@@ -19,6 +19,8 @@ class WorkCalculation(Calculation):
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
 
+    _hash_ignored_inputs = []
+
     @override
     def has_finished_ok(self):
         """
@@ -40,3 +42,19 @@ class WorkCalculation(Calculation):
         :rtype: bool
         """
         return self.get_attr(self.FAILED_KEY, False) is not False
+
+    def get_hash(self):
+        from aiida.common.hashing import make_hash
+        base_hash = super(WorkCalculation, self).get_hash()
+        if base_hash is None:
+            return None
+        try:
+            return make_hash([
+                base_hash,
+                {
+                    key: value.get_hash() for key, value in self.get_inputs_dict().items()
+                    if key not in self._hash_ignored_inputs
+                }
+            ])
+        except:
+            return None

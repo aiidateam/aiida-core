@@ -51,6 +51,8 @@ install:
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - pip install .[REST,docs,atomic_tools,testing]
+    # Unreleased plum version required for fast-forwarding
+    - pip install git+https://bitbucket.org/greschd/plum@edge
 
 before_script:
     # Here I create the actual DB for submission

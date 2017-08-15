@@ -55,3 +55,25 @@ class TestJobProcess(AiidaTestCase):
 
         job_instance.stop()
         job_instance.run_until_complete()
+
+    def test_job_process_set_none(self):
+    	"""
+    	Verify that calculation label and description get set when passed through inputs
+    	"""
+        label = 'test_label'
+        description = 'test_description'
+        inputs = {
+            '_options': {
+                    'computer': self.computer,
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                    'max_wallclock_seconds': 10,
+                },
+            '_label': None,
+            '_description': None
+        }
+
+        job_class = TemplatereplacerCalculation.process()
+        job_instance = job_class.new_instance(inputs)

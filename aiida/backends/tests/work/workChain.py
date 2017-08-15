@@ -360,6 +360,20 @@ class TestFastForwardingWorkChain(TestWorkchain):
         )
         self.reference_wc = load_node(self.reference_pid)
 
+        class ReturnInputsFastForward(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(ReturnInputsFastForward, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int, default=Int(2), required=False)
+                spec.outline(cls.return_inputs)
+                spec.deterministic()
+
+            def return_inputs(self):
+                raise ValueError
+
+        self.wf_class_broken = ReturnInputsFastForward
+
     def tearDown(self):
         super(TestFastForwardingWorkChain, self).tearDown()
         self.clean_db()
@@ -381,6 +395,39 @@ class TestFastForwardingWorkChain(TestWorkchain):
             _fast_forward=True, _return_pid=True
         )
         self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(res, self.reference_result)
+
+    def test_fastforwarding_notexecuted(self):
+        res, pid = run(
+            self.wf_class_broken,
+            a=Int(1), b=Int(2),
+            _fast_forward=True, _return_pid=True
+        )
+        self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(res, self.reference_result)
+
+    def test_fastforwarding_notexecuted_testworks(self):
+        self.assertRaises(
+            ValueError,
+            run,
+            self.wf_class_broken,
+            a=Int(1), b=Int(2),
+            _fast_forward=False, _return_pid=True
+        )
+
+    def test_fastforwarding_twice(self):
+        res1, pid1 = run(
+            self.wf_class,
+            a=Int(1), b=Int(2),
+            _fast_forward=True, _return_pid=True
+        )
+        res2, pid2 = run(
+            self.wf_class,
+            a=Int(1), b=Int(2),
+            _fast_forward=True, _return_pid=True
+        )
+        self.assertEquals(pid1, pid2)
+        self.assertEquals(res1, res2)
 
     def test_fastforwarding_default(self):
         res, pid = run(

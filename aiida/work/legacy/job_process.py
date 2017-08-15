@@ -152,10 +152,4 @@ class JobProcess(Process):
         if parent_calc:
             self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
 
-        if self.raw_inputs:
-            description = self.raw_inputs.get('_description', None)
-            if description is not None:
-                self._calc.description = description
-            label = self.raw_inputs.get('_label', None)
-            if label is not None:
-                self._calc.label = label
+        self._add_description_and_label()

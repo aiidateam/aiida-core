@@ -342,6 +342,7 @@ class TestWorkchain(AiidaTestCase):
 class TestFastForwardingWorkChain(TestWorkchain):
     def setUp(self):
         super(TestFastForwardingWorkChain, self).setUp()
+        self.insert_data()
         class ReturnInputsFastForward(WorkChain):
             @classmethod
             def define(cls, spec):

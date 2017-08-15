@@ -77,3 +77,4 @@ class TestJobProcess(AiidaTestCase):
 
         job_class = TemplatereplacerCalculation.process()
         job_instance = job_class.new_instance(inputs)
+        job_instance.run_until_complete()

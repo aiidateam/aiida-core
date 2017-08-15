@@ -342,7 +342,6 @@ class TestWorkchain(AiidaTestCase):
 class TestFastForwardingWorkChain(TestWorkchain):
     def setUp(self):
         super(TestFastForwardingWorkChain, self).setUp()
-        self.insert_data()
         class ReturnInputsFastForward(WorkChain):
             @classmethod
             def define(cls, spec):
@@ -377,7 +376,8 @@ class TestFastForwardingWorkChain(TestWorkchain):
 
     def tearDown(self):
         super(TestFastForwardingWorkChain, self).tearDown()
-        self.clean_db()
+        super(TestFastForwardingWorkChain, self).tearDownClass()
+        super(TestFastForwardingWorkChain, self).setUpClass()
 
     def test_hash(self):
         res, pid = run(

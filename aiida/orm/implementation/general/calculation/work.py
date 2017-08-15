@@ -20,7 +20,6 @@ class WorkCalculation(Calculation):
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
     _hash_ignored_attributes = [FINISHED_KEY]
-    _use_cache = caching.defaults.use_cache
 
     _hash_ignored_inputs = ['_return_pid', '_fast_forward']
     _hash_ignored_attributes = ['_finished', '_sealed']

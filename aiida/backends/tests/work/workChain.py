@@ -16,7 +16,6 @@ from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
@@ -27,9 +26,6 @@ import aiida.work.util as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-
-
-PwProcess = PwCalculation.process()
 
 
 class Wf(WorkChain):
@@ -175,6 +171,24 @@ class TestWorkchain(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             Wf.spec()
+
+    def test_identical_input_node_different_label(self):
+        # We allow the creation of multiple INPUT links from the same node
+        # as long as the label is different
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                spec.outline(cls.check_inputs)
+
+            def check_inputs(self):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+
+        A = Int(1)
+        run(Wf, a=A, b=A)
 
     def test_context(self):
         A = Str("a")

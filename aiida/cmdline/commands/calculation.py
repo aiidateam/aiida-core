@@ -289,12 +289,13 @@ class Calculation(VerdiCommandWithSubcommands):
             print_node_info(calc)
 
     def calculation_logshow(self, *args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.backends.utils import get_log_messages
-        from aiida.common.datastructures import calc_states
-
         if not is_dbenv_loaded():
             load_dbenv()
+
+        from aiida.backends.utils import get_log_messages
+        from aiida.common.exceptions import NotExistent
+        from aiida.common.datastructures import calc_states
+        from aiida.orm.calculation.work import WorkCalculation
 
         for calc_pk in args:
             try:
@@ -304,6 +305,11 @@ class Calculation(VerdiCommandWithSubcommands):
                 continue
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
+                continue
+
+            if isinstance(calc, WorkCalculation):
+                print "*** {}: Is a WorkCalculation node. Use 'verdi work report' " \
+                    "instead to show the log messages".format(calc_pk)
                 continue
 
             log_messages = get_log_messages(calc)

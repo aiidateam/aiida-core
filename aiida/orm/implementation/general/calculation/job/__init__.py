@@ -102,7 +102,9 @@ class AbstractJobCalculation(object):
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
         # I get here if the calculation was successfully stored.
-        self._set_state(calc_states.NEW)
+        # Set to new only if it is not already FINISHED (due to caching)
+        if not self.get_state() == calc_states.FINISHED:
+            self._set_state(calc_states.NEW)
 
         # Important to return self to allow the one-liner
         # c = Calculation().store()

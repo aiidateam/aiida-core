@@ -67,6 +67,3 @@ class WorkCalculation(Calculation):
                 return None
             else:
                 raise e
-
-    def _is_valid_cache(self):
-        return super(WorkCalculation, self)._is_valid_cache() and self.has_finished_ok

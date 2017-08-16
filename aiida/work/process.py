@@ -328,6 +328,10 @@ class Process(plum.process.Process):
                     if name.endswith('_{pk}'.format(pk=value.pk)):
                         continue
                     self.out(name, value)
+                # This is needed for JobProcess. In that case, the outputs are
+                # returned regardless of whether they end in '_pk'
+                for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
+                    self.out(name, value)
 
         if self.calc.pk is not None:
             return self.calc.pk

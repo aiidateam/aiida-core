@@ -1479,7 +1479,7 @@ class AbstractNode(object):
             self._temp_folder.erase()
 
 
-    def get_hash(self):
+    def get_hash(self, ignore_errors=True):
         """
         Making a hash based on my attributes
         """
@@ -1495,8 +1495,11 @@ class AbstractNode(object):
                 },
                 self.folder
             ])
-        except:
-            return None
+        except Exception as e:
+            if ignore_errors:
+                return None
+            else:
+                raise e
 
     def get_same_node(self):
         from aiida.orm.querybuilder import QueryBuilder

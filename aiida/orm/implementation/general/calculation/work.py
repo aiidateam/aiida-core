@@ -46,9 +46,12 @@ class WorkCalculation(Calculation):
         """
         return self.get_attr(self.FAILED_KEY, False) is not False
 
-    def get_hash(self):
+    def _is_valid_cache(self):
+        return super(WorkCalculation, self)._is_valid_cache() and self.has_finished_ok
+
+    def get_hash(self, ignore_errors=True):
         from aiida.common.hashing import make_hash
-        base_hash = super(WorkCalculation, self).get_hash()
+        base_hash = super(WorkCalculation, self).get_hash(ignore_errors=ignore_errors)
         if base_hash is None:
             return None
         try:
@@ -59,8 +62,11 @@ class WorkCalculation(Calculation):
                     if key not in self._hash_ignored_inputs
                 }
             ])
-        except:
-            return None
+        except Exception as e:
+            if ignore_errors:
+                return None
+            else:
+                raise e
 
     def _is_valid_cache(self):
         return super(WorkCalculation, self)._is_valid_cache() and self.has_finished_ok

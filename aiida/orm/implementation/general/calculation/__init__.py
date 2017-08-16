@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import abc
 import collections
 
 from aiida.common.utils import classproperty
@@ -324,3 +325,13 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         from aiida.orm.code import Code
         return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
+
+    @abc.abstractmethod
+    def has_finished_ok(self):
+        """
+        Returns whether the Calculation has finished successfully.
+        """
+        raise NotImplementedError
+
+    def _is_valid_cache(self):
+        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()

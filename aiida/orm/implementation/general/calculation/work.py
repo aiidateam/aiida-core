@@ -46,9 +46,6 @@ class WorkCalculation(Calculation):
         """
         return self.get_attr(self.FAILED_KEY, False) is not False
 
-    def _is_valid_cache(self):
-        return super(WorkCalculation, self)._is_valid_cache() and self.has_finished_ok
-
     def get_hash(self, ignore_errors=True):
         from aiida.common.hashing import make_hash
         base_hash = super(WorkCalculation, self).get_hash(ignore_errors=ignore_errors)

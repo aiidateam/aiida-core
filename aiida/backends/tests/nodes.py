@@ -1778,10 +1778,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Same should be allowed in _replace_link_from
         n3._replace_link_from(n2, label='l4')
 
-        # However, replacing with existing link of identical label and link_type
-        with self.assertRaises(UniquenessError):
-            n3._replace_link_from(n1, label='l4')
-
         n2.store_all()
         n3.store_all()
 

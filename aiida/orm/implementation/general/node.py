@@ -526,15 +526,6 @@ class AbstractNode(object):
             except KeyError:
                 pass
         else:
-            # At least one node is not stored: set in the internal cache
-
-            # The combination label/link_type should still be unique just
-            # as is checked for in the 'add_link_from' method.
-            for link_info in self._inputlinks_cache.itervalues():
-                if label == link_info.label and link_type == link_info.link_type:
-                    raise UniquenessError('A link with the label {} and type {} already'
-                        'exists'.format(label, link_type))
-
             # Remove any potential pre-existing links with the same source node and type
             existing_link_key = None
             for key, link_info in self._inputlinks_cache.iteritems():

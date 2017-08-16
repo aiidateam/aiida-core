@@ -41,49 +41,74 @@ class Work(VerdiCommandWithSubcommands):
 
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)
-@click.option('-p', '--past-days', type=int, default=1,
-              help="add a filter to show only workflows created in the past N"
-                   " days")
-@click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
-@click.option('-l', '--limit', type=int, default=None,
-              help="Limit to this many results")
-def do_list(past_days, all_nodes, limit):
+@click.option(
+    '-p', '--past-days', type=int, default=1,
+    help='add a filter to show only work calculations created in the past N days'
+)
+@click.option(
+    '-a', '--all-states', 'all_states', is_flag=True,
+    help='return all work calculations regardless of their sealed state'
+)
+@click.option(
+    '-l', '--limit', type=int, default=None,
+    help='limit the final result set to this size'
+)
+def do_list(past_days, all_states, limit):
     """
     Return a list of running workflows on screen
     """
-    from aiida.common.utils import str_timedelta
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
-    import aiida.utils.timezone as timezone
+
+    from aiida.common.utils import str_timedelta
+    from aiida.utils import timezone
     from aiida.orm.mixins import Sealable
+    from aiida.orm.calculation.work import WorkCalculation
+
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-
-    now = timezone.now()
-
-    if all_nodes:
-        past_days = None
+    _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
+    _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
     table = []
     for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):
-        calc = res['calculation']
+
+        calculation = res['calculation']
+
         creation_time = str_timedelta(
-            timezone.delta(calc['ctime'], now), negative_to_zero=True,
-            max_num_fields=1)
+            timezone.delta(calculation['ctime'], timezone.now()), negative_to_zero=True,
+            max_num_fields=1
+        )
+
+        if _FINISHED_ATTRIBUTE_KEY in calculation and calculation[_FINISHED_ATTRIBUTE_KEY]:
+            state = 'FINISHED'
+        elif _FAILED_ATTRIBUTE_KEY in calculation and calculation[_FAILED_ATTRIBUTE_KEY]:
+            state = 'FAILED'
+        else:
+            state = 'UNKNOWN'
+
+        if _SEALED_ATTRIBUTE_KEY in calculation and calculation[_SEALED_ATTRIBUTE_KEY]:
+            sealed = True
+        else:
+            sealed = False
+
+        # By default we only display unsealed entries, unless all_states flag is set
+        if sealed and not all_states:
+            continue
 
         table.append([
-            calc['id'],
+            calculation['id'],
             creation_time,
-            calc['attributes._process_label'],
-            str(calc[_SEALED_ATTRIBUTE_KEY])
+            state,
+            str(sealed),
+            calculation['attributes._process_label']
         ])
 
-    # Revert table:
-    # in this way, I order by 'desc', so I start by the most recent, but then
-    # I print this as the las one (like 'verdi calculation list' does)
-    # This is useful when 'limit' is set to not None
+    # Since we sorted by descending creation time, we revert the list to print the most
+    # recent entries last
     table = table[::-1]
-    print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
+
+    print(tabulate(table, headers=['PK', 'Creation', 'State', 'Sealed', 'ProcessLabel']))
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
@@ -225,29 +250,30 @@ def checkpoint(pks):
 
 
 def _build_query(order_by=None, limit=None, past_days=None):
+    import datetime
+    from aiida.utils import timezone
+    from aiida.orm.mixins import Sealable
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
-    import aiida.utils.timezone as timezone
-    import datetime
-    from aiida.orm.mixins import Sealable
+
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+    _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
+    _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
-    # The things that we want to get out
-    calculation_projections = \
-        ['id', 'ctime', 'attributes._process_label', _SEALED_ATTRIBUTE_KEY]
+    calculation_projections = [
+        'id', 'ctime', 'attributes._process_label',
+        _SEALED_ATTRIBUTE_KEY, _FAILED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY
+    ]
 
-    now = timezone.now()
-
-    # The things to filter by
+    # Define filters
     calculation_filters = {}
 
     if past_days is not None:
-        n_days_ago = now - datetime.timedelta(days=past_days)
+        n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
         calculation_filters['ctime'] = {'>': n_days_ago}
 
+    # Build the query
     qb = QueryBuilder()
-
-    # Build the quiery
     qb.append(
         cls=WorkCalculation,
         filters=calculation_filters,
@@ -255,11 +281,11 @@ def _build_query(order_by=None, limit=None, past_days=None):
         tag='calculation'
     )
 
-    # ORDER
+    # Ordering of queryset
     if order_by is not None:
         qb.order_by({'calculation': order_by})
 
-    # LIMIT
+    # Limiting the queryset
     if limit is not None:
         qb.limit(limit)
 

@@ -14,7 +14,6 @@ import time
 from datetime import datetime
 import numbers
 try: # Python3
-    import pathlib
     from functools import singledispatch
     from collections import abc
 except ImportError: # Python2

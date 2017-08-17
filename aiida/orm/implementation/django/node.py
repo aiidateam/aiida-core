@@ -165,11 +165,11 @@ class Node(AbstractNode):
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.atomic():
-                self._remove_dblink_from(label, link_type)
+                self._remove_dblink_from(label)
                 self._add_dblink_from(src, label, link_type)
 
-    def _remove_dblink_from(self, label, link_type):
-        DbLink.objects.filter(output=self.dbnode, label=label, type=link_type).delete()
+    def _remove_dblink_from(self, label):
+        DbLink.objects.filter(output=self.dbnode, label=label).delete()
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.djsite.db.models import DbPath
@@ -488,9 +488,9 @@ class Node(AbstractNode):
                 "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache.itervalues():
+        for label in self._inputlinks_cache:
             try:
-                parent_node = link.src
+                parent_node = self._inputlinks_cache[label][0]
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed(
@@ -546,9 +546,10 @@ class Node(AbstractNode):
             self._check_are_parents_stored()
             # I have to store only those links where the source is already
             # stored
-            links_to_store = list(self._inputlinks_cache.itervalues())
+            links_to_store = list(self._inputlinks_cache.keys())
 
-            for src, label, link_type in links_to_store:
+            for label in links_to_store:
+                src, link_type = self._inputlinks_cache[label]
                 self._add_dblink_from(src, label, link_type)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error

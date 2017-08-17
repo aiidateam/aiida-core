@@ -45,20 +45,6 @@ class TestNodeHashing(AiidaTestCase):
             self.assertEqual(n1.uuid, n2.uuid)
             self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
 
-    def test_set_default(self):
-        attributes = [
-            (1.0, 2, 3),
-            ({'a': 'b', 'c': 'd'}, [1, 2, 3], {4, 2, 2})
-        ]
-        for attr in attributes:
-            n1 = self.create_simple_node(*attr)
-            n2 = self.create_simple_node(*attr)
-            with caching.EnableCaching():
-                n1.store(use_cache=caching.defaults.use_cache)
-                n2.store(use_cache=caching.defaults.use_cache)
-            self.assertEqual(n1.uuid, n2.uuid)
-            self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
-
     @staticmethod
     def create_folderdata_with_empty_file():
         from aiida.orm.data.folder import FolderData

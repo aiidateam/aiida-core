@@ -35,8 +35,6 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.work import WorkCalculation
 from aiida import LOG_LEVEL_REPORT
-from aiida.common import caching
-
 
 
 class DictSchema(object):
@@ -400,8 +398,14 @@ class Process(plum.process.Process):
 
     def _fast_forward_enabled(self):
         # First priority: inputs
-        return self._parsed_inputs.get('_fast_forward', False)
-        # TODO: Add process and global level settings
+        try:
+            return self._parsed_inputs['_fast_forward']
+        # Second priority: config
+        except KeyError:
+            return (
+                caching.get_fast_forward_enabled(type(self).__name__) or
+                caching.get_fast_forward_enabled(type(self._calc).__name__)
+            )
 
 class FunctionProcess(Process):
     _func_args = None

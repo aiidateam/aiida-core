@@ -112,19 +112,26 @@ def do_list(past_days, all_states, limit):
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
-@click.argument('pk', nargs=1, type=int)
-@click.option('-i', '--indent-size', type=int, default=2)
-@click.option('-l', '--levelname',
-              type=click.Choice(LOG_LEVELS),
-              default='REPORT',
-              help='Filter the results by name of the log level'
-              )
-@click.option('-o', '--order-by',
-              type=click.Choice(['id', 'time', 'levelname']),
-              default='time',
-              help='Order the results by column'
-              )
-def report(pk, levelname, order_by, indent_size):
+@click.argument(
+    'pk', nargs=1, type=int
+)
+@click.option(
+    '-i', '--indent-size', type=int, default=2,
+    help='Set the number of spaces to indent each level by'
+)
+@click.option(
+    '-l', '--levelname', type=click.Choice(LOG_LEVELS), default='REPORT',
+    help='Filter the results by name of the log level'
+)
+@click.option(
+    '-o', '--order-by', type=click.Choice(['id', 'time', 'levelname']), default='time',
+    help='Order the results by column'
+)
+@click.option(
+    '-m', '--max-depth', 'max_depth', type=int, default=None,
+    help='Limit the number of levels to be printed'
+)
+def report(pk, levelname, order_by, indent_size, max_depth):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -181,7 +188,12 @@ def report(pk, levelname, order_by, indent_size):
 
     workchain_tree = get_subtree(pk)
 
-    reports = list(itertools.chain(*[get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]))
+    if max_depth:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth]
+    else:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
+
+    reports = list(itertools.chain(*report_list))
     reports.sort(key=lambda r: r[0].time)
 
     if reports is None or len(reports) == 0:

@@ -155,6 +155,7 @@ class Profile(VerdiCommandWithSubcommands):
 
         confs = get_or_create_config()
         profiles = confs.get('profiles',{})
+        users = [ profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
 
         profiles_to_delete = args
         for profile_to_delete in profiles_to_delete:
@@ -163,36 +164,43 @@ class Profile(VerdiCommandWithSubcommands):
             except KeyError:
                 raise ValueError('Profile "{}" does not exist'.format(profile_to_delete))
 
-            #TODO: Check whether database exists
             db = profile.get('AIIDADB_NAME', '')
-            if click.confirm("Delete associated database '{}'?\nWARNING: All data will be lost.".format(db)):
+            if not q._db_exists(db, pg_execute, **dbinfo):
+                print("Associated database '{}' does not exist.".format(db))
+            elif click.confirm("Delete associated database '{}'?\n" \
+                             "WARNING: All data will be lost.".format(db)):
                 print("Deleting database '{}'.".format(db))
                 q._drop_db(db, pg_execute, **dbinfo)
 
-            #TODO: Check whether this user appears in other AiiDA profiles
             user = profile.get('AIIDADB_USER', '')
-            if click.confirm("Delete database user '{}'?\nWARNING: This user might be used by other profiles as well.".format(user)):
+            if not q._dbuser_exists(user, pg_execute, **dbinfo):
+                print("Associated database user '{}' does not exist.".format(user))
+            elif users.count(user) > 1:
+                print("Associated database user '{}' is used by other profiles "\
+                      "and will not be deleted.".format(user))
+            elif click.confirm("Delete database user '{}'?".format(user)):
                 print("Deleting user '{}'.".format(user))
                 q._drop_dbuser(user, pg_execute, **dbinfo)
 
             repo_uri = profile.get('AIIDADB_REPOSITORY_URI','')
             repo_path = urlparse(repo_uri).path
-            if click.confirm("Delete associated file repository '{}'?\nWARNING: All data will be lost.".format(repo_path)):
+            repo_path = os.path.expanduser(repo_path)
+            if not os.path.isabs(repo_path):
+                print("Associated file repository '{}' does not exist."\
+                      .format(repo_path))
+            elif not os.path.isdir(repo_path):
+                print("Associated file repository '{}' is not a directory."\
+                       .format(repo_path))
+            elif click.confirm("Delete associated file repository '{}'?\n" \
+                               "WARNING: All data will be lost.".format(repo_path)):
+                print("Deleting directory '{}'.".format(repo_path))
+                import shutil
+                shutil.rmtree(repo_path)
 
-                repo_path = os.path.expanduser(repo_path)
-                if not os.path.isabs(repo_path):
-                    print("WARNING: Unable to determine absolute path corresponding to '{}'.".format(repo_path))
-
-                if not os.path.isdir(repo_path):
-                    print("WARNING: '{}' is not a directory. Skipping ...".format(repo_path))
-                else:
-                    print("Deleting directory '{}'.".format(repo_path))
-                    import shutil
-                    shutil.rmtree(repo_path)
-
-            if click.confirm("Delete configuration for profile '{}'?\nWARNING: This permanently removes the profile from the list of AiiDA profiles.".format(profile_to_delete)):
+            if click.confirm("Delete configuration for profile '{}'?\n" \
+                             "WARNING: Permanently removes profile from the list of AiiDA profiles."\
+                             .format(profile_to_delete)):
                 print("Deleting configuration for profile '{}'.".format(profile_to_delete))
                 del profiles[profile_to_delete]
                 update_config(confs)
-
 

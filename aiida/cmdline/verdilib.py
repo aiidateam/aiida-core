@@ -997,6 +997,10 @@ class Quicksetup(VerdiCommand):
         '''return True if postgres user with name dbuser exists, False otherwise.'''
         return bool(method(self._get_users_command.format(dbuser), **kwargs))
 
+    def _db_exists(self, dbname, method=None, **kwargs):
+        """return True if database with dbname exists."""
+        return bool(method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs))
+
     def _check_db_name(self, dbname, method=None, **kwargs):
         '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
         create = True

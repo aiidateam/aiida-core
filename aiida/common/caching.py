@@ -29,7 +29,7 @@ DEFAULT_CONFIG = {
 
 def _get_config():
     try:
-        with open(os.path.join(AIIDA_CONFIG_FOLDER, 'cache_config.yml'), 'r') as f:
+        with open(os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 'cache_config.yml'), 'r') as f:
             config = yaml.load(f)[get_current_profile()]
         # validate configuration
         for key, value in config.items():

@@ -46,21 +46,10 @@ class WorkCalculation(Calculation):
         """
         return self.get_attr(self.FAILED_KEY, False) is not False
 
-    def get_hash(self, ignore_errors=True):
-        from aiida.common.hashing import make_hash
-        base_hash = super(WorkCalculation, self).get_hash(ignore_errors=ignore_errors)
-        if base_hash is None:
-            return None
-        try:
-            return make_hash([
-                base_hash,
-                {
-                    key: value.get_hash() for key, value in self.get_inputs_dict().items()
-                    if key not in self._hash_ignored_inputs
-                }
-            ])
-        except Exception as e:
-            if ignore_errors:
-                return None
-            else:
-                raise e
+    def _get_objects_to_hash(self):
+        res = super(WorkCalculation, self)._get_objects_to_hash()
+        res.append({
+            key: value.get_hash() for key, value in self.get_inputs_dict().items()
+            if key not in self._hash_ignored_inputs
+        })
+        return res

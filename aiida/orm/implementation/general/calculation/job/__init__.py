@@ -531,6 +531,22 @@ class AbstractJobCalculation(object):
                                                                       label,
                                                                       link_type)
 
+    def _remove_link_from(self, label):
+        """
+        Remove a link. Only possible if the calculation is in state NEW.
+
+        :param str label: Name of the link to remove.
+        """
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can remove an input link to a calculation only if it is in one "
+                "of the following states:\n   {}\n it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(AbstractJobCalculation, self)._remove_link_from(label)
+
     @abstractmethod
     def _set_state(self, state):
         """

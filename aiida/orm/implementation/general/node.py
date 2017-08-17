@@ -64,11 +64,6 @@ def clean_value(value):
         # but is not an integer, I still accept it)
         return value
 
-
-LinkKey = collections.namedtuple("LinkKey", ["label", "src_uuid"])
-LinkInfo = collections.namedtuple("LinkInfo", ["src", "link_type", "label"])
-
-
 class AbstractNode(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -453,18 +448,18 @@ class AbstractNode(object):
         """
         assert src is not None, "You must provide a valid Node to link"
 
-        # If the exact same link already exists then just return as it is
-        # already done
+        # Check that the label does not already exist
 
         # This can happen also if both nodes are stored, e.g. if one first
         # stores the output node and then the input node. Therefore I check
         # it here.
-        if LinkKey(label, src.uuid) in self._inputlinks_cache:
-            return
+        if label in self._inputlinks_cache:
+            raise UniquenessError("Input link with name '{}' already present "
+                                  "in the internal cache".format(label))
 
         # See if I am pointing to already saved nodes and I am already
         # linking to a given node
-        if src.uuid in [v.src.uuid for v in self._inputlinks_cache.values()]:
+        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
             raise UniquenessError(
                 "A link from node with UUID={} and "
                 "the current node (UUID={}) already exists!".format(
@@ -497,7 +492,7 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
 
-        self._inputlinks_cache[LinkKey(label, src.uuid)] = LinkInfo(src, link_type, label)
+        self._inputlinks_cache[label] = (src, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
         """
@@ -510,7 +505,6 @@ class AbstractNode(object):
         :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
-        link_key = LinkKey(label, src.uuid)
         # If both are stored, write directly on the DB
         if self.is_stored and src.is_stored:
             self._replace_dblink_from(src, label, link_type)
@@ -518,7 +512,7 @@ class AbstractNode(object):
             # (this could happen if I first store the output node, then
             # the input node.
             try:
-                del self._inputlinks_cache[link_key]
+                del self._inputlinks_cache[label]
             except KeyError:
                 pass
         else:  # at least one is not stored: set in the internal cache
@@ -526,17 +520,40 @@ class AbstractNode(object):
             # linking to a given node
             # It is similar to the 'add' method, but if I am replacing the
             # same node, I will not complain (k!=label)
-            if src.uuid in [v.src.uuid for k, v in
-                            self._inputlinks_cache.iteritems() if k != link_key]:
+            if src.uuid in [v[0].uuid for k, v in
+                            self._inputlinks_cache.iteritems() if k != label]:
                 raise UniquenessError(
                     "A link from node with UUID={} and "
                     "the current node (UUID={}) already exists!".format(
                         src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
-            self._inputlinks_cache[link_key] = LinkInfo(src, link_type, label)
+            self._inputlinks_cache[label] = (src, link_type)
 
-            # self._add_cachelink_from(src, label, link_type)
+           # self._add_cachelink_from(src, label, link_type)
+
+    def _remove_link_from(self, label):
+        """
+        Remove from the DB the input link with the given label.
+
+        :note: In subclasses, change only this. Moreover, remember to call
+            the super() method in order to properly use the caching logic!
+
+        :note: No error is raised if the link does not exist.
+
+        :param str label: the name of the label to set the link from src.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
+        """
+        # Try to remove from the local cache, no problem if none is present
+        try:
+            del self._inputlinks_cache[label]
+        except KeyError:
+            pass
+
+        # If both are stored, remove also from the DB
+        if self.is_stored:
+            self._remove_dblink_from(label)
 
     def _remove_link_from(self, label, src_uuid):
         """
@@ -694,12 +711,13 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for link in self._inputlinks_cache.itervalues():
-                if link.label in input_list_keys:
+            for label, v in self._inputlinks_cache.iteritems():
+                src = v[0]
+                if label in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(link.label, self.pk))
-                inputs_list.append((link.label, link.src))
+                                        "cache for node pk= {}!".format(label, self.pk))
+                inputs_list.append((label, src))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -1414,8 +1432,8 @@ class AbstractNode(object):
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
 
-        for link in self._inputlinks_cache.itervalues():
-            parent = link.src
+        for label in self._inputlinks_cache:
+            parent = self._inputlinks_cache[label][0]
             if not parent.is_stored:
                 parent.store(with_transaction=False)
 
@@ -1427,13 +1445,13 @@ class AbstractNode(object):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        for link in self._inputlinks_cache.itervalues():
-            if not link.src.is_stored:
+        for label in self._inputlinks_cache:
+            if not self._inputlinks_cache[label][0].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(link.label))
+                    "parameter set to True".format(label))
 
     @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):

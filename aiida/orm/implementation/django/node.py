@@ -487,9 +487,9 @@ class Node(AbstractNode):
                 "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache.itervalues():
+        for label in self._inputlinks_cache:
             try:
-                parent_node = link.src
+                parent_node = self._inputlinks_cache[label][0]
                 parent_node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed(
@@ -542,9 +542,13 @@ class Node(AbstractNode):
         with context_man:
             # This raises if there is an unstored node.
             self._check_are_parents_stored()
+            # I have to store only those links where the source is already
+            # stored
+            links_to_store = list(self._inputlinks_cache.keys())
 
-            for link in self._inputlinks_cache.itervalues():
-                self._add_dblink_from(link.src, link.label, link.link_type)
+            for label in links_to_store:
+                src, link_type = self._inputlinks_cache[label]
+                self._add_dblink_from(src, label, link_type)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I

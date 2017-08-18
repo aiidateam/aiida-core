@@ -763,10 +763,10 @@ class Calculation(VerdiCommandWithSubcommands):
         qb.append(OrmCalculation, tag="calc",
                   filters=qb_calc_filters,
                   project=["id", "uuid", "attributes.remote_workdir"])
-        qb.append(OrmComputer, computer_of="calc",
+        qb.append(OrmComputer, computer_of="calc", tag="computer",
                   project=["*"],
                   filters=qb_computer_filters)
-        qb.append(OrmUser, creator_of="calc",
+        qb.append(OrmUser, creator_of="calc", tag="user",
                   project=["*"],
                   filters=qb_user_filters)
 

@@ -30,5 +30,7 @@ def _rehash_cmd(classname):
     qb = QueryBuilder()
     qb.append(node_class)
     for i, n in enumerate(qb.iterall()):
+        if i % 100 == 0:
+            click.echo('.', nl=False)
         n[0].rehash()
-    click.echo('All done! {} nodes re-hashed.'.format(i + 1))
+    click.echo('\nAll done! {} nodes re-hashed.'.format(i + 1))

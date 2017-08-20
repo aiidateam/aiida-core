@@ -53,6 +53,7 @@ from aiida.cmdline.commands.work import Work
 from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline.commands.restapi import Restapi
+from aiida.cmdline.commands.rehash import Rehash
 from aiida.cmdline import execname
 
 

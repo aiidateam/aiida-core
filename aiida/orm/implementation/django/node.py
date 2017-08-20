@@ -665,11 +665,11 @@ class Node(AbstractNode):
                         g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
                         g.add_nodes(self)
 
-        # This is useful because in this way I can do
-        # n = Node().store()
         from aiida.backends.djsite.db.models import DbExtra
         # I store the hash without cleaning and without incrementing the nodeversion number
         DbExtra.set_value_for_node(self.dbnode, 'hash', self.get_hash())
+        # This is useful because in this way I can do
+        # n = Node().store()
         return self
 
     @property

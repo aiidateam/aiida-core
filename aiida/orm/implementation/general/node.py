@@ -1504,6 +1504,9 @@ class AbstractNode(object):
             self.folder
         ]
 
+    def rehash(self):
+        self.set_extra('hash', self.get_hash())
+
     def get_same_node(self):
         from aiida.orm.querybuilder import QueryBuilder
 

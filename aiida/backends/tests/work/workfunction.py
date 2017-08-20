@@ -76,6 +76,8 @@ class TestWf(AiidaTestCase):
         r2, pid2 = run(simple_cached_wf,  inp=Int(2), _return_pid=True, _fast_forward=True)
         self.assertEqual(r, r2)
         self.assertEqual(pid, pid2)
+        self._check_hash_consistent(pid)
+        self._check_hash_consistent(pid2)
 
     def test_caching_different(self):
         # Creating a new workfunction to avoid getting other results.
@@ -87,3 +89,9 @@ class TestWf(AiidaTestCase):
         r2, pid2 = run(simple_cached_wf,  inp=Int(3), _return_pid=True, _fast_forward=True)
         self.assertNotEqual(r, r2)
         self.assertNotEqual(pid, pid2)
+        self._check_hash_consistent(pid)
+        self._check_hash_consistent(pid2)
+
+    def _check_hash_consistent(self, pid):
+        wc = load_node(pid)
+        self.assertEqual(wc.get_hash(), wc.get_extra('hash'))

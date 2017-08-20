@@ -13,7 +13,7 @@ import datetime
 import copy
 
 from aiida.utils import timezone
-from aiida.common.utils import str_timedelta
+from aiida.common.utils import str_timedelta, classproperty
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
@@ -27,7 +27,6 @@ from aiida.common.old_pluginloader import from_type_to_pluginclassname
 # 'rerunnable',
 # 'resourceLimits',
 
-
 _input_subfolder = 'raw_input'
 
 
@@ -36,6 +35,33 @@ class AbstractJobCalculation(object):
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+            'state',
+            'scheduler_state',
+            'scheduler_lastchecktime',
+            'remote_workdir',
+            'last_jobinfo',
+            'job_id',
+            'queue_name',
+            'max_wallclock_seconds',
+            'retrieve_list',
+            'retrieve_singlefile_list',
+        ]
+
+    def get_hash(
+        self,
+        ignore_errors=True,
+        ignored_folder_content=('raw_input',),
+        **kwargs
+    ):
+        return super(AbstractJobCalculation, self).get_hash(
+            ignore_errors=ignore_errors,
+            ignored_folder_content=ignored_folder_content,
+            **kwargs
+        )
 
     @classmethod
     def process(cls):

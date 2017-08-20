@@ -83,6 +83,15 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     calculations run via a scheduler.
     """
 
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        return super(AbstractCalculation, cls)._hash_ignored_attributes + [
+            '_sealed',
+            '_finished',
+        ]
+
+    _hash_ignored_inputs = []
+
     # A tuple with attributes that can be updated even after
     # the call of the store() method
 
@@ -335,3 +344,11 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
 
     def _is_valid_cache(self):
         return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()
+
+    def _get_objects_to_hash(self):
+        res = super(AbstractCalculation, self)._get_objects_to_hash()
+        res.append({
+            key: value.get_hash() for key, value in self.get_inputs_dict().items()
+            if key not in self._hash_ignored_inputs
+        })
+        return res

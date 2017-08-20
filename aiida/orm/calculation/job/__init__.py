@@ -18,7 +18,7 @@ class JobCalculation(_JC):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a JobCalculation node's 
+        Returns a string with infos retrieved from a JobCalculation node's
         properties.
         """
         return self.get_state(from_attribute=True)

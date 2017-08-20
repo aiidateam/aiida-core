@@ -124,7 +124,7 @@ def make_hash_with_type(type_chr, string_to_hash):
     return hashlib.sha224("{}{}".format(type_chr, string_to_hash)).hexdigest()
 
 @singledispatch
-def make_hash(object_to_hash):
+def make_hash(object_to_hash, **kwargs):
     """
     Makes a hash from a dictionary, list, tuple or set to any level, that contains
     only other hashable or nonhashable types (including lists, tuples, sets, and
@@ -197,76 +197,78 @@ def make_hash(object_to_hash):
     )
 
 @make_hash.register(abc.Sequence)
-def _(sequence):
+def _(sequence, **kwargs):
     hashes = tuple([
-        make_hash(x) for x in sequence
+        make_hash(x, **kwargs) for x in sequence
     ])
     return make_hash_with_type('L', ",".join(hashes))
 
 @make_hash.register(abc.Set)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     hashes = tuple([
-            make_hash(x)
+            make_hash(x, **kwargs)
             for x
             in sorted(object_to_hash)
         ])
     return make_hash_with_type('S', ",".join(hashes))
 
 @make_hash.register(abc.Mapping)
-def _(mapping):
+def _(mapping, **kwargs):
     hashed_dictionary = {
-        k: make_hash(v)
+        k: make_hash(v, **kwargs)
         for k,v
         in mapping.items()
     }
     return make_hash_with_type(
         'D',
-        make_hash(sorted(hashed_dictionary.items()))
+        make_hash(sorted(hashed_dictionary.items()), **kwargs)
     )
 
 @make_hash.register(numbers.Real)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type(
             'f',
             truncate_float64(object_to_hash).tobytes()
         )
 
 @make_hash.register(numbers.Complex)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type(
         'c',
         ','.join([
-            make_hash(object_to_hash.real),
-            make_hash(object_to_hash.imag)
+            make_hash(object_to_hash.real, **kwargs),
+            make_hash(object_to_hash.imag, **kwargs)
         ])
     )
 
 @make_hash.register(numbers.Integral)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type('i', str(object_to_hash))
 
 @make_hash.register(basestring)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type('s', object_to_hash)
 
 @make_hash.register(bool)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type('b', str(object_to_hash))
 
 @make_hash.register(type(None))
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type('n', str(object_to_hash))
 
 @make_hash.register(datetime)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     return make_hash_with_type('d', str(object_to_hash))
 
 @make_hash.register(Folder)
-def _(folder):
+def _(folder, **kwargs):
     # make sure file is closed after being read
     def _read_file(folder, name):
         with folder.open(name) as f:
             return f.read()
+
+    ignored_folder_content = kwargs.get('ignored_folder_content', [])
 
     return make_hash_with_type(
         'pd',
@@ -277,15 +279,16 @@ def _(folder):
                 make_hash_with_type('pf', _read_file(folder, name))
             )
             for name in sorted(folder.get_content_list())
-        ])
+            if name not in ignored_folder_content
+        ], **kwargs)
     )
 
 @make_hash.register(np.ndarray)
-def _(object_to_hash):
+def _(object_to_hash, **kwargs):
     if object_to_hash.dtype == np.float64:
         return make_hash_with_type(
             'af',
-            make_hash(truncate_array64(object_to_hash).tobytes())
+            make_hash(truncate_array64(object_to_hash).tobytes(), **kwargs)
         )
     elif object_to_hash.dtype == np.complex128:
         return make_hash_with_type(
@@ -293,12 +296,12 @@ def _(object_to_hash):
             make_hash([
                 object_to_hash.real,
                 object_to_hash.imag
-            ])
+            ], **kwargs)
         )
     else:
         return make_hash_with_type(
             'ao',
-            make_hash(object_to_hash.tobytes())
+            make_hash(object_to_hash.tobytes(), **kwargs)
         )
 
 def truncate_float64(x, num_bits=4):

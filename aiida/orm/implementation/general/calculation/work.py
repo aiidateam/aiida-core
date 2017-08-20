@@ -9,6 +9,7 @@
 ###########################################################################
 
 from aiida.orm.implementation.calculation import Calculation
+from aiida.common.utils import classproperty
 from aiida.common.lang import override
 from aiida.common import caching
 
@@ -19,10 +20,13 @@ class WorkCalculation(Calculation):
     """
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
-    _hash_ignored_attributes = [FINISHED_KEY]
 
-    _hash_ignored_inputs = ['_return_pid', '_fast_forward']
-    _hash_ignored_attributes = ['_finished', '_sealed']
+    @classproperty
+    def _hash_ignored_inputs(cls):
+        return super(WorkCalculation, cls)._hash_ignored_inputs + [
+            '_return_pid',
+            '_fast_forward'
+        ]
 
     @override
     def has_finished_ok(self):
@@ -45,11 +49,3 @@ class WorkCalculation(Calculation):
         :rtype: bool
         """
         return self.get_attr(self.FAILED_KEY, False) is not False
-
-    def _get_objects_to_hash(self):
-        res = super(WorkCalculation, self)._get_objects_to_hash()
-        res.append({
-            key: value.get_hash() for key, value in self.get_inputs_dict().items()
-            if key not in self._hash_ignored_inputs
-        })
-        return res

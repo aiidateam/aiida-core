@@ -1479,13 +1479,13 @@ class AbstractNode(object):
             self._temp_folder.erase()
 
 
-    def get_hash(self, ignore_errors=True):
+    def get_hash(self, ignore_errors=True, **kwargs):
         """
         Making a hash based on my attributes
         """
         from aiida.common.hashing import make_hash
         try:
-            return make_hash(self._get_objects_to_hash())
+            return make_hash(self._get_objects_to_hash(), **kwargs)
         except Exception as e:
             if ignore_errors:
                 return None

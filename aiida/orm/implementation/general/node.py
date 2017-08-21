@@ -1377,7 +1377,7 @@ class AbstractNode(object):
                                          reset_limit=True).get_abs_path(path, check_existence=True)
 
     @abstractmethod
-    def store_all(self, with_transaction=True):
+    def store_all(self, with_transaction=True, use_cache=False):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1447,7 +1447,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def store(self, with_transaction=True):
+    def store(self, with_transaction=True, use_cache=False):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -1513,7 +1513,7 @@ class AbstractNode(object):
         hash_ = self.get_hash()
         if hash_:
             qb = QueryBuilder()
-            qb.append(self.__class__, filters={'extras.hash':hash_}, project='*', subclassing=False)
+            qb.append(self.__class__, filters={'extras.hash': hash_}, project='*', subclassing=False)
             for same_node, in qb.iterall():
                 if same_node._is_valid_cache():
                     return same_node

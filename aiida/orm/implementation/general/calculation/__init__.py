@@ -90,10 +90,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
             '_finished',
         ]
 
-    _hash_ignored_inputs = []
-
-    # A tuple with attributes that can be updated even after
-    # the call of the store() method
+    # The link_type might not be correct while the object is being created.
+    _hash_ignored_inputs = ['CALL']
 
     # Nodes that can be added as input using the use_* methods
     @classproperty

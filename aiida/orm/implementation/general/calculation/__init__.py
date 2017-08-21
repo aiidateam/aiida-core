@@ -348,7 +348,10 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     def _get_objects_to_hash(self):
         res = super(AbstractCalculation, self)._get_objects_to_hash()
         res.append({
-            key: value.get_hash() for key, value in self.get_inputs_dict().items()
+            key: value.get_hash()
+            for key, value in self.get_inputs_dict(
+                link_type=LinkType.INPUT
+            ).items()
             if key not in self._hash_ignored_inputs
         })
         return res

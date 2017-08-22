@@ -18,7 +18,7 @@ import aiida.work.defaults as defaults
 from plum.process import ProcessState
 from aiida.work.process import Process
 import aiida.work.persistence
-
+from portalocker import LockException
 
 
 def tick_workflow_engine(storage=None, print_exceptions=True):
@@ -28,7 +28,12 @@ def tick_workflow_engine(storage=None, print_exceptions=True):
     more_work = False
 
     for proc in _load_all_processes(storage):
-        storage.persist_process(proc)
+
+        try:
+            storage.persist_process(proc)
+        except LockException:
+            continue
+
         is_waiting = proc.get_waiting_on()
         try:
             # Get the Process till the point it is about to do some work

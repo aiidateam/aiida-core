@@ -39,6 +39,7 @@ install_requires = [
     'meld3==1.0.0',
     'numpy==1.12.0',
     'plumpy==0.7.9',
+    'portalocker==1.1.0',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
     'ujson==1.35',

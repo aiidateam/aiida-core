@@ -254,7 +254,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         self._save_noraise(process)
 
     @override
-    def on_process_wait(self, process):
+    def on_process_wait(self, process, wait_on):
         self._save_noraise(process)
 
     @override
@@ -264,6 +264,11 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             self._release_process(process.pid, self.finished_directory)
         except ValueError:
             pass
+
+    @override
+    def on_process_destroy(self, process):
+        self.unpersist_process(process)
+
 
     ############################################################################
 
@@ -322,7 +327,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
 
     @override
     def load_checkpoint_from_file(self, filepath):
-        with open(filepath, 'rb') as file:
+        with portalocker.Lock(filepath, 'r', timeout=1) as file:
             cp = pickle.load(file)
 
         inputs = cp[Process.BundleKeys.INPUTS.value]

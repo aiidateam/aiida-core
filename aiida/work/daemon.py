@@ -27,7 +27,7 @@ def tick_workflow_engine(storage=None, print_exceptions=True):
 
     more_work = False
 
-    for proc in _load_all_processes(storage):
+    for proc in storage.load_all_processes():
 
         try:
             storage.persist_process(proc)
@@ -58,20 +58,6 @@ def tick_workflow_engine(storage=None, print_exceptions=True):
             more_work = True
 
     return more_work
-
-
-def _load_all_processes(storage):
-    procs = []
-    for cp in storage.load_all_checkpoints():
-        try:
-            procs.append(Process.create_from(cp))
-        except KeyboardInterrupt:
-            raise
-        except BaseException:
-            # TODO: Log exception
-            pass
-    return procs
-
 
 if __name__ == "__main__":
     """

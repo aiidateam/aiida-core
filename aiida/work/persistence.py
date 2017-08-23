@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import traceback
 import collections
 import uritools
 import os.path
@@ -147,28 +148,6 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         raise ValueError(
             "Not checkpoint with pid '{}' could be found".format(pid))
 
-    def load_all_checkpoints(self):
-        checkpoints = []
-        for f in glob.glob(path.join(self._running_directory, "*.pickle")):
-            try:
-                checkpoints.append(self.load_checkpoint_from_file(f))
-            except (portalocker.LockException, IOError):
-                # Don't load locked checkpoints or those with IOErrors
-                # these often come if the pickle was deleted since the glob
-                pass
-            except BaseException:
-                LOGGER.warning(
-                    "Failed to load checkpoint '{}' (deleting)\n"
-                    "{}".format(f, traceback.format_exc()))
-
-                # Deleting
-                try:
-                    os.remove(f)
-                except OSError:
-                    pass
-
-        return checkpoints
-
     @property
     def store_directory(self):
         return self._running_directory
@@ -180,6 +159,66 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     @property
     def finished_directory(self):
         return self._finished_directory
+
+    def load_all_processes(self):
+        """
+        Will detect all pickles in the running directory and will try to load
+        them up into Processes. As soon as a pickle is considered for loading,
+        a lock is placed on it, which is not released until the process is
+        destroyed. This is necessary to prevent another thread from loading up
+        the same process.
+
+        :return: a list of Process instances
+        """
+        processes = []
+        for f in glob.glob(path.join(self._running_directory, "*.pickle")):
+            try:
+                process = self.create_from_file_and_persist(f)
+            except (portalocker.LockException, IOError):
+                continue
+            except BaseException:
+                LOGGER.warning("Failed to load checkpoint '{}' (deleting)\n{}"
+                    .format(f, traceback.format_exc()))
+
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+
+            else:
+                processes.append(process)
+
+        return processes
+
+    def create_from_file_and_persist(self, filepath):
+        """
+        Try and load a process from a file and recreate the Process instance.
+        To prevent multiple threads from recreating a Process from the same pickle,
+        before loading the state from the file, a reentrant lock is created, which
+        will except if the file is already locked. Within a lock context manager, we
+        then attempt to recreate the Process from the process state and when successful
+        we acquire the lock.
+
+        :param filepath: path to the pickle to be loaded as a Process
+        :return: Process instance
+        """
+        lock = RLock(filepath, 'r+b', timeout=0)
+
+        with lock as handle:
+            checkpoint = self.load_checkpoint_from_file_object(handle)
+            process = Process.create_from(checkpoint)
+
+            try:
+                # Listen to the process - state transitions will trigger pickling
+                process.add_process_listener(self)
+            except AssertionError:
+                # Happens if we're already listening
+                pass
+
+            lock.acquire()
+            self._filelocks[process.pid] = lock
+
+        return process
 
     def persist_process(self, process):
         if process.pid in self._filelocks:
@@ -324,6 +363,17 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         except BaseException:
             LOGGER.error("Exception raised trying to pickle process (pid={})\n{}"
                          .format(process.pid, traceback.format_exc()))
+
+    @override
+    def load_checkpoint_from_file_object(self, file_object):
+        cp = pickle.load(file_object)
+
+        inputs = cp[Process.BundleKeys.INPUTS.value]
+        if inputs:
+            cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
+
+        cp.set_class_loader(class_loader)
+        return cp
 
     @override
     def load_checkpoint_from_file(self, filepath):

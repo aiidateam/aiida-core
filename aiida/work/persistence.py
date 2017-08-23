@@ -138,16 +138,6 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         self._failed_directory = failed_directory
         self._filelocks = {}
 
-    def load_checkpoint(self, pid):
-        for check_dir in [self._running_directory, self._failed_directory,
-                          self._finished_directory]:
-            p = path.join(check_dir, str(pid) + ".pickle")
-            if path.isfile(p):
-                return self.load_checkpoint_from_file(p)
-
-        raise ValueError(
-            "Not checkpoint with pid '{}' could be found".format(pid))
-
     @property
     def store_directory(self):
         return self._running_directory
@@ -364,7 +354,19 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             LOGGER.error("Exception raised trying to pickle process (pid={})\n{}"
                          .format(process.pid, traceback.format_exc()))
 
-    @override
+    def _load_checkpoint(self, pid):
+        """
+        Load a checkpoint from a pickle. Note that this will not properly check for
+        locks and should not be called outside of this class
+        """
+        for check_dir in [self._running_directory, self._failed_directory, self._finished_directory]:
+            filepath = path.join(check_dir, self.pickle_filename(pid))
+            if path.isfile(filepath):
+                with portalocker.Lock(filepath, 'r', timeout=1) as file:
+                    return self.load_checkpoint_from_file_object(file)
+
+        raise ValueError("checkpoint with pid '{}' does not exist".format(pid))
+
     def load_checkpoint_from_file_object(self, file_object):
         cp = pickle.load(file_object)
 
@@ -375,17 +377,9 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         cp.set_class_loader(class_loader)
         return cp
 
-    @override
-    def load_checkpoint_from_file(self, filepath):
-        with portalocker.Lock(filepath, 'r', timeout=1) as file:
-            cp = pickle.load(file)
-
-        inputs = cp[Process.BundleKeys.INPUTS.value]
-        if inputs:
-            cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
-
-        cp.set_class_loader(class_loader)
-        return cp
+    def get_checkpoint_state(self, pid):
+        checkpoint = self._load_checkpoint(pid)
+        return str(checkpoint)
 
     @override
     def create_bundle(self, process):

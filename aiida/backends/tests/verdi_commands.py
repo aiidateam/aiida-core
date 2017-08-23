@@ -11,6 +11,8 @@
 
 import mock
 
+from click.testing import CliRunner
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.utils.capturing import Capturing
 from aiida.common.datastructures import calc_states
@@ -194,3 +196,60 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertFalse(computer_name_2 in out_str,
                          "The computer 2 name should not be included into "
                          "this list")
+
+class TestVerdiWorkCommands(AiidaTestCase):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Create a simple workchain and run it.
+        """
+        super(TestVerdiWorkCommands, cls).setUpClass()
+        from aiida.work.run import run
+        from aiida.work.workchain import WorkChain
+        TEST_STRING = 'Test report.'
+        cls.test_string = TEST_STRING
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.outline(cls.create_logs)
+
+            def create_logs(self):
+                self.report(TEST_STRING)
+        _, cls.workchain_pid = run(Wf, _return_pid=True)
+
+    def test_report(self):
+        """
+        Test that 'verdi work report' contains the report message.
+        """
+        from aiida.cmdline.commands.work import report
+
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid)],
+            catch_exceptions=False
+        )
+        self.assertTrue(self.test_string in result.output)
+
+    def test_report_debug(self):
+        """
+        Test that 'verdi work report' contains the report message when called with levelname DEBUG.
+        """
+        from aiida.cmdline.commands.work import report
+
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid), '--levelname', 'DEBUG'],
+            catch_exceptions=False
+        )
+        self.assertTrue(self.test_string in result.output)
+
+    def test_report_error(self):
+        """
+        Test that 'verdi work report' does not contain the report message when called with levelname ERROR.
+        """
+        from aiida.cmdline.commands.work import report
+
+        result = CliRunner().invoke(
+            report, [str(self.workchain_pid), '--levelname', 'ERROR'],
+            catch_exceptions=False
+        )
+        self.assertTrue(self.test_string not in result.output)

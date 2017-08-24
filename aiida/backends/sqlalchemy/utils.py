@@ -436,7 +436,7 @@ def check_schema_version(force_migration=False, alembic_cfg=None):
             print("It is time to perform your first SQLAlchemy migration.")
         else:
             print("The code schema version is {}, but the version stored in "
-                  "the database (DbSetting table) is {}."
+                  "the database is {}."
                   .format(code_schema_version, db_schema_version))
         if force_migration or query_yes_no("Would you like to migrate to the "
                                            "latest version?", "yes"):

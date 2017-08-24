@@ -59,13 +59,10 @@ class TestMigrationsSQLA(AiidaTestCase):
         if destination not in ["head", "base"]:
             raise TypeError("Only head & base are accepted as destination "
                             "values.")
-        # Getting the alembic configuration
-        alembic_cfg = self.get_conf_from_alembic_file(
-            self.migr_method_dir_path)
-
         # Set the alembic script directory location
         self.alembic_dpath = os.path.join(self.migr_method_dir_path,
                                      utils.ALEMBIC_REL_PATH)
+        alembic_cfg = Config()
         alembic_cfg.set_main_option('script_location', self.alembic_dpath)
 
         # Undo all previous real migration of the database
@@ -75,19 +72,6 @@ class TestMigrationsSQLA(AiidaTestCase):
                 command.upgrade(alembic_cfg, "head")
             else:
                 command.downgrade(alembic_cfg, "base")
-
-    @staticmethod
-    def get_conf_from_alembic_file(migr_method_dir_path):
-        """
-        Constructs the path to the alembic file and returns a configuration
-        object.
-        :param migr_method_dir_path: The path to the alembic.ini file.
-        :return: The configuration object of the parsed file.
-        """
-        # Constructing the alembic full path & getting the configuration
-        alembic_fpath = os.path.join(migr_method_dir_path,
-                                     utils.ALEMBIC_FILENAME)
-        return Config(alembic_fpath)
 
     def test_migrations_forward_backward(self):
         """
@@ -102,16 +86,13 @@ class TestMigrationsSQLA(AiidaTestCase):
         from aiida.backends.sqlalchemy.utils import check_schema_version
 
         try:
-            # Getting the alembic configuration
-            alembic_cfg = self.get_conf_from_alembic_file(
-                self.migr_method_dir_path)
-
             # Constructing the versions directory
             versions_dpath = os.path.join(
                 os.path.dirname(versions.__file__))
 
             # Setting dynamically the the path to the alembic configuration
             # (this is where the env.py file can be found)
+            alembic_cfg = Config()
             alembic_cfg.set_main_option('script_location', self.alembic_dpath)
             # Setting dynamically the versions directory. These are the
             # migration scripts to pass from one version to the other. The

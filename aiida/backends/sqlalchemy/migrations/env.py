@@ -1,29 +1,11 @@
 from __future__ import with_statement
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from logging.config import fileConfig
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-fileConfig(config.config_file_name)
-
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-# from aiida.backends.sqlalchemy.models.base import Base
-# target_metadata = Base.metadata
-
-# from aiida.backends.sqlalchemy import get_scoped_session
-# from sqlalchemy import MetaData
-# ss = get_scoped_session()
-# target_metadata = MetaData()
-# target_metadata.reflect(bind=ss.bind)
-
+# The available SQLAlchemy tables
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
@@ -40,13 +22,6 @@ from aiida.backends.sqlalchemy.models.workflow import (
 from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata
 
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
-
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -59,12 +34,7 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
-
-    with context.begin_transaction():
-        context.run_migrations()
+    raise NotImplementedError("This feature is not currently supported.")
 
 
 def run_migrations_online():
@@ -77,12 +47,9 @@ def run_migrations_online():
     connectable = config.attributes.get('connection', None)
 
     if connectable is None:
-        # only create Engine if we don't have a Connection
-        # from the outside
-        connectable = engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix='sqlalchemy.',
-            poolclass=pool.NullPool)
+        from aiida.common.exceptions import ConfigurationError
+        raise ConfigurationError("An initialized connection is expected "
+                                 "for the AiiDA online migrations.")
 
     with connectable.connect() as connection:
         context.configure(

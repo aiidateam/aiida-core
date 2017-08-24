@@ -9,6 +9,8 @@
 ###########################################################################
 
 import os
+import logging
+
 from alembic import command
 from alembic.config import Config
 
@@ -17,6 +19,7 @@ from aiida.backends.sqlalchemy import utils
 from aiida.backends.sqlalchemy.utils import (get_migration_head,
                                              get_db_schema_version)
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.setup import set_property, get_property
 
 TEST_ALEMBIC_REL_PATH = 'migration_test'
 
@@ -32,6 +35,8 @@ class TestMigrationsSQLA(AiidaTestCase):
     # The path of the migration configuration (the actual configuration - not
     # the testing)
     alembic_dpath = None
+    # The initial alembic log level - to be restored after the testing
+    init_alemb_log_level = ''
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
@@ -40,10 +45,15 @@ class TestMigrationsSQLA(AiidaTestCase):
             os.path.realpath(utils.__file__))
 
     def setUp(self):
+        self.init_alemb_log_level = get_property('logging.alembic_loglevel')
+        set_property('logging.alembic_loglevel',
+                     logging.getLevelName(logging.ERROR))
         self.migrate_db_with_non_testing_migrations("base")
 
     def tearDown(self):
         self.migrate_db_with_non_testing_migrations("head")
+        set_property('logging.alembic_loglevel',
+                     logging.getLevelName(self.init_alemb_log_level))
 
     def migrate_db_with_non_testing_migrations(self, destination):
         if destination not in ["head", "base"]:

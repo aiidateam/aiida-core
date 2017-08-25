@@ -51,8 +51,8 @@ class DBLogHandler(logging.Handler):
         from django.core.exceptions import ImproperlyConfigured
 
         try:
-            backend   = construct()
-            log_entry = backend.log.create_entry_from_record(record)
+            backend = construct()
+            backend.log.create_entry_from_record(record)
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the

@@ -634,6 +634,12 @@ the procedure, make sure of the following:
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
   * From 0.8.0 onwards there is no ``requirements.txt`` file anymore. It has been replaced by ``setup_requirements.py`` and ``pip`` will install all the requirements automatically. If for some reason you would still like to get such a file, you can create it using the script ``aiida_core/utils/create_requirements.py``
 
+.. note::
+  Since AiiDA 0.9.0, we use Alembic for the database migrations of the
+  SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
+  of Alembic, you may experience problems during your first migration. If it is
+  the case, please have a look at the following section :ref:`first_alembic_migration`
+
 Updating between development versions (for Developers)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

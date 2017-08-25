@@ -213,13 +213,13 @@ def checkpoint(pks):
     for pk in pks:
         try:
             try:
-                cp = storage.load_checkpoint(pk)
+                checkpoint = storage.get_checkpoint_state(pk)
             except BaseException as e:
                 print("Failed to load checkpoint {}".format(pk))
                 print("Exception: {}".format(e.message))
             else:
                 print("Last checkpoint for calculation '{}'".format(pk))
-                print(str(cp))
+                print(str(checkpoint))
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
 

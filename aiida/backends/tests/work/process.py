@@ -225,6 +225,8 @@ class TestExposeProcess(AiidaTestCase):
                 assert self.inputs['b'] == Int(2)
                 assert self.inputs.beta['a'] == Int(3)
                 assert self.inputs.beta['b'] == Int(4)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
 
         ExposeProcess.run(**{'a': Int(1), 'b': Int(2), 'beta': {'a': Int(3), 'b': Int(4)}})
 
@@ -252,6 +254,8 @@ class TestExposeProcess(AiidaTestCase):
                 assert self.inputs.alef['b'] == Int(2)
                 assert self.inputs.beta['a'] == Int(3)
                 assert self.inputs.beta['b'] == Int(4)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
 
         ExposeProcess.run(**{'alef': {'a': Int(1), 'b': Int(2)}, 'beta': {'a': Int(3), 'b': Int(4)}})
 
@@ -417,3 +421,53 @@ class TestNestedNamespacedExposedProcess(AiidaTestCase):
             ValueError, self.ParentProcess.run,
             **{'e': Int(4)}
         )
+
+
+class TestExcludeExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestExcludeExposeProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, required=False)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_exclude_valid(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, exclude=('b',))
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+
+        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
+
+    def test_exclude_invalid(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, exclude=('a',))
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+
+        self.assertRaises(ValueError, ExposeProcess.run, **{'b': Int(2), 'c': Int(3)})

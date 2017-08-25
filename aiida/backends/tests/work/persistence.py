@@ -37,7 +37,7 @@ class TestProcess(AiidaTestCase):
         b = self.persistence.create_bundle(dp)
         # Save a bundle and reload it
         self.persistence.save(dp)
-        b2 = self.persistence.load_checkpoint(dp.pid)
+        b2 = self.persistence._load_checkpoint(dp.pid)
         # Now check that they are equal
         self.assertEqual(b, b2)
 

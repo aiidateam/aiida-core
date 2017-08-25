@@ -313,9 +313,6 @@ class TestWorkchain(AiidaTestCase):
             pid = fut.pid
             te.tick()
             finished_steps.update(wf_class.finished_steps)
-            # if not fut.done():
-            #     te.stop(pid)
-            #     fut = te.run_from(storage.load_checkpoint(pid))
         te.shutdown()
 
         return finished_steps

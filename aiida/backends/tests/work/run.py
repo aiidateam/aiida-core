@@ -39,7 +39,7 @@ class TestRun(AiidaTestCase):
         pid = queue_up(DummyProcess, inputs, self.storage)
 
         # Then load the checkpoint and instantiate the class
-        cp = self.storage.load_checkpoint(pid)
+        cp = self.storage._load_checkpoint(pid)
 
         dp = DummyProcess.create_from(cp)
         self.assertIsInstance(dp, DummyProcess)

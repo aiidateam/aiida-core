@@ -165,7 +165,7 @@ class ProcessSpec(plum.process.ProcessSpec):
 
         return template
 
-    def expose_inputs(self, process_class, namespace=None, exclude=()):
+    def expose_inputs(self, process_class, namespace=None, exclude=(), include=()):
         """
         This method allows one to automatically add the inputs from another
         Process to this ProcessSpec. The optional namespace argument can be
@@ -175,6 +175,9 @@ class ProcessSpec(plum.process.ProcessSpec):
         :param namespace: a namespace in which to place the exposed inputs
         :param exclude: list or tuple of input keys to exclude from being exposed
         """
+        if exclude and include:
+            raise ValueError('exclude and include are mutually exclusive')
+
         if namespace:
             self._inputs[namespace] = PortNamespace(namespace)
             port_namespace = self._inputs[namespace]
@@ -182,7 +185,15 @@ class ProcessSpec(plum.process.ProcessSpec):
             port_namespace = self._inputs
 
         for name, port in process_class.spec().inputs.iteritems():
-            if (not name.startswith('_') and not name == 'dynamic') and name not in exclude:
+
+            if name.startswith('_') or name == 'dynamic':
+                continue
+
+            if not exclude and not include:
+                port_namespace[name] = port
+            elif include and name in include:
+                port_namespace[name] = port
+            elif exclude and name not in exclude:
                 port_namespace[name] = port
 
 
@@ -374,7 +385,7 @@ class Process(plum.process.Process):
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    def exposed_inputs(self, process_class, namespace=None):
+    def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
         """
         Gather a dictionary of the inputs that were exposed for a given Process
         class under an optional namespace.
@@ -382,21 +393,29 @@ class Process(plum.process.Process):
         :param process_class: Process class whose inputs to try and retrieve
         :param namespace: PortNamespace in which to look for the inputs
         """
-        if namespace is not None:
-            inputs = self.inputs[namespace]
-            try:
-                port_namespace = self.spec().get_input(namespace)
-            except KeyError:
-                raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
-        else:
-            inputs = self.inputs
-            port_namespace = self.spec().inputs
-
         exposed_inputs = {}
+        namespaces = [namespace]
 
-        for name, port in port_namespace.ports.iteritems():
-            if name in inputs:
-                exposed_inputs[name] = inputs[name]
+        # If inputs are to be agglomerated, we prepend the lower lying namespace
+        if agglomerate:
+            namespaces.insert(0, None)
+
+        for namespace in namespaces:
+
+            # The namespace None indicates the base level namespace
+            if namespace is None:
+                inputs = self.inputs
+                port_namespace = self.spec().inputs
+            else:
+                inputs = self.inputs[namespace]
+                try:
+                    port_namespace = self.spec().get_input(namespace)
+                except KeyError:
+                    raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
+
+            for name, port in port_namespace.ports.iteritems():
+                if name in inputs and name in process_class.spec().inputs:
+                    exposed_inputs[name] = inputs[name]
 
         return exposed_inputs
 

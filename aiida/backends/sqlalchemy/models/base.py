@@ -75,11 +75,9 @@ class Model(object):
             sess.commit()
         return self
 
-
     def delete(self, commit=True):
         sess = get_scoped_session()
         sess.delete(self)
         if commit:
             sess.commit()
-
 Base = declarative_base(cls=Model, name='Model')

@@ -27,9 +27,6 @@ from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
 
-LinkKey = collections.namedtuple('LinkKey', ['src_uuid', 'label'])
-LinkInfo = collections.namedtuple('LinkInfo', ['src', 'label', 'link_type'])
-
 
 def clean_value(value):
     """
@@ -454,16 +451,22 @@ class AbstractNode(object):
         """
         assert src is not None, "You must provide a valid Node to link"
 
-        # Check if the link for the same label/node/type combination already
-        # exists in the link cache, in which case we don't have to do anything
-        if LinkInfo(src, label, link_type) in self._inputlinks_cache.itervalues():
-            return
+        # Check that the label does not already exist
 
-        # The combination label/link_type should be unique
-        for link_info in self._inputlinks_cache.itervalues():
-            if label == link_info.label and link_type == link_info.link_type:
-                raise UniquenessError('A link with the label {} and type {} already'
-                    'exists'.format(label, link_type))
+        # This can happen also if both nodes are stored, e.g. if one first
+        # stores the output node and then the input node. Therefore I check
+        # it here.
+        if label in self._inputlinks_cache:
+            raise UniquenessError("Input link with name '{}' already present "
+                                  "in the internal cache".format(label))
+
+        # See if I am pointing to already saved nodes and I am already
+        # linking to a given node
+        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
+            raise UniquenessError(
+                "A link from node with UUID={} and "
+                "the current node (UUID={}) already exists!".format(
+                    src.uuid, self.uuid))
 
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)
@@ -492,7 +495,7 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
 
-        self._inputlinks_cache[LinkKey(src.uuid, label)] = LinkInfo(src, label, link_type)
+        self._inputlinks_cache[label] = (src, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
         """
@@ -505,8 +508,6 @@ class AbstractNode(object):
         :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
-        link_key = LinkKey(src.uuid, label)
-
         # If both are stored, write directly on the DB
         if self.is_stored and src.is_stored:
             self._replace_dblink_from(src, label, link_type)
@@ -514,24 +515,48 @@ class AbstractNode(object):
             # (this could happen if I first store the output node, then
             # the input node.
             try:
-                del self._inputlinks_cache[link_key]
+                del self._inputlinks_cache[label]
             except KeyError:
                 pass
-        else:
-            # Remove any potential pre-existing links with the same source node and type
-            existing_link_key = None
-            for key, link_info in self._inputlinks_cache.iteritems():
-                if link_info.src == src and link_info.link_type == link_type:
-                    existing_link_key = key
-
-            if existing_link_key:
-                del self._inputlinks_cache[existing_link_key]
-
+        else:  # at least one is not stored: set in the internal cache
+            # See if I am pointing to already saved nodes and I am already
+            # linking to a given node
+            # It is similar to the 'add' method, but if I am replacing the
+            # same node, I will not complain (k!=label)
+            if src.uuid in [v[0].uuid for k, v in
+                            self._inputlinks_cache.iteritems() if k != label]:
+                raise UniquenessError(
+                    "A link from node with UUID={} and "
+                    "the current node (UUID={}) already exists!".format(
+                        src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
-            self._inputlinks_cache[link_key] = LinkInfo(src, label, link_type)
+            self._inputlinks_cache[label] = (src, link_type)
 
-            # self._add_cachelink_from(src, label, link_type)
+           # self._add_cachelink_from(src, label, link_type)
+
+    def _remove_link_from(self, label):
+        """
+        Remove from the DB the input link with the given label.
+
+        :note: In subclasses, change only this. Moreover, remember to call
+            the super() method in order to properly use the caching logic!
+
+        :note: No error is raised if the link does not exist.
+
+        :param str label: the name of the label to set the link from src.
+        :param link_type: The type of link, must be one of the enum values form
+          :class:`~aiida.common.links.LinkType`
+        """
+        # Try to remove from the local cache, no problem if none is present
+        try:
+            del self._inputlinks_cache[label]
+        except KeyError:
+            pass
+
+        # If both are stored, remove also from the DB
+        if self.is_stored:
+            self._remove_dblink_from(label)
 
     @abstractmethod
     def _replace_dblink_from(self, src, label, link_type):
@@ -550,7 +575,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def _remove_dblink_from(self, label, link_type):
+    def _remove_dblink_from(self, label):
         """
         Remove from the DB the input link with the given label.
 
@@ -665,12 +690,13 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for link_info in self._inputlinks_cache.itervalues():
-                if link_info.label in input_list_keys:
+            for label, v in self._inputlinks_cache.iteritems():
+                src = v[0]
+                if label in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                                         "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(link_info.label, self.pk))
-                inputs_list.append((link_info.label, link_info.src))
+                                        "cache for node pk= {}!".format(label, self.pk))
+                inputs_list.append((label, src))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -1391,8 +1417,8 @@ class AbstractNode(object):
                 "_store_input_nodes can be called only if the node is "
                 "unstored (node {} is stored, instead)".format(self.pk))
 
-        for link_info in self._inputlinks_cache.itervalues():
-            parent = link_info.src
+        for label in self._inputlinks_cache:
+            parent = self._inputlinks_cache[label][0]
             if not parent.is_stored:
                 parent.store(with_transaction=False)
 
@@ -1404,13 +1430,13 @@ class AbstractNode(object):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        for link_info in self._inputlinks_cache.itervalues():
-            if not link_info.src.is_stored:
+        for label in self._inputlinks_cache:
+            if not self._inputlinks_cache[label][0].is_stored:
                 raise ModificationNotAllowed(
                     "Cannot store the input link '{}' because the "
                     "source node is not stored. Either store it first, "
                     "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(link_info.label))
+                    "parameter set to True".format(label))
 
     @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):

@@ -172,24 +172,6 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
-    def test_identical_input_node_different_label(self):
-        # We allow the creation of multiple INPUT links from the same node
-        # as long as the label is different
-        class Wf(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(Wf, cls).define(spec)
-                spec.input('a', valid_type=Int)
-                spec.input('b', valid_type=Int)
-                spec.outline(cls.check_inputs)
-
-            def check_inputs(self):
-                assert 'a' in self.inputs
-                assert 'b' in self.inputs
-
-        A = Int(1)
-        run(Wf, a=A, b=A)
-
     def test_context(self):
         A = Str("a")
         B = Str("b")
@@ -331,15 +313,23 @@ class TestWorkchain(AiidaTestCase):
             pid = fut.pid
             te.tick()
             finished_steps.update(wf_class.finished_steps)
-            # if not fut.done():
-            #     te.stop(pid)
-            #     fut = te.run_from(storage.load_checkpoint(pid))
         te.shutdown()
 
         return finished_steps
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
+
+    def setUp(self):
+        super(TestWorkchainWithOldWorkflows, self).setUp()
+        import logging
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        import logging
+        logging.disable(logging.NOTSET)
+
     def test_call_old_wf(self):
         wf = WorkflowDemo()
         wf.start()

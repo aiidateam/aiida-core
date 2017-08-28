@@ -893,6 +893,18 @@ _property_table = {
         "for the 'paramiko' logger",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.alembic_loglevel": (
+        "logging_alembic_log_level",
+        "string",
+        "Minimum level to log to the console",
+        "INFO",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.sqlalchemy_loglevel": (
+        "logging_sqlalchemy_loglevel",
+        "string",
+        "Minimum level to log to the console",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.celery_loglevel": (
         "logging_celery_log_level",
         "string",

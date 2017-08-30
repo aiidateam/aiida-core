@@ -8,12 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+import logging
 from tabulate import tabulate
 from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
+LOG_LEVEL_MAPPING = {
+    levelname: i for levelname, i in [
+        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
+    ]
+    if not levelname.startswith('Level')
+}
+LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -71,7 +79,7 @@ def do_list(past_days, all_nodes, limit):
         ])
 
     # Revert table:
-    # in this way, I order by 'desc', so I start by the most recent, but then 
+    # in this way, I order by 'desc', so I start by the most recent, but then
     # I print this as the las one (like 'verdi calculation list' does)
     # This is useful when 'limit' is set to not None
     table = table[::-1]
@@ -82,8 +90,8 @@ def do_list(past_days, all_nodes, limit):
 @click.argument('pk', nargs=1, type=int)
 @click.option('-i', '--indent-size', type=int, default=2)
 @click.option('-l', '--levelname',
-              type=click.Choice(['DEBUG', 'INFO', 'REPORT', 'WARNING', 'ERROR', 'CRITICAL']),
-              default=None,
+              type=click.Choice(LOG_LEVELS),
+              default='REPORT',
               help='Filter the results by name of the log level'
               )
 @click.option('-o', '--order-by',
@@ -111,15 +119,12 @@ def report(pk, levelname, order_by, indent_size):
             'objpk': pk,
         }
 
-        if levelname:
-            filters['levelname'] = levelname
-
         entries = backend.log.find(filter_by=filters)
-
-        if entries is None or len(entries) == 0:
-            return []
-        else:
-            return [(_, depth) for _ in entries]
+        entries = [
+            entry for entry in entries
+            if LOG_LEVEL_MAPPING[entry.levelname] >= LOG_LEVEL_MAPPING[levelname]
+        ]
+        return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
         qb = QueryBuilder(with_dbpath=False)
@@ -208,13 +213,13 @@ def checkpoint(pks):
     for pk in pks:
         try:
             try:
-                cp = storage.load_checkpoint(pk)
+                checkpoint = storage.get_checkpoint_state(pk)
             except BaseException as e:
                 print("Failed to load checkpoint {}".format(pk))
                 print("Exception: {}".format(e.message))
             else:
                 print("Last checkpoint for calculation '{}'".format(pk))
-                print(str(cp))
+                print(str(checkpoint))
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
 

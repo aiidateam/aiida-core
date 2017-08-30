@@ -72,6 +72,17 @@ LOGGING = {
             'level': get_property('logging.paramiko_loglevel'),
             'propagate': False,
         },
+        'alembic': {
+            'handlers': ['console'],
+            'level': get_property('logging.alembic_loglevel'),
+            'propagate': False,
+        },
+        'sqlalchemy': {
+            'handlers': ['console'],
+            'level': get_property('logging.sqlalchemy_loglevel'),
+            'propagate': False,
+            'qualname': 'sqlalchemy.engine',
+        },
     },
 }
 
@@ -83,6 +94,14 @@ if get_property("warnings.showdeprecations"):
     # in Python 2.7 it is suppressed by default
     warnings.simplefilter('default', DeprecationWarning)
 
+def try_load_dbenv(*argc, **argv):
+    """
+    Run `load_dbenv` unless the dbenv has already been loaded.
+    """
+    if not is_dbenv_loaded():
+        load_dbenv(*argc, **argv)
+        return True
+    return False
 
 def load_dbenv(*argc, **argv):
     """
@@ -121,7 +140,7 @@ If you use AiiDA for publication purposes, please cite:
 
 def get_file_header(comment_char="# "):
     """
-    Get a string to be put as header of files created with AiiDA; 
+    Get a string to be put as header of files created with AiiDA;
     put in front a comment character as specified in the parameter
 
     :param comment_char: string put in front of each line

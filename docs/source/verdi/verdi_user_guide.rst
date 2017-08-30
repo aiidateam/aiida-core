@@ -69,8 +69,9 @@ Below is a list with all the available subcommands.
   * **label**: view / set the label of a calculation
   * **description**: view / set the description of a calculation
   * **res**: shows the calculation results (from calc.res).
-  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations 
-  
+  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations
+
+
 .. note:: When using gotocomputer, be careful not to change any file
   that AiiDA created,
   nor to modify the output files or resubmit the calculation, 
@@ -234,9 +235,14 @@ Manages database data objects.
 ``verdi devel``
 +++++++++++++++
 
-Here there are some functions that are in the development stage, and that might eventually find their way outside of this placeholder. As such, they are buggy, possibly difficult to use, not necessarily documented, and they might be subject to non back-compatible changes.
+Here there are some functions that are in the development stage, and that might eventually find their way outside of this placeholder. 
+As such, they are buggy, possibly difficult to use, not necessarily documented, and they might be subject to non back-compatible changes.
 
   * **delproperty**, **describeproperties**, **getproperty**, **listproperties**,  **setproperty**: handle the properties, see :doc:`here<properties>` for more information.
+
+
+Type in ``verdi devel listproperties`` to get a list of all *set* properties, and ``verdi devel describeproperties`` to get a description of all properties that you can possibly set.
+The command ``verdi devel getproperty [propertyname]`` will give you the set value for that propery, that can be changed with ``setproperty``.
 
 .. _export:
 
@@ -252,7 +258,8 @@ See also ``verdi import`` to import this data on another database.
 ``verdi graph``
 +++++++++++++++
 
-  * **generate**: generates a graph from a given root node, in ``.dot`` format. This can be rendered for example with the graphviz ``dot`` utility.
+  * **generate**: generates a graph from a given root node either in a graphical or a  ``.dot`` format.
+
 
 .. _group:
 

@@ -308,22 +308,25 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
-        from aiida.orm import DataFactory
         from aiida.orm.importexport import export
         from aiida.common.folders import SandboxFolder
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm import load_node
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
-            StructureData = DataFactory('structure')
+            node_label = "Test structure data"
             sd = StructureData()
+            sd.label = str(node_label)
             sd.store()
 
             filename = os.path.join(temp_folder, "export.tar.gz")
             export([sd.dbnode], outfile=filename, silent=True)
 
             unpack = SandboxFolder()
-            with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+            with tarfile.open(
+                    filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack.abspath)
 
             with open(unpack.get_abs_path('data.json'), 'r') as f:
@@ -336,7 +339,8 @@ class TestSimple(AiidaTestCase):
             with open(unpack.get_abs_path('data.json'), 'w') as f:
                 json.dump(metadata, f)
 
-            with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
+            with tarfile.open(
+                    filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack.abspath, arcname="")
 
             self.clean_db()
@@ -345,6 +349,8 @@ class TestSimple(AiidaTestCase):
                 import_data(filename, silent=True)
 
             import_data(filename, ignore_unknown_nodes=True, silent=True)
+            self.assertEquals(load_node(sd.uuid).label, node_label)
+
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -495,7 +501,6 @@ class TestSimple(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
-            # print temp_folder
 
     def test_6(self):
         """
@@ -602,6 +607,75 @@ class TestSimple(AiidaTestCase):
                 self.assertEquals(load_node(uuid).get_user().email,
                                   get_configured_user_email())
 
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+    def test_7(self):
+        """
+        This test checks that nodes that belong to a specific group are
+        correctly imported and exported.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.orm.user import User
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = User(email=new_email)
+            user.force_save()
+
+            # Create a structure data node that has a calculation as output
+            sd1 = StructureData()
+            sd1.dbnode.user = user._dbuser
+            sd1.label = 'sd1'
+            sd1.store()
+
+            jc1 = JobCalculation()
+            jc1.set_computer(self.computer)
+            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.dbnode.user = user._dbuser
+            jc1.label = 'jc1'
+            jc1.store()
+            jc1.add_link_from(sd1)
+            jc1._set_state(calc_states.PARSING)
+
+            # Create a group and add the data inside
+            from aiida.orm.group import Group
+            g1 = Group(name="node_group")
+            g1.store()
+            g1.add_nodes([sd1, jc1])
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1,
+                   silent=True)
+            n_uuids = [sd1.uuid, jc1.uuid]
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in n_uuids:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+
+            # Check that the exported group is imported correctly
+            qb = QueryBuilder()
+            qb.append(Group, filters={'uuid': {'==': g1.uuid}})
+            self.assertEquals(qb.count(), 1, "The group was not found.")
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)

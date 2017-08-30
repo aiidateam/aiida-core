@@ -26,6 +26,7 @@ db_test_list = {
         'query': ['aiida.backends.sqlalchemy.tests.query'],
         'session': ['aiida.backends.sqlalchemy.tests.session'],
         'schema': ['aiida.backends.sqlalchemy.tests.schema'],
+        'migrations': ['aiida.backends.sqlalchemy.tests.migrations'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {
@@ -34,13 +35,10 @@ db_test_list = {
         'nwchem': ['aiida.backends.tests.nwchem'],
         'base_dataclasses': ['aiida.backends.tests.base_dataclasses'],
         'dataclasses': ['aiida.backends.tests.dataclasses'],
-        'quantumespressopw': ['aiida.backends.tests.quantumespressopw'],
         'dbimporters': ['aiida.backends.tests.dbimporters'],
         'codtools': ['aiida.backends.tests.codtools'],
         'export_and_import': ['aiida.backends.tests.export_and_import'],
         'parsers': ['aiida.backends.tests.parsers'],
-        'pwinputparser': ['aiida.backends.tests.pwinputparser'],
-        'quantumespressopwimmigrant': ['aiida.backends.tests.quantumespressopwimmigrant'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],
         'query': ['aiida.backends.tests.query'],
         'workflows': ['aiida.backends.tests.workflows'],

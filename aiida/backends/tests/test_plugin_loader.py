@@ -29,15 +29,6 @@ class TestExistingPlugins(AiidaTestCase):
         for i in calcs:
             self.assertTrue(issubclass(CalculationFactory(i), JobCalculation))
 
-    def test_existing_parsers(self):
-        """Test listing all preinstalled parsers"""
-        from aiida.parsers import Parser
-        pars = pl.existing_plugins(Parser, 'aiida.parsers.plugins')
-        self.assertIsInstance(pars, list)
-        from aiida.parsers import ParserFactory
-        for i in pars:
-            self.assertTrue(issubclass(ParserFactory(i), Parser))
-
     def test_existing_data(self):
         """Test listing all preinstalled data formats"""
         from aiida.orm.data import Data

@@ -84,9 +84,6 @@ if __name__ == '__main__':
                 'local = aiida.transport.plugins.local:LocalTransport',
             ],
             'aiida.workflows': [],
-            'aiida.tools.dbexporters.tcod_plugins': [
-                'nwchem.nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
-            ],
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'
             ],

@@ -259,6 +259,34 @@ class TestExposeProcess(AiidaTestCase):
 
         ExposeProcess.run(**{'alef': {'a': Int(1), 'b': Int(2)}, 'beta': {'a': Int(3), 'b': Int(4)}})
 
+    def test_expose_pass_same_dict(self):
+        """
+        Pass the same dict to two different namespaces.
+        """
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess)
+                spec.expose_inputs(SimpleProcess, namespace='beta')
+
+            @override
+            def _run(self, **kwargs):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+                assert 'a' in self.inputs.beta
+                assert 'b' in self.inputs.beta
+                assert self.inputs['a'] == Int(1)
+                assert self.inputs['b'] == Int(2)
+                assert self.inputs.beta['a'] == Int(1)
+                assert self.inputs.beta['b'] == Int(2)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+
+        sub_inputs = {'a': Int(1), 'b': Int(2)}
+        ExposeProcess.run(**{'alef': sub_inputs, 'beta': sub_inputs})
 
 class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
 

@@ -54,14 +54,6 @@ if __name__ == '__main__':
             # following are AiiDA plugin entry points:
             'aiida.calculations': [
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
-                'nwchem.basic = aiida.orm.calculation.job.nwchem.basic:BasicCalculation',
-                'nwchem.pymatgen = aiida.orm.calculation.job.nwchem.nwcpymatgen:NwcpymatgenCalculation',
-                'codtools.ciffilter = aiida.orm.calculation.job.codtools.ciffilter:CiffilterCalculation',
-                'codtools.cifcellcontents = aiida.orm.calculation.job.codtools.cifcellcontents:CifcellcontentsCalculation',
-                'codtools.cifcodcheck = aiida.orm.calculation.job.codtools.cifcodcheck:CifcodcheckCalculation',
-                'codtools.cifcoddeposit = aiida.orm.calculation.job.codtools.cifcoddeposit:CifcoddepositCalculation',
-                'codtools.cifcodnumbers = aiida.orm.calculation.job.codtools.cifcodnumbers:CifcodnumbersCalculation',
-                'codtools.cifsplitprimitive = aiida.orm.calculation.job.codtools.cifsplitprimitive:CifsplitprimitiveCalculation',
             ],
             'aiida.data':[
                 'array.bands = aiida.orm.data.array.bands:BandsData',
@@ -79,18 +71,8 @@ if __name__ == '__main__':
                 'structure = aiida.orm.data.structure:StructureData',
                 'upf = aiida.orm.data.upf:UpfData'
             ],
-            'aiida.parsers': [
-                'codtools.cifcellcontents = aiida.parsers.plugins.codtools.cifcellcontents:CifcellcontentsParser',
-                'codtools.cifcodcheck = aiida.parsers.plugins.codtools.cifcodcheck:CifcodcheckParser',
-                'codtools.cifcoddeposit = aiida.parsers.plugins.codtools.cifcoddeposit:CifcoddepositParser',
-                'codtools.cifcodnumbers = aiida.parsers.plugins.codtools.cifcodnumbers:CifcodnumbersParser',
-                'codtools.ciffilter = aiida.parsers.plugins.codtools.ciffilter:CiffilterParser',
-                'codtools.cifsplitprimitive = aiida.parsers.plugins.codtools.cifsplitprimitive:CifsplitprimitiveParser',
-                'nwchem.basic = aiida.parsers.plugins.nwchem.basic:BasicParser',
-                'nwchem.basenwc = aiida.parsers.plugins.nwchem.__init__:BasenwcParser',
-                'nwchem.pymatgen = aiida.parsers.plugins.nwchem.nwcpymatgen:NwcpymatgenParser',
-            ],
             'aiida.cmdline': [],
+            'aiida.parsers': [],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',
                 'slurm = aiida.scheduler.plugins.slurm:SlurmScheduler',

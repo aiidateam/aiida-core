@@ -193,17 +193,26 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     group of entry points, aiida.common.pluginloader.plugin_list is returned
     """
     from aiida.common.old_pluginloader import existing_plugins as old_existing
+
+    category = _inv_category_mapping.get(plugins_module_name)
+
     plugins = []
-    try:    # try and add internal plugins to the list
+    old_plugins_found = True
+    new_plugins_found = True
+
+    if not category:
+        new_plugins_found = False
+    else:
+        plugins = plugin_list(category)
+
+    try:
         plugins += old_existing(base_class, plugins_module_name, max_depth=max_depth, suffix=suffix)
     except MissingPluginError as e:
-        # if there's no entry point for this type of plugin, reraise
-        category = _inv_category_mapping.get(plugins_module_name)
-        if not category:
-            raise e
-        else:
-            pass
-        plugins += plugin_list(category)
+        old_plugins_found = False
+
+    if not old_plugins_found and not new_plugins_found:
+        raise MissingPluginError("neither new nor old plugins could be found for {}".format(plugins_module_name))
+
     return plugins
 
 

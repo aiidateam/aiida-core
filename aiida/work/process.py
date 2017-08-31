@@ -282,6 +282,10 @@ class Process(plum.process.Process):
         else:
             return super(Process, self).out(output_port, value)
 
+    def out_many(self, **nodes):
+        for name, value in nodes.items():
+            self.out(name, value)
+
     @override
     def on_create(self, pid, inputs, saved_instance_state):
         from aiida.orm import load_node

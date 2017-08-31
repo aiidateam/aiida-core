@@ -812,30 +812,23 @@ def _collect_tags(node, calc,parameters=None,
             tags['_dft_BZ_integration_grid_shift_Y'] = shift[1]
             tags['_dft_BZ_integration_grid_shift_Z'] = shift[2]
 
-    # Collecting code-specific data
-
-    from aiida.common.pluginloader import BaseFactory, existing_plugins
-    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-
-    plugin_path = "aiida.tools.dbexporters.tcod_plugins"
-    plugins = list()
-
-    if calc is not None:
-        for plugin in existing_plugins(BaseTcodtranslator, plugin_path):
-            cls = BaseFactory(plugin, BaseTcodtranslator, plugin_path)
-            if calc._plugin_type_string.endswith(cls._plugin_type_string + '.'):
-                plugins.append(cls)
-
     from aiida.common.exceptions import MultipleObjectsError
-    if len(plugins) > 1:
-        raise MultipleObjectsError("more than one plugin found for "
-                                   "{}".calc._plugin_type_string)
+    from aiida.common.pluginloader import all_plugins, get_plugin
 
-    if len(plugins) == 1:
-        plugin = plugins[0]
-        translated_tags = translate_calculation_specific_values(calc,
-                                                                plugin)
-        tags.update(translated_tags)
+    # Collecting code-specific data
+    if calc is not None:
+        category = 'tools.dbexporters.tcod_plugins'
+        plugins = all_plugins(category)
+
+        if len(plugins) > 1:
+            raise MultipleObjectsError('more than one plugin found for {}'.format(category))
+
+        if len(plugins) == 1:
+            plugin = get_plugin(category, plugins[0])
+
+            if calc._plugin_type_string.endswith(plugin._plugin_type_string + '.'):
+                translated_tags = translate_calculation_specific_values(calc, plugin)
+                tags.update(translated_tags)
 
     return tags
 

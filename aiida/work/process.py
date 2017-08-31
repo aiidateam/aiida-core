@@ -10,6 +10,7 @@
 
 import inspect
 import collections
+from collections import defaultdict
 import uuid
 from enum import Enum
 import itertools
@@ -134,6 +135,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         self._fastforwardable = False
         self._inputs = PortNamespace()
         self._outputs = PortNamespace()
+        self._exposed_inputs = defaultdict(lambda: defaultdict(list))
 
     def is_fastforwardable(self):
         return self._fastforwardable
@@ -183,19 +185,20 @@ class ProcessSpec(plum.process.ProcessSpec):
             port_namespace = self._inputs[namespace]
         else:
             port_namespace = self._inputs
+        exposed_inputs_list = self._exposed_inputs[namespace][process_class]
 
         for name, port in process_class.spec().inputs.iteritems():
 
             if name.startswith('_') or name == 'dynamic':
                 continue
 
-            if not exclude and not include:
+            if any([
+                not exclude and not include,
+                include and name in include,
+                exclude and name not in exclude
+            ]):
                 port_namespace[name] = port
-            elif include and name in include:
-                port_namespace[name] = port
-            elif exclude and name not in exclude:
-                port_namespace[name] = port
-
+                exposed_inputs_list.append(name)
 
 class Process(plum.process.Process):
     """
@@ -401,7 +404,7 @@ class Process(plum.process.Process):
             namespaces.insert(0, None)
 
         for namespace in namespaces:
-
+            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
             # The namespace None indicates the base level namespace
             if namespace is None:
                 inputs = self.inputs
@@ -414,7 +417,7 @@ class Process(plum.process.Process):
                     raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
 
             for name, port in port_namespace.ports.iteritems():
-                if name in inputs and name in process_class.spec().inputs:
+                if name in inputs and name in exposed_inputs_list:
                     exposed_inputs[name] = inputs[name]
 
         return exposed_inputs

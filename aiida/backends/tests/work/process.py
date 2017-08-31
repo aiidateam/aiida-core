@@ -720,3 +720,41 @@ class TestNonAgglomerateExposeProcess(AiidaTestCase):
             },
         }
         self.ExposeProcess.run(**inputs)
+
+
+class TestExposeOutputProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestExposeOutputProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.output('a', valid_type=Int, required=True)
+                spec.output('b', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                self.out('a', Int(1))
+                self.out('b', Int(2))
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_expose_outputs(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_outputs(SimpleProcess)
+
+            @override
+            def _run(self, **kwargs):
+                instance = SimpleProcess.new_instance()
+                instance.run_until_complete()
+                self.out_many(**self.exposed_outputs(instance.calc, SimpleProcess))
+
+        result = ExposeProcess.run()
+        assert all(key in result for key in ['a', 'b'])

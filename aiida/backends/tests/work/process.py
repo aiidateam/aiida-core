@@ -422,6 +422,53 @@ class TestNestedNamespacedExposedProcess(AiidaTestCase):
             **{'e': Int(4)}
         )
 
+class TestIncludeExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestIncludeExposeProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, required=False)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_include_none(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, include=[])
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(a=Int(1), b=Int(2), **self.exposed_inputs(SimpleProcess))
+
+    def test_include_one(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, include=['a'])
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(b=Int(2), **self.exposed_inputs(SimpleProcess))
+
+        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
 
 class TestExcludeExposeProcess(AiidaTestCase):
 

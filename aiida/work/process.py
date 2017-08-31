@@ -165,7 +165,7 @@ class ProcessSpec(plum.process.ProcessSpec):
 
         return template
 
-    def expose_inputs(self, process_class, namespace=None, exclude=(), include=()):
+    def expose_inputs(self, process_class, namespace=None, exclude=(), include=None):
         """
         This method allows one to automatically add the inputs from another
         Process to this ProcessSpec. The optional namespace argument can be
@@ -175,7 +175,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         :param namespace: a namespace in which to place the exposed inputs
         :param exclude: list or tuple of input keys to exclude from being exposed
         """
-        if exclude and include:
+        if exclude and include is not None:
             raise ValueError('exclude and include are mutually exclusive')
 
         if namespace:
@@ -189,13 +189,12 @@ class ProcessSpec(plum.process.ProcessSpec):
             if name.startswith('_') or name == 'dynamic':
                 continue
 
-            if not exclude and not include:
-                port_namespace[name] = port
-            elif include and name in include:
-                port_namespace[name] = port
-            elif exclude and name not in exclude:
-                port_namespace[name] = port
-
+            if include is not None:
+                if name in include:
+                    port_namespace[name] = port
+            else:
+                if name not in exclude:
+                    port_namespace[name] = port
 
 class Process(plum.process.Process):
     """

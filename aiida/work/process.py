@@ -10,7 +10,7 @@
 
 import inspect
 import collections
-from collections import defaultdict 
+from collections import defaultdict
 import uuid
 from enum import Enum
 import itertools
@@ -183,6 +183,7 @@ class ProcessSpec(plum.process.ProcessSpec):
             port_namespace = self._inputs[namespace]
         else:
             port_namespace = self._inputs
+        exposed_inputs_list = self._exposed_inputs[namespace][process_class]
 
         for name, port in self._filter_names(
             process_class.spec().inputs.iteritems(),
@@ -216,8 +217,8 @@ class ProcessSpec(plum.process.ProcessSpec):
 
         for name, port in items:
             if include is not None:
-                if name in include:
-                    port_namespace[name] = port
+                if name not in include:
+                    continue
             else:
                 if name in exclude:
                     continue
@@ -431,7 +432,7 @@ class Process(plum.process.Process):
             namespaces.insert(0, None)
 
         for namespace in namespaces:
-
+            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
             # The namespace None indicates the base level namespace
             if namespace is None:
                 inputs = self.inputs
@@ -444,7 +445,7 @@ class Process(plum.process.Process):
                     raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
 
             for name, port in port_namespace.ports.iteritems():
-                if name in inputs and name in process_class.spec().inputs:
+                if name in inputs and name in exposed_inputs_list:
                     exposed_inputs[name] = inputs[name]
 
         return exposed_inputs

@@ -72,6 +72,17 @@ LOGGING = {
             'level': get_property('logging.paramiko_loglevel'),
             'propagate': False,
         },
+        'alembic': {
+            'handlers': ['console'],
+            'level': get_property('logging.alembic_loglevel'),
+            'propagate': False,
+        },
+        'sqlalchemy': {
+            'handlers': ['console'],
+            'level': get_property('logging.sqlalchemy_loglevel'),
+            'propagate': False,
+            'qualname': 'sqlalchemy.engine',
+        },
     },
 }
 

@@ -484,7 +484,7 @@ class TestExcludeExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SimpleProcess.run(a=Int(1), **self.exposed_inputs(SimpleProcess))
+                SimpleProcess.run(a=Int(1), **self.exposed_inputs(SimpleProcess, agglomerate=False))
 
         ExposeProcess.run(a=Str('1'), b=Int(2))
 

@@ -15,6 +15,17 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
+def has_nwchem_plugin():
+    from aiida.common.pluginloader import get_plugin
+    from aiida.common.exceptions import MissingPluginError
+    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+
+    try:
+        get_plugin('tools.dbexports.tcod_plugins', 'nwchem.nwcpymatgen')
+    except MissingPluginError:
+        return False
+
+    return True
 
 
 class FakeObject(object):
@@ -136,6 +147,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
@@ -237,15 +249,14 @@ class TestTcodDbExporter(AiidaTestCase):
                           ['cd 1; ./_aiidasubmit.sh'])
 
 
+    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_nwcpymatgen_translation(self):
-        from aiida.tools.dbexporters.tcod \
-            import translate_calculation_specific_values
-        # from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
-        #     import NwcpymatgenTcodtranslator as NPT
-        from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
+        from aiida.orm.data.parameter import ParameterData
         from aiida.common.pluginloader import get_plugin
-        NPT = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
+        from aiida.tools.dbexporters.tcod import translate_calculation_specific_values
+
+        nwchem_plugin = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
 
         calc = FakeObject({
             "out": {"output":
@@ -299,7 +310,7 @@ class TestTcodDbExporter(AiidaTestCase):
                     "verify": "yes",
                 })
             }})
-        res = translate_calculation_specific_values(calc, NPT)
+        res = translate_calculation_specific_values(calc, nwchem_plugin)
         self.assertEquals(res, {
             '_tcod_software_package': 'NWChem',
             '_tcod_software_package_version': '6.3',
@@ -312,6 +323,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values

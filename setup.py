@@ -66,7 +66,6 @@ if __name__ == '__main__':
                 'folder = aiida.orm.data.folder:FolderData',
                 'parameter = aiida.orm.data.parameter:ParameterData',
                 'remote = aiida.orm.data.remote:RemoteData',
-                'simple = aiida.orm.data.simple:SimpleData',
                 'singlefile = aiida.orm.data.singlefile:SinglefileData',
                 'structure = aiida.orm.data.structure:StructureData',
                 'upf = aiida.orm.data.upf:UpfData'

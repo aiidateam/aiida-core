@@ -60,7 +60,7 @@ install_requires = [
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
-    'ipython',
+    'ipython < 6.0',
 ]
 
 extras_require = {

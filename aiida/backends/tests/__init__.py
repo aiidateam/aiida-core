@@ -32,11 +32,9 @@ db_test_list = {
     'common': {
         'generic': ['aiida.backends.tests.generic'],
         'nodes': ['aiida.backends.tests.nodes'],
-        'nwchem': ['aiida.backends.tests.nwchem'],
         'base_dataclasses': ['aiida.backends.tests.base_dataclasses'],
         'dataclasses': ['aiida.backends.tests.dataclasses'],
         'dbimporters': ['aiida.backends.tests.dbimporters'],
-        'codtools': ['aiida.backends.tests.codtools'],
         'export_and_import': ['aiida.backends.tests.export_and_import'],
         'parsers': ['aiida.backends.tests.parsers'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],

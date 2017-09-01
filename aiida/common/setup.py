@@ -869,6 +869,15 @@ _property_table = {
         "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
         "",
         None),
+    "verdishell.calculation_list": (
+        "projections_for_calculation_list",
+        "list_of_str",
+        "A list of the projections that should be shown by default "
+        "when typing 'verdi calculation list'. "
+        "Set by passing the projections space separated as a string, for example: "
+        "verdi devel setproperty verdishell.calculation_list 'pk time state'",
+        ('pk', 'ctime', 'state', 'sched', 'computer', 'type'),
+        None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",
         "string",
@@ -883,6 +892,18 @@ _property_table = {
         "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'paramiko' logger",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.alembic_loglevel": (
+        "logging_alembic_log_level",
+        "string",
+        "Minimum level to log to the console",
+        "INFO",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.sqlalchemy_loglevel": (
+        "logging_sqlalchemy_loglevel",
+        "string",
+        "Minimum level to log to the console",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.celery_loglevel": (
@@ -1070,6 +1091,9 @@ def set_property(name, value):
         actual_value = unicode(value)
     elif type_string == "int":
         actual_value = int(value)
+    elif type_string == 'list_of_str':
+        # I expect the results as a list of strings
+        actual_value = value.split()
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(

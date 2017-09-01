@@ -42,6 +42,7 @@ install_requires = [
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
+    'alembic>=0.9.2',
     'ujson==1.35',
     'enum34==1.1.2',
     'voluptuous==0.8.11',

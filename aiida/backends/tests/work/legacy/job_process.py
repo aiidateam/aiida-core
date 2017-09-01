@@ -9,10 +9,9 @@
 ###########################################################################
 
 from aiida.backends.testbase import AiidaTestCase
-
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
+from aiida.work import util
 from aiida.work.class_loader import ClassLoader
-import aiida.work.util as util
 from aiida.work.legacy.job_process import JobProcess
 
 
@@ -27,4 +26,55 @@ class TestJobProcess(AiidaTestCase):
 
     def test_class_loader(self):
         cl = ClassLoader()
-        PwProcess = JobProcess.build(PwCalculation)
+        TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
+
+    def test_job_process_set_label_and_description(self):
+    	"""
+    	Verify that calculation label and description get set when passed through inputs
+    	"""
+        label = 'test_label'
+        description = 'test_description'
+        inputs = {
+            '_options': {
+                    'computer': self.computer,
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                    'max_wallclock_seconds': 10,
+                },
+            '_label': label,
+            '_description': description
+        }
+        job_instance = self._run_inputs(inputs)
+
+        self.assertEquals(job_instance.calc.label, label)
+        self.assertEquals(job_instance.calc.description, description)
+
+    def test_job_process_set_none(self):
+    	"""
+    	Verify that calculation label and description can be set to ``None``.
+    	"""
+        inputs = {
+            '_options': {
+                    'computer': self.computer,
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                    'max_wallclock_seconds': 10,
+                },
+            '_label': None,
+            '_description': None
+        }
+
+        self._run_inputs(inputs)
+
+    def _run_inputs(self, inputs):
+        job_class = TemplatereplacerCalculation.process()
+        job_instance = job_class.new_instance(inputs)
+
+        job_instance.stop()
+        job_instance.run_until_complete()
+
+        return job_instance

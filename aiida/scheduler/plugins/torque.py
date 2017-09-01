@@ -12,7 +12,7 @@ Plugin for PBS/Torque.
 This has been tested on Torque v.2.4.16 (from Ubuntu).
 """
 from __future__ import division
-import aiida.scheduler
+from aiida.scheduler import Scheduler
 from .pbsbaseclasses import PbsBaseClass
 
 ## These are instead the states from PBS/Torque v.2.4.16 (from Ubuntu)
@@ -28,13 +28,13 @@ from .pbsbaseclasses import PbsBaseClass
 
 
 
-class TorqueScheduler(PbsBaseClass):
+class TorqueScheduler(PbsBaseClass, Scheduler):
     """
     Subclass to support the Torque scheduler..
 
     I redefine only what needs to change from the base class
     """
-    _logger = aiida.scheduler.Scheduler._logger.getChild('torque')
+    _logger = Scheduler._logger.getChild('torque')
 
     ## I don't need to change this from the base class
     #_job_resource_class = PbsJobResource

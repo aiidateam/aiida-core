@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import unittest
+import operator
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
@@ -189,3 +190,15 @@ class TestFloat(AiidaTestCase):
 
         res = a ** b
         self.assertEqual(res.value, 16.)
+
+class TestFloatIntMix(AiidaTestCase):
+    def test_operator(self):
+        a = Float(2.2)
+        b = Int(3)
+
+        for op in [operator.add, operator.mul, operator.pow, operator.lt, operator.le, operator.gt, operator.ge, operator.iadd, operator.imul]:
+            for x, y in [(a, b), (b, a)]:
+                c = op(x, y)
+                c_val = op(x.value, y.value)
+                self.assertEqual(c._type, type(c_val))
+                self.assertEqual(c, op(x.value, y.value))

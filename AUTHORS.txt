@@ -7,7 +7,7 @@ The current members of the AiiDA team are, in alphabetical order:
 * Fernando Gargiulo
 * Leonid Kahle
 * Boris Kozinsky
-* Rico Haeuselmann
+* Rico Häuselmann
 * Sebastiaan P. Huber
 * Nicola Marzari
 * Andrius Merkys
@@ -37,6 +37,7 @@ We would like to thank the following people for their contibution
 * Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
 * Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
   the extension of the PW plugin to the ENVIRON code
+* Dominik Gresch (ETHZ): for contributions to the workflow engine
 * Eric Hontz (MIT, USA): for the Quantum Espresso pwimmigrant plugin
 * Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins 
   for PP, PROJWFC, and the first version of the Wannier90 plugin
@@ -47,7 +48,7 @@ We would like to thank the following people for their contibution
 And the following people for corrections, improving the documentation, 
 spotting typos or useful suggestions:
 
-Jens Broeder, Ivano E. Castelli, Dominik Gresch, Ian Lee, Gianluca Prandini, 
+Jens Broeder, Ivano E. Castelli, Ian Lee, Gianluca Prandini, 
 Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic
 
 ---

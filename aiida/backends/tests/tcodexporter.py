@@ -21,7 +21,7 @@ def has_nwchem_plugin():
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
     try:
-        get_plugin('tools.dbexports.tcod_plugins', 'nwchem.nwcpymatgen')
+        get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
     except MissingPluginError:
         return False
 

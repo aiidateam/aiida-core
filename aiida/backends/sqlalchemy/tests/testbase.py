@@ -33,10 +33,12 @@ from aiida.orm.computer import Computer
 expire_on_commit = True
 Session = sessionmaker(expire_on_commit=expire_on_commit)
 
-# This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
-# This inherits only from 'object' to avoid that it is picked up by the automatic discovery of tests
-# (It shouldn't, as it risks to destroy the DB if there are not the checks in place, and these are
-# implemented in the AiidaTestCase
+
+# This contains the codebase for the setUpClass and tearDown methods used
+# internally by the AiidaTestCase. This inherits only from 'object' to avoid
+# that it is picked up by the automatic discovery of tests
+# (It shouldn't, as it risks to destroy the DB if there are not the checks
+# in place, and these are implemented in the AiidaTestCase
 class SqlAlchemyTests(AiidaTestImplementation):
 
     # Specify the need to drop the table at the beginning of a test case

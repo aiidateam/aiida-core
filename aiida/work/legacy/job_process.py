@@ -10,28 +10,16 @@
 
 import plum.port as port
 import plum.process
-import plum.utils
-from plum.loop import tasks
-from aiida.common.datastructures import calc_states
-from aiida.scheduler.datastructures import job_states as scheduler_states
+import plum.util
 from aiida.common.lang import override
-from aiida.common.exceptions import ModificationNotAllowed
-from aiida.daemon.execmanager import parse_results, \
-    update_job_calc_from_job_info, update_job_calc_from_detailed_job_info
-from aiida.orm.calculation.job import JobCalculation
 from aiida.work.process import Process, DictSchema
-from aiida.work.utils import WithHeartbeat
-from aiida.work import event
-
-from . import calc_submitter
-
 from voluptuous import Any
 
 
-class JobProcess(Process, WithHeartbeat):
+
+class JobProcess(Process):
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = '_options'
-    WAITING_ON = 'waiting_on'
     _CALC_CLASS = None
 
     @classmethod
@@ -130,8 +118,13 @@ class JobProcess(Process, WithHeartbeat):
                     self._CALC_CLASS._use_methods[name]['additional_parameter']
 
                 for k, v in input.iteritems():
-                    getattr(self._calc,
+                    try:
+                        getattr(self._calc,
                             'use_{}'.format(name))(v, **{additional: k})
+                    except AttributeError as exception:
+                        raise AttributeError("You have provided for an input the key '{}' but"
+                            "the JobCalculation has no such use_{} method".format(name, name))
+
 
             else:
                 getattr(self._calc, 'use_{}'.format(name))(input)

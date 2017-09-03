@@ -19,6 +19,7 @@ from aiida.work.test_utils import DummyProcess
 from aiida.work.persistence import Persistence
 
 
+
 class TestRun(AiidaTestCase):
     def setUp(self):
         super(TestRun, self).setUp()

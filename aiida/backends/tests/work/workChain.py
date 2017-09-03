@@ -15,16 +15,15 @@ import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida.work.workchain import WorkChain, \
+    ToContext, _Block, _If, _While, if_, while_, return_
+from aiida.work.workchain import _WorkChainSpec, Outputs
+from aiida.work.workfunction import workfunction
+from aiida.work.run import run, async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.utils as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
-from aiida.work.workchain import WorkChain, \
-    ToContext, _Block, _If, _While, if_, while_, return_, assign_, append_
-from aiida.work.workchain import ToContext, _WorkChainSpec, Outputs
-from aiida.work import workfunction, ProcessState, run, async, submit
-import aiida.work.globals
-from aiida.work import async
 from aiida.daemon.workflowmanager import execute_steps
 from aiida.work.run import run_until, run_loop, enqueue, legacy_workflow
 
@@ -103,19 +102,34 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
+class TestContext(AiidaTestCase):
+    def test_attributes(self):
+        c = WorkChain.Context()
+        c.new_attr = 5
+        self.assertEqual(c.new_attr, 5)
+
+        del c.new_attr
+        with self.assertRaises(AttributeError):
+            c.new_attr
+
+    def test_dict(self):
+        c = WorkChain.Context()
+        c['new_attr'] = 5
+        self.assertEqual(c['new_attr'], 5)
+
+        del c['new_attr']
+        with self.assertRaises(KeyError):
+            c['new_attr']
+
+
 class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
-
-        self.procman = aiida.work.globals.get_thread_executor()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
-
-        self.procman.abort_all(timeout=10.)
-        self.assertEqual(self.procman.get_num_processes(), 0, "Failed to abort all processes")
         self.assertEquals(len(util.ProcessStack.stack()), 0)
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
@@ -126,7 +140,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        run(Wf, value=A, n=three)
+        Wf.run(value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -134,7 +148,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = run(Wf, value=B, n=three)
+        finished_steps = Wf.run(value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -142,7 +156,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = run(Wf, value=C, n=three)
+        finished_steps = Wf.run(value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -160,7 +174,6 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(ValueError):
             Wf.spec()
 
-    # @unittest.skip("Currently trying to find the bug that cases this test to deadlock.")
     def test_context(self):
         A = Str("a")
         B = Str("b")
@@ -193,7 +206,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['_return'] == B
                 assert self.ctx.r2['_return'] == B
 
-        run(Wf)
+        Wf.run()
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -265,7 +278,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        run(WcWithReturn)
+        WcWithReturn.run()
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
@@ -377,46 +390,46 @@ class TestWorkchain(AiidaTestCase):
         return wf_class.finished_steps
 
 
-# class TestWorkchainWithOldWorkflows(AiidaTestCase):
-#     def test_call_old_wf(self):
-#         wf = WorkflowDemo()
-#         wf.start()
-#         while wf.is_running():
-#             execute_steps()
-#
-#         class _TestWf(WorkChain):
-#             @classmethod
-#             def define(cls, spec):
-#                 super(_TestWf, cls).define(spec)
-#                 spec.outline(cls.start, cls.check)
-#
-#             def start(self):
-#                 return ToContext(wf=legacy_workflow(wf.pk))
-#
-#             def check(self):
-#                 assert self.ctx.wf is not None
-#
-#         _TestWf.run()
-#
-#     def test_old_wf_results(self):
-#         wf = WorkflowDemo()
-#         wf.start()
-#         while wf.is_running():
-#             execute_steps()
-#
-#         class _TestWf(WorkChain):
-#             @classmethod
-#             def define(cls, spec):
-#                 super(_TestWf, cls).define(spec)
-#                 spec.outline(cls.start, cls.check)
-#
-#             def start(self):
-#                 return ToContext(res=Outputs(legacy_workflow(wf.pk)))
-#
-#             def check(self):
-#                 assert set(self.ctx.res) == set(wf.get_results())
-#
-#         _TestWf.run()
+class TestWorkchainWithOldWorkflows(AiidaTestCase):
+    def test_call_old_wf(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(wf=legacy_workflow(wf.pk))
+
+            def check(self):
+                assert self.ctx.wf is not None
+
+        _TestWf.run()
+
+    def test_old_wf_results(self):
+        wf = WorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
+
+        class _TestWf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(_TestWf, cls).define(spec)
+                spec.outline(cls.start, cls.check)
+
+            def start(self):
+                return ToContext(res=Outputs(legacy_workflow(wf.pk)))
+
+            def check(self):
+                assert set(self.ctx.res) == set(wf.get_results())
+
+        _TestWf.run()
 
 
 class TestHelpers(AiidaTestCase):

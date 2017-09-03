@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+
 import uuid
 import shutil
 import tempfile
@@ -62,11 +63,11 @@ class TestProcess(AiidaTestCase):
         loop.reset()
 
     def test_process_stack(self):
-        run(ProcessStackTest)
+        ProcessStackTest.run()
 
     def test_inputs(self):
-        with self.assertRaises(TypeError):
-            run(BadOutput)
+        with self.assertRaises(AssertionError):
+            BadOutput.run()
 
     def test_pid_is_uuid(self):
         p = enqueue(DummyProcess, _store_provenance=False)
@@ -170,8 +171,11 @@ class TestFunctionProcess(AiidaTestCase):
 
         FP = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            run(FP, **inputs)
+            FP.run(**inputs)
 
         FP = work.FunctionProcess.build(wf_fixed_args)
         outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)
+
+
+

@@ -289,12 +289,13 @@ class TestParsers(AiidaTestCase):
 
             file_folder = os.path.split(__file__)[0]
             parser_test_folder = os.path.join(file_folder, 'parser_tests')
-            for f in os.listdir(parser_test_folder):
-                absf = os.path.abspath(os.path.join(parser_test_folder, f))
-                if is_valid_folder_name(f) and os.path.isdir(absf):
-                    function_name = f
-                    setattr(newcls, function_name,
-                            newcls.return_base_test(absf))
+            if os.path.isdir(parser_test_folder):
+                for f in os.listdir(parser_test_folder):
+                    absf = os.path.abspath(os.path.join(parser_test_folder, f))
+                    if is_valid_folder_name(f) and os.path.isdir(absf):
+                        function_name = f
+                        setattr(newcls, function_name,
+                                newcls.return_base_test(absf))
 
             return newcls
 

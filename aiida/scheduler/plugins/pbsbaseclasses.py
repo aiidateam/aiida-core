@@ -11,9 +11,8 @@
 Base classes for PBSPro and PBS/Torque plugins.
 """
 from __future__ import division
-import aiida.scheduler
 from aiida.common.utils import escape_for_bash
-from aiida.scheduler import SchedulerError, SchedulerParsingError
+from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
     JobInfo, job_states, MachineInfo, NodeNumberJobResource)
 
@@ -104,7 +103,7 @@ class PbsJobResource(NodeNumberJobResource):
                                  * self.num_mpiprocs_per_machine)
         
                 
-class PbsBaseClass(aiida.scheduler.Scheduler):
+class PbsBaseClass(object):
     """
     Base class with support for the PBSPro scheduler
     (http://www.pbsworks.com/) and for PBS and Torque
@@ -113,7 +112,7 @@ class PbsBaseClass(aiida.scheduler.Scheduler):
     Only a few properties need to be redefined, see examples of the pbspro and
     torque plugins
     """
-    _logger = aiida.scheduler.Scheduler._logger.getChild('pbsbaseclass')
+    _logger = Scheduler._logger.getChild('pbsbaseclass')
 
     # Query only by list of jobs and not by user
     _features = {

@@ -416,7 +416,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
     from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-    from aiida.backends.utils import set_backend_type, get_backend_type
+    from aiida.backends.utils import set_backend_type
     from aiida.common.exceptions import InvalidOperation
 
     # ~ cmdline_args = list(args)
@@ -522,49 +522,23 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
         elif backend_choice == BACKEND_SQLA:
             print("...for SQLAlchemy backend")
-            from aiida import is_dbenv_loaded, load_dbenv
+            from aiida import is_dbenv_loaded
+            from aiida.backends import settings
+            from aiida.backends.sqlalchemy.utils import (
+                _load_dbenv_noschemacheck, check_schema_version)
+            from aiida.backends.profile import load_profile
+
+            # We avoid calling load_dbenv since we want to force the schema
+            # migration
             if not is_dbenv_loaded():
-                load_dbenv()
+                settings.LOAD_DBENV_CALLED = True
+                # This is going to set global variables in settings, including
+                # settings.BACKEND
+                load_profile()
+                _load_dbenv_noschemacheck()
 
-            from aiida.backends.sqlalchemy.models.base import Base
-            from aiida.backends.sqlalchemy.utils import reset_session
-            from aiida.common.setup import get_profile_config
-
-            # This check should be done more properly
-            # try:
-            #     backend_type = get_backend_type()
-            # except KeyError:
-            #     backend_type = None
-            #
-            # if backend_type is not None and backend_type != BACKEND_SQLA:
-            #     raise InvalidOperation("An already existing database found"
-            #                            "and a different than the selected"
-            #                            "backend was used for its "
-            #                            "management.")
-
-            # Those import are necessary for SQLAlchemy to correctly create
-            # the needed database tables.
-            from aiida.backends.sqlalchemy.models.authinfo import (
-                DbAuthInfo)
-            from aiida.backends.sqlalchemy.models.comment import DbComment
-            from aiida.backends.sqlalchemy.models.computer import (
-                DbComputer)
-            from aiida.backends.sqlalchemy.models.group import (
-                DbGroup, table_groups_nodes)
-            from aiida.backends.sqlalchemy.models.lock import DbLock
-            from aiida.backends.sqlalchemy.models.log import DbLog
-            from aiida.backends.sqlalchemy.models.node import (
-                DbLink, DbNode, DbCalcState)
-            from aiida.backends.sqlalchemy.models.user import DbUser
-            from aiida.backends.sqlalchemy.models.workflow import (
-                DbWorkflow, DbWorkflowData, DbWorkflowStep)
-            from aiida.backends.sqlalchemy.models.settings import DbSetting
-
-            reset_session(get_profile_config(gprofile))
-            from aiida.backends.sqlalchemy import get_scoped_session
-            connection = get_scoped_session().connection()
-            Base.metadata.create_all(connection)
-
+            # Perform the needed migration quietly
+            check_schema_version(force_migration=True)
             set_backend_type(BACKEND_SQLA)
 
         else:

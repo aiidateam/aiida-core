@@ -1,3 +1,23 @@
+## v0.9.1:
+
+### Critical bug fixes
+- Workchain steps will no longer be executed multiple times due to process pickles not being locked
+
+### Minor bug fixes
+- Fix arithmetic operations for basic numeric types
+- Fixed `verdi calculation cleanworkdir` after changes in `QueryBuilder` syntax
+- Fixed `verdi calculation logshow` exception when called for `WorkCalculation` nodes
+- Fixed `verdi import` for SQLAlchemy profiles
+- Fixed bug in `reentry` and update dependency requirement to `v1.0.2`
+- Made octal literal string compatible with python 3
+- Fixed broken import in the ASE plugin
+
+### Improvements
+- `verdi calculation show` now properly distinguishes between `WorkCalculation` and `JobCalculation` nodes
+- Improved error handling in `verdi setup --non-interactive`
+- Disable unnecessary console logging for tests
+
+
 ## v0.9.0
 
 ### Data export functionality

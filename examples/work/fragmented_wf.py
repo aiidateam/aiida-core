@@ -14,7 +14,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.work.workchain import *
-from aiida.work.run import run
+from aiida.work.launch import run
 
 
 class W(WorkChain):

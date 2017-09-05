@@ -20,7 +20,7 @@ from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
 from aiida.work.process import Process
 from aiida.work.process_registry import ProcessRegistry
-from aiida.work.run import submit
+from aiida.work.launch import submit
 from aiida.common.lang import override
 from aiida.orm import load_node
 import aiida.work.utils as util

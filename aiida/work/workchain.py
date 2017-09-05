@@ -8,22 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import apricotpy
-from copy import deepcopy
+import abc
+from apricotpy import persistable
+import collections
 import inspect
-import uuid
-from collections import namedtuple, Mapping, Sequence, Set
 from plum.wait_ons import Checkpoint, WaitOnAll
-from aiida.orm import Node
-from aiida.work.process import Process, ProcessSpec
-from aiida.work.utils import WithHeartbeat
+
 from aiida.common.utils import get_class_string
-from aiida.work.interstep import *
+from .interstep import *
+from . import process
+from . import utils
 
 __all__ = ['WorkChain']
 
 
-class _WorkChainSpec(ProcessSpec):
+class _WorkChainSpec(process.ProcessSpec):
     def __init__(self):
         super(_WorkChainSpec, self).__init__()
         self._outline = None
@@ -50,43 +49,7 @@ class _WorkChainSpec(ProcessSpec):
         return self._outline
 
 
-def serialise_value(value):
-    """
-    Convert a value to a format that can be serialised.  In practice this means
-    converting Nodes to UUIDs, Mapping and Sequence values that are Nodes to UUIDs
-     
-    .. note::
-        Deepcopies are created for all values passed.
-        
-    :param value: The value to convert (if it falls into above criteria)
-    :return: A UUID, a copy of the mapping given with UUIDs as values where 
-        appropriate or similarly for a sequence.
-    """
-    if isinstance(value, Node):
-        return uuid.UUID(value.uuid)
-    elif isinstance(value, Mapping):
-        return value.__class__((k, serialise_value(v)) for k, v in value.iteritems())
-    elif isinstance(value, (Sequence, Set)):
-        return value.__class__(serialise_value(v) for v in value)
-    else:
-        return deepcopy(value)
-
-
-def deserialise_value(value):
-    if isinstance(value, uuid.UUID):
-        try:
-            return load_node(uuid=value)
-        except ValueError:
-            return deepcopy(value)
-    if isinstance(value, Mapping):
-        return value.__class__((k, deserialise_value(v)) for k, v in value.iteritems())
-    elif isinstance(value, (Sequence, Set)):
-        return value.__class__(deserialise_value(v) for v in value)
-    else:
-        return deepcopy(value)
-
-
-class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
+class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -103,8 +66,8 @@ class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, loop, inputs=None, pid=None, logger=None):
-        super(WorkChain, self).__init__(loop, inputs, pid, logger)
+    def __init__(self, inputs=None, pid=None, logger=None):
+        super(WorkChain, self).__init__(inputs, pid, logger)
         self._stepper = None
         self._barriers = []
         self._intersteps = []
@@ -114,28 +77,46 @@ class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
         super(WorkChain, self).save_instance_state(out_state)
         # Ask the stepper to save itself
         if self._stepper is not None:
-            stepper_state = apricotpy.Bundle()
-            self._stepper.save_position(stepper_state)
+            stepper_state = utils.Parcel()
+            self._stepper.save_instance_state(stepper_state)
             out_state[self._STEPPER_STATE] = stepper_state
 
-    def insert_barrier(self, wait_on):
+    @override
+    def load_instance_state(self, saved_state, evt_loop):
+        super(WorkChain, self).load_instance_state(saved_state, evt_loop)
+
+        # Recreate the stepper
+        if self._STEPPER_STATE in saved_state:
+            self._stepper = utils.Savable.load(saved_state[self._STEPPER_STATE])
+        else:
+            self._stepper = None
+
+        try:
+            self._intersteps = [_INTERSTEP_FACTORY.create(b) for
+                                b in saved_state[self._INTERSTEPS]]
+        except KeyError:
+            self._intersteps = []
+
+    def insert_barrier(self, awaitable):
         """
         Insert a barrier that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
-        :param wait_on: The thing to wait on (of type plum.wait.wait_on)
+        :param awaitable: The thing to await
+        :type awaitable: :class:`apricotpy.persistable.Awaitable`
         """
-        self._barriers.append(wait_on)
+        self._barriers.append(awaitable)
 
-    def remove_barrier(self, wait_on):
+    def remove_barrier(self, awaitable):
         """
         Remove a barrier.
 
         Precondition: must be a barrier that was previously inserted
 
-        :param wait_on:  The wait on to remove (of type plum.wait.wait_on)
+        :param awaitable:  The awaitable to remove
+        :type awaitable: :class:`apricotpy.persistable.Awaitable`
         """
-        del self._barriers[wait_on]
+        del self._barriers[awaitable]
 
     def insert_intersteps(self, intersteps):
         """
@@ -179,13 +160,15 @@ class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
         self._barriers = []
 
         try:
-            finished, retval = self._stepper.start()
+            finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
 
         if not finished:
             if retval is not None:
-                if isinstance(retval, list) and all(isinstance(interstep, Interstep) for interstep in retval):
+                if not isinstance(retval, str) and \
+                        isinstance(retval, collections.Sequence) and \
+                        all(isinstance(interstep, Interstep) for interstep in retval):
                     self.insert_intersteps(retval)
                 elif isinstance(retval, Interstep):
                     self.insert_intersteps(retval)
@@ -200,23 +183,6 @@ class WorkChain(apricotpy.ContextMixin, Process, WithHeartbeat):
                 return self.loop().create(WaitOnAll, self._barriers), self._do_step
             else:
                 return self.loop().create(Checkpoint), self._do_step
-
-    @override
-    def load_instance_state(self, saved_state, logger=None):
-        super(WorkChain, self).load_instance_state(saved_state, logger)
-        # Recreate the stepper
-        if self._STEPPER_STATE in saved_state:
-            self._stepper = self.spec().get_outline().create_stepper(self)
-            self._stepper.load_position(
-                saved_state[self._STEPPER_STATE])
-        else:
-            self._stepper = None
-
-        try:
-            self._intersteps = [_INTERSTEP_FACTORY.create(b) for
-                                b in saved_state[self._INTERSTEPS]]
-        except KeyError:
-            self._intersteps = []
 
     def abort_nowait(self, msg=None):
         """
@@ -297,13 +263,13 @@ class _InterstepFactory(object):
 _INTERSTEP_FACTORY = _InterstepFactory()
 
 
-class Stepper(object):
-    __metaclass__ = ABCMeta
+class Stepper(utils.Savable):
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, workflow):
         self._workflow = workflow
 
-    @abstractmethod
+    @abc.abstractmethod
     def step(self):
         """
         Execute on step of the instructions.
@@ -312,14 +278,6 @@ class Stepper(object):
             1. The return value from the executed step
         :rtype: tuple
         """
-        pass
-
-    @abstractmethod
-    def save_position(self, out_position):
-        pass
-
-    @abstractmethod
-    def load_position(self, bundle):
         pass
 
 
@@ -350,7 +308,7 @@ class _Instruction(object):
     @staticmethod
     def check_command(command):
         if not isinstance(command, _Instruction):
-            assert issubclass(command.im_class, Process)
+            assert issubclass(command.im_class, process.Process)
             args = inspect.getargspec(command)[0]
             assert len(args) == 1, "Instruction must take one argument only: self"
 
@@ -395,23 +353,25 @@ class _Block(_Instruction):
 
             return self._pos == len(self._commands), retval
 
-        def save_position(self, out_position):
-            out_position[self._POSITION] = self._pos
+        def save_instance_state(self, out_state):
+            super(Stepper, self).save_instance_state(out_state)
+
+            out_state[self._POSITION] = self._pos
             # Save the position of the current step we're working (if it's not a
             # direct function)
             if self._current_stepper is not None:
-                stepper_pos = apricotpy.Bundle()
-                self._current_stepper.save_position(stepper_pos)
-                out_position[self._STEPPER_POS] = stepper_pos
+                stepper_pos = utils.Parcel()
+                self._current_stepper.save_instance_state(stepper_pos)
+                out_state[self._STEPPER_POS] = stepper_pos
 
-        def load_position(self, bundle):
-            self._pos = bundle[self._POSITION]
+        def load_instance_state(self, saved_state):
+            super(Stepper, self).load_instance_state(saved_state)
+
+            self._pos = saved_state[self._POSITION]
 
             # Do we have a stepper position to load?
-            if self._STEPPER_POS in bundle:
-                self._current_stepper = \
-                    self._commands[self._pos].create_stepper(self._workflow)
-                self._current_stepper.load_position(bundle[self._STEPPER_POS])
+            if self._STEPPER_POS in saved_state:
+                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
 
     def __init__(self, commands):
         for command in commands:
@@ -505,18 +465,21 @@ class _If(_Instruction):
 
             return finished, retval
 
-        def save_position(self, out_position):
-            out_position[self._POSITION] = self._pos
-            if self._current_stepper is not None:
-                stepper_pos = apricotpy.Bundle()
-                self._current_stepper.save_position(stepper_pos)
-                out_position[self._STEPPER_POS] = stepper_pos
+        def save_instance_state(self, out_state):
+            super(Stepper, self).save_instance_state(out_state)
 
-        def load_position(self, bundle):
+            out_state[self._POSITION] = self._pos
+            if self._current_stepper is not None:
+                stepper_pos = utils.Parcel()
+                self._current_stepper.save_instance_state(stepper_pos)
+                out_state[self._STEPPER_POS] = stepper_pos
+
+        def load_instance_state(self, saved_state):
+            super(Stepper, self).load_instance_state(saved_state)
+
             self._pos = bundle[self._POSITION]
             if self._STEPPER_POS in bundle:
-                self._current_stepper = self._get_next_stepper()
-                self._current_stepper.load_position(bundle[self._STEPPER_POS])
+                self._current_stepper = utils.Savable.load(bundle[self._STEPPER_POS])
 
         def _get_next_stepper(self):
             # Check the conditions until we find that that is true
@@ -607,20 +570,23 @@ class _While(_Conditional, _Instruction):
             # Are we finished looping?
             return self._finished, retval
 
-        def save_position(self, out_position):
-            if self._stepper is not None:
-                stepper_pos = apricotpy.Bundle()
-                self._stepper.save_position(stepper_pos)
-                out_position[self._STEPPER_POS] = stepper_pos
-            out_position[self._CHECK_CONDITION] = self._check_condition
-            out_position[self._FINISHED] = self._finished
+        def save_instance_state(self, out_state):
+            super(Stepper, self).save_instance_state(out_state)
 
-        def load_position(self, bundle):
-            if self._STEPPER_POS in bundle:
-                self._stepper = self._spec.body.create_stepper(self._workflow)
-                self._stepper.load_position(bundle[self._STEPPER_POS])
-            self._finished = bundle[self._FINISHED]
-            self._check_condition = bundle[self._CHECK_CONDITION]
+            if self._stepper is not None:
+                stepper_pos = utils.Parcel()
+                self._stepper.save_instance_state(stepper_pos)
+                out_state[self._STEPPER_POS] = stepper_pos
+
+            out_state[self._CHECK_CONDITION] = self._check_condition
+            out_state[self._FINISHED] = self._finished
+
+        def load_instance_state(self, saved_state):
+            if self._STEPPER_POS in saved_state:
+                self._stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
+
+            self._finished = saved_state[self._FINISHED]
+            self._check_condition = saved_state[self._CHECK_CONDITION]
 
         @property
         def _body_stepper(self):
@@ -656,16 +622,11 @@ class _ReturnStepper(Stepper):
         """
         raise _PropagateReturn()
 
-    def save_position(self, out_position):
-        return
+    def save_instance_state(self, out_state):
+        super(_ReturnStepper, self).save_instance_state(out_state)
 
-    def load_position(self, bundle):
-        """
-        Nothing to be done: no internal state.
-        :param bundle:
-        :return:
-        """
-        return
+    def load_instance_state(self, saved_state):
+        super(_ReturnStepper, self).load_instance_state(saved_state)
 
 
 class _Return(_Instruction):

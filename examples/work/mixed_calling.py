@@ -17,7 +17,7 @@ if not is_dbenv_loaded():
 
 import time
 from aiida.orm.data.base import Int
-from aiida.work.run import async, run, submit
+from aiida.work.launch import async, run, submit
 from aiida.work.workfunction import workfunction
 from aiida.work.workchain import (WorkChain, ToContext)
 

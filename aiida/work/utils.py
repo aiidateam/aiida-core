@@ -8,10 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import abc
 import apricotpy
+from apricotpy import persistable
 import importlib
 import plum
-import threading
 from threading import local
 import time
 import random
@@ -154,8 +155,8 @@ class CalculationHeartbeat(apricotpy.LoopObject):
     HEARTBEAT_TAG = 'heartbeat_tag'
     DEFAULT_BEAT_INTERVAL = 60.0  # seconds
 
-    def __init__(self, loop, calc, beat_interval=DEFAULT_BEAT_INTERVAL, lost_callback=None):
-        super(CalculationHeartbeat, self).__init__(loop)
+    def __init__(self, calc, beat_interval=DEFAULT_BEAT_INTERVAL, lost_callback=None):
+        super(CalculationHeartbeat, self).__init__()
         self._calc = calc
         self._beat_interval = beat_interval
         self._lost_callback = lost_callback
@@ -171,7 +172,7 @@ class CalculationHeartbeat(apricotpy.LoopObject):
         self._acquire_heartbeat()
 
         # Figure out how long we've got left and give us a bit of leeway
-        delta = self._heartbeat_expires - time.time()
+        delta = self._heartbeat_expires - loop.time()
         self._heartbeat_callback = self.loop().call_later(0.9 * delta, self.run)
 
     def run(self):
@@ -201,14 +202,15 @@ class CalculationHeartbeat(apricotpy.LoopObject):
 
     def _acquire_heartbeat(self):
         current_expiry = self._calc.get_attr(self.HEARTBEAT_EXPIRES, None)
-        if current_expiry is None or current_expiry < time.time():
+        if current_expiry is None or current_expiry < self.loop().time():
             expiry_time = time.time() + self._beat_interval
             try:
                 self._calc._set_attr(self.HEARTBEAT_EXPIRES, expiry_time)
                 self._calc._set_attr(self.HEARTBEAT_TAG, self._heartbeat_tag)
             except ModificationNotAllowed as e:
                 raise HeartbeatError("Failed to acquire heartbeat\n{}".format(e.message))
-            self._heartbeat_expires = expiry_time
+            else:
+                self._heartbeat_expires = expiry_time
         else:
             raise HeartbeatError(
                 "Failed to acquire heartbeat, it is currently locked.")
@@ -230,7 +232,7 @@ class CalculationHeartbeat(apricotpy.LoopObject):
             return False
 
     def _update_expiry(self):
-        expiry_time = time.time() + self._beat_interval
+        expiry_time = self.loop().time() + self._beat_interval
         self._calc._set_attr(self.HEARTBEAT_EXPIRES, expiry_time)
         self._heartbeat_expires = expiry_time
 
@@ -254,8 +256,7 @@ class WithHeartbeat(plum.Process):
         self._start_heartbeat()
 
     def on_loop_removed(self):
-        if self._heartbeat is not None:
-            self.loop().remove(self._heartbeat)
+        self._stop_heartbeat()
         super(WithHeartbeat, self).on_loop_removed()
 
     def on_start(self):
@@ -283,8 +284,9 @@ class WithHeartbeat(plum.Process):
         assert self._heartbeat is not None
         self._stop_heartbeat()
 
-    def on_fail(self):
-        super(WithHeartbeat, self).on_fail()
+    def on_fail(self, exc_info):
+        super(WithHeartbeat, self).on_fail(exc_info)
+
         # Check here if we still have a heartbeat, the reason for the failure
         # may be precisely because we lost it.
         if self._heartbeat is not None:
@@ -306,8 +308,9 @@ class WithHeartbeat(plum.Process):
         )
 
     def _stop_heartbeat(self):
-        self.loop().remove(self._heartbeat)
-        self._heartbeat = None
+        if self._heartbeat is not None:
+            self.loop().remove(self._heartbeat)
+            self._heartbeat = None
 
     def _heartbeat_lost(self, heartbeat):
         self._heartbeat = None
@@ -329,41 +332,56 @@ def get_or_create_output_group(calculation):
     return FrozenDict(dict=d)
 
 
-class PeriodicTimer(threading.Thread):
-    def __init__(self, interval, fn):
-        super(PeriodicTimer, self).__init__()
-        self.daemon = True
+class Parcel(object):
+    def __init__(self, *args, **kwargs):
+        self._dict = dict(*args, **kwargs)
 
-        self._interval = interval
-        self._timeout = interval
-        self._fn = fn
-        self._interrupt = threading.Condition()
-        self._shutdown = False
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise TypeError("Keys can only be strings")
 
-    def run(self):
-        with self._interrupt:
-            while True:
-                if self._timeout is not None:
-                    self._fn()
-                self._interrupt.wait(self._timeout)
-                if self._shutdown:
-                    break
+        self._dict[key] = value
 
-    def pause(self):
-        assert not self._shutdown, "Timer has been shut down"
+    def __getitem__(self, item):
+        return self._dict[item]
 
-        self._timeout = None
 
-    def play(self):
-        assert not self._shutdown, "Timer has been shut down"
+class Savable(object):
+    __metaclass__ = abc.ABCMeta
 
-        with self._interrupt:
-            self._timeout = self._interval
-            self._interrupt.notify_all()
+    CLASS_NAME = 'CLASS_NAME'
 
-    def shutdown(self):
-        assert not self._shutdown, "Timer has been shut down"
+    @staticmethod
+    def load(saved_state):
+        try:
+            class_name = saved_state[Savable.CLASS_NAME]
+            cls = persistable.load_object(class_name)
+            return cls.create_from(saved_state)
+        except IndexError:
+            raise ValueError("Not a valid saved state with type")
 
-        with self._interrupt:
-            self._shutdown = True
-            self._interrupt.notify_all()
+    @classmethod
+    def create_from(cls, saved_state):
+        obj = cls.__new__(cls)
+        obj.load_instance_state(saved_state)
+        return obj
+
+    @abc.abstractmethod
+    def save_instance_state(self, out_state):
+        """
+        Save the instance state in a parcel
+
+        :param out_state: The state parcel
+        :type out_state: :class:`Parcel`
+        """
+        out_state[self.CLASS_NAME] = persistable.utils.fullname(self)
+
+    @abc.abstractmethod
+    def load_instance_state(self, saved_state):
+        """
+        Load the instance state from a pacel
+
+        :param saved_state: The saved state parcel
+        :type saved_state: :class:`Parcel`
+        """
+        pass

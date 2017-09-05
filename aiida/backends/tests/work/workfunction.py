@@ -12,7 +12,7 @@ import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workfunction import workfunction
 from aiida.orm.data.base import get_true_node
-from aiida.work.run import async, run
+from aiida.work.launch import async, run
 import aiida.work.utils as util
 
 

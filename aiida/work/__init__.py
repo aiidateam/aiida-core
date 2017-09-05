@@ -8,22 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.work.workfunction import workfunction
-from .workchain import *
-from aiida.work.run import async, run, submit
-import aiida.work.globals
-from aiida.work.globals import \
-    enable_persistence as enable_global_persistence, \
-    disable_persistence as disable_global_persistence
+from .launch import *
 from .process import *
+from . import workfunction
+from .workchain import *
 
 __all__ = (process.__all__ +
-           workchain.__all__)
-
-
-def load_checkpoint(pid):
-    return globals.get_persistence().load_checkpoint(pid)
-
-
-def retry_from_last_checkpoint(process_class, pid):
-    return process_class.retry(load_checkpoint(pid))
+           workchain.__all__ +
+           launch.__all__ +
+           workfunction.__all__)

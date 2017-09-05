@@ -1,17 +1,17 @@
 import apricotpy
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, MutableSequence
-from plum.utils import Savable
 from aiida.orm import load_node, load_workflow
-from aiida.work.run import RunningType, RunningInfo
+from aiida.work.launch import RunningType, RunningInfo
 from aiida.work.legacy.wait_on import WaitOnProcessTerminated, WaitOnWorkflow
 from aiida.common.lang import override
 from aiida.common.utils import get_object_string, get_object_from_string
+from . import utils
 
 Action = namedtuple("Action", "running_info fn")
 
 
-class Interstep(Savable):
+class Interstep(utils.Savable):
     """
     An internstep is an action that is performed between steps of a workchain.
     These allow the user to perform action when a step is finished and when
@@ -49,7 +49,7 @@ class UpdateContext(Interstep):
         self._key = key
 
     def __eq__(self, other):
-        return (self._action == other._action and self._key == other._key)
+        return self._action == other._action and self._key == other._key
 
     def _create_wait_on(self):
         rinfo = self._action.running_info
@@ -64,11 +64,15 @@ class UpdateContext(Interstep):
 
     @override
     def save_instance_state(self, out_state):
+        super(UpdateContext, self).save_instance_state(out_state)
+
         out_state['action'] = self._action
         out_state['key'] = self._key
 
     @override
     def load_instance_state(self, saved_state):
+        super(UpdateContext, self).load_instance_state(saved_state)
+
         self._action = saved_state['action']
         self._key = saved_state['key']
 

@@ -11,7 +11,7 @@ from aiida.orm.data.base import BaseType, Float, Str
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
-from aiida.work.run import async, run
+from aiida.work.launch import async, run
 from aiida.work.utils import ProcessStack
 from aiida.work.workfunction import workfunction
 from aiida.work.workchain import WorkChain, ToContext, while_, Outputs

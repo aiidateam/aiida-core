@@ -14,7 +14,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.base import Int
 from aiida.work import workfunction, run, async
 from aiida.work.interstep import Action, Assign, Append
-from aiida.work.run import RunningInfo, RunningType
+from aiida.work.launch import RunningInfo, RunningType
 from aiida.work.workchain import WorkChain, ToContext, return_, assign_, append_
 from aiida.work.workchain import ToContext, Outputs
 

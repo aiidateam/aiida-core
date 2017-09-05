@@ -9,7 +9,7 @@
 ###########################################################################
 
 from aiida.work.workfunction import workfunction
-from aiida.work.run import run
+from aiida.work.launch import run
 from aiida.orm import DataFactory
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.orm.code import Code

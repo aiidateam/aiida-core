@@ -16,7 +16,7 @@ import os.path
 import plum.persistence.pickle_persistence
 from plum.process import Process
 from aiida.common.lang import override
-from aiida.work.defaults import class_loader
+from aiida.work.globals import class_loader
 
 import glob
 import os
@@ -29,7 +29,7 @@ import pickle
 from plum.persistence.bundle import Bundle
 from plum.process_listener import ProcessListener
 from plum.process_monitor import MONITOR, ProcessMonitorListener
-from plum.util import override, protected
+from plum.utils import override, protected
 from plum.persistence._base import LOGGER
 
 _RUNNING_DIRECTORY = path.join(tempfile.gettempdir(), "running")
@@ -74,74 +74,7 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
-    @override
-    def load_checkpoint_from_file(self, filepath):
-        cp = super(Persistence, self).load_checkpoint_from_file(filepath)
-
-        inputs = cp.get(Process.BundleKeys.INPUTS.value, None)
-        if inputs:
-            cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
-        outputs = cp.get(Process.BundleKeys.OUTPUTS.value, None)
-        if outputs:
-            cp[Process.BundleKeys.OUTPUTS.value] = self._load_nodes_from(outputs)
-
-        cp.set_class_loader(class_loader)
-        return cp
-
-    @override
-    def create_bundle(self, process):
-        b = super(Persistence, self).create_bundle(process)
-
-        inputs = b.get(Process.BundleKeys.INPUTS.value, None)
-        if inputs:
-            b[Process.BundleKeys.INPUTS.value] = self._convert_to_ids(inputs)
-        outputs = b.get(Process.BundleKeys.OUTPUTS.value, None)
-        if outputs:
-            b[Process.BundleKeys.OUTPUTS.value] = self._convert_to_ids(outputs)
-
-        return b
-
-    def _convert_to_ids(self, nodes):
-        from aiida.orm import Node
-
-        input_ids = apricotpy.Bundle()
-        for label, node in nodes.iteritems():
-            if node is None:
-                continue
-            elif isinstance(node, Node):
-                if node.is_stored:
-                    input_ids[label] = node.pk
-                else:
-                    # Try using the UUID, but there's probably no chance of
-                    # being abel to recover the node from this if not stored
-                    # (for the time being)
-                    input_ids[label] = node.uuid
-            elif isinstance(node, collections.Mapping):
-                input_ids[label] = self._convert_to_ids(node)
-
-        return input_ids
-
-    def _load_nodes_from(self, pks_mapping):
-        """
-        Take a dictionary of of {label: pk} or nested dictionary i.e.
-        {label: {label: pk}} and convert to the equivalent Bundle but
-        with nodes instead of the ids.
-
-        :param pks_mapping: The dictionary of node pks.
-        :return: A dictionary with the loaded nodes.
-        :rtype: dict
-        """
-        from aiida.orm import load_node
-
-        nodes = apricotpy.Bundle()
-        for label, pk in pks_mapping.iteritems():
-            if isinstance(pk, collections.Mapping):
-                nodes[label] = self._load_nodes_from(pk)
-            else:
-                nodes[label] = load_node(pk=pk)
-        return nodes
-
+Persistence = plum.persistence.pickle_persistence.PicklePersistence
 
 _GLOBAL_PERSISTENCE = None
 

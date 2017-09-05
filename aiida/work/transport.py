@@ -21,8 +21,8 @@ class TransportQueue(apricotpy.LoopObject):
     DEFAULT_INTERVAL = 30.0
     AuthinfoEntry = namedtuple("AuthinfoEntry", ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
-    def __init__(self, loop, interval=DEFAULT_INTERVAL):
-        super(TransportQueue, self).__init__(loop)
+    def __init__(self, interval=DEFAULT_INTERVAL):
+        super(TransportQueue, self).__init__()
 
         self._entries = {}
         self._interval = interval

@@ -3,7 +3,7 @@ from aiida.work.event import DbPollingEmitter
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
 from plum.loop import BaseEventLoop
-from aiida.work.run import enqueue, run_loop
+from aiida.work.launch import enqueue, run_loop
 
 
 # class TestDbPollingTracker(AiidaTestCase):

@@ -1,6 +1,7 @@
 from collections import namedtuple
-from . import utils
+
 from aiida.work.process import Process
+from . import loop
 
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
@@ -10,7 +11,7 @@ _loop = None
 def get_loop():
     global _loop
     if _loop is None:
-        _loop = utils.loop_factory()
+        _loop = loop.loop_factory()
 
     return _loop
 
@@ -20,27 +21,6 @@ def reset():
     if _loop is not None:
         _loop.close()
         _loop = None
-
-
-def run(process_class, *args, **inputs):
-    """
-    Run a workfunction or process and return the result.
-
-    :param process_class: The process class or workfunction
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of keyword inputs
-    :return: The result of the process
-    """
-    loop = utils.loop_factory()
-    proc = loop.create(process_class, *args, **inputs)
-    result = loop.run_until_complete(proc)
-    loop.close()
-    return result
-
-
-def run_get_pid(process_class, *args, **inputs):
-    proc = enqueue(process_class, *args, **inputs)
-    return ResultAndPid(get_loop().run_until_complete(proc), proc.pid)
 
 
 def enqueue(process_class, *args, **inputs):
@@ -77,7 +57,7 @@ def run_loop():
             future.set_result('done')
             loop.messages().remove_listener(check_for_processes)
 
-    # List for any object being removed
+    # Listen for any object being removed
     loop.messages().add_listener(check_for_processes, "loop.object.*.removed")
 
     return loop.run_until_complete(future)

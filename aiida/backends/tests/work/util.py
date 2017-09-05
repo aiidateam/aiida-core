@@ -14,7 +14,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.process import Process
 from aiida.work.workfunction import workfunction
 from aiida.common.lang import override
-from aiida.work.run import async, run
+from aiida.work.launch import async, run
 from aiida.orm.data.base import Int
 from aiida.orm.calculation import Calculation
 from aiida.work.utils import ProcessStack, CalculationHeartbeat, HeartbeatError

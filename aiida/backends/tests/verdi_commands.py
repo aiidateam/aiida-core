@@ -204,7 +204,7 @@ class TestVerdiWorkCommands(AiidaTestCase):
         Create a simple workchain and run it.
         """
         super(TestVerdiWorkCommands, cls).setUpClass()
-        from aiida.work.run import run
+        from aiida.work.launch import run
         from aiida.work.workchain import WorkChain
         TEST_STRING = 'Test report.'
         cls.test_string = TEST_STRING

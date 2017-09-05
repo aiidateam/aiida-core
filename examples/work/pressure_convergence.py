@@ -18,7 +18,7 @@ from aiida.orm.utils import DataFactory
 from aiida.work.db_types import NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.work.run import run
+from aiida.work.launch import run
 from aiida.work.workchain import (WorkChain,
                                   ToContext, while_)
 from aiida.work.workfunction import workfunction

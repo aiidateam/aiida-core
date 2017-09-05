@@ -17,7 +17,7 @@ from aiida.work.workfunction import workfunction
 from aiida.orm.data.base import Int
 from aiida.work.workchain import WorkChain
 from aiida.orm.data.base import NumericType
-from aiida.work.run import run
+from aiida.work.launch import run
 
 
 @workfunction

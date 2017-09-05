@@ -13,7 +13,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 import aiida.work.workfunction as wf
-from aiida.work.run import async
+from aiida.work.launch import async
 from aiida.work.db_types import to_db_type
 from aiida.work.process import Process
 from aiida.work.workflow import Workflow

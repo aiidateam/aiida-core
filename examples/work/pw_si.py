@@ -17,7 +17,7 @@ import logging
 from aiida.orm import DataFactory
 from aiida.orm.code import Code
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.work.run import submit, run
+from aiida.work.launch import submit, run
 
 
 def get_pseudos(structure, family_name):

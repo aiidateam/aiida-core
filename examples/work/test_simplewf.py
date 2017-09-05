@@ -14,7 +14,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work.run import run, submit
+from aiida.work.launch import run, submit
 
 from aiida.tutorial.simple_wf import SimpleWF
 from aiida.orm.data.parameter import ParameterData

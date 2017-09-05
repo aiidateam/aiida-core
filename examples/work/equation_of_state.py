@@ -17,7 +17,7 @@ from aiida.orm.utils import DataFactory
 from aiida.orm.data.base import Float, Str, NumericType, BaseType
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.work.run import run, submit
+from aiida.work.launch import run, submit
 from aiida.work.workchain import WorkChain, \
     ToContext, while_
 from examples.work.diamond_fcc import rescale

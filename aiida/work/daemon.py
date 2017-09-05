@@ -3,15 +3,15 @@ import logging
 import time
 import traceback
 
-from aiida.orm.querybuilder import QueryBuilder
-from aiida.orm.mixins import Sealable
-from aiida.orm.calculation.job import JobCalculation
-from aiida.work.legacy.job_process import ContinueJobCalculation
-from aiida.work.utils import CalculationHeartbeat
+import aiida.work.default_loop
 import aiida.work.globals
 import aiida.work.persistence
+from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.mixins import Sealable
+from aiida.orm.querybuilder import QueryBuilder
+from aiida.work.legacy.job_process import ContinueJobCalculation
+from aiida.work.utils import CalculationHeartbeat
 from plum.exceptions import LockError
-import aiida.work.loop.default
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def launch_pending_jobs(storage=None, loop=None):
     if storage is None:
         storage = aiida.work.globals.get_persistence()
     if loop is None:
-        loop = aiida.work.loop.default.get_loop()
+        loop = aiida.work.default_loop.get_loop()
 
     executor = aiida.work.globals.get_thread_executor()
     for proc in _load_all_processes(storage, loop):

@@ -5,7 +5,6 @@ from aiida.transport.transport import Transport
 def TransportFactory(module):
     """
     Used to return a suitable Transport subclass.
-
     :param str module: name of the module containing the Transport subclass
     :return: the transport subclass located in module 'module'
     """

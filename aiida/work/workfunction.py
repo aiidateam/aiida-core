@@ -13,8 +13,9 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 from aiida.work.process import FunctionProcess
-from aiida.work.run import run
 import functools
+
+__all__ = ['workfunction']
 
 
 def workfunction(func):
@@ -47,7 +48,7 @@ def workfunction(func):
         # Build up the Process representing this function
         FuncProc = FunctionProcess.build(func, **kwargs)
         inputs = FuncProc.create_inputs(*args, **kwargs)
-        result = run(FuncProc, **inputs)
+        result = FuncProc.run(**inputs)
 
         # Check if there is just one value returned
         if len(result) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in result:

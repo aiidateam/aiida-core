@@ -13,7 +13,7 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.orm.data.base import Float, Str
-from aiida.work.run import run, async
+from aiida.work.launch import run, async
 from examples.work.diamond_fcc import rescale, create_diamond_fcc
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work import workfunction as wf

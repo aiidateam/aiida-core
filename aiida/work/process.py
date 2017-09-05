@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import abc
 import inspect
 import collections
 import uuid
@@ -23,20 +24,17 @@ from aiida.orm.data import Data
 from aiida.orm import load_node
 from aiida.orm.implementation.general.calculation.work import WorkCalculation
 import voluptuous
-from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
-from . import globals
-from aiida.work.utils import PROCESS_LABEL_ATTR, get_or_create_output_group
-from aiida.work.utils import ProcessStack, PROCESS_LABEL_ATTR
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
-
+from . import loop
+from . import utils
 
 __all__ = ['Process', 'FunctionProcess']
 
@@ -149,9 +147,11 @@ class Process(plum.process.Process):
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
 
     SINGLE_RETURN_LINKNAME = '_return'
+    # This is used for saving node pks in the saved instance state
+    NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
 
     class SaveKeys(Enum):
         """
@@ -190,20 +190,27 @@ class Process(plum.process.Process):
         calc = WorkCalculation()
         return calc
 
-    _spec_type = ProcessSpec
+    @classmethod
+    def new(cls, **inputs):
+        return cls(inputs=inputs)
 
     @classmethod
-    def retry(cls, bundle):
-        bundle['COPY'] = True
-        return cls.restart(bundle)
+    def run(cls, **inputs):
+        # Create a new loop and run
+        with loop.loop_factory() as evt_loop:
+            result = evt_loop.run_until_complete(evt_loop.create(cls, **inputs))
+        
+        return result
 
-    def __init__(self, loop, inputs=None, pid=None, logger=None):
-        super(Process, self).__init__(loop, inputs, pid, logger)
+    _spec_type = ProcessSpec
+
+    def __init__(self, inputs=None, pid=None, logger=None):
+        super(Process, self).__init__(inputs, pid, logger)
 
         self._calc = None
         # Get the parent from the top of the process stack
         try:
-            self._parent_pid = ProcessStack.top().pid
+            self._parent_pid = utils.ProcessStack.top().pid
         except IndexError:
             self._parent_pid = None
 
@@ -234,18 +241,8 @@ class Process(plum.process.Process):
                                  self.inputs.iteritems())
 
     @override
-    def out(self, output_port, value=None):
-        if value is None:
-            # In this case assume that output_port is the actual value and there
-            # is just one return value
-            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
-        else:
-            return super(Process, self).out(output_port, value)
-
-    # region Process messages
-    @override
-    def load_instance_state(self, loop, saved_state, logger=None):
-        super(Process, self).load_instance_state(loop, saved_state, logger)
+    def load_instance_state(self, saved_state, evt_loop):
+        super(Process, self).load_instance_state(saved_state, evt_loop)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -261,22 +258,19 @@ class Process(plum.process.Process):
         else:
             self._pid = self._create_and_setup_db_record()
 
-        if logger is None:
-            self.set_logger(self._calc.logger)
-
         if self.SaveKeys.PARENT_PID.value in saved_state:
             self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
 
     @override
-    def on_playing(self):
-        super(Process, self).on_playing()
-        ProcessStack.push(self)
+    def out(self, output_port, value=None):
+        if value is None:
+            # In this case assume that output_port is the actual value and there
+            # is just one return value
+            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
+        else:
+            return super(Process, self).out(output_port, value)
 
-    @override
-    def on_done_playing(self):
-        super(Process, self).on_done_playing()
-        ProcessStack.pop(self)
-
+    # region Process messages
     @override
     def on_finish(self):
         super(Process, self).on_finish()
@@ -288,16 +282,15 @@ class Process(plum.process.Process):
         self.calc.seal()
 
     @override
-    def on_fail(self):
+    def on_fail(self, exc_info):
         import traceback
-        super(Process, self).on_fail()
+        super(Process, self).on_fail(exc_info)
 
-        exc_info = self.get_exc_info()
         exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error("{} failed:\n{}".format(
-            self.pid, "".join(exc)))
+        self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))
 
-        self.calc._set_attr(WorkCalculation.FAILED_KEY, self.get_exception().message)
+        exception = exc_info[1]
+        self.calc._set_attr(WorkCalculation.FAILED_KEY, exception.message)
         self.calc.seal()
 
     @override
@@ -390,13 +383,62 @@ class Process(plum.process.Process):
         else:
             return uuid.UUID(self.calc.uuid)
 
+    @override
+    def encode_input_args(self, inputs):
+        """ 
+        Encode input arguments such that they may be saved in a 
+        :class:`apricotpy.persistable.Bundle`
+
+        :param inputs: A mapping of the inputs as passed to the process
+        :return: The encoded inputs
+        """
+        return {k: self._encode_input(v) for k, v in inputs.iteritems()}
+
+    @override
+    def decode_input_args(self, encoded):
+        """
+        Decode saved input arguments as they came from the saved instance state 
+        :class:`apricotpy.persistable.Bundle`
+
+        :param encoded: 
+        :return: The decoded input args
+        """
+        return {k: self._decode_input(v) for k, v in encoded.iteritems()}
+
+    def _encode_input(self, inp):
+        if isinstance(inp, aiida.orm.data.Node):
+            return self.NODE_TYPE, inp.uuid
+        elif isinstance(inp, collections.Mapping):
+            return {k: self._encode_input(v) for k, v in inp.iteritems()}
+        elif not isinstance(inp, (str, unicode)) and \
+                isinstance(inp, collections.Sequence):
+            return tuple(self._encode_input(v) for v in inp)
+        else:
+            return inp
+
+    def _decode_input(self, encoded):
+        if self._is_encoded_node(encoded):
+            return load_node(uuid=encoded[1])
+        elif isinstance(encoded, collections.Mapping):
+            return {k: self._decode_input(v) for k, v in encoded.iteritems()}
+        elif not isinstance(encoded, (str, unicode)) and \
+                isinstance(input, collections.Sequence):
+            return tuple(self._decode_input(v) for v in encoded)
+        else:
+            return encoded
+
+    def _is_encoded_node(self, value):
+        return not isinstance(value, (str, unicode)) and \
+               isinstance(value, collections.Sequence) and \
+               value[0] == self.NODE_TYPE
+
     def _setup_db_record(self):
         assert self.inputs is not None
         assert not self.calc.is_sealed, \
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
-        self.calc._set_attr(PROCESS_LABEL_ATTR, self.__class__.__name__)
+        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
@@ -425,7 +467,7 @@ class Process(plum.process.Process):
         for name, input in to_link.iteritems():
 
             if isinstance(input, Calculation):
-                input = get_or_create_output_group(input)
+                input = utils.get_or_create_output_group(input)
 
             if not input.is_stored:
                 # If the input isn't stored then assume our parent created it
@@ -531,7 +573,7 @@ class FunctionProcess(Process):
         super(FunctionProcess, self).setup_db_record()
         add_source_info(self.calc, self._func)
         # Save the name of the function
-        self.calc._set_attr(PROCESS_LABEL_ATTR, self._func.__name__)
+        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)
 
     @override
     def _run(self, **kwargs):

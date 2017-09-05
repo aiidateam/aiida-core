@@ -67,9 +67,9 @@ class WaitOnWorkflow(WaitOn):
     POLL_INTERVAL = 'POLL_INTERVAL'
     DEFAULT_POLL_INTERVAL = 30  # seconds
 
-    def __init__(self, loop, pk, return_results=False,
+    def __init__(self, pk, return_results=False,
                  poll_interval=DEFAULT_POLL_INTERVAL):
-        super(WaitOnWorkflow, self).__init__(loop)
+        super(WaitOnWorkflow, self).__init__()
         self._workflow = load_workflow(pk=pk)
         self._return_outputs = return_results
         self._poll_interval = poll_interval

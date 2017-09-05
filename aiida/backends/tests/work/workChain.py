@@ -14,20 +14,18 @@ import plum.process_monitor
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.work import WorkCalculation
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import run, async, legacy_workflow
+from aiida.work.launch import run, async, legacy_workflow
 from aiida.orm.data.base import Int, Str
 import aiida.work.utils as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.work.run import run_until, run_loop, enqueue, legacy_workflow
-
-PwProcess = PwCalculation.process()
+from aiida import work
+from aiida.work.launch import legacy_workflow
 
 
 class Wf(WorkChain):
@@ -55,8 +53,8 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, loop, inputs=None, pid=None, logger=None):
-        super(Wf, self).__init__(loop, inputs, pid, logger)
+    def __init__(self, inputs=None, pid=None, logger=None):
+        super(Wf, self).__init__(inputs, pid, logger)
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -289,7 +287,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=submit(SubWorkChain))
+                return ToContext(subwc=work.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -303,8 +301,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        p = enqueue(MainWorkChain)
-        run_loop()
+        work.run(MainWorkChain)
 
     def test_tocontext_async_workchain(self):
         class MainWorkChain(WorkChain):
@@ -384,8 +381,8 @@ class TestWorkchain(AiidaTestCase):
         run(Workchain)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
-        wf = enqueue(wf_class, **inputs)
-        run_loop()
+        proc = wf_class(inputs=inputs)
+        work.run(proc)
 
         return wf_class.finished_steps
 

@@ -321,7 +321,7 @@ class IcsdDbImporter(DbImporter):
 
     # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
     keywords_db = {'id': ['COLL_CODE', _int_clause],
-                   'element': ['STRUCT_FORM;', _composition_clause],
+                   'element': ['SUM_FORM;', _composition_clause],
                    'number_of_elements': ['EL_COUNT', _int_clause],
                    'chemical_name': ['CHEM_NAME', _str_fuzzy_clause],
                    'formula': ['SUM_FORM', _formula_clause],

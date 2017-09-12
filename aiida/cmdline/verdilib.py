@@ -839,7 +839,7 @@ class Quicksetup(VerdiCommand):
             if _set_default:
                 set_default_profile(process, profile_name, force_rewrite=True)
 
-    #TODO (ltalirz) db-related functions should be moved to the base level of verdilib
+    #TODO (issue 693): move db-related functions outside quicksetup
     def _try_connect(self, **kwargs):
         '''
         try to start a psycopg2 connection.

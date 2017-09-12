@@ -142,9 +142,8 @@ class Profile(VerdiCommandWithSubcommands):
         Asks whether to delete associated database and associated database
         user.
 
-        Specify argument '--yes' to answer yes to all questions.
-        parameters
-        ----------
+        Specify argument '--yes' to answer yes to all questions (useful
+        for running in non-interactive mode).
 
         """
         from aiida.cmdline.verdilib import Quicksetup

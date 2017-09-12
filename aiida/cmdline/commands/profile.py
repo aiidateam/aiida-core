@@ -152,13 +152,14 @@ class Profile(VerdiCommandWithSubcommands):
         import os.path
         from urlparse import urlparse
 
-        #TODO (issue 693): move functions below outside Quicksetup
+        args = list(args)
         if '--yes' in args:
             yes = True
             args.remove('--yes')
         else:
             yes = False
 
+        #TODO (issue 693): move db-related functions below outside Quicksetup
         q = Quicksetup()
         pg_info = q._get_pg_access()
         pg_execute = pg_info['method']
@@ -173,7 +174,7 @@ class Profile(VerdiCommandWithSubcommands):
             try:
                 profile = profiles[profile_to_delete]
             except KeyError:
-                print('Profile "{}" does not exist'.format(profile_to_delete))
+                print("Profile '{}' does not exist".format(profile_to_delete))
                 continue
 
             db = profile.get('AIIDADB_NAME', '')

@@ -142,9 +142,8 @@ class Profile(VerdiCommandWithSubcommands):
         Asks whether to delete associated database and associated database
         user.
 
-        Specify argument '--yes' to answer yes to all questions (useful
-        for running in non-interactive mode).
-
+        Specify argument '--force' to skip any questions warning about loss of
+        data.
         """
         from aiida.cmdline.verdilib import Quicksetup
         from aiida.common.setup import get_or_create_config, update_config, AIIDA_CONFIG_FOLDER
@@ -152,11 +151,11 @@ class Profile(VerdiCommandWithSubcommands):
         from urlparse import urlparse
 
         args = list(args)
-        if '--yes' in args:
-            yes = True
-            args.remove('--yes')
+        if '--force' in args:
+            force = True
+            args.remove('--force')
         else:
-            yes = False
+            force = False
 
         #TODO (issue 693): move db-related functions below outside Quicksetup
         q = Quicksetup()
@@ -179,7 +178,7 @@ class Profile(VerdiCommandWithSubcommands):
             db = profile.get('AIIDADB_NAME', '')
             if not q._db_exists(db, pg_execute, **dbinfo):
                 print("Associated database '{}' does not exist.".format(db))
-            elif yes or click.confirm("Delete associated database '{}'?\n" \
+            elif force or click.confirm("Delete associated database '{}'?\n" \
                              "WARNING: All data will be lost.".format(db)):
                 print("Deleting database '{}'.".format(db))
                 q._drop_db(db, pg_execute, **dbinfo)
@@ -190,7 +189,7 @@ class Profile(VerdiCommandWithSubcommands):
             elif users.count(user) > 1:
                 print("Associated database user '{}' is used by other profiles "\
                       "and will not be deleted.".format(user))
-            elif yes or click.confirm("Delete database user '{}'?".format(user)):
+            elif force or click.confirm("Delete database user '{}'?".format(user)):
                 print("Deleting user '{}'.".format(user))
                 q._drop_dbuser(user, pg_execute, **dbinfo)
 
@@ -203,13 +202,13 @@ class Profile(VerdiCommandWithSubcommands):
             elif not os.path.isdir(repo_path):
                 print("Associated file repository '{}' is not a directory."\
                        .format(repo_path))
-            elif yes or click.confirm("Delete associated file repository '{}'?\n" \
+            elif force or click.confirm("Delete associated file repository '{}'?\n" \
                                "WARNING: All data will be lost.".format(repo_path)):
                 print("Deleting directory '{}'.".format(repo_path))
                 import shutil
                 shutil.rmtree(repo_path)
 
-            if yes or click.confirm("Delete configuration for profile '{}'?\n" \
+            if force or click.confirm("Delete configuration for profile '{}'?\n" \
                              "WARNING: Permanently removes profile from the list of AiiDA profiles."\
                              .format(profile_to_delete)):
                 print("Deleting configuration for profile '{}'.".format(profile_to_delete))

@@ -11,7 +11,7 @@
 This allows to manage profiles from command line.
 """
 import sys
-
+import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
@@ -35,6 +35,7 @@ class Profile(VerdiCommandWithSubcommands):
             'setdefault': (self.profile_setdefault,
                            self.complete_processes_profiles),
             'list': (self.profile_list, self.complete_none),
+            'delete': (self.profile_delete, self.complete_processes_profiles),
         }
 
     def complete_processes_profiles(self, subargs_idx, subargs):
@@ -134,4 +135,83 @@ class Profile(VerdiCommandWithSubcommands):
             print "{}{} {}{}{} {}{}".format(
                 start_color, symbol,
                 bold_sequence, profile, default_str, nobold_sequence, end_color)
+
+    def profile_delete(self, *args):
+        """ Deletes profile
+
+        Asks whether to delete associated database and associated database
+        user.
+
+        Specify argument '--force' to skip any questions warning about loss of
+        data.
+        """
+        from aiida.cmdline.verdilib import Quicksetup
+        from aiida.common.setup import get_or_create_config, update_config, AIIDA_CONFIG_FOLDER
+        import os.path
+        from urlparse import urlparse
+
+        args = list(args)
+        if '--force' in args:
+            force = True
+            args.remove('--force')
+        else:
+            force = False
+
+        #TODO (issue 693): move db-related functions below outside Quicksetup
+        q = Quicksetup()
+        pg_info = q._get_pg_access()
+        pg_execute = pg_info['method']
+        dbinfo = pg_info['dbinfo']
+
+        confs = get_or_create_config()
+        profiles = confs.get('profiles',{})
+        users = [ profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
+
+        profiles_to_delete = args
+        for profile_to_delete in profiles_to_delete:
+            try:
+                profile = profiles[profile_to_delete]
+            except KeyError:
+                print("Profile '{}' does not exist".format(profile_to_delete))
+                continue
+
+            db = profile.get('AIIDADB_NAME', '')
+            if not q._db_exists(db, pg_execute, **dbinfo):
+                print("Associated database '{}' does not exist.".format(db))
+            elif force or click.confirm("Delete associated database '{}'?\n" \
+                             "WARNING: All data will be lost.".format(db)):
+                print("Deleting database '{}'.".format(db))
+                q._drop_db(db, pg_execute, **dbinfo)
+
+            user = profile.get('AIIDADB_USER', '')
+            if not q._dbuser_exists(user, pg_execute, **dbinfo):
+                print("Associated database user '{}' does not exist.".format(user))
+            elif users.count(user) > 1:
+                print("Associated database user '{}' is used by other profiles "\
+                      "and will not be deleted.".format(user))
+            elif force or click.confirm("Delete database user '{}'?".format(user)):
+                print("Deleting user '{}'.".format(user))
+                q._drop_dbuser(user, pg_execute, **dbinfo)
+
+            repo_uri = profile.get('AIIDADB_REPOSITORY_URI','')
+            repo_path = urlparse(repo_uri).path
+            repo_path = os.path.expanduser(repo_path)
+            if not os.path.isabs(repo_path):
+                print("Associated file repository '{}' does not exist."\
+                      .format(repo_path))
+            elif not os.path.isdir(repo_path):
+                print("Associated file repository '{}' is not a directory."\
+                       .format(repo_path))
+            elif force or click.confirm("Delete associated file repository '{}'?\n" \
+                               "WARNING: All data will be lost.".format(repo_path)):
+                print("Deleting directory '{}'.".format(repo_path))
+                import shutil
+                shutil.rmtree(repo_path)
+
+            if force or click.confirm("Delete configuration for profile '{}'?\n" \
+                             "WARNING: Permanently removes profile from the list of AiiDA profiles."\
+                             .format(profile_to_delete)):
+                print("Deleting configuration for profile '{}'.".format(profile_to_delete))
+                del profiles[profile_to_delete]
+                update_config(confs)
 

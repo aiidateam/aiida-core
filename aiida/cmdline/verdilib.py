@@ -344,9 +344,13 @@ class Setup(VerdiCommand):
     """
 
     def run(self, *args):
-        ctx = _setup_cmd.make_context('setup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             _setup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi setup', **kwargs):
+        return _setup_cmd.make_context(info_name, list(args), **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """
@@ -362,22 +366,23 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),
-              help='ignored unless --non-interactive is given')
-@click.option('--email', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_host', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_port', type=int, help='ignored unless --non-interactive is given')
-@click.option('--db_name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_user', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_pass', type=str, help='ignored unless --non-interactive is given')
-@click.option('--first-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--last-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--institution', type=str, help='ignored unless --non-interactive is given')
-@click.option('--no-password', is_flag=True, help='ignored unless --non-interactive is given')
-@click.option('--repo', type=str, help='ignored unless --non-interactive is given')
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),)
+@click.option('--email', type=str)
+@click.option('--db_host', type=str)
+@click.option('--db_port', type=int)
+@click.option('--db_name', type=str)
+@click.option('--db_user', type=str)
+@click.option('--db_pass', type=str)
+@click.option('--first-name', type=str)
+@click.option('--last-name', type=str)
+@click.option('--institution', type=str)
+@click.option('--no-password', is_flag=True)
+@click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
                first_name, last_name, institution, no_password, repo):
-    '''verdi setup command, forward cmdline arguments to the setup function.'''
+    '''verdi setup command, forward cmdline arguments to the setup function.
+    
+    Note: command line options are IGNORED unless --non-interactive is given.'''
     kwargs = dict(
         profile=profile,
         only_config=only_config,
@@ -592,22 +597,29 @@ class Quicksetup(VerdiCommand):
     '''
     Quick setup for the most common usecase (1 user, 1 machine).
 
-    Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
-    Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
-    Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
+    Creates a database user 'aiida_qs_<login-name>' with random password (if it
+    doesn't exist). Creates a database '<profile>_<username>' (if it exists,
+    prompts user to use or change the name).
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
+    _drop_user_command = 'DROP USER "{}"'
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
+    _drop_db_command = 'DROP DATABASE "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
+    # note: 'usename' is not a typo!
 
     def run(self, *args):
-        ctx = self._quicksetup_cmd.make_context('quicksetup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             ctx.obj = self
             self._quicksetup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi quicksetup', **kwargs):
+        return Quicksetup._quicksetup_cmd.make_context(info_name, list(args), **kwargs)
 
     def _get_pg_access(self):
         '''
@@ -684,8 +696,10 @@ class Quicksetup(VerdiCommand):
                         click.echo('Unable to connect to postgres, please try again')
         return dbinfo
 
+
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
+    @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
+    @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
                   help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
@@ -695,12 +709,12 @@ class Quicksetup(VerdiCommand):
     @click.option('--db-user', type=str)
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
-    @click.option('--profile', type=str)
     @click.option('--repo', type=str)
+    @click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
     @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                        profile, repo):
-        '''setup a sane aiida configuration with as little interaction as possible.'''
+    def _quicksetup_cmd(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
+                        repo, set_default):
+        '''Set up a sane aiida configuration with as little interaction as possible.'''
         from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
         create_base_dirs()
 
@@ -711,15 +725,18 @@ class Quicksetup(VerdiCommand):
         pg_execute = pg_info['method']
         dbinfo = pg_info['dbinfo']
 
-        # check if a database setup already exists
-        # otherwise setup the database user aiida
-        # setup the database aiida_qs_<username>
-        from getpass import getuser
-        from aiida.common.setup import generate_random_secret_key
-        osuser = getuser()
+        # default database name is <profile>_<login-name>
+        # this ensures that for profiles named test_... the database will also
+        # be named test_...
+        import getpass
+        osuser = getpass.getuser()
+        dbname = db_name or profile + '_' + osuser
+
+        # default database user name is aiida_qs_<login-name>
+        # default password is random
         dbuser = db_user or 'aiida_qs_' + osuser
+        from aiida.common.setup import generate_random_secret_key
         dbpass = db_user_pw or generate_random_secret_key()
-        dbname = db_name or 'aiidadb_qs_' + osuser
 
         # check if there is a profile that contains the db user already
         # and if yes, take the db user password from there
@@ -805,17 +822,24 @@ class Quicksetup(VerdiCommand):
 
         for process in valid_processes:
 
-            default_profile = default_profiles.get(process, '')
-            default_override = False
+            # if the user specifies whether to override that's fine
+            if set_default in [True, False]:
+                _set_default = set_default
+            # otherwise we may need to ask
+            else:
+                default_profile = default_profiles.get(process, '')
+                if default_profile:
+                    _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
+                                                     "do you want to set the newly created '{}' as the new default? (can be reverted later)"
+                                                     .format(process, default_profile, profile_name))
+                # if there are no other default profiles, we don't need to ask
+                else:
+                    _set_default = True
 
-            if default_profile:
-                default_override = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                 "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                 .format(process, default_profile, profile_name))
-
-            if not default_profile or default_override:
+            if _set_default:
                 set_default_profile(process, profile_name, force_rewrite=True)
 
+    #TODO (issue 693): move db-related functions outside quicksetup
     def _try_connect(self, **kwargs):
         '''
         try to start a psycopg2 connection.
@@ -857,6 +881,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_user_command.format(dbuser, dbpass), **kwargs)
 
+    def _drop_dbuser(self, dbuser, method=None, **kwargs):
+        '''
+        drop a database user in postgres
+
+        :param dbuser: Name of the user to be dropped.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_user_command.format(dbuser), **kwargs)
+
     def _create_db(self, dbuser, dbname, method=None, **kwargs):
         '''create a database in postgres
 
@@ -868,6 +903,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_db_command.format(dbname, dbuser), **kwargs)
         method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
+
+    def _drop_db(self, dbname, method=None, **kwargs):
+        '''drop a database in postgres
+
+        :param dbname: Name of the database.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_db_command.format(dbname), **kwargs)
+
 
     def _pg_execute_psyco(self, command, **kwargs):
         '''
@@ -925,6 +971,10 @@ class Quicksetup(VerdiCommand):
         '''return True if postgres user with name dbuser exists, False otherwise.'''
         return bool(method(self._get_users_command.format(dbuser), **kwargs))
 
+    def _db_exists(self, dbname, method=None, **kwargs):
+        """return True if database with dbname exists."""
+        return bool(method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs))
+
     def _check_db_name(self, dbname, method=None, **kwargs):
         '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
         create = True
@@ -935,6 +985,8 @@ class Quicksetup(VerdiCommand):
             else:
                 create = False
         return dbname, create
+
+
 
 
 class Run(VerdiCommand):
@@ -1133,9 +1185,27 @@ def exec_from_cmdline(argv):
 
     short_doc = {}
     long_doc = {}
-    for k, v in raw_docstrings.iteritems():
+    for k, cmd in list_commands.iteritems():
         if k in hidden_commands:
             continue
+
+        # assemble help string
+        # first from python docstring
+        if cmd.__doc__:
+            v = cmd.__doc__
+        else:
+            v = ""
+
+        # if command has parser written with the 'click' module
+        # we also add a dynamic help string documenting the options
+        # Note: to enable this for a command, simply add a static 
+        # _ctx method (see e.g. Quicksetup)
+        if hasattr(cmd, '_ctx'):
+            v += "\n"
+            # resilient_parsing suppresses interactive prompts
+            v += cmd._ctx(args=[], resilient_parsing=True).get_help()
+            v = v.split('\n')  # need list of lines
+
         lines = [l.strip() for l in v]
         empty_lines = [bool(l) for l in lines]
         try:
@@ -1147,6 +1217,7 @@ def exec_from_cmdline(argv):
             continue
         short_doc[k] = lines[first_idx]
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
+
 
     execname = os.path.basename(argv[0])
 

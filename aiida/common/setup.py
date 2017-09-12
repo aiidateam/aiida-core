@@ -656,8 +656,7 @@ def create_configuration(profile='default'):
         # Setting the email
         valid_email = False
         readline.set_startup_hook(lambda: readline.insert_text(
-            this_existing_confs.get(DEFAULT_USER_CONFIG_FIELD,
-                                    DEFAULT_AIIDA_USER)))
+            this_existing_confs.get(DEFAULT_AIIDA_USER)))
         while not valid_email:
             this_new_confs[DEFAULT_USER_CONFIG_FIELD] = raw_input(
                 'Default user email: ')

@@ -70,8 +70,12 @@ before_script:
 
     - .travis-data/before_script.sh
 
-script:
-    - .travis-data/test_script.sh
+jobs:
+    include:
+        - stage: pre-commit
+          script: pre-commit run --all-files
+        - stage: test
+          script: .travis-data/test_script.sh
 
 git:
   depth: 3

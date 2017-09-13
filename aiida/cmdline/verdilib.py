@@ -31,7 +31,7 @@ from aiida.common.exceptions import (
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
-from aiida.control.postgres import Postgres
+from aiida.control.postgres import Postgres, manual_setup_instructions
 
 # Import here from other files; once imported, it will be found and
 # used as a command-line parameter
@@ -139,6 +139,7 @@ def update_environment(new_argv):
 ########################################################################
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
+
 
 class CompletionCommand(VerdiCommand):
     """
@@ -610,6 +611,7 @@ class Quicksetup(VerdiCommand):
     _drop_db_command = 'DROP DATABASE "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
+
     # note: 'usename' is not a typo!
 
     def run(self, *args):
@@ -649,7 +651,6 @@ class Quicksetup(VerdiCommand):
                         click.echo('Unable to connect to postgres, please try again')
         return dbinfo
 
-
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
     @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
     @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
@@ -658,7 +659,7 @@ class Quicksetup(VerdiCommand):
     @click.option('--last-name', prompt='Last Name', type=str)
     @click.option('--institution', prompt='Institution', type=str)
     @click.option('--backend', type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]), default=BACKEND_DJANGO)
-    @click.option('--db-port', type=str)
+    @click.option('--db-port', type=int)
     @click.option('--db-user', type=str)
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
@@ -674,7 +675,7 @@ class Quicksetup(VerdiCommand):
         aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
         # access postgres
-        postgres = Postgres(interactive=True, quiet=False)
+        postgres = Postgres(port=db_port, interactive=True, quiet=False)
 
         # default database name is <profile>_<login-name>
         # this ensures that for profiles named test_... the database will also
@@ -706,7 +707,7 @@ class Quicksetup(VerdiCommand):
             if not postgres.dbuser_exists(dbuser):
                 postgres.create_dbuser(dbuser, dbpass)
             else:
-                dbname, create = self._check_db_name(dbname, pg_execute, **dbinfo)
+                dbname, create = self._check_db_name(dbname, postgres)
             if create:
                 self._create_db(dbuser, dbname, pg_execute, **dbinfo)
                 postgres.create_db(dbuser, dbname)
@@ -715,10 +716,11 @@ class Quicksetup(VerdiCommand):
                 'Oops! Something went wrong while creating the database for you.',
                 'You may continue with the quicksetup, however:',
                 'For aiida to work correctly you will have to do that yourself as follows.',
-                postgres.manual_instructions(dbuser=dbuser, dbname=dbname),
+                manual_setup_instructions(dbuser=dbuser, dbname=dbname),
                 '',
                 'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.',
-                '']))
+                ''
+            ]))
             raise e
 
         # create a profile, by default 'quicksetup' and prompt the user if
@@ -735,8 +737,8 @@ class Quicksetup(VerdiCommand):
             else:
                 write_profile = True
 
-        dbhost = dbinfo.get('host', 'localhost')
-        dbport = dbinfo.get('port', '5432')
+        dbhost = postgres.dbinfo.get('host', 'localhost')
+        dbport = postgres.dbinfo.get('port', '5432')
 
         from os.path import isabs
         repo = repo or 'repository-{}/'.format(profile_name)
@@ -795,8 +797,6 @@ class Quicksetup(VerdiCommand):
             else:
                 create = False
         return dbname, create
-
-
 
 
 class Run(VerdiCommand):
@@ -916,6 +916,7 @@ class Run(VerdiCommand):
 ########################################################################
 # From here on: utility functions
 
+
 def get_listparams():
     """
     Return a string with the list of parameters, to be printed
@@ -981,12 +982,14 @@ def exec_from_cmdline(argv):
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands = {v.get_command_name(): v for v in
-                     verdilib_namespace.itervalues()
-                     if inspect.isclass(v) and not v == VerdiCommand and
-                     issubclass(v, VerdiCommand)
-                     and not v.__name__.startswith('_')
-                     and not v._abstract}
+    list_commands = {
+        verdi_subcmd.get_command_name(): verdi_subcmd
+        for verdi_subcmd in verdilib_namespace.itervalues()
+        if inspect.isclass(verdi_subcmd) and not verdi_subcmd == VerdiCommand
+        and issubclass(verdi_subcmd, VerdiCommand)
+        and not verdi_subcmd.__name__.startswith('_')
+        and not verdi_subcmd._abstract
+    }
 
     # Retrieve the list of docstrings, managing correctly the
     # case of empty docstrings. Each value is a list of lines
@@ -1002,21 +1005,21 @@ def exec_from_cmdline(argv):
         # assemble help string
         # first from python docstring
         if cmd.__doc__:
-            v = cmd.__doc__
+            help_msg = cmd.__doc__
         else:
-            v = ""
+            help_msg = ""
 
         # if command has parser written with the 'click' module
         # we also add a dynamic help string documenting the options
         # Note: to enable this for a command, simply add a static
         # _ctx method (see e.g. Quicksetup)
         if hasattr(cmd, '_ctx'):
-            v += "\n"
+            help_msg += "\n"
             # resilient_parsing suppresses interactive prompts
-            v += cmd._ctx(args=[], resilient_parsing=True).get_help()
-            v = v.split('\n')  # need list of lines
+            help_msg += cmd._ctx(args=[], resilient_parsing=True).get_help()
+            help_msg = help_msg.split('\n')  # need list of lines
 
-        lines = [l.strip() for l in v]
+        lines = [l.strip() for l in help_msg]
         empty_lines = [bool(l) for l in lines]
         try:
             first_idx = empty_lines.index(True)  # The first non-empty line
@@ -1028,12 +1031,11 @@ def exec_from_cmdline(argv):
         short_doc[k] = lines[first_idx]
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
 
-
     execname = os.path.basename(argv[0])
 
     try:
         profile, command_position = parse_profile(argv)
-    except ProfileParsingException as e:
+    except ProfileParsingException as err:
         print_usage(execname)
         sys.exit(1)
 
@@ -1057,12 +1059,12 @@ def exec_from_cmdline(argv):
         else:
             print >> sys.stderr, ("{}: '{}' is not a valid command. "
                                   "See '{} help' for more help.".format(
-                execname, command, execname))
+                                      execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
-    except ProfileConfigurationError as e:
+    except ProfileConfigurationError as err:
         print >> sys.stderr, "The profile specified is not valid!"
-        print >> sys.stderr, e.message
+        print >> sys.stderr, err.message
         sys.exit(1)
 
 

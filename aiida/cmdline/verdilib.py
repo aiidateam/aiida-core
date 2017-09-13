@@ -31,6 +31,7 @@ from aiida.common.exceptions import (
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
+from aiida.control.postgres import Postgres
 
 # Import here from other files; once imported, it will be found and
 # used as a command-line parameter
@@ -381,7 +382,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
                first_name, last_name, institution, no_password, repo):
     '''verdi setup command, forward cmdline arguments to the setup function.
-    
+
     Note: command line options are IGNORED unless --non-interactive is given.'''
     kwargs = dict(
         profile=profile,
@@ -621,54 +622,6 @@ class Quicksetup(VerdiCommand):
     def _ctx(args, info_name='verdi quicksetup', **kwargs):
         return Quicksetup._quicksetup_cmd.make_context(info_name, list(args), **kwargs)
 
-    def _get_pg_access(self):
-        '''
-        find out how postgres can be accessed.
-
-        Depending on how postgres is set up, psycopg2 can be used to create dbs and db users, otherwise a subprocess has to be used that executes psql as an os user with the right permissions.
-        :return: (method, info) where method is a method that executes psql commandlines and info is a dict with keyword arguments to be used with method.
-        '''
-        # find out if we run as a postgres superuser or can connect as postgres
-        # This will work on OSX in some setups but not in the default Debian one
-        can_connect = False
-        can_subcmd = None
-        dbinfo = {'user': None, 'database': 'template1'}
-        for pg_user in [None, 'postgres']:
-            if self._try_connect(**dbinfo):
-                can_connect = True
-                dbinfo['user'] = pg_user
-                break
-
-        # This will work for the default Debian postgres setup
-        if not can_connect:
-            if self._try_subcmd(user='postgres'):
-                can_subcmd = True
-                dbinfo['user'] = 'postgres'
-            else:
-                can_subcmd = False
-
-        # This is to allow for any other setup
-        if not can_connect and not can_subcmd:
-            click.echo(
-                'Detected no known postgres setup, some information is needed to create the aiida database and grant aiida access to it.')
-            click.echo('If you feel unsure about the following parameters, first check if postgresql is installed.')
-            click.echo('If postgresql is not installed please exit and install it, then run verdi quicksetup again.')
-            click.echo(
-                'If postgresql is installed, please ask your system manager to provide you with the following parameters:')
-            dbinfo = self._prompt_db_info()
-
-        pg_method = None
-        if can_connect:
-            pg_method = self._pg_execute_psyco
-        elif can_subcmd:
-            pg_method = self._pg_execute_sh
-
-        result = {
-            'method': pg_method,
-            'dbinfo': dbinfo,
-        }
-        return result
-
     def _prompt_db_info(self):
         '''prompt interactively for postgres database connecting details.'''
         access = False
@@ -721,9 +674,7 @@ class Quicksetup(VerdiCommand):
         aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
         # access postgres
-        pg_info = self._get_pg_access()
-        pg_execute = pg_info['method']
-        dbinfo = pg_info['dbinfo']
+        postgres = Postgres(interactive=True, quiet=False)
 
         # default database name is <profile>_<login-name>
         # this ensures that for profiles named test_... the database will also
@@ -752,23 +703,19 @@ class Quicksetup(VerdiCommand):
 
         try:
             create = True
-            if not self._dbuser_exists(dbuser, pg_execute, **dbinfo):
-                self._create_dbuser(dbuser, dbpass, pg_execute, **dbinfo)
+            if not postgres.dbuser_exists(dbuser):
+                postgres.create_dbuser(dbuser, dbpass)
             else:
                 dbname, create = self._check_db_name(dbname, pg_execute, **dbinfo)
             if create:
                 self._create_db(dbuser, dbname, pg_execute, **dbinfo)
+                postgres.create_db(dbuser, dbname)
         except Exception as e:
             click.echo('\n'.join([
                 'Oops! Something went wrong while creating the database for you.',
                 'You may continue with the quicksetup, however:',
                 'For aiida to work correctly you will have to do that yourself as follows.',
-                'Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):',
-                '',
-                '\t$ psql template1',
-                '\t==> ' + self._create_user_command.format(dbuser, dbpass),
-                '\t==> ' + self._create_db_command.format(dbname, dbuser),
-                '\t==> ' + self._grant_priv_command.format(dbname, dbuser),
+                postgres.manual_instructions(dbuser=dbuser, dbname=dbname),
                 '',
                 'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.',
                 '']))
@@ -776,8 +723,6 @@ class Quicksetup(VerdiCommand):
 
         # create a profile, by default 'quicksetup' and prompt the user if
         # already exists
-        profile_name = profile or 'quicksetup'
-        write_profile = False
         confs = get_or_create_config()
         profile_name = profile or 'quicksetup'
         write_profile = False
@@ -840,145 +785,10 @@ class Quicksetup(VerdiCommand):
                 set_default_profile(process, profile_name, force_rewrite=True)
 
     #TODO (issue 693): move db-related functions outside quicksetup
-    def _try_connect(self, **kwargs):
-        '''
-        try to start a psycopg2 connection.
-
-        :return: True if successful, False otherwise
-        '''
-        from psycopg2 import connect
-        success = False
-        try:
-            connect(**kwargs)
-            success = True
-        except:
-            pass
-        return success
-
-    def _try_subcmd(self, **kwargs):
-        '''
-        try to run psql in a subprocess.
-
-        :return: True if successful, False otherwise
-        '''
-        success = False
-        try:
-            self._pg_execute_sh('\q', **kwargs)
-            success = True
-        except:
-            pass
-        return success
-
-    def _create_dbuser(self, dbuser, dbpass, method=None, **kwargs):
-        '''
-        create a database user in postgres
-
-        :param dbuser: Name of the user to be created.
-        :param dbpass: Password the user should be given.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._create_user_command.format(dbuser, dbpass), **kwargs)
-
-    def _drop_dbuser(self, dbuser, method=None, **kwargs):
-        '''
-        drop a database user in postgres
-
-        :param dbuser: Name of the user to be dropped.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._drop_user_command.format(dbuser), **kwargs)
-
-    def _create_db(self, dbuser, dbname, method=None, **kwargs):
-        '''create a database in postgres
-
-        :param dbuser: Name of the user which should own the db.
-        :param dbname: Name of the database.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._create_db_command.format(dbname, dbuser), **kwargs)
-        method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
-
-    def _drop_db(self, dbname, method=None, **kwargs):
-        '''drop a database in postgres
-
-        :param dbname: Name of the database.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._drop_db_command.format(dbname), **kwargs)
-
-
-    def _pg_execute_psyco(self, command, **kwargs):
-        '''
-        executes a postgres commandline through psycopg2
-
-        :param command: A psql command line as a str
-        :param kwargs: will be forwarded to psycopg2.connect
-        '''
-        from psycopg2 import connect, ProgrammingError
-        conn = connect(**kwargs)
-        conn.autocommit = True
-        output = None
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(command)
-                try:
-                    output = cur.fetchall()
-                except ProgrammingError:
-                    pass
-        return output
-
-    def _pg_execute_sh(self, command, user='postgres', **kwargs):
-        '''
-        executes a postgres command line as another system user in a subprocess.
-
-        :param command: A psql command line as a str
-        :param user: Name of a system user with postgres permissions
-        :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
-        '''
-        options = ''
-        database = kwargs.pop('database', None)
-        if database:
-            options += '-d {}'.format(database)
-        kwargs.pop('password', None)
-        host = kwargs.pop('host', None)
-        if host:
-            options += '-h {}'.format(host)
-        port = kwargs.pop('port', None)
-        if port:
-            options += '-p {}'.format(port)
-        try:
-            import subprocess32 as sp
-        except ImportError:
-            import subprocess as sp
-        from aiida.common.utils import escape_for_bash
-        result = sp.check_output(
-            ['sudo', 'su', user, '-c', 'psql {options} -tc {}'.format(escape_for_bash(command), options=options)],
-            **kwargs)
-        if isinstance(result, str):
-            result = result.strip().split('\n')
-            result = [i for i in result if i]
-        return result
-
-    def _dbuser_exists(self, dbuser, method, **kwargs):
-        '''return True if postgres user with name dbuser exists, False otherwise.'''
-        return bool(method(self._get_users_command.format(dbuser), **kwargs))
-
-    def _db_exists(self, dbname, method=None, **kwargs):
-        """return True if database with dbname exists."""
-        return bool(method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs))
-
-    def _check_db_name(self, dbname, method=None, **kwargs):
+    def _check_db_name(self, dbname, postgres):
         '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
         create = True
-        while create and method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
+        while create and postgres.db_exists(dbname):
             click.echo('database {} already exists!'.format(dbname))
             if not click.confirm('Use it (make sure it is not used by another profile)?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
@@ -1198,7 +1008,7 @@ def exec_from_cmdline(argv):
 
         # if command has parser written with the 'click' module
         # we also add a dynamic help string documenting the options
-        # Note: to enable this for a command, simply add a static 
+        # Note: to enable this for a command, simply add a static
         # _ctx method (see e.g. Quicksetup)
         if hasattr(cmd, '_ctx'):
             v += "\n"

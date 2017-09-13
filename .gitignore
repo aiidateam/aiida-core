@@ -15,5 +15,5 @@
 .eggs
 
 # files created by coverage
-*,cover
-.coverage
+*\,cover
+coverage/

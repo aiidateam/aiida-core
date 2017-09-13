@@ -43,7 +43,7 @@ install:
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - pip install .[REST,docs,atomic_tools,testing]
-    - pip install pre-commit, yapf, prospector
+    - pip install pre-commit yapf prospector
 
 jobs:
     include:

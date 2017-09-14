@@ -354,10 +354,11 @@ class NodeTranslator(BaseTranslator):
 
     # TODO this works but has to be rewritten once group_by is available in
     # querybuilder
-    def get_statistics(self, tclass, users=[]):
+    def get_statistics(self, tclass, user_email=None):
         from aiida.orm.querybuilder import QueryBuilder as QB
         from aiida.orm import User
         from collections import Counter
+        import datetime
 
         def count_statistics(dataset):
 
@@ -370,55 +371,46 @@ class NodeTranslator(BaseTranslator):
 
             count_dict = {}
 
-            types = Counter([r[3] for r in dataset])
+            types = Counter([r[2] for r in dataset])
             count_dict["types"] = get_statistics_dict(types)
-
-            ctimelist = [r[1].strftime("%Y-%m") for r in dataset]
-            ctime = Counter(ctimelist)
-            count_dict["ctime_by_month"] = get_statistics_dict(ctime)
 
             ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
             ctime = Counter(ctimelist)
-            count_dict["ctime_by_day"] = get_statistics_dict(ctime)
 
-            mtimelist = [r[2].strftime("%Y-%m") for r in dataset]
-            mtime = Counter(ctimelist)
-            count_dict["mtime_by_month"] = get_statistics_dict(mtime)
+            if len(ctimelist) > 0:
 
-            mtimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
-            mtime = Counter(ctimelist)
-            count_dict["mtime_by_day"] = get_statistics_dict(mtime)
+                # For the way the string is formatted, we can just sort it alphabetically
+                firstdate = datetime.datetime.strptime(sorted(ctimelist)[0], '%Y-%m-%d')
+                lastdate  = datetime.datetime.strptime(sorted(ctimelist)[-1], '%Y-%m-%d')
+
+                curdate = firstdate
+                outdata = {}
+
+                while curdate <= lastdate:
+                    curdatestring = curdate.strftime('%Y-%m-%d')
+                    outdata[curdatestring] = ctime.get(curdatestring, 0)
+                    curdate += datetime.timedelta(days=1)
+                count_dict["ctime_by_day"] = outdata
+
+            else:
+                count_dict["ctime_by_day"] = []
 
             return count_dict
 
         statistics = {}
 
         q = QB()
-        q.append(tclass, project=['id', 'ctime', 'mtime', 'type'], tag='node')
-        q.append(User, creator_of='node', project='email')
+        q.append(tclass, project=['id', 'ctime', 'type'], tag='node')
+        if user_email is not None:
+            q.append(User, creator_of='node', project='email', filters={'email': user_email})
         qb_res = q.all()
 
         # total count
         statistics["total"] = len(qb_res)
-
-        node_users = Counter([r[4] for r in qb_res])
-        statistics["users"] = {}
-
-        if isinstance(users, basestring):
-            users = [users]
-        if len(users) == 0:
-            users = node_users
-
-        for user in users:
-            user_data = [r for r in qb_res if r[4] == user]
-            # statistics for user data
-            statistics["users"][user] = count_statistics(user_data)
-            statistics["users"][user]["total"] = node_users[user]
-
-        # statistics for node data
         statistics.update(count_statistics(qb_res))
 
         return statistics
+
 
     def get_io_tree(self, uuid_pattern):
         from aiida.orm.querybuilder import QueryBuilder

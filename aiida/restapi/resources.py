@@ -132,7 +132,7 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
          nelist) = self.utils.parse_query_string(query_string)
@@ -160,7 +160,7 @@ class Node(Resource):
             if len(filters) > 0:
                 usr = filters["user"]["=="]
             else:
-                usr = []
+                usr = None
             results = self.trans.get_statistics(self.tclass, usr)
 
         # TODO Might need to be improved

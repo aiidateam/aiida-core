@@ -257,7 +257,7 @@ class Utils(object):
                                       "requested (i.e. the path must contain "
                                       "/page/)")
         # 4. No querystring if query type = schema', 'visualization', 'schema'
-        if query_type in ('schema', 'visualization', 'statistics') and \
+        if query_type in ('schema', 'visualization') and \
                 is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")

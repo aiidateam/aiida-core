@@ -13,8 +13,7 @@ This allows to manage profiles from command line.
 import sys
 import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-
+from aiida.control.postgres import Postgres
 
 valid_processes = ['verdi', 'daemon']
 
@@ -159,11 +158,8 @@ class Profile(VerdiCommandWithSubcommands):
         else:
             force = False
 
-        #TODO (issue 693): move db-related functions below outside Quicksetup
-        q = Quicksetup()
-        pg_info = q._get_pg_access()
-        pg_execute = pg_info['method']
-        dbinfo = pg_info['dbinfo']
+        postgres = Postgres()
+        postgres.determine_setup()
 
         confs = get_or_create_config()
         profiles = confs.get('profiles',{})
@@ -177,23 +173,23 @@ class Profile(VerdiCommandWithSubcommands):
                 print("Profile '{}' does not exist".format(profile_to_delete))
                 continue
 
-            db = profile.get('AIIDADB_NAME', '')
-            if not q._db_exists(db, pg_execute, **dbinfo):
-                print("Associated database '{}' does not exist.".format(db))
+            db_name = profile.get('AIIDADB_NAME', '')
+            if not postgres.db_exists(db_name):
+                print("Associated database '{}' does not exist.".format(db_name))
             elif force or click.confirm("Delete associated database '{}'?\n" \
-                             "WARNING: All data will be lost.".format(db)):
-                print("Deleting database '{}'.".format(db))
-                q._drop_db(db, pg_execute, **dbinfo)
+                             "WARNING: All data will be lost.".format(db_name)):
+                print("Deleting database '{}'.".format(db_name))
+                postgres.drop_db(db_name)
 
             user = profile.get('AIIDADB_USER', '')
-            if not q._dbuser_exists(user, pg_execute, **dbinfo):
+            if not postgres.dbuser_exists(user):
                 print("Associated database user '{}' does not exist.".format(user))
             elif users.count(user) > 1:
                 print("Associated database user '{}' is used by other profiles "\
                       "and will not be deleted.".format(user))
             elif force or click.confirm("Delete database user '{}'?".format(user)):
                 print("Deleting user '{}'.".format(user))
-                q._drop_dbuser(user, pg_execute, **dbinfo)
+                postgres.drop_dbuser(user)
 
             repo_uri = profile.get('AIIDADB_REPOSITORY_URI','')
             repo_path = urlparse(repo_uri).path

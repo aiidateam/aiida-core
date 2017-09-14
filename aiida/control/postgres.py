@@ -17,7 +17,7 @@ _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 
 class Postgres(object):
     """
-    Object that provides postgres database manipulation assuming no prior setup
+    Provides postgres database manipulation assuming no prior setup
 
     * Can be used to create the initial aiida db user and database.
     * Works in every reasonable environment, provided the user can sudo
@@ -33,6 +33,8 @@ class Postgres(object):
         if port:
             self.set_port(port)
         self.setup_fail_callback = None
+        self.setup_fail_counter = 0
+        self.setup_max_tries = 1
 
     def set_setup_fail_callback(self, callback):
         self.setup_fail_callback = callback
@@ -54,23 +56,26 @@ class Postgres(object):
         # find out if we run as a postgres superuser or can connect as postgres
         # This will work on OSX in some setups but not in the default Debian one
         dbinfo = {'user': None, 'database': 'template1'}
+        dbinfo.update(self.dbinfo)
         for pg_user in [None, 'postgres']:
-            if _try_connect(**dbinfo):
+            local_dbinfo = dbinfo.copy()
+            local_dbinfo['user'] = pg_user
+            if _try_connect(**local_dbinfo):
                 self.pg_execute = _pg_execute_psyco
-                self.dbinfo['user'] = pg_user
+                self.dbinfo = local_dbinfo
                 break
 
         # This will work for the default Debian postgres setup
         if not self.pg_execute:
-            if not self.interactive:
+            dbinfo['user'] = 'postgres'
+            if _try_subcmd(
+                    non_interactive=bool(not self.interactive), **dbinfo):
                 self.pg_execute = _pg_execute_sh
-                self.dbinfo['user'] = 'postgres'
-            elif _try_subcmd(user='postgres'):
-                self.pg_execute = _pg_execute_sh
-                self.dbinfo['user'] = 'postgres'
+                self.dbinfo = dbinfo
 
         # This is to allow for any other setup
         if not self.pg_execute:
+            self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
             click.echo((
@@ -118,7 +123,7 @@ class Postgres(object):
         self.pg_execute(
             _GRANT_PRIV_COMMAND.format(dbname, dbuser), **self.dbinfo)
 
-    def _drop_db(self, dbname):
+    def drop_db(self, dbname):
         """drop a database in postgres
 
         :param dbname: Name of the database.
@@ -142,8 +147,12 @@ class Postgres(object):
             'If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
             'If postgresql is installed, please ask your system manager to provide you with the following parameters:'
         ])
-        click.echo(message)
-        self.dbinfo = self.setup_fail_callback(self.interactive, self.dbinfo)
+        if not self.quiet:
+            click.echo(message)
+        if self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
+            self.dbinfo = self.setup_fail_callback(self.interactive,
+                                                   self.dbinfo)
+            self.determine_setup()
 
 
 def manual_setup_instructions(dbuser, dbname):
@@ -160,7 +169,7 @@ def manual_setup_instructions(dbuser, dbname):
     return instructions
 
 
-def _prompt_db_info():
+def prompt_db_info():
     """
     Prompt interactively for postgres database connecting details.
 
@@ -223,6 +232,7 @@ def _try_subcmd(**kwargs):
     """
     success = False
     try:
+        kwargs['stderr'] = subprocess.STDOUT
         _pg_execute_sh(r'\q', **kwargs)
         success = True
     except subprocess.CalledProcessError:
@@ -258,6 +268,9 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     :param command: A psql command line as a str
     :param user: Name of a system user with postgres permissions
     :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
+
+    To stop `sudo` from asking for a password and fail if one is required,
+    pass `noninteractive=True` as a kwarg.
     """
     options = ''
     database = kwargs.pop('database', None)
@@ -270,11 +283,21 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     port = kwargs.pop('port', None)
     if port:
         options += '-p {}'.format(port)
+
+    ## build command line
+    sudo_cmd = ['sudo']
+    non_interactive = kwargs.pop('non_interactive', None)
+    if non_interactive:
+        sudo_cmd += ['-n']
+    su_cmd = ['su', user, '-c']
     from aiida.common.utils import escape_for_bash
-    result = subprocess.check_output([
-        'sudo', 'su', user, '-c', 'psql {options} -tc {}'.format(
+    psql_cmd = [
+        'psql {options} -tc {}'.format(
             escape_for_bash(command), options=options)
-    ], **kwargs)
+    ]
+    sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
+    result = subprocess.check_output(sudo_su_psql, **kwargs)
+
     if isinstance(result, str):
         result = result.strip().split('\n')
         result = [i for i in result if i]

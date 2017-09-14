@@ -31,7 +31,7 @@ from aiida.common.exceptions import (
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
-from aiida.control.postgres import Postgres, manual_setup_instructions
+from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
 # Import here from other files; once imported, it will be found and
 # used as a command-line parameter
@@ -605,15 +605,6 @@ class Quicksetup(VerdiCommand):
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
-    _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
-    _drop_user_command = 'DROP USER "{}"'
-    _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
-    _drop_db_command = 'DROP DATABASE "{}"'
-    _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
-    _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
-
-    # note: 'usename' is not a typo!
-
     def run(self, *args):
         ctx = self._ctx(args)
         with ctx:
@@ -623,33 +614,6 @@ class Quicksetup(VerdiCommand):
     @staticmethod
     def _ctx(args, info_name='verdi quicksetup', **kwargs):
         return Quicksetup._quicksetup_cmd.make_context(info_name, list(args), **kwargs)
-
-    def _prompt_db_info(self):
-        '''prompt interactively for postgres database connecting details.'''
-        access = False
-        while not access:
-            dbinfo = {}
-            dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
-            dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
-            dbinfo['database'] = click.prompt('template', default='template1', type=str)
-            dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
-            click.echo('')
-            click.echo('trying to access postgres..')
-            if self._try_connect(**dbinfo):
-                access = True
-            else:
-                dbinfo['password'] = click.prompt('postgres password of {}'.format(dbinfo['user']), hide_input=True,
-                                                  type=str)
-                if self._try_connect(**dbinfo):
-                    access = True
-                else:
-                    click.echo(
-                        'you may get prompted for a super user password and again for your postgres super user password')
-                    if self._try_subcmd(**dbinfo):
-                        access = True
-                    else:
-                        click.echo('Unable to connect to postgres, please try again')
-        return dbinfo
 
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
     @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
@@ -676,6 +640,8 @@ class Quicksetup(VerdiCommand):
 
         # access postgres
         postgres = Postgres(port=db_port, interactive=True, quiet=False)
+        postgres.set_setup_fail_callback(prompt_db_info)
+        postgres.determine_setup()
 
         # default database name is <profile>_<login-name>
         # this ensures that for profiles named test_... the database will also
@@ -709,7 +675,6 @@ class Quicksetup(VerdiCommand):
             else:
                 dbname, create = self._check_db_name(dbname, postgres)
             if create:
-                self._create_db(dbuser, dbname, pg_execute, **dbinfo)
                 postgres.create_db(dbuser, dbname)
         except Exception as e:
             click.echo('\n'.join([

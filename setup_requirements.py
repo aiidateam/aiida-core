@@ -120,6 +120,7 @@ extras_require = {
     # Requirements for testing
     'testing': [
         'mock',
+        'pgtest'
     ]
 }
 

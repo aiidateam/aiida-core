@@ -45,7 +45,7 @@ install_requires = [
     'SQLAlchemy-Utils==0.31.2',
     'alembic>=0.9.2',
     'ujson==1.35',
-    'enum34==1.1.2',
+    'enum34==1.1.6',
     'voluptuous==0.8.11',
     'aldjemy==0.6.0',
     'passlib==1.7.1',
@@ -121,6 +121,12 @@ extras_require = {
     'testing': [
         'mock',
         'pgtest'
+    ],
+    'dev_precommit': [
+        'pre-commit',
+        'yapf',
+        'prospector',
+        'pylint'
     ]
 }
 

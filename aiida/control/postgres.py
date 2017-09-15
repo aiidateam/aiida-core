@@ -200,7 +200,7 @@ def prompt_db_info():
     """
     Prompt interactively for postgres database connecting details
 
-    Can be used as a setup fail callback for :py:class:`Postgres`
+    Can be used as a setup fail callback for :py:class:`aiida.control.postgres.Postgres`
 
     :return: dictionary with the following keys: host, port, database, user
     """

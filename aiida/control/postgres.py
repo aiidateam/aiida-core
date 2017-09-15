@@ -22,7 +22,29 @@ class Postgres(object):
     * Can be used to create the initial aiida db user and database.
     * Works in every reasonable environment, provided the user can sudo
 
-    Tries to use psychopg2 with a fallback to psql subcommands.
+    Tries to use psychopg2 with a fallback to psql subcommands (using ``sudo su`` to run as postgres user).
+
+    :param port: (str) Assume the database server runs on this port
+    :param interactive: (bool) Allow prompting the user for information
+        Will also be passed to ``sudo`` (if using ``psycopg2`` fails) and to
+        the callback that can be set to be called when automatic setup detection fails
+    :param quiet: (bool) Suppress messages
+
+    Simple Example::
+
+        postgres = Postgres()
+        postgres.determine_setup()
+        postgres.create_dbuser('username', 'password')
+        if not postgres.db_exists('dbname'):
+            postgres.create_db('username', 'dbname')
+
+    Complex Example::
+
+        postgres = Postgres(port=4321, interactive=True)
+        postgres.setup_fail_callback = prompt_db_info
+        postgres.determine_setup()
+        if postgres.pg_execute:
+            print('setup sucessful!')
     """
 
     def __init__(self, port=None, interactive=False, quiet=True):
@@ -37,21 +59,23 @@ class Postgres(object):
         self.setup_max_tries = 1
 
     def set_setup_fail_callback(self, callback):
+        """
+        Set a callback to be called when setup cannot be determined automatically
+
+        :param callback: a callable with signature ``callback(interactive, dbinfo)``
+        """
         self.setup_fail_callback = callback
 
     def set_port(self, port):
         """Set the port manually"""
-        self.dbinfo['port'] = port
+        self.dbinfo['port'] = str(port)
 
     def determine_setup(self):
         """
-        find out how postgres can be accessed.
+        Find out how postgres can be accessed.
 
         Depending on how postgres is set up, psycopg2 can be used to create dbs and db users,
         otherwise a subprocess has to be used that executes psql as an os user with the right permissions.
-
-        :return: (method, info) where method is a method that executes psql commandlines and
-            info is a dict with keyword arguments to be used with method.
         """
         # find out if we run as a postgres superuser or can connect as postgres
         # This will work on OSX in some setups but not in the default Debian one
@@ -85,38 +109,38 @@ class Postgres(object):
 
     def create_dbuser(self, dbuser, dbpass):
         """
-        create a database user in postgres
+        Create a database user in postgres
 
-        :param dbuser: Name of the user to be created.
-        :param dbpass: Password the user should be given.
+        :param dbuser: (str), Name of the user to be created.
+        :param dbpass: (str), Password the user should be given.
         """
         self.pg_execute(
             _CREATE_USER_COMMAND.format(dbuser, dbpass), **self.dbinfo)
 
     def drop_dbuser(self, dbuser):
         """
-        drop a database user in postgres
+        Drop a database user in postgres
 
-        :param dbuser: Name of the user to be dropped.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
+        :param dbuser: (str), Name of the user to be dropped.
         """
         self.pg_execute(_DROP_USER_COMMAND.format(dbuser), **self.dbinfo)
 
     def dbuser_exists(self, dbuser):
-        """return True if postgres user with name dbuser exists, False otherwise."""
+        """
+        Find out if postgres user with name dbuser exists
+
+        :param dbuser: (str) database user to check for
+        :return: (bool) True if user exists, False otherwise
+        """
         return bool(
             self.pg_execute(_GET_USERS_COMMAND.format(dbuser), **self.dbinfo))
 
     def create_db(self, dbuser, dbname):
-        """create a database in postgres
+        """
+        Create a database in postgres
 
-        :param dbuser: Name of the user which should own the db.
-        :param dbname: Name of the database.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
+        :param dbuser: (str), Name of the user which should own the db.
+        :param dbname: (str), Name of the database.
         """
         self.pg_execute(
             _CREATE_DB_COMMAND.format(dbname, dbuser), **self.dbinfo)
@@ -124,17 +148,20 @@ class Postgres(object):
             _GRANT_PRIV_COMMAND.format(dbname, dbuser), **self.dbinfo)
 
     def drop_db(self, dbname):
-        """drop a database in postgres
+        """
+        Drop a database in postgres
 
-        :param dbname: Name of the database.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
+        :param dbname: (str), Name of the database.
         """
         self.pg_execute(_DROP_DB_COMMAND.format(dbname), **self.dbinfo)
 
     def db_exists(self, dbname):
-        """return True if database with dbname exists."""
+        """
+        Check wether a postgres database with dbname exists
+
+        :param dbname: Name of the database to check for
+        :return: (bool), True if database exists, False otherwise
+        """
         return bool(
             self.pg_execute(
                 _CHECK_DB_EXISTS_COMMAND.format(dbname), **self.dbinfo))
@@ -156,7 +183,7 @@ class Postgres(object):
 
 
 def manual_setup_instructions(dbuser, dbname):
-    """Create a message with instructions for manual setup"""
+    """Create a message with instructions for manually creating a database"""
     dbpass = '<password>'
     instructions = '\n'.join([
         'Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):',
@@ -171,7 +198,9 @@ def manual_setup_instructions(dbuser, dbname):
 
 def prompt_db_info():
     """
-    Prompt interactively for postgres database connecting details.
+    Prompt interactively for postgres database connecting details
+
+    Can be used as a setup fail callback for :py:class:`Postgres`
 
     :return: dictionary with the following keys: host, port, database, user
     """

@@ -40,7 +40,7 @@ class Postgres(object):
 
     Complex Example::
 
-        postgres = Postgres(port=4321, interactive=True)
+        postgres = Postgres(port=5433, interactive=True)
         postgres.setup_fail_callback = prompt_db_info
         postgres.determine_setup()
         if postgres.pg_execute:

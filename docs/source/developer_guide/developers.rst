@@ -216,7 +216,7 @@ For a cheatsheet of git commands, see :doc:`here <git_cheatsheet>`.
 Pre-commit hooks
 ----------------
 
-Git has a *hooks* mechanism to run tasks automatically when an event is triggered.We use this mechanism to trigger code checks on every commit. Currently only the :py:mod:`aiida.control` module is affected, but more parts of the code will be added progressively.
+Git has a *hooks* mechanism to run tasks automatically when an event is triggered.We use this mechanism to trigger code checks on every commit. Currently only the :`aiida.control` module is affected, but more parts of the code will be added progressively.
 
 These checks are to prevent syntax or other coding errors from being committed and to enforce style consistency.
 

@@ -33,9 +33,11 @@ class FixtureManager(object):
             'email': 'test@aiida.mail',
             'first_name': 'AiiDA',
             'last_name': 'Plugintest',
-            'institution': 'aiidateam'
+            'institution': 'aiidateam',
+            'db_user': 'aiida',
+            'db_pass': 'aiida_pw',
+            'db_name': 'aiida_db'
         }
-        self.temp_dir = None
         self.pg_cluster = None
         self.postgres = None
 
@@ -77,6 +79,7 @@ class FixtureManager(object):
         from aiida.cmdline.verdilib import setup
         if not self.root_dir:
             self.create_root_dir()
+        print self.root_dir, self.config_dir
         aiida_cfg.AIIDA_CONFIG_FOLDER = self.config_dir
         aiida_cfg.create_base_dirs()
         profile_name = 'test_profile'
@@ -93,6 +96,7 @@ class FixtureManager(object):
         """Profile parameters"""
         profile = {
             'backend': self.backend,
+            'email': self.email,
             'repo': self.repo,
             'db_host': self.db_host,
             'db_port': self.db_port,
@@ -123,7 +127,7 @@ class FixtureManager(object):
 
     @property
     def last_name(self):
-        return self.profile_info['last_name', None]
+        return self.profile_info['last_name']
 
     @last_name.setter
     def last_name(self, name):
@@ -131,7 +135,7 @@ class FixtureManager(object):
 
     @property
     def institution(self):
-        return self.profile_info['institution', None]
+        return self.profile_info['institution']
 
     @institution.setter
     def institution(self, institution):
@@ -150,7 +154,7 @@ class FixtureManager(object):
 
     @property
     def repo(self):
-        self._return_dir('repo')
+        return self._return_dir('repo')
 
     @repo.setter
     def repo(self, repo_dir):
@@ -158,12 +162,12 @@ class FixtureManager(object):
 
     def _return_dir(self, key):
         """Return a path to a directory from the fs environment"""
-        dir_path = self.fs_env.get(key, '')
+        dir_path = self.fs_env[key]
         if not dir_path:
-            return None
-        elif dir_path.isabs(dir_path):
+            raise FixtureError('no directory set for {}'.format(key))
+        elif path.isabs(dir_path):
             return dir_path
-        return dir_path.join(self.root_dir, dir_path)
+        return path.join(self.root_dir, dir_path)
 
     @property
     def email(self):
@@ -187,7 +191,7 @@ class FixtureManager(object):
 
     @property
     def config_dir(self):
-        self._return_dir('config')
+        return self._return_dir('config')
 
     @config_dir.setter
     def config_dir(self, config_dir):
@@ -195,31 +199,31 @@ class FixtureManager(object):
 
     @property
     def db_user(self):
-        return self.db_params['user']
+        return self.profile_info['db_user']
 
     @db_user.setter
     def db_user(self, user):
-        self.db_params['user'] = user
+        self.profile_info['db_user'] = user
 
     @property
     def db_pass(self):
-        return self.db_params['password']
+        return self.profile_info['db_pass']
 
     @db_pass.setter
     def db_pass(self, passwd):
-        self.db_params['password'] = passwd
+        self.profile_info['db_pass'] = passwd
 
     @property
     def db_name(self):
-        return self.db_params['database']
+        return self.profile_info['db_name']
 
     @db_name.setter
     def db_name(self, name):
-        self.db_params['database'] = name
+        self.profile_info['db_name'] = name
 
     @property
     def root_dir(self):
-        return self.fs_env.get('root', None)
+        return self.fs_env.get('root', '')
 
     @root_dir.setter
     def root_dir(self, root_dir):
@@ -227,11 +231,11 @@ class FixtureManager(object):
 
     @property
     def root_dir_ok(self):
-        return bool(self.temp_dir and path.isdir(self.temp_dir))
+        return bool(self.root_dir and path.isdir(self.root_dir))
 
     def __del__(self):
-        if self.temp_dir:
-            shutil.rmtree(self.temp_dir)
+        if self.root_dir:
+            shutil.rmtree(self.root_dir)
         if self.pg_cluster:
             self.pg_cluster.close()
 

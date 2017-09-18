@@ -7,25 +7,33 @@ from os import path
 from pgtest.pgtest import PGTest
 
 from aiida.control.postgres import Postgres
+from aiida import is_dbenv_loaded
 
 
 class FixtureError(Exception):
+    """Raised by FixtureManager, when it encounters a situation in which consistent behaviour can not be guaranteed"""
 
     def __init__(self, msg):
+        super(FixtureError, self).__init__()
         self.msg = msg
 
     def __str__(self):
         return repr(self.msg)
 
 
-class FixtureBuilder(object):
+# pylint: disable=too-many-public-methods
+class FixtureManager(object):
+    """Manage AiiDA fixtures"""
 
     def __init__(self):
         self.db_params = {}
-        self.fs_env = {}
-        self.profile = {
+        self.fs_env = {'repo': 'test_repo', 'config': '.aiida'}
+        self.profile_info = {
             'backend': 'django',
             'email': 'test@aiida.mail',
+            'first_name': 'AiiDA',
+            'last_name': 'Plugintest',
+            'institution': 'aiidateam'
         }
         self.temp_dir = None
         self.pg_cluster = None
@@ -36,7 +44,12 @@ class FixtureBuilder(object):
         self.db_params.update(self.pg_cluster.dsn)
 
     def create_aiida_db(self):
-        if not db_params:
+        """Create the necessary database on the temporary postgres instance"""
+        if is_dbenv_loaded():
+            raise FixtureError(
+                'AiiDA dbenv can not be loaded while creating a test db environment'
+            )
+        if not self.db_params:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True)
         self.postgres.dbinfo = self.db_params
@@ -51,59 +64,122 @@ class FixtureBuilder(object):
     def create_root_dir(self):
         self.root_dir = tempfile.mkdtemp()
 
-    def create_config_dir(self):
-        self.fs_env['config'] = path.join(self.root_dir, '.aiida')
-
     def create_profile(self):
+        """
+        Set AiiDA to use the test config dir and create a default profile there
+
+        Warning: the AiiDA dbenv must not be loaded when this is called!
+        """
+        if is_dbenv_loaded():
+            raise FixtureError(
+                'AiiDA dbenv can not be loaded while creating a test profile')
         from aiida.common import setup as aiida_cfg
         from aiida.cmdline.verdilib import setup
+        if not self.root_dir:
+            self.create_root_dir()
         aiida_cfg.AIIDA_CONFIG_FOLDER = self.config_dir
         aiida_cfg.create_base_dirs()
         profile_name = 'test_profile'
-        profile = {
-            'repo': path.join(temp_dir, 'test_repo'),
-            'db_host': db_fixture.pg_test.dsn['host'],
-            'db_port': db_fixture.pg_test.port,
-            'db_user': db_fixture.pg_test.dsn['user'],
-            'db_pass': db_fixture.DB_PASS,
-            'db_name': db_fixture.DB_NAME,
-            'first_name': 'AiiDA',
-            'last_name': 'Tester',
-            'institution': 'aiidateam'
-        }
         setup(
             profile=profile_name,
             only_config=False,
             non_interactive=True,
-            **profile)
+            **self.profile)
         aiida_cfg.set_default_profile('verdi', profile_name)
         aiida_cfg.set_default_profile('daemon', profile_name)
 
     @property
+    def profile(self):
+        """Profile parameters"""
+        profile = {
+            'backend': self.backend,
+            'repo': self.repo,
+            'db_host': self.db_host,
+            'db_port': self.db_port,
+            'db_user': self.db_user,
+            'db_pass': self.db_pass,
+            'db_name': self.db_name,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'institution': self.institution
+        }
+        return profile
+
+    @property
+    def db_host(self):
+        return self.db_params.get('host')
+
+    @db_host.setter
+    def db_host(self, hostname):
+        self.db_params['host'] = hostname
+
+    @property
+    def first_name(self):
+        return self.profile_info['first_name']
+
+    @first_name.setter
+    def first_name(self, name):
+        self.profile_info['first_name'] = name
+
+    @property
+    def last_name(self):
+        return self.profile_info['last_name', None]
+
+    @last_name.setter
+    def last_name(self, name):
+        self.profile_info['last_name'] = name
+
+    @property
+    def institution(self):
+        return self.profile_info['institution', None]
+
+    @institution.setter
+    def institution(self, institution):
+        self.profile_info['institution'] = institution
+
+    @property
+    def db_port(self):
+        return self.db_params.get('port', None)
+
+    @db_port.setter
+    def db_port(self, port):
+        self.db_params['port'] = str(port)
+
+    def repo_ok(self):
+        return bool(self.repo and path.isdir(path.dirname(self.repo)))
+
+    @property
     def repo(self):
-        if not self.repo:
-            self.repo = path.join(self.root_dir, 'test_repo')
-        return self.profile.get('repo', None)
+        self._return_dir('repo')
 
     @repo.setter
-    def repo(self, path):
-        self.profile['repo'] = path
+    def repo(self, repo_dir):
+        self.fs_env['repo'] = repo_dir
+
+    def _return_dir(self, key):
+        """Return a path to a directory from the fs environment"""
+        dir_path = self.fs_env.get(key, '')
+        if not dir_path:
+            return None
+        elif dir_path.isabs(dir_path):
+            return dir_path
+        return dir_path.join(self.root_dir, dir_path)
 
     @property
     def email(self):
-        return self.profile.get('email', None)
+        return self.profile_info['email']
 
     @email.setter
     def email(self, email):
-        self.profile['email'] = email
+        self.profile_info['email'] = email
 
     @property
     def backend(self):
-        return self.profile.get('backend', None)
+        return self.profile_info['backend']
 
     @backend.setter
     def backend(self, backend):
-        self.profile['backend'] = backend
+        self.profile_info['backend'] = backend
 
     @property
     def config_dir_ok(self):
@@ -111,14 +187,11 @@ class FixtureBuilder(object):
 
     @property
     def config_dir(self):
-        if not self.config_dir_ok:
-            self.create_config_dir(
-            )  # TODO: Should never overwrite user set path but fail instead
-        return self.fs_env.get('config', None)
+        self._return_dir('config')
 
     @config_dir.setter
-    def config_dir(self, path):
-        self.fs_env['config'] = path
+    def config_dir(self, config_dir):
+        self.fs_env['config'] = config_dir
 
     @property
     def db_user(self):
@@ -146,13 +219,11 @@ class FixtureBuilder(object):
 
     @property
     def root_dir(self):
-        if not self.root_dir_ok:
-            self.create_root_dir()
         return self.fs_env.get('root', None)
 
     @root_dir.setter
-    def root_dir(self, path):
-        self.fs_env['root'] = path
+    def root_dir(self, root_dir):
+        self.fs_env['root'] = root_dir
 
     @property
     def root_dir_ok(self):
@@ -163,70 +234,6 @@ class FixtureBuilder(object):
             shutil.rmtree(self.temp_dir)
         if self.pg_cluster:
             self.pg_cluster.close()
-
-
-class DbFixture(object):
-    """Create temporary AiiDA db environment"""
-
-    DB_USER = 'aiida'
-    DB_NAME = 'aiida_db'
-    DB_PASS = 'aiida_pw'
-
-    def __init__(self):
-        self.pg_test = PGTest()
-        self.postgres = Postgres(
-            port=self.pg_test.port, interactive=False, quiet=True)
-        self.postgres.dbinfo = self.pg_test.dsn
-        self.postgres.determine_setup()
-        self.success = bool(self.postgres.pg_execute)
-        if self.success:
-            self.postgres.create_dbuser(self.DB_USER, self.DB_PASS)
-            self.postgres.create_db(self.DB_USER, self.DB_NAME)
-
-    def __del__(self):
-        self.pg_test.close()
-
-    def init_success(self):
-        return self.success
-
-
-def setup_fs_env():
-    """Create temporary config / repo folders"""
-    temp_dir = tempfile.mkdtemp()
-    return temp_dir
-
-
-def setup_aiida(temp_dir):
-    from aiida.common import setup as aiida_cfg
-    aiida_cfg.AIIDA_CONFIG_FOLDER = path.join(temp_dir, '.aiida')
-    aiida_cfg.create_base_dirs()
-    return aiida_cfg.get_or_create_config()
-
-
-def create_test_profile(temp_dir, db_fixture, backend):
-    from aiida.common import setup as aiida_cfg
-    from aiida.cmdline.verdilib import setup
-    profile_name = 'test_profile'
-    profile = {
-        'backend': backend,
-        'email': 'test@aiida.mail',
-        'repo': path.join(temp_dir, 'test_repo'),
-        'db_host': db_fixture.pg_test.dsn['host'],
-        'db_port': db_fixture.pg_test.port,
-        'db_user': db_fixture.pg_test.dsn['user'],
-        'db_pass': db_fixture.DB_PASS,
-        'db_name': db_fixture.DB_NAME,
-        'first_name': 'AiiDA',
-        'last_name': 'Tester',
-        'institution': 'aiidateam'
-    }
-    setup(
-        profile=profile_name,
-        only_config=False,
-        non_interactive=True,
-        **profile)
-    aiida_cfg.set_default_profile('verdi', profile_name)
-    aiida_cfg.set_default_profile('daemon', profile_name)
 
 
 class PluginTestCase(unittest.TestCase):
@@ -253,13 +260,10 @@ class PluginTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.db_fixture = DbFixture()
-        assert cls.db_fixture.init_success()
-        cls.temp_dir = setup_fs_env()
-        cls.aiida_cfg = setup_aiida(cls.temp_dir)
-        create_test_profile(cls.temp_dir, cls.db_fixture, cls.BACKEND)
+        cls.fixture_builder = FixtureManager()
+        cls.fixture_builder.create_aiida_db()
+        cls.fixture_builder.create_profile()
 
     @classmethod
     def tearDownClass(cls):
-        del cls.db_fixture
-        shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        del cls.fixture_builder

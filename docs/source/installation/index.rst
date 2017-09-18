@@ -634,6 +634,12 @@ the procedure, make sure of the following:
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
   * From 0.8.0 onwards there is no ``requirements.txt`` file anymore. It has been replaced by ``setup_requirements.py`` and ``pip`` will install all the requirements automatically. If for some reason you would still like to get such a file, you can create it using the script ``aiida_core/utils/create_requirements.py``
 
+.. note::
+  Since AiiDA 0.9.0, we use Alembic for the database migrations of the
+  SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
+  of Alembic, you may experience problems during your first migration. If it is
+  the case, please have a look at the following section :ref:`first_alembic_migration`
+
 Updating between development versions (for Developers)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -646,6 +652,84 @@ To use the new version in production:
 
 * run ``verdi setup``
   This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
+
+Updating from 0.9.* to 0.10.0
+++++++++++++++++++++++++++++++++++++++++++
+
+In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a separate plugin repository.
+With the new plugin system introduced in version ``0.9.0``, installing the Quantum ESPRESSO plugin through the repository is very easy.
+However, if your current AiiDA installation still has the plugin files in the ``aiida_core`` tree, they have to be removed manually and the old entry points have to be removed from the cache.
+The instructions to accomplish this will be detailed below.
+
+* First, make sure that you are in the correct virtual environment, for example (replace the path with the path to your actual virtual environment::
+
+    source ~/aiidapy/bin/activate
+
+* Go to the directory of the ``aiida_core`` source code tree, for example::
+
+    cd ~/code/aiida/core
+
+* Check out the new version, either through the develop branch or a specific tag::
+
+    git checkout -b develop
+    git pull origin develop
+
+  or::
+
+    git checkout -b v0.10.0 v0.10.0
+
+* Remove the obsolete Quantum ESPRESSO plugin directory::
+
+    rm -rf aiida/orm/calculation/job/quantumespresso
+
+* Install the new version of AiiDA by typing::
+
+    pip install -e .[<EXTRAS>]
+
+  where <EXTRAS> is a comma separated list of the optional features you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
+
+This should have successfully removed the old plugin entry points from your virtual environment installation.
+To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are not listed::
+
+  verdi calculation plugins
+
+If this is not the case, run the following command and check the ``verdi`` command again::
+
+  reentry scan
+  verdi calculation plugins
+
+If the plugin is no longer listed, we can safely reinstall them from the new plugin repository and the plugin loading system.
+First, clone the plugin repository from github in a separate directory::
+
+  mkdir -p ~/code/aiida/plugins
+  cd ~/code/aiida/plugins
+  git clone https://github.com/aiidateam/aiida-quantumespresso
+
+Now all we have to do to install the plugin and have it registered with AiiDA is execute the following ``pip`` command::
+
+  pip install -e aiida-quantumespresso
+
+To verify that the plugin was installed correctly, list the plugin entry points through ``verdi``::
+
+  verdi calculation plugins
+
+If the Quantum ESPRESSO plugin entry points are not listed, you can try the following::
+
+  reentry scan
+  verdi calculation plugins
+
+If the entry points are still not listed, please contact the developers for support.
+Finally, make sure to restart the daemon::
+
+  verdi daemon restart
+
+Now everything should be working properly and you can use the plugin as you were used to.
+You can use the ``CalculationFactory`` exactly in the same way to load calculation classes.
+For example you can still call ``CalculationFactory('quantumespresso.pw')`` to load the ``PwCalculation`` class.
+The only thing that will have changed is that you can no longer directly import from the old plugin location.
+That means that ``from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation`` will no longer work as those files no longer exist.
+Instead you can use the factories or the new import location ``from aiida_quantumespresso.calculation.pw import PwCalculation``.
+
 
 Updating from 0.8.* Django to 0.9.0 Django
 ++++++++++++++++++++++++++++++++++++++++++

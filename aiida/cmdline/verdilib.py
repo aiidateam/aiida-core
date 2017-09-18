@@ -344,9 +344,13 @@ class Setup(VerdiCommand):
     """
 
     def run(self, *args):
-        ctx = _setup_cmd.make_context('setup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             _setup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi setup', **kwargs):
+        return _setup_cmd.make_context(info_name, list(args), **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """
@@ -362,36 +366,41 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),
-              help='ignored unless --non-interactive is given')
-@click.option('--email', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_host', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_port', type=int, help='ignored unless --non-interactive is given')
-@click.option('--db_name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_user', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_pass', type=str, help='ignored unless --non-interactive is given')
-@click.option('--first-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--last-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--institution', type=str, help='ignored unless --non-interactive is given')
-@click.option('--no-password', is_flag=True, help='ignored unless --non-interactive is given')
-@click.option('--repo', type=str, help='ignored unless --non-interactive is given')
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),)
+@click.option('--email', type=str)
+@click.option('--db_host', type=str)
+@click.option('--db_port', type=int)
+@click.option('--db_name', type=str)
+@click.option('--db_user', type=str)
+@click.option('--db_pass', type=str)
+@click.option('--first-name', type=str)
+@click.option('--last-name', type=str)
+@click.option('--institution', type=str)
+@click.option('--no-password', is_flag=True)
+@click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
                first_name, last_name, institution, no_password, repo):
-    '''verdi setup command, forward cmdline arguments to the setup function.'''
-    setup(profile=profile,
-          only_config=only_config,
-          non_interactive=non_interactive,
-          backend=backend,
-          email=email,
-          db_host=db_host,
-          db_port=db_port,
-          db_name=db_name,
-          db_user=db_user,
-          db_pass=db_pass,
-          first_name=first_name,
-          last_name=last_name,
-          institution=institution,
-          repo=repo)
+    '''verdi setup command, forward cmdline arguments to the setup function.
+    
+    Note: command line options are IGNORED unless --non-interactive is given.'''
+    kwargs = dict(
+        profile=profile,
+        only_config=only_config,
+        non_interactive=non_interactive,
+        backend=backend,
+        email=email,
+        db_host=db_host,
+        db_port=db_port,
+        db_name=db_name,
+        db_user=db_user,
+        db_pass=db_pass,
+        first_name=first_name,
+        last_name=last_name,
+        institution=institution,
+        repo=repo
+    )
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    setup(**kwargs)
 
 
 def setup(profile, only_config, non_interactive=False, **kwargs):
@@ -412,7 +421,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
     from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
-    from aiida.backends.utils import set_backend_type, get_backend_type
+    from aiida.backends.utils import set_backend_type
     from aiida.common.exceptions import InvalidOperation
 
     # ~ cmdline_args = list(args)
@@ -468,8 +477,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
         except KeyError as e:
-            sys.exit("--non-interactive requires all values to be given on the commandline! {}".format(e.message),
-                     err=True)
+            click.echo("--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(e.message), err=True)
+            sys.exit(1)
     else:
         try:
             created_conf = create_configuration(profile=gprofile)
@@ -518,49 +527,23 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
         elif backend_choice == BACKEND_SQLA:
             print("...for SQLAlchemy backend")
-            from aiida import is_dbenv_loaded, load_dbenv
+            from aiida import is_dbenv_loaded
+            from aiida.backends import settings
+            from aiida.backends.sqlalchemy.utils import (
+                _load_dbenv_noschemacheck, check_schema_version)
+            from aiida.backends.profile import load_profile
+
+            # We avoid calling load_dbenv since we want to force the schema
+            # migration
             if not is_dbenv_loaded():
-                load_dbenv()
+                settings.LOAD_DBENV_CALLED = True
+                # This is going to set global variables in settings, including
+                # settings.BACKEND
+                load_profile()
+                _load_dbenv_noschemacheck()
 
-            from aiida.backends.sqlalchemy.models.base import Base
-            from aiida.backends.sqlalchemy.utils import install_tc, reset_session
-            from aiida.common.setup import get_profile_config
-
-            # This check should be done more properly
-            # try:
-            #     backend_type = get_backend_type()
-            # except KeyError:
-            #     backend_type = None
-            #
-            # if backend_type is not None and backend_type != BACKEND_SQLA:
-            #     raise InvalidOperation("An already existing database found"
-            #                            "and a different than the selected"
-            #                            "backend was used for its "
-            #                            "management.")
-
-            # Those import are necessary for SQLAlchemy to correctly create
-            # the needed database tables.
-            from aiida.backends.sqlalchemy.models.authinfo import (
-                DbAuthInfo)
-            from aiida.backends.sqlalchemy.models.comment import DbComment
-            from aiida.backends.sqlalchemy.models.computer import (
-                DbComputer)
-            from aiida.backends.sqlalchemy.models.group import (
-                DbGroup, table_groups_nodes)
-            from aiida.backends.sqlalchemy.models.lock import DbLock
-            from aiida.backends.sqlalchemy.models.log import DbLog
-            from aiida.backends.sqlalchemy.models.node import (
-                DbLink, DbNode, DbPath, DbCalcState)
-            from aiida.backends.sqlalchemy.models.user import DbUser
-            from aiida.backends.sqlalchemy.models.workflow import (
-                DbWorkflow, DbWorkflowData, DbWorkflowStep)
-            from aiida.backends.sqlalchemy.models.settings import DbSetting
-
-            reset_session(get_profile_config(gprofile))
-            from aiida.backends.sqlalchemy import get_scoped_session
-            connection = get_scoped_session().connection()
-            Base.metadata.create_all(connection)
-            install_tc(connection)
+            # Perform the needed migration quietly
+            check_schema_version(force_migration=True)
 
             set_backend_type(BACKEND_SQLA)
 
@@ -614,22 +597,29 @@ class Quicksetup(VerdiCommand):
     '''
     Quick setup for the most common usecase (1 user, 1 machine).
 
-    Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
-    Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
-    Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
+    Creates a database user 'aiida_qs_<login-name>' with random password (if it
+    doesn't exist). Creates a database '<profile>_<username>' (if it exists,
+    prompts user to use or change the name).
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
     _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
+    _drop_user_command = 'DROP USER "{}"'
     _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
+    _drop_db_command = 'DROP DATABASE "{}"'
     _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
     _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
+    # note: 'usename' is not a typo!
 
     def run(self, *args):
-        ctx = self._quicksetup_cmd.make_context('quicksetup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             ctx.obj = self
             self._quicksetup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi quicksetup', **kwargs):
+        return Quicksetup._quicksetup_cmd.make_context(info_name, list(args), **kwargs)
 
     def _get_pg_access(self):
         '''
@@ -706,8 +696,10 @@ class Quicksetup(VerdiCommand):
                         click.echo('Unable to connect to postgres, please try again')
         return dbinfo
 
+
     @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
+    @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
+    @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
                   help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
     @click.option('--first-name', prompt='First Name', type=str)
     @click.option('--last-name', prompt='Last Name', type=str)
@@ -717,12 +709,12 @@ class Quicksetup(VerdiCommand):
     @click.option('--db-user', type=str)
     @click.option('--db-user-pw', type=str)
     @click.option('--db-name', type=str)
-    @click.option('--profile', type=str)
     @click.option('--repo', type=str)
+    @click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
     @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                        profile, repo):
-        '''setup a sane aiida configuration with as little interaction as possible.'''
+    def _quicksetup_cmd(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
+                        repo, set_default):
+        '''Set up a sane aiida configuration with as little interaction as possible.'''
         from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
         create_base_dirs()
 
@@ -733,15 +725,18 @@ class Quicksetup(VerdiCommand):
         pg_execute = pg_info['method']
         dbinfo = pg_info['dbinfo']
 
-        # check if a database setup already exists
-        # otherwise setup the database user aiida
-        # setup the database aiida_qs_<username>
-        from getpass import getuser
-        from aiida.common.setup import generate_random_secret_key
-        osuser = getuser()
+        # default database name is <profile>_<login-name>
+        # this ensures that for profiles named test_... the database will also
+        # be named test_...
+        import getpass
+        osuser = getpass.getuser()
+        dbname = db_name or profile + '_' + osuser
+
+        # default database user name is aiida_qs_<login-name>
+        # default password is random
         dbuser = db_user or 'aiida_qs_' + osuser
+        from aiida.common.setup import generate_random_secret_key
         dbpass = db_user_pw or generate_random_secret_key()
-        dbname = db_name or 'aiidadb_qs_' + osuser
 
         # check if there is a profile that contains the db user already
         # and if yes, take the db user password from there
@@ -827,17 +822,24 @@ class Quicksetup(VerdiCommand):
 
         for process in valid_processes:
 
-            default_profile = default_profiles.get(process, '')
-            default_override = False
+            # if the user specifies whether to override that's fine
+            if set_default in [True, False]:
+                _set_default = set_default
+            # otherwise we may need to ask
+            else:
+                default_profile = default_profiles.get(process, '')
+                if default_profile:
+                    _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
+                                                     "do you want to set the newly created '{}' as the new default? (can be reverted later)"
+                                                     .format(process, default_profile, profile_name))
+                # if there are no other default profiles, we don't need to ask
+                else:
+                    _set_default = True
 
-            if default_profile:
-                default_override = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                 "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                 .format(process, default_profile, profile_name))
-
-            if not default_profile or default_override:
+            if _set_default:
                 set_default_profile(process, profile_name, force_rewrite=True)
 
+    #TODO (issue 693): move db-related functions outside quicksetup
     def _try_connect(self, **kwargs):
         '''
         try to start a psycopg2 connection.
@@ -879,6 +881,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_user_command.format(dbuser, dbpass), **kwargs)
 
+    def _drop_dbuser(self, dbuser, method=None, **kwargs):
+        '''
+        drop a database user in postgres
+
+        :param dbuser: Name of the user to be dropped.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_user_command.format(dbuser), **kwargs)
+
     def _create_db(self, dbuser, dbname, method=None, **kwargs):
         '''create a database in postgres
 
@@ -890,6 +903,17 @@ class Quicksetup(VerdiCommand):
         '''
         method(self._create_db_command.format(dbname, dbuser), **kwargs)
         method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
+
+    def _drop_db(self, dbname, method=None, **kwargs):
+        '''drop a database in postgres
+
+        :param dbname: Name of the database.
+        :param method: callable with signature method(psql_command, **connection_info)
+            where connection_info contains keys for psycopg2.connect.
+        :param kwargs: connection info as for psycopg2.connect.
+        '''
+        method(self._drop_db_command.format(dbname), **kwargs)
+
 
     def _pg_execute_psyco(self, command, **kwargs):
         '''
@@ -947,6 +971,10 @@ class Quicksetup(VerdiCommand):
         '''return True if postgres user with name dbuser exists, False otherwise.'''
         return bool(method(self._get_users_command.format(dbuser), **kwargs))
 
+    def _db_exists(self, dbname, method=None, **kwargs):
+        """return True if database with dbname exists."""
+        return bool(method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs))
+
     def _check_db_name(self, dbname, method=None, **kwargs):
         '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
         create = True
@@ -957,6 +985,8 @@ class Quicksetup(VerdiCommand):
             else:
                 create = False
         return dbname, create
+
+
 
 
 class Run(VerdiCommand):
@@ -1155,9 +1185,27 @@ def exec_from_cmdline(argv):
 
     short_doc = {}
     long_doc = {}
-    for k, v in raw_docstrings.iteritems():
+    for k, cmd in list_commands.iteritems():
         if k in hidden_commands:
             continue
+
+        # assemble help string
+        # first from python docstring
+        if cmd.__doc__:
+            v = cmd.__doc__
+        else:
+            v = ""
+
+        # if command has parser written with the 'click' module
+        # we also add a dynamic help string documenting the options
+        # Note: to enable this for a command, simply add a static 
+        # _ctx method (see e.g. Quicksetup)
+        if hasattr(cmd, '_ctx'):
+            v += "\n"
+            # resilient_parsing suppresses interactive prompts
+            v += cmd._ctx(args=[], resilient_parsing=True).get_help()
+            v = v.split('\n')  # need list of lines
+
         lines = [l.strip() for l in v]
         empty_lines = [bool(l) for l in lines]
         try:
@@ -1169,6 +1217,7 @@ def exec_from_cmdline(argv):
             continue
         short_doc[k] = lines[first_idx]
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
+
 
     execname = os.path.basename(argv[0])
 

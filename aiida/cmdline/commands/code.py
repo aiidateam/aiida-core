@@ -411,8 +411,7 @@ class CodeInputValidationClass(object):
 
     def _input_plugin_validator(self, input_plugin):
         """
-        Validates the input_plugin, checking it is in the list of existing
-        plugins.
+        Validates the input_plugin, checking it is in the list of existing plugins.
         """
         from aiida.common.exceptions import ValidationError
         from aiida.orm import JobCalculation
@@ -421,9 +420,6 @@ class CodeInputValidationClass(object):
         if input_plugin is None:
             return
 
-        #if input_plugin not in existing_plugins(JobCalculation,
-        #                                        'aiida.orm.calculation.job',
-        #                                        suffix='Calculation'):
         if input_plugin not in all_plugins('calculations'):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                                   "variable, it is not among the existing plugins".format(

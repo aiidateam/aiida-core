@@ -33,6 +33,3 @@ then
     cat ${HOME}/.ssh/known_hosts
     
 fi
-
-
-

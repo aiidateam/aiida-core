@@ -1842,6 +1842,12 @@ class AbstractJobCalculation(object):
 
         return errfile_content
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a JobCalculation node's
+        properties.
+        """
+        return self.get_state(from_attribute=True)
 
 class CalculationResultManager(object):
     """

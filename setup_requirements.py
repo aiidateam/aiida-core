@@ -21,6 +21,7 @@ install_requires = [
     'pytz==2014.10',
     'six==1.10',
     'future',
+    'pathlib2',
     'singledispatch >= 3.4.0.0',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,

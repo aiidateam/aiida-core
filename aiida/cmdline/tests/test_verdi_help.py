@@ -15,6 +15,8 @@ class VerdiHelpTest(unittest.TestCase):
         with captured_output() as (out, err):
             try:
                 self.help_cmd.run()
+            except SystemExit:
+                pass
             finally:
-                output = out.getvalue().strip()
-                self.assertIn(output, '* import        Import nodes and group of nodes')
+                output = [l.strip() for l in out.getvalue().split('\n')]
+                self.assertIn('* import        Import nodes and group of nodes', output)

@@ -982,7 +982,7 @@ def exec_from_cmdline(argv):
             help_msg += "\n"
             # resilient_parsing suppresses interactive prompts
             help_msg += cmd._ctx(args=[], resilient_parsing=True).get_help()
-            help_msg = help_msg.split('\n')  # need list of lines
+        help_msg = help_msg.split('\n')  # need list of lines
 
         lines = [l.strip() for l in help_msg]
         empty_lines = [bool(l) for l in lines]

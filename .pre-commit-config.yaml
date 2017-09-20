@@ -1,0 +1,15 @@
+- repo: git://github.com/pre-commit/mirrors-yapf
+  sha: v0.17.0
+  hooks:
+  - id: yapf
+    language: system
+    files: '^(aiida/control/)'
+
+- repo: git://github.com/guykisel/prospector-mirror
+  sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
+  hooks:
+  - id: prospector
+    language: system
+    exclude: '^(tests/)|(examples/)'
+    files: '^(aiida/control/)'
+

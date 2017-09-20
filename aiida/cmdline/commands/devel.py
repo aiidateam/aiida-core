@@ -86,7 +86,8 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.transport',
         'aiida.common',
         'aiida.tests.work',
-        'aiida.utils'
+        'aiida.utils',
+        'aiida.control'
     ]
 
     _dbrawprefix = "db"
@@ -580,7 +581,7 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  - {}".format(reason)
 
         print "* Tests run:     {}".format(tot_num_tests)
-        # This count is wrong, sometimes a test can both error and fail 
+        # This count is wrong, sometimes a test can both error and fail
         # apparently, and you can get negative numbers...
         #print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
         print "* Tests failed:  {}".format(len(test_failures))

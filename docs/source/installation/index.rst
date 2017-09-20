@@ -171,13 +171,38 @@ After updating your ``PATH`` you can check if it worked in the following way:
 
     import aiida
 
-  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check 
+  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check
   that you are in the correct virtual environment. If you did not install AiiDA
   within a virtual environment, you will have to set up the ``PYTHONPATH``
   environment variable in your ``.bashrc``::
-  
+
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
 
+Customizing the configuration directory location
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+By default, the AiiDA configuration is stored in the directory ``~/.aiida``. This can be changed by setting the ``AIIDA_PATH`` environment variable. The value of ``AIIDA_PATH`` can be a colon-separated list of paths. For each of the paths in the list, AiiDA will look for a ``.aiida`` directory in the given path and all of its parent folders. If no ``.aiida`` directory is found, ``~/.aiida`` will be used.
+
+For example, the directory structure in your home might look like this ::
+
+    .
+    ├── .aiida
+    ├── project_a
+    │   ├── .aiida
+    │   └── subfolder
+    └── project_b
+        └── .aiida
+
+If you set ::
+
+    export AIIDA_PATH='~/project_a:~/project_b'
+
+the configuration directory used will be ``~/project_a/.aiida``. The same is true if you set ``AIIDA_PATH='~/project_a/subdir'``, because ``subdir`` itself does not contain a ``.aiida`` folder, so AiiDA will first check its parent directories.
+
+If you set ``AIIDA_PATH='.'``, the configuration directory used depends on the current working directory. Inside the ``project_a`` and ``project_b`` directories, their respective ``.aiida`` directory will be used. Outside of these directories, ``~/.aiida`` is used.
+
+An example for when this option might be used is when two different AiiDA versions are used simultaneously. Using two different ``.aiida`` directories also allows running two daemon concurrently.
+Note however that this option does **not** change the database cluster that is being used. This means that by default you still need to take care that the database names do not clash.
 
 Using AiiDA in Jupyter
 ++++++++++++++++++++++
@@ -208,7 +233,7 @@ then open a Jupyter notebook as explained above and type in a cell:
     %aiida
 
 followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
- 
+
 
 .. _virtual-environment:
 
@@ -348,7 +373,7 @@ If you uses the same names used in the example commands above, during the ``verd
   on your hard drive AFTER it has been created and filled, look at the
   instructions :ref:`here<move_postgresql>`.
 
-.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash, 
+.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash,
   or after a restore from binary backup. The workaround given below is adapted from `here`_.
   The error message would be something like::
 
@@ -359,22 +384,22 @@ If you uses the same names used in the example commands above, during the ``verd
     2015-05-26 03:27:20 UTC [330-1] LOG:  startup process (PID 331) exited with exit code 1
     2015-05-26 03:27:20 UTC [330-2] LOG:  aborting startup due to startup process failure
 
-  If this happens you should change the permissions on any symlinked files 
-  to being writable by the Postgres user. For example, on Ubuntu, with PostgreSQL 9.1, 
-  the following should work (**WARNING**: Make sure these configuration files are 
-  symbolic links before executing these commands! If someone has customized the server.crt 
-  or server.key file, you can erase them by following these steps. 
+  If this happens you should change the permissions on any symlinked files
+  to being writable by the Postgres user. For example, on Ubuntu, with PostgreSQL 9.1,
+  the following should work (**WARNING**: Make sure these configuration files are
+  symbolic links before executing these commands! If someone has customized the server.crt
+  or server.key file, you can erase them by following these steps.
   It's a good idea to make a backup of the server.crt and server.key files before removing them)::
 
     (as root)
     # go to PGDATA directory
-    cd /var/lib/postgresql/9.1/main 
+    cd /var/lib/postgresql/9.1/main
     ls -l server.crt server.key
     # confirm both of those files are symbolic links
     # to files in /etc/ssl before going further
     # remove symlinks to SSL certs
     rm server.crt
-    rm server.key 
+    rm server.key
     # copy the SSL certs to the local directory
     cp /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt
     cp /etc/ssl/private/ssl-cert-snakeoil.key server.key
@@ -532,7 +557,7 @@ Troubleshooting
     apt-get install libpq-dev
 
   But under Ubuntu 12.04 this is not needed.
- 
+
 * If the installation fails while installing the packages related
   to the database, you may have not installed or set up the database
   libraries.
@@ -565,7 +590,7 @@ Troubleshooting
   (you should of course adapt the path to the PostgreSQL libraries).
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
- 
+
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi setup`` for the first
@@ -605,27 +630,27 @@ Troubleshooting
 Updating AiiDA from a previous version
 ======================================
 
-AiiDA can be updated from a previously installed version. Before beginning 
+AiiDA can be updated from a previously installed version. Before beginning
 the procedure, make sure of the following:
-  
+
   * your daemon is stopped (use ``verdi daemon stop``),
   * you know your current AiiDA version. In case, you can get it from the ``verdi shell``::
-  
+
       import aiida
       aiida.__version__
-    
+
     (only the two first digits matter),
-  * you have a backup of your database(s) (follow the guidelines in the 
+  * you have a backup of your database(s) (follow the guidelines in the
     :ref:`backup section<backup>`),
   * you have a backup of the full ``~/.aiida`` folder (where configuration
     files are stored),
   * (optional) ``virtualenv`` is installed, i.e. you once ran the command::
-    
+
       pip install --user -U setuptools pip wheel virtualenv
-  
+
 .. note::
   A few general remarks:
-  
+
   * If you want to update the code in the same folder, but modified some files locally,
     you can stash them (``git stash``) before cloning or pulling the new code.
     Then put them back with ``git stash pop`` (note that conflicts might appear).
@@ -778,25 +803,25 @@ Updating from 0.7.0 Django to 0.8.0 Django
   The two first steps above can be removed if you do not want to install AiiDA
   into a virtual environment (reminder: this is *not* recommended).
 
-* Undo all PATH and PYTHONPATH changes you did in your ``.bashrc`` and similar 
+* Undo all PATH and PYTHONPATH changes you did in your ``.bashrc`` and similar
   files to add ``verdi`` and ``runaiida`` of the previous version.
-  When using the virtual environment, you do not need anymore to update 
+  When using the virtual environment, you do not need anymore to update
   the PYTHONPATH nor the PATH.
 * Run a ``verdi`` command, e.g., ``verdi calculation list``. This should
   raise an exception, and in the exception message you will see the
   command to run to update the schema version of the DB (version 0.8
   is using a newer version of the schema). The command will look like
-  ``python manage.py --aiida-profile=default migrate`` (to be run from 
+  ``python manage.py --aiida-profile=default migrate`` (to be run from
   <AiiDA_folder>/aiida/backends/djsite) but please read the message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
-* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes 
+* Rerun ``verdi setup`` (formerly ``verdi install``), no manual changes
   to your profile should be necessary. This step is necessary as it
   updates some internal configuration files.
 * You might want to create an alias to easily go into the correct virtual
   environment and have all AiiDA commands available: in your `~/.bashrc`
   file you can add an alias like::
-  
+
     alias aiida_env='source ~/aiidapy/bin/activate'
 
 * Activate the tab-completion of `verdi` commands (see :ref:`here<tab-completion>`).
@@ -834,45 +859,45 @@ Updating from an older version
 
 Because the database schema changes typically at every version, and since
 the migration script assumes that you are using the previous AiiDA version,
-one has to migrate in steps, from the version of AiiDA you were using, 
+one has to migrate in steps, from the version of AiiDA you were using,
 until the current one. For instance, if you are currently using AiiDA 0.5,
-you should first update to 0.6, then to 0.7, and finally to 0.8. Do not forget to 
+you should first update to 0.6, then to 0.7, and finally to 0.8. Do not forget to
 **deactivate** the current virtual environment before installing any new version.
 
 For *each intermediate update* (e.g. when you update from 0.5 to 0.6 in the above example),
 do the following::
-  
+
   virtualenv ~/aiidapy_<VERSION>
   source ~/aiidapy_<VERSION>/bin/activate
   cd <where_you_want_the_aiida_sourcecode>
 
-(<VERSION> being the intermediate version you are updating to, in our example 0.6). 
+(<VERSION> being the intermediate version you are updating to, in our example 0.6).
 
 Then get the code with the appropriate version and install its dependencies:
 AiiDA versions prior or equal to 0.7 can be cloned from bitbucket::
-  
+
   git clone git@bitbucket.org:aiida_team/aiida_core.git aiida_core_<VERSION>
   cd aiida_core_<VERSION>
   git checkout v<VERSION>
   pip install -U -r requirements.txt
 
-and update the ``PATH`` and ``PYTHONPATH`` environment variables 
-in your ``~/.bashrc`` file before sourcing it (replace <AiiDA_folder> with the folder in 
+and update the ``PATH`` and ``PYTHONPATH`` environment variables
+in your ``~/.bashrc`` file before sourcing it (replace <AiiDA_folder> with the folder in
 which you just installed AiiDA)::
-  
+
     export PATH="${PATH}:<AiiDA_folder>/bin"
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
 
 Then follow the specific instructions below for each intermediate update.
 
 .. note::
-  * If you have an issue with ``ultrajson`` during the ``pip install`` step, 
-    replace ``ultrajson`` with ``ujson`` in the ``requirements.txt`` file 
+  * If you have an issue with ``ultrajson`` during the ``pip install`` step,
+    replace ``ultrajson`` with ``ujson`` in the ``requirements.txt`` file
     (the name of this module changed over time).
   * In the ``pip install`` step, you might need to install some dependencies
     located in ``optional_requirements.txt`` (e.g. ``psycopg2`` for postgresql
     database users), as well as ``ipython`` to get a proper shell, e.g.::
-      
+
       pip install -U -r requirements.txt psycopg2==2.6 ipython
 
 Updating from 0.6.0 Django to 0.7.0 Django
@@ -885,14 +910,14 @@ updated the AiiDA configuration files.
   command to run to update the schema version of the DB (version 0.7
   is using a newer version of the schema).
   The command will look like
-  ``python manage.py --aiida-profile=default migrate`` (to be run from 
+  ``python manage.py --aiida-profile=default migrate`` (to be run from
   <AiiDA_folder>/aiida/backends/djsite) but please read the
   message for the correct command to run.
 * If you run ``verdi calculation list`` again now, it should work without
   error messages.
 * To update the AiiDA configuration files, you should execute the migration
   script::
-  
+
     python <AiiDA_folder>/aiida/common/additions/migration_06dj_to_07dj.py
 
 Updating from 0.6.0 Django to 0.7.0 SQLAlchemy
@@ -907,7 +932,7 @@ that will update your config files and change your database to the proper schema
 
     from aiida.backends.sqlalchemy.transition_06dj_to_07sqla import transition
     transition(profile="<your_profile>",group_size=10000)
-    
+
   by replacing ``<your_profile>`` with the name of the appropriate profile
   (typically, ``default`` if you have only one profile).
 

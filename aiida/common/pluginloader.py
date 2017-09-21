@@ -21,7 +21,8 @@ try:
 except ImportError:
     import pkg_resources as epm
 
-from aiida.common.exceptions import MissingPluginError
+import itertools
+from aiida.common.exceptions import MissingPluginError, MultiplePluginError
 
 
 _category_mapping = {
@@ -94,6 +95,27 @@ def all_plugins(category):
     return [unicode(_) for _ in set(plugins)]
 
 
+def check_override(original, override):
+    """
+    Verify whether one entry point 'original' can be overriden by another entry point 'override'
+
+    :param original: EntryPoint to be overriden
+    :param override: EntryPoint to override with
+    :returns: boolean with True if original can be overriden by override and False otherwise
+    """
+    try:
+        original_class = original.load()
+    except ImportError:
+        raise MissingPluginError("registered entry point {} cannot be loaded".format(original))
+
+    allowed_override = getattr(original_class, '_allowed_override', None)
+
+    if allowed_override is not None and override.module_name == allowed_override:
+        return True
+    else:
+        return False
+
+
 def get_plugin(category, name):
     """
     Return an instance of the class registered under the given name and
@@ -103,21 +125,47 @@ def get_plugin(category, name):
     :param name: the name of the plugin
     """
     group = 'aiida.{}'.format(category)
+    entry_points = [ep for ep in epm.iter_entry_points(group=group) if ep.name == name]
 
-    eps = [ep for ep in epm.iter_entry_points(group=group) if ep.name == name]
-
-    if not eps:
+    if not entry_points:
         raise MissingPluginError(
             "No plugin named '{}' found for '{}'".format(name, category))
 
-    if len(eps) > 1:
-        raise MissingPluginError(
-            "Multiple plugins found for '{}' in '{}'".format(name, category))
+    if len(entry_points) == 1:
+        entry_point = entry_points[0]
+    else:
+        entry_point = None
 
-    entrypoint = eps[0]
+        for permutation in itertools.permutations(entry_points, 2):
+
+            original = permutation[0]
+            override = permutation[1]
+
+            # Determine the 'dominant' entry point
+            if check_override(original, override):
+                candidate_entry_point = override
+            else:
+                candidate_entry_point = original
+
+            # First iteration no entry point will be assigned yet
+            if entry_point is None:
+                entry_point = candidate_entry_point
+
+            # If the candidate entry point is the same as the current one, simply continue
+            elif entry_point == candidate_entry_point:
+                continue
+
+            # If an entry point is already assigned, the candidate entry point better override it
+            elif check_override(entry_point, candidate_entry_point):
+                entry_point = candidate_entry_point
+
+            # Because, if that is not the case, we have two entry points and situation is ambiguous
+            else:
+                raise MultiplePluginError(
+                    "Entry point '{}' for category '{}' could not be uniquely resolved".format(name, category))
 
     try:
-        plugin = entrypoint.load()
+        plugin = entry_point.load()
     except ImportError:
         raise MissingPluginError("Loading the plugin '{}' failed".format(name))
 

@@ -3,7 +3,7 @@
   hooks:
   - id: yapf
     language: system
-    files: '^(aiida/control/)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)'
 
 - repo: git://github.com/guykisel/prospector-mirror
   sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
@@ -11,5 +11,5 @@
   - id: prospector
     language: system
     exclude: '^(tests/)|(examples/)'
-    files: '^(aiida/control/)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)'
 

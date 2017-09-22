@@ -3,7 +3,7 @@
 # Be verbose, and stop with error as soon there's one
 set -ev
 
-if [ "TEST_TYPE" == "tests" ]
+if [[ "$TEST_TYPE" == "tests" ]]
 then
     THEKEY=`cat ${HOME}/.ssh/id_rsa.pub`
     echo 'AUTHORIZED_KEY='"$THEKEY" > ${TRAVIS_BUILD_DIR}/torquessh.env

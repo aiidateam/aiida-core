@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 from os import path
+from contextlib import contextmanager
 
 from pgtest.pgtest import PGTest
 
@@ -233,11 +234,20 @@ class FixtureManager(object):
     def root_dir_ok(self):
         return bool(self.root_dir and path.isdir(self.root_dir))
 
-    def __del__(self):
+    def destroy_all(self):
         if self.root_dir:
             shutil.rmtree(self.root_dir)
         if self.pg_cluster:
             self.pg_cluster.close()
+
+
+@contextmanager
+def plugin_fixture():
+    manager = FixtureManager()
+    try:
+        yield manager
+    finally:
+        manager.destroy_all()
 
 
 class PluginTestCase(unittest.TestCase):
@@ -270,4 +280,4 @@ class PluginTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        del cls.fixture_builder
+        cls.fixture_builder.destroy_all()

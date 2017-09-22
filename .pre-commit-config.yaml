@@ -24,3 +24,16 @@
     files: '^(setup_requirements.py)|(docs/requirements_for_rtd.txt)|(docs/update_req_for_rtd.py)'
     pass_filenames: false
 
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  sha: v0.9.4
+  hooks:
+  - id: check-yaml
+
+- repo: local
+  hooks:
+  - id: travis-linter
+    name: travis
+    entry: travis lint
+    files: .travis.yml
+    language: ruby
+    additional_dependencies: ['travis']

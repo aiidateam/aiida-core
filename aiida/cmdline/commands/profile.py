@@ -158,9 +158,6 @@ class Profile(VerdiCommandWithSubcommands):
         else:
             force = False
 
-        postgres = Postgres()
-        postgres.determine_setup()
-
         confs = get_or_create_config()
         profiles = confs.get('profiles',{})
         users = [ profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
@@ -172,6 +169,9 @@ class Profile(VerdiCommandWithSubcommands):
             except KeyError:
                 print("Profile '{}' does not exist".format(profile_to_delete))
                 continue
+
+            postgres = Postgres(port=profile.get('AIIDADB_PORT'))
+            postgres.determine_setup()
 
             db_name = profile.get('AIIDADB_NAME', '')
             if not postgres.db_exists(db_name):

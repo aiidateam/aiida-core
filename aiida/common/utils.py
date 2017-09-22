@@ -14,7 +14,9 @@ import inspect
 import os.path
 import string
 import sys
+import numbers
 
+import numpy as np
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -225,20 +227,19 @@ def conv_to_fortran(val):
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
-    if (isinstance(val, bool)):
+    if isinstance(val, (bool, np.bool_)):
         if val:
             val_str = '.true.'
         else:
             val_str = '.false.'
-    elif (isinstance(val, (int, long))):
+    elif isinstance(val, numbers.Integral):
         val_str = "{:d}".format(val)
-    elif (isinstance(val, float)):
+    elif isinstance(val, numbers.Real):
         val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif (isinstance(val, basestring)):
+    elif isinstance(val, basestring):
         val_str = "'{!s}'".format(val)
     else:
-        raise ValueError("Invalid value passed, accepts only bools, ints, "
-                         "floats and strings")
+        raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
 
     return val_str
 

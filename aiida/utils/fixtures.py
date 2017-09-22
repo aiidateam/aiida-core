@@ -24,7 +24,20 @@ class FixtureError(Exception):
 
 # pylint: disable=too-many-public-methods
 class FixtureManager(object):
-    """Manage AiiDA fixtures"""
+    """
+    Manage AiiDA fixtures
+
+    Example::
+
+        fixtures = FixtureManager()
+        fixtures.create_aiida_db()
+        fixtures.create_profile()
+
+        # ready for testing
+
+        fixtures.destroy_all()
+        # everything cleaned up
+    """
 
     def __init__(self):
         self.db_params = {}
@@ -243,6 +256,17 @@ class FixtureManager(object):
 
 @contextmanager
 def plugin_fixture():
+    """
+    Context manager for FixtureManager objects
+
+    Example::
+
+        with plugin_fixture() as fixtures:
+            fixtures.create_aiida_db()
+            fixtures.create_profile()
+            # ready for tests
+        # everything cleaned up
+    """
     manager = FixtureManager()
     try:
         yield manager

@@ -10,11 +10,8 @@
 
 import logging
 import os
-
 import django
-
 from aiida.utils.logger import get_dblogger_extra
-
 
 
 def load_dbenv(process=None, profile=None):
@@ -153,8 +150,7 @@ def check_schema_version():
       Otherwise, just return.
     """
     import aiida.backends.djsite.db.models
-    from aiida.backends.utils import (
-        get_current_profile,  set_db_schema_version, get_db_schema_version)
+    from aiida.backends.utils import get_current_profile
     from django.db import connection
     from aiida.common.exceptions import ConfigurationError
 
@@ -179,3 +175,26 @@ def check_schema_version():
             format(code_schema_version, db_schema_version,
                    get_current_profile())
         )
+
+
+def set_db_schema_version(version):
+    """
+    Set the schema version stored in the DB. Use only if you know what
+    you are doing.
+    """
+    from aiida.backends.utils import set_global_setting
+    return set_global_setting(
+        'db|schemaversion', version,
+        description="The version of the schema used in this database.")
+
+
+def get_db_schema_version():
+    """
+    Get the current schema version stored in the DB. Return None if
+    it is not stored.
+    """
+    from aiida.backends.utils import get_global_setting
+    try:
+        return get_global_setting('db|schemaversion')
+    except KeyError:
+        return None

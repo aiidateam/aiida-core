@@ -21,3 +21,4 @@ Developer's guide
    sphinx_cheatsheet
    ../verdi/properties
    database_schema
+   control/index

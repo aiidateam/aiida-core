@@ -723,7 +723,7 @@ def get_fortfloat(key, txt, be_case_sensitive=True):
         return float(match.group('float').replace('d', 'e').replace('D', 'e'))
 
 
-def ask_question(question, reply_type, allow_none_as_answer):
+def ask_question(question, reply_type, allow_none_as_answer=True):
     """
     This method asks a specific question, tries to parse the given reply
     and then it verifies the parsed answer.

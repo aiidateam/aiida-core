@@ -20,6 +20,10 @@ class WorkCalculation(Calculation):
     FAILED_KEY = '_failed'
 
     @override
+    def has_finished(self):
+        return self.has_finished_ok() or self.has_failed()
+
+    @override
     def has_finished_ok(self):
         """
         Returns True if the work calculation finished normally, False otherwise

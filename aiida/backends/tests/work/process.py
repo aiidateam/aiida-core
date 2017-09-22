@@ -107,7 +107,7 @@ class TestProcess(AiidaTestCase):
         n = load_node(pk=rinfo.pid)
         self.assertFalse(n.is_sealed)
 
-        dp = DummyProcess.create_from(storage.load_checkpoint(rinfo.pid))
+        dp = DummyProcess.create_from(storage._load_checkpoint(rinfo.pid))
         dp.run_until_complete()
         self.assertTrue(n.is_sealed)
         shutil.rmtree(storedir)
@@ -127,6 +127,11 @@ class TestProcess(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             DummyProcess.new_instance(inputs={'_label': 5})
+
+    def test_inputs_template(self):
+        inputs = DummyProcess.get_inputs_template()
+        dp = DummyProcess.new_instance(inputs=inputs)
+        dp.run_until_complete()
 
     def test_calculation_input(self):
         @workfunction
@@ -176,6 +181,3 @@ class TestFunctionProcess(AiidaTestCase):
         FP = FunctionProcess.build(wf_fixed_args)
         outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
-
-
-

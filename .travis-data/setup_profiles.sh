@@ -1,6 +1,6 @@
 set -ev
 
-if [[ "$TEST_TYPE" != "precommit" ]]
+if [[ "$TEST_TYPE" != "pre-commit" ]]
     # no setup at all required for pre-commit to run
 then
     # Here I create the actual DB for submission

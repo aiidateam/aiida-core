@@ -157,9 +157,9 @@ class Transport(object):
         """
         :return: a list of existing plugin names
         """
-        from aiida.common.pluginloader import existing_plugins
+        from aiida.common.pluginloader import all_plugins
 
-        return existing_plugins(Transport, "aiida.transport.plugins")
+        return all_plugins('transports')
 
     @classmethod
     def get_valid_auth_params(cls):

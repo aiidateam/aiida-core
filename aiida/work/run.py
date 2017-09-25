@@ -105,11 +105,6 @@ def run(process_class, *args, **inputs):
         raise ValueError("Unsupported type supplied for process_class.")
 
 
-def restart(pid):
-    cp = aiida.work.persistence.get_default().load_checkpoint(pid)
-    return serial_engine.run_from_and_block(cp)
-
-
 def submit(process_class, _jobs_store=None, **kwargs):
     assert not util.is_workfunction(process_class),\
         "You cannot submit a workfunction to the daemon"

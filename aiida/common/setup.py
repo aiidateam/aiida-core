@@ -15,11 +15,20 @@ import json
 # The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
+from aiida.utils.find_folder import find_path
 
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
-AIIDA_CONFIG_FOLDER = "~/.aiida"
+AIIDA_PATH = [path for path in os.environ.get('AIIDA_PATH', '').split(':') if path] + [os.path.expanduser('~')]
+for path in AIIDA_PATH:
+    try:
+        AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
+        break
+    except OSError:
+        pass
+else:
+    AIIDA_CONFIG_FOLDER = "~/.aiida"
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
@@ -656,8 +665,7 @@ def create_configuration(profile='default'):
         # Setting the email
         valid_email = False
         readline.set_startup_hook(lambda: readline.insert_text(
-            this_existing_confs.get(DEFAULT_USER_CONFIG_FIELD,
-                                    DEFAULT_AIIDA_USER)))
+            this_existing_confs.get(DEFAULT_AIIDA_USER)))
         while not valid_email:
             this_new_confs[DEFAULT_USER_CONFIG_FIELD] = raw_input(
                 'Default user email: ')
@@ -892,6 +900,18 @@ _property_table = {
         "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
         "for the 'paramiko' logger",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.alembic_loglevel": (
+        "logging_alembic_log_level",
+        "string",
+        "Minimum level to log to the console",
+        "INFO",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.sqlalchemy_loglevel": (
+        "logging_sqlalchemy_loglevel",
+        "string",
+        "Minimum level to log to the console",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.celery_loglevel": (

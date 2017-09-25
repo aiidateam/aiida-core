@@ -480,9 +480,8 @@ That works the same for the extras.
 .. note::
     Comparisons in the attributes (extras) are also implicitly done by type.
 
-Let's do a last example. You are familiar with the :ref:`sec.quantumespresso` tutorial?
-Great, because this will be
-our use case here.
+Let's do a last example. You are familiar with the quantumespresso tutorial?
+Great, because this will be our use case here.
 We will query for calculations that were done on a certain structure (*mystructure*),
 that fulfill certain requirements, such as a cutoff above 30.0.
 In our case, we have a structure (an instance of StructureData) and an instance

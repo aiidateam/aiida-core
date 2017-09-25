@@ -18,6 +18,17 @@ from aiida.workflows.test import WFTestSimpleWithSubWF
 
 
 class TestDaemonBasic(AiidaTestCase):
+
+    def setUp(self):
+        super(TestDaemonBasic, self).setUp()
+        import logging
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        super(TestDaemonBasic, self).tearDown()
+        import logging
+        logging.disable(logging.NOTSET)
+
     def test_workflow_fast_kill(self):
         from aiida.cmdline.commands.workflow import Workflow as WfCmd
 

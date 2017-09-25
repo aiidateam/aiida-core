@@ -213,6 +213,42 @@ For a cheatsheet of git commands, see :doc:`here <git_cheatsheet>`.
   code. Remember to do it even if you believe your modification to be small -
   the tests run pretty fast!
 
+Pre-commit hooks
+----------------
+
+Git has a *hooks* mechanism to run tasks automatically when an event is triggered.We use this mechanism to trigger code checks on every commit. Currently only the :`aiida.control` module is affected, but more parts of the code will be added progressively.
+
+These checks are to prevent syntax or other coding errors from being committed and to enforce style consistency.
+
+Two tools are run on all changed files before allowing a commit:
+
+ * `yapf`_ will automatically format your files for you. If it makes any changes, the commit will fail and you will get the opportunity to review them. Once you are done, ``git add`` the changed file and commit again.
+ * `prospector`_ will run multiple linters (mainly pylint) that will do:
+
+   - Syntax checking
+   - Static analysis
+   - Check for missing docstrings
+   - Check for *secrets* (prevent you from committing passwords, tokens, etc)
+
+   It will output file, line number and helpful messages and suggestions for each problem it finds.
+   
+  
+.. _yapf: https://github.com/google/yapf
+.. _prospector: https://prospector.landscape.io/en/master/
+
+Setting up the hooks is simple::
+
+   cd aiida_core
+   pip install [-e] .[dev_precommit]
+   pre-commit install
+   # from now on on every git commit the checks will be run on changed files
+   
+When working on parts of the code that are not included in pre-commit tests yet, it is ok to not install the hooks. 
+
+When code that fails the pre-commit checks is commited, the checks will run in a continuous integration stage and the commit will fail tests. Still sometimes it is necessary to push a work-in-progress state to continue working somewhere else, this can be accomplished by ``git commit --no-verify``.
+
+If you want to run the checks without having to call ``git commit``, you can do so using ``pre-commit run``.
+
 Tests
 +++++
 

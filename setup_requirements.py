@@ -21,6 +21,7 @@ install_requires = [
     'pytz==2014.10',
     'six==1.10',
     'future',
+    'pathlib2',
     'singledispatch >= 3.4.0.0',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
@@ -39,10 +40,12 @@ install_requires = [
     'meld3==1.0.0',
     'numpy==1.12.0',
     'plumpy==0.7.9',
+    'portalocker==1.1.0',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
+    'alembic>=0.9.2',
     'ujson==1.35',
-    'enum34==1.1.2',
+    'enum34==1.1.6',
     'voluptuous==0.8.11',
     'aldjemy==0.6.0',
     'passlib==1.7.1',
@@ -58,7 +61,7 @@ install_requires = [
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
-    'ipython',
+    'ipython < 6.0',
 ]
 
 extras_require = {
@@ -117,6 +120,13 @@ extras_require = {
     # Requirements for testing
     'testing': [
         'mock',
+        'pgtest'
+    ],
+    'dev_precommit': [
+        'pre-commit',
+        'yapf',
+        'prospector',
+        'pylint'
     ]
 }
 

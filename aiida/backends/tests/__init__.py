@@ -26,16 +26,15 @@ db_test_list = {
         'query': ['aiida.backends.sqlalchemy.tests.query'],
         'session': ['aiida.backends.sqlalchemy.tests.session'],
         'schema': ['aiida.backends.sqlalchemy.tests.schema'],
+        'migrations': ['aiida.backends.sqlalchemy.tests.migrations'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {
         'generic': ['aiida.backends.tests.generic'],
         'nodes': ['aiida.backends.tests.nodes'],
-        'nwchem': ['aiida.backends.tests.nwchem'],
         'base_dataclasses': ['aiida.backends.tests.base_dataclasses'],
         'dataclasses': ['aiida.backends.tests.dataclasses'],
         'dbimporters': ['aiida.backends.tests.dbimporters'],
-        'codtools': ['aiida.backends.tests.codtools'],
         'export_and_import': ['aiida.backends.tests.export_and_import'],
         'parsers': ['aiida.backends.tests.parsers'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],

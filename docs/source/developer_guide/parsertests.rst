@@ -34,8 +34,7 @@ the following function::
 
   from aiida.backends.tests.parsers import output_test
 
-and then run it with the correct parameters. The documentation of the function
-can be found :py:func:`here<aiida.backends.tests.parsers.output_test>`.
+and then run it with the correct parameters.
 
 An example call could be::
 

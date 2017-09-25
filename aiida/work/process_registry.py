@@ -32,7 +32,7 @@ class ProcessRegistry(plum.knowledge_provider.KnowledgeProvider):
 
     @override
     def has_finished(self, pid):
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm import JobCalculation
         from aiida.orm.calculation.work import WorkCalculation
 
         import aiida.orm

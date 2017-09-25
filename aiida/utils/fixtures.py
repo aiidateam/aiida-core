@@ -54,6 +54,8 @@ class FixtureManager(object):
         }
         self.pg_cluster = None
         self.postgres = None
+        self.__is_running_on_test_db = False
+        self.__is_running_on_test_profile = False
 
     def create_db_cluster(self):
         self.pg_cluster = PGTest()
@@ -76,6 +78,7 @@ class FixtureManager(object):
                 'Could not connect to the test postgres instance')
         self.postgres.create_dbuser(self.db_user, self.db_pass)
         self.postgres.create_db(self.db_user, self.db_name)
+        self.__is_running_on_test_db = True
 
     def create_root_dir(self):
         self.root_dir = tempfile.mkdtemp()
@@ -104,6 +107,7 @@ class FixtureManager(object):
             **self.profile)
         aiida_cfg.set_default_profile('verdi', profile_name)
         aiida_cfg.set_default_profile('daemon', profile_name)
+        self.__is_running_on_test_profile = True
 
     @property
     def profile(self):

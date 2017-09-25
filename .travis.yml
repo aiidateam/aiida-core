@@ -49,35 +49,17 @@ env:
 ## I still let it create the test backend for django 
 ## also when building the docs
 ## because otherwise the code would complain. Also, I need latex.
-- TEST_AIIDA_BACKEND=django COMPILE_DOCS=false
-- TEST_AIIDA_BACKEND=sqlalchemy COMPILE_DOCS=false
-- TEST_AIIDA_BACKEND=django COMPILE_DOCS=true
+- TEST_TYPE="pre-commit"
+- TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
+- TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
+- TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
 
 before_script:
-    # Here I create the actual DB for submission
-    - psql -c "CREATE DATABASE $TEST_AIIDA_BACKEND;" -U postgres
-    # Here I create the test DB
-    - psql -c "CREATE DATABASE test_$TEST_AIIDA_BACKEND;" -U postgres
-
-    # Here I setup the actual AiiDA profile, non-interactively
-    - verdi -p $TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
-
-    # Here I setup the test AiiDA profile, non-interactively
-    - verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
-
-    # Maybe not needed, but set this profile to be the default one for (at least) the daemon
-    - verdi profile setdefault daemon $TEST_AIIDA_BACKEND
-    - verdi profile setdefault verdi $TEST_AIIDA_BACKEND
-
+    - .travis-data/setup_profiles.sh
     - .travis-data/before_script.sh
 
 script: .travis-data/test_script.sh
-
-jobs:
-    include:
-        - stage: pre-commit
-          script: pre-commit run --all-files
 
 git:
   depth: 3

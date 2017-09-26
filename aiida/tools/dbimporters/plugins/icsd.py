@@ -155,9 +155,13 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return " AND ".join(map(lambda e: "STRUCT_FORM REGEXP ' " + \
-                                          e + "[0-9 ]'", \
-                                values))
+        # SUM_FORM in the ICSD always stores a numeral after the element name,
+        # STRUCT_FORM does not, so it's better to use SUM_FORM for the composition query.
+        # The element-numeral pair can be in the beginning of the formula expression (therefore no space before),
+        # or at the end of the formula expression (no space after).
+        # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
+        # after, because I found that capitalization of the element name is not enforced in these queries.
+        return " AND ".join(map(lambda e: "SUM_FORM REGEXP '(^|\ )" + e + "[0-9\.]+($|\ )'", values))
 
     def _double_clause(self, key, alias, values, precision):
         """
@@ -317,7 +321,7 @@ class IcsdDbImporter(DbImporter):
 
     # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
     keywords_db = {'id': ['COLL_CODE', _int_clause],
-                   'element': ['STRUCT_FORM;', _composition_clause],
+                   'element': ['SUM_FORM;', _composition_clause],
                    'number_of_elements': ['EL_COUNT', _int_clause],
                    'chemical_name': ['CHEM_NAME', _str_fuzzy_clause],
                    'formula': ['SUM_FORM', _formula_clause],

@@ -1,0 +1,7 @@
+[run]
+data_file = coverage/.coverage
+source = aiida
+omit = *test*,*/migrations/*
+
+[html]
+directory = coverage/html

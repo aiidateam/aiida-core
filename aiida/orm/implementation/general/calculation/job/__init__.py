@@ -129,7 +129,7 @@ class AbstractJobCalculation(object):
             _ = self.get_parserclass()
         except MissingPluginError:
             raise ValidationError(
-                "No valid plugin found for the parser '{}'. "
+                "No valid class/implementation found for the parser '{}'. "
                 "Set the parser to None if you do not need an automatic "
                 "parser.".format(self.get_parser_name())
             )
@@ -1842,6 +1842,12 @@ class AbstractJobCalculation(object):
 
         return errfile_content
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a JobCalculation node's
+        properties.
+        """
+        return self.get_state(from_attribute=True)
 
 class CalculationResultManager(object):
     """

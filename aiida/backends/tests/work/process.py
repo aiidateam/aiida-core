@@ -107,7 +107,7 @@ class TestProcess(AiidaTestCase):
         n = load_node(pk=rinfo.pid)
         self.assertFalse(n.is_sealed)
 
-        dp = DummyProcess.create_from(storage.load_checkpoint(rinfo.pid))
+        dp = DummyProcess.create_from(storage._load_checkpoint(rinfo.pid))
         dp.run_until_complete()
         self.assertTrue(n.is_sealed)
         shutil.rmtree(storedir)

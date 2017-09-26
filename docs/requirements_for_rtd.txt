@@ -2,28 +2,35 @@ SQLAlchemy-Utils==0.31.2
 SQLAlchemy==1.0.12
 Sphinx>=1.5
 aldjemy==0.6.0
+alembic>=0.9.2
 amqp==1.4.9
 anyjson==0.3.3
-billiard==3.3.0.19
-celery==3.1.17
+billiard==3.3.0.23
+celery==3.1.25
 click==6.7
-django-celery==3.1.16
 django==1.7.4
 django_extensions==1.5
 ecdsa==0.13
-enum34==1.1.2
+enum34==1.1.6
 ete3==3.0.0b35
+future
+ipython < 6.0
 meld3==1.0.0
 numpy==1.12.0
-paramiko==1.15.2
+paramiko==2.1.2
 passlib==1.7.1
+pathlib2
 pip==9.0.1
-plumpy==0.7.6
+plumpy==0.7.9
+portalocker==1.1.0
 pycrypto==2.6.1
 python-dateutil==2.6.0
 python-mimeparse==0.1.4
 pytz==2014.10
-setuptools==34.1.0
+reentry >= 1.0.2
+setuptools>=18.5
+singledispatch >= 3.4.0.0
+six==1.10
 supervisor==3.1.3
 tabulate==0.7.5
 tzlocal==1.3

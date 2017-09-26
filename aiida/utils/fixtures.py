@@ -35,6 +35,13 @@ class FixtureManager(object):
 
         # ready for testing
 
+        # run test 1
+
+        fixtures.reset_db()
+        # database ready for independent test 2
+
+        # run test 2
+
         fixtures.destroy_all()
         # everything cleaned up
     """
@@ -108,6 +115,16 @@ class FixtureManager(object):
         aiida_cfg.set_default_profile('verdi', profile_name)
         aiida_cfg.set_default_profile('daemon', profile_name)
         self.__is_running_on_test_profile = True
+
+    def reset_db(self):
+        """Cleans all data from the database between tests"""
+        if not self.__is_running_on_test_profile:
+            raise FixtureError(
+                'No test profile has been set up yet, can not reset the db')
+        if self.profile_info['backend'] == 'django':
+            self.__clean_db_django()
+        elif self.profile_info['backend'] == 'sqla':
+            self.__clean_db_sqla()
 
     @property
     def profile(self):
@@ -256,6 +273,16 @@ class FixtureManager(object):
             shutil.rmtree(self.root_dir)
         if self.pg_cluster:
             self.pg_cluster.close()
+
+    @staticmethod
+    def __clean_db_django():
+        from aiida.backends.djsite.db.testbase import DjangoTests
+        DjangoTests().clean_db()
+
+    @staticmethod
+    def __clean_db_sqla():
+        from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+        SqlAlchemyTests().clean_db()
 
 
 @contextmanager

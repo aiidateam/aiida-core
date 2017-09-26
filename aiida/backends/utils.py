@@ -283,5 +283,3 @@ def _get_column(colname, alias):
                     '\n'.join(alias._sa_class_manager.mapper.c.keys())
                 )
         )
-
-

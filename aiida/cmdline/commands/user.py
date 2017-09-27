@@ -11,10 +11,13 @@
 This allows to setup and configure a user from command line.
 """
 import sys
+
 import click
-from aiida.cmdline.commands import user, verdi
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import user, verdi
+from aiida.control.user import get_or_new_user
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -49,51 +52,28 @@ class User(VerdiCommandWithSubcommands):
 
 
 def do_configure(email, first_name, last_name, institution, no_password):
-    from aiida.backends.utils import is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
 
     import readline
     import getpass
 
-    from aiida.orm.implementation import User
+    configure_user = False
+    user, created = get_or_new_user(email)
 
-    # if len(args) != 1:
-    #    print >> sys.stderr, ("You have to pass (only) one parameter after "
-    #                          "'user configure', the email of")
-    #    print >> sys.stderr, "the user to be configured."
-    #    sys.exit(1)
-
-    # email = args[0]
-
-    user_list = User.search_for_users(email=email)
-    if user_list is not None and len(user_list) >= 1:
-        user = user_list[0]
-        print ""
-        print ("An AiiDA user for email '{}' is already present "
-               "in the DB:".format(email))
-        # print "First name:   {}".format(user.first_name)
-        # print "Last name:    {}".format(user.last_name)
-        # print "Institution:  {}".format(user.institution)
-        configure_user = False
+    if created:
+        click.echo("\nAn AiiDA user for email '{}' is already present "
+                   "in the DB:".format(email))
         reply = click.confirm("Do you want to reconfigure it?")
-        # if not reply:
-        #    pass
-        # elif reply.lower() == 'n':
-        #    pass
         if reply:
             configure_user = True
-            # else:
-            #    print "Invalid answer, assuming answer was 'NO'"
     else:
         configure_user = True
-        user = User(email=email)
-        print "Configuring a new user with email '{}'".format(email)
+        click.echo("Configuring a new user with email '{}'".format(email))
 
     if configure_user:
         try:
             kwargs = {}
-            # for field in models.DbUser.REQUIRED_FIELDS:
             for field in User.REQUIRED_FIELDS:
                 verbose_name = field.capitalize()
                 readline.set_startup_hook(lambda: readline.insert_text(
@@ -126,7 +106,7 @@ def do_configure(email, first_name, last_name, institution, no_password):
                 elif reply.lower() == 'y':
                     change_password = True
                 else:
-                    print "Invalid answer, assuming answer was 'NO'"
+                    click.echo("Invalid answer, assuming answer was 'NO'")
             else:
                 reply = raw_input("The user has no password, do you want to set one? [y/N] ")
                 reply = reply.strip()
@@ -137,7 +117,7 @@ def do_configure(email, first_name, last_name, institution, no_password):
                 elif reply.lower() == 'y':
                     change_password = True
                 else:
-                    print "Invalid answer, assuming answer was 'NO'"
+                    click.echo("Invalid answer, assuming answer was 'NO'")
 
             if change_password:
                 match = False
@@ -148,20 +128,19 @@ def do_configure(email, first_name, last_name, institution, no_password):
                     if new_password == new_password_check:
                         match = True
                     else:
-                        print "ERROR, the two passwords do not match."
+                        click.echo("ERROR, the two passwords do not match.")
                 ## Set the password here
                 user.password = new_password
             else:
                 user.password = None
 
         user.force_save()
-        print ">> User {} {} saved. <<".format(user.first_name,
-                                               user.last_name)
+        click.echo(">> User {} {} saved. <<".format(user.first_name,
+                                               user.last_name))
         if not user.has_usable_password():
-            print "** NOTE: no password set for this user, "
-            print "         so he/she will not be able to login"
-            print "         via the REST API and the Web Interface."
-
+            click.echo("** NOTE: no password set for this user, ")
+            click.echo("         so he/she will not be able to login")
+            click.echo("         via the REST API and the Web Interface.")
 
 @user.command(context_settings=CONTEXT_SETTINGS)
 @click.option('--first-name', prompt='First Name', type=str)
@@ -190,10 +169,9 @@ def list(color):
         current_user = None
 
     if current_user is not None:
-        # print >> sys.stderr, "### The '>' symbol indicates the current default user ###"
         pass
     else:
-        print >> sys.stderr, "### No default user configured yet, run 'verdi install'! ###"
+        click.echo("### No default user configured yet, run 'verdi install'! ###", err=True)
 
     for user in User.get_all_users():
         name_pieces = []
@@ -240,7 +218,9 @@ def list(color):
             bold_sequence = ""
             nobold_sequence = ""
 
-        print "{}{} {}{}{}:{}{}{}{}".format(
+        click.echo("{}{} {}{}{}:{}{}{}{}".format(
             start_color, symbol,
             bold_sequence, user.email, nobold_sequence,
-            full_name, institution_str, permissions_str, end_color)
+            full_name, institution_str, permissions_str, end_color))
+
+

@@ -667,7 +667,7 @@ class LocalTransport(aiida.transport.Transport):
         """
         :return: a list containing the names of the entries in the directory.
         :param path: default ='.'
-        :param filter: if set, returns the list of files matching pattern.
+        :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
         the_path = os.path.join(self.curdir, path).strip()

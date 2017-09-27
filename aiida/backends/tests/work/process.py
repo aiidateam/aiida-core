@@ -155,7 +155,7 @@ class TestFunctionProcess(AiidaTestCase):
         self.assertEqual(outs, inputs)
 
         FP = work.FunctionProcess.build(wf_without_kwargs)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             FP.run(**inputs)
 
         FP = work.FunctionProcess.build(wf_fixed_args)

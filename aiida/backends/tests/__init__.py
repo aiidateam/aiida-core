@@ -50,7 +50,6 @@ db_test_list = {
         'orm.log': ['aiida.backends.tests.orm.log'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
-        'work.event': ['aiida.backends.tests.work.event'],
         'work.interstep': ['aiida.backends.tests.work.interstep'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],

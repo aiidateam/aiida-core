@@ -86,9 +86,11 @@ class Profile(VerdiCommandWithSubcommands):
             default_profile = get_default_profile(
                 settings.CURRENT_AIIDADB_PROCESS)
         except ConfigurationError as e:
-            print >> sys.stderr, "Stopping: {}".format(e.message)
-            print >> sys.stderr, "Note: if no configuration file was found, it means that you have not run"
-            print >> sys.stderr, "'verdi setup' yet to configure at least one AiiDA profile."
+            err_msg = (
+                "Stopping: {}\n"
+                "Note: if no configuration file was found, it means that you have not run\n" 
+            "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
+            click.echo(err_msg, err=True)
             sys.exit(1)
         default_daemon_profile = get_default_profile("daemon")
         if current_profile is None:

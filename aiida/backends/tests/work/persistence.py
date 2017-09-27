@@ -15,7 +15,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.persistence import Persistence
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
-from aiida.work.launch import enqueue, run_loop
+from aiida import work
 
 
 class TestProcess(AiidaTestCase):
@@ -42,4 +42,4 @@ class TestProcess(AiidaTestCase):
         # Now check that they are equal
         self.assertEqual(b, b2)
 
-        run_loop()
+        work.run(dp)

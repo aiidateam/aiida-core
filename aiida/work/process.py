@@ -198,8 +198,8 @@ class Process(plum.process.Process):
     def run(cls, **inputs):
         # Create a new loop and run
         with loop.loop_factory() as evt_loop:
-            result = evt_loop.run_until_complete(evt_loop.create(cls, **inputs))
-        
+            result = evt_loop.run_until_complete(evt_loop.create(cls, inputs=inputs))
+
         return result
 
     _spec_type = ProcessSpec
@@ -321,6 +321,14 @@ class Process(plum.process.Process):
         value.add_link_from(self.calc, output_port, LinkType.RETURN)
 
     # end region
+
+    def schedule(self, loop_object, *args, **inputs):
+        return self.loop().create(loop_object, *args, **inputs)
+
+    def submit(self, loop_object, **inputs):
+        pass
+        # publisher = self.loop().objects(plum.rmq.ProcessLaunchPublisher)[0]
+        # return publisher.launch(loop_object, inputs=inputs)
 
     @override
     def do_run(self):

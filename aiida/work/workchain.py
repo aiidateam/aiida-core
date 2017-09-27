@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import apricotpy
 import abc
+from aiida.common.lang import override
 from apricotpy import persistable
-import collections
 import inspect
-from plum.wait_ons import Checkpoint, WaitOnAll
+from plum.wait_ons import Checkpoint
 
-from aiida.common.utils import get_class_string
 from .interstep import *
 from . import process
 from . import utils
@@ -49,12 +49,11 @@ class _WorkChainSpec(process.ProcessSpec):
         return self._outline
 
 
-class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
+class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
     _spec_type = _WorkChainSpec
-    _CONTEXT = 'context'
     _STEPPER_STATE = 'stepper_state'
     _INTERSTEPS = 'intersteps'
 
@@ -69,8 +68,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
     def __init__(self, inputs=None, pid=None, logger=None):
         super(WorkChain, self).__init__(inputs, pid, logger)
         self._stepper = None
-        self._barriers = []
-        self._intersteps = []
+        self._awaitables = []
 
     @override
     def save_instance_state(self, out_state):
@@ -91,12 +89,6 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         else:
             self._stepper = None
 
-        try:
-            self._intersteps = [_INTERSTEP_FACTORY.create(b) for
-                                b in saved_state[self._INTERSTEPS]]
-        except KeyError:
-            self._intersteps = []
-
     def insert_barrier(self, awaitable):
         """
         Insert a barrier that will cause the workchain to wait until the wait
@@ -105,7 +97,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         :param awaitable: The thing to await
         :type awaitable: :class:`apricotpy.persistable.Awaitable`
         """
-        self._barriers.append(awaitable)
+        self._awaitables.append(awaitable)
 
     def remove_barrier(self, awaitable):
         """
@@ -116,20 +108,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         :param awaitable:  The awaitable to remove
         :type awaitable: :class:`apricotpy.persistable.Awaitable`
         """
-        del self._barriers[awaitable]
-
-    def insert_intersteps(self, intersteps):
-        """
-        Insert an interstep to be executed after the current step
-        ends but before the next step ends
-
-        :param interstep: class:Interstep
-        """
-        if not isinstance(intersteps, list):
-            intersteps = [intersteps]
-
-        for interstep in intersteps:
-            self._intersteps.append(interstep)
+        del self._awaitables[awaitable]
 
     def to_context(self, **kwargs):
         """
@@ -137,16 +116,18 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         a user to add multiple intersteps that will assign a certain value
         to the corresponding key in the context of the workchain
         """
-        intersteps = []
         for key, value in kwargs.iteritems():
-
-            if not isinstance(value, UpdateContextBuilder):
+            if not isinstance(value, ContextAction):
                 value = assign_(value)
 
-            interstep = value.build(key)
-            intersteps.append(interstep)
+            awaitable = value.awaitable
 
-        self.insert_intersteps(intersteps)
+            if not isinstance(awaitable, apricotpy.Awaitable):
+                raise TypeError("Could not find an awaitable to place in the context")
+
+            awaitable.add_done_callback(persistable.Function(value.fn, key, self))
+
+            self.insert_barrier(awaitable)
 
     @override
     def _run(self, **kwargs):
@@ -154,10 +135,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
-        for interstep in self._intersteps:
-            interstep.on_next_step_starting(self)
-        self._intersteps = []
-        self._barriers = []
+        self._awaitables = []
 
         try:
             finished, retval = self._stepper.step()
@@ -166,21 +144,13 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
 
         if not finished:
             if retval is not None:
-                if not isinstance(retval, str) and \
-                        isinstance(retval, collections.Sequence) and \
-                        all(isinstance(interstep, Interstep) for interstep in retval):
-                    self.insert_intersteps(retval)
-                elif isinstance(retval, Interstep):
-                    self.insert_intersteps(retval)
+                if isinstance(retval, ToContext):
+                    self.to_context(**retval)
                 else:
-                    raise TypeError(
-                        "Invalid value returned from step '{}'".format(retval))
+                    raise TypeError("Invalid value returned from step '{}'".format(retval))
 
-            for interstep in self._intersteps:
-                interstep.on_last_step_finished(self)
-
-            if self._barriers:
-                return self.loop().create(WaitOnAll, self._barriers), self._do_step
+            if self._awaitables:
+                return persistable.gather(self._awaitables, self.loop()), self._do_step
             else:
                 return self.loop().create(Checkpoint), self._do_step
 
@@ -192,75 +162,10 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.WithHeartbeat):
         :param msg: The abort message
         :type msg: str
         """
-        self.abort(msg=msg, timeout=0)
-
-    def abort(self, msg=None, timeout=None):
-        """
-        Abort the workchain by calling the abort method of the Process and
-        also adding the abort message to the report
-
-        :param msg: The abort message
-        :type msg: str
-        :param timeout: Wait for the given time until the process has aborted
-        :type timeout: float
-        :return: True if the process is aborted at the end of the function, False otherwise
-        """
-        aborted = super(WorkChain, self).abort(msg, timeout)
-        self.report("Aborting: {}".format(msg))
-        return aborted
+        return self.abort(msg=msg)
 
 
-def ToContext(**kwargs):
-    """
-    Utility function that returns a list of UpdateContext Interstep instances
-
-    NOTE: This is effectively a copy of WorkChain.to_context method added to
-    keep backwards compatibility, but should eventually be deprecated
-    """
-    intersteps = []
-    for key, value in kwargs.iteritems():
-
-        if not isinstance(value, UpdateContextBuilder):
-            value = assign_(value)
-
-        interstep = value.build(key)
-        intersteps.append(interstep)
-
-        # if isinstance(value, Action):
-        #     pass
-        # elif isinstance(value, RunningInfo):
-        #     value = action_from_running_info(value)
-        # elif isinstance(value, Future):
-        #     value = Calc(RunningInfo(RunningType.PROCESS, value.pid))
-        # else:
-        #     value = Legacy(value)
-
-        # if not isinstance(value, Action):
-        #     raise ValueError("the values in the kwargs need to be of type Action")
-
-        # if key not in self.ctx:
-        #     interstep = Assign(key, value)
-        # elif isinstance(self.ctx[key], list):
-        #     interstep = Append(key, value)
-        # else:
-        #     interstep = Assign(key, value)
-
-        # intersteps.append(interstep)
-
-    return intersteps
-
-
-class _InterstepFactory(object):
-    def create(self, bundle):
-        class_string = bundle['class']
-        if class_string == get_class_string(ToContext):
-            return ToContext(**bundle[ToContext.TO_ASSIGN])
-        else:
-            raise ValueError(
-                "Unknown interstep class type '{}'".format(class_string))
-
-
-_INTERSTEP_FACTORY = _InterstepFactory()
+ToContext = dict
 
 
 class Stepper(utils.Savable):
@@ -287,16 +192,16 @@ class _Instruction(object):
     step you need to get a stepper by calling ``create_stepper()`` from which
     you can call the :class:`~Stepper.step()` method.
     """
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
 
-    @abstractmethod
+    @abc.abstractmethod
     def create_stepper(self, workflow):
         pass
 
     def __str__(self):
         return self.get_description()
 
-    @abstractmethod
+    @abc.abstractmethod
     def get_description(self):
         """
         Get a text description of these instructions.
@@ -477,9 +382,9 @@ class _If(_Instruction):
         def load_instance_state(self, saved_state):
             super(Stepper, self).load_instance_state(saved_state)
 
-            self._pos = bundle[self._POSITION]
-            if self._STEPPER_POS in bundle:
-                self._current_stepper = utils.Savable.load(bundle[self._STEPPER_POS])
+            self._pos = saved_state[self._POSITION]
+            if self._STEPPER_POS in saved_state:
+                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
 
         def _get_next_stepper(self):
             # Check the conditions until we find that that is true
@@ -562,7 +467,7 @@ class _While(_Conditional, _Instruction):
                     self._finished = True
                     return True, None
 
-            finished, retval = self._stepper.start()
+            finished, retval = self._stepper.step()
             if finished:
                 self._check_condition = True
                 self._stepper = None

@@ -7,17 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import aiida.work.legacy.job_tasks
+import apricotpy
+import plum
 import plum.port as port
-import plum.process
-import plum.util
-from aiida.common.lang import override
-from aiida.work.process import Process, DictSchema
 from voluptuous import Any
 
+from aiida.common.datastructures import calc_states
+from aiida.common.lang import override
+from aiida.work.process import DictSchema
+from aiida.orm.calculation.job import JobCalculation
+from aiida import work
+from . import job_tasks
 
 
-class JobProcess(Process):
+class JobProcess(plum.Process):
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = '_options'
     _CALC_CLASS = None
@@ -60,12 +64,12 @@ class JobProcess(Process):
             # Outputs
             spec.dynamic_output(valid_type=Data)
 
-        class_name = "{}_{}".format(cls.__name__, plum.utils.fullname(calc_class))
+        class_name = "{}_{}".format(cls.__name__, work.utils.class_name(calc_class))
 
         # Dynamically create the type for this Process
         return type(class_name, (cls,),
                     {
-                        Process.define.__name__: classmethod(define),
+                        plum.Process.define.__name__: classmethod(define),
                         '_CALC_CLASS': calc_class
                     })
 
@@ -79,17 +83,17 @@ class JobProcess(Process):
 
     # region Process overrides
     @override
-    def load_instance_state(self, loop, saved_state, logger=None):
+    def load_instance_state(self, saved_state):
         from aiida.backends.utils import get_authinfo
 
-        super(JobProcess, self).load_instance_state(loop, saved_state, logger)
+        super(JobProcess, self).load_instance_state(saved_state)
         self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):
         # Skip over parent on_output_emitted because it will try to store stuff
         # which is already done for us by the Calculation
-        plum.process.Process.on_output_emitted(self, output_port, value, dynamic)
+        plum.Process.on_output_emitted(self, output_port, value, dynamic)
 
     @override
     def get_or_create_db_record(self):
@@ -120,10 +124,10 @@ class JobProcess(Process):
                 for k, v in input.iteritems():
                     try:
                         getattr(self._calc,
-                            'use_{}'.format(name))(v, **{additional: k})
+                                'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError as exception:
                         raise AttributeError("You have provided for an input the key '{}' but"
-                            "the JobCalculation has no such use_{} method".format(name, name))
+                                             "the JobCalculation has no such use_{} method".format(name, name))
 
 
             else:
@@ -145,17 +149,14 @@ class JobProcess(Process):
         self.calc.submit()
 
         # Submit the calculation
-        return tasks.Await(
-            self._calc_submitted,
-            self.loop().create(calc_submitter.SubmitCalc, self.calc, self._authinfo)
-        )
+        submit_calc = self.loop().create(job_tasks.SubmitCalc, self.calc, self._authinfo)
+        return apricotpy.Await(self._calc_submitted, submit_calc)
+
     # endregion
 
     def _calc_submitted(self, submit_result):
-        return tasks.Await(
-            self._scheduler_event_received,
-            self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo)
-        )
+        scheduler_update = self._create_scheduler_update_task()
+        return apricotpy.Await(self._scheduler_event_received, scheduler_update)
 
     def _scheduler_event_received(self, body):
         """
@@ -170,19 +171,17 @@ class JobProcess(Process):
                     update_job_calc_from_detailed_job_info(self.calc, detailed_info)
             else:
                 # Wait for any event from our job
-                return tasks.Await(
-                    self._scheduler_event_received,
-                    self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo, body['job_info'].job_state)
-                )
+                scheduler_update = self._create_scheduler_update_task(body['job_info'].job_state)
+                return apricotpy.Await(self._scheduler_event_received, scheduler_update)
 
         # If the job is computed or not found assume it's done
         self.calc._set_scheduler_state(scheduler_states.DONE)
         self.calc._set_state(calc_states.COMPUTED)
 
         # Next, retrieve the calculation data
-        return tasks.Await(
+        return apricotpy.Await(
             self._retrieved,
-            self.loop().create(calc_submitter.RetrieveCalc, self.calc, self._authinfo)
+            self.loop().create(job_tasks.RetrieveCalc, self.calc, self._authinfo)
         )
 
     def _retrieved(self, result):
@@ -204,6 +203,12 @@ class JobProcess(Process):
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
+    def _create_scheduler_update_task(self, last_state=None):
+        return self.loop().create(
+            aiida.work.legacy.job_tasks.GetSchedulerUpdate, self.calc, self._authinfo,
+            last_state
+        )
+
 
 class ContinueJobCalculation(JobProcess):
     ACTIVE_CALC_STATES = [calc_states.TOSUBMIT, calc_states.SUBMITTING,
@@ -219,20 +224,21 @@ class ContinueJobCalculation(JobProcess):
         state = self.calc.get_state()
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
             return super(ContinueJobCalculation, self).execute()
+
         elif state in calc_states.WITHSCHEDULER:
-            return tasks.Await(
-                self._scheduler_event_received,
-                self.loop().create(event.GetSchedulerEvent, self.calc, self._authinfo)
-            )
+            scheduler_update = self._create_scheduler_update_task()
+            return apricotpy.Await(self._scheduler_event_received, scheduler_update)
+
         elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
-            return tasks.Await(
+            return apricotpy.Await(
                 self._retrieved,
-                self.loop().create(calc_submitter.RetrieveCalc, self.calc, self._authinfo)
+                self.loop().create(job_tasks.RetrieveCalc, self.calc, self._authinfo)
             )
+
         elif state is calc_states.PARSING:
             return self._retrieved(True)
 
-        # Otherwise nothing to do...
+            # Otherwise nothing to do...
 
     @override
     def get_or_create_db_record(self):

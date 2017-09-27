@@ -19,6 +19,7 @@ from . import loop
 from . import persistence
 from . import process
 from . import utils
+from . import legacy
 
 __all__ = ['run', 'run_get_pid', 'async', 'submit']
 
@@ -37,35 +38,7 @@ RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
 
 def legacy_workflow(pk):
-    """
-    Create a :class:`.RunningInfo` object for a legacy workflow.
-
-    This can be used in conjunction with :class:`aiida.work.workchain.ToContext`
-    as follows:
-
-    >>> from aiida.work.workchain import WorkChain, ToContext, Outputs
-    >>>
-    >>> class MyWf(WorkChain):
-    >>>     @classmethod
-    >>>     def define(cls, spec):
-    >>>         super(MyWf, cls).define(spec)
-    >>>         spec.outline(cls.step1, cls.step2)
-    >>>
-    >>>     def step1(self):
-    >>>         wf = OldEquationOfState()
-    >>>         wf.play()
-    >>>         return ToContext(eos=legacy_workflow(wf.pk))
-    >>>
-    >>>     def step2(self):
-    >>>         # Now self.ctx.eos contains the terminated workflow
-    >>>         pass
-
-    :param pk: The workflow pk
-    :type pk: int
-    :return: The running info
-    :rtype: :class:`.RunningInfo`
-    """
-    return RunningInfo(RunningType.LEGACY_WORKFLOW, pk)
+    return legacy.WaitOnWorkflow(pk)
 
 
 def legacy_calc(pk):
@@ -94,46 +67,8 @@ def async(process_class, *args, **inputs):
     return enqueue(process_class, *args, **inputs)
 
 
-def run_until(process, state):
-    plum_run_until(process, state, globals.get_loop())
-
-
-def restart(pid, storage=None):
-    if storage is None:
-        storage = persistence.get_global_persistence()
-    cp = storage.load_checkpoint(pid)
-    return process.Process.create_from(cp).play()
-
-
-def submit(process_class, _jobs_store=None, **kwargs):
-    assert not utils.is_workfunction(process_class), \
-        "You cannot submit a workfunction to the daemon"
-
-    if _jobs_store is None:
-        _jobs_store = aiida.work.persistence.get_global_persistence()
-
-    pid = queue_up(process_class, kwargs, _jobs_store)
-    return RunningInfo(RunningType.PROCESS, pid)
-
-
-def queue_up(process_class, inputs, storage):
-    """
-    This queues up the Process so that it's executed by the daemon when it gets
-    around to it.
-
-    :param process_class: The process class to queue up.
-    :param inputs: The inputs to the process.
-    :type inputs: Mapping
-    :param storage: The storage engine which will be used to save the process (of type plum.persistence)
-    :return: The pid of the queued process.
-    """
-
-    # The strategy for queueing up is this:
-    # 1) Create the process which will set up all the provenance info, pid, etc
-    proc = enqueue(process_class, **inputs)
-    # 2) Save the instance state of the Process
-    storage.save(proc)
-    return proc.pid
+def submit(process_class, **kwargs):
+    raise NotImplementedError()
 
 
 def _get_process_instance(process_class, *args, **kwargs):

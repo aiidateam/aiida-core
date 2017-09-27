@@ -9,9 +9,8 @@
 ###########################################################################
 
 import abc
-import apricotpy
+import apricotpy.persistable.utils
 from apricotpy import persistable
-import importlib
 import plum
 from threading import local
 import time
@@ -22,8 +21,14 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.frozendict import FrozenDict
 
+__all__ = ['ProcessStack']
+
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
+
+class_name = persistable.utils.class_name
+load_object = persistable.utils.load_object
+load_class = load_object
 
 
 class ProcessStack(object):
@@ -110,19 +115,6 @@ class ProcessStack(object):
         raise NotImplementedError("Can't instantiate the ProcessStack")
 
 
-def load_class(classstring):
-    """
-    Load a class from a string
-    """
-    class_data = classstring.split(".")
-    module_path = ".".join(class_data[:-1])
-    class_name = class_data[-1]
-
-    module = importlib.import_module(module_path)
-    # Finally, we retrieve the Class
-    return getattr(module, class_name)
-
-
 def is_workfunction(func):
     try:
         return func._is_workfunction
@@ -143,12 +135,6 @@ class CalculationHeartbeat(apricotpy.LoopObject):
 
     If the heartbeat has lost ownership over the calculation it will stop and
     call an optional (given) callback
-
-    .. warning::
-        This class is not immune to race conditions, i.e. two hearbeats trying
-        to take ownership simultaneously could collide.  Until we have a
-        QUERY+UPDATE atomic operation it is not possible to avoid this but the
-        problem *should* be discovered at the next beat.
     """
     # The attribute used to store the expiry
     HEARTBEAT_EXPIRES = 'heartbeat_expires'
@@ -225,67 +211,81 @@ class CalculationHeartbeat(apricotpy.LoopObject):
 
         # Check that we still have the heartbeat
         if tag == self._heartbeat_tag:
-            self._update_expiry()
-            self._update_tag()
+            if not self._update_expiry():
+                return False
+
+            if not self._update_tag():
+                return False
+
             return True
         else:
             return False
 
     def _update_expiry(self):
         expiry_time = self.loop().time() + self._beat_interval
-        self._calc._set_attr(self.HEARTBEAT_EXPIRES, expiry_time)
+        try:
+            self._calc._set_attr(self.HEARTBEAT_EXPIRES, expiry_time)
+        except ModificationNotAllowed:
+            return False
+
         self._heartbeat_expires = expiry_time
+        return True
 
     def _update_tag(self):
         tag = (self._heartbeat_tag + 1) % 2147483647
-        self._calc._set_attr(self.HEARTBEAT_TAG, tag)
+        try:
+            self._calc._set_attr(self.HEARTBEAT_TAG, tag)
+        except ModificationNotAllowed:
+            return False
+
         self._heartbeat_tag = tag
+        return True
 
 
-class WithHeartbeat(plum.Process):
+class HeartbeatMixin(plum.Process):
     """
     A mixin of sorts to add a calculation heartbeat to Process calculations.
     """
 
     def __init__(self, *args, **kwargs):
-        super(WithHeartbeat, self).__init__(*args, **kwargs)
+        super(HeartbeatMixin, self).__init__(*args, **kwargs)
         self._heartbeat = None
 
     def on_loop_inserted(self, loop):
-        super(WithHeartbeat, self).on_loop_inserted(loop)
+        super(HeartbeatMixin, self).on_loop_inserted(loop)
         self._start_heartbeat()
 
     def on_loop_removed(self):
         self._stop_heartbeat()
-        super(WithHeartbeat, self).on_loop_removed()
+        super(HeartbeatMixin, self).on_loop_removed()
 
     def on_start(self):
-        super(WithHeartbeat, self).on_start()
+        super(HeartbeatMixin, self).on_start()
         assert self._heartbeat is not None
 
     def on_run(self):
-        super(WithHeartbeat, self).on_run()
+        super(HeartbeatMixin, self).on_run()
         assert self._heartbeat is not None
 
     def on_wait(self, awaiting_uuid):
-        super(WithHeartbeat, self).on_wait(awaiting_uuid)
+        super(HeartbeatMixin, self).on_wait(awaiting_uuid)
         assert self._heartbeat is not None
 
     def on_resume(self):
-        super(WithHeartbeat, self).on_resume()
+        super(HeartbeatMixin, self).on_resume()
         assert self._heartbeat is not None
 
     def on_finish(self):
-        super(WithHeartbeat, self).on_finish()
+        super(HeartbeatMixin, self).on_finish()
         assert self._heartbeat is not None
 
     def on_stop(self):
-        super(WithHeartbeat, self).on_stop()
+        super(HeartbeatMixin, self).on_stop()
         assert self._heartbeat is not None
         self._stop_heartbeat()
 
     def on_fail(self, exc_info):
-        super(WithHeartbeat, self).on_fail(exc_info)
+        super(HeartbeatMixin, self).on_fail(exc_info)
 
         # Check here if we still have a heartbeat, the reason for the failure
         # may be precisely because we lost it.
@@ -294,7 +294,7 @@ class WithHeartbeat(plum.Process):
 
     @override
     def on_stop(self):
-        super(WithHeartbeat, self).on_stop()
+        super(HeartbeatMixin, self).on_stop()
         self._stop_heartbeat()
 
     @protected
@@ -355,7 +355,7 @@ class Savable(object):
     def load(saved_state):
         try:
             class_name = saved_state[Savable.CLASS_NAME]
-            cls = persistable.load_object(class_name)
+            cls = load_object(class_name)
             return cls.create_from(saved_state)
         except IndexError:
             raise ValueError("Not a valid saved state with type")
@@ -374,7 +374,7 @@ class Savable(object):
         :param out_state: The state parcel
         :type out_state: :class:`Parcel`
         """
-        out_state[self.CLASS_NAME] = persistable.utils.fullname(self)
+        out_state[self.CLASS_NAME] = class_name(self)
 
     @abc.abstractmethod
     def load_instance_state(self, saved_state):

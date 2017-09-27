@@ -13,19 +13,16 @@ import inspect
 import plum.process_monitor
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.calculation.work import WorkCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.launch import run, async, legacy_workflow
+from aiida.work.launch import run
 from aiida.orm.data.base import Int, Str
 import aiida.work.utils as util
-from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
 from aiida import work
-from aiida.work.launch import legacy_workflow
 
 
 class Wf(WorkChain):
@@ -76,10 +73,11 @@ class Wf(WorkChain):
         self._set_finished(inspect.stack()[0][3])
 
     def s5(self):
+        self.ctx.counter = 0
         self._set_finished(inspect.stack()[0][3])
 
     def s6(self):
-        self.ctx.counter = self.ctx.get('counter', 0) + 1
+        self.ctx.counter = self.ctx.counter + 1
         self._set_finished(inspect.stack()[0][3])
 
     def isA(self):
@@ -91,33 +89,13 @@ class Wf(WorkChain):
         return self.inputs.value.value == 'B'
 
     def ltN(self):
-        keep_looping = self.ctx.get('counter') < self.inputs.n.value
+        keep_looping = self.ctx.counter < self.inputs.n.value
         if not keep_looping:
             self._set_finished(inspect.stack()[0][3])
         return keep_looping
 
     def _set_finished(self, function_name):
         self.finished_steps[function_name] = True
-
-
-class TestContext(AiidaTestCase):
-    def test_attributes(self):
-        c = WorkChain.Context()
-        c.new_attr = 5
-        self.assertEqual(c.new_attr, 5)
-
-        del c.new_attr
-        with self.assertRaises(AttributeError):
-            c.new_attr
-
-    def test_dict(self):
-        c = WorkChain.Context()
-        c['new_attr'] = 5
-        self.assertEqual(c['new_attr'], 5)
-
-        del c['new_attr']
-        with self.assertRaises(KeyError):
-            c['new_attr']
 
 
 class TestWorkchain(AiidaTestCase):
@@ -191,14 +169,14 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                return ToContext(r1=Outputs(async(a)), r2=Outputs(async(b)))
+                return ToContext(r1=Outputs(self.schedule(a)), r2=Outputs(self.schedule(b)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(async(b)))
+                return ToContext(r1=Outputs(self.schedule(b)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -287,7 +265,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=work.submit(SubWorkChain))
+                return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -303,7 +281,7 @@ class TestWorkchain(AiidaTestCase):
 
         work.run(MainWorkChain)
 
-    def test_tocontext_async_workchain(self):
+    def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
@@ -312,7 +290,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=async(SubWorkChain))
+                return ToContext(subwc=self.schedule(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -370,8 +348,8 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.run, cls.result)
 
             def run(self):
-                self.to_context(result_a=Outputs(async(wf)))
-                return ToContext(result_b=Outputs(async(wf)))
+                self.to_context(result_a=Outputs(self.schedule(wf)))
+                return ToContext(result_b=Outputs(self.schedule(wf)))
 
             def result(self):
                 assert self.ctx.result_a['_return'] == val
@@ -401,7 +379,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=legacy_workflow(wf.pk))
+                return ToContext(wf=self.schedule(work.legacy.WaitOnWorkflow, wf.pk))
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -421,31 +399,9 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(legacy_workflow(wf.pk)))
+                return ToContext(res=Outputs(self.schedule(work.legacy.WaitOnWorkflow, wf.pk)))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
         _TestWf.run()
-
-
-class TestHelpers(AiidaTestCase):
-    """
-    Test the helper functions/classes used by workchains
-    """
-
-    def test_get_proc_outputs(self):
-        c = WorkCalculation()
-        a = Int(5)
-        b = Int(10)
-        a.add_link_from(c, u'a', link_type=LinkType.CREATE)
-        b.add_link_from(c, u'b', link_type=LinkType.CREATE)
-        c.store()
-        for n in [a, b, c]:
-            n.store()
-
-        from aiida.work.interstep import _get_proc_outputs_from_registry
-        outputs = _get_proc_outputs_from_registry(c.pk)
-        self.assertListEqual(outputs.keys(), [u'a', u'b'])
-        self.assertEquals(outputs['a'], a)
-        self.assertEquals(outputs['b'], b)

@@ -10,6 +10,7 @@ _CONTROL_EXCHANGE = 'process.control'
 _EVENT_EXCHANGE = 'process.event'
 _LAUNCH_QUEUE = 'process.queue'
 _STATUS_REQUEST_EXCHANGE = 'process.status_request'
+_LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
 
 
 def _create_connection():
@@ -82,7 +83,8 @@ def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connec
     return loop.create(
         rmq.launch.ProcessLaunchSubscriber,
         get_connection(),
-        "{}.{}".format(prefix, _LAUNCH_QUEUE)
+        "{}.{}".format(prefix, _LAUNCH_QUEUE),
+        persistent_uuid=_LAUNCH_SUBSCRIBER_UUID
     )
 
 

@@ -20,7 +20,6 @@ from aiida.orm.calculation import Calculation
 from aiida.work.utils import ProcessStack, CalculationHeartbeat, HeartbeatError
 
 
-
 class StackTester(Process):
     @override
     def _run(self):
@@ -30,48 +29,9 @@ class StackTester(Process):
 
 
 @workfunction
-def registry_tester():
-    # Call a wf
-    future = async(nested_tester)
-    out = future.result()
-    assert future.pid == out['pid']
-    assert future.pid == out['node_pk']
-
-    # Call a Process
-    run(StackTester)
-
-    return {'pid': Int(ProcessStack.get_active_process_id()),
-            'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
-
-
-@workfunction
 def nested_tester():
     return {'pid': Int(ProcessStack.get_active_process_id()),
             'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
-
-
-class TestProcessRegistry(AiidaTestCase):
-    """
-    These these check that the registry is giving out the right pid which when
-    using storage is equal to the node pk.
-    """
-    def setUp(self):
-        super(TestProcessRegistry, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
-    def tearDown(self):
-        super(TestProcessRegistry, self).tearDown()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
-    def test_process_pid_and_calc(self):
-        run(StackTester)
-
-    def test_wf_pid_and_calc(self):
-        future = async(registry_tester)
-        out = future.result()
-
-        self.assertEqual(out['pid'], future.pid)
-        self.assertEqual(out['node_pk'], future.pid)
 
 
 class TestCalculationHeartbeat(AiidaTestCase):
@@ -105,12 +65,3 @@ class TestCalculationHeartbeat(AiidaTestCase):
 
     def _lock_lost(self, calc):
         self.lock_lost = True
-
-
-
-
-
-
-
-
-

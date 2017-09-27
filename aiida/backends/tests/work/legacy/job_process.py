@@ -10,7 +10,7 @@
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from aiida.work import utils
+from aiida import work
 from aiida.work.class_loader import ClassLoader
 from aiida.work.legacy.job_process import JobProcess
 
@@ -18,31 +18,31 @@ from aiida.work.legacy.job_process import JobProcess
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(work.ProcessStack.stack()), 0)
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(work.ProcessStack.stack()), 0)
 
     def test_class_loader(self):
         cl = ClassLoader()
         TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
 
     def test_job_process_set_label_and_description(self):
-    	"""
-    	Verify that calculation label and description get set when passed through inputs
-    	"""
+        """
+        Verify that calculation label and description get set when passed through inputs
+        """
         label = 'test_label'
         description = 'test_description'
         inputs = {
             '_options': {
-                    'computer': self.computer,
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    },
-                    'max_wallclock_seconds': 10,
+                'computer': self.computer,
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
                 },
+                'max_wallclock_seconds': 10,
+            },
             '_label': label,
             '_description': description
         }
@@ -52,18 +52,18 @@ class TestJobProcess(AiidaTestCase):
         self.assertEquals(job_instance.calc.description, description)
 
     def test_job_process_set_none(self):
-    	"""
-    	Verify that calculation label and description can be set to ``None``.
-    	"""
+        """
+        Verify that calculation label and description can be set to ``None``.
+        """
         inputs = {
             '_options': {
-                    'computer': self.computer,
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    },
-                    'max_wallclock_seconds': 10,
+                'computer': self.computer,
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
                 },
+                'max_wallclock_seconds': 10,
+            },
             '_label': None,
             '_description': None
         }

@@ -811,8 +811,8 @@ class AbstractNode(object):
         validate_attribute_key(key)
 
         if self._to_be_stored:
-            import copy
-            self._attrs_cache[key] = clean_value(value)
+            # clean_value is performed only upon storing (more efficient)
+            self._attrs_cache[key] = value
         else:
             self._set_db_attr(key, clean_value(value))
 
@@ -926,7 +926,7 @@ class AbstractNode(object):
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
-        self._set_db_extra(key, clean_value(value), exclusive)
+        self._set_db_extra(key, value, exclusive)
 
 
     def set_extra_exclusive(self, key, value):
@@ -987,7 +987,7 @@ class AbstractNode(object):
                 "The extras of a node can be set only after "
                 "storing the node")
 
-        self._reset_db_extras(clean_value(new_extras))
+        self._reset_db_extras(new_extras)
 
     @abstractmethod
     def _reset_db_extras(self, new_extras):

@@ -21,7 +21,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, clean_value
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
@@ -616,7 +616,7 @@ class Node(AbstractNode):
                     # Save its attributes 'manually' without incrementing
                     # the version for each add.
                     DbAttribute.reset_values_for_node(self.dbnode,
-                                                      attributes=self._attrs_cache,
+                                                      attributes=clean_value(self._attrs_cache),
                                                       with_transaction=False)
                     # This should not be used anymore: I delete it to
                     # possibly free memory

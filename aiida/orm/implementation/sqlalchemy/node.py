@@ -29,7 +29,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      ValidationError)
 from aiida.common.links import LinkType
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, clean_value
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
@@ -644,7 +644,7 @@ class Node(AbstractNode):
                 session.add(self._dbnode)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
-                self.dbnode.attributes = self._attrs_cache
+                self.dbnode.attributes = clean_value(self._attrs_cache)
                 flag_modified(self.dbnode, "attributes")
                 # This should not be used anymore: I delete it to
                 # possibly free memory

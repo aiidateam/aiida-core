@@ -141,8 +141,8 @@ class PressureConvergence(WorkChain):
         self.ctx.last_structure = scaled_structure
 
         # Run PW
-        future0 = self.submit(PwProcess, inputs0)
-        future1 = self.submit(PwProcess, inputs1)
+        future0 = self.runner.submit(PwProcess, inputs0)
+        future1 = self.runner.submit(PwProcess, inputs1)
 
         # Wait to complete before next step
         return ToContext(r0=future0.pid, r1=future1.pid)
@@ -191,7 +191,7 @@ class PressureConvergence(WorkChain):
             scaled_structure, self.inputs.code, self.inputs.pseudo_family)
 
         # Run PW
-        future = self.submit(PwProcess, inputs)
+        future = self.runner.submit(PwProcess, inputs)
         # Replace r1
         return ToContext(r1=future.pid)
 

@@ -169,14 +169,16 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                return ToContext(r1=Outputs(self.schedule(a)), r2=Outputs(self.schedule(b)))
+                return ToContext(
+                    r1=Outputs(self.runner.submit(a)),
+                    r2=Outputs(self.runner.submit(b)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(self.schedule(b)))
+                return ToContext(r1=Outputs(self.runner.submit(b)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -290,7 +292,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=self.schedule(SubWorkChain))
+                return ToContext(subwc=self.runner.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -348,8 +350,8 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.run, cls.result)
 
             def run(self):
-                self.to_context(result_a=Outputs(self.schedule(wf)))
-                return ToContext(result_b=Outputs(self.schedule(wf)))
+                self.to_context(result_a=Outputs(self.runner.submit(wf)))
+                return ToContext(result_b=Outputs(self.runner.submit(wf)))
 
             def result(self):
                 assert self.ctx.result_a['_return'] == val
@@ -379,7 +381,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=self.schedule(work.legacy.WaitOnWorkflow, wf.pk))
+                return ToContext(wf=self.runner.submit(work.legacy.WaitOnWorkflow, wf.pk))
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -399,7 +401,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(self.schedule(work.legacy.WaitOnWorkflow, wf.pk)))
+                return ToContext(res=Outputs(self.runner.submit(work.legacy.WaitOnWorkflow, wf.pk)))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())

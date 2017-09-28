@@ -233,9 +233,6 @@ class Process(plum.process.Process):
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
-    def run_after_queueing(self, wait_on):
-        return self._run
-
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
                                  self.inputs.iteritems())
@@ -322,13 +319,9 @@ class Process(plum.process.Process):
 
     # end region
 
-    def schedule(self, loop_object, *args, **inputs):
-        return self.loop().create(loop_object, *args, **inputs)
-
-    def submit(self, loop_object, **inputs):
-        pass
-        # publisher = self.loop().objects(plum.rmq.ProcessLaunchPublisher)[0]
-        # return publisher.launch(loop_object, inputs=inputs)
+    @property
+    def runner(self):
+        return self.loop()
 
     @override
     def do_run(self):

@@ -18,6 +18,7 @@ from . import globals
 from . import loop
 from . import persistence
 from . import process
+from . import runner
 from . import utils
 from . import legacy
 
@@ -71,32 +72,6 @@ def submit(process_class, **kwargs):
     raise NotImplementedError()
 
 
-def _get_process_instance(process_class, *args, **kwargs):
-    """
-    Get a Process instance for a workchain or workfunction
-
-    :param process_class: The workchain or workfunction to instantiate
-    :param args: The positional arguments (only for workfunctions)
-    :param kwargs: The keyword argument pairs
-    :return: The process instance
-    :rtype: :class:`aiida.process.Process`
-    """
-
-    if isinstance(process_class, process.Process):
-        # Nothing to do
-        return process_class
-    elif utils.is_workfunction(process_class):
-        wf_class = process.FunctionProcess.build(process_class._original, **kwargs)
-        inputs = wf_class.create_inputs(*args, **kwargs)
-        return wf_class(inputs=inputs)
-    elif issubclass(process_class, process.Process):
-        # No need to consider args as a Process can't deal with positional
-        # arguments anyway
-        return process_class(inputs=kwargs)
-    else:
-        raise TypeError("Unknown type for process_class '{}'".format(process_class))
-
-
 def run(process_class_or_workfunction, *args, **inputs):
     """
     Run a workfunction or process and return the result.
@@ -106,17 +81,8 @@ def run(process_class_or_workfunction, *args, **inputs):
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    # Create a new loop and run
-    proc = _get_process_instance(process_class_or_workfunction, *args, **inputs)
-
-    # Create a new loop and run
-    with loop.loop_factory() as evt_loop:
-        evt_loop.insert(proc)
-        result = evt_loop.run_until_complete(proc)
-
-    return result
+    return runner.Runner().run(process_class_or_workfunction, *args, **inputs)
 
 
-def run_get_pid(process_class, *args, **inputs):
-    proc = enqueue(process_class, *args, **inputs)
-    return ResultAndPid(get_loop().run_until_complete(proc), proc.pid)
+def run_get_pid(process_class_or_workfunction, *args, **inputs):
+    return runner.Runner().run_get_pid(process_class_or_workfunction, *args, **inputs)

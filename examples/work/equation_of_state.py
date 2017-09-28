@@ -145,7 +145,7 @@ class EquationOfState(WorkChain):
                 scaled, self.inputs.code, self.inputs.pseudo_family)
 
             # Launch the code
-            pid = self.submit(PwProcess, inputs).pid
+            pid = self.runner.submit(PwProcess, inputs).pid
             # print scale.value, future.pid
             # Store the future
             calcs["s_{}".format(scale)] = pid

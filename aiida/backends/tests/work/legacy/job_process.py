@@ -14,6 +14,8 @@ from aiida import work
 from aiida.work.class_loader import ClassLoader
 from aiida.work.legacy.job_process import JobProcess
 
+Job = TemplatereplacerCalculation.process()
+
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
@@ -46,10 +48,10 @@ class TestJobProcess(AiidaTestCase):
             '_label': label,
             '_description': description
         }
-        job_instance = self._run_inputs(inputs)
+        job = Job(inputs)
 
-        self.assertEquals(job_instance.calc.label, label)
-        self.assertEquals(job_instance.calc.description, description)
+        self.assertEquals(job.calc.label, label)
+        self.assertEquals(job.calc.description, description)
 
     def test_job_process_set_none(self):
         """
@@ -68,13 +70,4 @@ class TestJobProcess(AiidaTestCase):
             '_description': None
         }
 
-        self._run_inputs(inputs)
-
-    def _run_inputs(self, inputs):
-        job_class = TemplatereplacerCalculation.process()
-        job_instance = job_class.new_instance(inputs)
-
-        job_instance.stop()
-        job_instance.run_until_complete()
-
-        return job_instance
+        Job(inputs)

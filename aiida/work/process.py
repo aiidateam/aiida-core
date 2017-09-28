@@ -241,8 +241,8 @@ class Process(plum.process.Process):
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state, evt_loop):
-        super(Process, self).load_instance_state(saved_state, evt_loop)
+    def load_instance_state(self, saved_state):
+        super(Process, self).load_instance_state(saved_state)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -480,8 +480,7 @@ class Process(plum.process.Process):
             if not input.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
-                    input.add_link_from(parent_calc, "CREATE",
-                                        link_type=LinkType.CREATE)
+                    input.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
                 if self.inputs._store_provenance:
                     input.store()
 
@@ -491,11 +490,16 @@ class Process(plum.process.Process):
             self.calc.add_link_from(parent_calc, "CALL",
                                     link_type=LinkType.CALL)
 
+        self._add_description_and_label()
+
+    def _add_description_and_label(self):
         if self.raw_inputs:
-            if '_description' in self.raw_inputs:
-                self.calc.description = self.raw_inputs._description
-            if '_label' in self.raw_inputs:
-                self.calc.label = self.raw_inputs._label
+            description = self.raw_inputs.get('_description', None)
+            if description is not None:
+                self._calc.description = description
+            label = self.raw_inputs.get('_label', None)
+            if label is not None:
+                self._calc.label = label
 
 
 class FunctionProcess(Process):
@@ -577,8 +581,8 @@ class FunctionProcess(Process):
         return dict(zip(cls._func_args, args))
 
     @override
-    def setup_db_record(self):
-        super(FunctionProcess, self).setup_db_record()
+    def _setup_db_record(self):
+        super(FunctionProcess, self)._setup_db_record()
         add_source_info(self.calc, self._func)
         # Save the name of the function
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)

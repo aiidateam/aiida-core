@@ -20,7 +20,6 @@ from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
 from aiida.work import process
-from aiida.work import transport
 from aiida.work import utils
 
 
@@ -187,7 +186,7 @@ class JobProcess(process.Process):
         self._transport_operation = self.loop().create_future()
 
         fn = partial(self._do_transport_operation, operation)
-        self._callback_handle = transport.call_me_with_transport(
+        self._callback_handle = self.runner.transport.call_me_with_transport(
             self.loop(), self._get_authinfo(), fn)
 
         return self._transport_operation
@@ -207,7 +206,7 @@ class JobProcess(process.Process):
             raise RuntimeError("Job calculation is not in a state that requires transport")
 
         fn = partial(self._do_transport_operation, op)
-        self._callback_handle = transport.call_me_with_transport(
+        self._callback_handle = self.runner.transport.call_me_with_transport(
             self.loop(), self._get_authinfo(), fn)
 
     def _do_transport_operation(self, operation, authinfo, transp):

@@ -76,20 +76,3 @@ class TransportQueue(apricotpy.LoopObject):
                     )
 
                 _LOGGER.debug("...callback finished")
-
-
-def call_me_with_transport(loop, authinfo, callback):
-    """
-    Find the transport queue in the loop and ask it to call back with transport
-
-    :param loop: The event loop
-    :param authinfo: Authorisation info
-    :param callback: The callback to call with transport
-    :return: A loop callback handle
-    """
-    results = loop.objects(obj_type=TransportQueue)
-    if not results:
-        raise RuntimeError("The transport queue was not found in the event loop")
-    transport_queue = results[0]
-
-    return transport_queue.call_me_with_transport(callback, authinfo)

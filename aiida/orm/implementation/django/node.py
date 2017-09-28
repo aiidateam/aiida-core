@@ -593,6 +593,9 @@ class Node(AbstractNode):
             # As a first thing, I check if the data is valid
             self._validate()
 
+            # Clean attributes of aiida BaseTypes
+            cleaned_attrs = clean_value(self._attrs_cache)
+
             # Verify that parents are already stored. Raises if this is not
             # the case.
             self._check_are_parents_stored()
@@ -616,10 +619,11 @@ class Node(AbstractNode):
                     # Save its attributes 'manually' without incrementing
                     # the version for each add.
                     DbAttribute.reset_values_for_node(self.dbnode,
-                                                      attributes=clean_value(self._attrs_cache),
+                                                      attributes=cleaned_attrs,
                                                       with_transaction=False)
                     # This should not be used anymore: I delete it to
                     # possibly free memory
+                    del cleaned_attrs
                     del self._attrs_cache
 
                     self._temp_folder = None

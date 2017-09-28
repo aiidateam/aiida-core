@@ -1002,7 +1002,7 @@ class TestNodeBasic(AiidaTestCase):
         n._set_attr('a', Str("sometext2"))
         n._set_attr('b', l2)
         self.assertEqual(n.get_attr('a'), "sometext2")
-        self.assertIsInstance(n.get_attr('a'),basestring)
+        self.assertIsInstance(n.get_attr('a'),Str)
         self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
         
@@ -1010,10 +1010,10 @@ class TestNodeBasic(AiidaTestCase):
         n = Node()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],Str)     
         n.store()
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],Str)     
 
     def test_basetype_as_extra(self):
         """

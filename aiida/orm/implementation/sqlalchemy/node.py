@@ -626,6 +626,9 @@ class Node(AbstractNode):
         if self._to_be_stored:
             self._validate()
 
+            # Clean attributes of aiida BaseTypes
+            cleaned_attrs = clean_value(self._attrs_cache)
+
             self._check_are_parents_stored()
 
             # I save the corresponding django entry
@@ -644,10 +647,11 @@ class Node(AbstractNode):
                 session.add(self._dbnode)
                 # Save its attributes 'manually' without incrementing
                 # the version for each add.
-                self.dbnode.attributes = clean_value(self._attrs_cache)
+                self.dbnode.attributes = cleaned_attrs
                 flag_modified(self.dbnode, "attributes")
                 # This should not be used anymore: I delete it to
                 # possibly free memory
+                del cleaned_attrs
                 del self._attrs_cache
 
                 self._temp_folder = None

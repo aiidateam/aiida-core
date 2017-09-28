@@ -12,17 +12,11 @@ from collections import namedtuple
 
 from enum import Enum
 
-from aiida.work.default_loop import enqueue, ResultAndPid, get_loop
-from plum.wait_ons import run_until as plum_run_until
-from . import globals
-from . import loop
-from . import persistence
-from . import process
+from aiida.work.default_loop import enqueue
 from . import runner
-from . import utils
 from . import legacy
 
-__all__ = ['run', 'run_get_pid', 'async', 'submit']
+__all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
 
 
 class RunningType(Enum):
@@ -68,21 +62,45 @@ def async(process_class, *args, **inputs):
     return enqueue(process_class, *args, **inputs)
 
 
-def submit(process_class, **kwargs):
-    raise NotImplementedError()
+def submit(process_class, **inputs):
+    with runner.create_runner() as my_runner:
+        return my_runner.submit(process_class, **inputs)
 
 
-def run(process_class_or_workfunction, *args, **inputs):
+def run(process_or_workfunction, *args, **inputs):
     """
     Run a workfunction or process and return the result.
 
-    :param process_class_or_workfunction: The process class or workfunction
+    :param process_or_workfunction: The process class, instance or workfunction
     :param args: Positional arguments for a workfunction
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    return runner.Runner().run(process_class_or_workfunction, *args, **inputs)
+    with runner.create_runner() as my_runner:
+        return rrun(my_runner, process_or_workfunction, *args, **inputs)
 
 
-def run_get_pid(process_class_or_workfunction, *args, **inputs):
-    return runner.Runner().run_get_pid(process_class_or_workfunction, *args, **inputs)
+def rrun(runner_, process_or_workfunction, *args, **inputs):
+    """
+    Run with the supplied runner.
+    
+    :param runner_: The runner to run with
+    :param process_or_workfunction: The process class, instance or workfunction
+    :param args: Positional arguments for a workfunction
+    :param inputs: The list of keyword inputs
+    :return: The result of the process
+    """
+    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
+    runner_.insert(proc)
+    return runner_.run_until_complete(proc)
+
+
+def run_get_pid(process_or_workfunction, *args, **inputs):
+    with runner.create_runner() as my_runner:
+        return rrun_get_pid(my_runner, process_or_workfunction, *args, **inputs)
+
+
+def rrun_get_pid(runner_, process_or_workfunction, *args, **inputs):
+    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
+    runner_.insert(proc)
+    return runner.ResultAndPid(runner_.run_until_complete(proc), proc.pid)

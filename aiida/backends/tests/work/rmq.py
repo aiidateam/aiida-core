@@ -1,29 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import uuid
-import threading
-from plum.process_monitor import ProcessMonitorListener, MONITOR
 from aiida.backends.testbase import AiidaTestCase
-import aiida.work.globals as globals
 import aiida.work.test_utils as test_utils
-from aiida.work import rmq
-from plum.process_controller import ProcessController
+import aiida.work as work
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
 __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
-
-
-class CaptureProcess(ProcessMonitorListener):
-    def __init__(self):
-        super(CaptureProcess, self).__init__()
-        self.got_it = threading.Event()
-        self.process = None
-
-    def on_monitored_process_registered(self, process):
-        self.process = process
-        self.got_it.set()
 
 
 class TestProcess(AiidaTestCase):
@@ -33,42 +18,48 @@ class TestProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestProcess, self).setUp()
-        self.controller = ProcessController()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
-        self._subscribers = rmq.enable_subscribers(self.controller, prefix)
-        self.control_panel = rmq.ProcessControlPanel(prefix)
+
+        self.runner = work.create_runner(rmq_control_panel={'prefix': prefix})
+        self.daemon_runner = work.create_daemon_runner(rmq_prefix=prefix)
 
     def tearDown(self):
-        self.controller.remove_all(timeout=10)
-        self.assertEqual(self.controller.get_num_processes(), 0, "Not all processes are finished")
-        self._subscribers.stop()
+        self.daemon_runner.close()
+        self.runner.close()
 
     def test_launch_simple(self):
-        # Monitor launched processes
-        capture = CaptureProcess()
-        MONITOR.add_listener(capture)
-
         # Launch the process
-        self.control_panel.launch.launch(test_utils.DummyProcess)
+        self.runner.rmq.launch(test_utils.DummyProcess)
 
-        self.assertTrue(capture.got_it.wait(5.), "The process wasn't launched in the timeout")
-        self.assertIsInstance(capture.process, test_utils.DummyProcess)
+        # Tick the daemon runner a few times
+        proc = None
+        for _ in range(3):
+            self.daemon_runner.tick()
+            objs = self.daemon_runner.objects(obj_type=test_utils.DummyProcess)
+            if len(objs) == 1:
+                proc = objs[0]
+                break
+
+        self.assertIsNotNone(proc, "The process wasn't launched in the timeout")
 
     def test_launch_and_get_status(self):
         from plum.rmq.status import PROCS_KEY
 
-        # Monitor launched processes
-        capture = CaptureProcess()
-        MONITOR.add_listener(capture)
-
         # Launch the process
-        self.control_panel.launch.launch(test_utils.WaitChain)
+        self.runner.rmq.launch(test_utils.WaitChain)
 
-        self.assertTrue(capture.got_it.wait(5.), "The process wasn't launched in the timeout")
-        self.assertIsInstance(capture.process, test_utils.WaitChain)
+        # Tick the daemon runner a few times
+        proc = None
+        for _ in range(3):
+            self.daemon_runner.tick()
+            objs = self.daemon_runner.objects(obj_type=test_utils.WaitChain)
+            if len(objs) == 1:
+                proc = objs[0]
+                break
 
-        responses = self.control_panel.status.request(timeout=2.)
+        self.assertIsNotNone(proc, "The process wasn't launched in the timeout")
+
+        responses = ~self.runner.rmq.status.send_request(timeout=2.)
         self.assertEqual(len(responses), 1)
         procs = responses[0][PROCS_KEY]
-        self.assertIn(capture.process.pid, procs)
-        self.assertTrue(capture.process.abort(timeout=2.), "Process didn't abort in time")
+        self.assertIn(proc.process.pid, procs)

@@ -41,13 +41,6 @@ class TestWf(AiidaTestCase):
         self.assertTrue(simple_wf()['result'])
         self.assertTrue(return_input(get_true_node())['result'])
 
-    def test_async(self):
-        self.assertTrue(async(simple_wf).result()['result'])
-        self.assertTrue(async(return_input, get_true_node()).result()['result'])
-        # Wait till all the processes are completely done
-        while len(plum.process_monitor.MONITOR.get_pids()):
-            pass
-
     def test_run(self):
         self.assertTrue(run(simple_wf)['result'])
         self.assertTrue(run(return_input, get_true_node())['result'])

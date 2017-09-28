@@ -11,13 +11,15 @@
 from . import legacy
 from .launch import *
 from .process import *
+from .runner import *
 from . import workfunction
 from .workchain import *
 from .utils import *
 
 __all__ = (
-           process.__all__ +
-           utils.__all__ +
-           workchain.__all__ +
-           launch.__all__ +
-           workfunction.__all__)
+    process.__all__ +
+    runner.__all__ +
+    utils.__all__ +
+    workchain.__all__ +
+    launch.__all__ +
+    workfunction.__all__)

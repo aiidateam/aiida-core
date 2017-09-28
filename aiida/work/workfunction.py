@@ -12,8 +12,9 @@ This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
-from aiida.work.process import FunctionProcess
 import functools
+from . import process
+from . import launch
 
 __all__ = ['workfunction']
 
@@ -46,13 +47,13 @@ def workfunction(func):
         This wrapper function is the actual function that is called.
         """
         # Build up the Process representing this function
-        FuncProc = FunctionProcess.build(func, **kwargs)
-        inputs = FuncProc.create_inputs(*args, **kwargs)
-        result = FuncProc.run(**inputs)
+        wf_class = process.FunctionProcess.build(func, **kwargs)
+        inputs = wf_class.create_inputs(*args, **kwargs)
+        result = launch.run(wf_class, **inputs)
 
         # Check if there is just one value returned
-        if len(result) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in result:
-            result = result[FuncProc.SINGLE_RETURN_LINKNAME]
+        if len(result) == 1 and wf_class.SINGLE_RETURN_LINKNAME in result:
+            result = result[wf_class.SINGLE_RETURN_LINKNAME]
 
         return result
 

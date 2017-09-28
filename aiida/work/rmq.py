@@ -1,3 +1,4 @@
+import apricotpy
 import pika
 import pika.exceptions
 import json
@@ -89,6 +90,7 @@ def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connec
 
 
 def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
+    # Give them all the same connection instance
     connection = get_connection()
     get_conn = lambda: connection
 
@@ -97,37 +99,46 @@ def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     insert_process_launch_subscriber(loop, prefix, get_conn)
 
 
-class ProcessControlPanel(object):
+class ProcessControlPanel(apricotpy.LoopObject):
     """
-    A separate thread for the RabbitMQ related classes.  It's done like this
-    because pika requires that the RMQ connection is on the same thread as
-    the polling functions so I create them all here and let it poll.
+    RMQ control panel for launching, controlling and getting status of
+    Processes over the RMQ protocol.
     """
 
-    def __init__(self, loop, prefix, create_connection=_create_connection):
-        self.daemon = True
+    def __init__(self, prefix, create_connection=_create_connection):
+        super(ProcessControlPanel, self).__init__()
 
         self._connection = create_connection()
 
-        self._control = loop.create(
-            rmq.control.ProcessControlPublisher,
+        self._control = rmq.control.ProcessControlPublisher(
             self._connection,
             "{}.{}".format(prefix, _CONTROL_EXCHANGE)
         )
 
-        self._status = loop.create(
-            rmq.status.ProcessStatusRequester,
+        self._status = rmq.status.ProcessStatusRequester(
             self._connection,
             "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
             status_decode
         )
 
-        self._launch = loop.create(
-            rmq.launch.ProcessLaunchPublisher,
+        self._launch = rmq.launch.ProcessLaunchPublisher(
             self._connection,
             "{}.{}".format(prefix, _LAUNCH_QUEUE),
             encode_launch_task
         )
+
+    def on_loop_inserted(self, loop):
+        super(ProcessControlPanel, self).on_loop_inserted(loop)
+        loop._insert(self._control)
+        loop._insert(self._status)
+        loop._insert(self._launch)
+
+    def on_loop_removed(self):
+        loop = self.loop()
+        loop._remove(self._control)
+        loop._remove(self._status)
+        loop._remove(self._launch)
+        super(ProcessControlPanel, self).on_loop_removed()
 
     @property
     def control(self):
@@ -137,6 +148,9 @@ class ProcessControlPanel(object):
     def status(self):
         return self._status
 
-    @property
-    def launch(self):
-        return self._launch
+    def launch(self, process_class, inputs=None):
+        return self._launch.launch(process_class, inputs)
+
+
+def create_control_panel(prefix="aiida", create_connection=_create_connection):
+    return ProcessControlPanel(prefix, create_connection)

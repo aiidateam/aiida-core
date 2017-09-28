@@ -242,7 +242,7 @@ class CalculationHeartbeat(apricotpy.LoopObject):
         return True
 
 
-class HeartbeatMixin(plum.Process):
+class HeartbeatMixin(object):
     """
     A mixin of sorts to add a calculation heartbeat to Process calculations.
     """
@@ -302,14 +302,12 @@ class HeartbeatMixin(plum.Process):
         return self._heartbeat is not None
 
     def _start_heartbeat(self):
-        self._heartbeat = self.loop().create(
-            CalculationHeartbeat,
-            self.calc, lost_callback=self._heartbeat_lost
-        )
+        self._heartbeat = CalculationHeartbeat(self.calc, lost_callback=self._heartbeat_lost)
+        self.loop()._insert(self._heartbeat)
 
     def _stop_heartbeat(self):
         if self._heartbeat is not None:
-            self.loop().remove(self._heartbeat)
+            self.loop()._remove(self._heartbeat)
             self._heartbeat = None
 
     def _heartbeat_lost(self, heartbeat):

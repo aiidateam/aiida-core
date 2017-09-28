@@ -24,6 +24,16 @@ from aiida.work.workfunction import workfunction
 from aiida import work
 
 
+def run(process_or_workfunction, *args, **inputs):
+    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
+        return work.rrun(runner, process_or_workfunction, *args, **inputs)
+
+
+def run_get_pid(process_or_workfunction, *args, **inputs):
+    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
+        return work.rrun_get_pid(runner, process_or_workfunction, *args, **inputs)
+
+
 class ProcessStackTest(work.Process):
     @override
     def _run(self):
@@ -56,22 +66,18 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
-        ProcessStackTest.run()
+        run(ProcessStackTest)
 
     def test_inputs(self):
         with self.assertRaises(TypeError):
-            BadOutput.run()
-
-    def test_pid_is_uuid(self):
-        p = DummyProcess.new(_store_provenance=False)
-        self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
+            run(BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
         inputs = {l: Int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
-        p = DummyProcess.new(**inputs)
+        p = DummyProcess(inputs)
 
         for label, value in p._calc.get_inputs_dict().iteritems():
             self.assertTrue(label in inputs)
@@ -83,30 +89,30 @@ class TestProcess(AiidaTestCase):
 
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        work.run(DummyProcess)
+        run(DummyProcess)
 
     def test_seal(self):
-        pid = work.run_get_pid(DummyProcess).pid
+        pid = run_get_pid(DummyProcess).pid
         self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
-        dp = DummyProcess.new(_description="Rockin' process")
+        dp = DummyProcess(inputs={'_description': "Rockin' process"})
         self.assertEquals(dp.calc.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            DummyProcess.new(_description=5)
+            DummyProcess(inputs={'_description': 5})
 
     def test_label(self):
-        dp = DummyProcess.new(_label='My label')
+        dp = DummyProcess(inputs={'_label': 'My label'})
         self.assertEquals(dp.calc.label, 'My label')
 
         with self.assertRaises(ValueError):
-            DummyProcess.new(_label=5)
+            DummyProcess(inputs={'_label': 5})
 
     def test_work_calc_finish(self):
         p = DummyProcess()
         self.assertFalse(p.calc.has_finished_ok())
-        work.run(p)
+        run(p)
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
@@ -114,11 +120,11 @@ class TestProcess(AiidaTestCase):
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
-        outputs, pid = work.run_get_pid(simple_wf)
+        outputs, pid = run_get_pid(simple_wf)
         calc = load_node(pid)
 
-        dp = DummyProcess.new(calc=calc)
-        work.run(dp)
+        dp = DummyProcess(inputs={'calc': calc})
+        run(dp)
 
         input_calc = dp.calc.get_inputs_dict()['calc']
         self.assertTrue(isinstance(input_calc, FrozenDict))
@@ -132,7 +138,7 @@ class TestFunctionProcess(AiidaTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         FP = work.FunctionProcess.build(wf)
-        self.assertEqual(work.run(FP, **inputs), inputs)
+        self.assertEqual(run(FP, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -148,13 +154,13 @@ class TestFunctionProcess(AiidaTestCase):
         inputs = {'a': a}
 
         FP = work.FunctionProcess.build(wf_with_kwargs)
-        outs = work.run(FP, **inputs)
+        outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)
 
         FP = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            FP.run(**inputs)
+            run(FP, **inputs)
 
         FP = work.FunctionProcess.build(wf_fixed_args)
-        outs = work.run(FP, **inputs)
+        outs = run(FP, **inputs)
         self.assertEqual(outs, inputs)

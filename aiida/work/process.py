@@ -33,7 +33,6 @@ from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
-from . import loop
 from . import utils
 
 __all__ = ['Process', 'FunctionProcess']
@@ -189,18 +188,6 @@ class Process(plum.process.Process):
         from aiida.orm.calculation.work import WorkCalculation
         calc = WorkCalculation()
         return calc
-
-    @classmethod
-    def new(cls, **inputs):
-        return cls(inputs=inputs)
-
-    @classmethod
-    def run(cls, **inputs):
-        # Create a new loop and run
-        with loop.loop_factory() as evt_loop:
-            result = evt_loop.run_until_complete(evt_loop.create(cls, inputs=inputs))
-
-        return result
 
     _spec_type = ProcessSpec
 
@@ -599,3 +586,29 @@ class FunctionProcess(Process):
                     "Workfunction returned unsupported type '{}'\n"
                     "Must be a Data type or a Mapping of string => Data".
                         format(outs.__class__))
+
+
+def _get_process_instance(process_class, *args, **kwargs):
+    """
+    Get a Process instance for a workchain or workfunction
+
+    :param process_class: The workchain or workfunction to instantiate
+    :param args: The positional arguments (only for workfunctions)
+    :param kwargs: The keyword argument pairs
+    :return: The process instance
+    :rtype: :class:`aiida.process.Process`
+    """
+
+    if isinstance(process_class, Process):
+        # Nothing to do
+        return process_class
+    elif utils.is_workfunction(process_class):
+        wf_class = FunctionProcess.build(process_class._original, **kwargs)
+        inputs = wf_class.create_inputs(*args, **kwargs)
+        return wf_class(inputs=inputs)
+    elif issubclass(process_class, Process):
+        # No need to consider args as a Process can't deal with positional
+        # arguments anyway
+        return process_class(inputs=kwargs)
+    else:
+        raise TypeError("Unknown type for process_class '{}'".format(process_class))

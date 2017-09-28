@@ -17,12 +17,16 @@ from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.launch import run
 from aiida.orm.data.base import Int, Str
 import aiida.work.utils as util
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
 from aiida import work
+
+
+def run(process_or_workfunction, *args, **inputs):
+    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
+        return work.rrun(runner, process_or_workfunction, *args, **inputs)
 
 
 class Wf(WorkChain):
@@ -116,7 +120,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        Wf.run(value=A, n=three)
+        run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -124,7 +128,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = Wf.run(value=B, n=three)
+        finished_steps = run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -132,7 +136,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = Wf.run(value=C, n=three)
+        finished_steps = run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -184,7 +188,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['_return'] == B
                 assert self.ctx.r2['_return'] == B
 
-        Wf.run()
+        run(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -256,7 +260,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        WcWithReturn.run()
+        run(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
@@ -267,7 +271,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=self.submit(SubWorkChain))
+                return ToContext(subwc=self.runner.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -281,7 +285,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        work.run(MainWorkChain)
+        run(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
@@ -362,7 +366,7 @@ class TestWorkchain(AiidaTestCase):
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         proc = wf_class(inputs=inputs)
-        work.run(proc)
+        run(proc)
 
         return wf_class.finished_steps
 
@@ -386,7 +390,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert self.ctx.wf is not None
 
-        _TestWf.run()
+        run(_TestWf)
 
     def test_old_wf_results(self):
         wf = WorkflowDemo()
@@ -406,4 +410,4 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
-        _TestWf.run()
+        run(_TestWf)

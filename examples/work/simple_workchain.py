@@ -32,7 +32,7 @@ class ProdSumBroken(ProdSum):
         raise RuntimeError("Break")
 
 
-p = ProdSumBroken.new(inputs={'a': Int(2), 'b': Int(3), 'c': Int(4)})
+p = ProdSumBroken(inputs={'a': Int(2), 'b': Int(3), 'c': Int(4)})
 pid = p.pid
 persistence.persist_process(p)
 try:

@@ -14,9 +14,9 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.process import Process
 from aiida.work.workfunction import workfunction
 from aiida.common.lang import override
-from aiida.work.launch import async, run
 from aiida.orm.data.base import Int
 from aiida.orm.calculation import Calculation
+from aiida import work
 from aiida.work.utils import ProcessStack, CalculationHeartbeat, HeartbeatError
 
 
@@ -38,30 +38,34 @@ class TestCalculationHeartbeat(AiidaTestCase):
     def setUp(self):
         super(TestCalculationHeartbeat, self).setUp()
         self.lock_lost = False
-
-    def test_start_stop(self):
-        c = Calculation()
-        heartbeat = CalculationHeartbeat(c)
-        heartbeat.start()
-        heartbeat.stop()
+        self.runner = work.create_runner()
 
     def test_acquire_locked(self):
         c = Calculation()
+
         # Start one heartbeat
-        with CalculationHeartbeat(c):
-            # Try starting another on the same calculation
-            with self.assertRaises(HeartbeatError):
-                with CalculationHeartbeat(c):
-                    pass
+        hb1 = CalculationHeartbeat(c)
+        self.runner._insert(hb1)
+
+        hb2 = CalculationHeartbeat(c)
+
+        # Try starting another on the same calculation
+        with self.assertRaises(HeartbeatError):
+            self.runner._insert(hb2)
 
     def test_heartbeat_lost(self):
         c = Calculation()
+
+        hb = CalculationHeartbeat(c, 0.5, lost_callback=self._lock_lost)
         # Start a heartbeat
-        with CalculationHeartbeat(c, 0.5, lost_callback=self._lock_lost) as heartbeat:
-            # Now steal its lock and wait for it to try and update the heartbeat
-            c._set_attr(CalculationHeartbeat.HEARTBEAT_TAG, 0)
-            time.sleep(1)
-            self.assertTrue(self.lock_lost)
+        self.runner._insert(hb)
+
+        # Now steal its lock and wait for it to try and update the heartbeat
+        c._set_attr(CalculationHeartbeat.HEARTBEAT_TAG, 0)
+        for _ in range(3):
+            self.runner.tick()
+
+        self.assertTrue(self.lock_lost)
 
     def _lock_lost(self, calc):
         self.lock_lost = True

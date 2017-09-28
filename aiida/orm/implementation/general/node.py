@@ -812,7 +812,7 @@ class AbstractNode(object):
 
         if self._to_be_stored:
             # clean_value is performed only upon storing (more efficient)
-            self._attrs_cache[key] = value)
+            self._attrs_cache[key] = value
         else:
             self._set_db_attr(key, clean_value(value))
 

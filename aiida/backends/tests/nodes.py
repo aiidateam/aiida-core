@@ -323,6 +323,21 @@ class TestNodeBasic(AiidaTestCase):
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(a.get_attrs(), target_attrs)
 
+    def test_storing_object(self):
+        """Trying to store objects should fail"""
+        a = Node()
+        a._set_attr('object', object())
+
+        with self.assertRaises(ValueError):
+            # objects are not json-serializable
+            a.store()
+
+        b = Node()
+        b._set_attr('object_list', [object(), object()])
+        with self.assertRaises(ValueError):
+            # objects are not json-serializable
+            b.store()
+
     def DISABLED(self):
         """
         This test routine is disabled for the time being; I will re-enable

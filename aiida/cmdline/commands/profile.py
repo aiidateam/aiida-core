@@ -75,13 +75,23 @@ class Profile(VerdiCommandWithSubcommands):
 
     def profile_list(self, *args):
         from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
+        from aiida.common.exceptions import ConfigurationError
+
         from aiida.backends import settings
 
         print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
 
         current_profile = settings.AIIDADB_PROFILE
-        default_profile = get_default_profile(
+        try:
+            default_profile = get_default_profile(
                 settings.CURRENT_AIIDADB_PROCESS)
+        except ConfigurationError as e:
+            err_msg = (
+                "Stopping: {}\n"
+                "Note: if no configuration file was found, it means that you have not run\n" 
+            "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
+            click.echo(err_msg, err=True)
+            sys.exit(1)
         default_daemon_profile = get_default_profile("daemon")
         if current_profile is None:
             current_profile = default_profile

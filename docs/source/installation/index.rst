@@ -223,10 +223,15 @@ followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupy
 
 If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
 
-  c = get_config()
-  c.InteractiveShellApp.extensions = [
-          'aiida.common.ipython.ipython_magics'
-  ]
+  try:
+      import aiida
+  except ImportError:
+      pass
+  else:
+      c = get_config()
+      c.InteractiveShellApp.extensions = [
+            'aiida.common.ipython.ipython_magics'
+      ]
 
 then open a Jupyter notebook as explained above and type in a cell:
 

@@ -197,6 +197,38 @@ class TestSimple(AiidaTestCase):
     def tearDown(self):
         pass
 
+    def test_0(self):
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import DataFactory
+        from aiida.orm import load_node
+        from aiida.orm.data.base import Str
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import export
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            strvalue = "HeLLo"
+            string = Str("HeLLo")
+            string.store()
+            myuuid = string.uuid
+            filename = os.path.join(temp_folder, "export.tar.gz")
+            export([string.dbnode], outfile=filename, silent=True)
+            self.clean_db()
+            # NOTE: it is better to load new nodes by uuid, rather than assuming
+            # that they will have the first 3 pks. In fact, a recommended policy in
+            # databases is that pk always increment, even if you've deleted elements
+            import_data(filename, silent=True)
+            newstring = load_node(myuuid)
+            self.assertEquals(newstring.value, strvalue)
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+
     def test_1(self):
         import os
         import shutil

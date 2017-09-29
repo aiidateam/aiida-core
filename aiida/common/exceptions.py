@@ -81,6 +81,13 @@ class MissingPluginError(AiidaException):
     pass
 
 
+class MultiplePluginError(AiidaException):
+    """
+    Raised when the user tries to load an entry point that cannot be uniquely resolved
+    """
+    pass
+
+
 class InvalidOperation(AiidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute

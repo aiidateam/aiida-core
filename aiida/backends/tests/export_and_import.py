@@ -204,26 +204,30 @@ class TestSimple(AiidaTestCase):
 
         from aiida.orm import DataFactory
         from aiida.orm import load_node
-        from aiida.orm.data.base import Str
+        from aiida.orm.data.base import Str, Int, Float, Bool
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.importexport import export
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
-            strvalue = "HeLLo"
-            string = Str("HeLLo")
-            string.store()
-            myuuid = string.uuid
+            # producing values for each base type
+            values = ("Hello", 6, -1.2399834e12, False) #, ["Bla", 1, 1e-10])
             filename = os.path.join(temp_folder, "export.tar.gz")
-            export([string.dbnode], outfile=filename, silent=True)
+
+            # producing nodes:
+            nodes = [cls(val).store() for val, cls in zip(values, (Str, Int, Float, Bool))]
+            # my uuid - list to reload the node:
+            uuids = [n.uuid for n in nodes]
+            # exporting the nodes:
+            export([n.dbnode for n in nodes], outfile=filename, silent=True)
+            # cleaning:
             self.clean_db()
-            # NOTE: it is better to load new nodes by uuid, rather than assuming
-            # that they will have the first 3 pks. In fact, a recommended policy in
-            # databases is that pk always increment, even if you've deleted elements
+            # Importing back the data:
             import_data(filename, silent=True)
-            newstring = load_node(myuuid)
-            self.assertEquals(newstring.value, strvalue)
+            # Checking whether values are preserved:
+            for uuid, refval in zip(uuids, values):
+                self.assertEquals(load_node(uuid).value, refval)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)

@@ -9,6 +9,8 @@
 ###########################################################################
 import sys
 
+import click
+
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import (
@@ -40,6 +42,7 @@ class Data(VerdiCommandRouter):
             'parameter': _Parameter,
             'array': _Array,
             'label': _Label,
+            'remote': _Remote,
             'description': _Description,
         }
 
@@ -1982,3 +1985,140 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
             for arrayname in node.arraynames():
                 the_dict[arrayname] = node.get_array(arrayname).tolist()
             print_dictionary(the_dict, 'json+date')
+
+def get_mode_string(mode):
+    """
+    Convert a file's mode to a string of the form '-rwxrwxrwx'.
+    Taken (simplified) from cpython 3.3 stat module: https://hg.python.org/cpython/file/3.3/Lib/stat.py
+    """
+    # Constants used as S_IFMT() for various file types
+    # (not all are implemented on all systems)
+
+    S_IFDIR = 0o040000  # directory
+    S_IFCHR = 0o020000  # character device
+    S_IFBLK = 0o060000  # block device
+    S_IFREG = 0o100000  # regular file
+    S_IFIFO = 0o010000  # fifo (named pipe)
+    S_IFLNK = 0o120000  # symbolic link
+    S_IFSOCK = 0o140000  # socket file
+
+    # Names for permission bits
+
+    S_ISUID = 0o4000  # set UID bit
+    S_ISGID = 0o2000  # set GID bit
+    S_ENFMT = S_ISGID  # file locking enforcement
+    S_ISVTX = 0o1000  # sticky bit
+    S_IREAD = 0o0400  # Unix V7 synonym for S_IRUSR
+    S_IWRITE = 0o0200  # Unix V7 synonym for S_IWUSR
+    S_IEXEC = 0o0100  # Unix V7 synonym for S_IXUSR
+    S_IRWXU = 0o0700  # mask for owner permissions
+    S_IRUSR = 0o0400  # read by owner
+    S_IWUSR = 0o0200  # write by owner
+    S_IXUSR = 0o0100  # execute by owner
+    S_IRWXG = 0o0070  # mask for group permissions
+    S_IRGRP = 0o0040  # read by group
+    S_IWGRP = 0o0020  # write by group
+    S_IXGRP = 0o0010  # execute by group
+    S_IRWXO = 0o0007  # mask for others (not in group) permissions
+    S_IROTH = 0o0004  # read by others
+    S_IWOTH = 0o0002  # write by others
+    S_IXOTH = 0o0001  # execute by others
+
+    _filemode_table = (
+        ((S_IFLNK, "l"),
+         (S_IFREG, "-"),
+         (S_IFBLK, "b"),
+         (S_IFDIR, "d"),
+         (S_IFCHR, "c"),
+         (S_IFIFO, "p")),
+
+        ((S_IRUSR, "r"),),
+        ((S_IWUSR, "w"),),
+        ((S_IXUSR | S_ISUID, "s"),
+         (S_ISUID, "S"),
+         (S_IXUSR, "x")),
+
+        ((S_IRGRP, "r"),),
+        ((S_IWGRP, "w"),),
+        ((S_IXGRP | S_ISGID, "s"),
+         (S_ISGID, "S"),
+         (S_IXGRP, "x")),
+
+        ((S_IROTH, "r"),),
+        ((S_IWOTH, "w"),),
+        ((S_IXOTH | S_ISVTX, "t"),
+         (S_ISVTX, "T"),
+         (S_IXOTH, "x"))
+    )
+
+
+    perm = []
+    for table in _filemode_table:
+        for bit, char in table:
+            if mode & bit == bit:
+                perm.append(char)
+                break
+        else:
+            perm.append("-")
+    return "".join(perm)
+
+
+class _Remote(VerdiCommandWithSubcommands):
+    """
+    Manage RemoteData objects
+    """
+
+    def __init__(self):
+        self.valid_subcommands = {
+            'ls': (self.do_listdir, self.complete_none),
+        }
+
+    def do_listdir(self, *args):
+        """
+        Return a list of running workflows on screen
+        """
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Manage RemoteData objects.')
+
+        parser.add_argument('-c', '--color', action='store_true',
+                      help="Color folders with a different color")
+        parser.add_argument('-l', '--long', action='store_true',
+                      help="Display also file metadata")
+        parser.add_argument('pk', type=int, help="PK of the node")
+        parser.add_argument('path', nargs='?', default='.', help="The folder to list")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        color = parsed_args.color
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+        content = n.listdir_withattributes(path=parsed_args.path)
+        for metadata in content:
+            if parsed_args.long:
+                mtime = datetime.datetime.fromtimestamp(
+                    metadata['attributes'].st_mtime)
+                pre_line = '{} {:10}  {} '.format(
+                    get_mode_string(metadata['attributes'].st_mode),
+                    metadata['attributes'].st_size,
+                    mtime.strftime("%d %b %Y %H:%M")
+                    )
+                click.echo(pre_line, nl=False)
+            if parsed_args.color:
+                if metadata['isdir']:
+                    click.echo(click.style(metadata['name'], fg='blue'))
+                else:
+                    click.echo(metadata['name'])
+            else:
+                click.echo(metadata['name'])

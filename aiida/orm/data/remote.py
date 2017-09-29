@@ -81,7 +81,7 @@ class RemoteData(Data):
 
             return t.listdir()
 
-    def listdir_withattributes(self, relpath="."):
+    def listdir_withattributes(self, path="."):
         """
         Connects to the remote folder and lists the directory content.
 
@@ -96,7 +96,7 @@ class RemoteData(Data):
 
         with t:
             try:
-                full_path = os.path.join(self.get_remote_path(), relpath)
+                full_path = os.path.join(self.get_remote_path(), path)
                 t.chdir(full_path)
             except IOError as e:
                 if e.errno == 2:  # directory not existing
@@ -106,7 +106,7 @@ class RemoteData(Data):
                 else:
                     raise
 
-            return t.listdir()
+            return t.listdir_withattributes()
 
 
     def _clean(self):

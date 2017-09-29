@@ -491,6 +491,8 @@ class Transport(object):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
+        S_IFDIR = 0o040000  # directory bit
+
         retlist = []
         full_path = self.getcwd()
         for f in self.listdir():
@@ -499,7 +501,9 @@ class Transport(object):
             retlist.append({
                 'name': f,
                 'attributes': attributes,
-                'isdir': self.isdir(filepath)
+                #'isdir': self.isdir(filepath)
+                ## Optimized version, no need to do a remote access again
+                'isdir': attributes.st_mode & S_IFDIR == S_IFDIR,
             })
         return retlist
 

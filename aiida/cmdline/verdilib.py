@@ -26,6 +26,8 @@ import contextlib
 import click
 
 import aiida
+import aiida.cmdline.commands.user
+import aiida.control.user
 from aiida.common.exceptions import (
     AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
@@ -588,9 +590,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             user.configure.main(args=[email])
         else:
             # or don't ask
-            user.do_configure(kwargs['email'], kwargs.get('first_name'),
-                              kwargs.get('last_name'), kwargs.get('institution'),
-                              True)
+            aiida.cmdline.commands.user.configure_user(kwargs['email'], kwargs.get('first_name'),
+                                                       kwargs.get('last_name'), kwargs.get('institution'),
+                                                       True)
 
     print "Setup finished."
 

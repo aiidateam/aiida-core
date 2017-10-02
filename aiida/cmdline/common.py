@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-
-
-
 def print_node_summary(node):
     from tabulate import tabulate
 
@@ -42,10 +39,10 @@ def print_node_summary(node):
 
     print(tabulate(table))
 
-
 def print_node_info(node, print_summary=True):
-    from aiida.backends.utils import get_log_messages
     from tabulate import tabulate
+    from aiida.backends.utils import get_log_messages
+    from aiida.orm.calculation.work import WorkCalculation
 
     if print_summary:
         print_node_summary(node)
@@ -67,7 +64,9 @@ def print_node_info(node, print_summary=True):
 
     log_messages = get_log_messages(node)
     if log_messages:
-        print ("##### NOTE! There are {} log messages for this "
-               "calculation.".format(len(log_messages)))
-        print "      Use the 'calculation logshow' command to see them."
-
+        print "##### LOGS:"
+        print ("There are {} log messages for this calculation".format(len(log_messages)))
+        if isinstance(node, WorkCalculation):
+            print ("Run 'verdi work report {}' to see them".format(node.pk))
+        else:
+            print ("Run 'verdi calculation logshow {}' to see them".format(node.pk))

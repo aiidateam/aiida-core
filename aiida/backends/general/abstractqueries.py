@@ -16,6 +16,8 @@ class AbstractQueryManager(object):
 
     def __init__(self,  *args, **kwargs):
         pass
+
+
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:
     def query_jobcalculations_by_computer_user_state(
@@ -105,4 +107,84 @@ class AbstractQueryManager(object):
             returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
+
+
+    def get_creation_statistics(
+            self,
+            user_email=None
+    ):
+        """
+        Return a dictionary with the statistics of node creation, summarized by day.
+
+        :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.
+
+        :param user_email: If None (default), return statistics for all users.
+            If an email is specified, return only the statistics for the given user.
+
+        :return: a dictionary as
+            follows::
+
+                {
+                   "total": TOTAL_NUM_OF_NODES,
+                   "types": {TYPESTRING1: count, TYPESTRING2: count, ...},
+                   "ctime_by_day": {'YYYY-MMM-DD': count, ...}
+
+            where in `ctime_by_day` the key is a string in the format 'YYYY-MM-DD' and the value is
+            an integer with the number of nodes created that day.
+        """
+        from aiida.orm.querybuilder import QueryBuilder as QB
+        from aiida.orm import User, Node
+        from collections import Counter
+        import datetime
+
+        def count_statistics(dataset):
+
+            def get_statistics_dict(dataset):
+                results = {}
+                for count, typestring in sorted(
+                        (v, k) for k, v in dataset.iteritems())[::-1]:
+                    results[typestring] = count
+                return results
+
+            count_dict = {}
+
+            types = Counter([r[2] for r in dataset])
+            count_dict["types"] = get_statistics_dict(types)
+
+            ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
+            ctime = Counter(ctimelist)
+
+            if len(ctimelist) > 0:
+
+                # For the way the string is formatted, we can just sort it alphabetically
+                firstdate = datetime.datetime.strptime(sorted(ctimelist)[0], '%Y-%m-%d')
+                lastdate = datetime.datetime.strptime(sorted(ctimelist)[-1], '%Y-%m-%d')
+
+                curdate = firstdate
+                outdata = {}
+
+                while curdate <= lastdate:
+                    curdatestring = curdate.strftime('%Y-%m-%d')
+                    outdata[curdatestring] = ctime.get(curdatestring, 0)
+                    curdate += datetime.timedelta(days=1)
+                count_dict["ctime_by_day"] = outdata
+
+            else:
+                count_dict["ctime_by_day"] = {}
+
+            return count_dict
+
+        statistics = {}
+
+        q = QB()
+        q.append(Node, project=['id', 'ctime', 'type'], tag='node')
+        if user_email is not None:
+            q.append(User, creator_of='node', project='email', filters={'email': user_email})
+        qb_res = q.all()
+
+        # total count
+        statistics["total"] = len(qb_res)
+        statistics.update(count_statistics(qb_res))
+
+        return statistics
 

@@ -13,7 +13,7 @@ Setup
 
 To be able to export data to TCOD, one has to
 :ref:`install the atomic_tools dependencies to enable CIF manipulation <install_optional_dependencies>`
-as well as the :ref:`cod-tools package and plugin <codtools_plugin>`, and set up an
+as well as the aiida-codtools plugin, and set up an
 AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
@@ -85,9 +85,8 @@ Where:
   files (off by default); ``--gzip-threshold`` sets the minimum file size
   to be compressed.
 
-Other command line options correspond to the options of
-:doc:`cif_cod_deposit <../plugins/codtools/cifcoddeposit>` of the same
-name. To ease the use of TCOD exporter, one can define persistent
+Other command line options correspond to the options of `cifcoddeposit` class of the `aiida-codtools plugin.
+To ease the use of TCOD exporter, one can define persistent
 parameters in :doc:`AiiDA properties <../verdi/properties>`. Corresponding
 command line parameters and AiiDA properties are presented in the table:
 

@@ -9,15 +9,3 @@ Tests
 
 .. automodule:: aiida.backends.tests
    :members:
-
-Parser tests
-------------
-
-.. automodule:: aiida.backends.tests.parsers
-   :members:
-
-
-
-
-
-

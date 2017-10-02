@@ -17,11 +17,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
-        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
-    ]
+    (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
+]
     if not levelname.startswith('Level')
 }
 LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
+
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -38,7 +39,6 @@ class Work(VerdiCommandWithSubcommands):
             self.status.__name__: (self.cli, self.complete_none),
             self.tree.__name__: (self.cli, self.complete_none),
             self.checkpoint.__name__: (self.cli, self.complete_none),
-            self.watch.__name__: (self.cli, self.complete_none),
         }
 
     def cli(self, *args):
@@ -227,37 +227,6 @@ def checkpoint(pks):
                 print(str(cp))
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
-
-
-@work.command('watch', context_settings=CONTEXT_SETTINGS)
-def watch():
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
-
-    from aiida.work.rmq import create_process_event_listener
-    event_listener = create_process_event_listener()
-    event_listener.add_event_callback(_print_event_msg)
-    print("Listening for events [Ctrl-C to exit]")
-    try:
-        event_listener.start()
-    except KeyboardInterrupt:
-        pass
-
-
-def _print_event_msg(evt, msg):
-    import plum.rmq.event as plum_event
-    pid, proc_evt = plum_event.split_event(evt)
-    proc_info = msg[plum_event.PROC_INFO_KEY]
-    proc_type = proc_info['type']
-    info = ["[{}] {} {}".format(pid, proc_type, proc_evt)]
-
-    try:
-        info.append(str(msg[plum_event.DETAILS_KEY]))
-    except KeyError:
-        pass
-
-    print(" ".join(info))
 
 
 def _build_query(order_by=None, limit=None, past_days=None):

@@ -13,7 +13,6 @@ import threading
 import uuid
 
 import aiida.work.utils as util
-import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.orm import load_node
@@ -57,13 +56,11 @@ class TestProcess(AiidaTestCase):
         super(TestProcess, self).setUp()
 
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
 
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
         run(ProcessStackTest)

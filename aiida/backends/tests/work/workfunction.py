@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workfunction import workfunction
 from aiida.orm.data.base import get_true_node
@@ -30,12 +29,10 @@ class TestWf(AiidaTestCase):
     def setUp(self):
         super(TestWf, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestWf, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_blocking(self):
         self.assertTrue(simple_wf()['result'])

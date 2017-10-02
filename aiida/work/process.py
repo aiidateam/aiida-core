@@ -16,8 +16,6 @@ from enum import Enum
 import itertools
 
 import plum.port
-from plum.process_monitor import MONITOR
-import plum.process_monitor
 
 import aiida.orm
 from aiida.orm.data import Data
@@ -331,15 +329,8 @@ class Process(plum.process.Process):
         if self._parent_pid is None:
             return None
 
-        # First try and get the process from the monitor in case it is running
         try:
-            return MONITOR.get_process(self._parent_pid).calc
-        except ValueError:
-            pass
-
-        # Ok, maybe the pid is actually a pk...
-        try:
-            return load_node(pk=self._parent_pid)
+            return load_node(uuid=self._parent_pid)
         except exceptions.NotExistent:
             pass
 

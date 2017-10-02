@@ -19,7 +19,6 @@ from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
 from aiida.work.process import Process
-from aiida.work.process_registry import ProcessRegistry
 from aiida.work.launch import submit
 from aiida.common.lang import override
 from aiida.orm import load_node
@@ -29,6 +28,7 @@ import aiida.work.daemon as work_daemon
 from aiida.work.utils import CalculationHeartbeat
 
 
+#@unittest.skip("Rewriting daemon")
 class ProcessEventsTester(Process):
     EVENTS = ["create", "start", "run", "wait", "resume", "finish", "emitted",
               "stop", "failed", ]
@@ -94,7 +94,7 @@ class ProcessEventsTester(Process):
     def finish(self, wait_on):
         pass
 
-
+@unittest.skip("Rewriting daemon")
 class FailCreateFromSavedStateProcess(DummyProcess):
     """
     This class emulates a failure that occurs when loading the process from

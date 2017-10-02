@@ -28,7 +28,6 @@ import tempfile
 import pickle
 from plum.persistence.bundle import Bundle
 from plum.process_listener import ProcessListener
-from plum.process_monitor import MONITOR, ProcessMonitorListener
 from plum.utils import override, protected
 from plum.persistence._base import LOGGER
 

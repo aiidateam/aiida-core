@@ -10,7 +10,6 @@
 
 from aiida.backends.testbase import AiidaTestCase
 
-import plum.process_monitor
 from aiida.orm.data.base import Int, Str
 from aiida import work
 from aiida.work import default_loop
@@ -20,11 +19,9 @@ from aiida.work.test_utils import DummyProcess
 class TestRun(AiidaTestCase):
     def setUp(self):
         super(TestRun, self).setUp()
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestRun, self).tearDown()
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_run_process_class(self):
         inputs = {'a': Int(2), 'b': Str('test')}

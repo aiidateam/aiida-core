@@ -10,8 +10,6 @@
 
 import inspect
 
-import plum.process_monitor
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
@@ -106,12 +104,10 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_run(self):
         A = Str('A')

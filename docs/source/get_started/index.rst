@@ -592,6 +592,4 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
   (only if it wasn't used by any calculation, otherwise an exception
   is raised) 
    
-And now, you are ready to launch your calculations! You may want to follow to
-the examples of how you can submit a single calculation, as for instance the 
-specific tutorial for :doc:`Quantum Espresso <../examples/pw_tutorial>`.
+And now, you are ready to launch your calculations!

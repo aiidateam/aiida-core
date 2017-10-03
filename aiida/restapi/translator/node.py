@@ -352,64 +352,11 @@ class NodeTranslator(BaseTranslator):
         else:
             return super(NodeTranslator, self).get_results()
 
-    # TODO this works but has to be rewritten once group_by is available in
-    # querybuilder
-    def get_statistics(self, tclass, user_email=None):
-        from aiida.orm.querybuilder import QueryBuilder as QB
-        from aiida.orm import User
-        from collections import Counter
-        import datetime
-
-        def count_statistics(dataset):
-
-            def get_statistics_dict(dataset):
-                results = {}
-                for count, typestring in sorted(
-                        (v, k) for k, v in dataset.iteritems())[::-1]:
-                    results[typestring] = count
-                return results
-
-            count_dict = {}
-
-            types = Counter([r[2] for r in dataset])
-            count_dict["types"] = get_statistics_dict(types)
-
-            ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
-            ctime = Counter(ctimelist)
-
-            if len(ctimelist) > 0:
-
-                # For the way the string is formatted, we can just sort it alphabetically
-                firstdate = datetime.datetime.strptime(sorted(ctimelist)[0], '%Y-%m-%d')
-                lastdate  = datetime.datetime.strptime(sorted(ctimelist)[-1], '%Y-%m-%d')
-
-                curdate = firstdate
-                outdata = {}
-
-                while curdate <= lastdate:
-                    curdatestring = curdate.strftime('%Y-%m-%d')
-                    outdata[curdatestring] = ctime.get(curdatestring, 0)
-                    curdate += datetime.timedelta(days=1)
-                count_dict["ctime_by_day"] = outdata
-
-            else:
-                count_dict["ctime_by_day"] = []
-
-            return count_dict
-
-        statistics = {}
-
-        q = QB()
-        q.append(tclass, project=['id', 'ctime', 'type'], tag='node')
-        if user_email is not None:
-            q.append(User, creator_of='node', project='email', filters={'email': user_email})
-        qb_res = q.all()
-
-        # total count
-        statistics["total"] = len(qb_res)
-        statistics.update(count_statistics(qb_res))
-
-        return statistics
+    def get_statistics(self, user_email=None):
+        "Return statistics for a given node"
+        from aiida.backends.utils import QueryFactory
+        qmanager = QueryFactory()()
+        return qmanager.get_creation_statistics(user_email=user_email)
 
 
     def get_io_tree(self, uuid_pattern):

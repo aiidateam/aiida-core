@@ -3,7 +3,7 @@
 # Be verbose, and stop with error as soon there's one
 set -ev
 
-if [[ "$COMPILE_DOCS" == "false" ]]
+if [[ "$TEST_TYPE" == "tests" ]]
 then
     # start the daemon for the correct profile
     # (actually, for the way it works now, the -p probably does not
@@ -33,6 +33,3 @@ then
     cat ${HOME}/.ssh/known_hosts
     
 fi
-
-
-

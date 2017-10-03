@@ -213,17 +213,6 @@ def get_global_setting_description(key):
     return get_global_setting_description(key)
 
 
-def get_db_schema_version():
-    """
-    Get the current schema version stored in the DB. Return None if
-    it is not stored.
-    """
-    try:
-        return get_global_setting('db|schemaversion')
-    except KeyError:
-        return None
-
-
 def get_backend_type():
     """
     Set the schema version stored in the DB. Use only if you know what
@@ -254,16 +243,6 @@ def del_global_setting(key):
     del_global_setting(key)
 
 
-def set_db_schema_version(version):
-    """
-    Set the schema version stored in the DB. Use only if you know what
-    you are doing.
-    """
-    return set_global_setting(
-        'db|schemaversion', version,
-        description="The version of the schema used in this database.")
-
-
 def set_backend_type(backend_name):
     """
     Set the schema version stored in the DB. Use only if you know what
@@ -272,25 +251,6 @@ def set_backend_type(backend_name):
     return set_global_setting(
         'db|backend', backend_name,
         description="The backend used to communicate with the database.")
-
-
-def check_schema_version():
-    """
-    Check if the version stored in the database is the same of the version
-    of the code. It calls the corresponding version of the selected
-    backend.
-
-    :raise ConfigurationError: if the two schema versions do not match.
-      Otherwise, just return.
-    """
-    if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.utils import check_schema_version
-        return check_schema_version()
-    elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.utils import check_schema_version
-        return check_schema_version()
-    else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
 
 
 def get_current_profile():

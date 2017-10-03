@@ -1,0 +1,11 @@
+ignore-paths:
+    - doc
+    - examples
+    - test
+    - utils
+
+pylint:
+    max-line-length: 140
+
+pyflakes:
+  run: false

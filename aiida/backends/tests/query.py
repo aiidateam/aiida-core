@@ -861,5 +861,99 @@ class TestConsistency(AiidaTestCase):
         self.assertEqual(idx,99)
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
+class TestStatisticsQuery(AiidaTestCase):
+    def test_statistics(self):
+        """
+        Test if the statistics query works properly.
 
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.backends.utils import QueryFactory
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        qmanager = QueryFactory()()
+        current_db_statistics = qmanager.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
+
+
+    def test_statistics_default_class(self):
+        """
+        Test if the statistics query works properly.
+
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+        from aiida.backends.general.abstractqueries import AbstractQueryManager
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        class QueryManagerDefault(AbstractQueryManager):
+            pass
+
+        qmanager_default = QueryManagerDefault()
+
+        current_db_statistics = qmanager_default.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager_default.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
 

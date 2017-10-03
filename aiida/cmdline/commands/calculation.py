@@ -137,6 +137,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         import argparse
         from aiida.orm.calculation.job import JobCalculation as C
+        from aiida.common.setup import get_property
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -190,7 +191,8 @@ class Calculation(VerdiCommandWithSubcommands):
                                     'mtime', 'user'
                                 ),
                             nargs='+',
-                            default=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                            default=get_property("verdishell.calculation_list"),
+                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
                             help="Define the list of properties to show"
                         )
 
@@ -287,12 +289,13 @@ class Calculation(VerdiCommandWithSubcommands):
             print_node_info(calc)
 
     def calculation_logshow(self, *args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.backends.utils import get_log_messages
-        from aiida.common.datastructures import calc_states
-
         if not is_dbenv_loaded():
             load_dbenv()
+
+        from aiida.backends.utils import get_log_messages
+        from aiida.common.exceptions import NotExistent
+        from aiida.common.datastructures import calc_states
+        from aiida.orm.calculation.work import WorkCalculation
 
         for calc_pk in args:
             try:
@@ -302,6 +305,11 @@ class Calculation(VerdiCommandWithSubcommands):
                 continue
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
+                continue
+
+            if isinstance(calc, WorkCalculation):
+                print "*** {}: Is a WorkCalculation node. Use 'verdi work report' " \
+                    "instead to show the log messages".format(calc_pk)
                 continue
 
             log_messages = get_log_messages(calc)
@@ -757,10 +765,10 @@ class Calculation(VerdiCommandWithSubcommands):
         qb.append(OrmCalculation, tag="calc",
                   filters=qb_calc_filters,
                   project=["id", "uuid", "attributes.remote_workdir"])
-        qb.append(OrmComputer, computer_of="calc",
+        qb.append(OrmComputer, computer_of="calc", tag="computer",
                   project=["*"],
                   filters=qb_computer_filters)
-        qb.append(OrmUser, creator_of="calc",
+        qb.append(OrmUser, creator_of="calc", tag="user",
                   project=["*"],
                   filters=qb_user_filters)
 

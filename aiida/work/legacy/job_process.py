@@ -151,3 +151,5 @@ class JobProcess(Process):
 
         if parent_calc:
             self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
+
+        self._add_description_and_label()

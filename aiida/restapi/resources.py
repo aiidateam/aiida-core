@@ -151,8 +151,7 @@ class Node(Resource):
             ## Build response and return it
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
-        ## Treat the statistics (TODO: recoded when group_by will be
-        # available, it should pass by the tranlsator)
+        ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
              nelist) = self.utils.parse_query_string(query_string)
@@ -160,8 +159,8 @@ class Node(Resource):
             if len(filters) > 0:
                 usr = filters["user"]["=="]
             else:
-                usr = None
-            results = self.trans.get_statistics(self.tclass, usr)
+                usr = []
+            results = self.trans.get_statistics(usr)
 
         # TODO Might need to be improved
         elif query_type == "tree":

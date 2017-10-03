@@ -33,18 +33,18 @@ def encode_launch_task(task):
     :rtype: str
     """
     task_ = task.copy()
-    for name, input in task_.get('input', {}):
+    for name, input in task_.get('inputs', {}).iteritems():
         if isinstance(input, Node):
-            task_['input'][name] = input.pk
+            task_['inputs'][name] = input.pk
     return json.dumps(task_)
 
 
 def launch_decode(msg):
     task = json.loads(msg)
-    for name, input in task.get('input', {}):
+    for name, input in task.get('inputs', {}):
         if isinstance(input, int):
             try:
-                task['input'][name] = load_node(pk=input)
+                task['inputs'][name] = load_node(pk=input)
             except ValueError:
                 pass
     return task

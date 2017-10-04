@@ -1,4 +1,5 @@
 import apricotpy
+import collections
 import pika
 import pika.exceptions
 import json
@@ -22,6 +23,24 @@ def _create_connection():
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
 
 
+def serialize_node_mapping(mapping):
+    """
+    """
+    serialized = {}
+    for label, value in mapping.iteritems():
+        if isinstance(value, Node):
+            node = value
+            if not node.is_stored:
+                node.store()
+            serialized[str(label)] = node.pk
+        elif isinstance(value, collections.Mapping):
+            serialized[str(label)] = serialize_node_mapping(value)
+        else:
+            serialized[str(label)] = value
+
+    return serialized
+
+
 def encode_launch_task(task):
     """
     Convert any AiiDA data types in the task dictionary to PKs and then return
@@ -32,11 +51,8 @@ def encode_launch_task(task):
     :return: The JSON string representing the task
     :rtype: str
     """
-    task_ = task.copy()
-    for name, input in task_.get('inputs', {}).iteritems():
-        if isinstance(input, Node):
-            task_['inputs'][name] = input.pk
-    return json.dumps(task_)
+    serialized = serialize_node_mapping(task.get('inputs', {}))
+    return json.dumps(serialized)
 
 
 def launch_decode(msg):

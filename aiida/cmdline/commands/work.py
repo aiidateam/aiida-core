@@ -31,14 +31,13 @@ class Work(VerdiCommandWithSubcommands):
 
     def __init__(self):
         self.valid_subcommands = {
-            self.abort.__name__: (self.cli, self.complete_none),
-            self.list.__name__: (self.cli, self.complete_none),
-            self.pause.__name__: (self.cli, self.complete_none),
-            self.play.__name__: (self.cli, self.complete_none),
-            self.report.__name__: (self.cli, self.complete_none),
-            self.status.__name__: (self.cli, self.complete_none),
-            self.tree.__name__: (self.cli, self.complete_none),
-            self.checkpoint.__name__: (self.cli, self.complete_none),
+            'list': (self.cli, self.complete_none),
+            'pause': (self.cli, self.complete_none),
+            'play': (self.cli, self.complete_none),
+            'report': (self.cli, self.complete_none),
+            'status': (self.cli, self.complete_none),
+            'tree': (self.cli, self.complete_none),
+            'checkpoint': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):

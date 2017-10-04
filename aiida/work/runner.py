@@ -99,7 +99,7 @@ class Runner(plum.PersistableEventLoop):
         if self._submit_to_daemon:
             return self.rmq.launch(process_class, inputs)
         else:
-            return self.create(process_class, *args, **inputs)
+            return self.create(process_class, *args, inputs=inputs)
 
     def _create_child_runner(self):
         if self._transport:

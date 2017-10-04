@@ -249,7 +249,7 @@ class JobProcess(process.Process):
             # Has the state changed?
             last_jobinfo = self.calc._get_last_jobinfo()
 
-            if info.job_state != last_jobinfo.job_state:
+            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
                 execmanager.update_job_calc_from_job_info(self.calc, info)
 
             job_done = info.job_state == job_states.DONE
@@ -280,7 +280,7 @@ class JobProcess(process.Process):
     def _submit(self):
         # Submit the calculation
         future = self._launch_transport_operation(self._submit_with_transport)
-        return future, self._update_scheduler_state
+        return future, self._submitted
 
     def _update_scheduler_state(self, job_done):
         if job_done:
@@ -289,6 +289,10 @@ class JobProcess(process.Process):
         else:
             future = self._launch_transport_operation(self._update_scheduler_state_with_transport)
             return future, self._update_scheduler_state
+
+    def _submitted(self, result):
+        future = self._launch_transport_operation(self._update_scheduler_state_with_transport)
+        return future, self._update_scheduler_state
 
     def _retrieved(self, result):
         """

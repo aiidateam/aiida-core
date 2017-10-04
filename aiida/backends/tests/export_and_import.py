@@ -197,6 +197,42 @@ class TestSimple(AiidaTestCase):
     def tearDown(self):
         pass
 
+    def test_0(self):
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import DataFactory
+        from aiida.orm import load_node
+        from aiida.orm.data.base import Str, Int, Float, Bool
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import export
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # producing values for each base type
+            values = ("Hello", 6, -1.2399834e12, False) #, ["Bla", 1, 1e-10])
+            filename = os.path.join(temp_folder, "export.tar.gz")
+
+            # producing nodes:
+            nodes = [cls(val).store() for val, cls in zip(values, (Str, Int, Float, Bool))]
+            # my uuid - list to reload the node:
+            uuids = [n.uuid for n in nodes]
+            # exporting the nodes:
+            export([n.dbnode for n in nodes], outfile=filename, silent=True)
+            # cleaning:
+            self.clean_db()
+            # Importing back the data:
+            import_data(filename, silent=True)
+            # Checking whether values are preserved:
+            for uuid, refval in zip(uuids, values):
+                self.assertEquals(load_node(uuid).value, refval)
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+
     def test_1(self):
         import os
         import shutil

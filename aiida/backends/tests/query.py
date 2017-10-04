@@ -420,10 +420,17 @@ class TestQueryBuilder(AiidaTestCase):
 
 
 class TestQueryBuilderCornerCases(AiidaTestCase):
+    """
+    In this class corner cases of QueryBuilder are added.
+    """
 
     def test_computer_json(self):
         """
-        Testing a simple query
+        In this test we check the correct behavior of QueryBuilder when
+        retrieving the _metadata and the transport_params with no content.
+        Note that they are in JSON format in both backends. Forcing the
+        decoding of a None value leads to an exception (this was the case
+        under Django).
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data, Calculation
@@ -438,21 +445,17 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # a JSON field (in both backends).
         qb = QueryBuilder()
         qb.append(Calculation, project=['id'], tag='calc')
-        # qb.append(Computer, project=['id', '_metadata', 'transport_params'], outerjoin=True, computer_of='calc')
         qb.append(Computer, project=['id', 'transport_params'],
                   outerjoin=True, computer_of='calc')
-        print "=======>", qb.all()
+        qb.all()
 
         # Checking the correct retrieval of _metadata which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
         qb.append(Calculation, project=['id'], tag='calc')
-        # qb.append(Computer, project=['id', '_metadata', 'transport_params'], outerjoin=True, computer_of='calc')
         qb.append(Computer, project=['id', '_metadata'],
                   outerjoin=True, computer_of='calc')
-        print "=======>", qb.all()
-
-
+        qb.all()
 
 
 class TestAttributes(AiidaTestCase):

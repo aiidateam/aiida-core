@@ -672,7 +672,12 @@ class LocalTransport(aiida.transport.Transport):
         """
         the_path = os.path.join(self.curdir, path).strip()
         if not pattern:
-            return os.listdir(the_path)
+            try:
+                return os.listdir(the_path)
+            except OSError as e:
+                exc = IOError(str(e))
+                exc.errno = e.errno
+                raise exc
         else:
             import re
 

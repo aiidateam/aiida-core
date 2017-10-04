@@ -1012,7 +1012,7 @@ class SshTransport(aiida.transport.Transport):
                 os.remove(localpath)
             except OSError:
                 pass
-            raise e
+            raise
         
         
     def gettree(self,remotepath,localpath,callback=None,dereference=True,overwrite=True):

@@ -1986,83 +1986,6 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
                 the_dict[arrayname] = node.get_array(arrayname).tolist()
             print_dictionary(the_dict, 'json+date')
 
-def get_mode_string(mode):
-    """
-    Convert a file's mode to a string of the form '-rwxrwxrwx'.
-    Taken (simplified) from cpython 3.3 stat module: https://hg.python.org/cpython/file/3.3/Lib/stat.py
-    """
-    # Constants used as S_IFMT() for various file types
-    # (not all are implemented on all systems)
-
-    S_IFDIR = 0o040000  # directory
-    S_IFCHR = 0o020000  # character device
-    S_IFBLK = 0o060000  # block device
-    S_IFREG = 0o100000  # regular file
-    S_IFIFO = 0o010000  # fifo (named pipe)
-    S_IFLNK = 0o120000  # symbolic link
-    S_IFSOCK = 0o140000  # socket file
-
-    # Names for permission bits
-
-    S_ISUID = 0o4000  # set UID bit
-    S_ISGID = 0o2000  # set GID bit
-    S_ENFMT = S_ISGID  # file locking enforcement
-    S_ISVTX = 0o1000  # sticky bit
-    S_IREAD = 0o0400  # Unix V7 synonym for S_IRUSR
-    S_IWRITE = 0o0200  # Unix V7 synonym for S_IWUSR
-    S_IEXEC = 0o0100  # Unix V7 synonym for S_IXUSR
-    S_IRWXU = 0o0700  # mask for owner permissions
-    S_IRUSR = 0o0400  # read by owner
-    S_IWUSR = 0o0200  # write by owner
-    S_IXUSR = 0o0100  # execute by owner
-    S_IRWXG = 0o0070  # mask for group permissions
-    S_IRGRP = 0o0040  # read by group
-    S_IWGRP = 0o0020  # write by group
-    S_IXGRP = 0o0010  # execute by group
-    S_IRWXO = 0o0007  # mask for others (not in group) permissions
-    S_IROTH = 0o0004  # read by others
-    S_IWOTH = 0o0002  # write by others
-    S_IXOTH = 0o0001  # execute by others
-
-    _filemode_table = (
-        ((S_IFLNK, "l"),
-         (S_IFREG, "-"),
-         (S_IFBLK, "b"),
-         (S_IFDIR, "d"),
-         (S_IFCHR, "c"),
-         (S_IFIFO, "p")),
-
-        ((S_IRUSR, "r"),),
-        ((S_IWUSR, "w"),),
-        ((S_IXUSR | S_ISUID, "s"),
-         (S_ISUID, "S"),
-         (S_IXUSR, "x")),
-
-        ((S_IRGRP, "r"),),
-        ((S_IWGRP, "w"),),
-        ((S_IXGRP | S_ISGID, "s"),
-         (S_ISGID, "S"),
-         (S_IXGRP, "x")),
-
-        ((S_IROTH, "r"),),
-        ((S_IWOTH, "w"),),
-        ((S_IXOTH | S_ISVTX, "t"),
-         (S_ISVTX, "T"),
-         (S_IXOTH, "x"))
-    )
-
-
-    perm = []
-    for table in _filemode_table:
-        for bit, char in table:
-            if mode & bit == bit:
-                perm.append(char)
-                break
-        else:
-            perm.append("-")
-    return "".join(perm)
-
-
 class _Remote(VerdiCommandWithSubcommands):
     """
     Manage RemoteData objects
@@ -2071,22 +1994,23 @@ class _Remote(VerdiCommandWithSubcommands):
     def __init__(self):
         self.valid_subcommands = {
             'ls': (self.do_listdir, self.complete_none),
+            'cat': (self.do_cat, self.complete_none),
+            'show': (self.do_show, self.complete_none),
         }
 
     def do_listdir(self, *args):
         """
-        Return a list of running workflows on screen
+        List directory content on remote RemoteData objects.
         """
         import argparse
         import datetime
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        from aiida.common.utils import get_mode_string
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='Manage RemoteData objects.')
+            description='List directory content on remote RemoteData objects.')
 
-        parser.add_argument('-c', '--color', action='store_true',
-                      help="Color folders with a different color")
         parser.add_argument('-l', '--long', action='store_true',
                       help="Display also file metadata")
         parser.add_argument('pk', type=int, help="PK of the node")
@@ -2098,27 +2022,109 @@ class _Remote(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        color = parsed_args.color
         try:
             n = load_node(parsed_args.pk)
         except Exception as e:
             click.echo(e.message, err=True)
             sys.exit(1)
-        content = n.listdir_withattributes(path=parsed_args.path)
+        try:
+            content = n.listdir_withattributes(path=parsed_args.path)
+        except (IOError, OSError) as e:
+            click.echo("Unable to access the remote folder or file, check if it exists.", err=True)
+            click.echo("Original error: {}".format(str(e)), err=True)
+            sys.exit(1)
         for metadata in content:
             if parsed_args.long:
                 mtime = datetime.datetime.fromtimestamp(
                     metadata['attributes'].st_mtime)
-                pre_line = '{} {:10}  {} '.format(
+                pre_line = '{} {:10}  {}  '.format(
                     get_mode_string(metadata['attributes'].st_mode),
                     metadata['attributes'].st_size,
                     mtime.strftime("%d %b %Y %H:%M")
                     )
                 click.echo(pre_line, nl=False)
-            if parsed_args.color:
-                if metadata['isdir']:
-                    click.echo(click.style(metadata['name'], fg='blue'))
-                else:
-                    click.echo(metadata['name'])
+            if metadata['isdir']:
+                click.echo(click.style(metadata['name'], fg='blue'))
             else:
                 click.echo(metadata['name'])
+
+    def do_cat(self, *args):
+        """
+        Show the content of remote files in RemoteData objects.
+        """
+        # Note: the implementation is not very efficient: if first downloads the full file on a file on the disk,
+        # then prints it and finally deletes the file.
+        # TODO: change it to open the file and stream it; it requires to add an openfile() method to the transport
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        import tempfile
+        import os
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show the content of remote files in RemoteData objects.')
+
+        parser.add_argument('pk', type=int, help="PK of the node")
+        parser.add_argument('path', type=str, help="The (relative) path to the file to show")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                f.close()
+                n.getfile(parsed_args.path, f.name)
+                with open(f.name) as fobj:
+                    sys.stdout.write(fobj.read())
+        except IOError as e:
+            click.echo("ERROR {}: {}".format(e.errno, str(e)), err=True)
+            sys.exit(1)
+
+        try:
+            os.remove(f.name)
+        except OSError:
+            # If you cannot delete, ignore (maybe I didn't manage to create it in the first place
+            pass
+
+    def do_show(self, *args):
+        """
+        Show information on a RemoteData object.
+        """
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        import tempfile
+        import os
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show information on a RemoteData object.')
+
+        parser.add_argument('pk', type=int, help="PK of the node")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+
+        click.echo("- Remote computer name:")
+        click.echo("  {}".format(n.get_computer_name()))
+        click.echo("- Remote folder full path:")
+        click.echo("  {}".format(n.get_remote_path()))

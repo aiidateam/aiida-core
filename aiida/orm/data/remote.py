@@ -22,6 +22,9 @@ class RemoteData(Data):
     def get_dbcomputer(self):
         return self.dbnode.dbcomputer
 
+    def get_computer_name(self):
+        return self.get_computer().name
+
     def get_remote_path(self):
         return self.get_attr('remote_path')
 
@@ -54,6 +57,35 @@ class RemoteData(Data):
                     return True  # is indeed empty, i.e. unusable
             return not t.listdir()
 
+    def getfile(self, relpath, destpath):
+        """
+        Connects to the remote folder and gets a string with the (full) content of the file.
+
+        :param relpath: The relative path of the file to show.
+        :param destpath: A path on the local computer to get the file
+        :return: a string with the file content
+        """
+        from aiida.backends.utils import get_authinfo
+
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
+
+        with t:
+            try:
+                full_path = os.path.join(self.get_remote_path(), relpath)
+                t.getfile(full_path, destpath)
+            except IOError as e:
+                if e.errno == 2:  # file not existing
+                    raise IOError("The required remote file {} on {} does not exist or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                else:
+                    raise
+
+            return t.listdir()
+
+
     def listdir(self, relpath="."):
         """
         Connects to the remote folder and lists the directory content.
@@ -72,14 +104,27 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 t.chdir(full_path)
             except IOError as e:
-                if e.errno == 2:  # directory not existing
-                    raise IOError("The required remote folder {} on {} does not exist or has been deleted.".format(
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
                         full_path, self.get_computer().name
                     ))
+                    exc.errno = e.errno
+                    raise exc
                 else:
                     raise
 
-            return t.listdir()
+            try:
+                return t.listdir()
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError(
+                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                            full_path, self.get_computer().name
+                        ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
 
     def listdir_withattributes(self, path="."):
         """
@@ -99,14 +144,26 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), path)
                 t.chdir(full_path)
             except IOError as e:
-                if e.errno == 2:  # directory not existing
-                    raise IOError("The required remote folder {} on {} does not exist or has been deleted.".format(
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
                         full_path, self.get_computer().name
                     ))
+                    exc.errno = e.errno
+                    raise exc
                 else:
                     raise
 
-            return t.listdir_withattributes()
+            try:
+                return t.listdir_withattributes()
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
 
 
     def _clean(self):

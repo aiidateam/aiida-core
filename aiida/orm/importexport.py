@@ -2353,7 +2353,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                          forbidden_licenses=forbidden_licenses,
                          silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        export_tree_dj(what, folder, also_parents = also_parents,
+        export_tree_sqla(what, folder, also_parents = also_parents,
                        also_calc_outputs=also_calc_outputs,
                        allowed_licenses=allowed_licenses,
                        forbidden_licenses=forbidden_licenses,

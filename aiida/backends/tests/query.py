@@ -13,8 +13,6 @@ import unittest
 import aiida.backends.settings as settings
 
 
-
-
 class TestQueryBuilder(AiidaTestCase):
 
     def test_classification(self):
@@ -70,7 +68,6 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'user')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Computer, None),
                 qb._get_ormclass(None, 'computer'),
@@ -79,14 +76,12 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'computer')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Data, None),
                 qb._get_ormclass(None, 'data.Data.'),
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
-
 
     def test_simple_query_1(self):
         """
@@ -162,7 +157,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb6.append(Data, tag='node2')
         self.assertEqual(qb6.count(), 0)
 
-
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
@@ -187,12 +181,9 @@ class TestQueryBuilder(AiidaTestCase):
         for n in (n0, n1, n2):
             n.store()
 
-
-
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'label': 'hello'})
         self.assertEqual(len(list(qb1.all())), 1)
-
 
         qh = {
             'path': [
@@ -222,17 +213,12 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb2 = QueryBuilder(**qh)
 
-
         resdict = qb2.dict()
         self.assertEqual(len(resdict), 1)
         self.assertTrue(isinstance(resdict[0]['n1']['ctime'], datetime))
 
-
         res_one = qb2.one()
         self.assertTrue('bar' in res_one)
-
-
-
 
         qh = {
             'path': [
@@ -253,7 +239,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb = QueryBuilder(**qh)
         self.assertEqual(qb.count(), 1)
 
-
         # Test the hashing:
         query1 = qb.get_query()
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
@@ -269,7 +254,6 @@ class TestQueryBuilder(AiidaTestCase):
 
         self.assertTrue(id(query1) != id(query2))
         self.assertTrue(id(query2) == id(query3))
-
 
     def test_operators_eq_lt_gt(self):
         from aiida.orm.querybuilder import QueryBuilder
@@ -296,9 +280,6 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<=':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
-
-
-
 
     def test_subclassing(self):
         from aiida.orm.data.structure import StructureData
@@ -336,7 +317,6 @@ class TestQueryBuilder(AiidaTestCase):
         for cls in (StructureData, ParameterData, Node, Data):
             qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
             self.assertEqual(qb.count(), 1)
-
 
     def test_list_behavior(self):
         from aiida.orm import Node
@@ -387,8 +367,6 @@ class TestQueryBuilder(AiidaTestCase):
         # Giving a nonsensical offset
         with self.assertRaises(InputValidationError):
             QueryBuilder(offset=2.3)
-
-
 
         # So, I mess up one append, I want the QueryBuilder to clean it!
         with self.assertRaises(InputValidationError):
@@ -441,6 +419,42 @@ class TestQueryBuilder(AiidaTestCase):
             ])
 
 
+class TestQueryBuilderCornerCases(AiidaTestCase):
+
+    def test_computer_json(self):
+        """
+        Testing a simple query
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Computer
+
+        n1 = Calculation()
+        n1.label = 'node2'
+        n1._set_attr('foo', 1)
+        n1.store()
+
+        # Checking the correct retrieval of transport_params which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        # qb.append(Computer, project=['id', '_metadata', 'transport_params'], outerjoin=True, computer_of='calc')
+        qb.append(Computer, project=['id', 'transport_params'],
+                  outerjoin=True, computer_of='calc')
+        print "=======>", qb.all()
+
+        # Checking the correct retrieval of _metadata which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        # qb.append(Computer, project=['id', '_metadata', 'transport_params'], outerjoin=True, computer_of='calc')
+        qb.append(Computer, project=['id', '_metadata'],
+                  outerjoin=True, computer_of='calc')
+        print "=======>", qb.all()
+
+
+
+
 class TestAttributes(AiidaTestCase):
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
@@ -453,21 +467,6 @@ class TestAttributes(AiidaTestCase):
         n1._set_attr("test_case", "test_attribute_existence")
         n1.store()
 
-        n1 = Node()
-        n1._set_attr("whatever", 0.)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
-
-        n1 = Node()
-        n1._set_attr("whatever", None)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-
-        n1 = Node()
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
 
@@ -480,7 +479,6 @@ class TestAttributes(AiidaTestCase):
             }, project='uuid')
         res_query = set([str(_[0]) for _ in qb.all()])
         self.assertEqual(res_query, res_uuids)
-
 
 
 class QueryBuilderDateTimeAttribute(AiidaTestCase):
@@ -502,8 +500,6 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
                 {"<":now+timedelta(seconds=1)},
             ]}})
         self.assertEqual(qb.count(), 1)
-
-
 
 
 class QueryBuilderLimitOffsetsTest(AiidaTestCase):

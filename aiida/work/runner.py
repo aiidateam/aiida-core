@@ -87,7 +87,7 @@ class Runner(plum.PersistableEventLoop):
         with self._create_child_runner() as child:
             proc = _get_process_instance(process_class_or_workfunction, *args, **inputs)
             child.insert(proc)
-            return ~proc
+            return child.run_until_complete(proc)
 
     def run_get_pid(self, process_class_or_workfunction, *args, **inputs):
         with self._create_child_runner() as child:

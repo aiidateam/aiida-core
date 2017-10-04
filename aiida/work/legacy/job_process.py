@@ -294,8 +294,6 @@ class JobProcess(process.Process):
         """
         Parse a retrieved job calculation.
         """
-        if self.calc.state != calc_states.PARSING:
-            self.calc._set_state(calc_states.PARSING)
         try:
             execmanager.parse_results(self.calc)
         except BaseException:

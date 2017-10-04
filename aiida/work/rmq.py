@@ -84,8 +84,7 @@ def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connec
     return loop.create(
         rmq.launch.ProcessLaunchSubscriber,
         get_connection(),
-        "{}.{}".format(prefix, _LAUNCH_QUEUE),
-        persistent_uuid=_LAUNCH_SUBSCRIBER_UUID
+        "{}.{}".format(prefix, _LAUNCH_QUEUE)
     )
 
 

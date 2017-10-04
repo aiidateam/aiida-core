@@ -187,7 +187,7 @@ class JobProcess(process.Process):
 
         fn = partial(self._do_transport_operation, operation)
         self._callback_handle = self.runner.transport.call_me_with_transport(
-            self.loop(), self._get_authinfo(), fn)
+            self._get_authinfo(), fn)
 
         return self._transport_operation
 
@@ -207,7 +207,7 @@ class JobProcess(process.Process):
 
         fn = partial(self._do_transport_operation, op)
         self._callback_handle = self.runner.transport.call_me_with_transport(
-            self.loop(), self._get_authinfo(), fn)
+            self._get_authinfo(), fn)
 
     def _do_transport_operation(self, operation, authinfo, transp):
         self._callback_handle = None

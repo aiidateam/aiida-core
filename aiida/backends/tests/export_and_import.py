@@ -1129,4 +1129,3 @@ class TestComputer(AiidaTestCase):
             # Deleting the created temporary folders
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
-

@@ -390,7 +390,7 @@ def _inline_to_standalone_script(calc):
 
 for key, value in {}(
     {}
-    )[1].iteritems():
+    ).iteritems():
     value.store()
 """.format(calc.get_attr('source_file').encode('utf-8'),
            calc.get_attr('function_name','f'),

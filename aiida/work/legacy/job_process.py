@@ -160,7 +160,7 @@ class JobProcess(process.Process):
         self._add_description_and_label()
 
     @override
-    def _run(self):
+    def _run(self, **kwargs):
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation

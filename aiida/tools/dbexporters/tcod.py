@@ -385,6 +385,10 @@ def _inline_to_standalone_script(calc):
     args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
+    code_string = calc.get_attr('source_file').encode('utf-8')
+    if calc.get_attr('namespace', '__main__').startswith('aiida.'):
+        code_string = "from {} import {}".format(calc.get_attr('namespace', '__main__'),
+                                                 calc.get_attr('function_name','f'))
     return """#!/usr/bin/env runaiida
 {}
 
@@ -392,9 +396,7 @@ for key, value in {}(
     {}
     ).iteritems():
     value.store()
-""".format(calc.get_attr('source_file').encode('utf-8'),
-           calc.get_attr('function_name','f'),
-           args_string)
+""".format(code_string, calc.get_attr('function_name','f'), args_string)
 
 
 def _collect_calculation_data(calc):

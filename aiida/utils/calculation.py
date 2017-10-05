@@ -39,3 +39,7 @@ def add_source_info(node, func):
         node._set_attr("source_file", source)
     except (IOError, OSError):
         pass
+    try:
+        node._set_attr("namespace", func.func_globals["__name__"]
+    except (Exception):
+        pass

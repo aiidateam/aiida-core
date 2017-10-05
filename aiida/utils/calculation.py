@@ -41,5 +41,5 @@ def add_source_info(node, func):
         pass
     try:
         node._set_attr("namespace", func.func_globals["__name__"]
-    except (Exception):
+    except Exception:
         pass

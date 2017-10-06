@@ -51,8 +51,9 @@ def encode_launch_task(task):
     :return: The JSON string representing the task
     :rtype: str
     """
-    serialized = serialize_node_mapping(task.get('inputs', {}))
-    return json.dumps(serialized)
+    serialized_inputs = serialize_node_mapping(task.get('inputs', {}))
+    task['inputs'] = serialized_inputs
+    return json.dumps(task)
 
 
 def launch_decode(msg):

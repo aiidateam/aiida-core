@@ -126,7 +126,7 @@ def create_runner(enable_transport=True, submit_to_daemon=True, rmq_control_pane
     )
 
 
-def create_daemon_runner(rmq_prefix=None, rmq_create_connection=None):
+def create_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
     if rmq_create_connection is None:
         rmq_create_connection = rmq._create_connection
 

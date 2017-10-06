@@ -770,6 +770,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                         if type(import_data['metadata']) is dict:
                             import_data['metadata'] = json.dumps(
                                 import_data['metadata'])
+                        if type(import_data['transport_params']) is dict:
+                            import_data['transport_params'] = json.dumps(
+                                import_data['transport_params'])
 
                         imported_comp_names.add(import_data['name'])
 

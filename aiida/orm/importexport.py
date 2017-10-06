@@ -764,6 +764,13 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                 Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
 
+                        # The following is done for compatibility reasons
+                        # In case the export file was generate with the SQLA
+                        # export method
+                        if type(import_data['metadata']) is dict:
+                            import_data['metadata'] = json.dumps(
+                                import_data['metadata'])
+
                         imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
@@ -2353,7 +2360,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                          forbidden_licenses=forbidden_licenses,
                          silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        export_tree_dj(what, folder, also_parents = also_parents,
+        export_tree_sqla(what, folder, also_parents = also_parents,
                        also_calc_outputs=also_calc_outputs,
                        allowed_licenses=allowed_licenses,
                        forbidden_licenses=forbidden_licenses,

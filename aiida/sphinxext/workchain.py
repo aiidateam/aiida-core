@@ -75,7 +75,11 @@ class AiidaWorkchainDirective(Directive):
         """
         paragraph = nodes.paragraph()
         paragraph += nodes.strong(text=title)
-        paragraph += self.build_portnamespace_doctree(port_namespace)
+        namespace_doctree = self.build_portnamespace_doctree(port_namespace)
+        if len(namespace_doctree) > 0:
+            paragraph += namespace_doctree
+        else:
+            paragraph += nodes.paragraph(text='None defined.')
 
         return paragraph
 
@@ -130,5 +134,8 @@ class AiidaWorkchainDirective(Directive):
     def format_valid_types(valid_type):
         try:
             return valid_type.__name__
-        except (TypeError, AttributeError):
-            return str(valid_type)
+        except AttributeError:
+            try:
+                return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
+            except (AttributeError, TypeError):
+                return str(valid_type)

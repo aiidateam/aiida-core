@@ -127,6 +127,11 @@ extras_require = {
         'yapf',
         'prospector',
         'pylint'
+    ],
+    'dev_sphinxext': [
+        'sphinx',
+        'sphinx-rtd-theme',
+        'pytest'
     ]
 }
 

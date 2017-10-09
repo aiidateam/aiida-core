@@ -20,6 +20,6 @@ case "$TEST_TYPE" in
         pre-commit run --all-files
         ;;
     sphinxext)
-        cd aiida/sphinxext/tests; py.test
+        py.test aiida/sphinxext/tests
         ;;
 esac

@@ -1,4 +1,0 @@
-{
-  "aiida/sphinxext/tests/test_workchain.py::test_workchain_build[html]": true, 
-  "aiida/sphinxext/tests/test_workchain.py::test_workchain_build[xml]": true
-}

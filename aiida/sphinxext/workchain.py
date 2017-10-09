@@ -130,5 +130,5 @@ class AiidaWorkchainDirective(Directive):
     def format_valid_types(valid_type):
         try:
             return valid_type.__name__
-        except TypeError:
+        except (TypeError, AttriuteError):
             return str(valid_type)

@@ -5,7 +5,7 @@ set -ev
 
 case "$TEST_TYPE" in
     docs)
-        # Compile the docs (HTML format); -W to convert warnings in errors, 
+        # Compile the docs (HTML format); -W to convert warnings in errors,
         # -n to warn about all missing references
         SPHINXOPTS="-nW" make -C docs html
         ;;
@@ -18,5 +18,8 @@ case "$TEST_TYPE" in
         ;;
     pre-commit)
         pre-commit run --all-files
+        ;;
+    sphinxext)
+        cd aiida/sphinxext/tests; py.test
         ;;
 esac

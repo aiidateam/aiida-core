@@ -44,7 +44,7 @@ install:
     - pip install -U pip wheel setuptools
     - pip install -r requirements.txt
     # Install AiiDA with some optional dependencies
-    - pip install .[REST,docs,atomic_tools,testing,dev_precommit]
+    - pip install .[REST,docs,atomic_tools,testing,dev_precommit,dev_sphinxext]
 
 
 env:
@@ -53,6 +53,7 @@ env:
 ## also when building the docs
 ## because otherwise the code would complain. Also, I need latex.
 - TEST_TYPE="pre-commit"
+- TEST_TYPE="sphinxext"
 - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
 - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
 - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"

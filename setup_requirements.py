@@ -129,11 +129,11 @@ extras_require = {
         'pylint'
     ],
     'dev_sphinxext': [
-        'sphinx',
-        'sphinx-rtd-theme',
         'pytest'
     ]
 }
+
+extras_require['dev_sphinxext'] += extras_require['docs']
 
 # There are a number of optional dependencies that are not
 # listed even as optional dependencies as they are quite

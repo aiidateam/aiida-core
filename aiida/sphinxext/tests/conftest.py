@@ -49,8 +49,6 @@ def xml_equal():
             shutil.copyfile(test_file, reference_file)
             raise ValueError('Reference file does not exist!')
         assert _flatten_xml(test_file) == _flatten_xml(reference_file)
-        print(_flatten_xml(test_file))
-        # assert ET.parse(test_file) == ET.parse(reference_file)
     return inner
 
 

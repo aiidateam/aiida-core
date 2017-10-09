@@ -27,6 +27,6 @@ case "$TEST_TYPE" in
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
         ;;
     sphinxext)
-        py.test aiida/sphinxext/tests
+        py.test -vv aiida/sphinxext/tests
         ;;
 esac

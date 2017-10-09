@@ -14,7 +14,7 @@ import uuid
 from enum import Enum
 import itertools
 
-import plum.port as port
+from plum.port import InputPort, Port, DynamicInputPort
 import plum.process
 from plum.process_monitor import MONITOR
 import plum.process_monitor
@@ -78,10 +78,62 @@ class DictSchema(object):
         return template
 
 
+class PortNamespace(collections.MutableMapping, Port):
+    """
+    A container for Ports. Effectively it maintains a dictionary whose members are
+    either a Port or yet another PortNamespace. This allows for the nesting of ports
+    """
+
+    def __init__(self, namespace=None, help=None, required=True, validator=None, valid_type=None):
+        super(PortNamespace, self).__init__(
+            name=namespace, help=help, required=required, validator=validator, valid_type=valid_type
+        )
+        self._ports = {}
+
+    @property
+    def ports(self):
+        return self._ports
+
+    def __iter__(self):
+        return self._ports.__iter__()
+
+    def __len__(self):
+        return len(self._ports)
+
+    def __delitem__(self, key):
+        del self._ports[key]
+
+    def __getitem__(self, key):
+        return self._ports[key]
+
+    def __setitem__(self, key, value):
+        self._ports[key] = value
+
+    def validate(self, inputs):
+        """
+        Validate the namespace port itself and subsequently all the ports it contains
+
+        :param inputs: a arbitrarily nested dictionary of parsed inputs
+        """
+        if inputs is None and self.required:
+            return False, "required value was not provided for '{}'".format(self.name)
+
+        for name, port in self._ports.iteritems():
+            valid, message = port.validate(inputs.get(name, None))
+
+            if not valid:
+                return False, message
+
+        return True, None
+
+
 class ProcessSpec(plum.process.ProcessSpec):
+
     def __init__(self):
         super(ProcessSpec, self).__init__()
         self._fastforwardable = False
+        self._inputs = PortNamespace()
+        self._outputs = PortNamespace()
 
     def is_fastforwardable(self):
         return self._fastforwardable
@@ -95,7 +147,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         defaults for the :class:`Process`.
 
         :return: An object with attributes that represent the known inputs for
-            this process.  Default values will be filled in.
+            this process. Default values will be filled in.
         """
         template = type(
             "{}Inputs".format(self.__class__.__name__),
@@ -113,6 +165,36 @@ class ProcessSpec(plum.process.ProcessSpec):
 
         return template
 
+    def expose_inputs(self, process_class, namespace=None, exclude=(), include=None):
+        """
+        This method allows one to automatically add the inputs from another
+        Process to this ProcessSpec. The optional namespace argument can be
+        used to group the exposed inputs in a separated PortNamespace
+
+        :param process_class: the Process class whose inputs to expose
+        :param namespace: a namespace in which to place the exposed inputs
+        :param exclude: list or tuple of input keys to exclude from being exposed
+        """
+        if exclude and include is not None:
+            raise ValueError('exclude and include are mutually exclusive')
+
+        if namespace:
+            self._inputs[namespace] = PortNamespace(namespace)
+            port_namespace = self._inputs[namespace]
+        else:
+            port_namespace = self._inputs
+
+        for name, port in process_class.spec().inputs.iteritems():
+
+            if name.startswith('_') or name == 'dynamic':
+                continue
+
+            if include is not None:
+                if name in include:
+                    port_namespace[name] = port
+            else:
+                if name not in exclude:
+                    port_namespace[name] = port
 
 class Process(plum.process.Process):
     """
@@ -135,8 +217,7 @@ class Process(plum.process.Process):
         import aiida.orm
         super(Process, cls).define(spec)
 
-        spec.input("_store_provenance", valid_type=bool, default=True,
-                   required=False)
+        spec.input("_store_provenance", valid_type=bool, default=True, required=False)
         spec.input("_description", valid_type=basestring, required=False)
         spec.input("_label", valid_type=basestring, required=False)
 
@@ -201,7 +282,6 @@ class Process(plum.process.Process):
         else:
             return super(Process, self).out(output_port, value)
 
-    # Messages #####################################################
     @override
     def on_create(self, pid, inputs, saved_instance_state):
         from aiida.orm import load_node
@@ -265,7 +345,6 @@ class Process(plum.process.Process):
             if self.inputs._store_provenance:
                 value.store()
         value.add_link_from(self.calc, output_port, LinkType.RETURN)
-    #################################################################
 
     @override
     def do_run(self):
@@ -305,14 +384,39 @@ class Process(plum.process.Process):
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    # @override
-    # def create_input_args(self, inputs):
-    #     parsed = super(Process, self).create_input_args(inputs)
-    #     # Now remove any that have a leading underscore
-    #     for name in parsed.keys():
-    #         if name.startswith('_'):
-    #             del parsed[name]
-    #     return parsed
+    def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
+        """
+        Gather a dictionary of the inputs that were exposed for a given Process
+        class under an optional namespace.
+
+        :param process_class: Process class whose inputs to try and retrieve
+        :param namespace: PortNamespace in which to look for the inputs
+        """
+        exposed_inputs = {}
+        namespaces = [namespace]
+
+        # If inputs are to be agglomerated, we prepend the lower lying namespace
+        if agglomerate:
+            namespaces.insert(0, None)
+
+        for namespace in namespaces:
+
+            # The namespace None indicates the base level namespace
+            if namespace is None:
+                inputs = self.inputs
+                port_namespace = self.spec().inputs
+            else:
+                inputs = self.inputs[namespace]
+                try:
+                    port_namespace = self.spec().get_input(namespace)
+                except KeyError:
+                    raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
+
+            for name, port in port_namespace.ports.iteritems():
+                if name in inputs and name in process_class.spec().inputs:
+                    exposed_inputs[name] = inputs[name]
+
+        return exposed_inputs
 
     def _create_and_setup_db_record(self):
         self._calc = self.create_db_record()
@@ -335,44 +439,22 @@ class Process(plum.process.Process):
 
         parent_calc = self.get_parent_calc()
 
-        # First get a dictionary of all the inputs to link, this is needed to
-        # deal with things like input groups
-        to_link = {}
-        for name, input in self.inputs.iteritems():
-            # Ignore all inputs starting with a leading underscore, and None inputs
-            if name.startswith('_') or input is None:
-                continue
+        for name, input_value in self._flat_inputs().iteritems():
 
-            if self.spec().has_input(name):
-                if isinstance(self.spec().get_input(name), port.InputGroupPort):
-                    to_link.update(
-                        {"{}_{}".format(name, k): v for k, v in
-                         input.iteritems()})
-                else:
-                    to_link[name] = input
-            else:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
-                to_link[name] = input
+            if isinstance(input_value, Calculation):
+                input_value = get_or_create_output_group(input_value)
 
-        for name, input in to_link.iteritems():
-
-            if isinstance(input, Calculation):
-                input = get_or_create_output_group(input)
-
-            if not input.is_stored:
-                # If the input isn't stored then assume our parent created it
+            # If the input isn't stored then assume our parent created it
+            if not input_value.is_stored:
                 if parent_calc:
-                    input.add_link_from(parent_calc, "CREATE",
-                                        link_type=LinkType.CREATE)
+                    input_value.add_link_from(parent_calc, 'CREATE', link_type=LinkType.CREATE)
                 if self.inputs._store_provenance:
-                    input.store()
+                    input_value.store()
 
-            self.calc.add_link_from(input, name)
+            self.calc.add_link_from(input_value, name)
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL",
-                                    link_type=LinkType.CALL)
+            self.calc.add_link_from(parent_calc, 'CALL', link_type=LinkType.CALL)
 
         self._add_description_and_label()
 
@@ -392,6 +474,40 @@ class Process(plum.process.Process):
         node = None  # Here we should find the old node
         for k, v in node.get_output_dict():
             self.out(k, v)
+
+    def _flat_inputs(self):
+        """
+        Return a flattened version of the parsed inputs dictionary. The eventual
+        keys will be a concatenation of the nested keys
+
+        :return: flat dictionary of parsed inputs
+        """
+        return self._flatten_inputs(self.inputs)
+
+    def _flatten_inputs(self, dictionary, parent_key='', separator='_'):
+        """
+        Function that will recursively flatten the inputs dictionary, omitting
+        inputs whose key starts with an underscore as they are considered to be
+        non storable.
+
+        :param dictionary: nested dictionary of parsed inputs
+        :param parent_key: the parent key with which to prefix the keys
+        :param separator: character to use for the concatenation of keys
+        """
+        items = []
+        for key, value in dictionary.iteritems():
+
+            if key.startswith('_') or value is None:
+                continue
+
+            prefixed_key = parent_key + separator + key if parent_key else key
+
+            if isinstance(value, collections.MutableMapping):
+                items.extend(self._flatten_inputs(value, prefixed_key, separator=separator).iteritems())
+            else:
+                items.append((prefixed_key, value))
+
+        return dict(items)
 
 
 class FunctionProcess(Process):

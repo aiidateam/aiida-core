@@ -3,6 +3,7 @@ import unittest
 import os
 
 from click.testing import CliRunner
+from pgtest.pgtest import PGTest
 
 from aiida.cmdline.verdilib import _setup_cmd, quicksetup
 from aiida.control.postgres import Postgres
@@ -36,8 +37,11 @@ class SetupTestCase(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
-        self.postgres = Postgres(interactive=False, quiet=False)
+        self.pgtest = PGTest()
+        self.postgres = Postgres(port=self.pgtest.port, interactive=False, quiet=False)
 
+    def tearDown(self):
+        self.pgtest.close()
 
     def test_user_setup(self):
         dbuser = 'aiida_SetupTestCase'
@@ -56,7 +60,7 @@ class SetupTestCase(unittest.TestCase):
                 '--institution=Scala',
                 '--repo=aiida_radames',
                 '--db_host=localhost',
-                '--db_port=5432',
+                '--db_port={}'.format(self.postgres.port),
                 '--db_name={}'.format(dbname),
                 '--db_user={}'.format(dbuser),
                 '--db_pass={}'.format(dbpass),

@@ -1229,6 +1229,32 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         for k, v in data['export_data'][entity_sig].iteritems():
                             if entity_sig == entity_names_to_signatures[
                                 COMPUTER_ENTITY_NAME]:
+                                # The following is done for compatibility
+                                # reasons in case the export file was generated
+                                # with the Django export method
+                                print "1 metadata ====> ", v['metadata']
+                                print "1 metadata (type) ====> ", type(v['metadata'])
+                                if ((type(v['metadata']) is str) or
+                                        (type(v['metadata']) is unicode)):
+                                    print "1 metadata ====> ", json.loads(v['metadata'])
+                                    v['metadata'] = json.loads(v['metadata'])
+
+                                print "2 transport_params ====> ", v['transport_params']
+                                print "2 transport_params (type) ====> ", type(v['transport_params'])
+                                if ((type(v['transport_params']) is str) or
+                                        (type(v['transport_params']) is
+                                             unicode)):
+                                    print "2 transport_params ====> ", json.loads(
+                                        v['transport_params'])
+                                    v['transport_params'] = json.loads(
+                                        v['transport_params'])
+
+                                # This should be done more properly and we
+                                # should see why we have metadata and not
+                                # _metadata
+                                v['_metadata'] = v['metadata']
+                                v.pop('metadata', None)
+
                                 # Check if there is already a computer with the
                                 # same name in the database
                                 qb = QueryBuilder()

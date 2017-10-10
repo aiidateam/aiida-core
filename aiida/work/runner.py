@@ -4,6 +4,7 @@ from . import rmq
 from . import transport
 from . import utils
 from .default_loop import ResultAndPid
+from apricotpy.persistable.core import Bundle
 
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
 
@@ -97,7 +98,9 @@ class Runner(plum.PersistableEventLoop):
 
     def submit(self, process_class, *args, **inputs):
         if self._submit_to_daemon:
-            return self.rmq.launch(process_class, inputs)
+            process = _get_process_instance(process_class, *args, **inputs)
+            bundle = Bundle(process)
+            return self.rmq.launch(bundle)
         else:
             return self.create(process_class, *args, inputs=inputs)
 

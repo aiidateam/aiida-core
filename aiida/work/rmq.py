@@ -2,6 +2,7 @@ import apricotpy
 import collections
 import pika
 import pika.exceptions
+import pickle
 import json
 import uuid
 
@@ -25,27 +26,6 @@ def _create_connection():
     except pika.exceptions.ConnectionClosed:
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
 
-def encode_launch_task(proc_class, *args, **kwargs):
-    """
-    Convert any AiiDA data types in the task dictionary to PKs and then return
-    as JSON string
-
-    :param task: The task dictionary to encode
-    :type task: dict
-    :return: The JSON string representing the task
-    :rtype: str
-    """
-    for label, node in kwargs['inputs'].iteritems():
-        if isinstance(node, Node) and not node.is_stored:
-            node.store()
-
-    kwargs = serialize_data(kwargs)
-    serialized = {
-        'proc_class': fullname(proc_class),
-        'args': args,
-        'kwargs': kwargs
-    }
-    return json.dumps(serialized)
 
 def decode_launch_task(serialized_task):
     """
@@ -60,6 +40,10 @@ def decode_launch_task(serialized_task):
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
+
+def decode_response(response):
+    response = json.loads(response)
+    return deserialize_data(response)
 
 def status_decode(msg):
     decoded = rmq.status.status_decode(msg)
@@ -136,7 +120,8 @@ class ProcessControlPanel(apricotpy.LoopObject):
         self._launch = rmq.launch.ProcessLaunchPublisher(
             self._connection,
             "{}.{}".format(prefix, _LAUNCH_QUEUE),
-            encode_launch_task
+            pickle.dumps,
+            decode_response
         )
 
     def on_loop_inserted(self, loop):
@@ -160,8 +145,8 @@ class ProcessControlPanel(apricotpy.LoopObject):
     def status(self):
         return self._status
 
-    def launch(self, process_class, inputs=None):
-        return self._launch.launch(process_class, inputs)
+    def launch(self, process_bundle):
+        return self._launch.launch(process_bundle)
 
 
 def create_control_panel(prefix="aiida", create_connection=_create_connection):

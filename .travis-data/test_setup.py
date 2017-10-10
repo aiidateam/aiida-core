@@ -5,7 +5,7 @@ import os
 from click.testing import CliRunner
 
 from aiida.cmdline.verdilib import _setup_cmd, quicksetup
-from aidia.control.postgres import Postgres
+from aiida.control.postgres import Postgres
 
 
 class QuicksetupTestCase(unittest.TestCase):

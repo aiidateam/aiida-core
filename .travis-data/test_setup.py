@@ -4,7 +4,7 @@ import os
 
 from click.testing import CliRunner
 
-from aiida.cmdline.verdilib import _setup_cmd, Quicksetup
+from aiida.cmdline.verdilib import _setup_cmd, quicksetup
 
 
 class QuicksetupTestCase(unittest.TestCase):
@@ -20,10 +20,8 @@ class QuicksetupTestCase(unittest.TestCase):
 
     def test_user_setup(self):
         result = self.runner.invoke(
-            'verdi', [
-                'quicksetup',
-                '--non-interactive',
-                '--profile=giuseppe'
+            quicksetup, [
+                '--profile=giuseppe',
                 '--backend={}'.format(self.backend),
                 '--email=giuseppe.verdi@ope.ra',
                 '--first-name=Giuseppe',

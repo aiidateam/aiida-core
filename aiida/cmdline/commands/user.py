@@ -59,7 +59,7 @@ def do_configure(email, first_name, last_name, institution, no_password):
     import getpass
 
     configure_user = False
-    user, created = get_or_new_user(email)
+    user, created = get_or_new_user(email=email)
 
     if created:
         click.echo("\nAn AiiDA user for email '{}' is already present "

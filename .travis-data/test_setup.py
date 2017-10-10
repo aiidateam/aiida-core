@@ -1,5 +1,6 @@
 """Integration tests for setup and quicksetup"""
 import unittest
+import os
 
 from click.testing import TestRunner
 
@@ -11,6 +12,7 @@ class QuicksetupTestCase(unittest.TestCase):
 
     def setUp(self):
         self.runner = TestRunner()
+        self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
 
     def _get_msg(self, result):
         msg = '{}\n---\nOutput:\n{}'
@@ -22,6 +24,7 @@ class QuicksetupTestCase(unittest.TestCase):
                 'quicksetup',
                 '--non-interactive',
                 '--profile=giuseppe'
+                '--backend={}'.format(self.backend),
                 '--email=giuseppe.verdi@ope.ra',
                 '--first-name=Giuseppe',
                 '--last-name=Verdi',

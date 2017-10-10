@@ -5,11 +5,11 @@ import pika.exceptions
 import json
 import uuid
 
-from ast import literal_eval
 from plum import rmq
 from plum.utils import override, load_class, fullname
 from aiida.orm import load_node, Node
 from aiida.work.class_loader import _CLASS_LOADER
+from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
 _CONTROL_EXCHANGE = 'process.control'
@@ -17,8 +17,6 @@ _EVENT_EXCHANGE = 'process.event'
 _LAUNCH_QUEUE = 'process.queue'
 _STATUS_REQUEST_EXCHANGE = 'process.status_request'
 _LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
-_PREFIX_LABEL_TUPLE = 'tuple():'
-_PREFIX_VALUE_NODE = 'aiida_node:'
 
 def _create_connection():
     # Set up communications
@@ -26,46 +24,6 @@ def _create_connection():
         return pika.BlockingConnection()
     except pika.exceptions.ConnectionClosed:
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
-
-def serialize_mapping(mapping):
-    """
-    """
-    serialized = {}
-    for label, value in mapping.iteritems():
-
-        if isinstance(label, tuple):
-            label = '{}{}'.format(_PREFIX_LABEL_TUPLE, label)
-
-        if isinstance(value, collections.Mapping):
-            serialized[label] = serialize_mapping(value)
-        elif isinstance(value, Node):
-            if not value.is_stored:
-                value.store()
-            serialized[label] = '{}{}'.format(_PREFIX_VALUE_NODE, value.uuid)
-        else:
-            serialized[label] = value
-
-    return serialized
-
-def deserialize_mapping(mapping):
-    """
-    """
-    deserialized = {}
-    for label, value in mapping.iteritems():
-
-        if label.startswith(_PREFIX_LABEL_TUPLE):
-            label = literal_eval(label[len(_PREFIX_LABEL_TUPLE):])
-
-        if isinstance(value, collections.Mapping):
-            deserialized[label] = deserialize_mapping(value)
-        elif isinstance(value, unicode) and value.startswith(_PREFIX_VALUE_NODE):
-            node_uuid = value[len(_PREFIX_VALUE_NODE):]
-            deserialized[label] = load_node(uuid=node_uuid)
-        else:
-            deserialized[label] = value
-
-    return deserialized
-
 
 def encode_launch_task(proc_class, *args, **kwargs):
     """
@@ -77,10 +35,15 @@ def encode_launch_task(proc_class, *args, **kwargs):
     :return: The JSON string representing the task
     :rtype: str
     """
+    for label, node in kwargs['inputs'].iteritems():
+        if isinstance(node, Node) and not node.is_stored:
+            node.store()
+
+    kwargs = serialize_data(kwargs)
     serialized = {
         'proc_class': fullname(proc_class),
         'args': args,
-        'kwargs': serialize_mapping(kwargs)
+        'kwargs': kwargs
     }
     return json.dumps(serialized)
 
@@ -90,12 +53,13 @@ def decode_launch_task(serialized_task):
     task = json.loads(serialized_task)
     proc_class = _CLASS_LOADER.load_class(task['proc_class'])
     args = task['args']
-    kwargs = deserialize_mapping(task['kwargs'])
+    kwargs = deserialize_data(task['kwargs'])
     task = rmq.launch._TaskInfo(proc_class, args, kwargs)
     return task
 
-def encode_response(mapping):
-    return json.dumps(serialize_mapping(mapping))
+def encode_response(response):
+    serialized = serialize_data(response)
+    return json.dumps(serialized)
 
 def status_decode(msg):
     decoded = rmq.status.status_decode(msg)

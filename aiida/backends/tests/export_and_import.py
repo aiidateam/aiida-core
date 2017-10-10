@@ -1179,6 +1179,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
+    @skip("")
     def test_correct_import_of_computer_json_params(self):
         """
         This test checks that the metadata and transport params are
@@ -1249,7 +1250,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
     # @skip("")
-    def test_import_of_django_export_file(self):
+    def test_import_of_django_sqla_export_file(self):
         """
         Check why sqla import manages to import the django export file correctly
         """
@@ -1259,7 +1260,12 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.computer import Computer
 
         for filename in (
-                'export_dj_comp_test.aiida', 'export_sqla_comp_test.aiida'):
+                # 'export_dj_comp_test.aiida', 'export_sqla_comp_test.aiida'):
+                'export_sqla_comp_test.aiida', 'export_dj_comp_test.aiida'):
+
+            print "##########################################"
+            print "Now working on file: ", filename
+
             curr_path = inspect.getfile(inspect.currentframe())
             folder_path = os.path.dirname(curr_path)
             relative_folder_path = ("export_import_test_files/" + filename)

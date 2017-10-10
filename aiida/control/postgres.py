@@ -50,7 +50,7 @@ class Postgres(object):
     def __init__(self, port=None, interactive=False, quiet=True):
         self.interactive = interactive
         self.quiet = quiet
-        self.pg_execute = None
+        self.pg_execute = _pg_execute_none
         self.dbinfo = {}
         if port:
             self.set_port(port)
@@ -98,7 +98,7 @@ class Postgres(object):
                 self.dbinfo = dbinfo
 
         # This is to allow for any other setup
-        if not self.pg_execute:
+        if self.pg_execute == _pg_execute_none:
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
@@ -196,7 +196,7 @@ def manual_setup_instructions(dbuser, dbname):
     return instructions
 
 
-def prompt_db_info():
+def prompt_db_info(*args):  # pylint: disable=unused-argument
     """
     Prompt interactively for postgres database connecting details
 
@@ -331,3 +331,8 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
         result = result.strip().split('\n')
         result = [i for i in result if i]
     return result
+
+
+def _pg_execute_none(command, **kwargs):  # pylint: disable=unused-argument
+    from aiida.common.exceptions import FailedError
+    raise FailedError('could not connect to postgres')

@@ -13,7 +13,7 @@ This allows to manage profiles from command line.
 import sys
 import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.control.postgres import Postgres
+from aiida.control.postgres import Postgres, prompt_db_info
 
 valid_processes = ['verdi', 'daemon']
 
@@ -180,8 +180,9 @@ class Profile(VerdiCommandWithSubcommands):
                 print("Profile '{}' does not exist".format(profile_to_delete))
                 continue
 
-            postgres = Postgres(port=profile.get('AIIDADB_PORT'))
+            postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
             postgres.determine_setup()
+            print postgres.dbinfo
 
             db_name = profile.get('AIIDADB_NAME', '')
             if not postgres.db_exists(db_name):

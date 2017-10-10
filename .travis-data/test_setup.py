@@ -2,7 +2,7 @@
 import unittest
 import os
 
-from click.testing import TestRunner
+from click.testing import CliRunner
 
 from aiida.cmdline.verdilib import _setup_cmd, Quicksetup
 
@@ -11,7 +11,7 @@ class QuicksetupTestCase(unittest.TestCase):
     """Test ``verdi setup``"""
 
     def setUp(self):
-        self.runner = TestRunner()
+        self.runner = CliRunner()
         self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
 
     def _get_msg(self, result):

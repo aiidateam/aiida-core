@@ -31,7 +31,7 @@ class SubWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input(
             'y',
             valid_type=Int,
-            help="The second, nested input.",
+            help="The second, nested input called ``y``.",
             required=False
         )
         spec.output('y', valid_type=Int)

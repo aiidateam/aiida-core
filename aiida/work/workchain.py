@@ -89,6 +89,8 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         else:
             self._stepper = None
 
+        self.set_logger(self._calc.logger)
+
     def insert_barrier(self, awaitable):
         """
         Insert a barrier that will cause the workchain to wait until the wait

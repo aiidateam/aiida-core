@@ -1,4 +1,5 @@
 import plum
+from . import class_loader
 from . import process
 from . import rmq
 from . import transport
@@ -99,7 +100,7 @@ class Runner(plum.PersistableEventLoop):
     def submit(self, process_class, *args, **inputs):
         if self._submit_to_daemon:
             process = _get_process_instance(process_class, *args, **inputs)
-            bundle = Bundle(process)
+            bundle = Bundle(process, class_loader=class_loader._CLASS_LOADER)
             return self.rmq.launch(bundle)
         else:
             return self.create(process_class, *args, inputs=inputs)

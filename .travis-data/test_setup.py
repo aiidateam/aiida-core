@@ -50,7 +50,7 @@ class SetupTestCase(unittest.TestCase):
     def tearDown(self):
         self.postgres.drop_db(self.dbname)
         self.postgres.drop_dbuser(self.dbuser)
-        self.pgtest.close()
+        self.pg_test.close()
 
     def test_user_setup(self):
         result = self.runner.invoke(

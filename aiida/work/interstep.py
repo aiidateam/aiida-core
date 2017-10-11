@@ -1,6 +1,7 @@
 from collections import namedtuple, MutableSequence
 from aiida.work.legacy.wait_on import WaitOnWorkflow
 from apricotpy import futures
+from aiida.orm import load_node
 from . import process
 
 Action = namedtuple("Action", "running_info fn")
@@ -40,7 +41,7 @@ def _assign(key, workchain, awaitable):
     elif isinstance(awaitable, process.Process):
         workchain.ctx[key] = awaitable.calc
     elif isinstance(awaitable, futures.Awaitable):
-        workchain.ctx[key] = awaitable.result()
+        workchain.ctx[key] = load_node(awaitable.pid)
     else:
         raise TypeError("Unsupported assign type '{}'".format(awaitable))
 
@@ -55,7 +56,7 @@ def _append(key, workchain, awaitable):
     elif isinstance(awaitable, process.Process):
         workchain.ctx.setdefault(key, []).append(awaitable.calc)
     elif isinstance(awaitable, futures.Awaitable):
-        workchain.ctx.setdefault(key, []).append(awaitable.result())
+        workchain.ctx.setdefault(key, []).append(load_node(awaitable.pid))
     else:
         raise TypeError("Unsupported append type '{}'".format(awaitable))
 

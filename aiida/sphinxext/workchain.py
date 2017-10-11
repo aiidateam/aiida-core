@@ -3,6 +3,7 @@ Defines an rst directive to auto-document AiiDA workchains.
 """
 
 from docutils import nodes
+from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive, directives
 from sphinx import addnodes
 import aiida
@@ -127,7 +128,9 @@ class AiidaWorkchainDirective(Directive):
         paragraph += nodes.Text('required' if port.required else 'optional')
         if port.help:
             paragraph += nodes.Text(' -- ')
-            paragraph += nodes.Text(port.help)
+            # publish_doctree returns <document: <paragraph...>>.
+            # Here we only want the content (children) of the paragraph.
+            paragraph.extend(publish_doctree(port.help)[0].children)
         return paragraph
 
     @staticmethod

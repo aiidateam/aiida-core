@@ -35,7 +35,6 @@ def copy_from_remote_to_remote(transportsource, transportdestination,
                                                remotesource, remotedestination,
                                                **kwargs)
 
-
 _GLOBAL_TRANSPORT_QUEUE = TransportQueue()
 
 

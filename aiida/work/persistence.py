@@ -100,4 +100,5 @@ def _create_storage():
         _GLOBAL_PERSISTENCE = Persistence(
             running_directory=os.path.join(WORKFLOWS_DIR, 'running'),
             finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
-            failed_directory=os.path.join(WORKFLOWS_DIR, 'failed'))
+            failed_directory=os.path.join(WORKFLOWS_DIR, 'failed')
+        )

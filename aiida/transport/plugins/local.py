@@ -673,12 +673,17 @@ class LocalTransport(Transport):
         """
         :return: a list containing the names of the entries in the directory.
         :param path: default ='.'
-        :param filter: if set, returns the list of files matching pattern.
+        :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
         the_path = os.path.join(self.curdir, path).strip()
         if not pattern:
-            return os.listdir(the_path)
+            try:
+                return os.listdir(the_path)
+            except OSError as e:
+                exc = IOError(str(e))
+                exc.errno = e.errno
+                raise exc
         else:
             import re
 

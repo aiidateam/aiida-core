@@ -11,5 +11,9 @@
 
 /venv*/
 /.idea/
-*egg-info
+*.egg-info
 .eggs
+
+# files created by coverage
+*\,cover
+coverage/

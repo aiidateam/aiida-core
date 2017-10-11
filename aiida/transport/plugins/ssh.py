@@ -539,9 +539,16 @@ class SshTransport(aiida.transport.Transport):
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
         """
+        from paramiko.sftp import SFTPError
         old_path = self.sftp.getcwd()
         if path is not None:
-            self.sftp.chdir(path)
+            try:
+                self.sftp.chdir(path)
+            except SFTPError as e:
+                # e.args[0] is an error code. For instance,
+                # 20 is 'the object is not a directory'
+                # Here I just re-raise the message as IOError
+                raise IOError(e.args[1])
 
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
@@ -998,7 +1005,7 @@ class SshTransport(aiida.transport.Transport):
                 os.remove(localpath)
             except OSError:
                 pass
-            raise e
+            raise
         
         
     def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
@@ -1197,7 +1204,7 @@ class SshTransport(aiida.transport.Transport):
         Get the list of files at path.
 
         :param path: default = '.'
-        :param filter: returns the list of files matching pattern.
+        :param pattern: returns the list of files matching pattern.
                              Unix only. (Use to emulate ``ls *`` for example)
         """
         if not pattern:

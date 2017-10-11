@@ -38,7 +38,7 @@ class SetupTestCase(unittest.TestCase):
         self.runner = CliRunner()
         self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
         self.pg_test = PGTest()
-        self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=False)
+        self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=True)
         self.postgres.dbinfo = self.pg_test.dsn
         self.postgres.determine_setup()
         self.dbuser = 'aiida_SetupTestCase'

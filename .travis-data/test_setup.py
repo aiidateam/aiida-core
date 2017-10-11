@@ -65,9 +65,9 @@ class SetupTestCase(unittest.TestCase):
                 '--repo=aiida_radames',
                 '--db_host=localhost',
                 '--db_port={}'.format(self.pg_test.port),
-                '--db_name={}'.format(dbname),
-                '--db_user={}'.format(dbuser),
-                '--db_pass={}'.format(dbpass),
+                '--db_name={}'.format(self.dbname),
+                '--db_user={}'.format(self.dbuser),
+                '--db_pass={}'.format(self.dbpass),
                 '--no-password'])
 
 

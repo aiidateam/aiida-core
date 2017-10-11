@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import fastentrypoints
+import re
 from os import path
 from setuptools import setup, find_packages
 from setup_requirements import install_requires, extras_require
@@ -20,9 +21,8 @@ if __name__ == '__main__':
     aiida_folder = path.split(path.abspath(__file__))[0]
     fname = path.join(aiida_folder, 'aiida', '__init__.py')
     with open(fname) as aiida_init:
-        ns = {}
-        exec(aiida_init.read(), ns)
-        aiida_version = ns['__version__']
+        match_expr = "__version__[^'\"]+(['\"])([^'\"]+)"
+        aiida_version = re.search(match_expr, aiida_init.read()).group(2).strip()
 
     bin_folder = path.join(aiida_folder, 'bin')
     setup(
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         packages=find_packages(),
         # Don't forget to install it as well (by adding to the install_requires)
         setup_requires=[
-            'reentry >= 1.0.2'
+            'reentry >= 1.0.2',
         ],
         reentry_register=True,
         entry_points={

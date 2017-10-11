@@ -11,7 +11,8 @@ import click
 
 
 @click.group()
-def verdi():
+@click.option('--profile', '-p')
+def verdi(profile):
     pass
 
 
@@ -23,3 +24,4 @@ def work():
 @verdi.group()
 def user():
     pass
+

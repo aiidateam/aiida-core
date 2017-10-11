@@ -504,7 +504,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         elif key == 'extras':
             # same as attributes
             return DbExtra.get_all_values_for_nodepk(res)
-        elif key in ('_metadata', 'transport_params'):
+        elif key in ('_metadata', 'transport_params') and res is not None:
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):

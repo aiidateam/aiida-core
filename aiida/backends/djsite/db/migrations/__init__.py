@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0006_delete_dbpath'
+LATEST_MIGRATION = '0007_update_linktypes'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -91,7 +91,7 @@ class SetupTestCase(unittest.TestCase):
 
         result = self.runner.invoke(
             _setup_cmd,
-            ['radames2', '--only-configure'],
+            ['radames2', '--only-config'],
             input='Radames\nVerdi\nScala\n'
         )
         self.assertFalse(result.exception, msg=get_debug_msg(result))

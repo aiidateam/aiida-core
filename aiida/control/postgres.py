@@ -50,7 +50,7 @@ class Postgres(object):
     def __init__(self, port=None, interactive=False, quiet=True):
         self.interactive = interactive
         self.quiet = quiet
-        self.pg_execute = _pg_execute_none
+        self.pg_execute = _pg_execute_not_connected
         self.dbinfo = {}
         if port:
             self.set_port(port)
@@ -98,7 +98,7 @@ class Postgres(object):
                 self.dbinfo = dbinfo
 
         # This is to allow for any other setup
-        if self.pg_execute == _pg_execute_none:
+        if self.pg_execute == _pg_execute_not_connected:
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
@@ -107,7 +107,7 @@ class Postgres(object):
                 'This may cause problems if the current user is not allowed to create databases.'
             ))
 
-        return bool(not self.pg_execute == _pg_execute_none)
+        return bool(not self.pg_execute == _pg_execute_not_connected)
 
     def create_dbuser(self, dbuser, dbpass):
         """
@@ -335,6 +335,11 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     return result
 
 
-def _pg_execute_none(command, **kwargs):  # pylint: disable=unused-argument
+def _pg_execute_not_connected(command, **kwargs):  # pylint: disable=unused-argument
+    """
+    A dummy implementation of a postgres command execution function.
+
+    Represents inability to execute postgres commands.
+    """
     from aiida.common.exceptions import FailedError
     raise FailedError('could not connect to postgres')

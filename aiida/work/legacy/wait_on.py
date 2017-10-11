@@ -27,8 +27,8 @@ class WaitOnProcessTerminated(WaitOn):
         self._init()
 
     @override
-    def load_instance_state(self, saved_state, loop):
-        super(WaitOnProcessTerminated, self).load_instance_state(saved_state, loop)
+    def load_instance_state(self, saved_state):
+        super(WaitOnProcessTerminated, self).load_instance_state(saved_state)
         self._pk = saved_state[self.PK]
         self._init()
 

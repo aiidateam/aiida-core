@@ -80,8 +80,8 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
             out_state[self._STEPPER_STATE] = stepper_state
 
     @override
-    def load_instance_state(self, saved_state, evt_loop):
-        super(WorkChain, self).load_instance_state(saved_state, evt_loop)
+    def load_instance_state(self, saved_state):
+        super(WorkChain, self).load_instance_state(saved_state)
 
         # Recreate the stepper
         if self._STEPPER_STATE in saved_state:

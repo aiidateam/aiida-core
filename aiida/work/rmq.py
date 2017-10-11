@@ -1,7 +1,6 @@
 import apricotpy
 import collections
 import pika
-import pika.exceptions
 import pickle
 import json
 import uuid
@@ -25,17 +24,6 @@ def _create_connection():
         return pika.BlockingConnection()
     except pika.exceptions.ConnectionClosed:
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
-
-
-def decode_launch_task(serialized_task):
-    """
-    """
-    task = json.loads(serialized_task)
-    proc_class = _CLASS_LOADER.load_class(task['proc_class'])
-    args = task['args']
-    kwargs = deserialize_data(task['kwargs'])
-    task = rmq.launch._TaskInfo(proc_class, args, kwargs)
-    return task
 
 def encode_response(response):
     serialized = serialize_data(response)
@@ -66,7 +54,6 @@ def insert_process_control_subscriber(loop, prefix, get_connection=_create_conne
         "{}.{}".format(prefix, _CONTROL_EXCHANGE),
     )
 
-
 def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
     return loop.create(
         rmq.status.ProcessStatusSubscriber,
@@ -74,16 +61,13 @@ def insert_process_status_subscriber(loop, prefix, get_connection=_create_connec
         "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
     )
 
-
 def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
     return loop.create(
         rmq.launch.ProcessLaunchSubscriber,
         get_connection(),
         "{}.{}".format(prefix, _LAUNCH_QUEUE),
-        decode_launch_task,
-        encode_response
+        response_encoder=encode_response
     )
-
 
 def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     # Give them all the same connection instance
@@ -93,7 +77,6 @@ def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     insert_process_control_subscriber(loop, prefix, get_conn)
     insert_process_status_subscriber(loop, prefix, get_conn)
     insert_process_launch_subscriber(loop, prefix, get_conn)
-
 
 class ProcessControlPanel(apricotpy.LoopObject):
     """

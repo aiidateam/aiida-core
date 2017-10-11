@@ -204,7 +204,7 @@ class TestVerdiWorkCommands(AiidaTestCase):
         Create a simple workchain and run it.
         """
         super(TestVerdiWorkCommands, cls).setUpClass()
-        from aiida.work.launch import run
+        from aiida.work.launch import run_get_pid
         from aiida.work.workchain import WorkChain
         TEST_STRING = 'Test report.'
         cls.test_string = TEST_STRING
@@ -216,7 +216,7 @@ class TestVerdiWorkCommands(AiidaTestCase):
 
             def create_logs(self):
                 self.report(TEST_STRING)
-        _, cls.workchain_pid = run(Wf, _return_pid=True)
+        _, cls.workchain_pid = run_get_pid(Wf)
 
     def test_report(self):
         """

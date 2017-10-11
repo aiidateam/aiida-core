@@ -11,9 +11,11 @@
 This allows to manage profiles from command line.
 """
 import sys
+
 import click
+
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.control.postgres import Postgres, prompt_db_info
+from aiida.control.postgres import Postgres
 
 valid_processes = ['verdi', 'daemon']
 
@@ -156,8 +158,7 @@ class Profile(VerdiCommandWithSubcommands):
         Specify argument '--force' to skip any questions warning about loss of
         data.
         """
-        from aiida.cmdline.verdilib import Quicksetup
-        from aiida.common.setup import get_or_create_config, update_config, AIIDA_CONFIG_FOLDER
+        from aiida.common.setup import get_or_create_config, update_config
         import os.path
         from urlparse import urlparse
 

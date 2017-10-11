@@ -430,6 +430,41 @@ class Transport(object):
         """
         raise NotImplementedError
 
+    def listdir_withattributes(self, path='.', pattern=None):
+        """
+        Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
+        entries '.' and '..' even if they are present in the directory.
+
+        :param str path: path to list (default to '.')
+        :param str pattern: if used, listdir returns a list of files matching
+                            filters in Unix style. Unix only.
+        :return: a list of dictionaries, one per entry.
+            The schema of the dictionary is
+            the following::
+
+                {
+                   'name': String,
+                   'attributes': FileAttributeObject,
+                   'isdir': Bool
+                }
+
+            where 'name' is the file or folder directory, and any other information is metadata
+            (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
+            transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
+        """
+        retlist = []
+        full_path = self.getcwd()
+        for f in self.listdir():
+            filepath = os.path.join(full_path, f)
+            attributes = self.get_attribute(filepath)
+            retlist.append({
+                'name': f,
+                'attributes': attributes,
+                'isdir': self.isdir(filepath)
+            })
+        return retlist
+
     def makedirs(self, path, ignore_existing=False):
         """
         Super-mkdir; create a leaf directory and all intermediate ones.

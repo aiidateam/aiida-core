@@ -64,7 +64,7 @@ class SetupTestCase(unittest.TestCase):
                 '--institution=Scala',
                 '--repo=aiida_radames',
                 '--db_host=localhost',
-                '--db_port={}'.format(self.postgres.port),
+                '--db_port={}'.format(self.pg_test.port),
                 '--db_name={}'.format(dbname),
                 '--db_user={}'.format(dbuser),
                 '--db_pass={}'.format(dbpass),

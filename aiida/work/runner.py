@@ -103,7 +103,7 @@ class Runner(plum.PersistableEventLoop):
             bundle = Bundle(process, class_loader=class_loader._CLASS_LOADER)
             return self.rmq.launch(bundle)
         else:
-            return self.create(process_class, *args, inputs=inputs)
+            return self.create(process_class, *args, **inputs)
 
     def _create_child_runner(self):
         if self._transport:

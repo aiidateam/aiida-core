@@ -716,6 +716,89 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    def test_workfunction_1(self):
+        import shutil,  os, tempfile
+
+        from aiida.work.workfunction import workfunction
+        from aiida.orm.data.base import Float
+        from aiida.orm import load_node
+        from aiida.orm.importexport import export
+        from aiida.common.exceptions import NotExistent
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        @workfunction
+        def add(a, b):
+            """Add 2 numbers"""
+            return {'res':Float(a+b)}
+        def max_(**kwargs):
+            """select the max value"""
+            max_val = max([(v.value, v) for v in kwargs.values()])
+            return {'res': max_val[1]}
+        try:
+            # I'm creating a bunch of nuimbers
+            a, b, c, d, e = (Float(i) for i in range(5))
+            # this adds the maximum number between bcde to a.
+            res = add(a=a,b=max_(b=b,c=c,d=d, e=e)['res'])['res']
+            # These are the uuids that would be exported as well (as parents) if I wanted the final result
+            uuids_values = [(a.uuid, a.value), (e.uuid, e.value), (res.uuid, res.value)]
+            # These are the uuids that shouldn't be exported since it's a selection.
+            not_wanted_uuids = [v.uuid for v in (b,c,d)]
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([res.dbnode], outfile=filename1, silent=True)
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+            # Check that the imported nodes are correctly imported and that the value is preserved
+            for uuid, value in uuids_values:
+                self.assertEquals(load_node(uuid).value, value)
+            for uuid in not_wanted_uuids:
+                with self.assertRaises(NotExistent):
+                    load_node(uuid)
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+    def test_workcalculation_2(self):
+        import shutil, os, tempfile
+
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.data.base import Float,  Int
+        from aiida.orm import load_node
+        from aiida.common.links import LinkType
+        from aiida.orm.importexport import export
+
+        from aiida.common.exceptions import NotExistent
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+
+
+        try:
+            master = WorkCalculation().store()
+            slave = WorkCalculation().store()
+
+            input_1 = Int(3).store()
+            input_2 = Int(5).store()
+            output_1 = Int(2).store()
+
+            master.add_link_from(input_1, 'input_1', link_type=LinkType.INPUT)
+            slave.add_link_from(master, 'CALL', link_type=LinkType.CALL)
+            slave.add_link_from(input_2, 'input_2', link_type=LinkType.INPUT)
+            output_1.add_link_from(master, 'CREATE', link_type=LinkType.CREATE)
+
+            uuids_values = [(v.uuid, v.value) for v in (output_1, )]
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([output_1.dbnode], outfile=filename1,silent=True)
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            for uuid, value in uuids_values:
+                self.assertEquals(load_node(uuid).value, value)
+
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
 
 class TestComplex(AiidaTestCase):
     def test_complex_graph_import_export(self):

@@ -41,16 +41,18 @@ class SetupTestCase(unittest.TestCase):
         self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=False)
         self.postgres.dbinfo = self.pg_test.dsn
         self.postgres.determine_setup()
+        self.dbuser = 'aiida_SetupTestCase'
+        self.dbpass = 'setuptestcase'
+        self.dbname = 'aiida_test_setup'
+        self.postgres.create_dbuser(self.dbuser, self.dbpass)
+        self.postgres.create_db(self.dbuser, self.dbname)
 
     def tearDown(self):
+        self.postgres.drop_db(self.dbname)
+        self.postgres.drop_dbuser(self.dbuser)
         self.pgtest.close()
 
     def test_user_setup(self):
-        dbuser = 'aiida_SetupTestCase'
-        dbpass = 'setuptestcase'
-        dbname = 'aiida_test_setup'
-        self.postgres.create_dbuser(dbuser, dbpass)
-        self.postgres.create_db(dbuser, dbname)
         result = self.runner.invoke(
             _setup_cmd, [
                 'radames',

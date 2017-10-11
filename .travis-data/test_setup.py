@@ -69,6 +69,32 @@ class SetupTestCase(unittest.TestCase):
                 '--db_user={}'.format(self.dbuser),
                 '--db_pass={}'.format(self.dbpass),
                 '--no-password'])
+        self.assertFalse(result.exception, msg=get_debug_msg(result))
+
+    def test_user_configure(self):
+        self.runner.invoke(
+            _setup_cmd, [
+                'radames2',
+                '--non-interactive',
+                '--backend={}'.format(self.backend),
+                '--email=radames.verdi@ope.ra',
+                '--first-name=Radames',
+                '--last-name=Verdi',
+                '--institution=Scala',
+                '--repo=aiida_radames',
+                '--db_host=localhost',
+                '--db_port={}'.format(self.pg_test.port),
+                '--db_name={}'.format(self.dbname),
+                '--db_user={}'.format(self.dbuser),
+                '--db_pass={}'.format(self.dbpass),
+                '--no-password'])
+
+        result = self.runner.invoke(
+            _setup_cmd,
+            ['radames2', '--only-configure'],
+            input='Radames\nVerdi\nScala\n'
+        )
+        self.assertFalse(result.exception, msg=get_debug_msg(result))
 
 
 def get_debug_msg(result):

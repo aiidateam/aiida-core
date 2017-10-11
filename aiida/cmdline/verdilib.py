@@ -368,7 +368,7 @@ class Setup(VerdiCommand):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-@click.command('setup', context_settings=CONTEXT_SETTINGS)
+@verdi.command('setup', context_settings=CONTEXT_SETTINGS)
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')

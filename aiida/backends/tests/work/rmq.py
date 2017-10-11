@@ -29,7 +29,7 @@ class TestProcess(AiidaTestCase):
 
     def test_launch_simple(self):
         # Launch the process
-        self.runner.rmq.launch(test_utils.DummyProcess)
+        self.runner.submit(test_utils.DummyProcess)
 
         # Tick the daemon runner a few times
         proc = None
@@ -46,7 +46,7 @@ class TestProcess(AiidaTestCase):
         from plum.rmq.status import PROCS_KEY
 
         # Launch the process
-        self.runner.rmq.launch(test_utils.WaitChain)
+        self.runner.submit(test_utils.WaitChain)
 
         # Tick the daemon runner a few times
         proc = None

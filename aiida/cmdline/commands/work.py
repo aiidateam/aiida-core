@@ -127,7 +127,7 @@ def report(pk, levelname, order_by, indent_size):
         return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
-        qb = QueryBuilder(with_dbpath=False)
+        qb = QueryBuilder()
         qb.append(
             cls=WorkCalculation,
             filters={'id': pk},

@@ -255,8 +255,12 @@ def deserialize_attributes(attributes_data, conversion_data):
                 ret_data[k] = deserialize_attributes(v, None)
     elif isinstance(attributes_data, (list, tuple)):
         ret_data = []
-        for value, conversion in zip(attributes_data, conversion_data):
-            ret_data.append(deserialize_attributes(value, conversion))
+        if conversion_data is not None:
+            for value, conversion in zip(attributes_data, conversion_data):
+                ret_data.append(deserialize_attributes(value, conversion))
+        else:
+            for value in attributes_data:
+                ret_data.append(deserialize_attributes(value, None))
     else:
         if conversion_data is None:
             ret_data = attributes_data

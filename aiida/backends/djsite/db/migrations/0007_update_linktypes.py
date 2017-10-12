@@ -114,7 +114,7 @@ class Migration(migrations.Migration):
                     JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
                 WHERE db_dbnode_1.type = 'calculation.work.WorkCalculation.'
                     AND db_dbnode_2.type LIKE 'calculation.%'
-                    AND db_dblink_1.type = null
+                    AND ( db_dblink_1.type = null  OR db_dblink_1.type = '')
             );
         """),
         update_schema_version(SCHEMA_VERSION)

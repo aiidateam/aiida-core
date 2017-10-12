@@ -17,7 +17,7 @@ from unittest import skip
 
 class TestSpecificImport(AiidaTestCase):
 
-    @skip("")
+    # @skip("")
     def test_simple_import(self):
         """
         This is a very simple test which checks that an export file with nodes
@@ -199,7 +199,7 @@ class TestSimple(AiidaTestCase):
     def tearDown(self):
         pass
 
-    @skip("")
+    # @skip("")
     def test_0(self):
         import os
         import shutil
@@ -235,7 +235,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_1(self):
         import os
         import shutil
@@ -289,7 +289,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
             # print temp_folder
 
-    @skip("")
+    # @skip("")
     def test_2(self):
         """
         Test the check for the export format version.
@@ -338,7 +338,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_3(self):
         """
         Test importing of nodes, that have links to unknown nodes.
@@ -396,7 +396,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_4(self):
         """
         Test control of licenses.
@@ -463,7 +463,7 @@ class TestSimple(AiidaTestCase):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
-    @skip("")
+    # @skip("")
     def test_5(self):
         """
         This test checks that nodes belonging to different users are correctly
@@ -545,7 +545,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_6(self):
         """
         This test checks that nodes belonging to user A (which is not the
@@ -655,7 +655,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_7(self):
         """
         This test checks that nodes that belong to a specific group are
@@ -727,7 +727,7 @@ class TestSimple(AiidaTestCase):
 
 
 class TestComplex(AiidaTestCase):
-    @skip("")
+    # @skip("")
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -821,7 +821,7 @@ class TestComputer(AiidaTestCase):
     def tearDown(self):
         pass
 
-    @skip("")
+    # @skip("")
     def test_same_computer_import(self):
         """
         Test that you can import nodes in steps without any problems. In this
@@ -949,7 +949,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_same_computer_different_name_import(self):
         """
         This test checks that if the computer is re-imported with a different
@@ -1057,7 +1057,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_different_computer_same_name_import(self):
         """
         This test checks that if there is a name collision, the imported
@@ -1179,7 +1179,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @skip("")
+    # @skip("")
     def test_correct_import_of_computer_json_params(self):
         """
         This test checks that the metadata and transport params are

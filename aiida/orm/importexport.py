@@ -1231,29 +1231,20 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 COMPUTER_ENTITY_NAME]:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
-                                # with the Django export method
-                                print "1 metadata ====> ", v['metadata']
-                                print "1 metadata (type) ====> ", type(v['metadata'])
+                                # with the Django export method. In Django the
+                                # metadata and the transport parameters are
+                                # stored as (unicode) strings of the serialized
+                                # JSON objects and not as simple serialized
+                                # JSON objects.
                                 if ((type(v['metadata']) is str) or
                                         (type(v['metadata']) is unicode)):
-                                    print "1 metadata ====> ", json.loads(v['metadata'])
                                     v['metadata'] = json.loads(v['metadata'])
 
-                                print "2 transport_params ====> ", v['transport_params']
-                                print "2 transport_params (type) ====> ", type(v['transport_params'])
                                 if ((type(v['transport_params']) is str) or
                                         (type(v['transport_params']) is
                                              unicode)):
-                                    print "2 transport_params ====> ", json.loads(
-                                        v['transport_params'])
                                     v['transport_params'] = json.loads(
                                         v['transport_params'])
-
-                                # This should be done more properly and we
-                                # should see why we have metadata and not
-                                # _metadata
-                                v['_metadata'] = v['metadata']
-                                v.pop('metadata', None)
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -1332,6 +1323,21 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings=
                         foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
+
+                    # We convert the Django fields to SQLA. Note that some of
+                    # the Django fields were converted to SQLA compatible
+                    # fields by the deserialize_field method. This was done
+                    # for optimization reasons in Django but makes them
+                    # compatible with the SQLA schema and they don't need any
+                    # further conversion.
+                    if entity_name in django_fields_to_sqla:
+                        for django_key in (
+                                django_fields_to_sqla[entity_name].keys()):
+                            sqla_key = django_fields_to_sqla[entity_name][django_key]
+                            if sqla_key in import_data.keys():
+                                continue
+                            import_data[sqla_key] = import_data[django_key]
+                            import_data.pop(django_key, None)
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])

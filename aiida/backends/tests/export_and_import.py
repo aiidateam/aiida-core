@@ -1259,13 +1259,8 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computer import Computer
 
-        for filename in (
-                # 'export_dj_comp_test.aiida', 'export_sqla_comp_test.aiida'):
-                'export_sqla_comp_test.aiida', 'export_dj_comp_test.aiida'):
-
-            print "##########################################"
-            print "Now working on file: ", filename
-
+        for filename in ('export_dj_comp_test.aiida',
+                         'export_sqla_comp_test.aiida'):
             curr_path = inspect.getfile(inspect.currentframe())
             folder_path = os.path.dirname(curr_path)
             relative_folder_path = ("export_import_test_files/" + filename)
@@ -1293,8 +1288,6 @@ class TestComputer(AiidaTestCase):
             self.assertEqual(qb.count(), 1, "Expected only one computer")
 
             res = qb.dict()[0]
-
-            print "res ====>", res
 
             self.assertEqual(res['comp']['transport_params'],
                              comp1_transport_params,

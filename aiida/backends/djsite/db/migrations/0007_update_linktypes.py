@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                     JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
                 WHERE db_dbnode_1.type LIKE 'data.%'
                     AND db_dbnode_2.type LIKE 'calculation.%'
-                    AND db_dblink_1.type = null
+                    AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
         """),
         #
@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                         OR
                         db_dbnode_1.type = 'calculation.inline.InlineCalculation.'
                     )
-                    AND db_dblink_1.type = null
+                    AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
         """),
         # The following sql statement:
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                     JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
                 WHERE db_dbnode_2.type LIKE 'data.%'
                     AND db_dbnode_1.type = 'calculation.work.WorkCalculation.'
-                    AND db_dblink_1.type = null
+                    AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
         """),
         # Now I update links that are CALLS:

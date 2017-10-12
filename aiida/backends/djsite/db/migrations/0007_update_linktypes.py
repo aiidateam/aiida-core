@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
         #
         # The following sql statement:
         # 1) selects all links that
-        #   - joins Data (or subclass) as input
+        #   - joins Data (or subclass) or Code as input
         #   - joins Calculation (or subclass) as output. This includes WorkCalculation, InlineCalcuation, JobCalculations...
         #   - has no type (null)
         # 2) set for these links the type to 'inputlink'
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                 FROM db_dbnode AS db_dbnode_1
                     JOIN db_dblink AS db_dblink_1 ON db_dblink_1.input_id = db_dbnode_1.id
                     JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
-                WHERE db_dbnode_1.type LIKE 'data.%'
+                WHERE ( db_dbnode_1.type LIKE 'data.%' or db_dbnode_1.type = 'code.Code.' )
                     AND db_dbnode_2.type LIKE 'calculation.%'
                     AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );

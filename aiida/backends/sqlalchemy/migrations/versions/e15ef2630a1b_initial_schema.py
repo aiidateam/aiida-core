@@ -247,7 +247,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
     sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key')
     )
-    install_tc(op.get_bind())
 
 
 def downgrade():

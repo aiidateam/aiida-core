@@ -255,8 +255,12 @@ def deserialize_attributes(attributes_data, conversion_data):
                 ret_data[k] = deserialize_attributes(v, None)
     elif isinstance(attributes_data, (list, tuple)):
         ret_data = []
-        for value, conversion in zip(attributes_data, conversion_data):
-            ret_data.append(deserialize_attributes(value, conversion))
+        if conversion_data is not None:
+            for value, conversion in zip(attributes_data, conversion_data):
+                ret_data.append(deserialize_attributes(value, conversion))
+        else:
+            for value in attributes_data:
+                ret_data.append(deserialize_attributes(value, None))
     else:
         if conversion_data is None:
             ret_data = attributes_data
@@ -525,6 +529,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
+    from aiida.common.links import LinkType
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
@@ -532,7 +537,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     from aiida.common.datastructures import calc_states
 
     # This is the export version expected by this function
-    expected_export_version = '0.2'
+    expected_export_version = '0.3'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -764,6 +769,16 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                 Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
 
+                        # The following is done for compatibility reasons
+                        # In case the export file was generate with the SQLA
+                        # export method
+                        if type(import_data['metadata']) is dict:
+                            import_data['metadata'] = json.dumps(
+                                import_data['metadata'])
+                        if type(import_data['transport_params']) is dict:
+                            import_data['transport_params'] = json.dumps(
+                                import_data['transport_params'])
+
                         imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
@@ -863,7 +878,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
             # Needed for fast checks of existing links
             existing_links_raw = models.DbLink.objects.all().values_list(
-                'input', 'output', 'label')
+                'input', 'output', 'label', 'type')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
@@ -906,7 +921,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
-                            input_id=in_id, output_id=out_id, label=link['label']))
+                            input_id=in_id, output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
                         if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
                             ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
                         ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
@@ -1019,6 +1034,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
+    from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -1028,7 +1044,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.backends.sqlalchemy.models.node import DbCalcState
 
     # This is the export version expected by this function
-    expected_export_version = '0.2'
+    expected_export_version = '0.3'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1219,6 +1235,23 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         for k, v in data['export_data'][entity_sig].iteritems():
                             if entity_sig == entity_names_to_signatures[
                                 COMPUTER_ENTITY_NAME]:
+                                # The following is done for compatibility
+                                # reasons in case the export file was generated
+                                # with the Django export method. In Django the
+                                # metadata and the transport parameters are
+                                # stored as (unicode) strings of the serialized
+                                # JSON objects and not as simple serialized
+                                # JSON objects.
+                                if ((type(v['metadata']) is str) or
+                                        (type(v['metadata']) is unicode)):
+                                    v['metadata'] = json.loads(v['metadata'])
+
+                                if ((type(v['transport_params']) is str) or
+                                        (type(v['transport_params']) is
+                                             unicode)):
+                                    v['transport_params'] = json.loads(
+                                        v['transport_params'])
+
                                 # Check if there is already a computer with the
                                 # same name in the database
                                 qb = QueryBuilder()
@@ -1296,6 +1329,21 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings=
                         foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
+
+                    # We convert the Django fields to SQLA. Note that some of
+                    # the Django fields were converted to SQLA compatible
+                    # fields by the deserialize_field method. This was done
+                    # for optimization reasons in Django but makes them
+                    # compatible with the SQLA schema and they don't need any
+                    # further conversion.
+                    if entity_name in django_fields_to_sqla:
+                        for django_key in (
+                                django_fields_to_sqla[entity_name].keys()):
+                            sqla_key = django_fields_to_sqla[entity_name][django_key]
+                            if sqla_key in import_data.keys():
+                                continue
+                            import_data[sqla_key] = import_data[django_key]
+                            import_data.pop(django_key, None)
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])
@@ -1461,7 +1509,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         # New link
                         links_to_store.append(DbLink(
                             input_id=in_id, output_id=out_id,
-                            label=link['label']))
+                            label=link['label'], type=LinkType(link['type']).value))
                         if entity_names_to_signatures[
                             LINK_ENTITY_NAME] not in ret_dict:
                             ret_dict[entity_names_to_signatures[
@@ -2017,7 +2065,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.2'
+    EXPORT_VERSION = '0.3'
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
@@ -2192,13 +2240,14 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         links_qb.append(Node,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_project=['label'], output_of='input')
+                        edge_project=['label', 'type'], output_of='input')
 
-        for input_uuid, output_uuid, link_label in links_qb.iterall():
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             links_uuid.append({
                 'input': str(input_uuid),
                 'output': str(output_uuid),
-                'label': str(link_label)
+                'label': str(link_label),
+                'type':str(link_type)
             })
 
     if not silent:
@@ -2353,7 +2402,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                          forbidden_licenses=forbidden_licenses,
                          silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        export_tree_dj(what, folder, also_parents = also_parents,
+        export_tree_sqla(what, folder, also_parents = also_parents,
                        also_calc_outputs=also_calc_outputs,
                        allowed_licenses=allowed_licenses,
                        forbidden_licenses=forbidden_licenses,
@@ -2424,7 +2473,7 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.2'
+    EXPORT_VERSION = '0.3'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -2624,7 +2673,7 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
             'input__uuid': 'input',
             'output__uuid': 'output'})
         for l in linksquery.values(
-            'input__uuid', 'output__uuid', 'label')]
+            'input__uuid', 'output__uuid', 'label', 'type')]
 
     if not silent:
         print "STORING GROUP ELEMENTS..."

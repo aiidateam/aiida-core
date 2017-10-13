@@ -90,18 +90,6 @@ class QueryBuilderInterface():
         pass
 
     @abstractmethod
-    def prepare_with_dbpath(self):
-        """
-        A method to use the DbPath, if this is supported, or throw an
-        exception if not.
-        The overrider must fill add the DbPath-ORM as an attribute to self::
-
-            from aiida.backends.implementation.model import DbPath
-            self.path = DbPath
-
-        """
-        pass
-    @abstractmethod
     def get_session(self):
         """
         :returns: a valid session, an instance of sqlalchemy.orm.session.Session

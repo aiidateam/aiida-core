@@ -232,7 +232,6 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-
     def test_1(self):
         import os
         import shutil
@@ -503,7 +502,7 @@ class TestSimple(AiidaTestCase):
             sd2.dbnode.user = user._dbuser
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE) # I assume jc1 CREATED sd2
 
             jc2 = JobCalculation()
             jc2.set_computer(self.computer)
@@ -516,7 +515,7 @@ class TestSimple(AiidaTestCase):
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
 
             uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
             uuids_u2 = [jc2.uuid, sd3.uuid]
@@ -587,7 +586,7 @@ class TestSimple(AiidaTestCase):
             sd2.dbnode.user = user._dbuser
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.RETURN)
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)
 
             # Set the jc1 to FINISHED
             jc1._set_state(calc_states.FINISHED)
@@ -620,7 +619,7 @@ class TestSimple(AiidaTestCase):
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.RETURN)
+            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
 
             # Set the jc2 to FINISHED
             jc2._set_state(calc_states.FINISHED)
@@ -1248,3 +1247,178 @@ class TestComputer(AiidaTestCase):
             # Deleting the created temporary folders
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_correct_import_of_computer_json_params(self):
+        """
+        This test checks that the metadata and transport params are
+        exported and imported correctly in both backends.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+        from aiida.orm.calculation.job import JobCalculation
+
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+        unpack_tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Set the computer name
+            comp1_name = "localhost_1"
+            comp1_metadata = {
+                u'workdir': u'/tmp/aiida'
+            }
+            comp1_transport_params = {
+                u'key1': u'value1',
+                u'key2': 2
+            }
+            self.computer.set_name(comp1_name)
+            self.computer._set_metadata(comp1_metadata)
+            self.computer.set_transport_params(comp1_transport_params)
+
+            # Store a calculation
+            calc1_label = "calc1"
+            calc1 = JobCalculation()
+            calc1.set_computer(self.computer)
+            calc1.set_resources({"num_machines": 1,
+                                 "num_mpiprocs_per_machine": 1})
+            calc1.label = calc1_label
+            calc1.store()
+            calc1._set_state(u'RETRIEVING')
+
+            # Export the first job calculation
+            filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
+            export([calc1.dbnode], outfile=filename1, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+            # Import the data
+            import_data(filename1, silent=True)
+
+            qb = QueryBuilder()
+            qb.append(Computer, project=['transport_params', '_metadata'],
+                      tag="comp")
+            self.assertEqual(qb.count(), 1, "Expected only one computer")
+
+            res = qb.dict()[0]
+            self.assertEqual(res['comp']['transport_params'],
+                             comp1_transport_params,
+                             "Not the expected transport parameters "
+                             "were found")
+            self.assertEqual(res['comp']['_metadata'],
+                             comp1_metadata,
+                             "Not the expected metadata were found")
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+            shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_import_of_django_sqla_export_file(self):
+        """
+        Check why sqla import manages to import the django export file correctly
+        """
+        import inspect
+        import os
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+
+        for filename in ('export_dj_comp_test.aiida',
+                         'export_sqla_comp_test.aiida'):
+            curr_path = inspect.getfile(inspect.currentframe())
+            folder_path = os.path.dirname(curr_path)
+            relative_folder_path = ("export_import_test_files/" + filename)
+            test_file_path = os.path.join(folder_path, relative_folder_path)
+
+            # Clean the database
+            self.clean_db()
+
+            # Import the needed data
+            import_data(test_file_path, silent=True)
+
+            # The expected metadata & transport parameters
+            comp1_metadata = {
+                u'workdir': u'/tmp/aiida'
+            }
+            comp1_transport_params = {
+                u'key1': u'value1',
+                u'key2': 2
+            }
+
+            # Check that we got the correct metadata & transport parameters
+            qb = QueryBuilder()
+            qb.append(Computer, project=['transport_params', '_metadata'],
+                      tag="comp")
+            self.assertEqual(qb.count(), 1, "Expected only one computer")
+
+            res = qb.dict()[0]
+
+            self.assertEqual(res['comp']['transport_params'],
+                             comp1_transport_params,
+                             "Not the expected transport parameters "
+                             "were found")
+            self.assertEqual(res['comp']['_metadata'],
+                             comp1_metadata,
+                             "Not the expected metadata were found")
+
+class TestLinks(AiidaTestCase):
+
+    def setUp(self):
+        self.clean_db()
+        self.insert_data()
+
+    def tearDown(self):
+        pass
+
+    def get_all_node_links(self):
+        """
+        """
+        from aiida.orm import load_node, Node
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(Node, project='uuid', tag='input')
+        qb.append(Node, project='uuid', tag='output', edge_project=['label', 'type'], output_of='input')
+        return qb.all()
+
+    def test_input_and_create_links(self):
+        """
+        Simple test that will verify that INPUT and CREATE links are properly exported and
+        correctly recreated upon import.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.common.exceptions import NotExistent
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            node_work = WorkCalculation().store()
+            node_input = Int(1).store()
+            node_output = Int(2).store()
+
+            node_work.add_link_from(node_input, 'input', link_type=LinkType.INPUT)
+            node_output.add_link_from(node_work, 'output', link_type=LinkType.CREATE)
+
+            export_links = self.get_all_node_links()
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([node_output.dbnode], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+            import_links = self.get_all_node_links()
+
+            export_set = [tuple(_) for _ in export_links]
+            import_set = [tuple(_) for _ in import_links]
+
+            self.assertEquals(set(export_set), set(import_set))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)

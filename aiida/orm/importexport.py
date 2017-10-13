@@ -2059,6 +2059,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     import aiida
 
     from aiida.orm import Node, Calculation
+    from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
 
@@ -2102,7 +2103,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
             qb = QueryBuilder()
             qb.append(Calculation, tag='high_node',
                       filters={'id': {'in': given_node_entry_ids}}) # Only looking at calculations and subclasses
-            qb.append(Node, output_of='high_node', project=['id']) # and the outputs
+            qb.append(Node, output_of='high_node', project=['id'],
+                edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 

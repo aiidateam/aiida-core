@@ -255,8 +255,12 @@ def deserialize_attributes(attributes_data, conversion_data):
                 ret_data[k] = deserialize_attributes(v, None)
     elif isinstance(attributes_data, (list, tuple)):
         ret_data = []
-        for value, conversion in zip(attributes_data, conversion_data):
-            ret_data.append(deserialize_attributes(value, conversion))
+        if conversion_data is not None:
+            for value, conversion in zip(attributes_data, conversion_data):
+                ret_data.append(deserialize_attributes(value, conversion))
+        else:
+            for value in attributes_data:
+                ret_data.append(deserialize_attributes(value, None))
     else:
         if conversion_data is None:
             ret_data = attributes_data
@@ -764,6 +768,16 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                 Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
 
+                        # The following is done for compatibility reasons
+                        # In case the export file was generate with the SQLA
+                        # export method
+                        if type(import_data['metadata']) is dict:
+                            import_data['metadata'] = json.dumps(
+                                import_data['metadata'])
+                        if type(import_data['transport_params']) is dict:
+                            import_data['transport_params'] = json.dumps(
+                                import_data['transport_params'])
+
                         imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(Model(**import_data))
@@ -1219,6 +1233,23 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         for k, v in data['export_data'][entity_sig].iteritems():
                             if entity_sig == entity_names_to_signatures[
                                 COMPUTER_ENTITY_NAME]:
+                                # The following is done for compatibility
+                                # reasons in case the export file was generated
+                                # with the Django export method. In Django the
+                                # metadata and the transport parameters are
+                                # stored as (unicode) strings of the serialized
+                                # JSON objects and not as simple serialized
+                                # JSON objects.
+                                if ((type(v['metadata']) is str) or
+                                        (type(v['metadata']) is unicode)):
+                                    v['metadata'] = json.loads(v['metadata'])
+
+                                if ((type(v['transport_params']) is str) or
+                                        (type(v['transport_params']) is
+                                             unicode)):
+                                    v['transport_params'] = json.loads(
+                                        v['transport_params'])
+
                                 # Check if there is already a computer with the
                                 # same name in the database
                                 qb = QueryBuilder()
@@ -1296,6 +1327,21 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         foreign_ids_reverse_mappings=
                         foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
+
+                    # We convert the Django fields to SQLA. Note that some of
+                    # the Django fields were converted to SQLA compatible
+                    # fields by the deserialize_field method. This was done
+                    # for optimization reasons in Django but makes them
+                    # compatible with the SQLA schema and they don't need any
+                    # further conversion.
+                    if entity_name in django_fields_to_sqla:
+                        for django_key in (
+                                django_fields_to_sqla[entity_name].keys()):
+                            sqla_key = django_fields_to_sqla[entity_name][django_key]
+                            if sqla_key in import_data.keys():
+                                continue
+                            import_data[sqla_key] = import_data[django_key]
+                            import_data.pop(django_key, None)
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])
@@ -2353,7 +2399,7 @@ def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
                          forbidden_licenses=forbidden_licenses,
                          silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        export_tree_dj(what, folder, also_parents = also_parents,
+        export_tree_sqla(what, folder, also_parents = also_parents,
                        also_calc_outputs=also_calc_outputs,
                        allowed_licenses=allowed_licenses,
                        forbidden_licenses=forbidden_licenses,

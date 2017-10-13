@@ -106,11 +106,11 @@ entity_names_to_sqla_schema = {
     USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
 }
 
-# Mapping of the Django entity properties fields to SQLA property fields.
+# Mapping of the export file fields (that coincide with the Django fields) to
+# model fields that can be used for the query of the database in both backends.
 # These are the names of the fields of the models that belong to the
 # corresponding entities.
-# Note that the Django field names are used in the export file.
-django_fields_to_sqla = {
+file_fields_to_model_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer": "dbcomputer_id",
         "user": "user_id"},
@@ -122,7 +122,7 @@ django_fields_to_sqla = {
 }
 
 # As above but the opposite procedure
-sqla_fields_to_django = {
+model_fields_to_file_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer_id": "dbcomputer",
         "user_id": "user"},
@@ -1336,14 +1336,15 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # for optimization reasons in Django but makes them
                     # compatible with the SQLA schema and they don't need any
                     # further conversion.
-                    if entity_name in django_fields_to_sqla:
-                        for django_key in (
-                                django_fields_to_sqla[entity_name].keys()):
-                            sqla_key = django_fields_to_sqla[entity_name][django_key]
-                            if sqla_key in import_data.keys():
+                    if entity_name in file_fields_to_model_fields:
+                        for file_fkey in (
+                                file_fields_to_model_fields[entity_name].keys()):
+                            model_fkey = file_fields_to_model_fields[
+                                entity_name][file_fkey]
+                            if model_fkey in import_data.keys():
                                 continue
-                            import_data[sqla_key] = import_data[django_key]
-                            import_data.pop(django_key, None)
+                            import_data[model_fkey] = import_data[file_fkey]
+                            import_data.pop(file_fkey, None)
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])
@@ -1999,9 +2000,9 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
-        if django_fields_to_sqla.has_key(current_entity_str):
-            if django_fields_to_sqla[current_entity_str].has_key(prop):
-                nprop = django_fields_to_sqla[current_entity_str][prop]
+        if file_fields_to_model_fields.has_key(current_entity_str):
+            if file_fields_to_model_fields[current_entity_str].has_key(prop):
+                nprop = file_fields_to_model_fields[current_entity_str][prop]
 
         project_cols.append(nprop)
 
@@ -2030,7 +2031,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                       new_tag_suffixes)
 
 
-def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
+def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                      allowed_licenses=None, forbidden_licenses=None,
                      silent=False):
     """
@@ -2125,8 +2126,8 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
 
         # Here we do the necessary renaming of properties
         for prop in entity_prop:
-            nprop = (django_fields_to_sqla[given_entity][prop]
-                    if django_fields_to_sqla[given_entity].has_key(prop)
+            nprop = (file_fields_to_model_fields[given_entity][prop]
+                    if file_fields_to_model_fields[given_entity].has_key(prop)
                     else prop)
             project_cols.append(nprop)
 
@@ -2187,7 +2188,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
                         serialize_dict(temp_d[k],
                                        remove_fields=['id'],
                                        rename_fields=
-                                       sqla_fields_to_django[current_entity])}
+                                       model_fields_to_file_fields[current_entity])}
                 try:
                     export_data[current_entity].update(temp_d2)
                 except KeyError:
@@ -2390,30 +2391,6 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
                     pk, license))
 
 
-def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
-
-    from aiida.backends.settings import BACKEND
-    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-
-    if BACKEND == BACKEND_SQLA:
-        export_tree_sqla(what, folder, also_parents = also_parents,
-                         also_calc_outputs=also_calc_outputs,
-                         allowed_licenses=allowed_licenses,
-                         forbidden_licenses=forbidden_licenses,
-                         silent=silent)
-    elif BACKEND == BACKEND_DJANGO:
-        export_tree_sqla(what, folder, also_parents = also_parents,
-                       also_calc_outputs=also_calc_outputs,
-                       allowed_licenses=allowed_licenses,
-                       forbidden_licenses=forbidden_licenses,
-                       silent=silent)
-    else:
-        raise Exception("Unknown settings.BACKEND: {}".format(
-            BACKEND))
-
-
 def get_all_parents_dj(node_pks):
     """
     Get all the parents of given nodes
@@ -2434,303 +2411,6 @@ def get_all_parents_dj(node_pks):
         parents = q_inputs | parents.all()
         q_inputs = models.DbNode.aiidaobjects.filter(outputs__in=inputs).distinct()        
     return parents
-
-
-def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
-    """
-    Export the DB entries passed in the 'what' list to a file tree.
-
-    :todo: limit the export to finished or failed calculations.
-
-    :param what: a list of Django database entries; they can belong to different
-      models.
-    :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param also_parents: if True, also all the parents are stored
-    :param also_calc_outputs: if True, any output of a calculation is also exported
-    :param allowed_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
-    :param forbidden_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
-    :param silent: suppress debug prints
-    :raises LicensingException: if any node is licensed under forbidden
-      license
-    """
-    import json
-    import operator
-    from collections import defaultdict
-
-    from django.db.models import Q
-
-    import aiida
-    from aiida.backends.djsite.db import models
-    from aiida.orm import Node, Calculation
-    from aiida.common.folders import RepositoryFolder
-
-    if not silent:
-        print "STARTING EXPORT..."
-
-    EXPORT_VERSION = '0.3'
-
-    all_fields_info, unique_identifiers = get_all_fields_info()
-
-    entries_ids_to_add = defaultdict(list)
-    # I store a list of the actual dbnodes
-    groups_entries = []
-    group_class_string = get_class_string(models.DbGroup)
-    for entry in what:
-        class_string = get_class_string(entry)
-        entries_ids_to_add[class_string].append(entry.pk)
-        if class_string == group_class_string:
-            groups_entries.append(entry)
-
-    if also_parents:
-        # It is a defaultdict, it will provide an empty list
-        given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-
-        if given_nodes:
-            # Also add the parents (to any level) to the query
-            given_nodes = list(set(given_nodes +
-                                   list(get_all_parents_dj(given_nodes).values_list('pk', flat=True))))
-            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
-
-
-    if also_calc_outputs:
-        given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-
-        if given_nodes:
-            # Add all (direct) outputs of a calculation object that was already
-            # selected
-            given_nodes = list(set(given_nodes +
-                                   list(models.DbNode.objects.filter(
-                                       inputs__pk__in=given_nodes,
-                                       inputs__type__startswith=Calculation._query_type_string
-                                   ).values_list('pk', flat=True)
-                                   )))
-            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
-
-    # Initial query to fire the generation of the export data
-    entries_to_add = {k: [Q(id__in=v)] for k, v
-                      in entries_ids_to_add.iteritems()}
-
-    # Check the licenses of exported data.
-    if allowed_licenses is not None or forbidden_licenses is not None:
-        # from inspect import isfunction
-
-        node_licenses = list(aiida.backends.djsite.db.models.DbNode.objects.filter(
-            reduce(operator.and_, entries_to_add['aiida.backends.djsite.db.models.DbNode']),
-            dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
-        check_licences(node_licenses, allowed_licenses, forbidden_licenses)
-
-        # for pk, license in node_licenses:
-        #     if allowed_licenses is not None:
-        #         try:
-        #             if isfunction(allowed_licenses):
-        #                 try:
-        #                     if not allowed_licenses(license):
-        #                         raise LicensingException
-        #                 except Exception as e:
-        #                     raise LicensingException
-        #             else:
-        #                 if license not in allowed_licenses:
-        #                     raise LicensingException
-        #         except LicensingException:
-        #             raise LicensingException("Node {} is licensed "
-        #                                      "under {} license, which "
-        #                                      "is not in the list of "
-        #                                      "allowed licenses".format(
-        #                                       pk, license))
-        #     if forbidden_licenses is not None:
-        #         try:
-        #             if isfunction(forbidden_licenses):
-        #                 try:
-        #                     if forbidden_licenses(license):
-        #                         raise LicensingException
-        #                 except Exception as e:
-        #                     raise LicensingException
-        #             else:
-        #                 if license in forbidden_licenses:
-        #                     raise LicensingException
-        #         except LicensingException:
-        #             raise LicensingException("Node {} is licensed "
-        #                                      "under {} license, which "
-        #                                      "is in the list of "
-        #                                      "forbidden licenses".format(
-        #                                       pk, license))
-
-    ############################################################
-    ##### Start automatic recursive export data generation #####
-    ############################################################
-    if not silent:
-        print "STORING DATABASE ENTRIES..."
-    export_data = {}
-    while entries_to_add:
-        new_entries_to_add = {}
-        for model_name, querysets in entries_to_add.iteritems():
-            if not silent:
-                print "  - Model: {}".format(model_name)
-            Model = get_object_from_string(model_name)
-
-            ## Before I was doing this. But it is VERY slow! E.g.
-            ## To get the user owning 44 nodes or 1 group was taking
-            ## 26 seconds, while it was taking only 0.1 seconds if the two
-            ## queries were run independently!
-            ## I think this was doing the wrong type of UNION
-            #dbentries = Model.objects.filter(
-            #    reduce(operator.or_, querysets)).distinct()
-            ## Now I instead create the list of UUIDs and do a set() instead
-            ## of .distinct(); then I get the final results with a further
-            ## query.
-            db_ids = set()
-            for queryset in querysets:
-                db_ids.update(Model.objects.filter(queryset).values_list(
-                    'id', flat=True))
-            dbentries = Model.objects.filter(id__in=db_ids)
-            entryvalues = dbentries.values(
-                'id', *all_fields_info[model_name].keys()
-            )
-
-            # Only serialize new nodes (also to avoid infinite loops)
-            if model_name in export_data:
-                serialized = {
-                    str(v['id']): serialize_dict(v, remove_fields=['id'])
-                    for v in entryvalues
-                    if v['id'] not in export_data[model_name]
-                }
-            else:
-                serialized = {
-                    str(v['id']): serialize_dict(v, remove_fields=['id'])
-                    for v in entryvalues
-                }
-
-            try:
-                export_data[model_name].update(serialized)
-            except KeyError:
-                export_data[model_name] = serialized
-
-            if serialized:
-                foreign_fields = {k: v for k, v in
-                                  all_fields_info[model_name].iteritems()
-                                  if 'requires' in v}
-
-                for k, v in foreign_fields.iteritems():
-                    related_queryobj = Q(**{'{}__in'.format(v['related_name']):
-                                                serialized.keys()})
-                    try:
-                        new_entries_to_add[v['requires']].append(related_queryobj)
-                    except KeyError:
-                        new_entries_to_add[v['requires']] = [related_queryobj]
-
-        entries_to_add = new_entries_to_add
-
-    ######################################
-    # Manually manage links and attributes
-    ######################################
-    # I use .get because there may be no nodes to export
-    all_nodes_pk = export_data.get(get_class_string(models.DbNode), {}).keys()
-    if sum(len(model_data) for model_data in export_data.values()) == 0:
-        if not silent:
-            print "No nodes to store, exiting..."
-        return
-
-    if not silent:
-        print "Exporting a total of {} db entries, of which {} nodes.".format(
-            sum(len(model_data) for model_data in export_data.values()),
-            len(all_nodes_pk))
-    all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
-
-    ## ATTRIBUTES
-    if not silent:
-        print "STORING NODE ATTRIBUTES..."
-    node_attributes = {}
-    node_attributes_conversion = {}
-    for n in all_nodes_query:
-        (node_attributes[str(n.pk)],
-         node_attributes_conversion[str(n.pk)]) = serialize_dict(
-            n.attributes, track_conversion=True)
-    ## If I want to store them 'raw'; it is faster, but more error prone and
-    ## less version-independent, I think. Better to optimize the n.attributes
-    ## call.
-    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
-    #node_attributes_raw = list(models.DbAttribute.objects.filter(
-    #    dbnode__in=all_nodes_pk).distinct().values(
-    #    'bval', 'tval', 'ival', 'fval', 'dval',
-    #    'datatype', 'time', 'dbnode', 'key')
-
-    if not silent:
-        print "STORING NODE LINKS..."
-    ## All 'parent' links (in this way, I can automatically export a node
-    ## that will get automatically attached to a parent node in the end DB,
-    ## if the parent node is already present in the DB)
-    linksquery = models.DbLink.objects.filter(
-        output__in=all_nodes_query).distinct()
-
-    links_uuid = [
-        serialize_dict(l, rename_fields={
-            'input__uuid': 'input',
-            'output__uuid': 'output'})
-        for l in linksquery.values(
-            'input__uuid', 'output__uuid', 'label', 'type')]
-
-    if not silent:
-        print "STORING GROUP ELEMENTS..."
-    groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
-                   for g in groups_entries}
-
-    ######################################
-    # Now I store
-    ######################################
-    # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder('nodes',create=True,
-                                         reset_limit=True)
-
-    if not silent:
-        print "STORING DATA..."
-
-    with folder.open('data.json', 'w') as f:
-        json.dump({
-                'node_attributes': node_attributes,
-                'node_attributes_conversion': node_attributes_conversion,
-                'export_data': export_data,
-                'links_uuid': links_uuid,
-                'groups_uuid': groups_uuid,
-                }, f)
-
-    metadata = {
-        'aiida_version': aiida.get_version(),
-        'export_version': EXPORT_VERSION,
-        'all_fields_info': all_fields_info,
-        'unique_identifiers': unique_identifiers,
-        }
-
-    with folder.open('metadata.json', 'w') as f:
-        json.dump(metadata, f)
-
-    if silent is not True:
-        print "STORING FILES..."
-
-    # Large speed increase by not getting the node itself and looping in memory
-    # in python, but just getting the uuid
-    for uuid in models.DbNode.objects.filter(pk__in=all_nodes_pk).values_list(
-        'uuid', flat=True):
-        sharded_uuid = export_shard_uuid(uuid)
-
-        # Important to set create=False, otherwise creates
-        # twice a subfolder. Maybe this is a bug of insert_path??
-
-        thisnodefolder = nodesubfolder.get_subfolder(
-            sharded_uuid, create=False,
-            reset_limit=True)
-        # In this way, I copy the content of the folder, and not the folder
-        # itself
-        thisnodefolder.insert_path(src=RepositoryFolder(
-            section=Node._section_name, uuid=uuid).abspath,
-                                   dest_name='.')
 
 
 class MyWritingZipFile(object):

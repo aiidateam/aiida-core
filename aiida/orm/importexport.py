@@ -529,6 +529,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
+    from aiida.common.links import LinkType
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
@@ -536,7 +537,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     from aiida.common.datastructures import calc_states
 
     # This is the export version expected by this function
-    expected_export_version = '0.2'
+    expected_export_version = '0.3'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -877,7 +878,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
             # Needed for fast checks of existing links
             existing_links_raw = models.DbLink.objects.all().values_list(
-                'input', 'output', 'label')
+                'input', 'output', 'label', 'type')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
@@ -920,7 +921,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
-                            input_id=in_id, output_id=out_id, label=link['label']))
+                            input_id=in_id, output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
                         if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
                             ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
                         ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
@@ -1033,6 +1034,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.utils import timezone
 
     from aiida.orm import Node, Group
+    from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -1042,7 +1044,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.backends.sqlalchemy.models.node import DbCalcState
 
     # This is the export version expected by this function
-    expected_export_version = '0.2'
+    expected_export_version = '0.3'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1507,7 +1509,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         # New link
                         links_to_store.append(DbLink(
                             input_id=in_id, output_id=out_id,
-                            label=link['label']))
+                            label=link['label'], type=LinkType(link['type']).value))
                         if entity_names_to_signatures[
                             LINK_ENTITY_NAME] not in ret_dict:
                             ret_dict[entity_names_to_signatures[
@@ -2063,7 +2065,7 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.2'
+    EXPORT_VERSION = '0.3'
 
     all_fields_info, unique_identifiers = get_all_fields_info_sqla()
 
@@ -2238,13 +2240,14 @@ def export_tree_sqla(what, folder, also_parents=True, also_calc_outputs=True,
         links_qb.append(Node,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_project=['label'], output_of='input')
+                        edge_project=['label', 'type'], output_of='input')
 
-        for input_uuid, output_uuid, link_label in links_qb.iterall():
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             links_uuid.append({
                 'input': str(input_uuid),
                 'output': str(output_uuid),
-                'label': str(link_label)
+                'label': str(link_label),
+                'type':str(link_type)
             })
 
     if not silent:
@@ -2470,7 +2473,7 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
     if not silent:
         print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.2'
+    EXPORT_VERSION = '0.3'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -2670,7 +2673,7 @@ def export_tree_dj(what, folder, also_parents = True, also_calc_outputs=True,
             'input__uuid': 'input',
             'output__uuid': 'output'})
         for l in linksquery.values(
-            'input__uuid', 'output__uuid', 'label')]
+            'input__uuid', 'output__uuid', 'label', 'type')]
 
     if not silent:
         print "STORING GROUP ELEMENTS..."

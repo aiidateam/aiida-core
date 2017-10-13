@@ -232,7 +232,6 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-
     def test_1(self):
         import os
         import shutil
@@ -1165,3 +1164,119 @@ class TestComputer(AiidaTestCase):
             # Deleting the created temporary folders
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_correct_import_of_computer_json_params(self):
+        """
+        This test checks that the metadata and transport params are
+        exported and imported correctly in both backends.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+        from aiida.orm.calculation.job import JobCalculation
+
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+        unpack_tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Set the computer name
+            comp1_name = "localhost_1"
+            comp1_metadata = {
+                u'workdir': u'/tmp/aiida'
+            }
+            comp1_transport_params = {
+                u'key1': u'value1',
+                u'key2': 2
+            }
+            self.computer.set_name(comp1_name)
+            self.computer._set_metadata(comp1_metadata)
+            self.computer.set_transport_params(comp1_transport_params)
+
+            # Store a calculation
+            calc1_label = "calc1"
+            calc1 = JobCalculation()
+            calc1.set_computer(self.computer)
+            calc1.set_resources({"num_machines": 1,
+                                 "num_mpiprocs_per_machine": 1})
+            calc1.label = calc1_label
+            calc1.store()
+            calc1._set_state(u'RETRIEVING')
+
+            # Export the first job calculation
+            filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
+            export([calc1.dbnode], outfile=filename1, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+            # Import the data
+            import_data(filename1, silent=True)
+
+            qb = QueryBuilder()
+            qb.append(Computer, project=['transport_params', '_metadata'],
+                      tag="comp")
+            self.assertEqual(qb.count(), 1, "Expected only one computer")
+
+            res = qb.dict()[0]
+            self.assertEqual(res['comp']['transport_params'],
+                             comp1_transport_params,
+                             "Not the expected transport parameters "
+                             "were found")
+            self.assertEqual(res['comp']['_metadata'],
+                             comp1_metadata,
+                             "Not the expected metadata were found")
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+            shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
+
+    def test_import_of_django_sqla_export_file(self):
+        """
+        Check why sqla import manages to import the django export file correctly
+        """
+        import inspect
+        import os
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+
+        for filename in ('export_dj_comp_test.aiida',
+                         'export_sqla_comp_test.aiida'):
+            curr_path = inspect.getfile(inspect.currentframe())
+            folder_path = os.path.dirname(curr_path)
+            relative_folder_path = ("export_import_test_files/" + filename)
+            test_file_path = os.path.join(folder_path, relative_folder_path)
+
+            # Clean the database
+            self.clean_db()
+
+            # Import the needed data
+            import_data(test_file_path, silent=True)
+
+            # The expected metadata & transport parameters
+            comp1_metadata = {
+                u'workdir': u'/tmp/aiida'
+            }
+            comp1_transport_params = {
+                u'key1': u'value1',
+                u'key2': 2
+            }
+
+            # Check that we got the correct metadata & transport parameters
+            qb = QueryBuilder()
+            qb.append(Computer, project=['transport_params', '_metadata'],
+                      tag="comp")
+            self.assertEqual(qb.count(), 1, "Expected only one computer")
+
+            res = qb.dict()[0]
+
+            self.assertEqual(res['comp']['transport_params'],
+                             comp1_transport_params,
+                             "Not the expected transport parameters "
+                             "were found")
+            self.assertEqual(res['comp']['_metadata'],
+                             comp1_metadata,
+                             "Not the expected metadata were found")

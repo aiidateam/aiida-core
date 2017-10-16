@@ -19,6 +19,7 @@ Developer's guide
    tcod_exporter
    git_cheatsheet
    sphinx_cheatsheet
+   aiida_sphinxext
    ../verdi/properties
    database_schema
    control/index

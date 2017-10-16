@@ -7,10 +7,17 @@ This is a demo documentation to show off the features of the ``sphinx-aiida`` ex
    :maxdepth: 2
    :caption: Contents:
 
-.. aiida-workchain:: demo_workchain.DemoWorkChain
+.. aiida-workchain:: DemoWorkChain
+    :module: demo_workchain
 
 
 You can add the ``:hidden-ports:`` option to also show inputs / outputs starting with ``_``:
 
-.. aiida-workchain:: demo_workchain.DemoWorkChain
+.. aiida-workchain:: DemoWorkChain
+    :module: demo_workchain
     :hidden-ports:
+
+The command is also hooked into ``sphinx.ext.autodoc``, so you can also use that.
+
+.. automodule:: demo_workchain
+    :members:

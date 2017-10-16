@@ -54,3 +54,6 @@ class NestedSubWorkChain(WorkChain):  # pylint: disable=abstract-method
             help="A third input variable, that is nested two levels deep."
         )
         spec.output('z', valid_type=Bool)
+
+class NormalClass(object):
+    """This is here to check that we didn't break the regular 'autoclass."""

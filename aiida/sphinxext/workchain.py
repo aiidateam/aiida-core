@@ -6,14 +6,28 @@ from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive, directives
 from sphinx import addnodes
+from sphinx.ext.autodoc import ClassDocumenter
+
 import aiida
 from plum.util import load_class
 from plum.port import InputPort, OutputPort
 
 
 def setup_aiida_workchain(app):
-    app.add_directive('aiida-workchain', AiidaWorkchainDirective)
+    app.add_directive_to_domain('py', 'aiida-workchain', AiidaWorkchainDirective)
+    app.add_autodocumenter(WorkChainDocumenter)
 
+class WorkChainDocumenter(ClassDocumenter):
+    directivetype = 'aiida-workchain'
+    objtype = 'workchain'
+    priority = 20
+
+    @classmethod
+    def can_document_member(cls, member, membername, isattr, parent):
+        import aiida
+        aiida.try_load_dbenv()
+        from aiida.work.workchain import WorkChain
+        return issubclass(member, WorkChain)
 
 class AiidaWorkchainDirective(Directive):
     """
@@ -21,8 +35,9 @@ class AiidaWorkchainDirective(Directive):
     """
     required_arguments = 1
     HIDDEN_PORTS_FLAG = 'hidden-ports'
-    option_spec = {HIDDEN_PORTS_FLAG: directives.flag}
-    has_content = False
+    optional_arguments = 2
+    option_spec = {'module': directives.unchanged, HIDDEN_PORTS_FLAG: directives.flag}
+    has_content = True
 
     def run(self):
         aiida.try_load_dbenv()
@@ -32,8 +47,9 @@ class AiidaWorkchainDirective(Directive):
     def load_workchain(self):
         """Loads the workchain and sets up additional attributes."""
         # pylint: disable=attribute-defined-outside-init
-        self.workchain_name = self.arguments[0]
-        self.module_name, self.class_name = self.workchain_name.rsplit('.', 1)
+        self.class_name = self.arguments[0].split('(')[0]
+        self.module_name = self.options['module']
+        self.workchain_name = self.module_name + '.' + self.class_name
         self.workchain = load_class(self.workchain_name)
         self.workchain_spec = self.workchain.spec()
 

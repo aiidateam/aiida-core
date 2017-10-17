@@ -1858,6 +1858,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         links_qb.append(Node,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type':{'in':(LinkType.CREATE.value, LinkType.INPUT.value)}},
                         edge_project=['label', 'type'], output_of='input')
 
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():

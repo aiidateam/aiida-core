@@ -14,6 +14,7 @@
 Tests for nodes, attributes and links
 """
 import unittest
+from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError

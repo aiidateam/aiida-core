@@ -231,6 +231,7 @@ class WorkChain(Process):
 
     def _do_step(self, wait_on=None):
         if self._aborted:
+            self.calc.kill()
             return
 
         for interstep in self._intersteps:

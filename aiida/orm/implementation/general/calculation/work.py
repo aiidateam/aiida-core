@@ -53,6 +53,9 @@ class WorkCalculation(Calculation):
         """
         Kill a WorkCalculation and all its children.
         """
-        if not self.is_sealed():
+        if not self.is_sealed:
             self._set_attr(self.ABORTED_KEY, True)
         self.seal()
+        for key, child in self.get_outputs_dict().items():
+            if key.startswith('CALL_'):
+                child.kill()

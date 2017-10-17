@@ -308,7 +308,8 @@ def migrate_v1_to_v2(metadata, data):
 def migrate_v2_to_v3(metadata, data):
     """
     Migration of export files from v0.2 to v0.3, which means adding the link
-    types to the link entries
+    types to the link entries and making the entity key names backend agnostic
+    by effectively removing the prefix 'aiida.backends.djsite.db.models'
 
     :param data: the content of an export archive data.json file
     :param metadata: the content of an export archive metadata.json file
@@ -329,6 +330,15 @@ def migrate_v2_to_v3(metadata, data):
         CODE = 'code'
         DATA = 'data'
         WORK = 'work'
+
+    entity_map = {
+        'aiida.backends.djsite.db.models.DbNode': 'Node',
+        'aiida.backends.djsite.db.models.DbLink': 'Link',
+        'aiida.backends.djsite.db.models.DbGroup': 'Group',
+        'aiida.backends.djsite.db.models.DbComputer': 'Computer',
+        'aiida.backends.djsite.db.models.DbUser': 'User',
+        'aiida.backends.djsite.db.models.DbAttribute': 'Attribute'
+    }
 
     try:
         verify_metadata_version(metadata, old_version)
@@ -388,3 +398,25 @@ def migrate_v2_to_v3(metadata, data):
             link['type'] = LinkType.CALL.value
         else:
             link['type'] = LinkType.UNSPECIFIED.value
+
+
+    # Now we migrate the entity key names i.e. removing the 'aiida.backends.djsite.db.models' prefix
+    for field in ['unique_identifiers', 'all_fields_info']:
+        for old_key, new_key in entity_map.iteritems():
+            if old_key in metadata[field]:
+                metadata[field][new_key] = metadata[field][old_key]
+                del metadata[field][old_key]
+
+    # Replace the 'requires' keys in the nested dictionaries in 'all_fields_info'
+    for entity in metadata['all_fields_info'].values():
+        for prop in entity.values():
+            for key, value in prop.iteritems():
+                if key == 'requires' and value in entity_map:
+                    prop[key] = entity_map[value]
+
+    # Replace any present keys in the data.json
+    for field in ['export_data']:
+        for old_key, new_key in entity_map.iteritems():
+            if old_key in data[field]:
+                data[field][new_key] = data[field][old_key]
+                del data[field][old_key]

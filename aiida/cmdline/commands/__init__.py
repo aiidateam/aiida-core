@@ -10,8 +10,6 @@
 import click
 from click_plugins import with_plugins
 
-from aiida.common.pluginloader import entry_point_list
-
 
 @click.group()
 @click.option('--profile', '-p')

@@ -1,4 +1,4 @@
-#!/usr/bin/env runaiida
+#!/usr/bin/env python
 
 def verify_metadata_version(metadata, version=None):
     """
@@ -123,16 +123,15 @@ def migrate_v2_to_v3(metadata, data):
             link['type'] = LinkType.UNSPECIFIED.value
 
 
-
 if __name__ == '__main__':
     import argparse, os, json, sys
     import tarfile, zipfile
     from aiida.common.folders import SandboxFolder
-    from aiida.orm.importexport import extract_tree, extract_zip, extract_tar
+    from aiida.common.archive import extract_tree, extract_zip, extract_tar
 
     parser = argparse.ArgumentParser(description='Migrate an AiiDA export archive file')
-    parser.add_argument('file_input', nargs='?', help='filepath to the input export file')
-    parser.add_argument('file_output', nargs='?', help='filepath to where the migrated export file is written')
+    parser.add_argument('file_input', help='filepath to the input export file')
+    parser.add_argument('file_output', help='filepath to where the migrated export file is written')
     parser.add_argument('-f', action='store_true', dest='force', default=False, help='overwrite output file if it already exists')
     parser.add_argument('-s', action='store_true', dest='silent', default=False, help='suppress output')
     args = parser.parse_args()

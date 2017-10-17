@@ -53,14 +53,14 @@ class TestDataNode(AiidaTestCase):
     def test_storing_object(self):
         """Trying to store objects should fail"""
         a = Node()
-        a._set_attr('object', object(), clean=a._clean_when.never)
+        a._set_attr('object', object(), clean=False)
 
         with self.assertRaises(ValueError):
             # objects are not json-serializable
             a.store()
 
         b = Node()
-        b._set_attr('object_list', [object(), object()], clean=a._clean_when.never)
+        b._set_attr('object_list', [object(), object()], clean=False)
         with self.assertRaises(ValueError):
             # objects are not json-serializable
             b.store()

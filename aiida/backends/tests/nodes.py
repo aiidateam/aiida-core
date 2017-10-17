@@ -354,25 +354,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.get_attrs(), target_attrs)
 
 
-   def assertRaisesMultiple(self, excClasses, callableObj, *args, **kwargs): 
-       """Fail unless an exception of class excClass is thrown 
-          by callableObj when invoked with arguments args and keyword 
-          arguments kwargs. If a different type of exception is 
-          thrown, it will not be caught, and the test case will be 
-          deemed to have suffered an error, exactly as for an 
-          unexpected exception. 
-       """ 
-       try: 
-           callableObj(*args, **kwargs) 
-       except excClasses: 
-           return 
-       else: 
-           for excClass in excClasses:
-               if hasattr(excClass,'__name__'): excName = excClass.__name__ 
-               else: excName = str(excClass) 
-               raise self.failureException, "%s not raised" % excName 
-
-
     def test_store_object(self):
         """Trying to store objects should fail"""
         a = Node()
@@ -380,12 +361,12 @@ class TestNodeBasic(AiidaTestCase):
 
         # django raises ValueError
         # sqlalchemy raises StatementError
-        with self.assertRaisesMultiple((ValueError, StatementError)):
+        with self.assertRaises((ValueError, StatementError)):
             a.store()
 
         b = Node()
         b._set_attr('object_list', [object(), object()], clean=False)
-        with self.assertRaisesMultiple((ValueError, StatementError)):
+        with self.assertRaises((ValueError, StatementError)):
             # objects are not json-serializable
             b.store()
 

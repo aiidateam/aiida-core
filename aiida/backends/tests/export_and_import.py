@@ -1422,3 +1422,58 @@ class TestLinks(AiidaTestCase):
             self.assertEquals(set(export_set), set(import_set))
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_input_and_create_links_proper(self):
+        """
+        Check that CALL links are not followed in the export procedure with
+        dangling links as a consequence
+
+         ____       ___        ___ 
+        |    | INP |   | CALL |   |
+        | i1 | --> | C | <--  | W |
+        |____|     |___|      |___|
+                     |
+                     v  CREATE
+                    ____ 
+                   |    |
+                   | o1 |
+                   |____|
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation import Calculation
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.common.exceptions import NotExistent
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            node_calc = Calculation().store()
+            node_work = WorkCalculation().store()
+            node_input = Int(1).store()
+            node_output = Int(2).store()
+
+            node_work.add_link_from(node_input, 'input', link_type=LinkType.INPUT)
+            node_calc.add_link_from(node_input, 'input', link_type=LinkType.INPUT)
+            node_calc.add_link_from(node_work, 'call', link_type=LinkType.CALL)
+            node_output.add_link_from(node_calc, 'output', link_type=LinkType.CREATE)
+
+            export_links = self.get_all_node_links()
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([node_output.dbnode], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+            import_links = self.get_all_node_links()
+
+            export_set = [tuple(_) for _ in export_links]
+            import_set = [tuple(_) for _ in import_links]
+
+            self.assertEquals(set(export_set), set(import_set))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)

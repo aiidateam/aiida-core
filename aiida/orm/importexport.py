@@ -731,10 +731,10 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
-                            input_id=in_id, output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
-                        if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
-                            ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
-                        ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
+                            input_id=in_id,output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
+                        if LINK_ENTITY_NAME not in ret_dict:
+                            ret_dict[LINK_ENTITY_NAME] = { 'new': [] }
+                        ret_dict[LINK_ENTITY_NAME]['new'].append((in_id,out_id))
 
             # Store new links
             if links_to_store:
@@ -930,8 +930,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for res in qb.iterall():
                 db_nodes_uuid.add(res[0])
 
-        for v in data['export_data'][entity_names_to_signatures[
-                    NODE_ENTITY_NAME]].values():
+        for v in data['export_data'][NODE_ENTITY_NAME].values():
             import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
@@ -949,11 +948,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model
-        # relationships
+        # relationships.
+        # It is a list of strings, e.g.:
+        # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
                         for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
                                   NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
-
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
         entity_sig_manual = [entity_names_to_signatures[m]
@@ -961,8 +961,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
         all_known_entity_sigs = entity_sig_order + entity_sig_manual
 
-        for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in all_known_entity_sigs:
+        #  I make a new list that contains the entity names:
+        # eg: ['User', 'Computer', 'Node', 'Group', 'Link', 'Attribute']
+        all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in all_known_entity_sigs]
+        for import_field_name in metadata['all_fields_info']:    
+            if import_field_name not in all_entity_names:
                 raise NotImplementedError("Apparently, you are importing a "
                                           "file with a model '{}', but this "
                                           "does not appear in "
@@ -971,14 +974,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
         for idx, entity_sig in enumerate(entity_sig_order):
             dependencies = []
-            for field in metadata['all_fields_info'][entity_sig].values():
+            entity_name = signatures_to_entity_names[entity_sig]
+            # for every field, I checked the dependencies given as value for key requires
+            for field in metadata['all_fields_info'][entity_name].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
                     # (No ForeignKey)
                     pass
             for dependency in dependencies:
-                if dependency not in entity_sig_order[:idx]:
+                if dependency not in all_entity_names[:idx]:
                     raise ValueError("Entity {} requires {} but would be "
                                      "loaded first; stopping..."
                                      .format(entity_sig, dependency))
@@ -986,14 +991,22 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
+        # This is ndested dictionary of entity_name:{id:uuid}
+        # to map one id (the pk) to a different one.
+        # One of the things to remove for v0.4
+        # {
+        # u'Node': {2362: u'82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14', 2363: u'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: u'1dc59576-af21-4d71-81c2-bac1fc82a84a'},
+        # u'User': {1: u'aiida@localhost'}
+        # }
         import_unique_ids_mappings = {}
-        for entity_sig, import_data in data['export_data'].iteritems():
-            if entity_sig in metadata['unique_identifiers']:
+        # Export data since v0.3 contains the keys entity_name
+        for entity_name, import_data in data['export_data'].iteritems():
+            # Again I need the entity_name since that's what's being stored since 0.3
+            if entity_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
-                import_unique_ids_mappings[entity_sig] = {
-                    int(k): v[metadata['unique_identifiers'][entity_sig]]
+                import_unique_ids_mappings[entity_name] = {
+                    int(k): v[metadata['unique_identifiers'][entity_name]]
                     for k, v in import_data.iteritems()}
-
         ###############
         # IMPORT DATA #
         ###############
@@ -1011,21 +1024,22 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
-                unique_identifier = metadata['unique_identifiers'].get(
-                    entity_sig, None)
+                # I get the unique identifier, since v0.3 stored under enity_name
+                unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                new_entries[entity_sig] = {}
-                existing_entries[entity_sig] = {}
-
-                foreign_ids_reverse_mappings[entity_sig] = {}
+                # so, new_entries. Also,since v0.3 it makes more sense to used the entity_name
+                #~ new_entries[entity_sig] = {}
+                new_entries[entity_name] = {}
+                # existing_entries[entity_sig] = {}
+                existing_entries[entity_name] = {}
+                #~ foreign_ids_reverse_mappings[entity_sig] = {}
+                foreign_ids_reverse_mappings[entity_name] = {}
 
                 # Not necessarily all models are exported
-                if entity_sig in data['export_data']:
+                if entity_name in data['export_data']:
 
                     if unique_identifier is not None:
-                        import_unique_ids = set(v[unique_identifier] for v in
-                                                data['export_data'][
-                                                    entity_sig].values())
+                        import_unique_ids = set(v[unique_identifier] for v in data['export_data'][entity_name].values())
 
                         relevant_db_entries = dict()
                         if len(import_unique_ids) > 0:
@@ -1037,15 +1051,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 getattr(v[0], unique_identifier):
                                     v[0] for v in qb.all()}
 
-                            foreign_ids_reverse_mappings[entity_sig] = {
+                            foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in
                                 relevant_db_entries.iteritems()}
 
                         dupl_counter = 0
                         imported_comp_names = set()
-                        for k, v in data['export_data'][entity_sig].iteritems():
-                            if entity_sig == entity_names_to_signatures[
-                                COMPUTER_ENTITY_NAME]:
+                        for k, v in data['export_data'][entity_name].iteritems():
+                            if entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
                                 # with the Django export method. In Django the
@@ -1090,35 +1103,31 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                                 imported_comp_names.add(v["name"])
 
-                            if v[unique_identifier] in (
-                                    relevant_db_entries.keys()):
+                            if v[unique_identifier] in (relevant_db_entries.keys()):
                                 # Already in DB
-                                existing_entries[entity_sig][k] = v
+                                # again, switched to entity_name in v0.3
+                                existing_entries[entity_name][k] = v
                             else:
                                 # To be added
-                                new_entries[entity_sig][k] = v
+                                new_entries[entity_name][k] = v
                     else:
-                        new_entries[entity_sig] = data[
-                            'export_data'][entity_sig].copy()
+                        # Why the copy:
+                        new_entries[entity_name] = data['export_data'][entity_name].copy()
 
             # I import data from the given model
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
-                fields_info = metadata['all_fields_info'].get(entity_sig, {})
-                unique_identifier = metadata['unique_identifiers'].get(
-                    entity_sig, None)
+                fields_info = metadata['all_fields_info'].get(entity_name, {})
+                unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (
-                        existing_entries[entity_sig].iteritems()):
+                for import_entry_id, entry_data in (existing_entries[entity_name].iteritems()):
                     unique_id = entry_data[unique_identifier]
-                    existing_entry_id = foreign_ids_reverse_mappings[
-                        entity_sig][unique_id]
+                    existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
-                    if entity_sig not in ret_dict:
-                        ret_dict[entity_sig] = { 'new': [], 'existing': [] }
-                    ret_dict[entity_sig]['existing'].append(
-                        (import_entry_id, existing_entry_id))
+                    if entity_name not in ret_dict:
+                        ret_dict[entity_name] = { 'new': [], 'existing': [] }
+                    ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
                     if not silent:
                         print "existing %s: %s (%s->%s)" % (entity_sig,
                                                             unique_id,
@@ -1130,15 +1139,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 objects_to_create = list()
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
-                for import_entry_id, entry_data in (
-                        new_entries[entity_sig].iteritems()):
+
+                for import_entry_id, entry_data in (new_entries[entity_name].iteritems()):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
-                        import_unique_ids_mappings=
-                        import_unique_ids_mappings,
-                        foreign_ids_reverse_mappings=
-                        foreign_ids_reverse_mappings)
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.iteritems())
 
                     # We convert the Django fields to SQLA. Note that some of
@@ -1150,8 +1157,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     if entity_name in file_fields_to_model_fields:
                         for file_fkey in (
                                 file_fields_to_model_fields[entity_name].keys()):
-                            model_fkey = file_fields_to_model_fields[
-                                entity_name][file_fkey]
+                            model_fkey = file_fields_to_model_fields[entity_name][file_fkey]
                             if model_fkey in import_data.keys():
                                 continue
                             import_data[model_fkey] = import_data[file_fkey]
@@ -1253,10 +1259,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     if isinstance(unique_id, UUID):
                         unique_id = str(unique_id)
                     import_entry_id = import_entry_ids[unique_id]
-                    foreign_ids_reverse_mappings[entity_sig][unique_id] = new_pk
-                    if entity_sig not in ret_dict:
-                        ret_dict[entity_sig] = {'new': [], 'existing': []}
-                    ret_dict[entity_sig]['new'].append((import_entry_id,
+                    foreign_ids_reverse_mappings[entity_name][unique_id] = new_pk
+                    if entity_name not in ret_dict:
+                        ret_dict[entity_name] = {'new': [], 'existing': []}
+                    ret_dict[entity_name]['new'].append((import_entry_id,
                                                         new_pk))
 
                     if not silent:
@@ -1280,8 +1286,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             existing_input_links = {(l[1], l[2]): l[0]
                                     for l in existing_links_raw}
 
-            dbnode_reverse_mappings = foreign_ids_reverse_mappings[
-                entity_names_to_signatures[NODE_ENTITY_NAME]]
+            dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -1322,12 +1327,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         links_to_store.append(DbLink(
                             input_id=in_id, output_id=out_id,
                             label=link['label'], type=LinkType(link['type']).value))
-                        if entity_names_to_signatures[
-                            LINK_ENTITY_NAME] not in ret_dict:
-                            ret_dict[entity_names_to_signatures[
-                                LINK_ENTITY_NAME]] = {'new': []}
-                        ret_dict[entity_names_to_signatures[
-                            LINK_ENTITY_NAME]]['new'].append((in_id, out_id))
+                        if LINK_ENTITY_NAME not in ret_dict:
+                            ret_dict[LINK_ENTITY_NAME] = {'new': []}
+                        ret_dict[LINK_ENTITY_NAME]['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:
@@ -1355,17 +1357,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             ######################################################
             # Put everything in a specific group
-            existing = existing_entries.get(
-                entity_names_to_signatures[NODE_ENTITY_NAME], {})
-            existing_pk = [foreign_ids_reverse_mappings[
-                               entity_names_to_signatures[
-                                   NODE_ENTITY_NAME]][v['uuid']]
+            existing = existing_entries.get(NODE_ENTITY_NAME, {})
+            existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
                            for v in existing.itervalues()]
-            new = new_entries.get(entity_names_to_signatures[
-                                      NODE_ENTITY_NAME], {})
-            new_pk = [foreign_ids_reverse_mappings[
-                          entity_names_to_signatures[
-                              NODE_ENTITY_NAME]][v['uuid']]
+            new = new_entries.get(NODE_ENTITY_NAME, {})
+            new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
                       for v in new.itervalues()]
 
             pks_for_group = existing_pk + new_pk

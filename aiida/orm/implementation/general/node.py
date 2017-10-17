@@ -853,7 +853,7 @@ class AbstractNode(object):
 
         try:
             values = self.get_attr(key)
-        except KeyError:
+        except AttributeError:
             values = []
 
         try:

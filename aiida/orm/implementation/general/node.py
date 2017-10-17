@@ -13,7 +13,6 @@ import collections
 import logging
 import os
 import types
-import enum
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
@@ -229,7 +228,6 @@ class AbstractNode(object):
         self._to_be_stored = True
         # Empty cache of input links in any case
         self._attrs_cache = {}
-        self._dirty_attrs = {}
         self._inputlinks_cache = {}
 
         self._temp_folder = None
@@ -812,17 +810,15 @@ class AbstractNode(object):
         """
         pass
 
-    def _set_attr(self, key, value, clean="now"):
+    def _set_attr(self, key, value, clean=True):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
         :param str key: key name
         :param value: its value
-        :param clean: when to clean values. allowed values are
-           "now": default, clean immediately
-           "defer": clean later (when storing and when getting)
-           "never": do not clean. WARNING: storing will throw errors for any
-           data types not recognized by the db backend
+        :param clean: whether to clean values.
+            WARNING: when set to False, storing will throw errors
+            for any data types not recognized by the db backend
         :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
             because the node was already stored, and the attribute is not listed
             as updatable).
@@ -833,20 +829,43 @@ class AbstractNode(object):
         validate_attribute_key(key)
 
         if self._to_be_stored:
-            if clean == "now":
-                value = clean_value(value)
-            elif clean == "defer":
-                self._dirty_attrs[key] = True
-            elif clean == "never":
-                pass
+            if clean:
+                self._attrs_cache[key] = clean_value(value)
             else:
-                raise ValueError(
-                    "Unrecognized value '{}' for clean".format(clean))
-
-            self._attrs_cache[key] = value
+                self._attrs_cache[key] = value
         else:
-            #TODO: is clean_value needed here?
             self._set_db_attr(key, clean_value(value))
+
+    def _append_to_attr(self, key, value, clean=True):
+        """
+        Append value to an attribute of the Node (in the DbAttribute table).
+
+        :param str key: key name of "list-type" attribute
+            If attribute doesn't exist, it is created.
+        :param value: the value to append to the list
+        :param clean: whether to clean the value
+            WARNING: when set to False, storing will throw errors
+            for any data types not recognized by the db backend
+        :raise ValidationError: if the key is not valid (e.g. it contains the
+            separator symbol).
+        """
+        validate_attribute_key(key)
+
+        try:
+            values = self.get_attr(key)
+        except KeyError:
+            values = []
+
+        try:
+            if clean:
+                values.append(clean_value(value))
+            else:
+                values.append(value)
+        except AttributeError:
+            raise AttributeError(
+                "Use _set_attr only on attributes containing lists")
+
+        self._set_attr(key, values, clean=False)
 
     @abstractmethod
     def _set_db_attr(self, key, value):
@@ -914,11 +933,6 @@ class AbstractNode(object):
         try:
             if self._to_be_stored:
                 try:
-                    # clean value, if needed
-                    if key in self._dirty_attrs:
-                        value = self._attrs_cache[key]
-                        self._set_attr(key, value, clean="now")
-                        del self._dirty_attrs[key]
                     return self._attrs_cache[key]
                 except KeyError:
                     raise AttributeError(
@@ -1115,6 +1129,7 @@ class AbstractNode(object):
         """
         pass
 
+    # pylint: disable=unused-variable
     def extras(self):
         """
         Get the keys of the extras.
@@ -1559,9 +1574,6 @@ class AbstractNode(object):
             # Verify that parents are already stored. Raises if this is not
             # the case.
             self._check_are_parents_stored()
-
-            for key in self._dirty_attrs:
-                self._attrs_cache[key] = clean_value(self._attrs_cache[key])
 
             # call implementation-dependent store method
             return self._db_store(with_transaction)

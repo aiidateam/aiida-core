@@ -136,7 +136,7 @@ model_fields_to_file_fields = {
 }
 
 
-def get_all_fields_info_sqla():
+def get_all_fields_info():
     """
     This method returns a description of the field names that should be used
     to describe the entity properties.
@@ -144,10 +144,6 @@ def get_all_fields_info_sqla():
     the dependencies among different entities (and on which fields). It is
     also shown/return the unique identifiers used per entity.
 
-    This method is needed for the import/export SQLA methods. The corresponding
-    information for Django (which is/should be the same - since it is a
-    description of the dependencies of the data in the export file) is
-    generated automatically.
     """
     unique_identifiers = {
         USER_ENTITY_NAME: "email",
@@ -1584,203 +1580,6 @@ fields_to_export = {
          'ctime', 'dbcomputer', 'label', 'type'],
 }
 
-# def get_all_fields_info_sqla():
-#
-#     unique_identifiers = {
-#         "aiida.backends.djsite.db.models.DbNode": "uuid",
-#         "aiida.backends.djsite.db.models.DbLink": None,
-#         "aiida.backends.djsite.db.models.DbGroup": "uuid",
-#         "aiida.backends.djsite.db.models.DbAttribute": None,
-#         "aiida.backends.djsite.db.models.DbComputer": "uuid",
-#         "aiida.backends.djsite.db.models.DbUser": "email"
-#     }
-#
-#     all_fields_info = dict()
-#     all_fields_info["aiida.backends.djsite.db.models.DbLink"] = {
-#             "input": {
-#                 "requires": "aiida.backends.djsite.db.models.DbNode",
-#                 "related_name": "output_links"
-#             },
-#             "type": {},
-#             "output": {
-#                 "requires": "aiida.backends.djsite.db.models.DbNode",
-#                 "related_name": "input_links"
-#             },
-#             "label": {}
-#         }
-#     all_fields_info["aiida.backends.djsite.db.models.DbNode"] = {
-#              "ctime" : {
-#                 "convert_type" : "date"
-#              },
-#              "uuid" : {},
-#              "public" : {},
-#              "mtime" : {
-#                 "convert_type" : "date"
-#              },
-#              "type" : {},
-#              "label" : {},
-#              "nodeversion" : {},
-#              "user" : {
-#                 "requires" : "aiida.backends.djsite.db.models.DbUser",
-#                 "related_name" : "dbnodes"
-#              },
-#              "dbcomputer" : {
-#                 "requires" : "aiida.backends.djsite.db.models.DbComputer",
-#                 "related_name" : "dbnodes"
-#              },
-#              "description" : {}
-#         }
-#     all_fields_info["aiida.backends.djsite.db.models.DbUser"] = {
-#              "last_name" : {},
-#              "first_name" : {},
-#              "institution" : {},
-#              "email" : {}
-#         }
-#     all_fields_info["aiida.backends.djsite.db.models.DbComputer"] = {
-#              "transport_type" : {},
-#              "transport_params" : {},
-#              "hostname" : {},
-#              "description" : {},
-#              "scheduler_type" : {},
-#              "metadata" : {},
-#              "enabled" : {},
-#              "uuid" : {},
-#              "name" : {}
-#         }
-#     all_fields_info["aiida.backends.djsite.db.models.DbGroup"] = {
-#              "description" : {},
-#              "user" : {
-#                 "related_name" : "dbgroups",
-#                 "requires" : "aiida.backends.djsite.db.models.DbUser"
-#              },
-#              "time" : {
-#                 "convert_type" : "date"
-#              },
-#              "type" : {},
-#              "uuid" : {},
-#              "name" : {}
-#         }
-#     all_fields_info["aiida.backends.djsite.db.models.DbAttribute"] = {
-#              "dbnode" : {
-#                 "requires" : "aiida.backends.djsite.db.models.DbNode",
-#                 "related_name" : "dbattributes"
-#              },
-#              "key" : {},
-#              "tval" : {},
-#              "fval" : {},
-#              "bval" : {},
-#              "datatype" : {},
-#              "dval" : {
-#                 "convert_type" : "date"
-#              },
-#              "ival" : {}
-#         }
-#     return all_fields_info, unique_identifiers
-
-
-def get_all_fields_info():
-    """
-    Retrieve automatically the information on the fields and store them in a
-    dictionary, that will be also stored in the export data, in the metadata
-    file.
-
-    :return: a tuple with two elements, the all_fiekds_info dictionary, and the
-      unique_identifiers dictionary.
-    """
-
-    import django.db.models.fields as djf
-    import django_extensions
-
-    from aiida.backends.djsite.db import models
-
-    all_fields_info = {}
-
-    user_model_string = get_class_string(models.DbUser)
-
-    # TODO: These will probably need to have a default value in the IMPORT!
-    # TODO: maybe define this inside the Model!
-    all_exclude_fields = {
-        user_model_string: ['password', 'is_staff',
-                            'is_superuser', 'is_active',
-                            'last_login', 'date_joined'],
-    }
-
-    # I start only with DbNode
-    export_models = set([get_class_string(Model) for Model in
-                         [models.DbNode, models.DbAttribute,
-                          models.DbLink, models.DbGroup]])
-
-    while True:
-        missing_models = export_models - set(all_fields_info.keys())
-        if not missing_models:
-            break
-
-        for model_name in missing_models:
-            Model = get_object_from_string(model_name)
-            # print "===================="
-            # print "Model", Model
-            thisinfo = {}
-            exclude_fields = all_exclude_fields.get(model_name, [])
-            for field in Model._meta.fields:
-                # print "field.name", field.name
-                if field.name in exclude_fields:
-                    continue
-                if isinstance(field, djf.AutoField):
-                    # Do not explicitly store the ID field
-                    pass
-                elif isinstance(field, (djf.CharField, djf.TextField,
-                                        djf.IntegerField, djf.FloatField,
-                                        djf.BooleanField, djf.NullBooleanField,
-                                        django_extensions.db.fields.UUIDField)):
-                    thisinfo[field.name] = {}
-                elif isinstance(field, djf.DateTimeField):
-                    # This information is needed on importing
-                    thisinfo[field.name] = {'convert_type': 'date'}
-                elif isinstance(field, django_extensions.db.fields.UUIDField):
-                    thisinfo[field.name] = {}
-                elif isinstance(field, djf.related.ForeignKey):
-                    rel_model_name = get_class_string(field.rel.to)
-                    # print "rel_model_name", rel_model_name
-                    # if rel_model_name == "aiida.backends.djsite.models.node.DbCalcState":
-                    #     print "!!!!!!!!!!!!WWWWWWWWWWWWWWWWWWW"
-                    related_name = field.rel.related_name
-                    thisinfo[field.name] = {
-                        # The 'values' method will return the id (an integer),
-                        # so no custom serializer is required
-                        'requires': rel_model_name,
-                        'related_name': related_name,
-                    }
-                    export_models.add(rel_model_name)
-                else:
-                    raise NotImplementedError(
-                        "Export not implemented for field of type {}.{}".format(
-                            get_class_string(field)))
-                all_fields_info[model_name] = thisinfo
-
-    unique_identifiers = {}
-    for k in all_fields_info:
-        if k == user_model_string:
-            unique_identifiers[k] = 'email'
-            continue
-
-        # No unique identifier in this case
-        if k in [get_class_string(models.DbAttribute),
-                 get_class_string(models.DbLink),
-                 get_class_string(models.DbExtra)]:
-            unique_identifiers[k] = None
-            continue
-
-        m = get_object_from_string(k)
-        field_names = [f.name for f in m._meta.fields]
-        if 'uuid' in field_names:
-            unique_identifiers[k] = 'uuid'
-        else:
-            raise ValueError("Unable to identify the unique identifier "
-                             "for model {}".format(k))
-
-    return all_fields_info, unique_identifiers
-
-
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
     """
@@ -1811,7 +1610,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
         }
     }
 
-    all_fields_info, unique_identifiers = get_all_fields_info_sqla()
+    all_fields_info, unique_identifiers = get_all_fields_info()
 
     entity_prop = all_fields_info[current_entity_str].keys()
 
@@ -1887,7 +1686,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     EXPORT_VERSION = '0.3'
 
-    all_fields_info, unique_identifiers = get_all_fields_info_sqla()
+    all_fields_info, unique_identifiers = get_all_fields_info()
 
     given_node_entry_ids = set()
     given_group_entry_ids = set()

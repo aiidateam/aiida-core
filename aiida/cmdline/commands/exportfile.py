@@ -146,7 +146,7 @@ def migrate(file_input, file_output, force, silent):
     import os, json, sys
     import tarfile, zipfile
     from aiida.common.folders import SandboxFolder
-    from aiida.common.archive import extract_tree, extract_zip, extract_tar
+    from aiida.common.archive import extract_zip, extract_tar
 
     if os.path.exists(file_output) and not force:
         print >> sys.stderr, 'Error: the output file already exists'
@@ -154,10 +154,15 @@ def migrate(file_input, file_output, force, silent):
 
     with SandboxFolder(sandbox_in_repo=False) as folder:
 
-        if tarfile.is_tarfile(file_input):
+        if zipfile.is_zipfile(file_input):
+            archive_format = 'zip'
+            extract_zip(file_input, folder, silent=silent)
+        elif tarfile.is_tarfile(file_input):
+            archive_format = 'tar.gz'
             extract_tar(file_input, folder, silent=silent)
         else:
-            raise ValueError('invalid archive format, expected .tar.gz AiiDA export file')
+            print >> sys.stderr, 'Error: invalid file format, expected either a zip archive or gzipped tarball'
+            sys.exit(2)
 
         try:
             with open(folder.get_abs_path('data.json')) as f:
@@ -188,8 +193,18 @@ def migrate(file_input, file_output, force, silent):
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
             json.dump(metadata, f)
 
-        with tarfile.open(file_output, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-            tar.add(folder.abspath, arcname='')
+        if archive_format == 'zip':
+            with zipfile.ZipFile(file_output, mode='w', compression=zipfile.ZIP_DEFLATED) as archive:
+                src = folder.abspath
+                for dirpath, dirnames, filenames in os.walk(src):
+                    relpath = os.path.relpath(dirpath, src)
+                    for fn in dirnames + filenames:
+                        real_src = os.path.join(dirpath,fn)
+                        real_dest = os.path.join(relpath,fn)
+                        archive.write(real_src, real_dest)
+        elif archive_format == 'tar.gz':
+            with tarfile.open(file_output, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
+                archive.add(folder.abspath, arcname='')
 
         if not silent:
             print 'Successfully migrated the archive from version {} to {}'.format(old_version, new_version)

@@ -201,6 +201,59 @@ This is a list of all implemented operators:
 |            | expressions|                                     |                                  |
 +------------+------------+-------------------------------------+----------------------------------+
 
+There are also some advanced operators:
+
+.. table::
+    :widths: auto
+
+    +------------+-------------+------------------------------------------+----------------------------------+
+    |**Operator**|**Datatype** |  **Example**                             | Explanation                      |
+    +============+=============+==========================================+==================================+
+    | has_key    | dicts       | | 'attributes.mykey':{'has_key': 'foo'}  | Check that a dictionary          |
+    |            |             | | 'extras':{'has_key': 'my_extra'}       | (typically stored in the         |
+    |            |             |                                          | attributes or in the extras) has |
+    |            |             |                                          | a given key. This can also be    |
+    |            |             |                                          | used to check if a given         |
+    |            |             |                                          | attribute or extra exists.       |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | of_type    |    any      | | 'attributes.mykey':{'of_type': 'bool'} | Check that an attribute or an    |
+    |            |             |                                          | extra is of a given type. Valid  |
+    |            |             |                                          | types are: ``object`` (meaning a |
+    |            |             |                                          | dictionary), ``array`` (meaning a|
+    |            |             |                                          | list), ``string``, ``number``    |
+    |            |             |                                          | (both for integers and floats),  |
+    |            |             |                                          | ``boolean`` or ``null``)         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | of_length  |    lists    | | 'attributes.mylist': {'of_length': 4}  | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a given length   |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | shorter    |    lists    | | 'attributes.mylist': {'shorter': 4}    | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a length shorter |
+    |            |             |                                          | than the specified value         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | longer     |    lists    | | 'attributes.mylist': {'longer': 4}     | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a length longer  |
+    |            |             |                                          | than the specified value         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | contains   |    lists    | | 'attributes.mykey': {'contains': 'a'}  | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) contains a specific  |
+    |            |             |                                          | element or value                 |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+
 
 This showed you how to 'filter' by properties of a node.
 So far we can do that for a single a single node in the database.

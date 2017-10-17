@@ -13,8 +13,6 @@ import unittest
 import aiida.backends.settings as settings
 
 
-
-
 class TestQueryBuilder(AiidaTestCase):
 
     def test_classification(self):
@@ -70,7 +68,6 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'user')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Computer, None),
                 qb._get_ormclass(None, 'computer'),
@@ -79,14 +76,12 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'computer')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Data, None),
                 qb._get_ormclass(None, 'data.Data.'),
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
-
 
     def test_simple_query_1(self):
         """
@@ -162,7 +157,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb6.append(Data, tag='node2')
         self.assertEqual(qb6.count(), 0)
 
-
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
@@ -187,12 +181,9 @@ class TestQueryBuilder(AiidaTestCase):
         for n in (n0, n1, n2):
             n.store()
 
-
-
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'label': 'hello'})
         self.assertEqual(len(list(qb1.all())), 1)
-
 
         qh = {
             'path': [
@@ -222,17 +213,12 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb2 = QueryBuilder(**qh)
 
-
         resdict = qb2.dict()
         self.assertEqual(len(resdict), 1)
         self.assertTrue(isinstance(resdict[0]['n1']['ctime'], datetime))
 
-
         res_one = qb2.one()
         self.assertTrue('bar' in res_one)
-
-
-
 
         qh = {
             'path': [
@@ -253,7 +239,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb = QueryBuilder(**qh)
         self.assertEqual(qb.count(), 1)
 
-
         # Test the hashing:
         query1 = qb.get_query()
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
@@ -269,7 +254,6 @@ class TestQueryBuilder(AiidaTestCase):
 
         self.assertTrue(id(query1) != id(query2))
         self.assertTrue(id(query2) == id(query3))
-
 
     def test_operators_eq_lt_gt(self):
         from aiida.orm.querybuilder import QueryBuilder
@@ -296,9 +280,6 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<=':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
-
-
-
 
     def test_subclassing(self):
         from aiida.orm.data.structure import StructureData
@@ -336,7 +317,6 @@ class TestQueryBuilder(AiidaTestCase):
         for cls in (StructureData, ParameterData, Node, Data):
             qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
             self.assertEqual(qb.count(), 1)
-
 
     def test_list_behavior(self):
         from aiida.orm import Node
@@ -387,8 +367,6 @@ class TestQueryBuilder(AiidaTestCase):
         # Giving a nonsensical offset
         with self.assertRaises(InputValidationError):
             QueryBuilder(offset=2.3)
-
-
 
         # So, I mess up one append, I want the QueryBuilder to clean it!
         with self.assertRaises(InputValidationError):
@@ -441,6 +419,45 @@ class TestQueryBuilder(AiidaTestCase):
             ])
 
 
+class TestQueryBuilderCornerCases(AiidaTestCase):
+    """
+    In this class corner cases of QueryBuilder are added.
+    """
+
+    def test_computer_json(self):
+        """
+        In this test we check the correct behavior of QueryBuilder when
+        retrieving the _metadata and the transport_params with no content.
+        Note that they are in JSON format in both backends. Forcing the
+        decoding of a None value leads to an exception (this was the case
+        under Django).
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Computer
+
+        n1 = Calculation()
+        n1.label = 'node2'
+        n1._set_attr('foo', 1)
+        n1.store()
+
+        # Checking the correct retrieval of transport_params which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(Computer, project=['id', 'transport_params'],
+                  outerjoin=True, computer_of='calc')
+        qb.all()
+
+        # Checking the correct retrieval of _metadata which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(Computer, project=['id', '_metadata'],
+                  outerjoin=True, computer_of='calc')
+        qb.all()
+
+
 class TestAttributes(AiidaTestCase):
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
@@ -453,21 +470,6 @@ class TestAttributes(AiidaTestCase):
         n1._set_attr("test_case", "test_attribute_existence")
         n1.store()
 
-        n1 = Node()
-        n1._set_attr("whatever", 0.)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
-
-        n1 = Node()
-        n1._set_attr("whatever", None)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-
-        n1 = Node()
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
 
@@ -480,7 +482,6 @@ class TestAttributes(AiidaTestCase):
             }, project='uuid')
         res_query = set([str(_[0]) for _ in qb.all()])
         self.assertEqual(res_query, res_uuids)
-
 
 
 class QueryBuilderDateTimeAttribute(AiidaTestCase):
@@ -502,8 +503,6 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
                 {"<":now+timedelta(seconds=1)},
             ]}})
         self.assertEqual(qb.count(), 1)
-
-
 
 
 class QueryBuilderLimitOffsetsTest(AiidaTestCase):
@@ -861,5 +860,99 @@ class TestConsistency(AiidaTestCase):
         self.assertEqual(idx,99)
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
+class TestStatisticsQuery(AiidaTestCase):
+    def test_statistics(self):
+        """
+        Test if the statistics query works properly.
 
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.backends.utils import QueryFactory
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        qmanager = QueryFactory()()
+        current_db_statistics = qmanager.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
+
+
+    def test_statistics_default_class(self):
+        """
+        Test if the statistics query works properly.
+
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+        from aiida.backends.general.abstractqueries import AbstractQueryManager
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        class QueryManagerDefault(AbstractQueryManager):
+            pass
+
+        qmanager_default = QueryManagerDefault()
+
+        current_db_statistics = qmanager_default.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager_default.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
 

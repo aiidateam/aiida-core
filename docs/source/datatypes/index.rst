@@ -75,7 +75,7 @@ UpfData
   is associated to
 * **What is stored in the file repository**: the pseudopotential file
 
-.. _Quantum ESPRESSO: http://www.quantume-spresso.org
+.. _Quantum ESPRESSO: http://www.quantum-espresso.org
 .. _AiiDA Quantum ESPRESSO plugin: http://aiida-quantumespresso.readthedocs.io/en/latest/
 
 ArrayData

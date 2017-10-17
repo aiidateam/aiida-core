@@ -1693,15 +1693,17 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     # I store a list of the actual dbnodes
     for entry in what:
+        # This returns the class name (as in imports). E.g. for a model node:
+        # aiida.backends.djsite.db.models.DbNode
         entry_class_string = get_class_string(entry)
+        # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         entry_entity_name = schema_to_entity_names(entry_class_string)
-
         if entry_entity_name == GROUP_ENTITY_NAME:
             given_group_entry_ids.add(entry.pk)
         elif entry_entity_name == NODE_ENTITY_NAME:
             given_node_entry_ids.add(entry.pk)
         else:
-            continue
+            raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
 
     if also_parents:
         if given_node_entry_ids:
@@ -2186,8 +2188,7 @@ def export_zip(what, outfile = 'testzip', overwrite = False,
         print "File written in {:10.3g} s.".format(time.time() - t)
 
 
-def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
-           silent = False, **kwargs):
+def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, **kwargs):
     """
     Export the DB entries passed in the 'what' list on a file.
 

@@ -1198,6 +1198,7 @@ class StructureData(Data):
 
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
+        #self.get_attr('sites', []).append(new_site.get_raw())
         self._set_attr('sites',
                        self.get_attr('sites', []) + [new_site.get_raw()])
 

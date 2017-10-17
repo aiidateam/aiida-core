@@ -14,6 +14,7 @@ import collections
 import logging
 import os
 import types
+import enum
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
@@ -139,6 +140,14 @@ class AbstractNode(object):
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
     _set_incompatibilities = []
+
+    # constants for when to clean_value
+    class _clean_when(enum.Enum):
+        now = 0
+        defer = 1
+        never = 2
+
+    _dirty_attrs = {}
 
     def get_desc(self):
         """
@@ -795,12 +804,17 @@ class AbstractNode(object):
         """
         pass
 
-    def _set_attr(self, key, value):
+    def _set_attr(self, key, value, clean=_clean_when.now):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
         :param str key: key name
         :param value: its value
+        :param clean: when to clean values. allowed values are
+           _clean_when.now: default
+           _clean_when.defer: clean later (when storing and when getting)
+           _clean_when.never: do not clean. 
+             WARNING: Storing will throw errors for any data types
         :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
             because the node was already stored, and the attribute is not listed
             as updatable).
@@ -810,10 +824,20 @@ class AbstractNode(object):
         """
         validate_attribute_key(key)
 
+        when = self._clean_when
         if self._to_be_stored:
-            # clean_value is performed only upon storing (more efficient)
+            if clean == when.now:
+                value = clean_value(value)
+            elif clean == when.defer:
+                self._dirty_attrs[key] = True
+            elif clean == when.never:
+                pass
+            else:
+                raise ValueError("Unrecognized value '{}' for clean".format(clean))
+
             self._attrs_cache[key] = value
         else:
+            #TODO: is clean_value needed here?
             self._set_db_attr(key, clean_value(value))
 
     @abstractmethod
@@ -882,6 +906,11 @@ class AbstractNode(object):
         try:
             if self._to_be_stored:
                 try:
+                    # clean value, if needed
+                    if key in self._dirty_attrs:
+                        value = self._attrs_cache[key]
+                        self._set_attr(key, clean_value(value))
+                        del self._dirty_attrs[key]
                     return self._attrs_cache[key]
                 except KeyError:
                     raise AttributeError(
@@ -1391,8 +1420,34 @@ class AbstractNode(object):
         return self.folder.get_subfolder(section,
                                          reset_limit=True).get_abs_path(path, check_existence=True)
 
-    @abstractmethod
     def store_all(self, with_transaction=True):
+        """
+        Store the node, together with all input links, if cached, and also the
+        linked nodes, if they were not stored yet.
+
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
+        """
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "Node with pk= {} was already stored".format(self.id))
+
+        # For each parent, check that all its inputs are stored
+        for link in self._inputlinks_cache:
+            try:
+                parent_node = self._inputlinks_cache[link][0]
+                parent_node._check_are_parents_stored()
+            except ModificationNotAllowed:
+                raise ModificationNotAllowed("Parent node (UUID={}) has "
+                                             "unstored parents, cannot proceed (only direct parents "
+                                             "can be unstored and will be stored by store_all, not "
+                                             "grandparents or other ancestors".format(parent_node.uuid))
+        return self._db_store_all(with_transaction)
+
+    @abstractmethod
+    def _db_store_all(self, with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1461,7 +1516,6 @@ class AbstractNode(object):
         """
         pass
 
-    @abstractmethod
     def store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
@@ -1481,7 +1535,46 @@ class AbstractNode(object):
         """
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
+
+        # As a first thing, I check if the data is valid
+        self._validate()
+
+        if self._to_be_stored:
+
+            # Verify that parents are already stored. Raises if this is not
+            # the case.
+            self._check_are_parents_stored()
+
+            for key in self._dirty_attrs:
+                self._attr_cache[key] = clean_value(self._attr_cache(key))
+
+            # call implementation-dependent store method
+            return self._db_store(with_transaction)
+
+        # This is useful because in this way I can do
+        # n = Node().store()
+        return self
+
+    @abstractmethod
+    def _db_store(self, with_transaction=True):
+        """
+        Store a new node in the DB, also saving its repository directory
+        and attributes.
+
+        After being called attributes cannot be
+        changed anymore! Instead, extras can be changed only AFTER calling
+        this store() function.
+
+        :note: After successful storage, those links that are in the cache, and
+            for which also the parent node is already stored, will be
+            automatically stored. The others will remain unstored.
+
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
+        """
         pass
+
 
     def __del__(self):
         """

@@ -50,6 +50,21 @@ class TestDataNode(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             a._set_attr('integer', 13)
 
+    def test_storing_object(self):
+        """Trying to store objects should fail"""
+        a = Node()
+        a._set_attr('object', object(), clean=a._clean_when.never)
+
+        with self.assertRaises(ValueError):
+            # objects are not json-serializable
+            a.store()
+
+        b = Node()
+        b._set_attr('object_list', [object(), object()], clean=a._clean_when.never)
+        with self.assertRaises(ValueError):
+            # objects are not json-serializable
+            b.store()
+
     def test_modify_attr_after_store(self):
         a = Data()
         a.store()
@@ -322,21 +337,6 @@ class TestNodeBasic(AiidaTestCase):
 
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(a.get_attrs(), target_attrs)
-
-    def test_storing_object(self):
-        """Trying to store objects should fail"""
-        a = Node()
-        a._set_attr('object', object())
-
-        with self.assertRaises(ValueError):
-            # objects are not json-serializable
-            a.store()
-
-        b = Node()
-        b._set_attr('object_list', [object(), object()])
-        with self.assertRaises(ValueError):
-            # objects are not json-serializable
-            b.store()
 
     def DISABLED(self):
         """
@@ -1017,7 +1017,7 @@ class TestNodeBasic(AiidaTestCase):
         n._set_attr('a', Str("sometext2"))
         n._set_attr('b', l2)
         self.assertEqual(n.get_attr('a'), "sometext2")
-        self.assertIsInstance(n.get_attr('a'),Str)
+        self.assertIsInstance(n.get_attr('a'),basestring)
         self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
         
@@ -1025,10 +1025,10 @@ class TestNodeBasic(AiidaTestCase):
         n = Node()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],Str)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
         n.store()
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],Str)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
 
     def test_basetype_as_extra(self):
         """

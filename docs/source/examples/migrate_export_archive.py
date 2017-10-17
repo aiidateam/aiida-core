@@ -1,4 +1,4 @@
-#!/usr/bin/env runaiida
+#!/usr/bin/env python
 
 def verify_metadata_version(metadata, version=None):
     """
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     import argparse, os, json, sys
     import tarfile, zipfile
     from aiida.common.folders import SandboxFolder
-    from aiida.orm.importexport import extract_tree, extract_zip, extract_tar
+    from aiida.common.archive import extract_tree, extract_zip, extract_tar
 
     parser = argparse.ArgumentParser(description='Migrate an AiiDA export archive file')
     parser.add_argument('file_input', nargs='?', help='filepath to the input export file')

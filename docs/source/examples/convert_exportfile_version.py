@@ -80,7 +80,7 @@ if __name__ == "__main__":
         load_dbenv()
     
     from aiida.common.folders import SandboxFolder
-    from aiida.orm.importexport import extract_tree, extract_zip, extract_tar
+    from aiida.common.archive import extract_tree, extract_zip, extract_tar
 
     silent = False
     

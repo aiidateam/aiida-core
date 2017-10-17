@@ -58,7 +58,7 @@ StructureData
 
 * **Class**: :py:class:`~aiida.orm.data.upf.UpfData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``structure``
-* **Aim**: store a pseudopotential in the .UPF format (e.g. used by Quantum ESPRESSO)
+* **Aim**: store a crystal structure to be used by atomistic codes
 * **What is stored in the database**: all atomic positions, species, kinds,
 * **What is stored in the file repository**: ---
 * **Additional functionality**:
@@ -70,10 +70,13 @@ UpfData
 
 * **Class**: :py:class:`~aiida.orm.data.upf.UpfData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``upf``
-* **Aim**: store a pseudopotential in the .UPF format (e.g. used by Quantum ESPRESSO)
+* **Aim**: store a pseudopotential in the .UPF format (e.g. used by `Quantum ESPRESSO`_ - see also the `AiiDA Quantum ESPRESSO plugin`_)
 * **What is stored in the database**: the MD5 of the UPF; the element the pseudopotential
   is associated to
 * **What is stored in the file repository**: the pseudopotential file
+
+.. _Quantum ESPRESSO: http://www.quantume-spresso.org
+.. _AiiDA Quantum ESPRESSO plugin: http://aiida-quantumespresso.readthedocs.io/en/latest/
 
 ArrayData
 +++++++++

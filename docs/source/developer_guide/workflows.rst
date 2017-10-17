@@ -31,13 +31,13 @@ To do so place in your ``__init__.py`` file in the main workflow directory
 	
 	    return BaseFactory(module, Workflow, "aiida.workflows.user.epfl_theos")
 	
-In this example, a workflow located in e.g. ``aiida/workflows/user/epfl_theos/quantumespresso/pw.py``
+In this example, a workflow located in e.g. ``aiida/workflows/user/epfl_theos/foldername/plugin.py``
 can be loaded simply by typing::
 	
-	TheosWorkflowFactory('quantumespresso.pw')
+	TheosWorkflowFactory('foldername.plugin')
 	
 .. note:: The class name of the workflow should be compliant with the ``BaseFactory``
-	syntax. In the above example, it should be called ``PwWorkflow`` otherwise
+	syntax. In the above example, it should be called ``PluginWorkflow`` otherwise
 	the workflow factory won't work.
 
 You can also customize your verdi shell by adding this function to the modules

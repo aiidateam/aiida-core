@@ -432,7 +432,9 @@ class SandboxFolder(Folder):
         """
         Initializes the object by creating a new temporary folder in the
         sandbox.
-        :param bool sandbox_in_repo: If True (default), creates the folder in the repository.
+
+        :param bool sandbox_in_repo:
+            If True (default), creates the folder in the repository.
             If false,  relies on the defaults of tempfile.mkdtemp
         """
         # First check if the sandbox folder already exists

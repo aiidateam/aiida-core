@@ -142,13 +142,6 @@ class AbstractNode(object):
     # See documentation in the set() method.
     _set_incompatibilities = []
 
-    # constants for when to clean_value
-    # pylint: disable=too-few-public-methods
-    class _clean_when(enum.Enum):
-        now = 0
-        defer = 1
-        never = 2
-
     def get_desc(self):
         """
         Returns a string with infos retrieved from a node's
@@ -819,17 +812,17 @@ class AbstractNode(object):
         """
         pass
 
-    def _set_attr(self, key, value, clean=_clean_when.now):
+    def _set_attr(self, key, value, clean="now"):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
         :param str key: key name
         :param value: its value
         :param clean: when to clean values. allowed values are
-           _clean_when.now: default
-           _clean_when.defer: clean later (when storing and when getting)
-           _clean_when.never: do not clean. WARNING: storing will throw errors
-           for any data types not recognized by the db backend
+           "now": default, clean immediately
+           "defer": clean later (when storing and when getting)
+           "never": do not clean. WARNING: storing will throw errors for any
+           data types not recognized by the db backend
         :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
             because the node was already stored, and the attribute is not listed
             as updatable).
@@ -839,13 +832,12 @@ class AbstractNode(object):
         """
         validate_attribute_key(key)
 
-        when = self._clean_when
         if self._to_be_stored:
-            if clean == when.now:
+            if clean == "now":
                 value = clean_value(value)
-            elif clean == when.defer:
+            elif clean == "defer":
                 self._dirty_attrs[key] = True
-            elif clean == when.never:
+            elif clean == "never":
                 pass
             else:
                 raise ValueError(
@@ -925,7 +917,7 @@ class AbstractNode(object):
                     # clean value, if needed
                     if key in self._dirty_attrs:
                         value = self._attrs_cache[key]
-                        self._set_attr(key, clean_value(value))
+                        self._set_attr(key, value, clean="now")
                         del self._dirty_attrs[key]
                     return self._attrs_cache[key]
                 except KeyError:

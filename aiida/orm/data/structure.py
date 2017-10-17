@@ -1200,7 +1200,7 @@ class StructureData(Data):
         # I join two lists. Do not use .append, which would work in-place
         #self.get_attr('sites', []).append(new_site.get_raw())
         self._set_attr('sites',
-                       self.get_attr('sites', []) + [new_site.get_raw()])
+                       self.get_attr('sites', []) + [new_site.get_raw()], clean="defer")
 
     def append_atom(self, **kwargs):
         """

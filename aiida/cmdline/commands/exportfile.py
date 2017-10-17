@@ -174,7 +174,9 @@ def migrate(file_input, file_output, force, silent):
         old_version = verify_metadata_version(metadata)
 
         try:
-            if old_version == '0.2':
+            if old_version == '0.1':
+                migrate_v1_to_v2(metadata, data)
+            elif old_version == '0.2':
                 migrate_v2_to_v3(metadata, data)
             else:
                 raise ValueError('cannot migrate from version {}'.format(old_version))
@@ -237,9 +239,64 @@ def update_metadata(metadata, version):
     metadata['export_version'] = version
     metadata['conversion_info'] = conversion_info
 
+def migrate_v1_to_v2(metadata, data):
+    """
+    Migration of export files from v0.1 to v0.2, which means generalizing the
+
+
+    :param data: the content of an export archive data.json file
+    :param metadata: the content of an export archive metadata.json file
+    """
+    old_version = '0.1'
+    new_version = '0.2'
+
+    old_start = "aiida.djsite"
+    new_start = "aiida.backends.djsite"
+
+    try:
+        verify_metadata_version(metadata, old_version)
+        update_metadata(metadata, new_version)
+    except ValueError:
+        raise
+
+    def get_new_string(old_string):
+        if old_string.startswith(old_start):
+            return "{}{}".format(new_start, old_string[len(old_start):])
+        else:
+            return old_string
+
+    def replace_requires(data):
+        if isinstance(data, dict):
+            new_data = {}
+            for k, v in data.iteritems():
+                if k == 'requires' and v.startswith(old_start):
+                    new_data[k] = get_new_string(v)
+                else:
+                    new_data[k] = replace_requires(v)
+            return new_data
+        else:
+            return data
+
+    for field in ['export_data']: 
+        for k in list(data[field]):
+            if k.startswith(old_start):
+                new_k = get_new_string(k)
+                data[field][new_k] = data[field][k]
+                del data[field][k]
+
+    for field in ['unique_identifiers', 'all_fields_info']: 
+        for k in list(metadata[field].keys()):
+            if k.startswith(old_start):
+                new_k = get_new_string(k)
+                metadata[field][new_k] = metadata[field][k]
+                del metadata[field][k]
+
+    metadata['all_fields_info'] = replace_requires(metadata['all_fields_info'])
+
+
 def migrate_v2_to_v3(metadata, data):
     """
-    Migration of export files from v2 to v3, which means adding the link
+    Migration of export files from v0.2 to v0.3, which means adding the link
     types to the link entries
 
     :param data: the content of an export archive data.json file

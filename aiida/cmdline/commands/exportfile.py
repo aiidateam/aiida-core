@@ -7,12 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
 import click
-
-from aiida.backends.utils import load_dbenv
 from aiida.cmdline.commands import verdi, export
-from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandWithSubcommands
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -44,17 +41,15 @@ class Export(VerdiCommandWithSubcommands):
     help='Store only the nodes that are explicitly given, without exporting the parents')
 @click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
     help='If a calculation is included in the list of nodes to export, do not export its outputs')
-@click.option('-y', '--overwrite', is_flag=True, default=False,
+@click.option('-f', '--overwrite', is_flag=True, default=False,
     help='Overwrite the output file, if it exists')
-@click.option('-z', '--zipfile-compressed', is_flag=True, default=False,
-    help='tore as zip file (experimental, should be faster')
-@click.option('-Z', '--zipfile-uncompressed', is_flag=True, default=False,
-    help='Store as uncompressed zip file (experimental, should be faster')
-def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_outputs,
-    overwrite, zipfile_compressed, zipfile_uncompressed):
+@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
+def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_outputs, overwrite, archive_format):
     """
     Export nodes and groups of nodes to an archive file for backup or sharing purposes
     """
+    import sys
+    from aiida.backends.utils import load_dbenv
     load_dbenv()
     from aiida.orm import Group, Node, Computer
     from aiida.orm.querybuilder import QueryBuilder
@@ -115,23 +110,24 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     dbcomputer_list = [computer.dbcomputer for computer in computer_list]
 
     what_list = dbnode_list + dbcomputer_list + dbgroups_list
+    additional_kwargs = dict()
 
-    export_function = export
-    additional_kwargs = {}
-
-    if zipfile_uncompressed:
-        export_function = export_zip
-        additional_kwargs.update({'use_compression': False})
-    elif zipfile_compressed:
+    if archive_format == 'zip':
         export_function = export_zip
         additional_kwargs.update({'use_compression': True})
+    elif archive_format == 'zip-uncompressed':
+        export_function = export_zip
+        additional_kwargs.update({'use_compression': False})
+    elif archive_format == 'tar.gz':
+        export_function = export
+    else:
+        print >> sys.stderr, 'invalid --archive-format value {}'.format(archive_format)
+        sys.exit(1)
 
     try:
         export_function(
-            what=what_list, also_parents=not no_parents,
-            also_calc_outputs=not no_calc_outputs,
-            outfile=outfile, overwrite=overwrite,
-            **additional_kwargs
+            what=what_list, also_parents=not no_parents, also_calc_outputs=not no_calc_outputs,
+            outfile=outfile, overwrite=overwrite, **additional_kwargs
         )
     except IOError as e:
         print >> sys.stderr, 'IOError: {}'.format(e.message)
@@ -242,7 +238,7 @@ def update_metadata(metadata, version):
 def migrate_v1_to_v2(metadata, data):
     """
     Migration of export files from v0.1 to v0.2, which means generalizing the
-
+    field names with respect to the database backend
 
     :param data: the content of an export archive data.json file
     :param metadata: the content of an export archive metadata.json file

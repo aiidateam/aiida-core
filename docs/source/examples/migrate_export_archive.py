@@ -29,6 +29,7 @@ def update_metadata(metadata, version):
     :param metadata: the content of an export archive metadata.json file
     :param version: string version number that the updated metadata should get
     """
+    import aiida
     old_version = metadata['export_version']
     conversion_info = metadata.get('conversion_info', [])
 
@@ -36,6 +37,8 @@ def update_metadata(metadata, version):
     conversion_info.append(conversion_message)
 
     metadata['export_version'] = version
+    # set the new aiida version:
+    metadata['aiida_version'] = aiida.get_version()
     metadata['conversion_info'] = conversion_info
 
 def migrate_v2_to_v3(metadata, data):
@@ -140,7 +143,7 @@ if __name__ == '__main__':
         print >> sys.stderr, 'Error: the output file already exists'
         sys.exit(2)
 
-    with SandboxFolder() as folder:
+    with SandboxFolder(sandbox_in_repo=False) as folder:
 
         if tarfile.is_tarfile(args.file_input):
             extract_tar(args.file_input, folder, silent=args.silent)

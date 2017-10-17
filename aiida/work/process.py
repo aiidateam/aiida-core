@@ -511,6 +511,7 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
         except ValueError:
             pass
         else:
+            calc_node._set_attr(calc_node.FAILED_KEY, True)
             calc_node.seal()
         aiida.work.util.ProcessStack.pop(pid=pid)
 

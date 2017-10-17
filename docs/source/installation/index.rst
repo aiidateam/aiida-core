@@ -716,7 +716,8 @@ To use the new version in production:
 Updating from 0.9.* to 0.10.0
 ++++++++++++++++++++++++++++++++++++++++++
 
-In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a separate plugin repository.
+In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a
+`separate plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
 With the new plugin system introduced in version ``0.9.0``, installing the Quantum ESPRESSO plugin through the repository is very easy.
 However, if your current AiiDA installation still has the plugin files in the ``aiida_core`` tree, they have to be removed manually and the old entry points have to be removed from the cache.
 The instructions to accomplish this will be detailed below.
@@ -749,7 +750,7 @@ The instructions to accomplish this will be detailed below.
   where <EXTRAS> is a comma separated list of the optional features you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
 
 This should have successfully removed the old plugin entry points from your virtual environment installation.
-To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are not listed::
+To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are **not** listed::
 
   verdi calculation plugins
 

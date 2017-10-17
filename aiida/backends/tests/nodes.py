@@ -11,6 +11,7 @@
 Tests for nodes, attributes and links
 """
 import unittest
+from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
@@ -55,13 +56,14 @@ class TestDataNode(AiidaTestCase):
         a = Node()
         a._set_attr('object', object(), clean=False)
 
-        with self.assertRaises(ValueError):
+        # sqlalchemy raises StatementError
+        with self.assertRaises(ValueError, StatementError):
             # objects are not json-serializable
             a.store()
 
         b = Node()
         b._set_attr('object_list', [object(), object()], clean=False)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError, StatementError):
             # objects are not json-serializable
             b.store()
 

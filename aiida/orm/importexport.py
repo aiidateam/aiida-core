@@ -67,6 +67,7 @@ entity_names_to_entities = {
 }
 
 
+
 def schema_to_entity_names(class_string):
     """
     Mapping from classes path to entity names (used by the SQLA import/export)
@@ -415,11 +416,12 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                           uuid__in=group)})
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
-        dbnode_model = get_class_string(models.DbNode)
-        import_nodes_uuid = set(v['uuid'] for v in
-                                data['export_data'][dbnode_model].values())
+        #~ dbnode_model = get_class_string(models.DbNode)
+        #~ print dbnode_model
+        import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
 
-
+        # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
+        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
 
@@ -436,20 +438,11 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         ###################################
         # I hardcode here the model order, for simplicity; in any case, this is
         # fixed by the export version
-        model_order = [get_class_string(m) for m in
-                       (models.DbUser,
-                        models.DbComputer,
-                        models.DbNode,
-                        models.DbGroup,
-                       )
-        ]
 
+        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME)
         # Models that do appear in the import file, but whose import is
         # managed manually
-        model_manual = [get_class_string(m) for m in
-                        (models.DbLink,
-                         models.DbAttribute,)
-        ]
+        model_manual  = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
 
         all_known_models = model_order + model_manual
 
@@ -495,7 +488,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
             # I first generate the list of data
             for model_name in model_order:
-                Model = get_object_from_string(model_name)
+                cls_signature = entity_names_to_signatures[model_name]
+                Model = get_object_from_string(cls_signature)
                 fields_info = metadata['all_fields_info'].get(model_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(
                     model_name, None)
@@ -531,7 +525,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
             # I import data from the given model
             for model_name in model_order:
-                Model = get_object_from_string(model_name)
+                cls_signature = entity_names_to_signatures[model_name]
+                Model = get_object_from_string(cls_signature)
+                # Model = get_object_from_string(model_name)
                 fields_info = metadata['all_fields_info'].get(model_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(
                     model_name, None)
@@ -657,7 +653,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                                        new_pk)
 
                 # For DbNodes, we also have to store Attributes!
-                if model_name == get_class_string(models.DbNode):
+                if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print "STORING NEW NODE ATTRIBUTES..."
                     for unique_id, new_pk in just_saved.iteritems():
@@ -695,8 +691,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            dbnode_reverse_mappings = foreign_ids_reverse_mappings[
-                get_class_string(models.DbNode)]
+            #~ print foreign_ids_reverse_mappings
+            dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
+                #~ get_class_string(models.DbNode)]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -1425,7 +1422,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     return ret_dict
 
-
 class HTMLGetLinksParser(HTMLParser.HTMLParser):
     def __init__(self, filter_extension=None):
         """
@@ -1676,7 +1672,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     import json
     import aiida
 
-    from aiida.orm import Node, Calculation
+    from aiida.orm import Node, Calculation, Data
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -1713,7 +1709,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             qb.append(Node, tag='low_node',
                       filters={'id': {'in': given_node_entry_ids}})
             qb.append(Node, ancestor_of='low_node', project=['id'])
-            additional_ids = [_ for [_] in qb.all()]
+            additional_ids = [_ for _, in qb.all()]
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     if also_calc_outputs:
@@ -1721,9 +1717,12 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             # Add all (direct) outputs of a calculation object that was already
              # selected
             qb = QueryBuilder()
+            # Only looking at calculations and subclasses that are in my entries:
             qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_node_entry_ids}}) # Only looking at calculations and subclasses
-            qb.append(Node, output_of='high_node', project=['id'],
+                      filters={'id': {'in': given_node_entry_ids}})
+            # Only looking at the output that was created by a calculation.
+            # From the OPM we know it has to be Data, linked by CREATE.
+            qb.append(Data, output_of='high_node', project=['id'],
                 edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
             additional_ids = [_ for [_] in qb.all()]
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
@@ -1745,6 +1744,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
         # Here we do the necessary renaming of properties
         for prop in entity_prop:
+            # nprop contains the list of projections
             nprop = (file_fields_to_model_fields[given_entity][prop]
                     if file_fields_to_model_fields[given_entity].has_key(prop)
                     else prop)
@@ -1899,7 +1899,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     # Add the proper signatures to the exported data
     for entity_name in export_data.keys():
-        export_data[entity_names_to_signatures[entity_name]] = (
+        export_data[entity_name] = (
             export_data.pop(entity_name))
 
     if not silent:
@@ -1916,22 +1916,6 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
-    for entity_name in set(unique_identifiers.keys() + all_fields_info.keys()):
-        try:
-            unique_identifiers[entity_names_to_signatures[entity_name]] = (
-                unique_identifiers.pop(entity_name))
-        except KeyError:
-            pass
-        try:
-            # Update the requires field
-            for dic in all_fields_info[entity_name].values():
-                if 'requires' in dic.keys():
-                    dic['requires'] = entity_names_to_signatures[
-                        dic['requires']]
-            all_fields_info[entity_names_to_signatures[entity_name]] = (
-                all_fields_info.pop(entity_name))
-        except KeyError:
-            pass
 
     metadata = {
         'aiida_version': aiida.get_version(),

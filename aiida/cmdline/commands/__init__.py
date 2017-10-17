@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+from click_plugins import with_plugins
+
+from aiida.common.pluginloader import entry_point_list
 
 
 @click.group()
@@ -28,3 +31,12 @@ def work():
 def user():
     pass
 
+
+@verdi.group()
+def data():
+    pass
+
+
+@data.group('plug')
+def data_plug():
+    pass

@@ -20,6 +20,7 @@ class WorkCalculation(Calculation):
     """
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
+    ABORTED_KEY = '_aborted'
 
     @override
     def has_finished(self):

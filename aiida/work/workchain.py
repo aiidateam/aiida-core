@@ -136,6 +136,14 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
+    @property
+    def _aborted(self):
+        return self._aborted_attr or self.calc.get_attr(self.calc.ABORTED_KEY, False)
+
+    @_aborted.setter
+    def _aborted(self, value):
+        self._aborted_attr = value
+
     def _do_step(self, wait_on=None):
         self._awaitables = []
 

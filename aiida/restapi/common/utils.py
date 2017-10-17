@@ -798,7 +798,8 @@ class Utils(object):
         ## Parse the query string
         try:
             fields = generalGrammar.parseString(query_string)
-            field_list = fields.asList()
+            # remove "_" parameter from query string
+            field_list = [entry for entry in fields.asList() if entry[0] != "_"]
         except ParseException as e:
             raise RestInputValidationError(
                 "The query string format is invalid. "

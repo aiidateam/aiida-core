@@ -17,6 +17,8 @@ from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.common.exceptions import MultipleObjectsError
+from aiida.cmdline.commands import verdi
+from aiida.common.pluginloader import plugin_list, get_plugin
 
 
 
@@ -44,7 +46,20 @@ class Data(VerdiCommandRouter):
             'label': _Label,
             'remote': _Remote,
             'description': _Description,
+            'plug': Plugin,
         }
+
+
+class Plugin(VerdiCommandWithSubcommands):
+    def __init__(self):
+        self.valid_subcommands = {}
+        for ep in plugin_list('cmdline.data'):
+            cmd = get_plugin('cmdline.data', ep)
+            self.valid_subcommands[cmd.name] = (self.cli, self.complete_none)
+
+    def cli(self, *args):
+        verdi()
+
 
 
 class Listable(object):

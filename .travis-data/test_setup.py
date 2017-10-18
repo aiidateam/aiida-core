@@ -1,4 +1,14 @@
-"""Integration tests for setup and quicksetup"""
+"""
+Integration tests for setup and quicksetup
+
+These can not be added to the locally run test suite as long as that does
+not use a separate (temporary) configuration directory, it might overwrite
+user profiles and leave behind partial profiles. It also does not clean up
+the file system behind itself.
+
+These problems could also be addressed in tearDown methods of the test cases instead.
+It has not been done due to time constraints yet.
+"""
 import unittest
 import os
 from os.path import abspath

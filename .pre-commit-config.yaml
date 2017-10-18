@@ -4,7 +4,7 @@
   hooks:
   - id: yapf
     language: system
-    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(.travis_data/test_setup.py)'
 
 # prospector: collection of linters
 - repo: git://github.com/guykisel/prospector-mirror
@@ -13,7 +13,7 @@
   - id: prospector
     language: system
     exclude: '^(tests/)|(examples/)'
-    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(.travis_data/test_setup.py)'
 
 - repo: local
   hooks: 

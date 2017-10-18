@@ -86,27 +86,17 @@ class Daemon(VerdiCommandWithSubcommands):
 
     def _get_pid_full_path(self):
         """
-        Return the full path of the supervisord.pid file.
+        Return the full path of the celery.pid file.
         """
         from aiida.common import setup
 
         return os.path.normpath(os.path.expanduser(
             os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                         setup.DAEMON_SUBDIR, "supervisord.pid")))
-
-    def _get_sock_full_path(self):
-        """
-        Return the full path of the supervisord.sock file.
-        """
-        from aiida.common import setup
-
-        return os.path.normpath(os.path.expanduser(
-            os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                         setup.DAEMON_SUBDIR, "supervisord.sock")))
+                         setup.DAEMON_SUBDIR, "celery.pid")))
 
     def get_daemon_pid(self):
         """
-        Return the daemon pid, as read from the supervisord.pid file.
+        Return the daemon pid, as read from the celery.pid file.
         Return None if no pid is found (or the pid is not valid).
         """
         if (os.path.isfile(self._get_pid_full_path())):
@@ -492,7 +482,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
     def _clean_pid_files(self):
         """
-        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon
+        Tries to remove the celery.pid files from the .aiida/daemon
         subfolder. This is typically needed when the computer is restarted with
         the daemon still on.
         """

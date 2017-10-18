@@ -13,6 +13,10 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
+
+class DanglingLinkError(Exception):
+    pass
+
 class Export(VerdiCommandWithSubcommands):
     """
     Create and manage AiiDA export archives
@@ -178,7 +182,12 @@ def migrate(file_input, file_output, force, silent):
             if old_version == '0.1':
                 migrate_v1_to_v2(metadata, data)
             elif old_version == '0.2':
-                migrate_v2_to_v3(metadata, data)
+                try:
+                    migrate_v2_to_v3(metadata, data)
+                except DanglingLinkError as e:
+                    print "An exception occured!"
+                    print e
+                    raise RuntimeError("You're export file is broken because it contains dangling links")
             else:
                 raise ValueError('cannot migrate from version {}'.format(old_version))
         except ValueError as exception:
@@ -379,7 +388,7 @@ def migrate_v2_to_v3(metadata, data):
             input_type = NodeType(mapping[link['input']])
             output_type = NodeType(mapping[link['output']])
         except KeyError:
-            raise RuntimeError('Unknown node UUID')
+            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'],link['output']))
 
         # The following table demonstrates the logic for infering the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT

@@ -5,6 +5,7 @@ Plugin Development
 
 .. toctree::
 
+   quickstart
    overview
    new_system
    concepts

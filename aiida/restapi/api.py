@@ -239,6 +239,8 @@ class AiidaApi(Api):
                           )
 
         """
+        # Commented user endpoints for security reasons.
+
         self.add_resource(User,
                           '/users/',
                           '/users/schema/',

@@ -7,37 +7,39 @@ Workflow's Guide For AiiDA
 Creating new workflows
 ++++++++++++++++++++++
 
-New user specific workflows should be put in ``aiida/workflows/user``. If the
-workflow is general enough to be of interest for the community, the best is to
-create a git repository (e.g. on `GitHub <https://github.com>`_) and clone
-the content of the repository in a subfolder of ``aiida/workflows/user``, e.g.
-in ``aiida/workflows/user/epfl_theos`` for workflows from the group THEOS at EPFL.
+New user specific workflows should be importable by python.
+The simplest thing is to put them in ``aiida/workflows/user``. 
+A better option, if the workflow is general enough to be of 
+interest for the community, is to
+create a new AiiDA plugin containing the workflow and install it
+(you can check :ref:`the documentation on how to make new plugin repositories<plugin_development>`).
 
-Put ``__init__.py`` files in all subdirectories of ``aiida/workflows/user``
+In the first case, put ``__init__.py`` files in all subdirectories 
+of ``aiida/workflows/user``
 to be able to import any workflows. Also, it may be a good
 idea to create a specific workflow factory to load easily workflows of the subdirectory.
 To do so place in your ``__init__.py`` file in the main workflow directory 
-(e.g. in ``aiida/workflows/user/epfl_theos/__init__.py`` in the example above):
+(e.g. in ``aiida/workflows/user/myname/__init__.py`` in the example above):
 
 .. code-block:: python
 
 	from aiida.orm.workflow import Workflow
 	
-	def TheosWorkflowFactory(module):
+	def MynameWorkflowFactory(module):
 	    """
 	    Return a suitable Workflow subclass for the workflows defined here.
 	    """
 	    from aiida.common.pluginloader import BaseFactory
 	
-	    return BaseFactory(module, Workflow, "aiida.workflows.user.epfl_theos")
+	    return BaseFactory(module, Workflow, "aiida.workflows.user.myname")
 	
-In this example, a workflow located in e.g. ``aiida/workflows/user/epfl_theos/quantumespresso/pw.py``
+In this example, a workflow located in e.g. ``aiida/workflows/user/myname/foldername/plugin.py``
 can be loaded simply by typing::
 	
-	TheosWorkflowFactory('quantumespresso.pw')
+	MynameWorkflowFactory('foldername.plugin')
 	
 .. note:: The class name of the workflow should be compliant with the ``BaseFactory``
-	syntax. In the above example, it should be called ``PwWorkflow`` otherwise
+	syntax. In the above example, it should be called ``PluginWorkflow`` otherwise
 	the workflow factory won't work.
 
 You can also customize your verdi shell by adding this function to the modules

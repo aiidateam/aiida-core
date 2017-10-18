@@ -32,7 +32,7 @@ class QuicksetupTestCase(unittest.TestCase):
                 '--no-set-default'])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
-    def test_postgres_failluer(self):
+    def test_postgres_faillure(self):
         result = self.runner.invoke(
             quicksetup, [
                 '--profile=giuseppe2',
@@ -44,7 +44,8 @@ class QuicksetupTestCase(unittest.TestCase):
                 '--db-port=1111',
                 '--db-name=aiida_giuseppe2',
                 '--repo=aiida_giuseppe2',
-                '--no-set-default'
+                '--no-set-default',
+                '--non-interactive'
             ],
             input='nohost\n1111\naiida_giuseppe2\npostgres\n',
             catch_exceptions=False

@@ -633,9 +633,10 @@ class Quicksetup(VerdiCommand):
 @click.option('--db-name', type=str)
 @click.option('--repo', type=str)
 @click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
+@click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
 @click.pass_obj
 def quicksetup(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                    repo, set_default):
+                    repo, set_default, non_interactive):
     '''Set up a sane aiida configuration with as little interaction as possible.'''
     from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
     create_base_dirs()
@@ -643,7 +644,7 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
     # access postgres
-    postgres = Postgres(port=db_port, interactive=True, quiet=False)
+    postgres = Postgres(port=db_port, interactive=bool(not non_interactive), quiet=False)
     postgres.set_setup_fail_callback(prompt_db_info)
     postgres.determine_setup()
 

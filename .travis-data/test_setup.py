@@ -37,7 +37,8 @@ class SetupTestCase(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-        self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
+        backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
+        self.backend = 'django' if backend == 'django' else 'sqlalchemy'
         self.pg_test = PGTest()
         self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=True)
         self.postgres.dbinfo = self.pg_test.dsn
@@ -47,6 +48,7 @@ class SetupTestCase(unittest.TestCase):
         self.dbname = 'aiida_test_setup'
         self.postgres.create_dbuser(self.dbuser, self.dbpass)
         self.postgres.create_db(self.dbuser, self.dbname)
+        self.repo = abspath('./aiida_radames')
 
     def tearDown(self):
         self.postgres.drop_db(self.dbname)
@@ -64,7 +66,7 @@ class SetupTestCase(unittest.TestCase):
                 '--first-name=Radames',
                 '--last-name=Verdi',
                 '--institution=Scala',
-                '--repo=/aiida_radames',
+                '--repo={}'.format(self.repo),
                 '--db_host=localhost',
                 '--db_port={}'.format(self.pg_test.port),
                 '--db_name={}'.format(self.dbname),
@@ -84,7 +86,7 @@ class SetupTestCase(unittest.TestCase):
                 '--first-name=Radames',
                 '--last-name=Verdi',
                 '--institution=Scala',
-                '--repo=/aiida_radames',
+                '--repo={}'.format(self.repo),
                 '--db_host=localhost',
                 '--db_port={}'.format(self.pg_test.port),
                 '--db_name={}'.format(self.dbname),

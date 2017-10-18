@@ -8,7 +8,7 @@ Create Date: 2017-06-28 17:12:23.327195
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.schema import Sequence, CreateSequence
+from sqlalchemy.orm.session import Session
 from aiida.backends.sqlalchemy.utils import install_tc
 
 # revision identifiers, used by Alembic.
@@ -247,6 +247,11 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
     sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key')
     )
+    # I get the session using the alembic connection
+    # (Keep in mind that alembic uses the AiiDA SQLA
+    # session)
+    session = Session(bind=op.get_bind())
+    install_tc(session)
 
 
 def downgrade():

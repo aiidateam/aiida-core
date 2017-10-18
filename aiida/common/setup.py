@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-from aiida.migration.config import check_and_migrate_config
+from .additions.config_migrations import check_and_migrate_config
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
@@ -93,7 +93,7 @@ def _load_config():
     Return the current configurations, without checking their version.
     """
     import json
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     from aiida.backends.settings import IN_DOC_MODE, DUMMY_CONF_FILE
 
     if IN_DOC_MODE:
@@ -106,14 +106,15 @@ def _load_config():
             return json.load(json_file)
     except IOError:
         # No configuration file
-        raise ConfigurationError("No configuration file found")
+        raise MissingConfigurationError("No configuration file found")
 
 def get_or_create_config():
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     try:
         config = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         config = {}
+        config = check_and_migrate_config({})
         store_config(config)
     return config
 
@@ -589,7 +590,7 @@ def create_configuration(profile='default'):
     :return: The populated profile that was also stored.
     """
     import readline
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     from validate_email import validate_email
     from aiida.common.utils import query_yes_no
 
@@ -606,7 +607,7 @@ def create_configuration(profile='default'):
 
     try:
         confs = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         # No configuration file found
         confs = {}
 
@@ -985,7 +986,7 @@ def exists_property(name):
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -995,7 +996,7 @@ def exists_property(name):
     try:
         config = get_config()
         return key in config
-    except ConfigurationError:  # No file found
+    except MissingConfigurationError:  # No file found
         return False
 
 
@@ -1012,7 +1013,7 @@ def get_property(name, default=_NoDefaultValue()):
     :raise KeyError: if the given property is not found in the config file, and
       no default value is given or provided in _property_table.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     import aiida.utils.logger as logger
 
     try:
@@ -1024,7 +1025,7 @@ def get_property(name, default=_NoDefaultValue()):
     try:
         config = get_config()
         value = config[key]
-    except (KeyError, ConfigurationError):
+    except (KeyError, MissingConfigurationError):
         if isinstance(default, _NoDefaultValue):
             if isinstance(table_defval, _NoDefaultValue):
                 raise
@@ -1052,7 +1053,7 @@ def del_property(name):
     :param name: the name of the property to delete.
     :raise: KeyError if the key is not found in the configuration file.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, _, _, _, _ = _property_table[name]
@@ -1062,7 +1063,7 @@ def del_property(name):
     try:
         config = get_config()
         del config[key]
-    except ConfigurationError:
+    except MissingConfigurationError:
         raise KeyError("No configuration file found")
 
     # If we are here, no exception was raised
@@ -1082,7 +1083,7 @@ def set_property(name, value):
       properties, or if the value provided as a string cannot be casted to the
       correct type.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, type_string, _, _, valid_values = _property_table[name]
@@ -1120,7 +1121,7 @@ def set_property(name, value):
 
     try:
         config = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         config = {}
 
     config[key] = actual_value

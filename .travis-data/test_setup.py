@@ -1,6 +1,7 @@
 """Integration tests for setup and quicksetup"""
 import unittest
 import os
+from os.path import abspath
 
 from click.testing import CliRunner
 from pgtest.pgtest import PGTest

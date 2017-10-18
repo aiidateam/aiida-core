@@ -25,6 +25,10 @@ def _create_connection():
     except pika.exceptions.ConnectionClosed:
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
 
+def _get_prefix():
+    """Get the queue prefix from the profile."""
+    #TODO
+
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
@@ -84,9 +88,10 @@ class ProcessControlPanel(apricotpy.LoopObject):
     Processes over the RMQ protocol.
     """
 
-    def __init__(self, prefix, create_connection=_create_connection):
+    def __init__(self, get_prefix=_get_prefix, create_connection=_create_connection):
         super(ProcessControlPanel, self).__init__()
 
+        self._prefix = get_prefix()
         self._connection = create_connection()
 
         self._control = rmq.control.ProcessControlPublisher(

@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-
+from aiida.migration.config import check_and_migrate_config
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
@@ -85,6 +85,13 @@ def get_config():
     """
     Return all the configurations
     """
+    return check_and_migrate_config(_load_config())
+
+
+def _load_config():
+    """
+    Return the current configurations, without checking their version.
+    """
     import json
     from aiida.common.exceptions import ConfigurationError
     from aiida.backends.settings import IN_DOC_MODE, DUMMY_CONF_FILE
@@ -100,7 +107,6 @@ def get_config():
     except IOError:
         # No configuration file
         raise ConfigurationError("No configuration file found")
-
 
 def get_or_create_config():
     from aiida.common.exceptions import ConfigurationError

@@ -595,7 +595,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
                 # Before storing entries in the DB, I store the files (if these
                 # are nodes). Note: only for new entries!
-                if model_name == get_class_string(models.DbNode):
+                if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print "STORING NEW NODE FILES..."
                     for o in objects_to_create:
@@ -626,7 +626,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                            import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
 
                 imported_states = []
-                if model_name == get_class_string(models.DbNode):
+                if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print "SETTING THE IMPORTED STATES FOR NEW NODES..."
                     # I set for all nodes, even if I should set it only
@@ -759,7 +759,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
 
             ######################################################
             # Put everything in a specific group
-            dbnode_model_name = get_class_string(models.DbNode)
+            dbnode_model_name = NODE_ENTITY_NAME
+
             existing = existing_entries.get(dbnode_model_name, {})
             existing_pk = [foreign_ids_reverse_mappings[
                                dbnode_model_name][v['uuid']]

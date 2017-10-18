@@ -21,6 +21,14 @@
 
 import sys, os
 
+# Following 3 lines avoid the need of importing load_dbenv() for compiling the
+# documentation -> works also without verdi install
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir,os.pardir) )
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
+
 import aiida
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -227,14 +235,6 @@ latex_documents = [
 # from docs.readthedocs.org
 # NOTE: it is needed to have these lines before load_dbenv()
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-# Following 3 lines avoid the need of importing load_dbenv() for compiling the
-# documentation -> works also without verdi install
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir,os.pardir) )
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:

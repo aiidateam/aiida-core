@@ -34,7 +34,8 @@ class UserTranslator(BaseTranslator):
     if 'columns' in custom_schema:
         _default_projections = custom_schema['columns'][__label__]
     else:
-        _default_projections = ['**']
+        # send only white listed keys in default response for user for security reasons
+        _default_projections = ['id', 'first_name', "last_name", 'institution']
 
 
     def __init__(self, **kwargs):

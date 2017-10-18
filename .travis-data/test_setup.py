@@ -99,7 +99,7 @@ class SetupTestCase(unittest.TestCase):
         result = self.runner.invoke(
             _setup_cmd,
             ['radames2', '--only-config'],
-            input='yes\nradames2.verdi@ope.ra\npostgresql_psycopg2\n\n\n\n\n{repo}\nRadames2\nVerdi2\nScala2\n'.format(
+            input='yes\nradames2.verdi@ope.ra\npostgresql_psycopg2\n\n\n\n\n\n{repo}\nRadames2\nVerdi2\nScala2\n'.format(
                 repo=self.repo
             )
         )

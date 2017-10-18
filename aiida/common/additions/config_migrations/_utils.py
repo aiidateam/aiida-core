@@ -1,10 +1,9 @@
 """Defines the migrations on the config.json file."""
 
 from aiida.common.exceptions import ConfigurationVersionError
-from ._lookup import _MIGRATION_LOOKUP
-
-CURRENT_CONFIG_VERSION = 1
-OLDEST_COMPATIBLE_CONFIG_VERSION = 0
+from ._migrations import (
+    _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
+)
 
 VERSION_KEY = 'CONFIG_VERSION'
 CURRENT_KEY = 'CURRENT'
@@ -13,6 +12,9 @@ OLDEST_KEY = 'OLDEST_COMPATIBLE'
 __all__ = ['check_and_migrate_config']
 
 def check_and_migrate_config(config):
+    """
+    Checks if the config needs to be migrated, and performs the migration if needed.
+    """
     if config_needs_migrating(config):
         config = migrate_config(config)
         from aiida.common.setup import store_config
@@ -41,6 +43,6 @@ def migrate_config(config):
     """Runs the migration functions to update the config to the current version."""
     current, _ = _get_config_version(config)
     while current < CURRENT_CONFIG_VERSION:
-        config = _MIGRATION_LOOKUP[current](config)
+        config = _MIGRATION_LOOKUP[current].apply(config)
         current, _ = _get_config_version(config)
     return config

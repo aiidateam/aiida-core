@@ -19,5 +19,4 @@ Modules (API documentation)
    ../work/dev
    ../dbimporters/dev
    ../dbexporters/dev
-   ../tools/dev
    ../testing/dev

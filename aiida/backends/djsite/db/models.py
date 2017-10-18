@@ -46,7 +46,7 @@ class AiidaQuerySet(QuerySet):
 
 
 class AiidaObjectManager(m.Manager):
-    def get_query_set(self):
+    def get_queryset(self):
         return AiidaQuerySet(self.model, using=self._db)
 
 

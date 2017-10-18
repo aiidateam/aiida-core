@@ -231,8 +231,8 @@ Two tools are run on all changed files before allowing a commit:
    - Check for *secrets* (prevent you from committing passwords, tokens, etc)
 
    It will output file, line number and helpful messages and suggestions for each problem it finds.
-   
-  
+
+
 .. _yapf: https://github.com/google/yapf
 .. _prospector: https://prospector.landscape.io/en/master/
 
@@ -242,8 +242,8 @@ Setting up the hooks is simple::
    pip install [-e] .[dev_precommit]
    pre-commit install
    # from now on on every git commit the checks will be run on changed files
-   
-When working on parts of the code that are not included in pre-commit tests yet, it is ok to not install the hooks. 
+
+When working on parts of the code that are not included in pre-commit tests yet, it is ok to not install the hooks.
 
 When code that fails the pre-commit checks is commited, the checks will run in a continuous integration stage and the commit will fail tests. Still sometimes it is necessary to push a work-in-progress state to continue working somewhere else, this can be accomplished by ``git commit --no-verify``.
 
@@ -482,3 +482,16 @@ In case a method is renamed or removed, this is the procedure to follow:
    (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the
    correct string, and adapt the strings to the correct content if you are
    only removing a function, or just adding a new one).
+
+Changing the config.json structure
+++++++++++++++++++++++++++++++++++
+
+In general, changes to ``config.json`` should be avoided if possible. However, if there is a need to modify it, the following procedure should be used to create a migration:
+
+1. Determine whether the change will be backwards-compatible. This means that an older version of AiiDA will still be able to run with the new ``config.json`` structure. It goes without saying that it's preferable to change ``config.json`` in a backwards-compatible way.
+
+2. In ``aiida/common/additions/config_migration/_migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
+
+3. Write a function which transforms the old config dict into the new version. It is possible that you need user input for the migration, in which case this should also be handled in that function.
+
+4. Add an entry in ``_MIGRATION_LOOKUP`` where the key is the version **before** the migration, and the value is a ``ConfigMigration`` object. The ``ConfigMigration`` is constructed from your migration function, and the **hard-coded** values of ``CURRENT_CONFIG_VERSION`` and ``OLDEST_COMPATIBLE_CONFIG_VERSION``. If these values are not hard-coded, the migration will break as soon as the values are changed again.

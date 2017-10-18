@@ -107,7 +107,7 @@ class Postgres(object):
                 'This may cause problems if the current user is not allowed to create databases.'
             ))
 
-        return bool(not self.pg_execute == _pg_execute_not_connected)
+        return bool(self.pg_execute != _pg_execute_not_connected)
 
     def create_dbuser(self, dbuser, dbpass):
         """

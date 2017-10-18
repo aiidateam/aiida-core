@@ -32,6 +32,23 @@ class QuicksetupTestCase(unittest.TestCase):
                 '--no-set-default'])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
+    def test_postgres_failluer(self):
+        result = self.runner.invoke(
+            quicksetup, [
+                '--profile=giuseppe2',
+                '--backend={}'.format(self.backend),
+                '--email=giuseppe2.verdi@ope.ra',
+                '--first-name=Giuseppe',
+                '--last-name=Verdi',
+                '--institution=Scala',
+                '--db-port=1111',
+                '--db-name=aiida_giuseppe2',
+                '--repo=aiida_giuseppe2',
+                '--no-set-default'
+            ], input=[
+                'nohost\n1111\naiida_giuseppe2\npostgres\n'
+            ])
+
 
 class SetupTestCase(unittest.TestCase):
     """Test ``verdi setup``"""

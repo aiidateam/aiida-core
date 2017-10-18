@@ -45,9 +45,11 @@ class QuicksetupTestCase(unittest.TestCase):
                 '--db-name=aiida_giuseppe2',
                 '--repo=aiida_giuseppe2',
                 '--no-set-default'
-            ], input=[
-                'nohost\n1111\naiida_giuseppe2\npostgres\n'
-            ])
+            ],
+            input='nohost\n1111\naiida_giuseppe2\npostgres\n',
+            catch_exceptions=False
+        )
+        self.assertFalse(result.exception, msg=get_debug_msg(result))
 
 
 class SetupTestCase(unittest.TestCase):

@@ -11,7 +11,9 @@
 This allows to manage profiles from command line.
 """
 import sys
+
 import click
+
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.control.postgres import Postgres
 
@@ -156,8 +158,7 @@ class Profile(VerdiCommandWithSubcommands):
         Specify argument '--force' to skip any questions warning about loss of
         data.
         """
-        from aiida.cmdline.verdilib import Quicksetup
-        from aiida.common.setup import get_or_create_config, update_config, AIIDA_CONFIG_FOLDER
+        from aiida.common.setup import get_or_create_config, update_config
         import os.path
         from urlparse import urlparse
 
@@ -180,8 +181,9 @@ class Profile(VerdiCommandWithSubcommands):
                 print("Profile '{}' does not exist".format(profile_to_delete))
                 continue
 
-            postgres = Postgres(port=profile.get('AIIDADB_PORT'))
+            postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
             postgres.determine_setup()
+            print postgres.dbinfo
 
             db_name = profile.get('AIIDADB_NAME', '')
             if not postgres.db_exists(db_name):

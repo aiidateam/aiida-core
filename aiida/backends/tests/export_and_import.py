@@ -1465,7 +1465,6 @@ class TestLinks(AiidaTestCase):
             node_calc.add_link_from(node_work, 'call', link_type=LinkType.CALL)
             node_output.add_link_from(node_calc, 'output', link_type=LinkType.CREATE)
 
-            # This captures also the input form i1 to the work, which is wrong
             export_links = QueryBuilder().append(
                     Data, project='uuid').append(
                     InlineCalculation, project='uuid', edge_project=['label', 'type'],
@@ -1490,5 +1489,72 @@ class TestLinks(AiidaTestCase):
             import_set = [tuple(_) for _ in import_links]
 
             self.assertEquals(set(export_set), set(import_set))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_links_for_workflows(self):
+        """
+        Check that CALL links are not followed in the export procedure, and the only creation
+        is followed for data:
+         ____       ____        ____
+        |    | INP |    | CALL |    |
+        | i1 | --> | w1 | <--- | w2 |
+        |____|     |____|      |____|
+                    | |
+             CREATE v v RETURN
+                    ____
+                   |    |
+                   | o1 |
+                   |____|
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm import Node, Data
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation import Calculation
+        from aiida.orm.calculation.inline import InlineCalculation
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.querybuilder import QueryBuilder
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            w1 = WorkCalculation().store()
+            w2 = WorkCalculation().store()
+            i1 = Int(1).store()
+            o1 = Int(2).store()
+
+            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
+            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
+            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
+            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
+
+            uuids_wanted = set(_.uuid for _ in (w1,o1,i1))
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
+
+            export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
+            export_file_2 = os.path.join(tmp_folder, 'export-2.tar.gz')
+            export([o1.dbnode], outfile=export_file_1, silent=True)
+            export([w1.dbnode], outfile=export_file_2, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file_1, silent=True)
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file_2, silent=True)
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
+
+
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

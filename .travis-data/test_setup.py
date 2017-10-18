@@ -19,6 +19,7 @@ class QuicksetupTestCase(unittest.TestCase):
         self.backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
 
     def test_user_setup(self):
+        backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             quicksetup, [
                 '--profile=giuseppe',
@@ -33,6 +34,7 @@ class QuicksetupTestCase(unittest.TestCase):
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
     def test_postgres_faillure(self):
+        backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             quicksetup, [
                 '--profile=giuseppe2',

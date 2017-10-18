@@ -178,6 +178,8 @@ After updating your ``PATH`` you can check if it worked in the following way:
 
     export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
 
+.. _directory_location:
+
 Customizing the configuration directory location
 ++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -303,6 +305,34 @@ If it is activated successfully, you should see that your prompt is prefixed wit
 To leave or deactivate the environment and set all the settings back to default, simply run::
 
     (my_env) $ deactivate
+
+
+.. _aiida_path_in_virtualenv:
+
+Creating a ``.aiida`` folder in your virtualenvironment
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` folder for each virtualenv. To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
+
+1. Create your virtualenv, as described above
+2. Create a ``.aiida`` directory in your virtualenv directory::
+
+    $ mkdir ~/.virtualenvs/my_env/.aiida
+3. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line::
+
+    export AIIDA_PATH='~/.virtualenvs/my_env'
+4. Deactivate and re-activate the virtualenv
+5. You can test that everything is set up correctly if you can reproduce the following::
+
+    (my_env)$ echo $AIIDA_PATH
+    >>> ~/.virtualenvs/my_env
+
+    (my_env)$ verdi profile list
+    >>> Configuration folder: /home/my_username/.virtualenvs/my_env/.aiida
+    >>> Stopping: No configuration file found
+    >>> Note: if no configuration file was found, it means that you have not run
+    >>> 'verdi setup' yet to configure at least one AiiDA profile.
+6. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
 
 
 .. _database:
@@ -686,7 +716,8 @@ To use the new version in production:
 Updating from 0.9.* to 0.10.0
 ++++++++++++++++++++++++++++++++++++++++++
 
-In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a separate plugin repository.
+In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a
+`separate plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
 With the new plugin system introduced in version ``0.9.0``, installing the Quantum ESPRESSO plugin through the repository is very easy.
 However, if your current AiiDA installation still has the plugin files in the ``aiida_core`` tree, they have to be removed manually and the old entry points have to be removed from the cache.
 The instructions to accomplish this will be detailed below.
@@ -719,7 +750,7 @@ The instructions to accomplish this will be detailed below.
   where <EXTRAS> is a comma separated list of the optional features you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
 
 This should have successfully removed the old plugin entry points from your virtual environment installation.
-To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are not listed::
+To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are **not** listed::
 
   verdi calculation plugins
 

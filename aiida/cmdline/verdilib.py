@@ -646,7 +646,9 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     # access postgres
     postgres = Postgres(port=db_port, interactive=bool(not non_interactive), quiet=False)
     postgres.set_setup_fail_callback(prompt_db_info)
-    postgres.determine_setup()
+    success = postgres.determine_setup()
+    if not success:
+        sys.exit(1)
 
     # default database name is <profile>_<login-name>
     # this ensures that for profiles named test_... the database will also

@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-from .additions.config_migrations import check_and_migrate_config
+from .additions.config_migrations import check_and_migrate_config, add_config_version
 
 DEFAULT_AIIDA_USER = "aiida@localhost"
 
@@ -114,7 +114,6 @@ def get_or_create_config():
         config = get_config()
     except MissingConfigurationError:
         config = {}
-        config = check_and_migrate_config({})
         store_config(config)
     return config
 
@@ -841,6 +840,7 @@ def create_configuration(profile='default'):
         confs['profiles'][profile] = this_new_confs
 
         backup_config()
+        add_config_version(confs)
         store_config(confs)
 
         return this_new_confs

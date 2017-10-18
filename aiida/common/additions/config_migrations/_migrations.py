@@ -34,11 +34,13 @@ class ConfigMigration(object):
 
     def apply(self, config):
         from ._utils import VERSION_KEY, CURRENT_KEY, OLDEST_KEY
+        from ._utils import add_config_version
         config = self.migrate_function(config)
-        config[VERSION_KEY] = {
-            CURRENT_KEY: self.current_version,
-            OLDEST_KEY: self.oldest_version
-        }
+        add_config_version(
+            config,
+            current_version=self.current_version,
+            oldest_version=self.oldest_version
+        )
         return config
 
 # Maps the initial config version to the ConfigMigration which updates it.

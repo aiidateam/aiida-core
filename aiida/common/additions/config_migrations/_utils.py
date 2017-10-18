@@ -9,7 +9,15 @@ VERSION_KEY = 'CONFIG_VERSION'
 CURRENT_KEY = 'CURRENT'
 OLDEST_KEY = 'OLDEST_COMPATIBLE'
 
-__all__ = ['check_and_migrate_config']
+__all__ = ['check_and_migrate_config', 'add_config_version']
+
+def add_config_version(
+        config,
+        current_version=CURRENT_CONFIG_VERSION,
+        oldest_version=OLDEST_COMPATIBLE_CONFIG_VERSION
+    ):
+    """Injects the current and oldest compatible version numbers into the config."""
+    config[VERSION_KEY] = {CURRENT_KEY: current_version, OLDEST_KEY: oldest_version}
 
 def check_and_migrate_config(config):
     """

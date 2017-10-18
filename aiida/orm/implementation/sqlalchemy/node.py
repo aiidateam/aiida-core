@@ -25,8 +25,7 @@ from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     NotExistent, UniquenessError,
-                                     ValidationError)
+                                     NotExistent, UniquenessError)
 from aiida.common.links import LinkType
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
@@ -656,20 +655,6 @@ class Node(AbstractNode):
             self._get_temp_folder().replace_with_folder(
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
-
-        ## Set up autogrouping used be verdi run
-        #autogroup = aiida.orm.autogroup.current_autogroup
-        #grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
-
-        #if autogroup is not None:
-        #    if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-        #        raise ValidationError("current_autogroup is not an AiiDA Autogroup")
-
-        #    if autogroup.is_to_be_grouped(self):
-        #        group_name = autogroup.get_group_name()
-        #        if group_name is not None:
-        #            g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-        #            g.add_nodes(self)
 
         return self
 

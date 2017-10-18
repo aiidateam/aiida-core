@@ -7,6 +7,7 @@ Installation
 .. toctree::
 
   quick_install
+  plugins
   optional_configuration
   virtual_environment
   database

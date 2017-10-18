@@ -7,7 +7,7 @@ Then you'll need to write an **AiiDA plugin**.
 
 Let's walk through the steps for creating a new plugin ``aiida-compute``.
 
- 0. You know how to :ref:`install an aiida plugin <install_plugin>`
+ 0. You know how to :ref:`install an aiida plugin <plugins>`
 
  1. Check on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_
     that the plugin name is still available

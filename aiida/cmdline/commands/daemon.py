@@ -149,13 +149,24 @@ class Daemon(VerdiCommandWithSubcommands):
 
         print "Clearing all locks ..."
         from aiida.orm.lock import LockManager
+        LockManager().clear_all()
+
+        import gzip
+        import shutil
         from aiida.common import setup
         import aiida  # ok, this should definitely change
 
-        LockManager().clear_all()
+        # rotate an existing log file out of the way
+        daemon_logfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log")
+        if os.path.isfile(daemon_logfile):
+            with open(daemon_logfile, 'rb') as curr_log_fh:
+                with gzip.open(daemon_logfile + '.0.gz', 'wb') as old_log_fh:
+                    shutil.copyfileobj(curr_log_fh, old_log_fh)
+            os.remove(daemon_logfile)
 
         daemon_workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
-        print "Starting AiiDA Daemon in {}...".format(daemon_workdir)
+
+        print "Starting AiiDA Daemon (log file: {})...".format(daemon_logfile)
         currenv = _get_env_with_venv_bin()
         process = subprocess.Popen([
                 "celery",  "worker",
@@ -163,7 +174,7 @@ class Daemon(VerdiCommandWithSubcommands):
                 "--loglevel", "INFO",
                 "--beat",
                 "--schedule", os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule"),
-                "--logfile", os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log"),
+                "--logfile", daemon_logfile,
                 "--pidfile", self._get_pid_full_path(),
                 ],
             cwd=daemon_workdir,

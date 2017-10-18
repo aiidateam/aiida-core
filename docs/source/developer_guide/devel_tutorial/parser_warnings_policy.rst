@@ -42,7 +42,8 @@ Parser_warnings
 
 These should be reserved to warnings occurring **during parsing**, i.e. when
 the parser does not find an information it was looking for in the output files.
-For Quantum-ESPRESSO (PW), examples are
+For Quantum-ESPRESSO (PW), for instance (implemented in the
+`aiida-quantumespresso package <https://github.com/aiidateam/aiida-quantumespresso>`_) examples are
 
   * ``Skipping the parsing of the xml file.``
   * ``Error while parsing for energy terms.``

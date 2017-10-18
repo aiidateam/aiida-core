@@ -9,6 +9,8 @@
 ###########################################################################
 import sys
 
+import click
+
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import (
@@ -40,6 +42,7 @@ class Data(VerdiCommandRouter):
             'parameter': _Parameter,
             'array': _Array,
             'label': _Label,
+            'remote': _Remote,
             'description': _Description,
         }
 
@@ -1982,3 +1985,146 @@ class _Array(VerdiCommandWithSubcommands, Visualizable):
             for arrayname in node.arraynames():
                 the_dict[arrayname] = node.get_array(arrayname).tolist()
             print_dictionary(the_dict, 'json+date')
+
+class _Remote(VerdiCommandWithSubcommands):
+    """
+    Manage RemoteData objects
+    """
+
+    def __init__(self):
+        self.valid_subcommands = {
+            'ls': (self.do_listdir, self.complete_none),
+            'cat': (self.do_cat, self.complete_none),
+            'show': (self.do_show, self.complete_none),
+        }
+
+    def do_listdir(self, *args):
+        """
+        List directory content on remote RemoteData objects.
+        """
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        from aiida.common.utils import get_mode_string
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List directory content on remote RemoteData objects.')
+
+        parser.add_argument('-l', '--long', action='store_true',
+                      help="Display also file metadata")
+        parser.add_argument('pk', type=int, help="PK of the node")
+        parser.add_argument('path', nargs='?', default='.', help="The folder to list")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+        try:
+            content = n.listdir_withattributes(path=parsed_args.path)
+        except (IOError, OSError) as e:
+            click.echo("Unable to access the remote folder or file, check if it exists.", err=True)
+            click.echo("Original error: {}".format(str(e)), err=True)
+            sys.exit(1)
+        for metadata in content:
+            if parsed_args.long:
+                mtime = datetime.datetime.fromtimestamp(
+                    metadata['attributes'].st_mtime)
+                pre_line = '{} {:10}  {}  '.format(
+                    get_mode_string(metadata['attributes'].st_mode),
+                    metadata['attributes'].st_size,
+                    mtime.strftime("%d %b %Y %H:%M")
+                    )
+                click.echo(pre_line, nl=False)
+            if metadata['isdir']:
+                click.echo(click.style(metadata['name'], fg='blue'))
+            else:
+                click.echo(metadata['name'])
+
+    def do_cat(self, *args):
+        """
+        Show the content of remote files in RemoteData objects.
+        """
+        # Note: the implementation is not very efficient: if first downloads the full file on a file on the disk,
+        # then prints it and finally deletes the file.
+        # TODO: change it to open the file and stream it; it requires to add an openfile() method to the transport
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        import tempfile
+        import os
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show the content of remote files in RemoteData objects.')
+
+        parser.add_argument('pk', type=int, help="PK of the node")
+        parser.add_argument('path', type=str, help="The (relative) path to the file to show")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                f.close()
+                n.getfile(parsed_args.path, f.name)
+                with open(f.name) as fobj:
+                    sys.stdout.write(fobj.read())
+        except IOError as e:
+            click.echo("ERROR {}: {}".format(e.errno, str(e)), err=True)
+            sys.exit(1)
+
+        try:
+            os.remove(f.name)
+        except OSError:
+            # If you cannot delete, ignore (maybe I didn't manage to create it in the first place
+            pass
+
+    def do_show(self, *args):
+        """
+        Show information on a RemoteData object.
+        """
+        import argparse
+        import datetime
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        import tempfile
+        import os
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show information on a RemoteData object.')
+
+        parser.add_argument('pk', type=int, help="PK of the node")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        try:
+            n = load_node(parsed_args.pk)
+        except Exception as e:
+            click.echo(e.message, err=True)
+            sys.exit(1)
+
+        click.echo("- Remote computer name:")
+        click.echo("  {}".format(n.get_computer_name()))
+        click.echo("- Remote folder full path:")
+        click.echo("  {}".format(n.get_remote_path()))

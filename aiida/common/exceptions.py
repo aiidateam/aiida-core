@@ -81,6 +81,13 @@ class MissingPluginError(AiidaException):
     pass
 
 
+class LoadingPluginFailed(AiidaException):
+    """
+    Raised when loading a plugin through the plugin loader fails
+    """
+    pass
+
+
 class InvalidOperation(AiidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute

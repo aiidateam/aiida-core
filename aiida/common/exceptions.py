@@ -13,7 +13,7 @@
 class AiidaException(Exception):
     """
     Base class for all AiiDA exceptions.
-    
+
     Each module will have its own subclass, inherited from this
     (e.g. ExecManagerException, TransportException, ...)
     """
@@ -37,7 +37,7 @@ class MultipleObjectsError(AiidaException):
 
 class RemoteOperationError(AiidaException):
     """
-    Raised when an error in a remote operation occurs, as in a failed kill() 
+    Raised when an error in a remote operation occurs, as in a failed kill()
     of a scheduler job.
     """
     pass
@@ -68,7 +68,7 @@ class ModificationNotAllowed(AiidaException):
 
 class UniquenessError(AiidaException):
     """
-    Raised when the user tries to violate a uniqueness constraint (on the 
+    Raised when the user tries to violate a uniqueness constraint (on the
     DB, for instance).
     """
     pass
@@ -91,7 +91,7 @@ class LoadingPluginFailed(AiidaException):
 class InvalidOperation(AiidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute
-    before saving the entry), or deleting an entry that is protected (e.g., 
+    before saving the entry), or deleting an entry that is protected (e.g.,
     because it is referenced by foreign keys)
     """
     pass
@@ -122,7 +122,7 @@ class PluginInternalError(InternalError):
 class ValidationError(AiidaException):
     """
     Error raised when there is an error during the validation phase
-    of a property. 
+    of a property.
     """
     pass
 
@@ -136,6 +136,19 @@ class ConfigurationError(AiidaException):
 class ProfileConfigurationError(ConfigurationError):
     """
     Configuration error raised when a wrong/inexistent profile is requested.
+    """
+    pass
+
+class MissingConfigurationError(ConfigurationError):
+    """
+    Configuration error raised when the configuration file is missing.
+    """
+    pass
+
+class ConfigurationVersionError(ConfigurationError):
+    """
+    Configuration error raised when the configuration file version is not
+    compatible with the current version.
     """
     pass
 

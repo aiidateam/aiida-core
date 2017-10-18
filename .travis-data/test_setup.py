@@ -7,6 +7,7 @@ from pgtest.pgtest import PGTest
 
 from aiida.cmdline.verdilib import _setup_cmd, quicksetup
 from aiida.control.postgres import Postgres
+from aiida.backends import settings as backend_settings
 
 
 class QuicksetupTestCase(unittest.TestCase):
@@ -53,6 +54,7 @@ class SetupTestCase(unittest.TestCase):
         self.pg_test.close()
 
     def test_user_setup(self):
+        backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             _setup_cmd, [
                 'radames',
@@ -72,6 +74,7 @@ class SetupTestCase(unittest.TestCase):
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
     def test_user_configure(self):
+        backend_settings.AIIDADB_PROFILE = None
         self.runner.invoke(
             _setup_cmd, [
                 'radames2',
@@ -89,6 +92,7 @@ class SetupTestCase(unittest.TestCase):
                 '--db_pass={}'.format(self.dbpass),
                 '--no-password'])
 
+        backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             _setup_cmd,
             ['radames2', '--only-config'],

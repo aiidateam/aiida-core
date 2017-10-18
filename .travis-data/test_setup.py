@@ -101,7 +101,8 @@ class SetupTestCase(unittest.TestCase):
             ['radames2', '--only-config'],
             input='yes\nradames.verdi@ope.ra\npostgresql_psycopg2\n\n\n\n\n\n{repo}\nRadames2\nVerdi2\nScala2\nyes\n'.format(
                 repo=self.repo
-            )
+            ),
+            catch_exceptions=False
         )
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 

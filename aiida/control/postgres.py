@@ -224,18 +224,10 @@ def prompt_db_info(*args):  # pylint: disable=unused-argument
             dbinfo['password'] = click.prompt(
                 'postgres password of {}'.format(dbinfo['user']),
                 hide_input=True,
-                type=str)
-            if _try_connect(**dbinfo):
-                access = True
-            else:
-                click.echo(
-                    'you may get prompted for a super user password and again for your postgres super user password'
-                )
-                if _try_subcmd(**dbinfo):
-                    access = True
-                else:
-                    click.echo(
-                        'Unable to connect to postgres, please try again')
+                type=str,
+                default='')
+            if not dbinfo.get('password'):
+                dbinfo.pop('password')
     return dbinfo
 
 

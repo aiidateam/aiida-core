@@ -47,7 +47,7 @@ class QuicksetupTestCase(unittest.TestCase):
                 '--no-set-default',
                 '--non-interactive'
             ],
-            input='nohost\n1111\naiida_giuseppe2\npostgres\n',
+            input='nohost\n1111\naiida_giuseppe2\npostgres\n\n',
             catch_exceptions=False
         )
         self.assertFalse(result.exception, msg=get_debug_msg(result))

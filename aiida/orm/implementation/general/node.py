@@ -15,7 +15,7 @@ import os
 import types
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     UniquenessError)
+                                     UniquenessError, ValidationError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
@@ -1576,7 +1576,23 @@ class AbstractNode(object):
             self._check_are_parents_stored()
 
             # call implementation-dependent store method
-            return self._db_store(with_transaction)
+            self._db_store(with_transaction)
+
+            # Set up autogrouping used by verdi run
+            from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
+            from aiida.orm import Group
+
+            if current_autogroup is not None:
+                if not isinstance(current_autogroup, Autogroup):
+                    raise ValidationError(
+                        "current_autogroup is not an AiiDA Autogroup")
+
+                if current_autogroup.is_to_be_grouped(self):
+                    group_name = current_autogroup.get_group_name()
+                    if group_name is not None:
+                        g = Group.get_or_create(
+                            name=group_name, type_string=VERDIAUTOGROUP_TYPE)[0]
+                        g.add_nodes(self)
 
         # This is useful because in this way I can do
         # n = Node().store()

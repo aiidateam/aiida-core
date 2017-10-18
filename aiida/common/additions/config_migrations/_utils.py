@@ -19,14 +19,15 @@ def add_config_version(
     """Injects the current and oldest compatible version numbers into the config."""
     config[VERSION_KEY] = {CURRENT_KEY: current_version, OLDEST_KEY: oldest_version}
 
-def check_and_migrate_config(config):
+def check_and_migrate_config(config, store=True):
     """
     Checks if the config needs to be migrated, and performs the migration if needed.
     """
     if config_needs_migrating(config):
         config = migrate_config(config)
         from aiida.common.setup import store_config
-        store_config(config)
+        if store:
+            store_config(config)
     return config
 
 def config_needs_migrating(config):

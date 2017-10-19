@@ -298,5 +298,18 @@ class AbstractQueryManager(object):
             entry_list.append([str(bid), str(formula),
                                bdate.strftime('%d %b %Y'), blabel])
 
-        print entry_list
         return entry_list
+
+    def get_all_parents(self, node_pks, return_values=['id']):
+        """
+        Get all the parents of given nodes
+        :param node_pks: one node pk or an iterable of node pks
+        :return: a list of aiida objects with all the parents of the nodes
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        qb = QueryBuilder()
+        qb.append(Node, tag='low_node',
+                  filters={'id': {'in': node_pks}})
+        qb.append(Node, ancestor_of='low_node', project=return_values)
+        return qb.all()

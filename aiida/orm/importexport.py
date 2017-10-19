@@ -1643,7 +1643,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                      allowed_licenses=None, forbidden_licenses=None,
-                     silent=False):
+                     silent=False, use_querybuilder_ancestors=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -1673,7 +1673,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-
+    from aiida.backends.utils import QueryFactory
     if not silent:
         print "STARTING EXPORT..."
 
@@ -1702,11 +1702,16 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         if given_node_entry_ids:
             # Also add the parents (to any level) to the query
             # This is done via the ancestor relationship.
-            qb = QueryBuilder()
-            qb.append(Node, tag='low_node',
-                      filters={'id': {'in': given_node_entry_ids}})
-            qb.append(Node, ancestor_of='low_node', project=['id'])
-            additional_ids = [_ for _, in qb.all()]
+            if use_querybuilder_ancestors:
+                qb = QueryBuilder()
+                qb.append(Node, tag='low_node',
+                          filters={'id': {'in': given_node_entry_ids}})
+                qb.append(Node, ancestor_of='low_node', project=['id'])
+                additional_ids = [_ for _, in qb.all()]
+            else:
+                q = QueryFactory()()
+                additional_ids = [_ for _, in q.get_all_parents(given_node_entry_ids, return_values=['id'])]
+
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     if also_calc_outputs:

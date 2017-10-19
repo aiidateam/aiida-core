@@ -691,7 +691,9 @@ class QueryBuilderPath(AiidaTestCase):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
+        from aiida.backends.utils import QueryFactory
 
+        q = QueryFactory()()
         n1 = Node()
         n1.label='n1'
         n1.store()
@@ -733,6 +735,15 @@ class QueryBuilderPath(AiidaTestCase):
         n8.add_link_from(n7)
 
 
+
+        # There are no parents to n9, checking that
+        self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
+        # There is one parent to n6
+        self.assertEqual(set([(_,) for _ in (n6.pk,)]), set([tuple(_) for _ in q.get_all_parents([n7.pk])]))
+        # There are several parents to n4
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2)]), set([tuple(_) for _ in q.get_all_parents([n4.pk])]))
+        # There are several parents to n5
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2,n3,n4)]), set([tuple(_) for _ in q.get_all_parents([n5.pk])]))
 
 
         # Yet, no links from 1 to 8
@@ -871,7 +882,7 @@ class TestConsistency(AiidaTestCase):
         self.assertEqual(idx,99)
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
-class TestStatisticsQuery(AiidaTestCase):
+class TestManager(AiidaTestCase):
     def test_statistics(self):
         """
         Test if the statistics query works properly.

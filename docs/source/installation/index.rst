@@ -746,13 +746,13 @@ Updating from 0.9.* Django to 0.10.0 Django
 
         > psql AIIDADB
         AIIDADB=# CREATE TABLE db_dbpath (
-            id integer NOT NULL,
-            depth integer NOT NULL,
-            entry_edge_id integer,
-            direct_edge_id integer,
-            exit_edge_id integer,
-            child_id integer NOT NULL,
-            parent_id integer NOT NULL
+        id integer NOT NULL,
+        depth integer NOT NULL,
+        entry_edge_id integer,
+        direct_edge_id integer,
+        exit_edge_id integer,
+        child_id integer NOT NULL,
+        parent_id integer NOT NULL
         );
 
 

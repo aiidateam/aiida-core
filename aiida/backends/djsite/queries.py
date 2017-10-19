@@ -270,6 +270,34 @@ class QueryManagerDjango(AbstractQueryManager):
 
         return entry_list
 
+    def get_all_parents(self, node_pks, return_values=['id']):
+        """
+        Get all the parents of given nodes
+        :param node_pks: one node pk or an iterable of node pks
+        :return: a list of aiida objects with all the parents of the nodes
+        """
+        from aiida.backends.djsite.db import models
+        from aiida.common.links import LinkType
+
+        try:
+            the_node_pks = list(node_pks)
+        except TypeError:
+            the_node_pks = [node_pks]
+
+        parents = models.DbNode.objects.none()
+        q_inputs = models.DbNode.aiidaobjects.filter(
+                outputs__pk__in=the_node_pks,
+                output_links__type__in=(LinkType.CREATE.value, LinkType.INPUT.value)).distinct()
+
+        while q_inputs.count() > 0:
+            inputs = list(q_inputs)
+            parents = q_inputs | parents.all()
+            q_inputs = models.DbNode.aiidaobjects.filter(
+                outputs__in=inputs,
+                output_links__type__in=(LinkType.CREATE.value, LinkType.INPUT.value)).distinct()
+
+        return parents.values_list(*return_values)
+
 
 def get_closest_parents(pks,*args,**kwargs):
     """

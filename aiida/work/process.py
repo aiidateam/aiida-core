@@ -29,6 +29,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
+from aiida.orm.calculation.job import JobCalculation 
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
 from . import utils
@@ -281,7 +282,10 @@ class Process(plum.process.Process):
         super(Process, self).on_abort()
         control_publisher = create_control_panel().control
         for child in self.calc.get_outputs(link_type=LinkType.CALL):
-            control_publisher.abort_process(pid=child.pk)
+            if isinstance(child, JobCalculation):
+                child.kill()
+            else:
+                control_publisher.abort_process(pid=child.pk)
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):

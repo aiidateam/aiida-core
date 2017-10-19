@@ -57,5 +57,5 @@ class WorkCalculation(Calculation):
         if not self.is_sealed:
             self._set_attr(self.ABORTED_KEY, True)
             self.seal()
-        for child in self.get_outputs_dict(link_type=LinkType.CALL).values():
+        for child in self.get_outputs(link_type=LinkType.CALL):
             child.kill()

@@ -6,6 +6,7 @@ from pgtest import pgtest
 
 from aiida.utils.fixtures import FixtureManager, FixtureError
 from aiida.utils.capturing import Capturing
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class FixtureManagerTestCase(unittest.TestCase):
@@ -13,8 +14,8 @@ class FixtureManagerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.fixture_manager = FixtureManager()
-        self.backend = 'django' if os.environ.get(
-            'TEST_AIIDA_BACKEND', 'django') == 'django' else 'sqlalchemy'
+        self.backend = BACKEND_DJANGO if os.environ.get(
+            'TEST_AIIDA_BACKEND', BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
         self.fixture_manager.backend = self.backend
 
     def test_create_db_cluster(self):

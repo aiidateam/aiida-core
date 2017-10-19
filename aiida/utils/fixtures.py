@@ -9,6 +9,7 @@ from pgtest.pgtest import PGTest
 
 from aiida.control.postgres import Postgres
 from aiida import is_dbenv_loaded
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class FixtureError(Exception):
@@ -66,7 +67,8 @@ class FixtureManager(object):
         self._backup = {}
 
     def create_db_cluster(self):
-        self.pg_cluster = PGTest()
+        if not self.pg_cluster:
+            self.pg_cluster = PGTest()
         self.db_params.update(self.pg_cluster.dsn)
 
     def create_aiida_db(self):
@@ -128,9 +130,9 @@ class FixtureManager(object):
         if not self.__is_running_on_test_profile:
             raise FixtureError(
                 'No test profile has been set up yet, can not reset the db')
-        if self.profile_info['backend'] == 'django':
+        if self.profile_info['backend'] == BACKEND_DJANGO:
             self.__clean_db_django()
-        elif self.profile_info['backend'] == 'sqla':
+        elif self.profile_info['backend'] == BACKEND_SQLA:
             self.__clean_db_sqla()
 
     @property
@@ -225,6 +227,10 @@ class FixtureManager(object):
 
     @backend.setter
     def backend(self, backend):
+        valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
+        if backend not in valid_backends:
+            raise ValueError('invalid backend {}, must be one of {}'.format(
+                backend, valid_backends))
         self.profile_info['backend'] = backend
 
     @property
@@ -299,8 +305,12 @@ class FixtureManager(object):
 
     @staticmethod
     def __clean_db_sqla():
+        """Clean database for sqlalchemy backend"""
         from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
-        SqlAlchemyTests().clean_db()
+        from aiida.backends.sqlalchemy import get_scoped_session
+        sqla_testcase = SqlAlchemyTests()
+        sqla_testcase.test_session = get_scoped_session()
+        sqla_testcase.clean_db()
 
 
 @contextmanager

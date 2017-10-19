@@ -738,6 +738,24 @@ Updating from 0.9.* Django to 0.10.0 Django
 
   Have faith in your AiiDA team and type ``yes``!
 
+  .. note::
+    For everyone who `tuned` his AiiDA-database by dropping the path-table and the corresponding triggers,
+    the migration will fail because the table db_dbpath does not exist.
+    In such a case, you have to insert the table manually into the database of your profile
+    (which we call AIIDADB in the demonstration):
+
+        > psql AIIDADB
+
+        AIIDADB=# CREATE TABLE db_dbpath (                                                                             
+            id integer NOT NULL,
+            depth integer NOT NULL,
+            entry_edge_id integer,
+            direct_edge_id integer,
+            exit_edge_id integer,
+            child_id integer NOT NULL,
+            parent_id integer NOT NULL
+        );
+
 Updating from 0.9.* to 0.10.0
 ++++++++++++++++++++++++++++++++++++++++++
 

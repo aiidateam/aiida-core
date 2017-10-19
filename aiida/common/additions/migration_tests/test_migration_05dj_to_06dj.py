@@ -18,6 +18,7 @@ import aiida.common.setup as setup
 from aiida.common.additions.old_migrations.migration_05dj_to_06dj import (
     Migration)
 
+from ..config_migrations import check_and_migrate_config
 
 
 class MigrationTest(unittest.TestCase):

@@ -592,9 +592,15 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             user.configure.main(args=[email])
         else:
             # or don't ask
-            aiida.cmdline.commands.user.do_configure(kwargs['email'], kwargs.get('first_name'),
-                                                       kwargs.get('last_name'), kwargs.get('institution'),
-                                                       True)
+            aiida.cmdline.commands.user.do_configure(
+                email=kwargs['email'],
+                first_name=kwargs.get('first_name'),
+                last_name=kwargs.get('last_name'),
+                institution=kwargs.get('institution'),
+                no_password=True,
+                non_interactive=non_interactive,
+                force=True
+            )
 
     print "Setup finished."
 

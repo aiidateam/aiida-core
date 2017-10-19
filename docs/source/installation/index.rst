@@ -745,7 +745,6 @@ Updating from 0.9.* Django to 0.10.0 Django
     (which we call AIIDADB in the demonstration):
 
         > psql AIIDADB
-
         AIIDADB=# CREATE TABLE db_dbpath (                                                                             
             id integer NOT NULL,
             depth integer NOT NULL,
@@ -755,6 +754,7 @@ Updating from 0.9.* Django to 0.10.0 Django
             child_id integer NOT NULL,
             parent_id integer NOT NULL
         );
+
 
 Updating from 0.9.* to 0.10.0
 ++++++++++++++++++++++++++++++++++++++++++

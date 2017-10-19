@@ -744,6 +744,8 @@ Updating from 0.9.* Django to 0.10.0 Django
     In such a case, you have to insert the table manually into the database of your profile
     (which we call AIIDADB in the demonstration):
 
+    .. code-block:: psql
+
         > psql AIIDADB
         AIIDADB=# CREATE TABLE db_dbpath (
         id integer NOT NULL,

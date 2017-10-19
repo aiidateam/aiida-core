@@ -45,9 +45,9 @@ You could for example opt to create a directory for all your virtual environment
 
     $ mkdir ~/.virtualenvs
 
-Using ``virtualenv`` you can then create a new virtual environment by running::
+Using ``virtualenv`` you can then create a new virtual environment with python 2.7 by running::
 
-    $ virtualenv ~/.virtualenvs/my_env
+    $ virtualenv --python=<path/to/python2.7> ~/.virtualenvs/my_env
 
 This will create the environment ``my_env`` and automatically activate it for you.
 If you open a new terminal, or you have deactivated the environment, you can reactivate it as follows::

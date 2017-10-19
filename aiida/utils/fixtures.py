@@ -26,7 +26,11 @@ class FixtureError(Exception):
 # pylint: disable=too-many-public-methods
 class FixtureManager(object):
     """
-    Manage AiiDA fixtures
+    Manage the life cycle of a completely separated and temporary AiiDA environment
+
+    * No previously created database of profile is required to run tests using this
+    environment
+    * Tests using this environment will never pollute the user's work environment
 
     Example::
 
@@ -45,6 +49,28 @@ class FixtureManager(object):
 
         fixtures.destroy_all()
         # everything cleaned up
+
+    Unittest Example::
+
+        class PluginTestCase(unittest.TestCase):
+            @classmethod
+            def setUpClass(cls):
+                cls.fixture_manager = FixtureManager()
+                cls.fixture_manager.create_profile()
+
+            def setUp(self):
+                # load your specific test data
+
+            def tearDown(self):
+                cls.fixture_manager.reset_db()
+
+            @classmethod
+            def tearDownClass(cls):
+                cls.fixture_manager.destroy_all()
+
+            def test_my_plugin(self):
+                # execute tests
+
     """
 
     def __init__(self):
@@ -358,7 +384,6 @@ class PluginTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.fixture_builder = FixtureManager()
-        cls.fixture_builder.create_aiida_db()
         cls.fixture_builder.create_profile()
 
     @classmethod

@@ -296,7 +296,7 @@ class NodeTranslator(BaseTranslator):
                 full_path = full_path_base + '.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source(package_path, full_path)
+                app_module = imp.load_source("rst"+name, full_path)
 
             # Go through the content of the module
             if not is_pkg:

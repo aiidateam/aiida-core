@@ -10,6 +10,7 @@
 
 from aiida.orm.implementation.calculation import Calculation
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 
 class WorkCalculation(Calculation):
     """
@@ -55,7 +56,6 @@ class WorkCalculation(Calculation):
         """
         if not self.is_sealed:
             self._set_attr(self.ABORTED_KEY, True)
-        self.seal()
-        for key, child in self.get_outputs_dict().items():
-            if key.startswith('CALL_'):
-                child.kill()
+            self.seal()
+        for child in self.get_outputs_dict(link_type=LinkType.CALL).values():
+            child.kill()

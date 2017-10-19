@@ -1492,13 +1492,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         This check verifies that the properties has_children has_parents of the
         Node class behave correctly.
         """
+        from aiida.common.links import LinkType
 
         # Create 2 nodes and store them
         n1 = Node().store()
         n2 = Node().store()
 
-        # Create a link between these 2 nodes
-        n2.add_link_from(n1, "N1")
+        # Create a link between these 2 nodes, link type CREATE so we track the provenance
+        n2.add_link_from(n1, "N1", link_type=LinkType.CREATE)
 
         self.assertTrue(n1.has_children, "It should be true since n2 is the "
                                          "child of n1.")

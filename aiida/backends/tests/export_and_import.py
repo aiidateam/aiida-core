@@ -799,6 +799,124 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+
+    def test_reexport(self):
+        """
+        Export something, import and reexport and check if everything is valid.
+        The export is rather easy:
+         ___       ___          ___
+        |   | INP |   | CREATE |   |
+        | p | --> | c | -----> | a |
+        |___|     |___|        |___|
+
+        """
+        import os, shutil, tempfile, numpy as np, string, random
+        from datetime import datetime
+
+        from aiida.orm import  Calculation, load_node, Group
+        from aiida.orm.data.array import ArrayData
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.importexport import export
+        from aiida.common.hashing import make_hash
+        from aiida.common.links import LinkType
+        def get_hash_from_db_content(groupname):
+            qb = QueryBuilder()
+            qb.append(ParameterData, tag='p', project='*')
+            qb.append(Calculation,tag='c',project='*', edge_tag='p2c', edge_project=('label', 'type'))
+            qb.append(ArrayData, tag='a',project='*', edge_tag='c2a', edge_project=('label', 'type'))
+            qb.append(Group, filters={'name':groupname}, project='*', tag='g', group_of='a')
+            # I want the query to contain something!
+            self.assertTrue(qb.count() > 0)
+            # The hash is given from the preservable entries in an export-import cycle,
+            # uuids, attributes, labels, descriptions, arrays, link-labels, link-types:
+            hash_ = make_hash([(
+                    item['p']['*'].get_attrs(),
+                    item['p']['*'].uuid,
+                    item['p']['*'].label,
+                    item['p']['*'].description,
+                    item['c']['*'].uuid,
+                    item['c']['*'].get_attrs(),
+                    item['a']['*'].get_attrs(),
+                    [item['a']['*'].get_array(name) for name in item['a']['*'].get_arraynames()],
+                    item['a']['*'].uuid,
+                    item['g']['*'].uuid,
+                    item['g']['*'].name,
+                    item['p2c']['label'],
+                    item['p2c']['type'],
+                    item['c2a']['label'],
+                    item['c2a']['type'],
+                    item['g']['*'].name,
+                    ) for item in qb.dict()])
+            return hash_
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        chars=string.ascii_uppercase + string.digits
+        size=10
+        groupname='test-group'
+        try:
+            nparr = np.random.random((4,3,2))
+            trial_dict = {}
+            # give some integers:
+            trial_dict.update({str(k):np.random.randint(100) for k in range(10)})
+            # give some floats:
+            trial_dict.update({str(k):np.random.random() for k in range(10,20)})
+            # give some booleans:
+            trial_dict.update({str(k):bool(np.random.randint(1)) for k in range(20,30)})
+            # give some datetime:
+            trial_dict.update({str(k):datetime(
+                    year=2017,
+                    month=np.random.randint(1,12),
+                    day=np.random.randint(1,28)) for k in range(30,40)})
+            # give some text:
+            trial_dict.update({str(k):''.join(random.choice(chars) for _ in range(size)) for k in range(20,30)})
+
+            p = ParameterData(dict=trial_dict)
+            p.label = str(datetime.now())
+            p.description = 'd_' + str(datetime.now())
+            p.store()
+            c = Calculation()
+            # setting also trial dict as attributes, but randomizing the keys)
+            (c._set_attr(str(int(k)+np.random.randint(10)),v) for k,v in trial_dict.items())
+            c.store()
+            a = ArrayData()
+            a.set_array('array', nparr)
+            a.store()
+            # LINKS
+            # the calculation has input the parameters-instance
+            c.add_link_from(p, label='input_parameters', link_type=LinkType.INPUT)
+            # I want the array to be an output of the calculation
+            a.add_link_from(c, label='output_array', link_type=LinkType.CREATE)
+            g = Group(name='test-group')
+            g.store()
+            g.add_nodes(a)
+
+            hash_from_dbcontent = get_hash_from_db_content(groupname)
+
+            # I export and reimport 3 times in a row:
+            for i in range(3):
+                # Always new filename:
+                filename = os.path.join(temp_folder, "export-{}.zip".format(i))
+                # Loading the group from the string
+                g = Group.get_from_string(groupname)
+                # exporting based on all members of the group
+                # this also checks if group memberships are preserved!
+                export([g.dbgroup]+[n.dbnode for n in g.nodes], outfile=filename, silent=True)
+                # cleaning the DB!
+                self.clean_db()
+                # reimporting the data from the file
+                import_data(filename, silent=True, ignore_unknown_nodes=True)
+                # creating the hash from db content
+                new_hash = get_hash_from_db_content(groupname)
+                # I check for equality against the first hash created, which implies that hashes
+                # are equal in all iterations of this process
+                self.assertEqual(hash_from_dbcontent, new_hash)
+
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+
 class TestComplex(AiidaTestCase):
     def test_complex_graph_import_export(self):
         """

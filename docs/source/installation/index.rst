@@ -745,7 +745,7 @@ Updating from 0.9.* Django to 0.10.0 Django
     (which we call AIIDADB in the demonstration):
 
         > psql AIIDADB
-        AIIDADB=# CREATE TABLE db_dbpath (                                                                             
+        AIIDADB=# CREATE TABLE db_dbpath (
             id integer NOT NULL,
             depth integer NOT NULL,
             entry_edge_id integer,

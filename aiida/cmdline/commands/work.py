@@ -277,6 +277,7 @@ def kill(pks):
     try_load_dbenv()
     from aiida.orm import load_node
     from aiida.orm.calculation.work import WorkCalculation
+    from aiida.work.rmq import create_control_panel 
 
     nodes = [load_node(pk) for pk in pks]
     workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
@@ -291,8 +292,9 @@ def kill(pks):
         ).lower()
         if answer == 'y':
             click.echo('Killing workflows.')
+            control_publisher = create_control_panel().control
             for n in running_workchain_nodes:
-                n.kill()
+                control_publisher.abort_process(n.pk)
         else:
             click.echo('Abort!')
     else:

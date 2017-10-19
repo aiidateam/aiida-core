@@ -32,6 +32,7 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
 from . import utils
+from .rmq import create_control_panel
 
 __all__ = ['Process', 'FunctionProcess']
 
@@ -44,7 +45,7 @@ class DictSchema(object):
         """
         Call this to validate the value against the schema.
 
-        :param value: a regular dictionary or a ParameterData instance 
+        :param value: a regular dictionary or a ParameterData instance
         :return: tuple (success, msg).  success is True if the value is valid
             and False otherwise, in which case msg will contain information about
             the validation failure.
@@ -276,6 +277,13 @@ class Process(plum.process.Process):
         self.calc.seal()
 
     @override
+    def on_abort(self):
+        super(Process, self).on_abort()
+        control_publisher = create_control_panel().control
+        for child in self.calc.get_outputs(link_type=LinkType.CALL):
+            control_publisher.abort_process(pid=child.pk)
+
+    @override
     def on_output_emitted(self, output_port, value, dynamic):
         """
         The process has emitted a value on the given output port.
@@ -364,8 +372,8 @@ class Process(plum.process.Process):
 
     @override
     def encode_input_args(self, inputs):
-        """ 
-        Encode input arguments such that they may be saved in a 
+        """
+        Encode input arguments such that they may be saved in a
         :class:`apricotpy.persistable.Bundle`
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -376,10 +384,10 @@ class Process(plum.process.Process):
     @override
     def decode_input_args(self, encoded):
         """
-        Decode saved input arguments as they came from the saved instance state 
+        Decode saved input arguments as they came from the saved instance state
         :class:`apricotpy.persistable.Bundle`
 
-        :param encoded: 
+        :param encoded:
         :return: The decoded input args
         """
         return {k: self._decode_input(v) for k, v in encoded.iteritems()}

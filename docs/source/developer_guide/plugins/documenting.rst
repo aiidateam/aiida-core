@@ -48,36 +48,3 @@ The
  #. When you update the plugin to a new version make sure to update the version number both in
     ``setup.json`` and in ``<your_plugin>/__init__.py``
 
-
-
-4. Get Your Plugin Listed
--------------------------
-
-This step is important to ensure that the name by which your plugin classes are loaded stays unique and unambiguous!
-
-If you wish to get your plugin listed on the official registry for AiiDA plugins, you will provide the following keyword arguments as key-value pairs in a setup.json or setup.yaml file alongside. It is recommended to have setup.py read the keyword arguments from that file::
-
-   aiida-myplugin/
-      aiida_myplugin/
-         ...
-      setup.py
-      setup.json | setup.yaml
-
-* ``name``
-* ``author``
-* ``author_email``
-* ``description``
-* ``url``
-* ``license``
-* ``classifiers`` (optional)
-* ``version``
-* ``install_requires``
-* ``entry_points``
-* ``scripts`` (optional)
-
-Now, fork the plugin `registry`_ repository, fill in your plugin's information in the same fashion as the plugins already registered, and create a pull request. The registry will allow users to discover your plugin using ``verdi plugin search`` (note: the latter verdi command is not yet implemented in AiiDA).
-
-.. _pypi: https://pypi.python.org
-.. _packaging: https://packaging.python.org/distributing/#configuring-your-project
-.. _setuptools: https://setuptools.readthedocs.io
-.. _registry: https://github.com/aiidateam/aiida-registry

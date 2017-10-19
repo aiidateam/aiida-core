@@ -33,8 +33,10 @@ What happens when ``pip`` is used to install a package is explained in detail in
 * if the ``-e`` option is given, a symbolic link is put into the python package search path, pointing to the distribution top level directory. This is where the ``.egg-info`` folder gets created. Changes to the source code will be picked up by python without reinstalling, however changes to the distribution metadata will not.
 
 
+.. _plugins.get_listed:
 
-
+Get Your Plugin Listed
+------------------------
 
 This step is important to ensure that the name by which your plugin classes are loaded stays unique and unambiguous!
 

@@ -691,6 +691,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
+        from aiida.common.links import LinkType
         from aiida.backends.utils import QueryFactory
 
         q = QueryFactory()()
@@ -725,14 +726,15 @@ class QueryBuilderPath(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2)
-        n2.add_link_from(n1)
-        n5.add_link_from(n3)
-        n5.add_link_from(n4)
-        n4.add_link_from(n2)
-
-        n7.add_link_from(n6)
-        n8.add_link_from(n7)
+        # I set everything as an INPUT-links now, because the QueryBuilder path query or
+        # our custom queries don't follow other links than CREATE or INPUT
+        n3.add_link_from(n2, link_type=LinkType.INPUT)
+        n2.add_link_from(n1, link_type=LinkType.INPUT)
+        n5.add_link_from(n3, link_type=LinkType.INPUT)
+        n5.add_link_from(n4, link_type=LinkType.INPUT)
+        n4.add_link_from(n2, link_type=LinkType.INPUT)
+        n7.add_link_from(n6, link_type=LinkType.INPUT)
+        n8.add_link_from(n7, link_type=LinkType.INPUT)
 
 
 
@@ -761,7 +763,7 @@ class QueryBuilderPath(AiidaTestCase):
                 ).count(), 0)
 
 
-        n6.add_link_from(n5)
+        n6.add_link_from(n5, link_type=LinkType.INPUT)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             QueryBuilder().append(
@@ -818,7 +820,7 @@ class QueryBuilderPath(AiidaTestCase):
                 frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
             ))
 
-        n7.add_link_from(n9)
+        n7.add_link_from(n9, link_type=LinkType.INPUT)
         # Still two links...
 
         self.assertEquals(
@@ -833,7 +835,7 @@ class QueryBuilderPath(AiidaTestCase):
                     Node, filters={'id':n8.pk}, tag='desc'
                 ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
                 ).count(), 2)
-        n9.add_link_from(n6)
+        n9.add_link_from(n6, link_type=LinkType.INPUT)
         # And now there should be 4 nodes
 
         self.assertEquals(

@@ -38,6 +38,7 @@ class Work(VerdiCommandWithSubcommands):
             'status': (self.cli, self.complete_none),
             'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
+            'kill': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):
@@ -268,3 +269,33 @@ def _build_query(order_by=None, limit=None, past_days=None):
         qb.limit(limit)
 
     return qb.iterdict()
+
+@work.command('kill', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def kill(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    from aiida.orm import load_node
+    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.work.rmq import create_control_panel 
+
+    nodes = [load_node(pk) for pk in pks]
+    workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
+    running_workchain_nodes = [n for n in nodes if not n.has_finished()]
+
+    num_workchains = len(running_workchain_nodes)
+    if num_workchains > 0:
+        answer = click.prompt(
+            'Are you sure you want to kill {} workflows and all their children? [y/n]'.format(
+                num_workchains
+            )
+        ).lower()
+        if answer == 'y':
+            click.echo('Killing workflows.')
+            control_publisher = create_control_panel().control
+            for n in running_workchain_nodes:
+                control_publisher.abort_process(n.pk)
+        else:
+            click.echo('Abort!')
+    else:
+        click.echo('No pks of valid running workchains given.')

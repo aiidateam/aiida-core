@@ -2,9 +2,11 @@
 Defines the migration functions between different config versions.
 """
 
+import uuid
+
 # The current configuration version. Increment this value whenever a change
 # to the config.json structure is made.
-CURRENT_CONFIG_VERSION = 1
+CURRENT_CONFIG_VERSION = 2
 # The oldest config version where no backwards-incompatible changes have been
 # made since. When doing backwards-incompatible changes, set this to the current
 # version.
@@ -43,11 +45,21 @@ class ConfigMigration(object):
         )
         return config
 
+def _1_add_rmq_prefix(config):
+    for profile in config['profiles'].values():
+        profile['RMQ_PREFIX'] = uuid.uuid4().hex
+    return config
+
 # Maps the initial config version to the ConfigMigration which updates it.
 _MIGRATION_LOOKUP = {
     0: ConfigMigration(
         migrate_function=lambda x: x,
         current_version=1,
+        oldest_version=0
+    ),
+    1: ConfigMigration(
+        migrate_function=_1_add_rmq_prefix,
+        current_version=2,
         oldest_version=0
     )
 }

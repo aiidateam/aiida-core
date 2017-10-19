@@ -245,8 +245,9 @@ def _try_connect(**kwargs):
     from psycopg2 import connect
     success = False
     try:
-        connect(**kwargs)
+        conn = connect(**kwargs)
         success = True
+        conn.close()
     except Exception:  # pylint: disable=broad-except
         pass
     return success
@@ -286,6 +287,7 @@ def _pg_execute_psyco(command, **kwargs):
                 output = cur.fetchall()
             except ProgrammingError:
                 pass
+    conn.close()
     return output
 
 

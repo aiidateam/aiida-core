@@ -99,6 +99,8 @@ class FixtureManager(object):
         if is_dbenv_loaded():
             raise FixtureError(
                 'AiiDA dbenv can not be loaded while creating a test profile')
+        if not self.__is_running_on_test_db:
+            self.create_aiida_db()
         from aiida.common import setup as aiida_cfg
         from aiida.cmdline.verdilib import setup
         if not self.root_dir:
@@ -269,10 +271,15 @@ class FixtureManager(object):
         return bool(self.root_dir and path.isdir(self.root_dir))
 
     def destroy_all(self):
+        """Remove all traces of the test run"""
         if self.root_dir:
             shutil.rmtree(self.root_dir)
+            self.root_dir = None
         if self.pg_cluster:
             self.pg_cluster.close()
+            self.pg_cluster = None
+        self.__is_running_on_test_db = False
+        self.__is_running_on_test_profile = False
 
     @staticmethod
     def __clean_db_django():

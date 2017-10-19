@@ -75,3 +75,7 @@ class FixtureManagerTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.fixture_manager.destroy_all()
+
+
+if __name__ == '__main__':
+    unittest.main()

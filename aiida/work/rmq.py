@@ -11,6 +11,8 @@ from aiida.orm import load_node, Node
 from aiida.work.class_loader import _CLASS_LOADER
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
+from aiida.backends import settings
 
 _CONTROL_EXCHANGE = 'process.control'
 _EVENT_EXCHANGE = 'process.event'
@@ -27,7 +29,7 @@ def _create_connection():
 
 def _get_prefix():
     """Get the queue prefix from the profile."""
-    #TODO
+    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 def encode_response(response):
     serialized = serialize_data(response)
@@ -51,33 +53,34 @@ def status_decode(msg):
     return decoded
 
 
-def insert_process_control_subscriber(loop, prefix, get_connection=_create_connection):
+def insert_process_control_subscriber(loop, get_prefix=_get_prefix, get_connection=_create_connection):
     return loop.create(
         rmq.control.ProcessControlSubscriber,
         get_connection(),
-        "{}.{}".format(prefix, _CONTROL_EXCHANGE),
+        "{}.{}".format(_get_prefix(), _CONTROL_EXCHANGE),
     )
 
-def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
+def insert_process_status_subscriber(loop, get_prefix=_get_prefix, get_connection=_create_connection):
     return loop.create(
         rmq.status.ProcessStatusSubscriber,
         get_connection(),
-        "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
+        "{}.{}".format(_get_prefix(), _STATUS_REQUEST_EXCHANGE),
     )
 
-def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
+def insert_process_launch_subscriber(loop, get_prefix=_get_prefix, get_connection=_create_connection):
     return loop.create(
         rmq.launch.ProcessLaunchSubscriber,
         get_connection(),
-        "{}.{}".format(prefix, _LAUNCH_QUEUE),
+        "{}.{}".format(_get_prefix(), _LAUNCH_QUEUE),
         response_encoder=encode_response
     )
 
-def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
+def insert_all_subscribers(loop, get_prefix=_get_prefix, get_connection=_create_connection):
     # Give them all the same connection instance
     connection = get_connection()
     get_conn = lambda: connection
 
+    prefix = _get_prefix()
     insert_process_control_subscriber(loop, prefix, get_conn)
     insert_process_status_subscriber(loop, prefix, get_conn)
     insert_process_launch_subscriber(loop, prefix, get_conn)
@@ -96,18 +99,18 @@ class ProcessControlPanel(apricotpy.LoopObject):
 
         self._control = rmq.control.ProcessControlPublisher(
             self._connection,
-            "{}.{}".format(prefix, _CONTROL_EXCHANGE)
+            "{}.{}".format(self._prefix, _CONTROL_EXCHANGE)
         )
 
         self._status = rmq.status.ProcessStatusRequester(
             self._connection,
-            "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
+            "{}.{}".format(self._prefix, _STATUS_REQUEST_EXCHANGE),
             status_decode
         )
 
         self._launch = rmq.launch.ProcessLaunchPublisher(
             self._connection,
-            "{}.{}".format(prefix, _LAUNCH_QUEUE),
+            "{}.{}".format(self._prefix, _LAUNCH_QUEUE),
             pickle.dumps,
             decode_response
         )
@@ -137,5 +140,8 @@ class ProcessControlPanel(apricotpy.LoopObject):
         return self._launch.launch(process_bundle)
 
 
-def create_control_panel(prefix="aiida", create_connection=_create_connection):
-    return ProcessControlPanel(prefix, create_connection)
+def create_control_panel(get_prefix=_get_prefix, create_connection=_create_connection):
+    return ProcessControlPanel(
+        get_prefix=get_prefix,
+        create_connection=create_connection
+    )

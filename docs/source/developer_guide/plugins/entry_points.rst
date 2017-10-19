@@ -3,6 +3,21 @@
 AiiDA Entry Points
 ==================
 
+
+Entry Points
+------------
+
+The ``setuptools`` package to which ``pip`` is a frontend has a feature called `entry points`_. When a distribution which registers entry points is installed, the entry point specifications are written to a file inside the distribution's ``.egg-info`` folder. ``setuptools`` provides a package ``pkg_resources`` which can find these entry points by distribution, group and/or name and load the data structure to which it points. This is the way AiiDA finds and loads classes provided by plugins.
+
+There is a list of entry point groups defined by AiiDA on the page :ref:`plugins.entry_points`.
+
+.. _packages: https://docs.python.org/2/tutorial/modules.html?highlight=package#packages
+.. _PyPI: https://pypi.python.org/pypi
+.. _packaging: https://packaging.python.org
+.. _Entry points: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+
+
+
 This document contains a list of entry point groups AiiDA uses, with an example usage for each. For the examples we assume the following plugin structure for a plugin that supports a code (example: ``mycode``):
 
 .. code-block:: bash

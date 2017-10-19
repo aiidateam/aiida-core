@@ -16,7 +16,7 @@ install_requires = [
     'python-dateutil>=2.6.0',
     'python-mimeparse>=0.1.4',
     'django==1.7.11',  # upgrade to Django 1.9 does prevent AiiDA functioning
-    'django_extensions<1.8',
+    'django-extensions<1.8',
     'tzlocal>=1.3',
     'pytz>=2014.10',
     'six>=1.10',
@@ -51,7 +51,7 @@ install_requires = [
     'voluptuous>=0.8.11',
     'aldjemy>=0.6.0',
     'passlib>=1.7.1',
-    'validate_email>=1.3',
+    'validate-email>=1.3',
     'click>=6.7',
     'tabulate>=0.7.5',
     'ete3>=3.0.0b35',
@@ -63,7 +63,7 @@ install_requires = [
     'pycrypto>=2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
-    'ipython < 6.0',
+    'ipython<6.0',
 ]
 
 extras_require = {
@@ -78,7 +78,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'flask>=0.10.1',
-        'flask_restful>=0.3.5',
+        'flask-restful>=0.3.5',
         'flask-cors>=3.0.1',
         'pyparsing>=2.1.10',
         'pattern>=2.6',
@@ -99,7 +99,7 @@ extras_require = {
         'jinja2>=2.9.5',
         'markupsafe>=0.23',
         # Required by readthedocs
-        'sphinx_rtd_theme>=0.1.9',
+        'sphinx-rtd-theme>=0.1.9',
     ],
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software

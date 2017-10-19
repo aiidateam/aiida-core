@@ -38,10 +38,8 @@ class FixtureManagerTestCase(unittest.TestCase):
         * reset_db deletes all data added after profile creation
         * destroy_all removes all traces of the test run
         """
-        from aiida.backends import settings as backend_settings
         from aiida.common import setup as aiida_cfg
         from aiida import is_dbenv_loaded
-        backend_settings.AIIDADB_PROFILE = None
         with Capturing() as output:
             self.fixture_manager.create_profile()
         self.assertTrue(self.fixture_manager.root_dir_ok, msg=output)

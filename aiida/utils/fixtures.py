@@ -63,6 +63,7 @@ class FixtureManager(object):
         self.postgres = None
         self.__is_running_on_test_db = False
         self.__is_running_on_test_profile = False
+        self._backup = {}
 
     def create_db_cluster(self):
         self.pg_cluster = PGTest()
@@ -102,11 +103,15 @@ class FixtureManager(object):
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
         from aiida.common import setup as aiida_cfg
+        from aiida.backends import settings as backend_settings
         from aiida.cmdline.verdilib import setup
         if not self.root_dir:
             self.create_root_dir()
         print self.root_dir, self.config_dir
+        self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
+        self._backup['profile'] = backend_settings.AIIDADB_PROFILE
         aiida_cfg.AIIDA_CONFIG_FOLDER = self.config_dir
+        backend_settings.AIIDADB_PROFILE = None
         aiida_cfg.create_base_dirs()
         profile_name = 'test_profile'
         setup(
@@ -272,6 +277,8 @@ class FixtureManager(object):
 
     def destroy_all(self):
         """Remove all traces of the test run"""
+        from aiida.common import setup as aiida_cfg
+        from aiida.backends import settings as backend_settings
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -280,6 +287,10 @@ class FixtureManager(object):
             self.pg_cluster = None
         self.__is_running_on_test_db = False
         self.__is_running_on_test_profile = False
+        if 'config_dir' in self._backup:
+            aiida_cfg.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
+        if 'profile' in self._backup:
+            backend_settings.AIIDADB_PROFILE = self._backup['profile']
 
     @staticmethod
     def __clean_db_django():

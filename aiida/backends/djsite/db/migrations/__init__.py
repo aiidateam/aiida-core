@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0005_add_cmtime_indices'
+LATEST_MIGRATION = '0007_update_linktypes'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -53,22 +53,10 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsInstance(n1.dbnode.outputs_q, AppenderQuery,
                               "This is expected to be an AppenderQuery")
 
-        # Check that the result of children is a list
-        self.assertIsInstance(n1.dbnode.children, list,
-                              "This is expected to be a list")
-
-        # Check that the result of children_q is a list
-        from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(n1.dbnode.children_q, AppenderQuery,
-                              "This is expected to be an AppenderQuery")
-
         # Check that the result of outputs is correct
         out = set([_.pk for _ in n1.dbnode.outputs])
         self.assertEqual(out, set([n2.pk]))
 
-        # Check that the result of children is correct
-        out = set([_.pk for _ in n1.dbnode.children])
-        self.assertEqual(out, set([n2.pk, n3.pk]))
 
     def test_inputs_parents_relationship(self):
         """
@@ -92,22 +80,10 @@ class TestRelationshipsSQLA(AiidaTestCase):
         self.assertIsInstance(n1.dbnode.inputs_q, AppenderQuery,
                               "This is expected to be an AppenderQuery")
 
-        # Check that the result of children is a list
-        self.assertIsInstance(n1.dbnode.parents, list,
-                              "This is expected to be a list")
-
-        # Check that the result of children_q is a list
-        from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(n1.dbnode.parents_q, AppenderQuery,
-                              "This is expected to be an AppenderQuery")
 
         # Check that the result of inputs is correct
         out = set([_.pk for _ in n3.dbnode.inputs])
         self.assertEqual(out, set([n2.pk]))
-
-        # Check that the result of parents is correct
-        out = set([_.pk for _ in n3.dbnode.parents])
-        self.assertEqual(out, set([n1.pk, n2.pk]))
 
     def test_User_node_1(self):
         """

@@ -14,6 +14,8 @@ from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'sealed', 'uuid',
+                                'finished', 'descr', 'mtime']
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
@@ -47,7 +49,9 @@ class Work(VerdiCommandWithSubcommands):
 @click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
 @click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
-def do_list(past_days, all_nodes, limit):
+@click.option('-pr', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
+              multiple=True, help="Define the list of properties to show")
+def do_list(past_days, all_nodes, limit, project):
     """
     Return a list of running workflows on screen
     """
@@ -64,26 +68,72 @@ def do_list(past_days, all_nodes, limit):
     if all_nodes:
         past_days = None
 
-    table = []
-    for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):
-        calc = res['calculation']
-        creation_time = str_timedelta(
-            timezone.delta(calc['ctime'], now), negative_to_zero=True,
-            max_num_fields=1)
+    if not project:
+        project = ('id', 'ctime', 'label')  # default projections
 
-        table.append([
-            calc['id'],
-            creation_time,
-            calc['attributes._process_label'],
-            str(calc[_SEALED_ATTRIBUTE_KEY])
-        ])
+
+    # Mapping of projections to list table headers.
+    hmap_dict = {
+        'id': "PID",
+        'ctime': "Creation time",
+        'label': "Process Label",
+        'uuid': "UUID",
+        'descr': 'Description',
+        'mtime': 'Modification time'
+    }
+
+    def map_header(p):
+        try:
+            return hmap_dict[p]
+        except KeyError:
+            return p.capitalize()
+
+    # Mapping of querybuilder keys that differ from projections.
+    pmap_dict = {
+        'label': 'attributes._process_label',
+        'sealed': _SEALED_ATTRIBUTE_KEY,
+        'finished': 'attributes._finished',
+        'descr': 'description',
+    }
+
+    def map_projection(p):
+        try:
+            return pmap_dict[p]
+        except KeyError:
+            return p
+
+    # Mapping of to-string formatting of projections that do need it.
+    rmap_dict = {
+        'ctime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('ctime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'mtime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('mtime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'sealed': lambda calc: str(calc[map_projection('sealed')]),
+        'finished': lambda calc: str(calc[map_projection('finished')]),
+    }
+
+    def map_result(p, obj):
+        try:
+            return rmap_dict[p](obj)
+        except:
+            return obj[map_projection(p)]
+
+
+    mapped_projections = list(map(lambda p: map_projection(p), project))
+    table = []
+
+    for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days, order_by={'ctime': 'desc'}):
+        calc = res['calculation']
+        table.append(list(map(lambda p: map_result(p, calc), project)))
 
     # Revert table:
     # in this way, I order by 'desc', so I start by the most recent, but then
     # I print this as the las one (like 'verdi calculation list' does)
     # This is useful when 'limit' is set to not None
     table = table[::-1]
-    print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
+    print(tabulate(table, headers=(list(map(lambda p: map_header(p), project)))))
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
@@ -224,17 +274,11 @@ def checkpoint(pks):
             print("Unable to show checkpoint for calculation '{}'".format(pk))
 
 
-def _build_query(order_by=None, limit=None, past_days=None):
+def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
     import aiida.utils.timezone as timezone
     import datetime
-    from aiida.orm.mixins import Sealable
-    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-
-    # The things that we want to get out
-    calculation_projections = \
-        ['id', 'ctime', 'attributes._process_label', _SEALED_ATTRIBUTE_KEY]
 
     now = timezone.now()
 
@@ -251,7 +295,7 @@ def _build_query(order_by=None, limit=None, past_days=None):
     qb.append(
         cls=WorkCalculation,
         filters=calculation_filters,
-        project=calculation_projections,
+        project=projections,
         tag='calculation'
     )
 

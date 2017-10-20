@@ -3,9 +3,14 @@ Testing tools for related projects like plugins
 
 Usage (unittest)::
 
+    import os
+
     MyTestCase(aiida.utils.fixtures.PluginTestCase):
 
-        BACKEND = <load from env variable etc>
+        BACKEND = os.environ.get('TEST_BACKEND')
+        # load the backend to be tested from the environment variable
+        # proceed the test command with TEST_BACKEND='django' | 'sqlalchemy'
+        # or set the TEST_BACKEND in your CI configuration
 
         def setUp(self):
             # load my test data
@@ -38,6 +43,7 @@ Usage (pytest)::
 import unittest
 import tempfile
 import shutil
+import os
 from os import path
 from contextlib import contextmanager
 
@@ -421,7 +427,7 @@ class PluginTestCase(unittest.TestCase):
         * set to use the temporary config folder
         * create and configure a profile
     """
-    BACKEND = BACKEND_DJANGO
+    BACKEND = os.environ.get('TEST_BACKEND')
 
     @classmethod
     def setUpClass(cls):

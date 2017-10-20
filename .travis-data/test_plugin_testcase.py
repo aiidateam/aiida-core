@@ -1,5 +1,11 @@
-"""Test the plugin test case"""
+"""
+Test the plugin test case
+
+This must be in a separate file because it would clash with other tests,
+Since the dbenv gets loaded on the temporary profile.
+"""
 import os
+import unittest
 
 from aiida.utils.fixtures import PluginTestCase
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
@@ -29,3 +35,6 @@ class PluginTestcaseTestCase(PluginTestCase):
         with self.assertRaises(Exception):
             load_node(self.data_pk)
 
+
+if __name__ == '__main__':
+    unittest.main()

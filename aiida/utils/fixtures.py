@@ -1,4 +1,40 @@
-"""Test fixtures for use in related projects"""
+"""
+Testing tools for related projects like plugins
+
+Usage (unittest)::
+
+    MyTestCase(aiida.utils.fixtures.PluginTestCase):
+
+        BACKEND = <load from env variable etc>
+
+        def setUp(self):
+            # load my test data
+
+        # optionally you can extend setUpClass / tearDownClass / tearDown if
+        # needed
+
+        def test_my_stuff(self):
+            # run a test
+
+Usage (pytest)::
+
+    import pytest
+
+    @pytest.fixture(scope='session')
+    def aiida_profile():
+        with aiida.utils.fixtures.fixture_manager() as fixture_mgr:
+            fixture_mgr.create_profile()
+            yield fixture_manager
+
+    @pytest.fixture(scope='function')
+    def test_data(aiida_profile):
+        # load my test data
+        yield
+        fixture_manager.reset_db()
+
+    def test_my_stuff(test_data):
+        # run a test
+"""
 import unittest
 import tempfile
 import shutil
@@ -35,8 +71,8 @@ class FixtureManager(object):
     Example::
 
         fixtures = FixtureManager()
-        fixtures.create_aiida_db()
-        fixtures.create_profile()
+        fixtures.create_aiida_db()  # set up only the database
+        fixtures.create_profile()  # set up a profile (creates the db too if necessary)
 
         # ready for testing
 
@@ -340,17 +376,23 @@ class FixtureManager(object):
 
 
 @contextmanager
-def plugin_fixture():
+def fixture_manager():
     """
     Context manager for FixtureManager objects
 
     Example::
 
-        with plugin_fixture() as fixtures:
-            fixtures.create_aiida_db()
-            fixtures.create_profile()
+        with fixture_manager() as fixture_mgr:
+            fixture_mgr.create_profile()
             # ready for tests
         # everything cleaned up
+
+    Example for pytest fixture::
+
+        def aiida_profile():
+            with fixture_manager() as fixture_mgr:
+                fixture_mgr.create_profile()
+                yield fixture_mgr
     """
     manager = FixtureManager()
     try:
@@ -379,13 +421,17 @@ class PluginTestCase(unittest.TestCase):
         * set to use the temporary config folder
         * create and configure a profile
     """
-    BACKEND = 'django'
+    BACKEND = BACKEND_DJANGO
 
     @classmethod
     def setUpClass(cls):
-        cls.fixture_builder = FixtureManager()
-        cls.fixture_builder.create_profile()
+        cls.fixture_manager = FixtureManager()
+        cls.fixture_manager.backend = cls.BACKEND
+        cls.fixture_manager.create_profile()
+
+    def tearDown(self):
+        self.fixture_manager.reset_db()
 
     @classmethod
     def tearDownClass(cls):
-        cls.fixture_builder.destroy_all()
+        cls.fixture_manager.destroy_all()

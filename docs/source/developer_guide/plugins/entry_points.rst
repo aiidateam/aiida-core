@@ -263,7 +263,6 @@ Spec::
        ]
    }
 
-<{}>
 
 
 ``aiida.schedulers``

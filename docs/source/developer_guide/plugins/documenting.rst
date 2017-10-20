@@ -4,7 +4,7 @@ Documenting a plugin
 
 The `aiida plugin template`_ already comes with
 a template for documentation that just needs to be adjusted to your needs.
-In the following we, again, a plugin ``aiida-compute``:
+In the following we, again, assume you wrote a plugin named ``aiida-compute``:
 
 
  #. Modify ``docs/source/conf.py`` template configuration file inserting the information about your plugin:

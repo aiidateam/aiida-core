@@ -9,7 +9,7 @@ Usage (unittest)::
 
         BACKEND = os.environ.get('TEST_BACKEND')
         # load the backend to be tested from the environment variable
-        # proceed the test command with TEST_BACKEND='django' | 'sqlalchemy'
+        # on bash, simply prepend the test command with TEST_BACKEND='django' or TEST_BACKEND='sqlalchemy'
         # or set the TEST_BACKEND in your CI configuration
 
         def setUp(self):

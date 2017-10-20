@@ -45,10 +45,16 @@ class WorkCalculation(Calculation):
         :return: True if the calculation has failed, False otherwise.
         :rtype: bool
         """
-        return (
-            self.get_attr(self.FAILED_KEY, False) or
-            self.get_attr(self.ABORTED_KEY, False)
-        )
+        return self.get_attr(self.FAILED_KEY, False)
+
+    def has_aborted(self):
+        """
+        Returns True if the work calculation was killed and is
+
+        :return: True if the calculation was killed, False otherwise.
+        :rtype: bool
+        """
+        return self.get_attr(self.ABORTED_KEY, False)
 
     def kill(self):
         """
@@ -56,6 +62,6 @@ class WorkCalculation(Calculation):
         """
         if not self.is_sealed:
             self._set_attr(self.ABORTED_KEY, True)
-            self.seal()
+
         for child in self.get_outputs(link_type=LinkType.CALL):
             child.kill()

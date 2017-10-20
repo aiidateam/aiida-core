@@ -18,7 +18,7 @@ import threading
 import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import load_node
-from aiida.orm.data.base import Int
+from aiida.orm.data.base import Int, Str
 from aiida.work.persistence import Persistence
 from aiida.work.process import Process, FunctionProcess
 from aiida.work.run import run, submit
@@ -181,3 +181,595 @@ class TestFunctionProcess(AiidaTestCase):
         FP = FunctionProcess.build(wf_fixed_args)
         outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
+
+
+class TestExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestExposeProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_expose_duplicate_unnamespaced(self):
+        """
+        As long as separate namespaces are used, the same Process should be
+        able to be exposed more than once
+        """
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess)
+                spec.expose_inputs(SimpleProcess, namespace='beta')
+
+            @override
+            def _run(self, **kwargs):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+                assert 'a' in self.inputs.beta
+                assert 'b' in self.inputs.beta
+                assert self.inputs['a'] == Int(1)
+                assert self.inputs['b'] == Int(2)
+                assert self.inputs.beta['a'] == Int(3)
+                assert self.inputs.beta['b'] == Int(4)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+
+        ExposeProcess.run(**{'a': Int(1), 'b': Int(2), 'beta': {'a': Int(3), 'b': Int(4)}})
+
+    def test_expose_duplicate_namespaced(self):
+        """
+        As long as separate namespaces are used, the same Process should be
+        able to be exposed more than once
+        """
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, namespace='alef')
+                spec.expose_inputs(SimpleProcess, namespace='beta')
+
+            @override
+            def _run(self, **kwargs):
+                assert 'a' in self.inputs.alef
+                assert 'b' in self.inputs.alef
+                assert 'a' in self.inputs.beta
+                assert 'b' in self.inputs.beta
+                assert self.inputs.alef['a'] == Int(1)
+                assert self.inputs.alef['b'] == Int(2)
+                assert self.inputs.beta['a'] == Int(3)
+                assert self.inputs.beta['b'] == Int(4)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+
+        ExposeProcess.run(**{'alef': {'a': Int(1), 'b': Int(2)}, 'beta': {'a': Int(3), 'b': Int(4)}})
+
+    def test_expose_pass_same_dict(self):
+        """
+        Pass the same dict to two different namespaces.
+        """
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, namespace='alef')
+                spec.expose_inputs(SimpleProcess, namespace='beta')
+
+            @override
+            def _run(self, **kwargs):
+                assert 'a' in self.inputs.alef
+                assert 'b' in self.inputs.alef
+                assert 'a' in self.inputs.beta
+                assert 'b' in self.inputs.beta
+                assert self.inputs.alef['a'] == Int(1)
+                assert self.inputs.alef['b'] == Int(2)
+                assert self.inputs.beta['a'] == Int(1)
+                assert self.inputs.beta['b'] == Int(2)
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+
+        sub_inputs = {'a': Int(1), 'b': Int(2)}
+        ExposeProcess.run(**{'alef': sub_inputs, 'beta': sub_inputs})
+
+class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestNestedUnnamespacedExposedProcess, self).setUp()
+
+        class BaseProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(BaseProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        class SubProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubProcess, cls).define(spec)
+                spec.expose_inputs(BaseProcess)
+                spec.input('c', valid_type=Int, required=True)
+                spec.input('d', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                BaseProcess.run(**self.exposed_inputs(BaseProcess))
+
+        class ParentProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ParentProcess, cls).define(spec)
+                spec.expose_inputs(SubProcess)
+                spec.input('e', valid_type=Int, required=True)
+                spec.input('f', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                SubProcess.run(**self.exposed_inputs(SubProcess))
+
+        self.BaseProcess = BaseProcess
+        self.SubProcess = SubProcess
+        self.ParentProcess = ParentProcess
+
+    def test_base_process_valid_input(self):
+        self.BaseProcess.run(
+            **{'a': Int(0), 'b': Int(1)}
+        )
+
+    def test_sub_process_valid_input(self):
+        self.SubProcess.run(
+            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3)}
+        )
+
+    def test_parent_process_valid_input(self):
+        self.ParentProcess.run(
+            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Int(5)}
+        )
+
+    def test_base_process_missing_input(self):
+        self.assertRaises(
+            ValueError, self.BaseProcess.run,
+            **{'b': Int(1)}
+        )
+
+    def test_sub_process_missing_input(self):
+        self.assertRaises(
+            ValueError, self.SubProcess.run,
+            **{'b': Int(1)}
+        )
+
+    def test_parent_process_missing_input(self):
+        self.assertRaises(
+            ValueError, self.ParentProcess.run,
+            **{'b': Int(1)}
+        )
+
+    def test_base_process_invalid_type_input(self):
+        self.assertRaises(
+            ValueError, self.BaseProcess.run,
+            **{'a': Int(0), 'b': Str(1)}
+        )
+
+    def test_sub_process_invalid_type_input(self):
+        self.assertRaises(
+            ValueError, self.SubProcess.run,
+            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Str(3)}
+        )
+
+    def test_parent_process_invalid_type_input(self):
+        self.assertRaises(
+            ValueError, self.ParentProcess.run,
+            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Str(5)}
+        )
+
+
+class TestNestedNamespacedExposedProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestNestedNamespacedExposedProcess, self).setUp()
+
+        class BaseProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(BaseProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        class SubProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubProcess, cls).define(spec)
+                spec.expose_inputs(BaseProcess, namespace='base')
+                spec.input('c', valid_type=Int, required=True)
+                spec.input('d', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                BaseProcess.run(**self.exposed_inputs(BaseProcess, namespace='base'))
+
+        class ParentProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ParentProcess, cls).define(spec)
+                spec.expose_inputs(SubProcess, namespace='sub')
+                spec.input('e', valid_type=Int, required=True)
+                spec.input('f', valid_type=Int, default=Int(0))
+
+            @override
+            def _run(self, **kwargs):
+                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub'))
+
+        self.BaseProcess = BaseProcess
+        self.SubProcess = SubProcess
+        self.ParentProcess = ParentProcess
+
+    def test_sub_process_valid_input(self):
+        self.SubProcess.run(
+            **{'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)}
+        )
+
+    def test_parent_process_valid_input(self):
+        self.ParentProcess.run(
+            **{'sub': {'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)}, 'e': Int(4)}
+        )
+
+    def test_sub_process_missing_input(self):
+        self.assertRaises(
+            ValueError, self.SubProcess.run,
+            **{'c': Int(2)}
+        )
+
+    def test_parent_process_missing_input(self):
+        self.assertRaises(
+            ValueError, self.ParentProcess.run,
+            **{'e': Int(4)}
+        )
+
+class TestIncludeExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestIncludeExposeProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, required=False)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_include_none(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, include=[])
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(a=Int(1), b=Int(2), **self.exposed_inputs(SimpleProcess))
+
+    def test_include_one(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, include=['a'])
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(b=Int(2), **self.exposed_inputs(SimpleProcess))
+
+        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
+
+class TestExcludeExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestExcludeExposeProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.input('a', valid_type=Int, required=True)
+                spec.input('b', valid_type=Int, required=False)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_exclude_valid(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, exclude=('b',))
+                spec.input('c', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+
+        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
+
+    def test_exclude_invalid(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, exclude=('a',))
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+
+        self.assertRaises(ValueError, ExposeProcess.run, **{'b': Int(2), 'c': Int(3)})
+
+    def test_exclude_same_input_in_parent(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess, exclude=('a',))
+                spec.input('a', valid_type=Str)
+
+            @override
+            def _run(self, **kwargs):
+                SimpleProcess.run(a=Int(1), **self.exposed_inputs(SimpleProcess, agglomerate=False))
+
+        ExposeProcess.run(a=Str('1'), b=Int(2))
+
+class TestUnionInputsExposeProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestUnionInputsExposeProcess, self).setUp()
+
+        class SubOneProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubOneProcess, cls).define(spec)
+                spec.input('common', valid_type=Int, required=True)
+                spec.input('sub_one', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                assert self.inputs['common'] == Int(1)
+                assert self.inputs['sub_one'] == Int(2)
+
+        class SubTwoProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubTwoProcess, cls).define(spec)
+                spec.input('common', valid_type=Int, required=True)
+                spec.input('sub_two', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                assert self.inputs['common'] == Int(1)
+                assert self.inputs['sub_two'] == Int(3)
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SubOneProcess)
+                spec.expose_inputs(SubTwoProcess)
+
+            @override
+            def _run(self, **kwargs):
+                SubOneProcess.run(**self.exposed_inputs(SubOneProcess))
+                SubTwoProcess.run(**self.exposed_inputs(SubTwoProcess))
+
+        self.SubOneProcess = SubOneProcess
+        self.SubTwoProcess = SubTwoProcess
+        self.ExposeProcess = ExposeProcess
+
+    def test_inputs_union_valid(self):
+        self.ExposeProcess.run(**{'common': Int(1), 'sub_one': Int(2), 'sub_two': Int(3)})
+
+    def test_inputs_union_invalid(self):
+        inputs = {'sub_one': Int(2), 'sub_two': Int(3)}
+        self.assertRaises(ValueError, self.ExposeProcess.run, **inputs)
+
+
+class TestAgglomerateExposeProcess(AiidaTestCase):
+    """
+    Often one wants to run multiple instances of a certain Process, where some but
+    not all the inputs will be the same or "common". By using a combination of include and
+    exclude on the same Process, the user can define separate namespaces for the specific
+    inputs, while exposing the shared or common inputs on the base level namespace. The
+    method exposed_inputs will by default agglomerate inputs that belong to the SubProcess
+    starting from the base level and moving down the specified namespaces, overriding duplicate
+    inputs as they are found.
+
+    The exposed_inputs provides the flag 'agglomerate' which can be set to False to turn off
+    this behavior and only return the inputs in the specified namespace
+    """
+
+    def setUp(self):
+        super(TestAgglomerateExposeProcess, self).setUp()
+
+        class SubProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubProcess, cls).define(spec)
+                spec.input('common', valid_type=Int, required=True)
+                spec.input('specific_a', valid_type=Int, required=True)
+                spec.input('specific_b', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SubProcess, include=('common',))
+                spec.expose_inputs(SubProcess, namespace='sub_a', exclude=('common',))
+                spec.expose_inputs(SubProcess, namespace='sub_b', exclude=('common',))
+
+            @override
+            def _run(self, **kwargs):
+                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub_a'))
+                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub_b'))
+
+        self.SubProcess = SubProcess
+        self.ExposeProcess = ExposeProcess
+
+    def test_inputs_union_valid(self):
+        inputs = {
+            'common': Int(1),
+            'sub_a': {
+                'specific_a': Int(2),
+                'specific_b': Int(3)
+            },
+            'sub_b': {
+                'specific_a': Int(4),
+                'specific_b': Int(5)
+            }
+        }
+        self.ExposeProcess.run(**inputs)
+
+    def test_inputs_union_invalid(self):
+        inputs = {
+            'sub_a': {
+                'specific_a': Int(2),
+                'specific_b': Int(3)
+            },
+            'sub_b': {
+                'specific_a': Int(4),
+                'specific_b': Int(5)
+            }
+        }
+        self.assertRaises(ValueError, self.ExposeProcess.run, **inputs)
+
+
+class TestNonAgglomerateExposeProcess(AiidaTestCase):
+    """
+    Example where the default agglomerate behavior of exposed_inputs is undesirable and can be
+    switched off by setting the flag agglomerate to False. The SubProcess shares an input with
+    the parent processs, but unlike for the ExposeProcess, for the SubProcess it is not required.
+    A user might for that reason not want to pass the common input to the SubProcess.
+    """
+
+    def setUp(self):
+        super(TestNonAgglomerateExposeProcess, self).setUp()
+
+        class SubProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SubProcess, cls).define(spec)
+                spec.input('specific_a', valid_type=Int, required=True)
+                spec.input('specific_b', valid_type=Int, required=True)
+                spec.input('common', valid_type=Int, required=False)
+
+            @override
+            def _run(self, **kwargs):
+                assert 'common' not in self.inputs
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SubProcess, namespace='sub')
+                spec.input('common', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub', agglomerate=False))
+
+        self.SubProcess = SubProcess
+        self.ExposeProcess = ExposeProcess
+
+    def test_valid_input_non_agglomerate(self):
+        inputs = {
+            'common': Int(1),
+            'sub': {
+                'specific_a': Int(2),
+                'specific_b': Int(3)
+            },
+        }
+        self.ExposeProcess.run(**inputs)
+
+
+class TestExposeOutputProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestExposeOutputProcess, self).setUp()
+
+        class SimpleProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleProcess, cls).define(spec)
+                spec.output('a', valid_type=Int, required=True)
+                spec.output('b', valid_type=Int, required=True)
+
+            @override
+            def _run(self, **kwargs):
+                self.out('a', Int(1))
+                self.out('b', Int(2))
+
+        self.SimpleProcess = SimpleProcess
+
+    def test_expose_outputs(self):
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_outputs(SimpleProcess)
+
+            @override
+            def _run(self, **kwargs):
+                instance = SimpleProcess.new_instance()
+                instance.run_until_complete()
+                self.out_many(**self.exposed_outputs(instance.calc, SimpleProcess))
+
+        result = ExposeProcess.run()
+        assert all(key in result for key in ['a', 'b'])

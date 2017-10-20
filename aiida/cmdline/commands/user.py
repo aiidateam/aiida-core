@@ -51,7 +51,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
 
-def do_configure(email, first_name, last_name, institution, no_password):
+def do_configure(email, first_name, last_name, institution, no_password, ask_reconfigure=True):
     if not is_dbenv_loaded():
         load_dbenv()
 
@@ -65,8 +65,7 @@ def do_configure(email, first_name, last_name, institution, no_password):
     if created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
-        reply = click.confirm("Do you want to reconfigure it?")
-        if reply:
+        if not ask_reconfigure or click.confirm("Do you want to reconfigure it?"):
             configure_user = True
     else:
         configure_user = True

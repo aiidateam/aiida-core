@@ -60,6 +60,16 @@ code_name_2 = "doubler_2"
 code_setup_input_2 = (
     [code_name_2] + code_common_info_1 + [computer_name_2] + code_common_info_2)
 
+# User #1
+user_1 = {
+    'email': "test@localhost",
+    'first_name': "Max",
+    'last_name': "Mueller",
+    'institution': "Testing Instiute"
+}
+user_setup_input_1 = (
+    user_1['first_name'] + user_1['last_name'] + user_1['institution'])
+
 
 # pylint: disable=protected-access
 class TestVerdiCalculationCommands(AiidaTestCase):
@@ -270,3 +280,39 @@ class TestVerdiWorkCommands(AiidaTestCase):
             report, [str(self.workchain_pid), '--levelname', 'ERROR'],
             catch_exceptions=False)
         self.assertTrue(self.test_string not in result.output)
+
+
+# pylint: disable=no-self-use
+class TestVerdiUserCommands(AiidaTestCase):
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create a user
+        """
+        super(TestVerdiUserCommands, cls).setUpClass()
+
+        # Setup user #1
+        from aiida.cmdline.commands.user import do_configure
+
+        with mock.patch(
+                '__builtin__.raw_input', side_effect=computer_setup_input_1):
+            do_configure(
+                user_1['email'],
+                user_1['first_name'],
+                user_1['last_name'],
+                user_1['institution'],
+                no_password=True,
+                ask_reconfigure=False)
+
+    def test_user_list(self):
+        """
+        verdi user list
+        """
+        from aiida.cmdline.commands.user import User
+
+        with Capturing() as output:
+            User()
+        out_str = ''.join(output)
+
+        self.assertTrue(user_1['email'] in out_str)

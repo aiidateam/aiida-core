@@ -13,6 +13,7 @@ _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
 _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
 _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
+_COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
 
 
 class Postgres(object):
@@ -157,6 +158,10 @@ class Postgres(object):
         """
         self.pg_execute(_DROP_DB_COMMAND.format(dbname), **self.dbinfo)
 
+    def copy_db(self, src_db, dest_db, dbuser):
+        self.pg_execute(
+            _COPY_DB_COMMAND.format(dest_db, src_db, dbuser), **self.dbinfo)
+
     def db_exists(self, dbname):
         """
         Check wether a postgres database with dbname exists
@@ -240,8 +245,9 @@ def _try_connect(**kwargs):
     from psycopg2 import connect
     success = False
     try:
-        connect(**kwargs)
+        conn = connect(**kwargs)
         success = True
+        conn.close()
     except Exception:  # pylint: disable=broad-except
         pass
     return success
@@ -281,6 +287,7 @@ def _pg_execute_psyco(command, **kwargs):
                 output = cur.fetchall()
             except ProgrammingError:
                 pass
+    conn.close()
     return output
 
 

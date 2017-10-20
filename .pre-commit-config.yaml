@@ -4,7 +4,7 @@
   hooks:
   - id: yapf
     language: system
-    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(.travis_data/test_setup.py)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(\.travis_data/test_setup.py)|(aiida/utils/.*fixtures.py)'
 
 # prospector: collection of linters
 - repo: git://github.com/guykisel/prospector-mirror
@@ -13,7 +13,7 @@
   - id: prospector
     language: system
     exclude: '^(tests/)|(examples/)'
-    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(.travis_data/test_setup.py)'
+    files: '^(aiida/control/)|(aiida/cmdline/tests)|(docs/update_req_for_rtd.py)|(\.travis_data/test_setup.py)|(aiida/utils/.*fixtures.py)'
 
 - repo: local
   hooks: 
@@ -24,3 +24,16 @@
     files: '^(setup_requirements.py)|(docs/requirements_for_rtd.txt)|(docs/update_req_for_rtd.py)'
     pass_filenames: false
 
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  sha: v0.9.4
+  hooks:
+  - id: check-yaml
+
+- repo: local
+  hooks:
+  - id: travis-linter
+    name: travis
+    entry: travis lint
+    files: .travis.yml
+    language: ruby
+    additional_dependencies: ['travis']

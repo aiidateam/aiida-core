@@ -120,7 +120,7 @@ extras_require = {
     # Requirements for testing
     'testing': [
         'mock',
-        'pgtest'
+        'pgtest>=1.1.0'
     ],
     'dev_precommit': [
         'pre-commit',

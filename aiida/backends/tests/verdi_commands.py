@@ -309,10 +309,7 @@ class TestVerdiUserCommands(AiidaTestCase):
         """
         verdi user list
         """
-        from aiida.cmdline.commands.user import User
+        from aiida.cmdline.commands.user import list as list_user
 
-        with Capturing() as output:
-            User()
-        out_str = ''.join(output)
-
-        self.assertTrue(user_1['email'] in out_str)
+        result = CliRunner().invoke(list_user, [], catch_exceptions=False)
+        self.assertTrue(user_1['email'] in result.output)

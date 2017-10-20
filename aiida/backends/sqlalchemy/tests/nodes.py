@@ -22,8 +22,10 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
     """
     def test_creation_and_deletion(self):
         from aiida.backends.sqlalchemy.models.node import DbLink  # Direct links
-        from aiida.backends.sqlalchemy.models.node import DbPath # The transitive closure table
         from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.common.links import LinkType
+
 
         n1 = Node().store()
         n2 = Node().store()
@@ -38,41 +40,65 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2)
-        n2.add_link_from(n1)
-        n5.add_link_from(n3)
-        n5.add_link_from(n4)
-        n4.add_link_from(n2)
+        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n2.add_link_from(n1, link_type=LinkType.CREATE)
+        n5.add_link_from(n3, link_type=LinkType.CREATE)
+        n5.add_link_from(n4, link_type=LinkType.CREATE)
+        n4.add_link_from(n2, link_type=LinkType.CREATE)
 
-        n7.add_link_from(n6)
-        n8.add_link_from(n7)
+        n7.add_link_from(n6, link_type=LinkType.CREATE)
+        n8.add_link_from(n7, link_type=LinkType.CREATE)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            0)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0
+            )
 
-        n6.add_link_from(n5)
+        n6.add_link_from(n5, link_type=LinkType.CREATE)
         # Yet, now 2 links from 1 to 8
-        self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            2)
 
-        n7.add_link_from(n9)
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 2)
+
+        n7.add_link_from(n9, link_type=LinkType.CREATE)
         # Still two links...
-        self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            2)
 
-        n9.add_link_from(n6)
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 2)
+
+        n9.add_link_from(n6, link_type=LinkType.CREATE)
         # And now there should be 4 nodes
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            4)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 4
+            )
+
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 4)
 
         ### I start deleting now
 
@@ -80,45 +106,90 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         DbLink.query.filter(DbLink.input == n6.dbnode,
                             DbLink.output == n9.dbnode).delete()
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            2)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 2)
 
         # I cut another branch above: I should loose one more link
         DbLink.query.filter(DbLink.input == n2.dbnode,
                             DbLink.output == n4.dbnode).delete()
+
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            1)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
+
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 1)
 
         # Another cut should delete all links
         DbLink.query.filter(DbLink.input == n3.dbnode,
                             DbLink.output == n5.dbnode).delete()
 
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            0)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0
+            )
+
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 0)
 
         # But I did not delete everything! For instance, I can check
         # the following links
+
+
+
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n4.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            1)
+            QueryBuilder().append(
+                    Node, filters={'id':n4.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n4.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 1)
+
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n5.dbnode,
-                                DbPath.child == n7.dbnode).distinct().count(),
-            1)
+            QueryBuilder().append(
+                    Node, filters={'id':n5.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n7.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n5.dbnode,
+                                #~ DbPath.child == n7.dbnode).distinct().count(),
+            #~ 1)
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_link_from(n3)
+        n4.add_link_from(n3, link_type=LinkType.CREATE)
+
         self.assertEquals(
-            DbPath.query.filter(DbPath.parent == n1.dbnode,
-                                DbPath.child == n8.dbnode).distinct().count(),
-            1)
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 1
+            )
+        #~ self.assertEquals(
+            #~ DbPath.query.filter(DbPath.parent == n1.dbnode,
+                                #~ DbPath.child == n8.dbnode).distinct().count(),
+            #~ 1)
 
 
 class TestNodeBasicSQLA(AiidaTestCase):

@@ -37,9 +37,9 @@ class Export(VerdiCommandWithSubcommands):
     help='Export the given nodes by pk')
 @click.option('-c', '--computers', multiple=True, type=int,
     help='Export the given computers by pk')
-@click.option('-g', '--groups', multiple=True, type=int,
+@click.option('-G', '--groups', multiple=True, type=int,
     help='Export the given groups by pk')
-@click.option('-G', '--group_names', multiple=True, type=str,
+@click.option('-g', '--group_names', multiple=True, type=str,
     help='Export the given groups by group name')
 @click.option('-P', '--no-parents', is_flag=True, default=False,
     help='Store only the nodes that are explicitly given, without exporting the parents')

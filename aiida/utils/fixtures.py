@@ -52,6 +52,9 @@ from pgtest.pgtest import PGTest
 from aiida.control.postgres import Postgres
 from aiida import is_dbenv_loaded
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.utils.capturing import Capturing
+from aiida.common import setup as aiida_cfg
+from aiida.backends import settings as backend_settings
 
 
 class FixtureError(Exception):
@@ -133,6 +136,8 @@ class FixtureManager(object):
         self.__is_running_on_test_db = False
         self.__is_running_on_test_profile = False
         self._backup = {}
+        self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
+        self._backup['profile'] = backend_settings.AIIDADB_PROFILE
 
     def create_db_cluster(self):
         if not self.pg_cluster:
@@ -172,14 +177,10 @@ class FixtureManager(object):
                 'AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.common import setup as aiida_cfg
-        from aiida.backends import settings as backend_settings
         from aiida.cmdline.verdilib import setup
         if not self.root_dir:
             self.create_root_dir()
         print self.root_dir, self.config_dir
-        self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
-        self._backup['profile'] = backend_settings.AIIDADB_PROFILE
         aiida_cfg.AIIDA_CONFIG_FOLDER = self.config_dir
         backend_settings.AIIDADB_PROFILE = None
         aiida_cfg.create_base_dirs()
@@ -351,8 +352,6 @@ class FixtureManager(object):
 
     def destroy_all(self):
         """Remove all traces of the test run"""
-        from aiida.common import setup as aiida_cfg
-        from aiida.backends import settings as backend_settings
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -371,14 +370,24 @@ class FixtureManager(object):
         from aiida.backends.djsite.db.testbase import DjangoTests
         DjangoTests().clean_db()
 
-    @staticmethod
-    def __clean_db_sqla():
+    def __clean_db_sqla(self):
         """Clean database for sqlalchemy backend"""
         from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm import User
+
+        user = User.search_for_users(email=self.email)[0]
+        new_user = User(email=user.email)
+        new_user.first_name = user.first_name
+        new_user.last_name = user.last_name
+        new_user.institution = user.institution
+
         sqla_testcase = SqlAlchemyTests()
         sqla_testcase.test_session = get_scoped_session()
         sqla_testcase.clean_db()
+
+        # that deleted our user, we need to recreate it
+        new_user.force_save()
 
 
 @contextmanager
@@ -433,7 +442,8 @@ class PluginTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.fixture_manager = FixtureManager()
         cls.fixture_manager.backend = cls.BACKEND
-        cls.fixture_manager.create_profile()
+        with Capturing():
+            cls.fixture_manager.create_profile()
 
     def tearDown(self):
         self.fixture_manager.reset_db()

@@ -250,7 +250,7 @@ class Process(plum.process.Process):
         the final process state and so we seal the calculation node
         """
         super(Process, self).on_destroy()
-        if self.calc.has_finished_ok() or self.calc.has_failed() or self.calc.has_aborted():
+        if self.calc.has_finished_ok() or (hasattr(self.calc, 'has_aborted') and self.calc.has_aborted()):
             self.calc.seal()
 
     @override

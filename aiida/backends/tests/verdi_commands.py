@@ -62,13 +62,18 @@ code_setup_input_2 = (
 
 # User #1
 user_1 = {
-    'email': "test@localhost",
+    'email': "testuser1@localhost",
     'first_name': "Max",
     'last_name': "Mueller",
     'institution': "Testing Instiute"
 }
-user_setup_input_1 = (
-    user_1['first_name'] + user_1['last_name'] + user_1['institution'])
+# User #2
+user_2 = {
+    'email': "testuser2@localhost",
+    'first_name': "Sabine",
+    'last_name': "Mueller",
+    'institution': "Testing Instiute"
+}
 
 
 # pylint: disable=protected-access
@@ -297,13 +302,14 @@ class TestVerdiUserCommands(AiidaTestCase):
 
         with mock.patch(
                 '__builtin__.raw_input', side_effect=computer_setup_input_1):
-            do_configure(
-                user_1['email'],
-                user_1['first_name'],
-                user_1['last_name'],
-                user_1['institution'],
-                no_password=True,
-                ask_reconfigure=False)
+            with Capturing():
+                do_configure(
+                    user_1['email'],
+                    user_1['first_name'],
+                    user_1['last_name'],
+                    user_1['institution'],
+                    no_password=True,
+                    force_reconfigure=True)
 
     def test_user_list(self):
         """
@@ -313,3 +319,28 @@ class TestVerdiUserCommands(AiidaTestCase):
 
         result = CliRunner().invoke(list_user, [], catch_exceptions=False)
         self.assertTrue(user_1['email'] in result.output)
+
+    def test_user_configure(self):
+        """
+        Try configuring a new user
+        verdi user configure
+        """
+        from aiida.cmdline.commands.user import configure
+
+        cli_options = [
+            user_2['email'], '--first-name', user_2['first_name'],
+            '--last-name', user_2['last_name'], '--institution',
+            user_2['institution'], '--no-password', '--force-reconfigure'
+        ]
+
+        # configure user
+        result = CliRunner().invoke(
+            configure, cli_options, catch_exceptions=False)
+        self.assertTrue(user_2['email'] in result.output)
+        self.assertTrue("is already present" not in result.output)
+
+        # reconfigure user
+        result = CliRunner().invoke(
+            configure, cli_options, catch_exceptions=False)
+        self.assertTrue(user_2['email'] in result.output)
+        self.assertTrue("is already present" in result.output)

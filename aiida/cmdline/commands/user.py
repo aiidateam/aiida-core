@@ -51,7 +51,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
 
-def do_configure(email, first_name, last_name, institution, no_password, ask_reconfigure=True):
+def do_configure(email, first_name, last_name, institution, no_password, force_reconfigure=False):
     if not is_dbenv_loaded():
         load_dbenv()
 
@@ -62,10 +62,13 @@ def do_configure(email, first_name, last_name, institution, no_password, ask_rec
     configure_user = False
     user, created = get_or_new_user(email=email)
 
+    print("here")
+    print(force_reconfigure)
+
     if created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
-        if not ask_reconfigure or click.confirm("Do you want to reconfigure it?"):
+        if force_reconfigure or click.confirm("Do you want to reconfigure it?"):
             configure_user = True
     else:
         configure_user = True
@@ -143,14 +146,16 @@ def do_configure(email, first_name, last_name, institution, no_password, ask_rec
             click.echo("         via the REST API and the Web Interface.")
 
 @user.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('email', type=str)
 @click.option('--first-name', prompt='First Name', type=str)
 @click.option('--last-name', prompt='Last Name', type=str)
 @click.option('--institution', prompt='Institution', type=str)
 @click.option('--no-password', is_flag=True)
-@click.argument('email', type=str)
-def configure(first_name, last_name, institution, no_password, email):
-    do_configure(email, first_name, last_name, institution, no_password)
-
+@click.option('--force-reconfigure', is_flag=True)
+def configure(email, first_name, last_name, institution, no_password, force_reconfigure):
+    do_configure(email=email, first_name=first_name,
+            last_name=last_name, institution=institution,
+            no_password=no_password, force_reconfigure=force_reconfigure)
 
 @user.command()
 @click.option('--color', is_flag=True, help='Show results with colors', default=False)

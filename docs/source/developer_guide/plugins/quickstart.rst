@@ -34,9 +34,10 @@ Let's get started with creating a new plugin ``aiida-mycode``.
 That's it - now you can ``import aiida-mycode`` and start developing your plugin
 
 
-A few notes:
+A few things to keep in mind:
  * Be sure to update the `setup.json`_, in particular the license and version number
- * :ref:`Get your plugin listed <plugins.get_listed>` as soon as possible to reserve your plugin name and to inform others of your ongoing development
+ * :ref:`Get your plugin listed <plugins.get_listed>` as soon as possible to
+   reserve your plugin name and to inform others of your ongoing development
 
 .. _setup.json: https://github.com/aiidateam/aiida-plugin-template/blob/master/setup.json
 .. _registry: https://github.com/aiidateam/aiida-registry

@@ -4,7 +4,23 @@ Publishing a plugin
 
 .. _plugins.get_listed:
 
-1. Get Your Plugin Listed
+1. Choose a name
+----------------
+
+The naming convention for AiiDA plugins is ``aiida-mycode`` for the plugin
+and ``aiida_mycode`` for the corresponding python package, leading to the
+following folder structure::
+
+   aiida-mycode/
+      aiida_mycode/
+         __init__.py
+
+This marks your plugin as an AiiDA package and makes it easy to find on package indices like `PyPI`_.
+
+**Note:** Python packages cannot contain dashes, thus the underscore.
+
+
+2. Get Your Plugin Listed
 -------------------------
 
 AiiDA plugins should be listed on the AiiDA plugin `registry`_ to
@@ -39,7 +55,7 @@ request. The registry will allow users to discover your plugin using ``verdi
 plugin search`` (note: the latter verdi command is not yet implemented in
 AiiDA).
 
-2. Get Your Plugin On PyPI
+3. Get Your Plugin On PyPI
 --------------------------
 
 For packaging and distributing AiiDA plugins, we recommend to follow existing

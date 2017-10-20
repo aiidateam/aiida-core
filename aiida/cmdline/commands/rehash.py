@@ -49,11 +49,11 @@ def _rehash_cmd(all, class_name, pks):
             click.echo("Nothing specified, nothing re-hashed.\nExplicitly specify the PK of the nodes, or use '--all'.")
             return
 
-    i = -1
-    for i, n in enumerate(qb.iterall()):
+    if not qb.count():
+        click.echo('No matching nodes found.')
+        return
+    for i, (node,) in enumerate(qb.iterall()):
         if i % 100 == 0:
             click.echo('.', nl=False)
-        n[0].rehash()
-    if i > 0:
-        click.echo('')
-    click.echo('All done! {} nodes re-hashed.'.format(i + 1))
+        node.rehash()
+    click.echo('\nAll done! {} node(s) re-hashed.'.format(i + 1))

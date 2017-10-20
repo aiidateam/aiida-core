@@ -5,11 +5,11 @@ Plugin Development
 
 .. toctree::
 
+   concepts
    quickstart
    entry_points
    documenting
    publish
-   concepts
-   plugin_system
    update_plugin
+   plugin_system
    contributing

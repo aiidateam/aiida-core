@@ -1,5 +1,5 @@
-Important Concepts
-==================
+AiiDA plugins
+==============
 
 
 What a Plugin Is
@@ -20,8 +20,6 @@ package.
 
 What a Plugin Can Do
 --------------------
-
-A plugin can
 
 * add new classes to AiiDA's unified interface, including:
 

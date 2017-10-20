@@ -20,3 +20,19 @@ the plugin from the python source, e.g.::
     pip install aiida-plugin-template
     reentry scan -r aiida
 
+Background
+-----------
+
+What does ``pip install aiida-plugin-template`` do?
+
+* resolves and installs the dependencies on other python packages as specified in ``setup.py``
+* creates a folder ``aiida_plugin_template.egg-info/`` with metadata about the package
+* if the ``-e`` option is given, creates a symbolic link from the python package
+  search path to the ``aiida-plugin-template`` directory
+  and puts the ``.egg-info`` folder there.
+  Changes to the **source code** will be picked up by python without reinstalling, 
+  but changes to the **metadata** in ``setup.json`` will not.
+
+For further details, see the Python `packaging user guide`_.
+
+.. _packaging user guide: https://packaging.python.org/distributing/#configuring-your-project

@@ -62,10 +62,7 @@ def do_configure(email, first_name, last_name, institution, no_password, force_r
     configure_user = False
     user, created = get_or_new_user(email=email)
 
-    print("here")
-    print(force_reconfigure)
-
-    if created:
+    if not created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
         if force_reconfigure or click.confirm("Do you want to reconfigure it?"):

@@ -23,7 +23,7 @@ class WorkCalculation(Calculation):
 
     @override
     def has_finished(self):
-        return self.has_finished_ok() or self.has_failed()
+        return self.has_finished_ok() or self.has_failed() or self.has_aborted()
 
     @override
     def has_finished_ok(self):

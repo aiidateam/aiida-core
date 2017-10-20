@@ -1,5 +1,5 @@
-New Plugin System
-=================
+The AiiDA Plugin System
+=======================
 
 Introduction
 ------------

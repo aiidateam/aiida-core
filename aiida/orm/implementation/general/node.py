@@ -1493,23 +1493,33 @@ class AbstractNode(object):
         """
         return NodeInputManager(self)
 
-    @abstractproperty
+
+    @property
     def has_children(self):
         """
         Property to understand if children are attached to the node
         :return: a boolean
         """
-        # use the transitive closure
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        first_desc = QueryBuilder().append(
+            Node, filters={'id':self.pk}, tag='self').append(
+            Node, descendant_of='self', project='id').first()
+        return bool(first_desc)
 
-    @abstractproperty
+
+    @property
     def has_parents(self):
         """
         Property to understand if parents are attached to the node
         :return: a boolean
         """
-        # use the transitive closure
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        first_ancestor = QueryBuilder().append(
+            Node, filters={'id':self.pk}, tag='self').append(
+            Node, ancestor_of='self', project='id').first()
+        return bool(first_ancestor)
 
     @combomethod
     def querybuild(self_or_cls, **kwargs):

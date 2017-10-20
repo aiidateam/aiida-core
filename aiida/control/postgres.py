@@ -50,7 +50,7 @@ class Postgres(object):
     def __init__(self, port=None, interactive=False, quiet=True):
         self.interactive = interactive
         self.quiet = quiet
-        self.pg_execute = None
+        self.pg_execute = _pg_execute_not_connected
         self.dbinfo = {}
         if port:
             self.set_port(port)
@@ -98,7 +98,7 @@ class Postgres(object):
                 self.dbinfo = dbinfo
 
         # This is to allow for any other setup
-        if not self.pg_execute:
+        if self.pg_execute == _pg_execute_not_connected:
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
@@ -106,6 +106,8 @@ class Postgres(object):
                 'Database setup not confirmed, (non-interactive). '
                 'This may cause problems if the current user is not allowed to create databases.'
             ))
+
+        return bool(self.pg_execute != _pg_execute_not_connected)
 
     def create_dbuser(self, dbuser, dbpass):
         """
@@ -196,7 +198,7 @@ def manual_setup_instructions(dbuser, dbname):
     return instructions
 
 
-def prompt_db_info():
+def prompt_db_info(*args):  # pylint: disable=unused-argument
     """
     Prompt interactively for postgres database connecting details
 
@@ -222,18 +224,10 @@ def prompt_db_info():
             dbinfo['password'] = click.prompt(
                 'postgres password of {}'.format(dbinfo['user']),
                 hide_input=True,
-                type=str)
-            if _try_connect(**dbinfo):
-                access = True
-            else:
-                click.echo(
-                    'you may get prompted for a super user password and again for your postgres super user password'
-                )
-                if _try_subcmd(**dbinfo):
-                    access = True
-                else:
-                    click.echo(
-                        'Unable to connect to postgres, please try again')
+                type=str,
+                default='')
+            if not dbinfo.get('password'):
+                dbinfo.pop('password')
     return dbinfo
 
 
@@ -331,3 +325,13 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
         result = result.strip().split('\n')
         result = [i for i in result if i]
     return result
+
+
+def _pg_execute_not_connected(command, **kwargs):  # pylint: disable=unused-argument
+    """
+    A dummy implementation of a postgres command execution function.
+
+    Represents inability to execute postgres commands.
+    """
+    from aiida.common.exceptions import FailedError
+    raise FailedError('could not connect to postgres')

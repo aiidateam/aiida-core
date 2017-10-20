@@ -21,7 +21,7 @@ try:
 except ImportError:
     import pkg_resources as epm
 
-from aiida.common.exceptions import MissingPluginError
+from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
 
 
 _category_mapping = {
@@ -119,7 +119,7 @@ def get_plugin(category, name):
     try:
         plugin = entrypoint.load()
     except ImportError:
-        raise MissingPluginError("Loading the plugin '{}' failed".format(name))
+        raise LoadingPluginFailed("Loading the plugin '{}' failed".format(name))
 
     return plugin
 

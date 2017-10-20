@@ -49,7 +49,7 @@ class Work(VerdiCommandWithSubcommands):
 @click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
 @click.option('-l', '--limit', type=int, default=None,
               help="Limit to this many results")
-@click.option('-pr', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
+@click.option('-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
               multiple=True, help="Define the list of properties to show")
 def do_list(past_days, all_nodes, limit, project):
     """

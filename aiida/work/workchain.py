@@ -132,7 +132,6 @@ class WorkChain(Process):
         self._stepper = None
         self._barriers = []
         self._intersteps = []
-        self._aborted = False
 
     @property
     def ctx(self):
@@ -223,15 +222,15 @@ class WorkChain(Process):
 
     @property
     def _aborted(self):
-        return self._aborted_attr or self.calc.get_attr(self.calc.ABORTED_KEY, False)
+        return self.calc.get_attr(self.calc.ABORTED_KEY, False)
 
     @_aborted.setter
     def _aborted(self, value):
-        self._aborted_attr = value
+        self.calc._set_attr(self.calc.ABORTED_KEY, True)
 
     def _do_step(self, wait_on=None):
         if self._aborted:
-            self.calc.kill()
+            self.abort()
             return
 
         for interstep in self._intersteps:
@@ -246,6 +245,7 @@ class WorkChain(Process):
 
         # Could have aborted during the step
         if self._aborted:
+            self.abort()
             return
 
         if not finished:
@@ -306,6 +306,7 @@ class WorkChain(Process):
         """
         self.report("Aborting: {}".format(msg))
         self._aborted = True
+        self.stop()
 
     def abort(self, msg=None, timeout=None):
         """
@@ -320,6 +321,7 @@ class WorkChain(Process):
         """
         self.report("Aborting: {}".format(msg))
         self._aborted = True
+        self.stop()
 
 def ToContext(**kwargs):
     """

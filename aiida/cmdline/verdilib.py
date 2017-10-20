@@ -550,7 +550,6 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
             # Perform the needed migration quietly
             check_schema_version(force_migration=True)
-
             set_backend_type(BACKEND_SQLA)
 
         else:

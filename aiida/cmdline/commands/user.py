@@ -55,11 +55,12 @@ def do_configure(email, first_name, last_name, institution, no_password):
     if not is_dbenv_loaded():
         load_dbenv()
 
+    from aiida.orm import User as UserModel
     import readline
     import getpass
 
     configure_user = False
-    user, created = get_or_new_user(email)
+    user, created = get_or_new_user(email=email)
 
     if created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
@@ -74,7 +75,7 @@ def do_configure(email, first_name, last_name, institution, no_password):
     if configure_user:
         try:
             kwargs = {}
-            for field in User.REQUIRED_FIELDS:
+            for field in UserModel.REQUIRED_FIELDS:
                 verbose_name = field.capitalize()
                 readline.set_startup_hook(lambda: readline.insert_text(
                     getattr(user, field)))

@@ -22,7 +22,7 @@ class PluginTestcaseTestCase(PluginTestCase):
     def setUp(self):
         from aiida.orm import DataFactory
         self.data = DataFactory('parameter')(dict={'data': 'test'})
-        self.data.save()
+        self.data.store()
         self.data_pk = self.data.pk
 
     def test_data_loaded(self):

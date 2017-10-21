@@ -10,6 +10,7 @@
 
 from aiida.orm.implementation.calculation import Calculation
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 
 class WorkCalculation(Calculation):
     """
@@ -18,6 +19,7 @@ class WorkCalculation(Calculation):
     """
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
+    ABORTED_KEY = '_aborted'
 
     @override
     def has_finished(self):
@@ -43,4 +45,17 @@ class WorkCalculation(Calculation):
         :return: True if the calculation has failed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.FAILED_KEY, False) is not False
+        return (
+            self.get_attr(self.FAILED_KEY, False) or
+            self.get_attr(self.ABORTED_KEY, False)
+        )
+
+    def kill(self):
+        """
+        Kill a WorkCalculation and all its children.
+        """
+        if not self.is_sealed:
+            self._set_attr(self.ABORTED_KEY, True)
+            self.seal()
+        for child in self.get_outputs(link_type=LinkType.CALL):
+            child.kill()

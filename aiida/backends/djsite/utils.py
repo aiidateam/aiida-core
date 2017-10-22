@@ -170,8 +170,8 @@ def check_schema_version():
         raise ConfigurationError(
             "The code schema version is {}, but the version stored in the "
             "database (DbSetting table) is {}, stopping.\n"
-            "To migrate to latest version, go to aiida.backends.djsite and "
-            "run:\nverdi daemon stop\n python manage.py --aiida-profile={} migrate".
+            "To migrate to latest version, run:"
+            "\n    verdi daemon stop\n    python path/to/aiida/backends/djsite/manage.py --aiida-profile={} migrate".
             format(code_schema_version, db_schema_version,
                    get_current_profile())
         )

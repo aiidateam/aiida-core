@@ -1,5 +1,5 @@
-AiiDA plugins
-==============
+Basics
+======
 
 
 What a Plugin Is

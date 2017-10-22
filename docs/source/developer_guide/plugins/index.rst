@@ -5,7 +5,7 @@ Plugin Development
 
 .. toctree::
 
-   concepts
+   basics
    quickstart
    entry_points
    documenting

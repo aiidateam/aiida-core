@@ -160,6 +160,8 @@ class TestMigrationsSQLA(AiidaTestCase):
 import os
 import unittest
 
+
+from sqlalchemy_utils.functions.database import drop_database
 from alembic import command
 from sqlalchemydiff import compare
 from sqlalchemydiff.util import (
@@ -338,8 +340,10 @@ class TestExample(unittest.TestCase):
 
         result = compare(
             self.db_url_left, self.db_url_right, set(['alembic_version']))
-        # result = compare(
-        #     self.db_url_left, self.db_url_right)
+
+        self.assertTrue(result.is_match, "The migration database doesn't"
+                                         "match to the one created by the"
+                                         "models.")
 
         assert result.is_match
 
@@ -353,8 +357,62 @@ class TestExample(unittest.TestCase):
 
 def new_database(uri):
     """Drop the database at ``uri`` and create a brand new one. """
-    # destroy_database(uri)
+    destroy_database(uri)
     create_database(uri)
+
+
+def destroy_database(uri):
+    """Destroy the database at ``uri``, if it exists. """
+    if database_exists(uri):
+        drop_database(uri)
+
+
+def database_exists(url):
+    """Check if a database exists.
+
+
+    sqlalchemy_utils.functions.database.database_exists
+
+    :param url: A SQLAlchemy engine URL.
+
+    Performs backend-specific testing to quickly determine if a database
+    exists on the server. ::
+
+        database_exists('postgres://postgres@localhost/name')  #=> False
+        create_database('postgres://postgres@localhost/name')
+        database_exists('postgres://postgres@localhost/name')  #=> True
+
+    Supports checking against a constructed URL as well. ::
+
+        engine = create_engine('postgres://postgres@localhost/name')
+        database_exists(engine.url)  #=> False
+        create_database(engine.url)
+        database_exists(engine.url)  #=> True
+
+    """
+    from sqlalchemy.engine.url import make_url
+    from sqlalchemy_utils.functions.orm import quote
+    from copy import copy
+    import sqlalchemy as sa
+
+    url = copy(make_url(url))
+    database = url.database
+    if url.drivername.startswith('postgresql'):
+        url.database = 'template1'
+    else:
+        url.database = None
+
+    engine = sa.create_engine(url)
+
+    try:
+        if engine.dialect.name == 'postgresql':
+            text = "SELECT 1 FROM pg_database WHERE datname='%s'" % database
+            return bool(engine.execute(text).scalar())
+
+        else:
+            raise Exception("Only PostgreSQL is supported.")
+    finally:
+        engine.dispose()
 
 
 def create_database(url, encoding='utf8'):

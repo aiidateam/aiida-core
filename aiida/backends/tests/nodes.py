@@ -59,7 +59,7 @@ class TestDataNode(AiidaTestCase):
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
-    Test the creation of the transitive closure table
+    Test the transitive closure functionality
     """
 
     def test_loop_not_allowed(self):
@@ -767,7 +767,7 @@ class TestNodeBasic(AiidaTestCase):
         a = Node()
         a.store()
         a.set_extra('a', 'b')
-        
+
         self.assertEquals(a.get_extra('a'), 'b')
         with self.assertRaises(AttributeError):
             a.get_extra('c')
@@ -996,7 +996,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(p.get_attr('b'),basestring)
         self.assertEqual(p.get_attr('c'), ['b', [1,2]])
         self.assertIsInstance(p.get_attr('c'), (list, tuple))
-        
+
         # Check also before storing
         n = Node()
         n._set_attr('a', Str("sometext2"))
@@ -1005,15 +1005,15 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(n.get_attr('a'),basestring)
         self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
-        
+
         # Check also deep in a dictionary/list
         n = Node()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)
         n.store()
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_attr('a')['b'][0],basestring)
 
     def test_basetype_as_extra(self):
         """
@@ -1048,7 +1048,7 @@ class TestNodeBasic(AiidaTestCase):
         n.store()
         n.set_extra('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)     
+        self.assertIsInstance(n.get_extra('a')['b'][0],basestring)
 
     def test_versioning_lowlevel(self):
         """
@@ -1492,13 +1492,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         This check verifies that the properties has_children has_parents of the
         Node class behave correctly.
         """
+        from aiida.common.links import LinkType
 
         # Create 2 nodes and store them
         n1 = Node().store()
         n2 = Node().store()
 
-        # Create a link between these 2 nodes
-        n2.add_link_from(n1, "N1")
+        # Create a link between these 2 nodes, link type CREATE so we track the provenance
+        n2.add_link_from(n1, "N1", link_type=LinkType.CREATE)
 
         self.assertTrue(n1.has_children, "It should be true since n2 is the "
                                          "child of n1.")
@@ -1663,14 +1664,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Twice the same link name
         with self.assertRaises(UniquenessError):
             n3.add_link_from(n4, label='l2')
-
-        # Twice the link to the same node
-        with self.assertRaises(UniquenessError):
-            n3.add_link_from(n2, label='l4')
-
-        # Same error also in _replace_link_from
-        with self.assertRaises(UniquenessError):
-            n3._replace_link_from(n2, label='l4')
 
         n2.store_all()
         n3.store_all()

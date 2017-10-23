@@ -335,6 +335,9 @@ or, equivalently::
 A more sophisticated workflow
 +++++++++++++++++++++++++++++
 
+.. note:: This workflow uses the Quantum ESPRESSO plugins that are hosted
+  `in the aiida-quantumespresso plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
+
 In the previous chapter we've been able to see almost all the workflow features, and we're now ready to work on some more sophisticated examples, 
 where real calculations are performed and common real-life issues are solved. As a real case example we'll compute the equation of state 
 of a simple class of materials, XTiO3; the workflow will accept as an input the X material, it will build several structures with different 

@@ -94,9 +94,6 @@ In order to install any of these package groups, simply append them as a comma s
 
     sudo apt-get install libffi-dev libkrb5-dev
 
-  If you run into issue related to ``version 'GFORTRAN_1.4'`` when installing through Anaconda, see the :ref:`troubleshooting <troubleshooting>` section 
-
-
 Configure the AiiDA installation
 ++++++++++++++++++++++++++++++++
 After successful installation, AiiDA needs to be configured, such as setting up a profile and creating a database, which can be done through AiiDA's command line interface ``verdi``.

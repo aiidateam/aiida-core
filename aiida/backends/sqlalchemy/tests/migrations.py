@@ -193,6 +193,9 @@ class TestExample(unittest.TestCase):
 
 
     def setUp(self):
+        # from aiida.backends.sqlalchemy import engine
+        # engine.dispose()
+
         # uri = (
         #     "mysql+mysqlconnector://root:password@localhost:3306/alembicverify"
         # )
@@ -256,6 +259,9 @@ class TestExample(unittest.TestCase):
             # Database creation
             print 'self.db_url_left ', self.db_url_left
             new_database(self.db_url_left)
+
+            import time
+            time.sleep(10)
             print 'self.db_url_right ', self.db_url_right
             new_database(self.db_url_right)
 
@@ -324,11 +330,16 @@ class TestExample(unittest.TestCase):
         # prepare_schema_from_migrations(self.db_url_left, self.alembic_cfg_left)
         # prepare_schema_from_models(self.db_url_right, Base)
 
-        with self.create_engine(self.db_url_left) as engine_left:
-            Base.metadata.create_all(engine_left)
+        engine_right = self.create_engine(self.db_url_right)
+        Base.metadata.create_all(engine_right)
+        # with self.create_engine(self.db_url_right) as engine_right:
+        #     Base.metadata.create_all(engine_right)
+        engine_right.dispose()
 
         result = compare(
             self.db_url_left, self.db_url_right, set(['alembic_version']))
+        # result = compare(
+        #     self.db_url_left, self.db_url_right)
 
         assert result.is_match
 
@@ -342,7 +353,7 @@ class TestExample(unittest.TestCase):
 
 def new_database(uri):
     """Drop the database at ``uri`` and create a brand new one. """
-    destroy_database(uri)
+    # destroy_database(uri)
     create_database(uri)
 
 
@@ -372,6 +383,7 @@ def create_database(url, encoding='utf8'):
 
     # A default PostgreSQL database to connect
     url.database = 'template1'
+    # url.database = 'test_aiidadb_sqla3'
 
     engine = sa.create_engine(url)
 
@@ -387,15 +399,23 @@ def create_database(url, encoding='utf8'):
                 encoding
             )
 
-            # conn = engine.connect()
-            # # conn.execute("commit")
-            # conn.execute(text)
-            # conn.close()
+            # text = "CREATE DATABASE {0}".format(
+            #     quote(engine, database),
+            #
+            # )
 
             engine.execute(text)
+            # print dir(engine)
+
+            # conn = engine.connect()
+            # conn.execute(text)
+            # print dir(conn)
+            #
+            # conn.close()
 
         else:
             raise Exception("Only PostgreSQL with the psycopg2 driver is "
                             "supported.")
     finally:
         engine.dispose()
+        # pass

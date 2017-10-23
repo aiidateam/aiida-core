@@ -142,11 +142,11 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's 
+        Returns a string with infos retrieved from a node's
         properties.
         This method is actually overwritten by the inheriting classes
-        
-        :return: a description string     
+
+        :return: a description string
         """
         return ""
 
@@ -460,14 +460,6 @@ class AbstractNode(object):
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
 
-        # See if I am pointing to already saved nodes and I am already
-        # linking to a given node
-        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
-            raise UniquenessError(
-                "A link from node with UUID={} and "
-                "the current node (UUID={}) already exists!".format(
-                    src.uuid, self.uuid))
-
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)
         src._linking_as_output(self, link_type)
@@ -519,21 +511,9 @@ class AbstractNode(object):
             except KeyError:
                 pass
         else:  # at least one is not stored: set in the internal cache
-            # See if I am pointing to already saved nodes and I am already
-            # linking to a given node
-            # It is similar to the 'add' method, but if I am replacing the
-            # same node, I will not complain (k!=label)
-            if src.uuid in [v[0].uuid for k, v in
-                            self._inputlinks_cache.iteritems() if k != label]:
-                raise UniquenessError(
-                    "A link from node with UUID={} and "
-                    "the current node (UUID={}) already exists!".format(
-                        src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
             self._inputlinks_cache[label] = (src, link_type)
-
-           # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """

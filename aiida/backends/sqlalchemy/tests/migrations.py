@@ -254,8 +254,10 @@ class TestExample(unittest.TestCase):
                                                    self.db_url_right)
 
             # Database creation
-            new_db(self.db_url_left)
-            new_db(self.db_url_right)
+            print 'self.db_url_left ', self.db_url_left
+            new_database(self.db_url_left)
+            print 'self.db_url_right ', self.db_url_right
+            new_database(self.db_url_right)
 
         except Exception as ex:
             print ex.message
@@ -278,23 +280,6 @@ class TestExample(unittest.TestCase):
         #
         # new_db(self.uri_left)
         # new_db(self.uri_right)
-
-
-    def create_database(self, existing_db_uri, new_db_uri):
-        from sqlalchemy.engine import create_engine
-
-        # Create engine and connect to the existing database
-        engine = create_engine(existing_db_uri)
-        conn = engine.connect()
-        # Do an initial commit to exit the transaction procedure
-        conn.execute("commit")
-
-        #
-
-        conn.execute("create database temp_07f07f0a599d4c6d8f658ffc892e368c")
-        conn.close()
-
-
 
 
     def tearDown(self):
@@ -355,6 +340,12 @@ class TestExample(unittest.TestCase):
                              json_deserializer=loads_json)
 
 
+def new_database(uri):
+    """Drop the database at ``uri`` and create a brand new one. """
+    destroy_database(uri)
+    create_database(uri)
+
+
 def create_database(url, encoding='utf8'):
     """Issue the appropriate CREATE DATABASE statement.
 
@@ -379,27 +370,32 @@ def create_database(url, encoding='utf8'):
 
     database = url.database
 
-    if url.drivername.startswith('postgresql'):
-        url.database = 'template1'
-    elif not url.drivername.startswith('sqlite'):
-        url.database = None
+    # A default PostgreSQL database to connect
+    url.database = 'template1'
 
     engine = sa.create_engine(url)
 
-    if engine.dialect.name == 'postgresql':
-        if engine.driver == 'psycopg2':
+    try:
+        if engine.dialect.name == 'postgresql' and engine.driver == 'psycopg2':
             from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
             engine.raw_connection().set_isolation_level(
                 ISOLATION_LEVEL_AUTOCOMMIT
             )
 
-        text = "CREATE DATABASE {0} ENCODING '{1}'".format(
-            quote(engine, database),
-            encoding
-        )
+            text = "CREATE DATABASE {0} ENCODING '{1}'".format(
+                quote(engine, database),
+                encoding
+            )
 
-        engine.execute(text)
+            # conn = engine.connect()
+            # # conn.execute("commit")
+            # conn.execute(text)
+            # conn.close()
 
-    else:
-        raise Exception("Only PostgreSQL with the psycopg2 driver is "
-                        "supported.")
+            engine.execute(text)
+
+        else:
+            raise Exception("Only PostgreSQL with the psycopg2 driver is "
+                            "supported.")
+    finally:
+        engine.dispose()

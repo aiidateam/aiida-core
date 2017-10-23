@@ -24,6 +24,8 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         from aiida.backends.sqlalchemy.models.node import DbLink  # Direct links
         from aiida.orm.node import Node
         from aiida.orm.querybuilder import QueryBuilder
+        from aiida.common.links import LinkType
+
 
         n1 = Node().store()
         n2 = Node().store()
@@ -38,14 +40,14 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2)
-        n2.add_link_from(n1)
-        n5.add_link_from(n3)
-        n5.add_link_from(n4)
-        n4.add_link_from(n2)
+        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n2.add_link_from(n1, link_type=LinkType.CREATE)
+        n5.add_link_from(n3, link_type=LinkType.CREATE)
+        n5.add_link_from(n4, link_type=LinkType.CREATE)
+        n4.add_link_from(n2, link_type=LinkType.CREATE)
 
-        n7.add_link_from(n6)
-        n8.add_link_from(n7)
+        n7.add_link_from(n6, link_type=LinkType.CREATE)
+        n8.add_link_from(n7, link_type=LinkType.CREATE)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
@@ -55,7 +57,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
                 ).count(), 0
             )
 
-        n6.add_link_from(n5)
+        n6.add_link_from(n5, link_type=LinkType.CREATE)
         # Yet, now 2 links from 1 to 8
 
         self.assertEquals(
@@ -70,7 +72,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
                                 #~ DbPath.child == n8.dbnode).distinct().count(),
             #~ 2)
 
-        n7.add_link_from(n9)
+        n7.add_link_from(n9, link_type=LinkType.CREATE)
         # Still two links...
 
         self.assertEquals(
@@ -84,7 +86,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
                                 #~ DbPath.child == n8.dbnode).distinct().count(),
             #~ 2)
 
-        n9.add_link_from(n6)
+        n9.add_link_from(n6, link_type=LinkType.CREATE)
         # And now there should be 4 nodes
         self.assertEquals(
             QueryBuilder().append(
@@ -176,7 +178,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_link_from(n3)
+        n4.add_link_from(n3, link_type=LinkType.CREATE)
 
         self.assertEquals(
             QueryBuilder().append(

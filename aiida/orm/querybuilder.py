@@ -1248,7 +1248,6 @@ class QueryBuilder(object):
         node1 = aliased(self._impl.Node)
         in_recursive_filters = self._build_filters(node1, filter_dict)
 
-
         selection_walk_list = [
                 link1.input_id.label('ancestor_id'),
                 link1.output_id.label('descendant_id'),
@@ -1261,7 +1260,10 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.input_id==node1.id
                 )
-            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value)).cte(recursive=True)
+            ).where(and_(
+                    in_recursive_filters, # I apply filters for speed here
+                    link1.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)) # I follow input and create links
+                )).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1280,7 +1282,7 @@ class QueryBuilder(object):
                         link2,
                         link2.input_id == aliased_walk.c.descendant_id,
                     )
-                ).where(link2.type != LinkType.RETURN.value) # I can't follow RETURN links
+                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))
             )) #.alias()
 
         self._query = self._query.join(
@@ -1324,7 +1326,7 @@ class QueryBuilder(object):
                 join(
                     node1, link1, link1.output_id==node1.id
                 )
-            ).where(and_(in_recursive_filters, link1.type != LinkType.RETURN.value, link1.type != LinkType.CALL.value)).cte(recursive=True)
+            ).where(and_(in_recursive_filters, link1.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1344,7 +1346,7 @@ class QueryBuilder(object):
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
-                ).where(and_(link2.type != LinkType.RETURN.value, link2.type != LinkType.CALL.value)) # I can't follow RETURN or CALL links
+                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value))) # I can't follow RETURN or CALL links
             ))
 
 

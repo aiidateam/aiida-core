@@ -1,19 +1,21 @@
+.. _troubleshooting:
+
 ===============
 Troubleshooting
 ===============
 
 * On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
   may fail due to a problem with dependencies on the ``numpy`` package. In this case
-  you may be presented with a message like the following:
+  you may be presented with a message like the following::
 
     from numpy.distutils.misc_util import get_numpy_include_dirs
     ImportError: No module named numpy.distutils.misc_util
 
-  To fix this, simply install ``numpy`` individually through pip in your virtual env, i.e.
+  To fix this, simply install ``numpy`` individually through pip in your virtual env, i.e.::
 
     pip install numpy
 
-  followed by executing the original install command once more
+  followed by executing the original install command once more::
 
     pip install -e .
 
@@ -51,6 +53,17 @@ Troubleshooting
 
   and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 
+
+* When installing the ``ssh_kerberos`` optional requirement through Anaconda you may encounter the following error on Ubuntu machines::
+
+    version 'GFORTRAN_1.4' not found (required by /usr/lib/libblas.so.3)
+
+  This is related to an open issue in anaconda `ContinuumIO/anaconda-issues#686`_.
+  A potential solution is to run the following command::
+
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3
+
+.. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
 * Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 

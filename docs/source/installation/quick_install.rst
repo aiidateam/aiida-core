@@ -89,6 +89,10 @@ In order to install any of these package groups, simply append them as a comma s
 
     (aiidapy) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
 
+.. note:: If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
+  To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages::
+
+    sudo apt-get install libffi-dev libkrb5-dev
 
 Configure the AiiDA installation
 ++++++++++++++++++++++++++++++++

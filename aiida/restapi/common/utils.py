@@ -798,7 +798,13 @@ class Utils(object):
         ## Parse the query string
         try:
             fields = generalGrammar.parseString(query_string)
-            field_list = fields.asList()
+
+            # JQuery adds _=timestamp a parameter to not use cached data/response.
+            # To handle query, remove this "_" parameter from the query string
+            # For more details check issue #789
+            # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
+            field_list = [entry for entry in fields.asList() if entry[0] != "_"]
+
         except ParseException as e:
             raise RestInputValidationError(
                 "The query string format is invalid. "

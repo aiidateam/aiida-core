@@ -225,11 +225,13 @@ class TestDirectoryManipulation(unittest.TestCase):
         create directories, verify listdir, delete a folder with subfolders
         """
         # Imports required later
+        import tempfile
         import random
         import string
         import os
 
         with custom_transport as t:
+            # We cannot use tempfile.mkdtemp because we're on a remote folder
             location = t.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
             t.chdir(location)
@@ -242,10 +244,17 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.mkdir(directory)
             t.chdir(directory)
             list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+            list_of_files = ['a', 'b']
             for this_dir in list_of_dir:
                 t.mkdir(this_dir)
-            list_of_dir_found = t.listdir('.')
-            self.assertTrue(sorted(list_of_dir_found) == sorted(list_of_dir))
+            for fname in list_of_files:
+                with tempfile.NamedTemporaryFile() as f:
+                    # Just put an empty file there at the right file name
+                    t.putfile(f.name, fname)
+
+            list_found = t.listdir('.')
+
+            self.assertTrue(sorted(list_found) == sorted(list_of_dir + list_of_files))
 
             self.assertTrue(sorted(t.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f']))
             self.assertTrue(sorted(t.listdir('.', 'a?')), sorted(['as', 'a2']))
@@ -253,6 +262,74 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)
+
+            for this_file in list_of_files:
+                t.remove(this_file)
+
+            t.chdir('..')
+            t.rmdir(directory)
+
+    @run_for_all_plugins
+    def test_listdir_withattributes(self, custom_transport):
+        """
+        create directories, verify listdir_withattributes, delete a folder with subfolders
+        """
+        # Imports required later
+        import tempfile
+        import random
+        import string
+        import os
+
+        def simplify_attributes(data):
+            """
+            Take data from listdir_withattributes and return a dictionary
+            {fname: isdir}
+
+            :param data: the output of listdir_withattributes
+            :return: dictionary: the key is a filename, the value is True if it's a directory, False otherwise
+            """
+            return {_['name']: _['isdir'] for _ in data}
+
+        with custom_transport as t:
+            # We cannot use tempfile.mkdtemp because we're on a remote folder
+            location = t.normalize(os.path.join('/', 'tmp'))
+            directory = 'temp_dir_test'
+            t.chdir(location)
+
+            self.assertEquals(location, t.getcwd())
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+            t.mkdir(directory)
+            t.chdir(directory)
+            list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+            list_of_files = ['a', 'b']
+            for this_dir in list_of_dir:
+                t.mkdir(this_dir)
+            for fname in list_of_files:
+                with tempfile.NamedTemporaryFile() as f:
+                    # Just put an empty file there at the right file name
+                    t.putfile(f.name, fname)
+
+            comparison_list = {k: True for k in list_of_dir}
+            for k in list_of_files:
+                comparison_list[k] = False
+            self.assertTrue(simplify_attributes(t.listdir_withattributes('.')),
+                            comparison_list)
+
+            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a*')),
+                            {'as': True, 'a2': True, 'a4f': True, 'a': False})
+            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a?')),
+                            {'as': True, 'a2': True})
+            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a[2-4]*')),
+                            {'a2': True, 'a4f': True})
+
+            for this_dir in list_of_dir:
+                t.rmdir(this_dir)
+
+            for this_file in list_of_files:
+                t.remove(this_file)
 
             t.chdir('..')
             t.rmdir(directory)

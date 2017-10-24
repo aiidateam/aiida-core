@@ -35,19 +35,45 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        response = []
+        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
 
-        from aiida.restapi.common.config import PREFIX
+        if(len(pathlist) > 1):
+            resource_type = pathlist.pop(1)
+        else:
+            resource_type = "info"
 
-        # Add Rest API version
-        response.append("REST API version: " + PREFIX.split("/")[-1])
+        response = {}
 
-        # Add Rest API prefix
-        response.append("REST API Prefix: " + PREFIX)
-
-        # Add AiiDA version
+        import aiida.restapi.common.config as conf
         from aiida import __version__
-        response.append("AiiDA==" + __version__)
+
+        if(resource_type == "info"):
+            response = []
+
+            # Add Rest API version
+            response.append("REST API version: " + conf.PREFIX.split("/")[-1])
+
+            # Add Rest API prefix
+            response.append("REST API Prefix: " + conf.PREFIX)
+
+            # Add AiiDA version
+            response.append("AiiDA==" + __version__)
+
+        elif (resource_type == "endpoints"):
+
+            # TODO: remove hardcoded list
+            response["available_endpoints"] = [
+                "/api/v2/server",
+                "/api/v2/computers",
+                "/api/v2/nodes",
+                "/api/v2/calculations",
+                "/api/v2/data",
+                "/api/v2/codes",
+                "/api/v2/structures",
+                "/api/v2/kpoints",
+                "/api/v2/bands",
+                "/api/v2/groups"
+              ]
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
 

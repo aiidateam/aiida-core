@@ -97,8 +97,9 @@ class AiidaApi(Api):
 
 
         self.add_resource(ServerInfo,
-                          "/info/",
-                          endpoint='info',
+                          "/server/",
+                          "/server/endpoints/",
+                          endpoint='server',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 

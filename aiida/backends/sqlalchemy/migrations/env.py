@@ -13,7 +13,7 @@ from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.backends.sqlalchemy.models.lock import DbLock
 from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import (
-    DbPath, DbCalcState, DbComputer,
+    DbCalcState, DbComputer,
     DbContentError, DbLink, DbNode)
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from aiida.backends.sqlalchemy.models.user import DbUser

@@ -25,8 +25,8 @@ class PostgresTest(unittest.TestCase):
 
     def test_determine_setup_fail(self):
         self.postgres.set_port('11111')
-        self.postgres.determine_setup()
-        self.assertFalse(self.postgres.pg_execute)
+        setup_success = self.postgres.determine_setup()
+        self.assertFalse(setup_success)
 
     def test_determine_setup_success(self):
         self._setup_postgres()

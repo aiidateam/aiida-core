@@ -1,24 +1,50 @@
-======================================
-Updating AiiDA from a previous version
-======================================
+==============
+Updating AiiDA
+==============
+Before you update your AiiDA installation, first make sure that you do the following:
 
-AiiDA can be updated from a previously installed version. Before beginning
-the procedure, make sure of the following:
+* Stop your daemon by executing ``verdi daemon stop``
+* Create a backup of your database(s) by following the guidelines in the :ref:`backup section<backup>`
+* Create a backup of the ``~/.aiida`` folder (where configuration files are stored)
 
-  * your daemon is stopped (use ``verdi daemon stop``),
-  * you know your current AiiDA version. In case, you can get it from the ``verdi shell``::
+If you have installed AiiDA manually from a local clone of the ``aiida_core`` repository, skip to the instructions for :ref:`developers <update_developers>`.
+Otherwise, if you have installed AiiDA through ``pip``, you can also update your installation through ``pip``.
+If you installed ``aiida_core`` in a virtual environment make sure to load it first.
+Now you are ready to update your AiiDA installation through ``pip``::
 
-      import aiida
-      aiida.__version__
+  pip install --upgrade aiida_core
 
-    (only the two first digits matter),
-  * you have a backup of your database(s) (follow the guidelines in the
-    :ref:`backup section<backup>`),
-  * you have a backup of the full ``~/.aiida`` folder (where configuration
-    files are stored),
-  * (optional) ``virtualenv`` is installed, i.e. you once ran the command::
+After upgrading your AiiDA installation you may have to perform :ref:`version specific migrations <update_migrations>`.
+When all necessary migrations are completed, finalize the update by executing::
 
-      pip install --user -U setuptools pip wheel virtualenv
+  verdi setup
+
+This updates your daemon profile and related files.
+It should not be done when another version of aiida is wished to be used productively on the same machine/user.
+
+.. _update_developers:
+
+Updating AiiDA for developers
++++++++++++++++++++++++++++++
+After you have performed all the steps in the checklist described in the previous section, go to your local clone of the ``aiida_core`` repository and checkout the desired branch or tag.
+If you installed ``aiida_core`` in a virtual environment make sure that you have loaded it.
+
+Each version increase may come with its own necessary migrations and you should only ever update the version by one at a time.
+Therefore, first make sure you know the version number of the current installed version by using ``verdi shell`` and typing::
+
+  import aiida
+  aiida.__version__
+
+Now you can install the updated version of ``aiida_core`` by simply executing::
+
+  pip install -e .
+
+After upgrading your AiiDA installation you may have to perform :ref:`version specific migrations <update_migrations>` based on the version of your previous installation.
+When all necessary migrations are completed, finalize the update by executing::
+
+  verdi setup
+
+This updates your daemon profile and related files.
 
 .. note::
   A few general remarks:
@@ -26,44 +52,54 @@ the procedure, make sure of the following:
   * If you want to update the code in the same folder, but modified some files locally,
     you can stash them (``git stash``) before cloning or pulling the new code.
     Then put them back with ``git stash pop`` (note that conflicts might appear).
-  * If you encounter any problems and/or inconsistencies, delete any .pyc
+  * If you encounter any problems and/or inconsistencies, delete any ``.pyc``
     files that may have remained from the previous version. E.g. If you are
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
-  * From 0.8.0 onwards there is no ``requirements.txt`` file anymore. It has been replaced by ``setup_requirements.py`` and ``pip`` will install all the requirements automatically. If for some reason you would still like to get such a file, you can create it using the script ``aiida_core/utils/create_requirements.py``
 
 .. note::
-  Since AiiDA 0.9.0, we use Alembic for the database migrations of the
+  Since AiiDA ``0.9.0``, we use Alembic for the database migrations of the
   SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
   of Alembic, you may experience problems during your first migration. If it is
   the case, please have a look at the following section :ref:`first_alembic_migration`
 
-Updating between development versions (for Developers)
-++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.. _update_migrations:
 
-After you checkout a development branch or pull a new state from the repository
+Version migration instructions
+++++++++++++++++++++++++++++++
 
-* run ``pip install -e`` again (or in a different virtualenv)
-  This applies changes to the distribution system (setup.py and related)
+Updating from 0.9.* to 0.10.0
+-----------------------------
+Multiple things have changed in AiiDA ``v0.10.0`` that require some manual attention when upgrading the ``aiida_core`` code base.
+There have been changes to the:
 
-To use the new version in production:
+1. Database schema
+2. Export archive format
+3. Plugins for Quantum ESPRESSO, ASE, COD tools and NWChem
 
-* run ``verdi setup``
-  This updates your daemon profile and related files. It should not be done when another version of aiida is wished to be used productively on the same machine/user.
+For each of these three points, you will find instructions on how to perform the necessary migration below.
 
-Updating from 0.9.* Django to 0.10.0 Django
-+++++++++++++++++++++++++++++++++++++++++++
+Database migration
+""""""""""""""""""
+
+The exact migration procedure will differ slightly depending on which backend the profile uses, but for both Django and SqlAlchemy the procedure starts as follows.
 
 * Backup your database
-
 * Upgrade AiiDA within the virtual environment
 
-* Run the migration::
+After having performed these steps, the remainder of the migration can be triggered by executing any ``verdi`` command.
+For example you can execute ``verdi calculation list`` and you should be prompted with an exception for Django or a message for SqlAlchemy.
+Depending on your backend, follow the instructions below.
 
-    python backends/djsite/manage.py --aiida-profile=PROFILENAME migrate
+Django
+~~~~~~
 
-  An warning will appear since we are deleting a table::
+When the profile that you want to migrate uses Django for the backend you will get an exception and instructions to run a command that looks like the following::
 
-      The following content types are stale and need to be deleted:
+    python aiida_core/aiida/backends/djsite/manage.py --aiida-profile=PROFILENAME migrate
+
+After you execute the migration command, a warning will appear since we are deleting a table::
+
+    The following content types are stale and need to be deleted:
 
         db | dbpath
 
@@ -73,7 +109,7 @@ Updating from 0.9.* Django to 0.10.0 Django
 
         Type 'yes' to continue, or 'no' to cancel:
 
-  Have faith in your AiiDA team and type ``yes``!
+Have faith in your AiiDA team and type ``yes``!
 
   .. note::
     For everyone who `tuned` his AiiDA-database by dropping the path-table and the corresponding triggers,
@@ -94,98 +130,81 @@ Updating from 0.9.* Django to 0.10.0 Django
         parent_id integer NOT NULL
         );
 
+SqlAlchemy
+~~~~~~~~~~
 
-Updating from 0.9.* to 0.10.0
-++++++++++++++++++++++++++++++++++++++++++
+When the profile that you want to migrate uses SqlAlchemy for the backend you will get a message that looks like the following::
 
-Export archive files
-------------------------------------------
-The format of the export archives, created with ``verdi export``, has changed and in order
-to import them, they have to be migrated. To do this you can use the ``verdi export migrate`` command.
+  It is time to perform your first SQLAlchemy migration.
+  Would you like to migrate to the latest version? [Y/n]
+
+Simply enter ``Y`` and hit enter and the database migration should be automatically applied.
+
+
+Export archive file migration
+-----------------------------
+
+The format of the export archives, created with ``verdi export``, has changed in ``aiida_core v0.10.0`` and in order
+to be able to import them, they have to be migrated. To do this you can use the ``verdi export migrate`` command.
 The archive format version up to ``0.10.0`` was ``0.2`` and starting from ``0.10.0`` it is now ``0.3``.
 
-Quantum ESPRESSO plugins
-------------------------------------------
-In version ``0.10.0`` the Quantum ESPRESSO plugin was removed from the ``aiida_core`` repository and moved to a
-`separate plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
-With the new plugin system introduced in version ``0.9.0``, installing the Quantum ESPRESSO plugin through the repository is very easy.
-However, if your current AiiDA installation still has the plugin files in the ``aiida_core`` tree, they have to be removed manually and the old entry points have to be removed from the cache.
-The instructions to accomplish this will be detailed below.
+Plugin migration
+----------------
 
-* First, make sure that you are in the correct virtual environment, for example (replace the path with the path to your actual virtual environment::
+In ``v0.10.0`` the plugins for Quantum ESPRESSO, ASE, COD tools and NWChem that used to be included in ``aiida_core`` have
+been moved to separate plugin repositories which can be found here:
 
-    source ~/aiidapy/bin/activate
+* `Quantum ESPRESSO`_ (aiida-quantumespresso)
+* `ASE`_ (aiida-ase)
+* `COD tools`_ (aiida-codtools)
+* `NWChem`_ (aiida-nwchem)
 
-* Go to the directory of the ``aiida_core`` source code tree, for example::
+.. _Quantum ESPRESSO: https://github.com/aiidateam/aiida-quantumespresso
+.. _ASE: https://github.com/aiidateam/aiida-ase
+.. _COD tools: https://github.com/aiidateam/aiida-codtools
+.. _NWChem: https://github.com/aiidateam/aiida-nwchem
 
-    cd ~/code/aiida/core
+With the new plugin system introduced in ``aiida_core v0.9.0``, all you have to do to install a plugin for AiiDA is to install it with ``pip``.
+For example, to install all four original plugins you can execute::
 
-* Check out the new version, either through the develop branch or a specific tag::
+  pip install aiida-quantumespresso aiida-ase aiida-codtools aiida-nwchem
 
-    git checkout -b develop
-    git pull origin develop
+Note, however, that if you are upgrading an existing manual installation of ``aiida_core``, you first need to make sure that your code base is cleaned.
+After you have upgraded your local repository to ``v0.10.0`` by checking out the relevant branch or tag, before you run ``pip install``, make sure
+that all old ``*pyc`` files are removed, by running the following command from your local checked out repository::
 
-  or::
+  find . -name "*pyc" -type f -delete
 
-    git checkout -b v0.10.0 v0.10.0
+Now you can install the new version of ``aiida_core`` with any of the optional extra dependencies that you might need::
 
-* Remove the obsolete Quantum ESPRESSO plugin directory::
+  pip install -e .[<EXTRAS>]
 
-    rm -rf aiida/orm/calculation/job/quantumespresso
-
-* Install the new version of AiiDA by typing::
-
-    pip install -e .[<EXTRAS>]
-
-  where <EXTRAS> is a comma separated list of the optional features you wish to install (see the :ref:`optional dependencies<install_optional_dependencies>`).
-
-This should have successfully removed the old plugin entry points from your virtual environment installation.
-To verify this, execute the following command and make sure that the ``quantumespresso.*`` plugins are **not** listed::
-
-  verdi calculation plugins
-
-If this is not the case, run the following command and check the ``verdi`` command again::
+and make sure to refresh the plugin cache by executing::
 
   reentry scan
-  verdi calculation plugins
 
-If the plugin is no longer listed, we can safely reinstall them from the new plugin repository and the plugin loading system.
-First, clone the plugin repository from github in a separate directory::
+Now you can reinstall any of the Quantum ESPRESSO, ASE, COD tools or NWChem plugins, either through ``pip`` for example::
 
-  mkdir -p ~/code/aiida/plugins
-  cd ~/code/aiida/plugins
+  pip install aiida-quantumespresso
+
+or you can install them for development just like ``aiida_core`` by checking out the repository and using ``pip install -e``, like so::
+
   git clone https://github.com/aiidateam/aiida-quantumespresso
-
-Now all we have to do to install the plugin and have it registered with AiiDA is execute the following ``pip`` command::
-
   pip install -e aiida-quantumespresso
 
-To verify that the plugin was installed correctly, list the plugin entry points through ``verdi``::
+You can verify that the plugins were properly installed by running the following ``verdi`` command::
 
   verdi calculation plugins
-
-If the Quantum ESPRESSO plugin entry points are not listed, you can try the following::
-
-  reentry scan
-  verdi calculation plugins
-
-If the entry points are still not listed, please contact the developers for support.
-Finally, make sure to restart the daemon::
-
-  verdi daemon restart
 
 Now everything should be working properly and you can use the plugin as you were used to.
-You can use the ``CalculationFactory`` exactly in the same way to load calculation classes.
+You can use the class factories, such as ``CalculationFactory``, exactly in the same way to load the plugin classes.
 For example you can still call ``CalculationFactory('quantumespresso.pw')`` to load the ``PwCalculation`` class.
-The only thing that will have changed is that you can no longer directly import from the old plugin location.
-That means that ``from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation`` will no longer work as those files no longer exist.
-Instead you can use the factories or the new import location ``from aiida_quantumespresso.calculation.pw import PwCalculation``.
+The only thing that will have changed is that you can no longer use any of the old direct import paths, as those files no longer exist.
 
 
 Updating from older versions
-++++++++++++++++++++++++++++++++++++++++++
-To find the update instructions for older versions of AiiDA follow the following links
-to the documentation of the corresponding version:
+++++++++++++++++++++++++++++
+To find the update instructions for older versions of AiiDA follow the following links to the documentation of the corresponding version:
 
 * `0.8.* Django`_
 * `0.7.* Django`_

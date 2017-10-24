@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, MutableSequence
 from plum.engine.execution_engine import Future

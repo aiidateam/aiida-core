@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Common code to be used in cli testing"""
 import sys
 from contextlib import contextmanager

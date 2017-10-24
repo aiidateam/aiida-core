@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def get_db_columns(db_class):
     """
     This function returns a dictionary where the keys are the columns of

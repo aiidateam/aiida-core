@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Deleting dbpath table and triggers
 
 Revision ID: 70c7d732f1b2

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 

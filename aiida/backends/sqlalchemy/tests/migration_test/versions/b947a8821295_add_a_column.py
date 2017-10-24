@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Add a column
 
 Revision ID: b947a8821295

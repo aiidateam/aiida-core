@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Updating link types - This is a copy of the Django migration script
 
 Revision ID: a6048f0ffca8

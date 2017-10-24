@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os, tempfile
 
 def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',

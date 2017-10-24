@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """create account table
 
 Revision ID: 470e57bc0936

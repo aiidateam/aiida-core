@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Provides an API for postgres database maintenance tasks"""
 try:
     import subprocess32 as subprocess

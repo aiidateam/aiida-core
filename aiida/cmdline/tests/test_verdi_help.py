@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Bug regression tests for ``verdi help``"""
 import unittest
 

@@ -77,7 +77,7 @@ class NodeTranslator(BaseTranslator):
         self._subclasses = self._get_subclasses()
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
-                       nelist=None):
+                       nelist=None, visformat=None):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
@@ -100,6 +100,7 @@ class NodeTranslator(BaseTranslator):
             self._nelist = nelist
         elif query_type == 'visualization':
             self._content_type = 'visualization'
+            self._visformat = visformat
         else:
             raise InputValidationError("invalid result/content value: {"
                                        "}".format(query_type))
@@ -115,7 +116,7 @@ class NodeTranslator(BaseTranslator):
 
     def set_query(self, filters=None, orders=None, projections=None,
                   query_type=None, id=None, alist=None, nalist=None,
-                  elist=None, nelist=None):
+                  elist=None, nelist=None, visformat=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -136,7 +137,7 @@ class NodeTranslator(BaseTranslator):
 
         ## Set the type of query
         self.set_query_type(query_type, alist=alist, nalist=nalist,
-                            elist=elist, nelist=nelist)
+                            elist=elist, nelist=nelist, visformat=visformat)
 
         ## Define projections
         if self._content_type is not None:
@@ -235,7 +236,7 @@ class NodeTranslator(BaseTranslator):
         elif self._content_type == 'visualization':
             # In this we do not return a dictionary but just an object and
             # the dictionary format is set by get_visualization_data
-            data = {self._content_type: self.get_visualization_data(n)}
+            data = {self._content_type: self.get_visualization_data(n, self._visformat)}
 
         else:
             raise ValidationError("invalid content type")
@@ -310,7 +311,7 @@ class NodeTranslator(BaseTranslator):
 
         return results
 
-    def get_visualization_data(self, node):
+    def get_visualization_data(self, node, format=None):
         """
         Generic function to get the data required to visualize the node with
         a specific plugin.
@@ -336,7 +337,7 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
-        visualization_data = lowtrans.get_visualization_data(node)
+        visualization_data = lowtrans.get_visualization_data(node, format=format)
 
         return visualization_data
 

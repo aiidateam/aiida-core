@@ -48,7 +48,7 @@ class BaseResource(Resource):
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = self.utils.parse_query_string(query_string)
+         nelist, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -135,7 +135,7 @@ class Node(Resource):
         (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = self.utils.parse_query_string(query_string)
+         nelist, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -171,7 +171,7 @@ class Node(Resource):
             ## Initialize the translator
             self.trans.set_query(filters=filters, orders=orderby,
                                  query_type=query_type, id=id, alist=alist,
-                                 nalist=nalist, elist=elist, nelist=nelist)
+                                 nalist=nalist, elist=elist, nelist=nelist, visformat=visformat)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -273,6 +273,7 @@ class Data(Node):
 
 class StructureData(Data):
     def __init__(self, **kwargs):
+
         super(StructureData, self).__init__(**kwargs)
 
         from aiida.restapi.translator.data.structure import \

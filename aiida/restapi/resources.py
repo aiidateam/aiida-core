@@ -15,6 +15,53 @@ from flask_restful import Resource
 from aiida.restapi.common.utils import Utils
 
 
+class ServerInfo(Resource):
+    def __init__(self, **kwargs):
+        # Configure utils
+        utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
+                            kwargs}
+        self.utils = Utils(**self.utils_confs)
+
+    def get(self):
+        """
+        It returns the general info about the REST API
+        :return: returns current AiiDA version defined in aiida/__init__.py
+        """
+
+        ## Decode url parts
+        path = unquote(request.path)
+        query_string = unquote(request.query_string)
+        url = unquote(request.url)
+        url_root = unquote(request.url_root)
+
+        response = []
+
+        from aiida.restapi.common.config import PREFIX
+
+        # Add Rest API version
+        response.append("REST API version: " + PREFIX.split("/")[-1])
+
+        # Add Rest API prefix
+        response.append("REST API Prefix: " + PREFIX)
+
+        # Add AiiDA version
+        from aiida import __version__
+        response.append("AiiDA==" + __version__)
+
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
+        ## Build response and return it
+        data = dict(method=request.method,
+                    url=url,
+                    url_root=url_root,
+                    path=path,
+                    query_string=query_string,
+                    resource_type="Info",
+                    data=response)
+        return self.utils.build_response(status=200, headers=headers, data=data)
+
+
 ## TODO add the caching support. I cache total count, results, and possibly
 # set_query
 class BaseResource(Resource):

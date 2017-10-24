@@ -308,4 +308,5 @@ class AiidaApi(Api):
 
                 return jsonify(response)
 
-        return e
+        else:
+            raise e

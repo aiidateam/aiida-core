@@ -16,7 +16,7 @@ from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql.expression import cast
+from sqlalchemy.sql.expression import cast, ColumnClause
 
 
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -142,11 +142,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
     def AiidaComputer(self):
         import aiida.orm.implementation.sqlalchemy.computer
         return aiida.orm.implementation.sqlalchemy.computer.Computer
-
-
-    def prepare_with_dbpath(self):
-        from aiida.backends.sqlalchemy.models.node import DbPath
-        self.Path = DbPath
 
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
@@ -318,7 +313,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label, ColumnClause)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column

@@ -76,7 +76,13 @@ Now, let's try making a slightly more complex workflow by composing workfunction
 
 Above we see the workflow that was executed with the outputs and the PKs of all the nodes along the way.
 
-Let's look at a slightly more complex example, that of performing an Equation of State calculation::
+Let's look at a slightly more complex example, that of performing an Equation of State calculation.
+
+.. note:: The following example workflows use the Quantum ESPRESSO plugins that are hosted
+  `in the aiida-quantumespresso plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
+
+
+Here is the code::
 
     from aiida.orm.utils import DataFactory
     import ase
@@ -89,7 +95,7 @@ Let's look at a slightly more complex example, that of performing an Equation of
         new_structure = DataFactory('structure')(ase=new_ase)
         return new_structure
 
-    from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+    from aiida_quantumespresso.calculations.pw import PwCalculation
     from aiida.orm.data.base import Float
     from aiida.work.run import run
 
@@ -115,7 +121,7 @@ ESPRESSO plugin was written before the new plugin system hence we get a class co
 ``PwCalculation.process()`` call.
 
 On line 21-23 we first use a standard python function (not shown) to get a  set of
-Quantum ESPRESSO inputs parametersma for our structure.  Then we use the :func:`~aiida.work.run.run` method to launch the
+Quantum ESPRESSO inputs parameters for our structure.  Then we use the :func:`~aiida.work.run.run` method to launch the
 calculation.  This is a blocking call and will wait until the calculation has completed.
 
 Upon completion on lines 24-25 we get the outputs dictionary from the calculation and store it for returning when

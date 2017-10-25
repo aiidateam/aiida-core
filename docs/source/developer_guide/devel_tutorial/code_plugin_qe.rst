@@ -11,6 +11,14 @@ It will be assumed that you have already tried to run an example of Quantum
 Espresso, and you know more or less how the AiiDA interface works. We hope
 that in the end you will be able to replicate the task for other codes.
 
+.. note:: While we keep this documentation here, as it is a guide on how to write
+  a plugin, we mention that since AiiDA 0.10 the ``aiida-quantumespresso`` plugin
+  has been moved to a `different repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
+  You can find the documentation (including the tutorials on how to run Quantum ESPRESSO
+  calculations with the plugins that we describe here) on the
+  `respective Read The Docs page <http://aiida-quantumespresso.readthedocs.io/en/latest/index.html>`_.
+
+
 In fact, when writing your own plugin, keep in mind that you need to
 satisfy multiple users, and the interface needs to be simple (not the
 code below). But always try to follow the Zen of Python:
@@ -218,7 +226,9 @@ for submission without the need to store all nodes on the DB.
 
 For the sake of clarity, it's probably going to be easier looking at
 an implemented example. Take a look at the ``NamelistsCalculation`` located in 
-``aiida.orm.calculation.job.quantumespresso.namelists``.
+``aiida_quantumespresso.calculations.namelists`` (this is not in AiiDA-core but on
+the ``aiida-quantumespresso`` package - you can find the links to this repository
+and its documentation at the top of this page).
 
 How does the method ``_prepare_for_submission`` work in practice?
 

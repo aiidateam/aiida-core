@@ -21,6 +21,15 @@
 
 import sys, os
 
+# Following 3 lines avoid the need of importing load_dbenv() for compiling the
+# documentation -> works also without verdi install
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir,os.pardir) )
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
+
+import aiida
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -59,9 +68,9 @@ copyright = u'2016, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulat
 # built documents.
 #
 # The short X.Y version.
-version = '0.9'
+version = '.'.join(aiida.__version__.split('.')[:2])
 # The full version, including alpha/beta/rc tags.
-release = '0.9.1'
+release = aiida.__version__
 
 author = "The AiiDA team."
 
@@ -226,14 +235,6 @@ latex_documents = [
 # from docs.readthedocs.org
 # NOTE: it is needed to have these lines before load_dbenv()
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-# Following 3 lines avoid the need of importing load_dbenv() for compiling the
-# documentation -> works also without verdi install
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir,os.pardir) )
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:

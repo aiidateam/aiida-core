@@ -11,6 +11,10 @@ case "$TEST_TYPE" in
         ;;
     tests)
         # Run the AiiDA tests
+        python ${TRAVIS_BUILD_DIR}/.travis-data/test_setup.py
+        python ${TRAVIS_BUILD_DIR}/.travis-data/test_fixtures.py
+        python ${TRAVIS_BUILD_DIR}/.travis-data/test_plugin_testcase.py
+
         verdi -p test_$TEST_AIIDA_BACKEND devel tests
 
         # Run the daemon tests using docker

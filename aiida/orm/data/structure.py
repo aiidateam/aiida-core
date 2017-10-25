@@ -1164,9 +1164,7 @@ class StructureData(Data):
                              "".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
-        # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('kinds',
-                       self.get_attr('kinds', []) + [new_kind.get_raw()])
+        self._append_to_attr('kinds', new_kind.get_raw())
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
@@ -1197,9 +1195,7 @@ class StructureData(Data):
                                          [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
-        # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('sites',
-                       self.get_attr('sites', []) + [new_site.get_raw()])
+        self._append_to_attr('sites', new_site.get_raw())
 
     def append_atom(self, **kwargs):
         """

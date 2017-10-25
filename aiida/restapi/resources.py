@@ -15,6 +15,79 @@ from flask_restful import Resource
 from aiida.restapi.common.utils import Utils
 
 
+class ServerInfo(Resource):
+    def __init__(self, **kwargs):
+        # Configure utils
+        utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
+                            kwargs}
+        self.utils = Utils(**self.utils_confs)
+
+    def get(self):
+        """
+        It returns the general info about the REST API
+        :return: returns current AiiDA version defined in aiida/__init__.py
+        """
+
+        ## Decode url parts
+        path = unquote(request.path)
+        query_string = unquote(request.query_string)
+        url = unquote(request.url)
+        url_root = unquote(request.url_root)
+
+        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+
+        if(len(pathlist) > 1):
+            resource_type = pathlist.pop(1)
+        else:
+            resource_type = "info"
+
+        response = {}
+
+        import aiida.restapi.common.config as conf
+        from aiida import __version__
+
+        if(resource_type == "info"):
+            response = []
+
+            # Add Rest API version
+            response.append("REST API version: " + conf.PREFIX.split("/")[-1])
+
+            # Add Rest API prefix
+            response.append("REST API Prefix: " + conf.PREFIX)
+
+            # Add AiiDA version
+            response.append("AiiDA==" + __version__)
+
+        elif (resource_type == "endpoints"):
+
+            # TODO: remove hardcoded list
+            response["available_endpoints"] = [
+                "/api/v2/server",
+                "/api/v2/computers",
+                "/api/v2/nodes",
+                "/api/v2/calculations",
+                "/api/v2/data",
+                "/api/v2/codes",
+                "/api/v2/structures",
+                "/api/v2/kpoints",
+                "/api/v2/bands",
+                "/api/v2/groups"
+              ]
+
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
+        ## Build response and return it
+        data = dict(method=request.method,
+                    url=url,
+                    url_root=url_root,
+                    path=path,
+                    query_string=query_string,
+                    resource_type="Info",
+                    data=response)
+        return self.utils.build_response(status=200, headers=headers, data=data)
+
+
 ## TODO add the caching support. I cache total count, results, and possibly
 # set_query
 class BaseResource(Resource):

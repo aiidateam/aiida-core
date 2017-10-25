@@ -9,7 +9,7 @@
 ###########################################################################
 from urllib import unquote
 
-from flask import request
+from flask import request, make_response
 from flask_restful import Resource
 
 from aiida.restapi.common.utils import Utils
@@ -48,7 +48,7 @@ class BaseResource(Resource):
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, visformat) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -132,10 +132,10 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, visformat) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -154,7 +154,7 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist) = self.utils.parse_query_string(query_string)
+             nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if len(filters) > 0:
                 usr = filters["user"]["=="]
@@ -166,12 +166,12 @@ class Node(Resource):
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_io_tree(id)
-
         else:
             ## Initialize the translator
             self.trans.set_query(filters=filters, orders=orderby,
                                  query_type=query_type, id=id, alist=alist,
-                                 nalist=nalist, elist=elist, nelist=nelist, visformat=visformat)
+                                 nalist=nalist, elist=elist, nelist=nelist,
+                                 downloadformat=downloadformat, visformat=visformat)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -185,22 +185,36 @@ class Node(Resource):
                                                    url=request.url,
                                                    total_count=total_count)
             else:
+
                 self.trans.set_limit_offset(limit=limit, offset=offset)
+                ## Retrieve results
+                results = self.trans.get_results()
+
+                if query_type == "download" and len(results) > 0:
+                    if results["download"]["status"] == 200:
+                        data = results["download"]["data"]
+                        response = make_response(data)
+                        response.headers['content-type'] = 'application/octet-stream'
+                        response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
+                            results["download"]["filename"])
+                        return response
+
+                    else:
+                        results = results["download"]["data"]
+
                 headers = self.utils.build_headers(url=request.url,
                                                    total_count=total_count)
 
-            ## Retrieve results
-            results = self.trans.get_results()
+                ## Build response
+                data = dict(method=request.method,
+                            url=url,
+                            url_root=url_root,
+                            path=path,
+                            id=id,
+                            query_string=query_string,
+                            resource_type=resource_type,
+                            data=results)
 
-        ## Build response
-        data = dict(method=request.method,
-                    url=url,
-                    url_root=url_root,
-                    path=path,
-                    id=id,
-                    query_string=query_string,
-                    resource_type=resource_type,
-                    data=results)
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 

@@ -172,3 +172,30 @@ class StructureDataTranslator(DataTranslator):
 
         return response
 
+
+    @staticmethod
+    def get_downloadable_data(node, format=None):
+        """
+        Generic function extented for structure data
+
+        :param node: node object that has to be visualized
+        :param format: file extension format
+        :returns: data in selected format to download
+        """
+
+        response = {}
+
+        if format is None:
+            format = "cif"
+
+        if format in node.get_export_formats():
+            try:
+                response["data"] = node._exportstring(format)[0]
+                response["status"] = 200
+                response["filename"] = node.uuid + "_structure." + format
+            except LicensingException as e:
+                response["status"] = 500
+                response["data"] = e.message
+
+        return response
+

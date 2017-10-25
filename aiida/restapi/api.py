@@ -37,7 +37,7 @@ class App(Flask):
 
         # Error handler
         from aiida.restapi.common.exceptions import RestInputValidationError, \
-            RestValidationError
+            RestValidationError, RestFeatureNotAvailable
 
         if catch_internal_server:
 
@@ -51,6 +51,10 @@ class App(Flask):
                 elif isinstance(error, RestInputValidationError):
                     response = jsonify({'message': error.message})
                     response.status_code = 400
+
+                elif isinstance(error, RestFeatureNotAvailable):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 501
 
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
@@ -156,6 +160,7 @@ class AiidaApi(Api):
                           '/data/<id>/content/attributes/',
                           '/data/<id>/content/extras/',
                           '/data/<id>/content/visualization/',
+                          '/data/<id>/content/download/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -194,6 +199,7 @@ class AiidaApi(Api):
                           '/structures/<id>/content/attributes/',
                           '/structures/<id>/content/extras/',
                           '/structures/<id>/content/visualization/',
+                          '/structures/<id>/content/download/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )

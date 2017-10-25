@@ -750,3 +750,22 @@ class RESTApiTestSuite(RESTApiTestCase):
             RESTApiTestCase.compare_extra_response_data(self, "calculations",
                                                         url,
                                                         response, uuid=node_uuid)
+
+    ############### Structure visualization and download #############
+    def test_structure_visualization(self):
+        """
+        Get the list of give calculation inputs
+        """
+        node_uuid = self.get_dummy_data()["data"][3]["uuid"]
+        url = self.get_url_prefix() + '/structures/' + str(
+            node_uuid) + '/content/visualization?visformat=cif'
+        self.app.config['TESTING'] = True
+        with self.app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            expected_visdata = """#\\#CIF1.1\n##########################################################################\n#               Crystallographic Information Format file \n#               Produced by PyCifRW module\n# \n#  This is a CIF file.  CIF has been adopted by the International\n#  Union of Crystallography as the standard for data archiving and \n#  transmission.\n#\n#  For information on this file format, follow the CIF links at\n#  http://www.iucr.org\n##########################################################################\n\ndata_0\nloop_\n  _atom_site_label\n  _atom_site_fract_x\n  _atom_site_fract_y\n  _atom_site_fract_z\n  _atom_site_type_symbol\n   Ba1  0.0  0.0  0.0  Ba\n \n_cell_angle_alpha                       90.0\n_cell_angle_beta                        90.0\n_cell_angle_gamma                       90.0\n_cell_length_a                          2.0\n_cell_length_b                          2.0\n_cell_length_c                          2.0\nloop_\n  _symmetry_equiv_pos_as_xyz\n   'x, y, z'\n \n_symmetry_int_tables_number             1\n_symmetry_space_group_name_H-M          'P 1'\n"""
+            self.assertEquals(response["data"]["visualization"]["cif"],expected_visdata)
+            RESTApiTestCase.compare_extra_response_data(self, "structures",
+                                                        url,
+                                                        response, uuid=node_uuid)
+

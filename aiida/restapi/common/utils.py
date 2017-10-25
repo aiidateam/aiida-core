@@ -256,9 +256,8 @@ class Utils(object):
             raise RestValidationError("perpage key requires that a page is "
                                       "requested (i.e. the path must contain "
                                       "/page/)")
-        # 4. No querystring if query type = schema', 'visualization', 'schema'
-        if query_type in ('schema', 'statistics') and \
-                is_querystring_defined:
+        # 4. No querystring if query type = schema'
+        if query_type in ('schema') and is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")
 

@@ -130,7 +130,7 @@ class RESTApiTestCase(AiidaTestCase):
         """
         computer_projects = ["id", "uuid", "name", "hostname",
                                            "transport_type", "scheduler_type"]
-        computers = expected_data = QueryBuilder().append(
+        computers = QueryBuilder().append(
             Computer, tag="comp", project=computer_projects).order_by(
             {'comp': [{'name': {'order': 'asc'}}]}).dict()
 

@@ -508,6 +508,7 @@ class Utils(object):
         nalist = None
         elist = None
         nelist = None
+        downloadformat = None
         visformat = None
 
         ## Count how many time a key has been used for the filters and check if
@@ -563,6 +564,10 @@ class Utils(object):
         if 'format' in field_counts.keys() and field_counts['format'] > 1:
             raise RestInputValidationError(
                 "You cannot specify format more than "
+                "once")
+        if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify visformat more than "
                 "once")
 
         ## Extract results
@@ -634,11 +639,18 @@ class Utils(object):
 
             elif field[0] == 'format':
                 if field[1] == '=':
-                    visformat = field[2]
+                    downloadformat = field[2]
                 else:
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'format'")
+            elif field[0] == 'visformat':
+                if field[1] == '=':
+                    visformat = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'visformat'")
 
             else:
 
@@ -672,7 +684,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, visformat)
+                nelist, downloadformat, visformat)
 
     def parse_query_string(self, query_string):
         """

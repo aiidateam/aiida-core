@@ -12,7 +12,6 @@ Developer's guide
    devel_tutorial/code_plugin_qe
    devel_tutorial/parser_warnings_policy
    devel_tutorial/extend_restapi
-   parsertests
    workflows
    dev_workflow
    data_cmdline

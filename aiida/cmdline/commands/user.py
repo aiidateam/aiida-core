@@ -62,9 +62,10 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
     configure_user = False
     user, created = get_or_new_user(email=email)
 
-    if created:
+    if not created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
+
         if not non_interactive:
             reply = click.confirm("Do you want to reconfigure it?")
             if reply:
@@ -153,14 +154,16 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
             click.echo("         via the REST API and the Web Interface.")
 
 @user.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('email', type=str)
 @click.option('--first-name', prompt='First Name', type=str)
 @click.option('--last-name', prompt='Last Name', type=str)
 @click.option('--institution', prompt='Institution', type=str)
 @click.option('--no-password', is_flag=True)
-@click.argument('email', type=str)
-def configure(first_name, last_name, institution, no_password, email):
-    do_configure(email, first_name, last_name, institution, no_password)
-
+@click.option('--force-reconfigure', is_flag=True)
+def configure(email, first_name, last_name, institution, no_password, force_reconfigure):
+    do_configure(email=email, first_name=first_name,
+            last_name=last_name, institution=institution,
+            no_password=no_password, force_reconfigure=force_reconfigure)
 
 @user.command()
 @click.option('--color', is_flag=True, help='Show results with colors', default=False)

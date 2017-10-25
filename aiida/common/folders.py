@@ -428,17 +428,23 @@ class SandboxFolder(Folder):
     .. todo:: Implement check of whether the folder has been removed.
     """
 
-    def __init__(self):
+    def __init__(self, sandbox_in_repo=True):
         """
         Initializes the object by creating a new temporary folder in the
         sandbox.
+
+        :param bool sandbox_in_repo:
+            If True (default), creates the folder in the repository.
+            If false,  relies on the defaults of tempfile.mkdtemp
         """
         # First check if the sandbox folder already exists
-        sandbox = get_repository_folder('sandbox')
-        if not os.path.exists(sandbox):
-            os.makedirs(sandbox)
-
-        abspath = tempfile.mkdtemp(dir=sandbox)
+        if sandbox_in_repo:
+            sandbox = get_repository_folder('sandbox')
+            if not os.path.exists(sandbox):
+                os.makedirs(sandbox)
+            abspath = tempfile.mkdtemp(dir=sandbox)
+        else:
+            abspath = tempfile.mkdtemp()
         super(SandboxFolder, self).__init__(abspath=abspath)
 
     def __enter__(self):

@@ -51,7 +51,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
 
-def do_configure(email, first_name, last_name, institution, no_password, force_reconfigure=False):
+def do_configure(email, first_name, last_name, institution, no_password, non_interactive=False, force=False, **kwargs):
     if not is_dbenv_loaded():
         load_dbenv()
 
@@ -65,31 +65,42 @@ def do_configure(email, first_name, last_name, institution, no_password, force_r
     if not created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
                    "in the DB:".format(email))
-        if force_reconfigure or click.confirm("Do you want to reconfigure it?"):
+
+        if not non_interactive:
+            reply = click.confirm("Do you want to reconfigure it?")
+            if reply:
+                configure_user = True
+        elif force:
             configure_user = True
     else:
         configure_user = True
         click.echo("Configuring a new user with email '{}'".format(email))
 
     if configure_user:
-        try:
-            kwargs = {}
-            for field in UserModel.REQUIRED_FIELDS:
-                verbose_name = field.capitalize()
-                readline.set_startup_hook(lambda: readline.insert_text(
-                    getattr(user, field)))
-                if field == 'first_name' and first_name:
-                    kwargs[field] = first_name
-                elif field == 'last_name' and last_name:
-                    kwargs[field] = last_name
-                elif field == 'institution' and institution:
-                    kwargs[field] = institution
-                else:
-                    kwargs[field] = raw_input('{}: '.format(verbose_name))
-        finally:
-            readline.set_startup_hook(lambda: readline.insert_text(""))
+        if not non_interactive:
+            try:
+                attributes = {}
+                for field in UserModel.REQUIRED_FIELDS:
+                    verbose_name = field.capitalize()
+                    readline.set_startup_hook(lambda: readline.insert_text(
+                        getattr(user, field)))
+                    if field == 'first_name' and first_name:
+                        attributes[field] = first_name
+                    elif field == 'last_name' and last_name:
+                        attributes[field] = last_name
+                    elif field == 'institution' and institution:
+                        attributes[field] = institution
+                    else:
+                        attributes[field] = raw_input('{}: '.format(verbose_name))
+            finally:
+                readline.set_startup_hook(lambda: readline.insert_text(""))
+        else:
+            attributes = kwargs.copy()
+            attributes['first_name'] = first_name
+            attributes['last_name'] = last_name
+            attributes['institution'] = institution
 
-        for k, v in kwargs.iteritems():
+        for k, v in attributes.iteritems():
             setattr(user, k, v)
 
         change_password = False

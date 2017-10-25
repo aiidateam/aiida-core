@@ -88,8 +88,8 @@ class Computer(AbstractComputer):
     @staticmethod
     def get_db_columns():
         #I import get_db_columns here to avoid circular imports.
-        #Indeed, aiida.orm.implementation.django.utils imports Computer
-        from aiida.orm.implementation.sqlalchemy.utils import get_db_columns
+        #In fact, aiida.orm.implementation.django.utils imports Computer
+        from aiida.orm.implementation.general.utils import get_db_columns
         return get_db_columns(DbComputer)
 
 

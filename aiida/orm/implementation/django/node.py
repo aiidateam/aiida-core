@@ -23,8 +23,8 @@ from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
-from aiida.orm.implementation.django.utils import get_db_columns
-
+# from aiida.orm.implementation.django.utils import get_db_columns
+from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class Node(AbstractNode):
@@ -42,7 +42,8 @@ class Node(AbstractNode):
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
         return get_db_columns(DbNode)
 
     @classmethod
@@ -171,7 +172,7 @@ class Node(AbstractNode):
         DbLink.objects.filter(output=self.dbnode, label=label).delete()
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.backends.djsite.db.models import DbPath
+        from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
@@ -193,7 +194,9 @@ class Node(AbstractNode):
             #
             # I am linking src->self; a loop would be created if a DbPath exists already
             # in the TC table from self to src
-            if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
+            if QueryBuilder().append(
+                    Node, filters={'id':self.pk}, tag='parent').append(
+                    Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 
@@ -655,14 +658,3 @@ class Node(AbstractNode):
         # n = Node().store()
         return self
 
-    @property
-    def has_children(self):
-        from aiida.backends.djsite.db.models import DbPath
-        childrens = DbPath.objects.filter(parent=self.pk)
-        return False if not childrens else True
-
-    @property
-    def has_parents(self):
-        from aiida.backends.djsite.db.models import DbPath
-        parents = DbPath.objects.filter(child=self.pk)
-        return False if not parents else True

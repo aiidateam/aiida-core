@@ -1,6 +1,12 @@
 DbExporter documentation
 ========================
 
+.. note:: This is the documentation of the general DbExporter class and the TCOD implementatation.
+   TCOD itself accepts a number of plugins that know how to convert code-specific output to the TCOD
+   format; these typically live in different repositories. For instance, you can find
+   `here <http://aiida-quantumespresso.readthedocs.io/en/latest/module_guide/tcod_dbexporter.html#pw>`_ the
+   extensions for Quantum ESPRESSO.
+
 .. toctree::
    :maxdepth: 4
 
@@ -17,17 +23,4 @@ Base class
 .. automodule:: aiida.tools.dbexporters.tcod_plugins
    :members:
 
-CP
-++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.cp
-   :members:
 
-NWChem (pymatgen-based)
-+++++++++++++++++++++++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.nwcpymatgen
-   :members:
-
-PW
-++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.pw
-   :members:

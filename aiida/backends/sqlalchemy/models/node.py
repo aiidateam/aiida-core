@@ -32,6 +32,9 @@ from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
@@ -132,25 +135,6 @@ class DbNode(Base):
     @property
     def inputs(self):
         return self.inputs_q.all()
-
-    # children via db_dbpath
-    # suggest change name to descendants
-    children_q = relationship(
-        "DbNode", secondary="db_dbpath",
-        primaryjoin="DbNode.id == DbPath.parent_id",
-        secondaryjoin="DbNode.id == DbPath.child_id",
-        backref=backref("parents_q", passive_deletes=True, lazy='dynamic'),
-        lazy='dynamic',
-        passive_deletes=True
-    )
-
-    @property
-    def children(self):
-        return self.children_q.all()
-
-    @property
-    def parents(self):
-        return self.parents_q.all()
 
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
@@ -262,6 +246,40 @@ class DbNode(Base):
             return "{} node [{}]: {}".format(simplename, self.pk, self.label)
         else:
             return "{} node [{}]".format(simplename, self.pk)
+
+    # User email
+    @hybrid_property
+    def user_email(self):
+        """
+        Returns: the email of the user
+        """
+        return self.user.email
+
+    @user_email.expression
+    def user_email(cls):
+        """
+        Returns: the email of the user at a class level (i.e. in the database)
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
+    # Computer name
+    @hybrid_property
+    def computer_name(self):
+        """
+        Returns: the of the computer
+        """
+        return self.dbcomputer.name
+
+    @computer_name.expression
+    def computer_name(cls):
+        """
+        Returns: the name of the computer at a class level (i.e. in the 
+        database)
+        """
+        return select([DbComputer.name]).where(DbComputer.id ==
+                                                 cls.dbcomputer_id).label(
+            'computer_name')
 
 
     @hybrid_property
@@ -375,57 +393,4 @@ class DbLink(Base):
             self.output.get_simple_name(invalid_result="Unknown node"),
             self.output.pk
         )
-
-
-class DbPath(Base):
-    __tablename__ = "db_dbpath"
-
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    child_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-
-    parent = relationship(
-        "DbNode",
-        primaryjoin="DbPath.parent_id == DbNode.id",
-        backref="child_paths"
-    )
-    child = relationship(
-        "DbNode",
-        primaryjoin="DbPath.child_id == DbNode.id",
-        backref="parent_paths"
-    )
-
-    depth = Column(Integer)
-
-    entry_edge_id = Column(Integer)
-    direct_edge_id = Column(Integer)
-    exit_edge_id = Column(Integer)
-
-    def expand(self):
-        """
-        Method to expand a DbPath (recursive function), i.e., to get a list
-        of all dbnodes that are traversed in the given path.
-
-        :return: list of DbNode objects representing the expanded DbPath
-        """
-
-        if self.depth == 0:
-            return [self.parent_id, self.child_id]
-        else:
-            path_entry = []
-            path_direct = DbPath.query.filter_by(id=self.direct_edge_id).first().expand()
-            path_exit = []
-            # we prevent DbNode repetitions
-            if self.entry_edge_id != self.direct_edge_id:
-                path_entry = DbPath.query.filter_by(id=self.entry_edge_id).first().expand()[:-1]
-            if self.exit_edge_id != self.direct_edge_id:
-                path_exit = DbPath.query.filter_by(id=self.exit_edge_id).first().expand()[1:]
-
-            return path_entry + path_direct + path_exit
 

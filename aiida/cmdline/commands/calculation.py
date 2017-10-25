@@ -137,6 +137,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         import argparse
         from aiida.orm.calculation.job import JobCalculation as C
+        from aiida.common.setup import get_property
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -190,7 +191,8 @@ class Calculation(VerdiCommandWithSubcommands):
                                     'mtime', 'user'
                                 ),
                             nargs='+',
-                            default=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                            default=get_property("verdishell.calculation_list"),
+                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
                             help="Define the list of properties to show"
                         )
 

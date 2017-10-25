@@ -13,51 +13,21 @@ from aiida.restapi.common.config import custom_schema
 
 class GroupTranslator(BaseTranslator):
     """
-    It prepares the query_help from user inputs which later will be
-    passed to QueryBuilder to get either the list of Groups or the
-    details of one group
-
-    Supported REST requests:
-    - http://base_url/group?filters
-    - http://base_url/group/pk
-
-    **Please NOTE that filters are not allowed to get group details
-
-    Pk         : pk of the group
-    Filters    : filters dictionary to apply on
-                 group list. Not applicable to single group.
-    order_by   : used to sort group list. Not applicable to
-                 single group
-    end_points : NA
-    query_help : (TODO)
-    kwargs: extra parameters if any.
-
-    **Return: list of groups or details of single group
-
-    EXAMPLES:
-    ex1::
-    ct = GroupTranslator()
-    ct.add_filters(node_pk)
-    query_help = ct.get_query_help()
-    qb = QueryBuilder(**query_help)
-    data = ct.formatted_result(qb)
-
-    ex2::
-    ct = GroupTranslator()
-    ct.add_filters(filters_dict)
-    query_help = ct.get_query_help()
-    qb = QueryBuilder(**query_help)
-    data = ct.formatted_result(qb)
-
+    Translator relative to resource 'groups' and aiida class Group
     """
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "groups"
-    # The string name of the AiiDA class one-to-one associated to the present
-    #  class
+    # The AiiDA class one-to-one associated to the present class
+    from aiida.orm.group import Group
+    _aiida_class = Group
+    # The string name of the AiiDA class
     _aiida_type = "group.Group"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = 'group'
+
+    # If True (False) the corresponding AiiDA class has (no) uuid property
+    _has_uuid = True
 
     _result_type = __label__
 

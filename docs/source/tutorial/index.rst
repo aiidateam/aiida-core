@@ -24,17 +24,17 @@ Pseudopotentials
     ../examples/pseudo_tutorial
 
 
-================
-Quantum Espresso
-================
+=========================
+Plugin-specific tutorials
+=========================
 
-A collection of tutorials that focus on the plug-ins written for the DFT code Quantum Espresso.
+There are a number of additional tutorials you might want to follow. These are typically included in the documentation
+of each plugin. Below we mention a few notable examples, but feel free to check the documentation of your favourite
+plugin (and don't hesitate to ask the developer to write a tutorial, if there isn't any!)
 
-.. toctree::
-    :maxdepth: 4
+Quantum ESPRESSO tutorials
+--------------------------
+The AiiDA plugins for Quantum ESPRESSO provide a set of tutorials for some of the
+main Quantum ESPRESSO codes (PW, PH, CP, and one of the post-processing tools PROJWFC).
+You can find them on the `plugin documentation page <http://aiida-quantumespresso.readthedocs.io/en/latest/user_guide/get_started/index.html>`_.
 
-    ../examples/pw_tutorial
-    ../examples/pwimmigrant_tutorial
-    ../examples/ph_tutorial
-    ../examples/cp_tutorial
-    ../examples/projwfc_tutorial

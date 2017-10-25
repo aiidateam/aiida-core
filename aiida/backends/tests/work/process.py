@@ -128,6 +128,11 @@ class TestProcess(AiidaTestCase):
         with self.assertRaises(ValueError):
             DummyProcess.new_instance(inputs={'_label': 5})
 
+    def test_inputs_template(self):
+        inputs = DummyProcess.get_inputs_template()
+        dp = DummyProcess.new_instance(inputs=inputs)
+        dp.run_until_complete()
+
     def test_calculation_input(self):
         @workfunction
         def simple_wf():
@@ -176,6 +181,3 @@ class TestFunctionProcess(AiidaTestCase):
         FP = FunctionProcess.build(wf_fixed_args)
         outs = FP.run(**inputs)
         self.assertEqual(outs, inputs)
-
-
-

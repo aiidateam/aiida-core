@@ -21,6 +21,12 @@ The documentation is hosted on Read The Docs at:
 - (stable version) http://aiida-core.readthedocs.io/en/stable
 - (develop version) http://aiida-core.readthedocs.io/en/latest
 
+Which branch should you use?
+----------------------------
+
+For users, the stable version of the code is in the "master" branch (switch to it with the command "git checkout master").
+Developers can make pull requests into the "develop" branch".
+
 How to cite AiiDA
 -----------------
 If you use AiiDA in your research, please consider citing the following work:

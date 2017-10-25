@@ -46,7 +46,7 @@ class AiidaQuerySet(QuerySet):
 
 
 class AiidaObjectManager(m.Manager):
-    def get_query_set(self):
+    def get_queryset(self):
         return AiidaQuerySet(self.model, using=self._db)
 
 
@@ -129,12 +129,6 @@ class DbNode(m.Model):
 
     * A is 'input' of C.
     * C is 'output' of A.
-    * A is 'parent' of B,C
-    * C,B are 'children' of A.
-
-    :note: parents and children are stored in the DbPath table, the transitive
-      closure table, automatically updated via DB triggers whenever a link is
-      added to or removed from the DbLink table.
 
     Internal attributes, that define the node itself,
     are stored in the DbAttribute table; further user-defined attributes,
@@ -152,7 +146,7 @@ class DbNode(m.Model):
        can be redefined if the code has to be recompiled).
     """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, db_index=True)
-    # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
+    # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
     # starting with the same string
@@ -161,8 +155,8 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
-    ctime = m.DateTimeField(default=timezone.now, editable=False)
-    mtime = m.DateTimeField(auto_now=True, editable=False)
+    ctime = m.DateTimeField(default=timezone.now, db_index=True, editable=False)
+    mtime = m.DateTimeField(auto_now=True, db_index=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
                         related_name='dbnodes')
@@ -170,9 +164,6 @@ class DbNode(m.Model):
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
                                 related_name='inputs', through='DbLink')
-    # Transitive closure
-    children = m.ManyToManyField('self', symmetrical=False,
-                                 related_name='parents', through='DbPath')
 
     # Used only if dbnode is a calculation, or remotedata
     # Avoid that computers can be deleted if at least a node exists pointing
@@ -304,50 +295,6 @@ class DbLink(m.Model):
             self.output.get_simple_name(invalid_result="Unknown node"),
             self.output.pk, )
 
-
-@python_2_unicode_compatible
-class DbPath(m.Model):
-    """
-    Transitive closure table for all dbnode paths.
-    """
-    parent = m.ForeignKey('DbNode', related_name='child_paths', editable=False)
-    child = m.ForeignKey('DbNode', related_name='parent_paths', editable=False)
-    depth = m.IntegerField(editable=False)
-
-    # Used to delete or to expand the path
-    entry_edge_id = m.IntegerField(null=True, editable=False)
-    direct_edge_id = m.IntegerField(null=True, editable=False)
-    exit_edge_id = m.IntegerField(null=True, editable=False)
-
-    def __str__(self):
-        return "{} ({}) ==[{}]==>> {} ({})".format(
-            self.parent.get_simple_name(invalid_result="Unknown node"),
-            self.parent.pk,
-            self.depth,
-            self.child.get_simple_name(invalid_result="Unknown node"),
-            self.child.pk, )
-
-    def expand(self):
-        """
-        Method to expand a DbPath (recursive function), i.e., to get a list
-        of all dbnodes that are traversed in the given path.
-
-        :return: list of DbNode objects representing the expanded DbPath
-        """
-
-        if self.depth == 0:
-            return [self.parent, self.child]
-        else:
-            path_entry = []
-            path_direct = DbPath.objects.get(id=self.direct_edge_id).expand()
-            path_exit = []
-            # we prevent DbNode repetitions
-            if self.entry_edge_id != self.direct_edge_id:
-                path_entry = DbPath.objects.get(id=self.entry_edge_id).expand()[:-1]
-            if self.exit_edge_id != self.direct_edge_id:
-                path_exit = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
-
-            return path_entry + path_direct + path_exit
 
 
 attrdatatype_choice = (

@@ -17,7 +17,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.backends.utils import get_automatic_user
-from aiida.backends.sqlalchemy.models.node import DbNode, DbLink, DbPath
+from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.computer import DbComputer
@@ -33,7 +33,8 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
-    get_attr, get_db_columns
+    get_attr
+from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.orm.mixins import Sealable
 
 import aiida.backends.sqlalchemy
@@ -195,6 +196,7 @@ class Node(AbstractNode):
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
@@ -217,10 +219,9 @@ class Node(AbstractNode):
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
         if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
-            c = session.query(literal(True)).filter(DbPath.query
-                                                .filter_by(parent_id=self.dbnode.id, child_id=src.dbnode.id)
-                                                .exists()).scalar()
-            if c:
+            if QueryBuilder().append(
+                    Node, filters={'id':self.pk}, tag='parent').append(
+                    Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 
@@ -691,13 +692,6 @@ class Node(AbstractNode):
 
         return self
 
-    @property
-    def has_children(self):
-        return self.dbnode.children_q.first() is not None
-
-    @property
-    def has_parents(self):
-        return self.dbnode.parents_q.first() is not None
 
     @property
     def uuid(self):

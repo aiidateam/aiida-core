@@ -82,33 +82,6 @@ class DbLink(Base):
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
 
-
-class DbPath(Base):
-    __tablename__ = "db_dbpath"
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    child_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-    )
-    parent = relationship(
-        "DbNode",
-        primaryjoin="DbPath.parent_id == DbNode.id",
-        backref="child_paths"
-    )
-    child = relationship(
-        "DbNode",
-        primaryjoin="DbPath.child_id == DbNode.id",
-        backref="parent_paths"
-    )
-    depth = Column(Integer)
-    entry_edge_id = Column(Integer)
-    direct_edge_id = Column(Integer)
-    exit_edge_id = Column(Integer)
-
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
     id = Column(Integer, primary_key=True)
@@ -320,13 +293,6 @@ class DbNode(Base):
         passive_deletes =   True
     )
 
-    children = relationship(
-        "DbNode",
-        secondary       =   "db_dbpath",
-        primaryjoin     =   "DbNode.id == DbPath.parent_id",
-        secondaryjoin   =   "DbNode.id == DbPath.child_id",
-        backref         =   "parents"
-    )
     def get_aiida_class(self):
         """
         Return the corresponding instance of
@@ -356,7 +322,41 @@ class DbNode(Base):
         )
         return dbnode.get_aiida_class()
 
+    @hybrid_property
+    def user_email(self):
+        """
+        Returns: the email of the user
+        """
+        return self.user.email
 
+    @user_email.expression
+    def user_email(cls):
+        """
+        Returns: the email of the user at a class level (i.e. in the database)
+        """
+        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
+            'user_email')
+
+
+    # Computer name
+    @hybrid_property
+    def computer_name(self):
+        """
+        Returns: the of the computer
+        """
+        return self.dbcomputer.name
+
+    @computer_name.expression
+    def computer_name(cls):
+        """
+        Returns: the name of the computer at a class level (i.e. in the 
+        database)
+        """
+        return select([DbComputer.name]).where(DbComputer.id ==
+                                                 cls.dbcomputer_id).label(
+            'computer_name')
+
+    # State
     @hybrid_property
     def state(self):
         """

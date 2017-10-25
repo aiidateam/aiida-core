@@ -48,6 +48,9 @@ Code
 ORM documentation: Data
 =======================
 
+.. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
+  check the corresponding plugin repositories.
+
 .. automodule:: aiida.orm.data
    :members:
    :private-members: _exportstring
@@ -138,6 +141,9 @@ Base data types
 ORM documentation: Calculations
 ===============================
 
+.. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
+  check the corresponding plugin repositories.
+
 .. automodule:: aiida.orm.implementation.general.calculation
    :members:
    :special-members: __init__
@@ -157,42 +163,6 @@ ORM documentation: Calculations
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
-
-Quantum ESPRESSO
-++++++++++++++++
-
-Quantum Espresso - pw.x
------------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.pw
-   :members:
-
-.. automodule:: aiida.orm.calculation.job.quantumespresso.helpers
-   :members:
-
-Quantum Espresso - Dos
-----------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.dos
-   :members:
-   :special-members: __init__
-
-Quantum Espresso - Projwfc
---------------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.projwfc
-   :members:
-   :special-members: __init__
-
-Quantum Espresso - PW immigrant
--------------------------------
-.. automodule:: aiida.orm.calculation.job.quantumespresso.pwimmigrant
-   :members:
-   :special-members: __init__
-
-.. NOTE: Wannier90 plugin not yet merged
-.. Wannier90  - Wannier90
-.. ++++++++++++++++++++++
-.. .. automodule:: aiida.orm.calculation.job.wannier90
-..    :members:
-..    :special-members: __init__
 
 TemplateReplacer
 ++++++++++++++++

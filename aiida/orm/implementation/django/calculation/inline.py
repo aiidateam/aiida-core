@@ -81,7 +81,7 @@ def make_inline(func):
 
         # Add link to output data nodes
         for k, v in retval.iteritems():
-            v.add_link_from(c, label=k, link_type=LinkType.RETURN)
+            v.add_link_from(c, label=k, link_type=LinkType.CREATE)
 
         with transaction.atomic():
             # I call store_all for the Inline calculation;

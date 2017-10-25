@@ -23,22 +23,23 @@ except ImportError:
     json_loads = json.loads
 
 import datetime
-from dateutil import parser
 
 import re
-
+from alembic import command
+from alembic.config import Config
+from alembic.runtime.environment import EnvironmentContext
+from alembic.script import ScriptDirectory
+from dateutil import parser
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
-
-from aiida.common.exceptions import InvalidOperation, ConfigurationError
-from aiida.common.setup import (get_profile_config, DEFAULT_USER_CONFIG_FIELD)
+from sqlalchemy.orm import sessionmaker
 
 from aiida.backends import sqlalchemy as sa, settings
+from aiida.common.exceptions import ConfigurationError
+from aiida.common.setup import (get_profile_config)
 
-from aiida.backends.profile import (is_profile_loaded,
-                                    load_profile)
-
+ALEMBIC_FILENAME = "alembic.ini"
+ALEMBIC_REL_PATH = "migrations"
 
 # def is_dbenv_loaded():
 #     """
@@ -71,10 +72,10 @@ def reset_session(config):
         "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
     ).format(**config)
 
-    sa.engine = create_engine(engine_url,
-                           json_serializer=dumps_json,
-                           json_deserializer=loads_json)
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+    sa.engine = create_engine(engine_url, json_serializer=dumps_json,
+                              json_deserializer=loads_json)
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine,
+                                                        expire_on_commit=True))
     register_after_fork(sa.engine, recreate_after_fork)
 
 
@@ -103,7 +104,6 @@ _aiida_autouser_cache = None
 
 
 def get_automatic_user():
-    from aiida.common.utils import get_configured_user_email
     # global _aiida_autouser_cache
 
     # if _aiida_autouser_cache is not None:
@@ -400,7 +400,7 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_child_field=closure_table_child_field)
 
 
-def check_schema_version():
+def check_schema_version(force_migration=False, alembic_cfg=None):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -416,28 +416,120 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    from aiida.common.exceptions import ConfigurationError
-    from sqlalchemy.engine import reflection
-    from aiida.backends.sqlalchemy.models import SCHEMA_VERSION
-    from aiida.backends.utils import (
-        get_db_schema_version, set_db_schema_version,get_current_profile)
+    import sys
+    from aiida.common.utils import query_yes_no
+    from aiida.backends import sqlalchemy as sa
 
-    # Do not do anything if the table does not exist yet
-    inspector = reflection.Inspector.from_engine(sa.get_scoped_session().bind)
-    if 'db_dbsetting' not in inspector.get_table_names():
-        return
+    # If an alembic configuration file is given then use that one.
+    if alembic_cfg is None:
+        alembic_cfg = get_alembic_conf()
 
-    code_schema_version = SCHEMA_VERSION
-    db_schema_version = get_db_schema_version()
-
-    if db_schema_version is None:
-        # No code schema defined yet, I set it to the code version
-        set_db_schema_version(code_schema_version)
-        db_schema_version = get_db_schema_version()
+    # Getting the version of the code and the database
+    # Reusing the existing engine (initialized by AiiDA)
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        code_schema_version = get_migration_head(alembic_cfg)
+        db_schema_version = get_db_schema_version(alembic_cfg)
 
     if code_schema_version != db_schema_version:
-        raise ConfigurationError(
-            "The code schema version is {}, but the version stored in the"
-            "database (DbSetting table) is {}, stopping.\n".
-            format(code_schema_version, db_schema_version)
-        )
+        if db_schema_version is None:
+            print("It is time to perform your first SQLAlchemy migration.")
+        else:
+            print("The code schema version is {}, but the version stored in "
+                  "the database is {}."
+                  .format(code_schema_version, db_schema_version))
+        if force_migration or query_yes_no("Would you like to migrate to the "
+                                           "latest version?", "yes"):
+            print("Migrating to the last version")
+            # Reusing the existing engine (initialized by AiiDA)
+            with sa.engine.begin() as connection:
+                alembic_cfg.attributes['connection'] = connection
+                command.upgrade(alembic_cfg, "head")
+        else:
+            print("No migration is performed. Exiting since database is out "
+                  "of sync with the code.")
+            sys.exit(1)
+
+
+def get_migration_head(config):
+    """
+    This function returns the head of the migration scripts.
+    :param config: The alembic configuration.
+    :return: The version of the head.
+    """
+    script = ScriptDirectory.from_config(config)
+    return script.get_current_head()
+
+
+def get_db_schema_version(config):
+    """
+    This function returns the current version of the database.
+    :param config: The alembic configuration.
+    :return: The version of the database.
+    """
+    script = ScriptDirectory.from_config(config)
+
+    def get_db_version(rev, _):
+        if isinstance(rev, tuple) and len(rev) > 0:
+            config.attributes['rev'] = rev[0]
+        else:
+            config.attributes['rev'] = None
+
+        return []
+
+    with EnvironmentContext(
+        config,
+        script,
+        fn=get_db_version
+    ):
+        script.run_env()
+        return config.attributes['rev']
+
+
+def get_alembic_conf():
+    """
+    This function returns the alembic configuration file contents by doing
+    the necessary updates in the 'script_location' name.
+    :return: The alembic configuration.
+    """
+    # Constructing the alembic full path & getting the configuration
+    import os
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    alembic_fpath = os.path.join(dir_path, ALEMBIC_FILENAME)
+    alembic_cfg = Config(alembic_fpath)
+
+    # Set the alembic script directory location
+    alembic_dpath = os.path.join(dir_path, ALEMBIC_REL_PATH)
+    alembic_cfg.set_main_option('script_location', alembic_dpath)
+
+    return alembic_cfg
+
+
+def alembic_command(selected_command, *args, **kwargs):
+    """
+    This function calls the necessary alembic command with the provided
+    arguments.
+    :param selected_command: The command that should be called from the
+    alembic commands.
+    :param args: The arguments.
+    :param kwargs: The keyword arguments.
+    :return: Nothing.
+    """
+    if selected_command is None:
+        return
+
+    # Get the requested alembic command from the available commands
+    al_command = getattr(command, selected_command)
+
+    alembic_cfg = get_alembic_conf()
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        if selected_command in ['current', 'history']:
+            if 'verbose' in args:
+                al_command(alembic_cfg, verbose=True)
+            else:
+                al_command(alembic_cfg, *args, **kwargs)
+        elif selected_command == 'revision':
+            al_command(alembic_cfg, message=args[0][0])
+        else:
+            al_command(alembic_cfg, *args, **kwargs)

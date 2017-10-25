@@ -1782,14 +1782,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(UniquenessError):
             n3.add_link_from(n4, label='l2')
 
-        # Twice the link to the same node
-        with self.assertRaises(UniquenessError):
-            n3.add_link_from(n2, label='l4')
-
-        # Same error also in _replace_link_from
-        with self.assertRaises(UniquenessError):
-            n3._replace_link_from(n2, label='l4')
-
         n2.store_all()
         n3.store_all()
 

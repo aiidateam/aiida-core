@@ -41,7 +41,7 @@ install_requires = [
     'supervisor==3.1.3',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.9',
+    'plumpy==0.7.10',
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
@@ -64,6 +64,7 @@ install_requires = [
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
+    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {
@@ -73,7 +74,7 @@ extras_require = {
     # E.g. for Ubuntu 14.04: sudo apt-get install libffi-dev libkrb5-dev
     'ssh_kerberos': [
         'pyasn1==0.3.7',
-        'python-gssapi>=0.6.4',
+        'python-gssapi==0.6.4',
     ],
     # Requirements for RESTful API
     'REST': [
@@ -117,18 +118,19 @@ extras_require = {
     ],
     # Requirements for jupyter notebook
     'notebook': [
-        'jupyter',
+        'jupyter==1.0.0',
     ],
     # Requirements for testing
     'testing': [
         'mock==2.0.0',
-        'pgtest==1.1.0'
+        'pgtest==1.1.0',
+        'sqlalchemy-diff==0.1.3'
     ],
     'dev_precommit': [
-        'pre-commit',
-        'yapf',
-        'prospector',
-        'pylint'
+        'pre-commit==1.3.0',
+        'yapf==0.19.0',
+        'prospector==0.12.7',
+        'pylint==1.7.4'
     ]
 }
 

@@ -29,9 +29,9 @@ class TestJobProcess(AiidaTestCase):
         TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
 
     def test_job_process_set_label_and_description(self):
-    	"""
-    	Verify that calculation label and description get set when passed through inputs
-    	"""
+        """
+        Verify that calculation label and description get set when passed through inputs
+        """
         label = 'test_label'
         description = 'test_description'
         inputs = {
@@ -52,9 +52,9 @@ class TestJobProcess(AiidaTestCase):
         self.assertEquals(job_instance.calc.description, description)
 
     def test_job_process_set_none(self):
-    	"""
-    	Verify that calculation label and description can be set to ``None``.
-    	"""
+        """
+        Verify that calculation label and description can be set to ``None``.
+        """
         inputs = {
             '_options': {
                     'computer': self.computer,

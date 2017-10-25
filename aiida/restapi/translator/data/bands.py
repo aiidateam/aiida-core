@@ -55,7 +55,7 @@ class BandsDataTranslator(DataTranslator):
 
         import ujson as uj
         json_string = node._exportstring('json', comments=False)
-        json_content = uj.decode(json_string)
+        json_content = uj.decode(json_string[0])
 
         # Add Ylabel which by default is not exported
         Y_label = node.label + ' ({})'.format(node.get_attr('units'))

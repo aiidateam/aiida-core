@@ -358,6 +358,7 @@ class NodeTranslator(BaseTranslator):
         qmanager = QueryFactory()()
         return qmanager.get_creation_statistics(user_email=user_email)
 
+
     def get_io_tree(self, uuid_pattern):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -384,7 +385,7 @@ class NodeTranslator(BaseTranslator):
                 description = mainNode.dbnode.type.split('.')[-2]
 
             nodes.append({
-                "uuid_pattern": nodeCount,
+                "id": nodeCount,
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
@@ -414,7 +415,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,
@@ -451,7 +452,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,

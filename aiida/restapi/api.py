@@ -40,7 +40,6 @@ class App(Flask):
         from aiida.restapi.common.exceptions import RestInputValidationError, \
             RestValidationError, RestFeatureNotAvailable
 
-
         if catch_internal_server:
 
             @self.errorhandler(Exception)

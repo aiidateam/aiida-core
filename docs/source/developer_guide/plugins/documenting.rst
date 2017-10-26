@@ -41,7 +41,7 @@ In the following we, again, assume you wrote a plugin named ``aiida-compute``:
         make
 
  #. Host your documentation online on ReadTheDocs_.
-    Simply sign up and import your project.  Make sure toadd the path to the
+    Simply sign up and import your project.  Make sure to add the path to the
     requirements file ``docs/requirements_for_rtd.txt`` and the Python
     configuration file ``docs/source/conf.py`` in Admin => Advanced settings.
 

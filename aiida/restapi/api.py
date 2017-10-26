@@ -88,7 +88,6 @@ class AiidaApi(Api):
             configuration and PREFIX
         """
 
-
         from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
             Group, Node, StructureData, KpointsData, BandsData, ServerInfo
 
@@ -258,7 +257,6 @@ class AiidaApi(Api):
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
-
 
         self.add_resource(User,
                           '/users/',

@@ -1,4 +1,4 @@
-## v0.10.0rc1:
+## v0.10.0rc2:
 
 ### Major changes
 - The `DbPath` table has been removed and replaced with a dynamic transitive closure, because, among others, nested workchains could lead to the `DbPath` table exploding in size
@@ -16,6 +16,7 @@
 - New verdi command: `verdi work kill` to kill running workchains [[#821]](https://github.com/aiidateam/aiida_core/pull/821)
 - New verdi command: `verdi data remote [ls,cat,show]` to inspect the contents of `RemoteData` objects [[#743]](https://github.com/aiidateam/aiida_core/pull/743)
 - New verdi command: `verdi export migrate` allows the migration of existing export archives to new formats [[#781]](https://github.com/aiidateam/aiida_core/pull/781)
+- New verdi command: `verdi profile delete` [[#606]](https://github.com/aiidateam/aiida_core/pull/606)
 - Implemented faster query to obtain database statistics [[#738]](https://github.com/aiidateam/aiida_core/pull/738)
 - Added testing for automatic SqlAlchemy database migrations through alembic [[#834]](https://github.com/aiidateam/aiida_core/pull/834)
 
@@ -30,6 +31,7 @@
 - Fixed query in the ICSD importer element that caused certain structures to be erroneously skipped [[#690]](https://github.com/aiidateam/aiida_core/pull/690)
 
 ### Miscellaneous
+- Added a "quickstart" to plugin development in the [documentation](http://aiida-core.readthedocs.io/en/v0.10.0/developer_guide/plugins/quickstart.html), structured around the new [plugin template](https://github.com/aiidateam/aiida-plugin-template)
 - Improved and restructured the documentation
 
 

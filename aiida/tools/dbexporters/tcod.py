@@ -437,24 +437,26 @@ def _collect_calculation_data(calc):
         stderr_name = '{}.err'.format(aiida_executable_name)
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
-        files_out.append({
-            'name'    : stdout_name,
-            'contents': calc.get_scheduler_output(),
-            'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
-            'role'    : 'stdout',
-            'type'    : 'file',
-            })
-        files_out.append({
-            'name'    : stderr_name,
-            'contents': calc.get_scheduler_error(),
-            'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
-            'role'    : 'stderr',
-            'type'    : 'file',
-            })
-        this_calc['stdout'] = stdout_name
-        this_calc['stderr'] = stderr_name
+        if calc.get_scheduler_output() is not None:
+            files_out.append({
+                'name'    : stdout_name,
+                'contents': calc.get_scheduler_output(),
+                'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+                'role'    : 'stdout',
+                'type'    : 'file',
+                })
+            this_calc['stdout'] = stdout_name
+        if calc.get_scheduler_error() is not None:
+            files_out.append({
+                'name'    : stderr_name,
+                'contents': calc.get_scheduler_error(),
+                'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+                'role'    : 'stderr',
+                'type'    : 'file',
+                })
+            this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
         python_script = _inline_to_standalone_script(calc)

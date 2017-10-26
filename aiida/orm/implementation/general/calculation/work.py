@@ -20,6 +20,7 @@ class WorkCalculation(Calculation):
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
     ABORTED_KEY = '_aborted'
+    DO_ABORT_KEY = '_do_abort'
 
     @override
     def has_finished(self):
@@ -61,7 +62,7 @@ class WorkCalculation(Calculation):
         Kill a WorkCalculation and all its children.
         """
         if not self.is_sealed:
-            self._set_attr(self.ABORTED_KEY, True)
+            self._set_attr(self.DO_ABORT_KEY, 'killed by user')
 
         for child in self.get_outputs(link_type=LinkType.CALL):
             child.kill()

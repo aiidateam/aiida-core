@@ -226,7 +226,12 @@ class WorkChain(Process):
 
     @_aborted.setter
     def _aborted(self, value):
-        self.calc._set_attr(self.calc.ABORTED_KEY, True)
+        # One is not allowed to unabort an aborted WorkChain
+        if self._aborted == True and value == False:
+            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
+            return
+
+        self.calc._set_attr(self.calc.ABORTED_KEY, value)
 
     def _do_step(self, wait_on=None):
         if self._aborted:

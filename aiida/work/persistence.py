@@ -291,14 +291,16 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     @override
     def on_process_finish(self, process):
         self._save_noraise(process)
-        try:
-            self._release_process(process.pid, self.finished_directory)
-        except ValueError:
-            pass
 
     @override
     def on_process_destroy(self, process):
-        self.unpersist_process(process)
+        if process.calc.has_finished():
+            try:
+                self._release_process(process.pid, self.finished_directory)
+            except ValueError:
+                pass
+        else:
+            self.unpersist_process(process)
 
     ############################################################################
 

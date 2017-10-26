@@ -88,7 +88,7 @@ class AiidaApi(Api):
             configuration and PREFIX
         """
 
-        from aiida.restapi.resources import Calculation, Computer, Code, Data, \
+        from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
             Group, Node, StructureData, KpointsData, BandsData, ServerInfo
 
         self.app = app
@@ -258,8 +258,6 @@ class AiidaApi(Api):
                           resource_class_kwargs=kwargs
                           )
 
-        """
-        # Commented user endpoints for security reasons.
         self.add_resource(User,
                           '/users/',
                           '/users/schema/',
@@ -268,7 +266,6 @@ class AiidaApi(Api):
                           '/users/<id>/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
-        """
 
         self.add_resource(Group,
                           '/groups/',

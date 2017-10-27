@@ -181,6 +181,10 @@ class Node(Resource):
                 (limit, offset, rel_pages) = self.utils.paginate(page, perpage,
                                                                  total_count)
                 self.trans.set_limit_offset(limit=limit, offset=offset)
+
+                ## Retrieve results
+                results = self.trans.get_results()
+
                 headers = self.utils.build_headers(rel_pages=rel_pages,
                                                    url=request.url,
                                                    total_count=total_count)
@@ -205,15 +209,15 @@ class Node(Resource):
                 headers = self.utils.build_headers(url=request.url,
                                                    total_count=total_count)
 
-                ## Build response
-                data = dict(method=request.method,
-                            url=url,
-                            url_root=url_root,
-                            path=path,
-                            id=id,
-                            query_string=query_string,
-                            resource_type=resource_type,
-                            data=results)
+            ## Build response
+            data = dict(method=request.method,
+                        url=url,
+                        url_root=url_root,
+                        path=path,
+                        id=id,
+                        query_string=query_string,
+                        resource_type=resource_type,
+                        data=results)
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 

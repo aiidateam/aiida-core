@@ -282,15 +282,15 @@ class Node(Resource):
                 headers = self.utils.build_headers(url=request.url,
                                                    total_count=total_count)
 
-            ## Build response
-            data = dict(method=request.method,
-                        url=url,
-                        url_root=url_root,
-                        path=path,
-                        id=id,
-                        query_string=query_string,
-                        resource_type=resource_type,
-                        data=results)
+        ## Build response
+        data = dict(method=request.method,
+                    url=url,
+                    url_root=url_root,
+                    path=path,
+                    id=id,
+                    query_string=query_string,
+                    resource_type=resource_type,
+                    data=results)
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 

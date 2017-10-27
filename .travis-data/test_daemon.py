@@ -96,7 +96,10 @@ def main():
         inputval = counter
         parameters = ParameterData(dict={'value': inputval})
         template = ParameterData(dict={
-                'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+                ## The following line adds a significant sleep time.
+                ## I remove it to speed up tests
+                #'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+                'cmdline_params': [],
                 'input_file_template': "{value}", # File just contains the value to double
                 'input_file_name': 'value_to_double.txt',
                 'output_file_name': 'output.txt',

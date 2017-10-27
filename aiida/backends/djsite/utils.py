@@ -10,11 +10,8 @@
 
 import logging
 import os
-
 import django
-
 from aiida.utils.logger import get_dblogger_extra
-
 
 
 def load_dbenv(process=None, profile=None):
@@ -152,9 +149,9 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
+    import os
     import aiida.backends.djsite.db.models
-    from aiida.backends.utils import (
-        get_current_profile,  set_db_schema_version, get_db_schema_version)
+    from aiida.backends.utils import get_current_profile
     from django.db import connection
     from aiida.common.exceptions import ConfigurationError
 
@@ -170,12 +167,42 @@ def check_schema_version():
         set_db_schema_version(code_schema_version)
         db_schema_version = get_db_schema_version()
 
+    filepath_utils = os.path.abspath(__file__)
+    filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
+
     if code_schema_version != db_schema_version:
         raise ConfigurationError(
             "The code schema version is {}, but the version stored in the "
             "database (DbSetting table) is {}, stopping.\n"
-            "To migrate to latest version, go to aiida.backends.djsite and "
-            "run:\nverdi daemon stop\n python manage.py --aiida-profile={} migrate".
-            format(code_schema_version, db_schema_version,
-                   get_current_profile())
+            "To migrate the database to the current version, run the following commands:"
+            "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".
+            format(
+                code_schema_version,
+                db_schema_version,
+                filepath_manage,
+                get_current_profile()
+            )
         )
+
+
+def set_db_schema_version(version):
+    """
+    Set the schema version stored in the DB. Use only if you know what
+    you are doing.
+    """
+    from aiida.backends.utils import set_global_setting
+    return set_global_setting(
+        'db|schemaversion', version,
+        description="The version of the schema used in this database.")
+
+
+def get_db_schema_version():
+    """
+    Get the current schema version stored in the DB. Return None if
+    it is not stored.
+    """
+    from aiida.backends.utils import get_global_setting
+    try:
+        return get_global_setting('db|schemaversion')
+    except KeyError:
+        return None

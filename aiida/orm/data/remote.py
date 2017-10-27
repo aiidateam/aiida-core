@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm import Data
-
+import os
 
 
 
@@ -21,6 +21,9 @@ class RemoteData(Data):
 
     def get_dbcomputer(self):
         return self.dbnode.dbcomputer
+
+    def get_computer_name(self):
+        return self.get_computer().name
 
     def get_remote_path(self):
         return self.get_attr('remote_path')
@@ -53,6 +56,115 @@ class RemoteData(Data):
                 if e.errno == 2:  # directory not existing
                     return True  # is indeed empty, i.e. unusable
             return not t.listdir()
+
+    def getfile(self, relpath, destpath):
+        """
+        Connects to the remote folder and gets a string with the (full) content of the file.
+
+        :param relpath: The relative path of the file to show.
+        :param destpath: A path on the local computer to get the file
+        :return: a string with the file content
+        """
+        from aiida.backends.utils import get_authinfo
+
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
+
+        with t:
+            try:
+                full_path = os.path.join(self.get_remote_path(), relpath)
+                t.getfile(full_path, destpath)
+            except IOError as e:
+                if e.errno == 2:  # file not existing
+                    raise IOError("The required remote file {} on {} does not exist or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                else:
+                    raise
+
+            return t.listdir()
+
+
+    def listdir(self, relpath="."):
+        """
+        Connects to the remote folder and lists the directory content.
+
+        :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
+        :return: a flat list of file/directory names (as strings).
+        """
+        from aiida.backends.utils import get_authinfo
+
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
+
+        with t:
+            try:
+                full_path = os.path.join(self.get_remote_path(), relpath)
+                t.chdir(full_path)
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
+
+            try:
+                return t.listdir()
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError(
+                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                            full_path, self.get_computer().name
+                        ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
+
+    def listdir_withattributes(self, path="."):
+        """
+        Connects to the remote folder and lists the directory content.
+
+        :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
+        :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
+        """
+        from aiida.backends.utils import get_authinfo
+
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
+
+        with t:
+            try:
+                full_path = os.path.join(self.get_remote_path(), path)
+                t.chdir(full_path)
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
+
+            try:
+                return t.listdir_withattributes()
+            except IOError as e:
+                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        full_path, self.get_computer().name
+                    ))
+                    exc.errno = e.errno
+                    raise exc
+                else:
+                    raise
+
 
     def _clean(self):
         """

@@ -1,3 +1,58 @@
+## v0.10.0rc1:
+
+### Major changes
+- The `DbPath` table has been removed and replaced with a dynamic transitive closure, because, among others, nested workchains could lead to the `DbPath` table exploding in size
+- Code plugins have been removed from `aiida_core` and have been migrated to their own respective plugin repositories and can be found here:
+    * [Quantum ESPRESSO](https://github.com/aiidateam/aiida-quantumespresso)
+    * [ASE](https://github.com/aiidateam/aiida-ase)
+    * [COD tools](https://github.com/aiidateam/aiida-codtools)
+    * [NWChem](https://github.com/aiidateam/aiida-nwchem)
+
+    Each can be installed from `pip` using e.g. `pip install aiida-quantumespresso`.
+    Existing installations will require a migration (see [update instructions in the documentation](https://aiida-core.readthedocs.io/en/v0.10.0/installation/updating.html#plugin-migration)).
+    For a complete overview of available plugins you can visit [the registry](https://aiidateam.github.io/aiida-registry/).
+
+### Improvements
+- New verdi command: `verdi work kill` to kill running workchains [[#821]](https://github.com/aiidateam/aiida_core/pull/821)
+- New verdi command: `verdi data remote [ls,cat,show]` to inspect the contents of `RemoteData` objects [[#743]](https://github.com/aiidateam/aiida_core/pull/743)
+- New verdi command: `verdi export migrate` allows the migration of existing export archives to new formats [[#781]](https://github.com/aiidateam/aiida_core/pull/781)
+- Implemented faster query to obtain database statistics [[#738]](https://github.com/aiidateam/aiida_core/pull/738)
+- Added testing for automatic SqlAlchemy database migrations through alembic [[#834]](https://github.com/aiidateam/aiida_core/pull/834)
+
+### Critical bug fixes
+- Export will now write the link types to the archive and import will properly recreate the link [[#760]](https://github.com/aiidateam/aiida_core/pull/760)
+- Fix bug in workchain persistence that would lead to crashed workchains under certain conditions being resubmitted [[#728]](https://github.com/aiidateam/aiida_core/pull/728)
+
+### Minor bug fixes
+- Fixed bug in `TCODexporter` [[#761]](https://github.com/aiidateam/aiida_core/pull/761)
+- `verdi profile delete` now respects the configured `dbport` setting [[#713]](https://github.com/aiidateam/aiida_core/pull/713)
+- Restore correct help text for `verdi --help` [[#704]](https://github.com/aiidateam/aiida_core/pull/704)
+- Fixed query in the ICSD importer element that caused certain structures to be erroneously skipped [[#690]](https://github.com/aiidateam/aiida_core/pull/690)
+
+### Miscellaneous
+- Improved and restructured the documentation
+
+
+## v0.9.1:
+
+### Critical bug fixes
+- Workchain steps will no longer be executed multiple times due to process pickles not being locked
+
+### Minor bug fixes
+- Fix arithmetic operations for basic numeric types
+- Fixed `verdi calculation cleanworkdir` after changes in `QueryBuilder` syntax
+- Fixed `verdi calculation logshow` exception when called for `WorkCalculation` nodes
+- Fixed `verdi import` for SQLAlchemy profiles
+- Fixed bug in `reentry` and update dependency requirement to `v1.0.2`
+- Made octal literal string compatible with python 3
+- Fixed broken import in the ASE plugin
+
+### Improvements
+- `verdi calculation show` now properly distinguishes between `WorkCalculation` and `JobCalculation` nodes
+- Improved error handling in `verdi setup --non-interactive`
+- Disable unnecessary console logging for tests
+
+
 ## v0.9.0
 
 ### Data export functionality

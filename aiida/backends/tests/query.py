@@ -13,8 +13,6 @@ import unittest
 import aiida.backends.settings as settings
 
 
-
-
 class TestQueryBuilder(AiidaTestCase):
 
     def test_classification(self):
@@ -70,7 +68,6 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'user')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Computer, None),
                 qb._get_ormclass(None, 'computer'),
@@ -79,14 +76,12 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, 'computer')
             self.assertEqual(query_type_string, None)
 
-
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Data, None),
                 qb._get_ormclass(None, 'data.Data.'),
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
-
 
     def test_simple_query_1(self):
         """
@@ -162,7 +157,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb6.append(Data, tag='node2')
         self.assertEqual(qb6.count(), 0)
 
-
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
@@ -187,12 +181,9 @@ class TestQueryBuilder(AiidaTestCase):
         for n in (n0, n1, n2):
             n.store()
 
-
-
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'label': 'hello'})
         self.assertEqual(len(list(qb1.all())), 1)
-
 
         qh = {
             'path': [
@@ -222,17 +213,12 @@ class TestQueryBuilder(AiidaTestCase):
 
         qb2 = QueryBuilder(**qh)
 
-
         resdict = qb2.dict()
         self.assertEqual(len(resdict), 1)
         self.assertTrue(isinstance(resdict[0]['n1']['ctime'], datetime))
 
-
         res_one = qb2.one()
         self.assertTrue('bar' in res_one)
-
-
-
 
         qh = {
             'path': [
@@ -253,7 +239,6 @@ class TestQueryBuilder(AiidaTestCase):
         qb = QueryBuilder(**qh)
         self.assertEqual(qb.count(), 1)
 
-
         # Test the hashing:
         query1 = qb.get_query()
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
@@ -269,7 +254,6 @@ class TestQueryBuilder(AiidaTestCase):
 
         self.assertTrue(id(query1) != id(query2))
         self.assertTrue(id(query2) == id(query3))
-
 
     def test_operators_eq_lt_gt(self):
         from aiida.orm.querybuilder import QueryBuilder
@@ -296,9 +280,6 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'<=':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>':1.02}}).count(), 4)
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa':{'>=':1.02}}).count(), 5)
-
-
-
 
     def test_subclassing(self):
         from aiida.orm.data.structure import StructureData
@@ -336,7 +317,6 @@ class TestQueryBuilder(AiidaTestCase):
         for cls in (StructureData, ParameterData, Node, Data):
             qb = QueryBuilder().append(cls, filters={'attributes.cat':'miau'}, subclassing=False)
             self.assertEqual(qb.count(), 1)
-
 
     def test_list_behavior(self):
         from aiida.orm import Node
@@ -388,8 +368,6 @@ class TestQueryBuilder(AiidaTestCase):
         with self.assertRaises(InputValidationError):
             QueryBuilder(offset=2.3)
 
-
-
         # So, I mess up one append, I want the QueryBuilder to clean it!
         with self.assertRaises(InputValidationError):
             qb = QueryBuilder()
@@ -416,8 +394,8 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(Node, tag='n1')
         qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
         qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
-        qb.append(Computer, computer_of='n3', tag='c1')
-        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
+        qb.append(Computer, computer_of='n3', tag='c1', edge_tag='nonsense')
+        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1', 'nonsense'])
 
 
         # Now I am testing the default tags,
@@ -441,6 +419,45 @@ class TestQueryBuilder(AiidaTestCase):
             ])
 
 
+class TestQueryBuilderCornerCases(AiidaTestCase):
+    """
+    In this class corner cases of QueryBuilder are added.
+    """
+
+    def test_computer_json(self):
+        """
+        In this test we check the correct behavior of QueryBuilder when
+        retrieving the _metadata and the transport_params with no content.
+        Note that they are in JSON format in both backends. Forcing the
+        decoding of a None value leads to an exception (this was the case
+        under Django).
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Computer
+
+        n1 = Calculation()
+        n1.label = 'node2'
+        n1._set_attr('foo', 1)
+        n1.store()
+
+        # Checking the correct retrieval of transport_params which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(Computer, project=['id', 'transport_params'],
+                  outerjoin=True, computer_of='calc')
+        qb.all()
+
+        # Checking the correct retrieval of _metadata which is
+        # a JSON field (in both backends).
+        qb = QueryBuilder()
+        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(Computer, project=['id', '_metadata'],
+                  outerjoin=True, computer_of='calc')
+        qb.all()
+
+
 class TestAttributes(AiidaTestCase):
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
@@ -453,21 +470,6 @@ class TestAttributes(AiidaTestCase):
         n1._set_attr("test_case", "test_attribute_existence")
         n1.store()
 
-        n1 = Node()
-        n1._set_attr("whatever", 0.)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
-
-        n1 = Node()
-        n1._set_attr("whatever", None)
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-
-        n1 = Node()
-        n1._set_attr("test_case", "test_attribute_existence")
-        n1.store()
-        res_uuids.add(n1.uuid)
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
 
@@ -480,7 +482,6 @@ class TestAttributes(AiidaTestCase):
             }, project='uuid')
         res_query = set([str(_[0]) for _ in qb.all()])
         self.assertEqual(res_query, res_uuids)
-
 
 
 class QueryBuilderDateTimeAttribute(AiidaTestCase):
@@ -502,8 +503,6 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
                 {"<":now+timedelta(seconds=1)},
             ]}})
         self.assertEqual(qb.count(), 1)
-
-
 
 
 class QueryBuilderLimitOffsetsTest(AiidaTestCase):
@@ -692,7 +691,10 @@ class QueryBuilderPath(AiidaTestCase):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
+        from aiida.common.links import LinkType
+        from aiida.backends.utils import QueryFactory
 
+        q = QueryFactory()()
         n1 = Node()
         n1.label='n1'
         n1.store()
@@ -724,53 +726,76 @@ class QueryBuilderPath(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2)
-        n2.add_link_from(n1)
-        n5.add_link_from(n3)
-        n5.add_link_from(n4)
-        n4.add_link_from(n2)
-
-        n7.add_link_from(n6)
-        n8.add_link_from(n7)
-
-
-        for with_dbpath in (True, False):
-
-            # Yet, no links from 1 to 8
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 0)
+        # I set everything as an INPUT-links now, because the QueryBuilder path query or
+        # our custom queries don't follow other links than CREATE or INPUT
+        n3.add_link_from(n2, link_type=LinkType.INPUT)
+        n2.add_link_from(n1, link_type=LinkType.INPUT)
+        n5.add_link_from(n3, link_type=LinkType.INPUT)
+        n5.add_link_from(n4, link_type=LinkType.INPUT)
+        n4.add_link_from(n2, link_type=LinkType.INPUT)
+        n7.add_link_from(n6, link_type=LinkType.INPUT)
+        n8.add_link_from(n7, link_type=LinkType.INPUT)
 
 
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 0)
+
+        # There are no parents to n9, checking that
+        self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
+        # There is one parent to n6
+        self.assertEqual(set([(_,) for _ in (n6.pk,)]), set([tuple(_) for _ in q.get_all_parents([n7.pk])]))
+        # There are several parents to n4
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2)]), set([tuple(_) for _ in q.get_all_parents([n4.pk])]))
+        # There are several parents to n5
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2,n3,n4)]), set([tuple(_) for _ in q.get_all_parents([n5.pk])]))
 
 
-        n6.add_link_from(n5)
+        # Yet, no links from 1 to 8
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0)
+
+
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 0)
+
+
+        n6.add_link_from(n5, link_type=LinkType.INPUT)
         # Yet, now 2 links from 1 to 8
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
 
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
 
-        for with_dbpath in (True, False):
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':6}},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':5},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':5}},
+                ).count(), 0)
 
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
-
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
-
-        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+        # TODO write a query that can filter certain paths by traversed ID
+        qb = QueryBuilder().append(
                 Node, filters={'id':n8.pk}, tag='desc',
             ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
         queried_path_set = set([frozenset(p) for p, in qb.all()])
@@ -782,7 +807,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
-        qb = QueryBuilder(with_dbpath=False, expand_path=True).append(
+        qb = QueryBuilder().append(
                 Node, filters={'id':n1.pk}, tag='anc'
             ).append(
                 Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'
@@ -795,48 +820,46 @@ class QueryBuilderPath(AiidaTestCase):
                 frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
             ))
 
-        n7.add_link_from(n9)
+        n7.add_link_from(n9, link_type=LinkType.INPUT)
         # Still two links...
 
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
-
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
-        n9.add_link_from(n6)
-        # And now there should be 4 nodes
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 4)
-
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 4)
-
-
-        for with_dbpath in (True, False):
-            qb = QueryBuilder(with_dbpath=True).append(
+        self.assertEquals(
+            QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
-                ).append(
-                    Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
-                )
-            qb.add_projection('edge', 'depth')
-            self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
-            qb.add_filter('edge', {'depth':6})
-            self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
+        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        # And now there should be 4 nodes
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 4)
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 4)
+
+
+        qb = QueryBuilder().append(
+                Node, filters={'id':n1.pk}, tag='anc'
+            ).append(
+                Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
+            )
+        qb.add_projection('edge', 'depth')
+        self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
+        qb.add_filter('edge', {'depth':6})
+        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
 
 
 
@@ -861,5 +884,99 @@ class TestConsistency(AiidaTestCase):
         self.assertEqual(idx,99)
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
+class TestManager(AiidaTestCase):
+    def test_statistics(self):
+        """
+        Test if the statistics query works properly.
 
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.backends.utils import QueryFactory
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        qmanager = QueryFactory()()
+        current_db_statistics = qmanager.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
+
+
+    def test_statistics_default_class(self):
+        """
+        Test if the statistics query works properly.
+
+        I try to implement it in a way that does not depend on the past state.
+        """
+        from aiida.orm import Node, DataFactory, Calculation
+        from collections import defaultdict
+        from aiida.backends.general.abstractqueries import AbstractQueryManager
+
+        def store_and_add(n, statistics):
+            n.store()
+            statistics['total'] += 1
+            statistics['types'][n._plugin_type_string] += 1
+            statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
+
+        class QueryManagerDefault(AbstractQueryManager):
+            pass
+
+        qmanager_default = QueryManagerDefault()
+
+        current_db_statistics = qmanager_default.get_creation_statistics()
+        types = defaultdict(int)
+        types.update(current_db_statistics['types'])
+        ctime_by_day = defaultdict(int)
+        ctime_by_day.update(current_db_statistics['ctime_by_day'])
+
+        expected_db_statistics = {
+            'total': current_db_statistics['total'],
+            'types': types,
+            'ctime_by_day': ctime_by_day
+            }
+
+        ParameterData = DataFactory('parameter')
+
+        store_and_add(Node(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Calculation(), expected_db_statistics)
+
+        new_db_statistics = qmanager_default.get_creation_statistics()
+        # I only check a few fields
+        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+
+        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
+            for k, v in expected_db_statistics.iteritems()}
+
+        self.assertEquals(new_db_statistics, expected_db_statistics)
 

@@ -87,7 +87,7 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, Node, User, StructureData, KpointsData, BandsData
+            Group, Node, StructureData, KpointsData, BandsData
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 
@@ -125,7 +125,6 @@ class AiidaApi(Api):
         self.add_resource(Calculation,
                           '/calculations/',
                           '/calculations/schema/',
-                          '/calculations/statistics/',
                           '/calculations/page/',
                           '/calculations/page/<int:page>/',
                           '/calculations/<id>/',
@@ -144,7 +143,6 @@ class AiidaApi(Api):
         self.add_resource(Data,
                           '/data/',
                           '/data/schema/',
-                          '/data/statistics/',
                           '/data/page/',
                           '/data/page/<int:page>',
                           '/data/<id>/',
@@ -164,7 +162,6 @@ class AiidaApi(Api):
         self.add_resource(Code,
                           '/codes/',
                           '/codes/schema/',
-                          '/codes/statistics/',
                           '/codes/page/',
                           '/codes/page/<int:page>/',
                           '/codes/<id>/',
@@ -184,7 +181,6 @@ class AiidaApi(Api):
         self.add_resource(StructureData,
                           '/structures/',
                           '/structures/schema/',
-                          '/structures/statistics/',
                           '/structures/page/',
                           '/structures/page/<int:page>',
                           '/structures/<id>/',
@@ -205,7 +201,6 @@ class AiidaApi(Api):
         self.add_resource(KpointsData,
                           '/kpoints/',
                           '/kpoints/schema/',
-                          '/kpoints/statistics/',
                           '/kpoints/page/',
                           '/kpoints/page/<int:page>',
                           '/kpoints/<id>/',
@@ -226,7 +221,6 @@ class AiidaApi(Api):
         self.add_resource(BandsData,
                           '/bands/',
                           '/bands/schema/',
-                          '/bands/statistics/',
                           '/bands/page/',
                           '/bands/page/<int:page>',
                           '/bands/<id>/',
@@ -244,20 +238,22 @@ class AiidaApi(Api):
                           resource_class_kwargs=kwargs
                           )
 
+        """
+        # Commented user endpoints for security reasons.
+
         self.add_resource(User,
                           '/users/',
                           '/users/schema/',
-                          '/users/statistics/',
                           '/users/page/',
                           '/users/page/<int:page>/',
                           '/users/<id>/',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
+        """
 
         self.add_resource(Group,
                           '/groups/',
                           '/groups/schema/',
-                          '/groups/statistics/',
                           '/groups/page/',
                           '/groups/page/<int:page>/',
                           '/groups/<id>/',

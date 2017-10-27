@@ -1,0 +1,54 @@
+# yet another python formatter
+- repo: git://github.com/pre-commit/mirrors-yapf
+  sha: v0.17.0
+  hooks:
+  - id: yapf
+    language: system
+    files: >-
+      ^(aiida/control/)
+      |(aiida/cmdline/tests)
+      |(docs/update_req_for_rtd.py)
+      |(.travis_data/test_setup.py)
+      |(aiida/backends/tests/verdi_commands.py)
+      |(aiida/utils/.*fixtures.py)
+
+# prospector: collection of linters
+- repo: git://github.com/guykisel/prospector-mirror
+  sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
+  hooks:
+  - id: prospector
+    language: system
+    exclude: '^(tests/)|(examples/)'
+    files: >-
+      ^(aiida/control/)
+      |(aiida/cmdline/tests)
+      |(docs/update_req_for_rtd.py)
+      |(.travis_data/test_setup.py)
+      |(aiida/backends/tests/verdi_commands.py)
+      |(aiida/utils/.*fixtures.py)
+
+- repo: local
+  hooks: 
+  - id: rtd-requirements
+    name: Requirements for RTD
+    entry: python ./docs/update_req_for_rtd.py --pre-commit
+    language: system
+    files: >-
+      ^(setup_requirements.py)
+      |(docs/requirements_for_rtd.txt)
+      |(docs/update_req_for_rtd.py)
+    pass_filenames: false
+
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  sha: v0.9.4
+  hooks:
+  - id: check-yaml
+
+- repo: local
+  hooks:
+  - id: travis-linter
+    name: travis
+    entry: travis lint
+    files: .travis.yml
+    language: ruby
+    additional_dependencies: ['travis']

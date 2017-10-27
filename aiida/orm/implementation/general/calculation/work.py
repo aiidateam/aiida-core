@@ -9,9 +9,8 @@
 ###########################################################################
 
 from aiida.orm.implementation.calculation import Calculation
-from aiida.common.utils import classproperty
 from aiida.common.lang import override
-from aiida.common import caching
+from aiida.common.links import LinkType
 
 class WorkCalculation(Calculation):
     """
@@ -20,13 +19,11 @@ class WorkCalculation(Calculation):
     """
     FINISHED_KEY = '_finished'
     FAILED_KEY = '_failed'
+    ABORTED_KEY = '_aborted'
 
-    @classproperty
-    def _hash_ignored_inputs(cls):
-        return super(WorkCalculation, cls)._hash_ignored_inputs + [
-            '_return_pid',
-            '_fast_forward'
-        ]
+    @override
+    def has_finished(self):
+        return self.has_finished_ok() or self.has_failed() or self.has_aborted()
 
     @override
     def has_finished_ok(self):
@@ -48,4 +45,23 @@ class WorkCalculation(Calculation):
         :return: True if the calculation has failed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.FAILED_KEY, False) is not False
+        return self.get_attr(self.FAILED_KEY, False)
+
+    def has_aborted(self):
+        """
+        Returns True if the work calculation was killed and is
+
+        :return: True if the calculation was killed, False otherwise.
+        :rtype: bool
+        """
+        return self.get_attr(self.ABORTED_KEY, False)
+
+    def kill(self):
+        """
+        Kill a WorkCalculation and all its children.
+        """
+        if not self.is_sealed:
+            self._set_attr(self.ABORTED_KEY, True)
+
+        for child in self.get_outputs(link_type=LinkType.CALL):
+            child.kill()

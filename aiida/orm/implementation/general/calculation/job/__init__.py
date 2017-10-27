@@ -157,7 +157,7 @@ class AbstractJobCalculation(object):
             _ = self.get_parserclass()
         except MissingPluginError:
             raise ValidationError(
-                "No valid plugin found for the parser '{}'. "
+                "No valid class/implementation found for the parser '{}'. "
                 "Set the parser to None if you do not need an automatic "
                 "parser.".format(self.get_parser_name())
             )
@@ -558,6 +558,22 @@ class AbstractJobCalculation(object):
         return super(AbstractJobCalculation, self)._replace_link_from(src,
                                                                       label,
                                                                       link_type)
+
+    def _remove_link_from(self, label):
+        """
+        Remove a link. Only possible if the calculation is in state NEW.
+
+        :param str label: Name of the link to remove.
+        """
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can remove an input link to a calculation only if it is in one "
+                "of the following states:\n   {}\n it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(AbstractJobCalculation, self)._remove_link_from(label)
 
     @abstractmethod
     def _set_state(self, state):
@@ -1854,6 +1870,12 @@ class AbstractJobCalculation(object):
 
         return errfile_content
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a JobCalculation node's
+        properties.
+        """
+        return self.get_state(from_attribute=True)
 
 class CalculationResultManager(object):
     """

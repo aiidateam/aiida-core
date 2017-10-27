@@ -97,9 +97,12 @@ def main():
         parameters = ParameterData(dict={'value': inputval})
         template = ParameterData(dict={
                 ## The following line adds a significant sleep time.
-                ## I remove it to speed up tests
+                ## I set it to 1 second to speed up tests
+                ## I keep it to a non-zero value because I want
+                ## To test the case when AiiDA finds some calcs
+                ## in a queued state
                 #'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-                'cmdline_params': [],
+                'cmdline_params': ["1"],
                 'input_file_template': "{value}", # File just contains the value to double
                 'input_file_name': 'value_to_double.txt',
                 'output_file_name': 'output.txt',

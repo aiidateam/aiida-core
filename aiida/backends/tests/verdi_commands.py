@@ -93,18 +93,24 @@ class TestVerdiCalculationCommands(AiidaTestCase):
         # Create some calculation
         calc1 = JobCalculation(
             computer=cls.computer,
-            resources={'num_machines': 1,
-                       'num_mpiprocs_per_machine': 1}).store()
+            resources={
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            }).store()
         calc1._set_state(calc_states.TOSUBMIT)
         calc2 = JobCalculation(
             computer=cls.computer.name,
-            resources={'num_machines': 1,
-                       'num_mpiprocs_per_machine': 1}).store()
+            resources={
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            }).store()
         calc2._set_state(calc_states.COMPUTED)
         calc3 = JobCalculation(
             computer=cls.computer.id,
-            resources={'num_machines': 1,
-                       'num_mpiprocs_per_machine': 1}).store()
+            resources={
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            }).store()
         calc3._set_state(calc_states.FINISHED)
 
     def test_calculation_list(self):
@@ -130,7 +136,7 @@ class TestVerdiCalculationCommands(AiidaTestCase):
                          "simple calculation list.")
 
         with Capturing() as output:
-            calc_cmd.calculation_list(* ['-a'])
+            calc_cmd.calculation_list(*['-a'])
 
         out_str = ''.join(output)
         self.assertTrue(calc_states.FINISHED in out_str,
@@ -201,7 +207,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         # Run a verdi code list -a, capture the output and check if the result
         # is the same as the previous one
         with Capturing() as output:
-            code_cmd.code_list(* ['-a'])
+            code_cmd.code_list(*['-a'])
         out_str_2 = ''.join(output)
         self.assertEqual(out_str_1, out_str_2,
                          "verdi code list & verdi code list -a should provide "
@@ -209,7 +215,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
         # Run a verdi code list -c, capture the output and check the result
         with Capturing() as output:
-            code_cmd.code_list(* ['-c', computer_name_1])
+            code_cmd.code_list(*['-c', computer_name_1])
         out_str = ''.join(output)
         self.assertTrue(computer_name_1 in out_str,
                         "The computer 1 name should be included into "

@@ -1641,7 +1641,10 @@ class AbstractNode(object):
             ).__version__,
             {
                 key: val for key, val in self.get_attrs().items()
-                if key not in self._hash_ignored_attributes
+                if (
+                    (key not in self._hash_ignored_attributes) and
+                    (key not in getattr(self, '_updatable_attributes', tuple()))
+                )
             },
             self.folder
         ]

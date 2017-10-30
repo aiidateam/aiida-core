@@ -38,17 +38,10 @@ class AbstractJobCalculation(object):
 
     @classproperty
     def _hash_ignored_attributes(cls):
+        # _updatable_attributes are ignored automatically.
         return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
-            'state',
-            'scheduler_state',
-            'scheduler_lastchecktime',
-            'remote_workdir',
-            'last_jobinfo',
-            'job_id',
             'queue_name',
             'max_wallclock_seconds',
-            'retrieve_list',
-            'retrieve_singlefile_list',
         ]
 
     def get_hash(

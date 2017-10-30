@@ -20,6 +20,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.common import caching
+from aiida.orm.code import Code 
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
@@ -118,6 +119,17 @@ class TestNodeHashing(AiidaTestCase):
             a2 = create_arraydata(arr2)
             a2.store(use_cache=True)
             self.assertNotEquals(a1.uuid, a2.uuid)
+
+    def test_updatable_attributes(self):
+        """
+        Tests that updatable attributes are ignored.
+        """
+        c = Code()
+        hash1 = c.get_hash()
+        c._hide()
+        hash2 = c.get_hash()
+        self.assertNotEquals(hash1, None)
+        self.assertEquals(hash1, hash2)
 
 class TestDataNode(AiidaTestCase):
     """

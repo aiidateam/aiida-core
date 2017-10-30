@@ -1,3 +1,5 @@
+.. _calculation_state:
+
 AiiDA calculations can be of two kinds:
 
 * :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`: those who need to be run on a scheduler

@@ -6,4 +6,5 @@ Calculation parsers
 
 This section describes the different parsers classes for calculations.
 
-.. TODO: link to aiida-quantumespresso plugin docs
+.. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
+  check the corresponding plugin repositories.

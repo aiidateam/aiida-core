@@ -86,8 +86,8 @@ class AiidaApi(Api):
             configuration and PREFIX
         """
 
-        from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, Node, User, StructureData, KpointsData, BandsData
+        from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
+            Group, Node, StructureData, KpointsData, BandsData
 
         super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
 

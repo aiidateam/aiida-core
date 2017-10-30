@@ -136,13 +136,39 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
+    @property
+    def _do_abort(self):
+        return self.calc.get_attr(self.calc.DO_ABORT_KEY, False)
+
+    @property
+    def _aborted(self):
+        return self.calc.get_attr(self.calc.ABORTED_KEY, False)
+
+    @_aborted.setter
+    def _aborted(self, value):
+        # One is not allowed to unabort an aborted WorkChain
+        if self._aborted == True and value == False:
+            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
+            return
+
+        self.calc._set_attr(self.calc.ABORTED_KEY, value)
+
     def _do_step(self, wait_on=None):
         self._awaitables = []
+
+        self._handle_do_abort()
+        if self._aborted:
+            return
 
         try:
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
+
+        # Could have aborted during the step
+        self._handle_do_abort()
+        if self._aborted:
+            return
 
         if not finished:
             if retval is not None:
@@ -155,6 +181,16 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
                 return persistable.gather(self._awaitables, self.loop()), self._do_step
             else:
                 return self.loop().create(Checkpoint), self._do_step
+
+    def _handle_do_abort(self):
+        """
+        Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
+        attribute has been set, and if so call self.abort and remove the DO_ABORT_KEY attribute 
+        """
+        do_abort = self._do_abort
+        if do_abort:
+            self.abort(do_abort)
+            self.calc._del_attr(self.calc.DO_ABORT_KEY)
 
     def abort_nowait(self, msg=None):
         """

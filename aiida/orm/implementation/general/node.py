@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
-from aiida.common.utils import abstractclassmethod
 
 import collections
 import logging
@@ -16,8 +15,9 @@ import os
 import types
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     UniquenessError)
+                                     UniquenessError, ValidationError)
 from aiida.common.folders import SandboxFolder
+from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
 
 from aiida.common.lang import override
@@ -52,18 +52,20 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.iteritems()}
     elif (isinstance(value, collections.Iterable) and
-              not isinstance(value, types.StringTypes)):
+          not isinstance(value, types.StringTypes)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
         return [clean_value(v) for v in value]
-    else:
-        # If I don't know what to do I just return the value
-        # itself - it's not super robust, but relies on duck typing
-        # (e.g. if there is something that behaves like an integer
-        # but is not an integer, I still accept it)
-        return value
 
+    # If I don't know what to do I just return the value
+    # itself - it's not super robust, but relies on duck typing
+    # (e.g. if there is something that behaves like an integer
+    # but is not an integer, I still accept it)
+    return value
+
+
+# pylint: disable=protected-access
 class AbstractNode(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -82,6 +84,7 @@ class AbstractNode(object):
     the 'type' field.
     """
 
+    # pylint: disable=invalid-name,protected-access
     class __metaclass__(ABCMeta):
         """
         Some python black magic to set correctly the logger also in subclasses.
@@ -90,8 +93,8 @@ class AbstractNode(object):
         def __new__(cls, name, bases, attrs):
 
             newcls = ABCMeta.__new__(cls, name, bases, attrs)
-            newcls._logger = logging.getLogger(
-                '{:s}.{:s}'.format(attrs['__module__'], name))
+            newcls._logger = logging.getLogger('{:s}.{:s}'.format(
+                attrs['__module__'], name))
 
             # Note: the reverse logic (from type_string to name that can
             # be passed to the plugin loader) is implemented in
@@ -112,17 +115,16 @@ class AbstractNode(object):
                 if newcls._plugin_type_string == 'node.Node.':
                     newcls._plugin_type_string = ''
                 newcls._query_type_string = get_query_type_string(
-                    newcls._plugin_type_string
-                )
+                    newcls._plugin_type_string)
             # Experimental: type string for external plugins
             else:
                 from aiida.common.pluginloader import entry_point_tpstr_from
                 classname = '.'.join([attrs['__module__'], name])
                 if entry_point_tpstr_from(classname):
-                    newcls._plugin_type_string = entry_point_tpstr_from(classname)
+                    newcls._plugin_type_string = entry_point_tpstr_from(
+                        classname)
                     newcls._query_type_string = get_query_type_string(
-                        newcls._plugin_type_string
-                    )
+                        newcls._plugin_type_string)
             return newcls
 
     # This will be set by the metaclass call
@@ -141,11 +143,11 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's 
+        Returns a string with infos retrieved from a node's
         properties.
         This method is actually overwritten by the inheriting classes
-        
-        :return: a description string     
+
+        :return: a description string
         """
         return ""
 
@@ -211,8 +213,8 @@ class AbstractNode(object):
     def __int__(self):
         if self._to_be_stored:
             return None
-        else:
-            return self.id
+
+        return self.id
 
     @abstractmethod
     def __init__(self, **kwargs):
@@ -225,7 +227,11 @@ class AbstractNode(object):
         """
         self._to_be_stored = True
         # Empty cache of input links in any case
+        self._attrs_cache = {}
         self._inputlinks_cache = {}
+
+        self._temp_folder = None
+        self._repo_folder = None
 
     @property
     def is_stored(self):
@@ -240,8 +246,7 @@ class AbstractNode(object):
     def __str__(self):
         if not self.is_stored:
             return "uuid: {} (unstored)".format(self.uuid)
-        else:
-            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+        return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -334,7 +339,7 @@ class AbstractNode(object):
                     raise ValueError("Cannot set {} directly when creating "
                                      "the node or using the .set() method; "
                                      "use the specific method instead.".format(
-                        incomp[0]))
+                                         incomp[0]))
                 else:
                     raise ValueError("Cannot set {} at the same time".format(
                         " and ".join(incomp)))
@@ -433,6 +438,7 @@ class AbstractNode(object):
         """
         return len(self._inputlinks_cache) != 0
 
+    # pylint: disable=protected-access
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
         Add a link to the current node from the 'src' node.
@@ -456,14 +462,6 @@ class AbstractNode(object):
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
-
-        # See if I am pointing to already saved nodes and I am already
-        # linking to a given node
-        if src.uuid in [_[0].uuid for _ in self._inputlinks_cache.values()]:
-            raise UniquenessError(
-                "A link from node with UUID={} and "
-                "the current node (UUID={}) already exists!".format(
-                    src.uuid, self.uuid))
 
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)
@@ -516,21 +514,9 @@ class AbstractNode(object):
             except KeyError:
                 pass
         else:  # at least one is not stored: set in the internal cache
-            # See if I am pointing to already saved nodes and I am already
-            # linking to a given node
-            # It is similar to the 'add' method, but if I am replacing the
-            # same node, I will not complain (k!=label)
-            if src.uuid in [v[0].uuid for k, v in
-                            self._inputlinks_cache.iteritems() if k != label]:
-                raise UniquenessError(
-                    "A link from node with UUID={} and "
-                    "the current node (UUID={}) already exists!".format(
-                        src.uuid, self.uuid))
             # I insert the link directly in the cache rather than calling
             # _add_cachelink_from because this latter performs an undesired check
             self._inputlinks_cache[label] = (src, link_type)
-
-           # self._add_cachelink_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -673,7 +659,9 @@ class AbstractNode(object):
         new_outputs = {}
         # first add the defaults
         for irreducible_linkname in linknames_set:
-            this_elements = [i[1] for i in all_outputs if i[0] == irreducible_linkname]
+            this_elements = [
+                i[1] for i in all_outputs if i[0] == irreducible_linkname
+            ]
             # select the oldest element
             last_element = sorted(this_elements, key=lambda x: x.ctime)[0]
             # for this one add the default value
@@ -685,7 +673,10 @@ class AbstractNode(object):
 
         return new_outputs
 
-    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False,
+    def get_inputs(self,
+                   node_type=None,
+                   also_labels=False,
+                   only_in_db=False,
                    link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
@@ -714,20 +705,23 @@ class AbstractNode(object):
             for label, v in self._inputlinks_cache.iteritems():
                 src = v[0]
                 if label in input_list_keys:
-                    raise InternalError("There exist a link with the same name "
-                                        "'{}' both in the DB and in the internal "
-                                        "cache for node pk= {}!".format(label, self.pk))
+                    raise InternalError(
+                        "There exist a link with the same name "
+                        "'{}' both in the DB and in the internal "
+                        "cache for node pk= {}!".format(label, self.pk))
                 inputs_list.append((label, src))
 
         if node_type is None:
             filtered_list = inputs_list
         else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
+            filtered_list = [
+                i for i in inputs_list if isinstance(i[1], node_type)
+            ]
 
         if also_labels:
             return list(filtered_list)
-        else:
-            return [i[1] for i in filtered_list]
+
+        return [i[1] for i in filtered_list]
 
     @abstractclassmethod
     def _get_db_input_links(self, link_type):
@@ -740,6 +734,7 @@ class AbstractNode(object):
         """
         pass
 
+    # pylint: disable=no-else-return
     @override
     def get_outputs(self, type=None, also_labels=False, link_type=None):
         """
@@ -816,12 +811,15 @@ class AbstractNode(object):
         """
         pass
 
-    def _set_attr(self, key, value):
+    def _set_attr(self, key, value, clean=True):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
         :param str key: key name
         :param value: its value
+        :param clean: whether to clean values.
+            WARNING: when set to False, storing will throw errors
+            for any data types not recognized by the db backend
         :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
             because the node was already stored, and the attribute is not listed
             as updatable).
@@ -832,10 +830,43 @@ class AbstractNode(object):
         validate_attribute_key(key)
 
         if self._to_be_stored:
-            import copy
-            self._attrs_cache[key] = clean_value(value)
+            if clean:
+                self._attrs_cache[key] = clean_value(value)
+            else:
+                self._attrs_cache[key] = value
         else:
             self._set_db_attr(key, clean_value(value))
+
+    def _append_to_attr(self, key, value, clean=True):
+        """
+        Append value to an attribute of the Node (in the DbAttribute table).
+
+        :param str key: key name of "list-type" attribute
+            If attribute doesn't exist, it is created.
+        :param value: the value to append to the list
+        :param clean: whether to clean the value
+            WARNING: when set to False, storing will throw errors
+            for any data types not recognized by the db backend
+        :raise ValidationError: if the key is not valid (e.g. it contains the
+            separator symbol).
+        """
+        validate_attribute_key(key)
+
+        try:
+            values = self.get_attr(key)
+        except AttributeError:
+            values = []
+
+        try:
+            if clean:
+                values.append(clean_value(value))
+            else:
+                values.append(value)
+        except AttributeError:
+            raise AttributeError(
+                "Use _set_attr only on attributes containing lists")
+
+        self._set_attr(key, values, clean=False)
 
     @abstractmethod
     def _set_db_attr(self, key, value):
@@ -1099,6 +1130,7 @@ class AbstractNode(object):
         """
         pass
 
+    # pylint: disable=unused-variable
     def extras(self):
         """
         Get the keys of the extras.
@@ -1108,6 +1140,7 @@ class AbstractNode(object):
         for k, v in self.iterextras():
             yield k
 
+    # pylint: disable=unreachable
     def iterextras(self):
         """
         Iterator over the extras, returning tuples (key, value)
@@ -1165,6 +1198,15 @@ class AbstractNode(object):
     def _db_iterattrs(self):
         """
         Iterator over the attributes (directly in the DB!)
+
+        DO NOT USE DIRECTLY.
+        """
+        pass
+
+    @abstractmethod
+    def _db_iterextras(self):
+        """
+        Iterator over the extras (directly in the DB!)
 
         DO NOT USE DIRECTLY.
         """
@@ -1328,7 +1370,8 @@ class AbstractNode(object):
         :param subfolder: get the list of a subfolder
         :return: a list of strings.
         """
-        return self._get_folder_pathsubfolder.get_subfolder(subfolder).get_content_list()
+        return self._get_folder_pathsubfolder.get_subfolder(
+            subfolder).get_content_list()
 
     def _get_temp_folder(self):
         """
@@ -1404,11 +1447,38 @@ class AbstractNode(object):
         #      'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
-        return self.folder.get_subfolder(section,
-                                         reset_limit=True).get_abs_path(path, check_existence=True)
+        return self.folder.get_subfolder(
+            section, reset_limit=True).get_abs_path(
+                path, check_existence=True)
+
+    def store_all(self, with_transaction=True):
+        """
+        Store the node, together with all input links, if cached, and also the
+        linked nodes, if they were not stored yet.
+
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
+        """
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "Node with pk= {} was already stored".format(self.id))
+
+        # For each parent, check that all its inputs are stored
+        for link in self._inputlinks_cache:
+            try:
+                parent_node = self._inputlinks_cache[link][0]
+                parent_node._check_are_parents_stored()
+            except ModificationNotAllowed:
+                raise ModificationNotAllowed(
+                    "Parent node (UUID={}) has "
+                    "unstored parents, cannot proceed (only direct parents "
+                    "can be unstored and will be stored by store_all, not "
+                    "grandparents or other ancestors".format(parent_node.uuid))
+        return self._db_store_all(with_transaction)
 
     @abstractmethod
-    def store_all(self, with_transaction=True):
+    def _db_store_all(self, with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1476,7 +1546,6 @@ class AbstractNode(object):
         """
         pass
 
-    @abstractmethod
     def store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
@@ -1496,6 +1565,57 @@ class AbstractNode(object):
         """
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
+
+        # As a first thing, I check if the data is valid
+        self._validate()
+
+        if self._to_be_stored:
+
+            # Verify that parents are already stored. Raises if this is not
+            # the case.
+            self._check_are_parents_stored()
+
+            # call implementation-dependent store method
+            self._db_store(with_transaction)
+
+            # Set up autogrouping used by verdi run
+            from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
+            from aiida.orm import Group
+
+            if current_autogroup is not None:
+                if not isinstance(current_autogroup, Autogroup):
+                    raise ValidationError(
+                        "current_autogroup is not an AiiDA Autogroup")
+
+                if current_autogroup.is_to_be_grouped(self):
+                    group_name = current_autogroup.get_group_name()
+                    if group_name is not None:
+                        g = Group.get_or_create(
+                            name=group_name, type_string=VERDIAUTOGROUP_TYPE)[0]
+                        g.add_nodes(self)
+
+        # This is useful because in this way I can do
+        # n = Node().store()
+        return self
+
+    @abstractmethod
+    def _db_store(self, with_transaction=True):
+        """
+        Store a new node in the DB, also saving its repository directory
+        and attributes.
+
+        After being called attributes cannot be
+        changed anymore! Instead, extras can be changed only AFTER calling
+        this store() function.
+
+        :note: After successful storage, those links that are in the cache, and
+            for which also the parent node is already stored, will be
+            automatically stored. The others will remain unstored.
+
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
+        """
         pass
 
     def __del__(self):
@@ -1528,24 +1648,35 @@ class AbstractNode(object):
         """
         return NodeInputManager(self)
 
-    @abstractproperty
+
+    @property
     def has_children(self):
         """
         Property to understand if children are attached to the node
         :return: a boolean
         """
-        # use the transitive closure
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        first_desc = QueryBuilder().append(
+            Node, filters={'id':self.pk}, tag='self').append(
+            Node, descendant_of='self', project='id').first()
+        return bool(first_desc)
 
-    @abstractproperty
+
+    @property
     def has_parents(self):
         """
         Property to understand if parents are attached to the node
         :return: a boolean
         """
-        # use the transitive closure
-        pass
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+        first_ancestor = QueryBuilder().append(
+            Node, filters={'id':self.pk}, tag='self').append(
+            Node, ancestor_of='self', project='id').first()
+        return bool(first_ancestor)
 
+    # pylint: disable=no-self-argument
     @combomethod
     def querybuild(self_or_cls, **kwargs):
         """
@@ -1565,7 +1696,6 @@ class AbstractNode(object):
         If called as an instance method, adds a filter on the id.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node as AiidaNode
         isclass = kwargs.pop('isclass')
         qb = QueryBuilder()
         if isclass:
@@ -1577,6 +1707,7 @@ class AbstractNode(object):
         return qb
 
 
+# pylint: disable=too-few-public-methods
 class NodeOutputManager(object):
     """
     To document
@@ -1656,8 +1787,8 @@ class NodeInputManager(object):
             return self._node.get_inputs_dict()[name]
         except KeyError:
             raise AttributeError(
-                "Node '{}' does not have an input with link '{}'"
-                    .format(self._node.pk, name))
+                "Node '{}' does not have an input with link '{}'".format(
+                    self._node.pk, name))
 
     def __getitem__(self, name):
         """
@@ -1725,5 +1856,5 @@ class AttributeManager(object):
         """
         try:
             return self._node.get_attr(name)
-        except AttributeError as e:
-            raise KeyError(e.message)
+        except AttributeError as err:
+            raise KeyError(err.message)

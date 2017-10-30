@@ -259,9 +259,17 @@ class Process(plum.process.Process):
         self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
 
     @override
-    def on_stop(self):
-        super(Process, self).on_stop()
-        self.calc.seal()
+    def on_destroy(self):
+        """
+        Called when a Process enters the DESTROYED state which should be
+        the final process state and so we seal the calculation node
+        """
+        super(Process, self).on_destroy()
+        if self.calc.has_finished():
+            try:
+                self.calc.seal()
+            except exceptions.ModificationNotAllowed:
+                pass
 
     @override
     def on_fail(self, exc_info):
@@ -589,6 +597,25 @@ def _get_process_instance(process_class, *args, **kwargs):
     :return: The process instance
     :rtype: :class:`aiida.process.Process`
     """
+    def __init__(self):
+        MONITOR.add_monitor_listener(self)
+
+    @override
+    def on_monitored_process_destroying(self, process):
+        aiida.work.util.ProcessStack.pop(process)
+
+    @override
+    def on_monitored_process_failed(self, pid):
+        from aiida.orm import load_node
+        try:
+            calc_node = load_node(pk=pid)
+        except ValueError:
+            pass
+        else:
+            calc_node._set_attr(calc_node.FAILED_KEY, True)
+            calc_node.seal()
+        finally:
+            aiida.work.util.ProcessStack.pop(pid=pid)
 
     if isinstance(process_class, Process):
         # Nothing to do

@@ -41,10 +41,11 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
+    # Unreleased plum version required for fast-forwarding
+    - pip install git+https://github.com/greschd/plumpy@submit_with_process_type
     # Install AiiDA with some optional dependencies
     - pip install .[REST,docs,atomic_tools,testing,dev_precommit]
-    # Unreleased plum version required for fast-forwarding
-    - pip install git+https://bitbucket.org/greschd/plum@submit_with_process_type
+
 
 env:
 ## Build matrix to test both backends, and the docs

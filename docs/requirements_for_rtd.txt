@@ -21,7 +21,7 @@ paramiko==2.1.2
 passlib==1.7.1
 pathlib2==2.3.0
 pip==9.0.1
-plumpy==0.7.10
+plumpy==0.7.11
 portalocker==1.1.0
 pycrypto==2.6.1
 python-dateutil==2.6.0

@@ -634,9 +634,9 @@ class TestAgglomerateExposeProcess(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(ExposeProcess, cls).define(spec)
-                spec.expose_inputs(SubProcess, include=('common,'))
-                spec.expose_inputs(SubProcess, namespace='sub_a', exclude=('common,'))
-                spec.expose_inputs(SubProcess, namespace='sub_b', exclude=('common,'))
+                spec.expose_inputs(SubProcess, include=('common',))
+                spec.expose_inputs(SubProcess, namespace='sub_a', exclude=('common',))
+                spec.expose_inputs(SubProcess, namespace='sub_b', exclude=('common',))
 
             @override
             def _run(self, **kwargs):

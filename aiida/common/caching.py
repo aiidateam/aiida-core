@@ -52,12 +52,11 @@ def _get_config(config_file):
 
     # add defaults where config is missing
     for key, default_config in DEFAULT_CONFIG.items():
-        config[key] = ChainMap(config.get(key, {}), default_config)
+        config[key] = config.get(key, {})
         for sub_key, sub_default_config in default_config.items():
             config[key][sub_key] = config[key].get(sub_key, sub_default_config)
 
     # load classes
-    aiida.try_load_dbenv()
     try:
         for config_part in config.values():
             for key in [config_keys.enabled, config_keys.disabled]:

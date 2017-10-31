@@ -10,6 +10,9 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs html
         ;;
     tests)
+        # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
+        export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data
+
         # Run the AiiDA tests
         python ${TRAVIS_BUILD_DIR}/.travis-data/test_setup.py
         python ${TRAVIS_BUILD_DIR}/.travis-data/test_fixtures.py

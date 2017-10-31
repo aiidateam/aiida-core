@@ -389,6 +389,12 @@ class FixtureManager(object):
         # that deleted our user, we need to recreate it
         new_user.force_save()
 
+    def has_profile_open(self):
+        return self.__is_running_on_test_profile
+
+
+_PYTEST_FIXTURE_MANAGER = FixtureManager()
+
 
 @contextmanager
 def fixture_manager():
@@ -409,11 +415,12 @@ def fixture_manager():
                 fixture_mgr.create_profile()
                 yield fixture_mgr
     """
-    manager = FixtureManager()
     try:
-        yield manager
+        if not _PYTEST_FIXTURE_MANAGER.has_profile_open():
+            _PYTEST_FIXTURE_MANAGER.create_profile()
+        yield _PYTEST_FIXTURE_MANAGER
     finally:
-        manager.destroy_all()
+        _PYTEST_FIXTURE_MANAGER.destroy_all()
 
 
 class PluginTestCase(unittest.TestCase):

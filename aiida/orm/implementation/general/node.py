@@ -24,7 +24,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
-
+from aiida.common.caching import get_use_cache_default
 from aiida.common.links import LinkType
 from aiida.common.lang import override
 from aiida.common.old_pluginloader import get_query_type_string
@@ -1567,8 +1567,19 @@ class AbstractNode(object):
             # the case.
             self._check_are_parents_stored()
 
-            # call implementation-dependent store method
-            self._db_store(with_transaction, use_cache=use_cache)
+
+            # Get default for use_cache if it's not set explicitly.
+            if use_cache is None:
+                use_cache = get_use_cache_default()
+            # Retrieve the cached node.
+            same_node = self.get_same_node() if use_cache else None
+            if same_node is not None:
+                self._dbnode = same_node.dbnode
+                self._to_be_stored = False
+                self._repo_folder = same_node._repo_folder
+            else:
+                # call implementation-dependent store method
+                self._db_store(with_transaction)
 
             # Set up autogrouping used by verdi run
             from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
@@ -1591,7 +1602,7 @@ class AbstractNode(object):
         return self
 
     @abstractmethod
-    def _db_store(self, with_transaction=True, use_cache=None):
+    def _db_store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.

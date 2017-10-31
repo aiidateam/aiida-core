@@ -21,7 +21,6 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
-from aiida.common.caching import get_use_cache_default
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
@@ -545,7 +544,7 @@ class Node(AbstractNode):
             # would have been raised, and the following lines are not executed)
             self._inputlinks_cache.clear()
 
-    def _db_store(self, with_transaction=True, use_cache=None):
+    def _db_store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -571,16 +570,6 @@ class Node(AbstractNode):
         from aiida.common.exceptions import ValidationError
         from aiida.backends.djsite.db.models import DbAttribute
         import aiida.orm.autogroup
-
-        if use_cache is None:
-            use_cache = get_use_cache_default()
-        if use_cache:
-            same_node = self.get_same_node()
-            if same_node is not None:
-                self._dbnode = same_node.dbnode
-                self._to_be_stored = False
-                self._repo_folder = same_node._repo_folder
-                return self
 
         if with_transaction:
             context_man = transaction.atomic()

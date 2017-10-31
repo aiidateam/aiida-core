@@ -27,6 +27,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.links import LinkType
+from aiida.common.caching import get_use_cache_default
 
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.implementation.sqlalchemy.computer import Computer
@@ -508,7 +509,7 @@ class Node(AbstractNode):
     def dbnode(self):
         return self._dbnode
 
-    def _db_store_all(self, with_transaction=True, use_cache=False):
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -585,7 +586,7 @@ class Node(AbstractNode):
                 session.rollback()
                 raise
 
-    def _db_store(self, with_transaction=True, use_cache=False):
+    def _db_store(self, with_transaction=True, use_cache=None):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -610,6 +611,8 @@ class Node(AbstractNode):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
 
+        if use_cache is None:
+            use_cache = get_use_cache_default()
         # For node hashing, if use_cache is true:
         if use_cache:
             same_node = self.get_same_node()

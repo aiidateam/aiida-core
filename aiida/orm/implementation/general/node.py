@@ -1439,7 +1439,7 @@ class AbstractNode(object):
             section, reset_limit=True).get_abs_path(
                 path, check_existence=True)
 
-    def store_all(self, with_transaction=True, use_cache=False):
+    def store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1467,7 +1467,7 @@ class AbstractNode(object):
         return self._db_store_all(with_transaction, use_cache=use_cache)
 
     @abstractmethod
-    def _db_store_all(self, with_transaction=True, use_cache=False):
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1538,7 +1538,7 @@ class AbstractNode(object):
         """
         pass
 
-    def store(self, with_transaction=True, use_cache=False):
+    def store(self, with_transaction=True, use_cache=None):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -1591,7 +1591,7 @@ class AbstractNode(object):
         return self
 
     @abstractmethod
-    def _db_store(self, with_transaction=True, use_cache=False):
+    def _db_store(self, with_transaction=True, use_cache=None):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.

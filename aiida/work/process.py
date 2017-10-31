@@ -412,8 +412,8 @@ class Process(plum.process.Process):
         # Second priority: config
         except KeyError:
             return (
-                caching.get_fast_forward_enabled(type(self).__name__) or
-                caching.get_fast_forward_enabled(type(self._calc).__name__)
+                caching.get_fast_forward_enabled(type(self)) or
+                caching.get_fast_forward_enabled(type(self._calc))
             )
 
 class FunctionProcess(Process):

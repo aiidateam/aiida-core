@@ -98,6 +98,29 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         lines = []
         empty_line = ""
 
+        # Redirecting script output on the correct files
+        # Should be one of the first commands
+        if job_tmpl.sched_output_path:
+            lines.append("exec > {}".format(job_tmpl.sched_output_path))
+
+        if job_tmpl.sched_join_files:
+            # TODO: manual says:
+            #By  default both standard output and standard error are directed
+            #to a file of the name "slurm-%j.out", where the "%j" is replaced
+            #with  the  job  allocation  number. 
+            # See that this automatic redirection works also if 
+            # I specify a different --output file
+            if job_tmpl.sched_error_path:
+                self.logger.info(
+                    "sched_join_files is True, but sched_error_path is set; "
+                    " ignoring sched_error_path")
+        else:
+            if job_tmpl.sched_error_path:
+                lines.append("exec 2> {}".format(job_tmpl.sched_error_path))
+            else:
+                # To avoid automatic join of files
+                lines.append("exec 2>&1")
+
         if job_tmpl.max_memory_kb:
             try:
                 virtualMemoryKb = int(job_tmpl.max_memory_kb)
@@ -155,13 +178,15 @@ class DirectScheduler(aiida.scheduler.Scheduler):
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
+    
+        .. note:: One needs to redirect stdout and stderr to /dev/null
+           otherwise the daemon remains hanging for the script to run
 
-        Args:
-            submit_script: the path of the submit script relative to the working
-                directory.
-                IMPORTANT: submit_script should be already escaped.
+        :param submit_script: the path of the submit script relative to the working
+            directory.
+            IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'bash -e {} & echo $!'.format(submit_script)
+        submit_command = 'bash -e {} > /dev/null 2>&1 & echo $!'.format(submit_script)
 
         self.logger.info("submitting with: " + submit_command)
 

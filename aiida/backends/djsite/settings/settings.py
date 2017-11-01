@@ -11,7 +11,7 @@
 import sys
 import os
 
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property,
@@ -29,8 +29,8 @@ sys.path = [BASE_DIR] + sys.path
 
 try:
     confs = get_config()
-except ConfigurationError:
-    raise ConfigurationError(
+except MissingConfigurationError:
+    raise MissingConfigurationError(
         "Please run the AiiDA Installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
@@ -212,11 +212,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'aiida.backends.djsite.db',
 ]
-try:
-    import kombu
-    INSTALLED_APPS.append('kombu.transport.django')
-except ImportError:
-    pass
 
 # Automatic logging configuration for Django is disabled here
 # and done for all backends in aiida/__init__.py
@@ -227,4 +222,3 @@ LOGGING_CONFIG = None
 # -------------------------
 # For the time being, we support only json
 TASTYPIE_DEFAULT_FORMATS = ['json']
-

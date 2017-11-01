@@ -172,7 +172,7 @@ class Node(AbstractNode):
         DbLink.objects.filter(output=self.dbnode, label=label).delete()
 
     def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.backends.djsite.db.models import DbPath
+        from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
@@ -194,7 +194,9 @@ class Node(AbstractNode):
             #
             # I am linking src->self; a loop would be created if a DbPath exists already
             # in the TC table from self to src
-            if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode)) > 0:
+            if QueryBuilder().append(
+                    Node, filters={'id':self.pk}, tag='parent').append(
+                    Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 
@@ -466,7 +468,7 @@ class Node(AbstractNode):
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
-    def store_all(self, with_transaction=True):
+    def _db_store_all(self, with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -482,22 +484,6 @@ class Node(AbstractNode):
             context_man = transaction.atomic()
         else:
             context_man = EmptyContextManager()
-
-        if not self._to_be_stored:
-            raise ModificationNotAllowed(
-                "Node with pk= {} was already stored".format(self.pk))
-
-        # For each parent, check that all its inputs are stored
-        for label in self._inputlinks_cache:
-            try:
-                parent_node = self._inputlinks_cache[label][0]
-                parent_node._check_are_parents_stored()
-            except ModificationNotAllowed:
-                raise ModificationNotAllowed(
-                    "Parent node (UUID={}) has "
-                    "unstored parents, cannot proceed (only direct parents "
-                    "can be unstored and will be stored by store_all, not "
-                    "grandparents or other ancestors".format(parent_node.uuid))
 
         with context_man:
             # Always without transaction: either it is the context_man here,
@@ -558,7 +544,7 @@ class Node(AbstractNode):
             # would have been raised, and the following lines are not executed)
             self._inputlinks_cache.clear()
 
-    def store(self, with_transaction=True):
+    def _db_store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -588,82 +574,46 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if self._to_be_stored:
+        # I save the corresponding django entry
+        # I set the folder
+        # NOTE: I first store the files, then only if this is successful,
+        # I store the DB entry. In this way,
+        # I assume that if a node exists in the DB, its folder is in place.
+        # On the other hand, periodically the user might need to run some
+        # bookkeeping utility to check for lone folders.
+        self._repository_folder.replace_with_folder(
+            self._get_temp_folder().abspath, move=True, overwrite=True)
 
-            # As a first thing, I check if the data is valid
-            self._validate()
+        # I do the transaction only during storage on DB to avoid timeout
+        # problems, especially with SQLite
+        try:
+            with context_man:
+                # Save the row
+                self._dbnode.save()
+                # Save its attributes 'manually' without incrementing
+                # the version for each add.
+                DbAttribute.reset_values_for_node(self.dbnode,
+                                                  attributes=self._attrs_cache,
+                                                  with_transaction=False)
+                # This should not be used anymore: I delete it to
+                # possibly free memory
+                del self._attrs_cache
 
-            # Verify that parents are already stored. Raises if this is not
-            # the case.
-            self._check_are_parents_stored()
+                self._temp_folder = None
+                self._to_be_stored = False
 
-            # I save the corresponding django entry
-            # I set the folder
-            # NOTE: I first store the files, then only if this is successful,
-            # I store the DB entry. In this way,
-            # I assume that if a node exists in the DB, its folder is in place.
-            # On the other hand, periodically the user might need to run some
-            # bookkeeping utility to check for lone folders.
-            self._repository_folder.replace_with_folder(
-                self._get_temp_folder().abspath, move=True, overwrite=True)
+                # Here, I store those links that were in the cache and
+                # that are between stored nodes.
+                self._store_cached_input_links()
 
-            # I do the transaction only during storage on DB to avoid timeout
-            # problems, especially with SQLite
-            try:
-                with context_man:
-                    # Save the row
-                    self._dbnode.save()
-                    # Save its attributes 'manually' without incrementing
-                    # the version for each add.
-                    DbAttribute.reset_values_for_node(self.dbnode,
-                                                      attributes=self._attrs_cache,
-                                                      with_transaction=False)
-                    # This should not be used anymore: I delete it to
-                    # possibly free memory
-                    del self._attrs_cache
+        # This is one of the few cases where it is ok to do a 'global'
+        # except, also because I am re-raising the exception
+        except:
+            # I put back the files in the sandbox folder since the
+            # transaction did not succeed
+            self._get_temp_folder().replace_with_folder(
+                self._repository_folder.abspath, move=True, overwrite=True)
+            raise
 
-                    self._temp_folder = None
-                    self._to_be_stored = False
-
-                    # Here, I store those links that were in the cache and
-                    # that are between stored nodes.
-                    self._store_cached_input_links()
-
-            # This is one of the few cases where it is ok to do a 'global'
-            # except, also because I am re-raising the exception
-            except:
-                # I put back the files in the sandbox folder since the
-                # transaction did not succeed
-                self._get_temp_folder().replace_with_folder(
-                    self._repository_folder.abspath, move=True, overwrite=True)
-                raise
-
-            # Set up autogrouping used be verdi run
-            autogroup = aiida.orm.autogroup.current_autogroup
-            grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
-            if autogroup is not None:
-                if not isinstance(autogroup, aiida.orm.autogroup.Autogroup):
-                    raise ValidationError("current_autogroup is not an AiiDA Autogroup")
-                if autogroup.is_to_be_grouped(self):
-                    group_name = autogroup.get_group_name()
-                    if group_name is not None:
-                        from aiida.orm import Group
-
-                        g = Group.get_or_create(name=group_name, type_string=grouptype)[0]
-                        g.add_nodes(self)
-
-        # This is useful because in this way I can do
-        # n = Node().store()
         return self
 
-    @property
-    def has_children(self):
-        from aiida.backends.djsite.db.models import DbPath
-        childrens = DbPath.objects.filter(parent=self.pk)
-        return False if not childrens else True
-
-    @property
-    def has_parents(self):
-        from aiida.backends.djsite.db.models import DbPath
-        parents = DbPath.objects.filter(child=self.pk)
-        return False if not parents else True

@@ -394,8 +394,8 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(Node, tag='n1')
         qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
         qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
-        qb.append(Computer, computer_of='n3', tag='c1')
-        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1'])
+        qb.append(Computer, computer_of='n3', tag='c1', edge_tag='nonsense')
+        self.assertEqual(qb.get_used_tags(), ['n1', 'n2','e1', 'n3', 'e2', 'c1', 'nonsense'])
 
 
         # Now I am testing the default tags,
@@ -691,7 +691,10 @@ class QueryBuilderPath(AiidaTestCase):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
+        from aiida.common.links import LinkType
+        from aiida.backends.utils import QueryFactory
 
+        q = QueryFactory()()
         n1 = Node()
         n1.label='n1'
         n1.store()
@@ -723,53 +726,76 @@ class QueryBuilderPath(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2)
-        n2.add_link_from(n1)
-        n5.add_link_from(n3)
-        n5.add_link_from(n4)
-        n4.add_link_from(n2)
-
-        n7.add_link_from(n6)
-        n8.add_link_from(n7)
-
-
-        for with_dbpath in (True, False):
-
-            # Yet, no links from 1 to 8
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 0)
+        # I set everything as an INPUT-links now, because the QueryBuilder path query or
+        # our custom queries don't follow other links than CREATE or INPUT
+        n3.add_link_from(n2, link_type=LinkType.INPUT)
+        n2.add_link_from(n1, link_type=LinkType.INPUT)
+        n5.add_link_from(n3, link_type=LinkType.INPUT)
+        n5.add_link_from(n4, link_type=LinkType.INPUT)
+        n4.add_link_from(n2, link_type=LinkType.INPUT)
+        n7.add_link_from(n6, link_type=LinkType.INPUT)
+        n8.add_link_from(n7, link_type=LinkType.INPUT)
 
 
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 0)
+
+        # There are no parents to n9, checking that
+        self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
+        # There is one parent to n6
+        self.assertEqual(set([(_,) for _ in (n6.pk,)]), set([tuple(_) for _ in q.get_all_parents([n7.pk])]))
+        # There are several parents to n4
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2)]), set([tuple(_) for _ in q.get_all_parents([n4.pk])]))
+        # There are several parents to n5
+        self.assertEqual(set([(_.pk,) for _ in (n1,n2,n3,n4)]), set([tuple(_) for _ in q.get_all_parents([n5.pk])]))
 
 
-        n6.add_link_from(n5)
+        # Yet, no links from 1 to 8
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 0)
+
+
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 0)
+
+
+        n6.add_link_from(n5, link_type=LinkType.INPUT)
         # Yet, now 2 links from 1 to 8
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
 
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
 
-        for with_dbpath in (True, False):
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':6}},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':5},
+                ).count(), 2)
+        self.assertEquals(
+                QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}, edge_filters={'depth':{'<':5}},
+                ).count(), 0)
 
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
-
-            self.assertEquals(
-                    QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
-
-        qb = QueryBuilder(with_dbpath=False,expand_path=True).append(
+        # TODO write a query that can filter certain paths by traversed ID
+        qb = QueryBuilder().append(
                 Node, filters={'id':n8.pk}, tag='desc',
             ).append(Node, ancestor_of='desc', edge_project='path', filters={'id':n1.pk})
         queried_path_set = set([frozenset(p) for p, in qb.all()])
@@ -781,7 +807,7 @@ class QueryBuilderPath(AiidaTestCase):
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
-        qb = QueryBuilder(with_dbpath=False, expand_path=True).append(
+        qb = QueryBuilder().append(
                 Node, filters={'id':n1.pk}, tag='anc'
             ).append(
                 Node, descendant_of='anc',  filters={'id':n8.pk}, edge_project='path'
@@ -794,48 +820,46 @@ class QueryBuilderPath(AiidaTestCase):
                 frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
             ))
 
-        n7.add_link_from(n9)
+        n7.add_link_from(n9, link_type=LinkType.INPUT)
         # Still two links...
 
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 2
-                )
-
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 2)
-        n9.add_link_from(n6)
-        # And now there should be 4 nodes
-        for with_dbpath in (True, False):
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n1.pk}, tag='anc'
-                    ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                    ).count(), 4)
-
-            self.assertEquals(
-                QueryBuilder(with_dbpath=with_dbpath).append(
-                        Node, filters={'id':n8.pk}, tag='desc'
-                    ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
-                    ).count(), 4)
-
-
-        for with_dbpath in (True, False):
-            qb = QueryBuilder(with_dbpath=True).append(
+        self.assertEquals(
+            QueryBuilder().append(
                     Node, filters={'id':n1.pk}, tag='anc'
-                ).append(
-                    Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
-                )
-            qb.add_projection('edge', 'depth')
-            self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
-            qb.add_filter('edge', {'depth':6})
-            self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 2
+            )
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 2)
+        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        # And now there should be 4 nodes
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n1.pk}, tag='anc'
+                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
+                ).count(), 4)
+
+        self.assertEquals(
+            QueryBuilder().append(
+                    Node, filters={'id':n8.pk}, tag='desc'
+                ).append(Node, ancestor_of='desc',  filters={'id':n1.pk}
+                ).count(), 4)
+
+
+        qb = QueryBuilder().append(
+                Node, filters={'id':n1.pk}, tag='anc'
+            ).append(
+                Node, descendant_of='anc',  filters={'id':n8.pk}, edge_tag='edge'
+            )
+        qb.add_projection('edge', 'depth')
+        self.assertTrue(set(zip(*qb.all())[0]), set([5,6]))
+        qb.add_filter('edge', {'depth':6})
+        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
 
 
 
@@ -860,7 +884,7 @@ class TestConsistency(AiidaTestCase):
         self.assertEqual(idx,99)
         self.assertTrue(len(QueryBuilder().append(Node,project=['id','label']).all(batch_size=10)) > 99)
 
-class TestStatisticsQuery(AiidaTestCase):
+class TestManager(AiidaTestCase):
     def test_statistics(self):
         """
         Test if the statistics query works properly.

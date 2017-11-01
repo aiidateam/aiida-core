@@ -189,8 +189,8 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(Process, self).__init__(inputs, pid, logger)
+    def __init__(self, loop=None, inputs=None, pid=None, logger=None):
+        super(Process, self).__init__(loop, inputs, pid, logger)
 
         self._calc = None
         # Get the parent from the top of the process stack
@@ -585,48 +585,3 @@ class FunctionProcess(Process):
                     "Workfunction returned unsupported type '{}'\n"
                     "Must be a Data type or a Mapping of string => Data".
                         format(outs.__class__))
-
-
-def _get_process_instance(process_class, *args, **kwargs):
-    """
-    Get a Process instance for a workchain or workfunction
-
-    :param process_class: The workchain or workfunction to instantiate
-    :param args: The positional arguments (only for workfunctions)
-    :param kwargs: The keyword argument pairs
-    :return: The process instance
-    :rtype: :class:`aiida.process.Process`
-    """
-    def __init__(self):
-        MONITOR.add_monitor_listener(self)
-
-    @override
-    def on_monitored_process_destroying(self, process):
-        aiida.work.util.ProcessStack.pop(process)
-
-    @override
-    def on_monitored_process_failed(self, pid):
-        from aiida.orm import load_node
-        try:
-            calc_node = load_node(pk=pid)
-        except ValueError:
-            pass
-        else:
-            calc_node._set_attr(calc_node.FAILED_KEY, True)
-            calc_node.seal()
-        finally:
-            aiida.work.util.ProcessStack.pop(pid=pid)
-
-    if isinstance(process_class, Process):
-        # Nothing to do
-        return process_class
-    elif utils.is_workfunction(process_class):
-        wf_class = FunctionProcess.build(process_class._original, **kwargs)
-        inputs = wf_class.create_inputs(*args, **kwargs)
-        return wf_class(inputs=inputs)
-    elif issubclass(process_class, Process):
-        # No need to consider args as a Process can't deal with positional
-        # arguments anyway
-        return process_class(inputs=kwargs)
-    else:
-        raise TypeError("Unknown type for process_class '{}'".format(process_class))

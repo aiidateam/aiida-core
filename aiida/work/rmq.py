@@ -84,8 +84,8 @@ class ProcessControlPanel(apricotpy.LoopObject):
     Processes over the RMQ protocol.
     """
 
-    def __init__(self, prefix, create_connection=_create_connection):
-        super(ProcessControlPanel, self).__init__()
+    def __init__(self, prefix, create_connection=_create_connection, loop=None):
+        super(ProcessControlPanel, self).__init__(loop=loop)
 
         self._connection = create_connection()
 
@@ -132,5 +132,5 @@ class ProcessControlPanel(apricotpy.LoopObject):
         return self._launch.launch(process_bundle)
 
 
-def create_control_panel(prefix="aiida", create_connection=_create_connection):
-    return ProcessControlPanel(prefix, create_connection)
+def create_control_panel(prefix="aiida", create_connection=_create_connection, loop=None):
+    return ProcessControlPanel(prefix, create_connection, loop=loop)

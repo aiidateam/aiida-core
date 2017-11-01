@@ -13,7 +13,7 @@ from collections import namedtuple
 from enum import Enum
 
 from aiida.work.default_loop import enqueue
-from . import runner
+from runner import create_runner
 from . import legacy
 
 __all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
@@ -63,8 +63,8 @@ def async(process_class, *args, **inputs):
 
 
 def submit(process_class, **inputs):
-    with runner.create_runner() as my_runner:
-        return my_runner.submit(process_class, **inputs)
+    with create_runner() as runner:
+        return runner.submit(process_class, **inputs)
 
 
 def run(process_or_workfunction, *args, **inputs):
@@ -76,31 +76,29 @@ def run(process_or_workfunction, *args, **inputs):
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    with runner.create_runner() as my_runner:
-        return rrun(my_runner, process_or_workfunction, *args, **inputs)
+    with create_runner() as runner:
+        return rrun(runner, process_or_workfunction, *args, **inputs)
 
 
-def rrun(runner_, process_or_workfunction, *args, **inputs):
+def rrun(runner, process_or_workfunction, *args, **inputs):
     """
     Run with the supplied runner.
     
-    :param runner_: The runner to run with
+    :param runner: The runner to run with
     :param process_or_workfunction: The process class, instance or workfunction
     :param args: Positional arguments for a workfunction
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
-    runner_.insert(proc)
-    return runner_.run_until_complete(proc)
+    proc = runner.create(process_or_workfunction, *args, **inputs)
+    return runner.run_until_complete(proc)
 
 
 def run_get_pid(process_or_workfunction, *args, **inputs):
-    with runner.create_runner() as my_runner:
-        return rrun_get_pid(my_runner, process_or_workfunction, *args, **inputs)
+    with create_runner() as runner:
+        return rrun_get_pid(runner, process_or_workfunction, *args, **inputs)
 
 
-def rrun_get_pid(runner_, process_or_workfunction, *args, **inputs):
-    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
-    runner_.insert(proc)
-    return runner.ResultAndPid(runner_.run_until_complete(proc), proc.pid)
+def rrun_get_pid(runner, process_or_workfunction, *args, **inputs):
+    proc = runner.create(process_or_workfunction, *args, **inputs)
+    return runner.ResultAndPid(runner.run_until_complete(proc), proc.pid)

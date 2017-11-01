@@ -1567,7 +1567,6 @@ class AbstractNode(object):
             # the case.
             self._check_are_parents_stored()
 
-
             # Get default for use_cache if it's not set explicitly.
             if use_cache is None:
                 use_cache = get_use_cache_default()
@@ -1575,7 +1574,9 @@ class AbstractNode(object):
             same_node = self.get_same_node() if use_cache else None
             if same_node is not None:
                 new_node = same_node.copy(include_updatable_attrs=True)
+                inputlinks_cache = self._inputlinks_cache
                 self.__dict__ = new_node.__dict__
+                self._inputlinks_cache = inputlinks_cache
                 # self._repo_folder = new_node._repo_folder
                 self.store(with_transaction=with_transaction, use_cache=False)
                 self.set_extra('cached_from', same_node.uuid)

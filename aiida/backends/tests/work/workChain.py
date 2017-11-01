@@ -391,7 +391,10 @@ class TestFastForwardingWorkChain(TestWorkchain):
             a=Int(1), b=Int(2),
             _fast_forward=True, _return_pid=True
         )
-        self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(
+            self.reference_wc.uuid,
+            load_node(pid).get_extra('cached_from')
+        )
         self.assertEquals(res, self.reference_result)
 
     def test_fastforwarding_notexecuted(self):
@@ -400,7 +403,10 @@ class TestFastForwardingWorkChain(TestWorkchain):
             a=Int(1), b=Int(2),
             _fast_forward=True, _return_pid=True
         )
-        self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(
+            self.reference_wc.uuid,
+            load_node(pid).get_extra('cached_from')
+        )
         self.assertEquals(res, self.reference_result)
 
     def test_fastforwarding_notexecuted_testworks(self):
@@ -423,7 +429,12 @@ class TestFastForwardingWorkChain(TestWorkchain):
             a=Int(1), b=Int(2),
             _fast_forward=True, _return_pid=True
         )
-        self.assertEquals(pid1, pid2)
+        wc1 = load_node(pid1)
+        wc2 = load_node(pid2)
+        self.assertEquals(
+            wc1.get_extra('cached_from', wc1.uuid),
+            wc2.get_extra('cached_from', wc2.uuid)
+        )
         self.assertEquals(res1, res2)
 
     def test_fastforwarding_default(self):
@@ -432,7 +443,10 @@ class TestFastForwardingWorkChain(TestWorkchain):
             a=Int(1),
             _fast_forward=True, _return_pid=True
         )
-        self.assertEquals(pid, self.reference_pid)
+        self.assertEquals(
+            load_node(pid).get_extra('cached_from'),
+            self.reference_wc.uuid
+        )
         self.assertEquals(res, self.reference_result)
 
     def test_fastforwarding_different(self):
@@ -441,7 +455,7 @@ class TestFastForwardingWorkChain(TestWorkchain):
             a=Int(2), b=Int(1),
             _fast_forward=True, _return_pid=True
         )
-        self.assertNotEquals(pid, self.reference_pid)
+        self.assertFalse('cached_from' in load_node(pid).extras())
         self.assertNotEquals(res, self.reference_result)
 
 

@@ -483,7 +483,7 @@ class Node(AbstractNode):
             raise
 
 
-    def copy(self):
+    def copy(self, **kwargs):
         newobject = self.__class__()
         newobject.dbnode.type = self.dbnode.type  # Inherit type
         newobject.dbnode.label = self.dbnode.label  # Inherit label

@@ -435,7 +435,7 @@ class Node(AbstractNode):
         # otherwise I only get the Django Field F object as a result!
         self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
 
-    def copy(self):
+    def copy(self, **kwargs):
         newobject = self.__class__()
         newobject.dbnode.type = self.dbnode.type  # Inherit type
         newobject.dbnode.label = self.dbnode.label  # Inherit label

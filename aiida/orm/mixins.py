@@ -98,11 +98,12 @@ class SealableWithUpdatableAttributes(Sealable):
                 pass
 
     @override
-    def copy(self):
+    def copy(self, include_updatable_attrs=False):
         newobj = super(SealableWithUpdatableAttributes, self).copy()
 
         # Remove the updatable attributes
-        for k, v in self.iter_updatable_attrs():
-            newobj._del_attr(k)
+        if not include_updatable_attrs:
+            for k, v in self.iter_updatable_attrs():
+                newobj._del_attr(k)
 
         return newobj

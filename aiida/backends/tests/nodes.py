@@ -20,7 +20,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.common import caching
-from aiida.orm.code import Code 
+from aiida.orm.code import Code
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
@@ -47,8 +47,7 @@ class TestNodeHashing(AiidaTestCase):
             n2 = self.create_simple_node(*attr)
             n1.store(use_cache=True)
             n2.store(use_cache=True)
-            self.assertEqual(n1.uuid, n2.uuid)
-            self.assertEqual(n1.folder.get_abs_path('.'), n2.folder.get_abs_path('.'))
+            self.assertEqual(n1.uuid, n2.get_extra('cached_from'))
 
     @staticmethod
     def create_folderdata_with_empty_file():
@@ -80,14 +79,14 @@ class TestNodeHashing(AiidaTestCase):
         f2 = self.create_folderdata_with_empty_folder()
         f1.store()
         f2.store(use_cache=True)
-        assert f1.uuid == f2.uuid
+        assert f1.uuid == f2.get_extra('cached_from')
 
     def test_file_same(self):
         f1 = self.create_folderdata_with_empty_file()
         f2 = self.create_folderdata_with_empty_file()
         f1.store()
         f2.store(use_cache=True)
-        assert f1.uuid == f2.uuid
+        assert f1.uuid == f2.get_extra('cached_from')
 
     def test_simple_unequal_nodes(self):
         attributes = [
@@ -100,6 +99,7 @@ class TestNodeHashing(AiidaTestCase):
             n1.store()
             n2.store(use_cache=True)
             self.assertNotEquals(n1.uuid, n2.uuid)
+            self.assertFalse('cached_from' in n2.extras())
 
     def test_unequal_arrays(self):
         import numpy as np
@@ -119,6 +119,7 @@ class TestNodeHashing(AiidaTestCase):
             a2 = create_arraydata(arr2)
             a2.store(use_cache=True)
             self.assertNotEquals(a1.uuid, a2.uuid)
+            self.assertFalse('cached_from' in a2.extras())
 
     def test_updatable_attributes(self):
         """

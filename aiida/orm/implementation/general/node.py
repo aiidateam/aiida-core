@@ -1267,7 +1267,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def copy(self):
+    def copy(self, **kwargs):
         """
         Return a copy of the current object to work with, not stored yet.
 
@@ -1574,9 +1574,11 @@ class AbstractNode(object):
             # Retrieve the cached node.
             same_node = self.get_same_node() if use_cache else None
             if same_node is not None:
-                self._dbnode = same_node.dbnode
-                self._to_be_stored = False
-                self._repo_folder = same_node._repo_folder
+                new_node = same_node.copy(include_updatable_attrs=True)
+                self.__dict__ = new_node.__dict__
+                # self._repo_folder = new_node._repo_folder
+                self.store(with_transaction=with_transaction, use_cache=False)
+                self.set_extra('cached_from', same_node.uuid)
             else:
                 # call implementation-dependent store method
                 self._db_store(with_transaction)

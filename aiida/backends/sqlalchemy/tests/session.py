@@ -209,8 +209,49 @@ class TestSessionSqla(AiidaTestCase):
         wf = WFTestSimpleWithSubWF()
         wf.store()
 
+        print "<======== Report 1 ========>"
+        for obj in sess:
+            print "Session obj ==> ", obj
+        for obj in sess.new:
+            print "[new] Session obj ==> ", obj
+        for obj in sess.dirty:
+            print "[dirty] Session obj ==> ", obj
+        for obj in sess.deleted:
+            print "[deleted] Session obj ==> ", obj
+        for k, v in sess.identity_map:
+            print "Identity map ==> ", k, " - ", v
+
         # Load a new version of the node
         n_reloaded = load_node(n_id)
+
+        # Remove everything from the session
+        sess.expunge_all()
         sess.add(old_dbnode)
 
+        print "<======== Report 2 ========>"
+        for obj in sess:
+            print "Session obj ==> ", obj
+        for obj in sess.new:
+            print "[new] Session obj ==> ", obj
+        for obj in sess.dirty:
+            print "[dirty] Session obj ==> ", obj
+        for obj in sess.deleted:
+            print "[deleted] Session obj ==> ", obj
+        for k, v in sess.identity_map:
+            print "Identity map ==> ", k, " - ", v
+
+
         wf.add_attribute('a', n_reloaded)
+        # wf.add_attribute('a', n)
+
+        print "<======== Report 3 ========>"
+        for obj in sess:
+            print "Session obj ==> ", obj
+        for obj in sess.new:
+            print "[new] Session obj ==> ", obj
+        for obj in sess.dirty:
+            print "[dirty] Session obj ==> ", obj
+        for obj in sess.deleted:
+            print "[deleted] Session obj ==> ", obj
+        for k, v in sess.identity_map:
+            print "Identity map ==> ", k, " - ", v

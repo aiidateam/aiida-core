@@ -252,15 +252,15 @@ class DbWorkflowData(Base):
                 from aiida.backends.sqlalchemy import get_scoped_session
                 sess = get_scoped_session()
                 self.aiida_obj = sess.merge(arg.dbnode, load=True)
-                # self.aiida_obj = arg.dbnode
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()
             else:
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
                 self.save()
-        except:
-            raise ValueError("Cannot set the parameter {}".format(self.name))
+        except Exception as ex:
+            raise ValueError("Cannot set the parameter {}\n".format(self.name)
+                             + ex.message)
 
     def get_value(self):
         if self.value_type == wf_data_value_types.JSON:

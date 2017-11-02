@@ -34,6 +34,7 @@ class Work(VerdiCommandWithSubcommands):
             'report': (self.cli, self.complete_none),
             'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
+            'kill': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):
@@ -159,7 +160,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
-        qb = QueryBuilder(with_dbpath=False)
+        qb = QueryBuilder()
         qb.append(
             cls=WorkCalculation,
             filters={'id': pk},
@@ -259,6 +260,34 @@ def checkpoint(pks):
                 print(str(checkpoint))
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
+
+@work.command('kill', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def kill(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    from aiida.orm import load_node
+    from aiida.orm.calculation.work import WorkCalculation
+
+    nodes = [load_node(pk) for pk in pks]
+    workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
+    running_workchain_nodes = [n for n in nodes if not n.has_finished()]
+
+    num_workchains = len(running_workchain_nodes)
+    if num_workchains > 0:
+        answer = click.prompt(
+            'Are you sure you want to kill {} workflows and all their children? [y/n]'.format(
+                num_workchains
+            )
+        ).lower()
+        if answer == 'y':
+            click.echo('Killing workflows.')
+            for n in running_workchain_nodes:
+                n.kill()
+        else:
+            click.echo('Abort!')
+    else:
+        click.echo('No pks of valid running workchains given.')
 
 
 def _build_query(order_by=None, limit=None, past_days=None):

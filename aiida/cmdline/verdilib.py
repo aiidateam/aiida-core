@@ -26,11 +26,16 @@ import contextlib
 import click
 
 import aiida
+import aiida.cmdline.commands.user
+import aiida.control.user
 from aiida.common.exceptions import (
     AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
+from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.cmdline.commands import verdi
+from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
 # Import here from other files; once imported, it will be found and
 # used as a command-line parameter
@@ -138,6 +143,7 @@ def update_environment(new_argv):
 ########################################################################
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
+
 
 class CompletionCommand(VerdiCommand):
     """
@@ -344,9 +350,13 @@ class Setup(VerdiCommand):
     """
 
     def run(self, *args):
-        ctx = _setup_cmd.make_context('setup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             _setup_cmd.invoke(ctx)
+
+    @staticmethod
+    def _ctx(args, info_name='verdi setup', **kwargs):
+        return _setup_cmd.make_context(info_name, list(args), **kwargs)
 
     def complete(self, subargs_idx, subargs):
         """
@@ -358,26 +368,27 @@ class Setup(VerdiCommand):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-@click.command('setup', context_settings=CONTEXT_SETTINGS)
+@verdi.command('setup', context_settings=CONTEXT_SETTINGS)
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),
-              help='ignored unless --non-interactive is given')
-@click.option('--email', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_host', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_port', type=int, help='ignored unless --non-interactive is given')
-@click.option('--db_name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_user', type=str, help='ignored unless --non-interactive is given')
-@click.option('--db_pass', type=str, help='ignored unless --non-interactive is given')
-@click.option('--first-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--last-name', type=str, help='ignored unless --non-interactive is given')
-@click.option('--institution', type=str, help='ignored unless --non-interactive is given')
-@click.option('--no-password', is_flag=True, help='ignored unless --non-interactive is given')
-@click.option('--repo', type=str, help='ignored unless --non-interactive is given')
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),)
+@click.option('--email', type=str)
+@click.option('--db_host', type=str)
+@click.option('--db_port', type=int)
+@click.option('--db_name', type=str)
+@click.option('--db_user', type=str)
+@click.option('--db_pass', type=str)
+@click.option('--first-name', type=str)
+@click.option('--last-name', type=str)
+@click.option('--institution', type=str)
+@click.option('--no-password', is_flag=True)
+@click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
                first_name, last_name, institution, no_password, repo):
-    '''verdi setup command, forward cmdline arguments to the setup function.'''
+    '''verdi setup command, forward cmdline arguments to the setup function.
+
+    Note: command line options are IGNORED unless --non-interactive is given.'''
     kwargs = dict(
         profile=profile,
         only_config=only_config,
@@ -539,7 +550,6 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
             # Perform the needed migration quietly
             check_schema_version(force_migration=True)
-
             set_backend_type(BACKEND_SQLA)
 
         else:
@@ -581,9 +591,9 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             user.configure.main(args=[email])
         else:
             # or don't ask
-            user.do_configure(kwargs['email'], kwargs.get('first_name'),
-                              kwargs.get('last_name'), kwargs.get('institution'),
-                              True)
+            aiida.cmdline.commands.user.do_configure(kwargs['email'], kwargs.get('first_name'),
+                                                       kwargs.get('last_name'), kwargs.get('institution'),
+                                                       True)
 
     print "Setup finished."
 
@@ -592,349 +602,171 @@ class Quicksetup(VerdiCommand):
     '''
     Quick setup for the most common usecase (1 user, 1 machine).
 
-    Uses click for options. Creates a database user 'aiida_qs_<username>' with random password if it doesn't exist.
-    Creates a 'aiidadb_qs_<username>' database (prompts to use or change the name if already exists).
-    Makes sure not to overwrite existing databases or profiles without prompting for confirmation.
+    Creates a database user 'aiida_qs_<login-name>' with random password (if it
+    doesn't exist). Creates a database '<profile>_<username>' (if it exists,
+    prompts user to use or change the name).
     '''
     from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
-    _create_user_command = 'CREATE USER "{}" WITH PASSWORD \'{}\''
-    _create_db_command = 'CREATE DATABASE "{}" OWNER "{}"'
-    _grant_priv_command = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
-    _get_users_command = "SELECT usename FROM pg_user WHERE usename='{}'"
-
     def run(self, *args):
-        ctx = self._quicksetup_cmd.make_context('quicksetup', list(args))
+        ctx = self._ctx(args)
         with ctx:
             ctx.obj = self
-            self._quicksetup_cmd.invoke(ctx)
+            quicksetup.invoke(ctx)
 
-    def _get_pg_access(self):
-        '''
-        find out how postgres can be accessed.
+    @staticmethod
+    def _ctx(args, info_name='verdi quicksetup', **kwargs):
+        return quicksetup.make_context(info_name, list(args), **kwargs)
 
-        Depending on how postgres is set up, psycopg2 can be used to create dbs and db users, otherwise a subprocess has to be used that executes psql as an os user with the right permissions.
-        :return: (method, info) where method is a method that executes psql commandlines and info is a dict with keyword arguments to be used with method.
-        '''
-        # find out if we run as a postgres superuser or can connect as postgres
-        # This will work on OSX in some setups but not in the default Debian one
-        can_connect = False
-        can_subcmd = None
-        dbinfo = {'user': None, 'database': 'template1'}
-        for pg_user in [None, 'postgres']:
-            if self._try_connect(**dbinfo):
-                can_connect = True
-                dbinfo['user'] = pg_user
-                break
+@verdi.command('quicksetup', context_settings=CONTEXT_SETTINGS)
+@click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
+@click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
+                help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
+@click.option('--first-name', prompt='First Name', type=str)
+@click.option('--last-name', prompt='Last Name', type=str)
+@click.option('--institution', prompt='Institution', type=str)
+@click.option('--backend', type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]), default=BACKEND_DJANGO)
+@click.option('--db-port', type=int)
+@click.option('--db-user', type=str)
+@click.option('--db-user-pw', type=str)
+@click.option('--db-name', type=str)
+@click.option('--repo', type=str)
+@click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
+@click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
+@click.pass_obj
+def quicksetup(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
+                    repo, set_default, non_interactive):
+    '''Set up a sane aiida configuration with as little interaction as possible.'''
+    from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
+    create_base_dirs()
 
-        # This will work for the default Debian postgres setup
-        if not can_connect:
-            if self._try_subcmd(user='postgres'):
-                can_subcmd = True
-                dbinfo['user'] = 'postgres'
-            else:
-                can_subcmd = False
+    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
-        # This is to allow for any other setup
-        if not can_connect and not can_subcmd:
-            click.echo(
-                'Detected no known postgres setup, some information is needed to create the aiida database and grant aiida access to it.')
-            click.echo('If you feel unsure about the following parameters, first check if postgresql is installed.')
-            click.echo('If postgresql is not installed please exit and install it, then run verdi quicksetup again.')
-            click.echo(
-                'If postgresql is installed, please ask your system manager to provide you with the following parameters:')
-            dbinfo = self._prompt_db_info()
+    # access postgres
+    postgres = Postgres(port=db_port, interactive=bool(not non_interactive), quiet=False)
+    postgres.set_setup_fail_callback(prompt_db_info)
+    success = postgres.determine_setup()
+    if not success:
+        sys.exit(1)
 
-        pg_method = None
-        if can_connect:
-            pg_method = self._pg_execute_psyco
-        elif can_subcmd:
-            pg_method = self._pg_execute_sh
+    # default database name is <profile>_<login-name>
+    # this ensures that for profiles named test_... the database will also
+    # be named test_...
+    import getpass
+    osuser = getpass.getuser()
+    dbname = db_name or profile + '_' + osuser
 
-        result = {
-            'method': pg_method,
-            'dbinfo': dbinfo,
-        }
-        return result
+    # default database user name is aiida_qs_<login-name>
+    # default password is random
+    dbuser = db_user or 'aiida_qs_' + osuser
+    from aiida.common.setup import generate_random_secret_key
+    dbpass = db_user_pw or generate_random_secret_key()
 
-    def _prompt_db_info(self):
-        '''prompt interactively for postgres database connecting details.'''
-        access = False
-        while not access:
-            dbinfo = {}
-            dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
-            dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
-            dbinfo['database'] = click.prompt('template', default='template1', type=str)
-            dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
-            click.echo('')
-            click.echo('trying to access postgres..')
-            if self._try_connect(**dbinfo):
-                access = True
-            else:
-                dbinfo['password'] = click.prompt('postgres password of {}'.format(dbinfo['user']), hide_input=True,
-                                                  type=str)
-                if self._try_connect(**dbinfo):
-                    access = True
-                else:
-                    click.echo(
-                        'you may get prompted for a super user password and again for your postgres super user password')
-                    if self._try_subcmd(**dbinfo):
-                        access = True
-                    else:
-                        click.echo('Unable to connect to postgres, please try again')
-        return dbinfo
+    # check if there is a profile that contains the db user already
+    # and if yes, take the db user password from there
+    # This is ok because a user can only see his own config files
+    from aiida.common.setup import (set_default_profile, get_or_create_config)
+    confs = get_or_create_config()
+    profs = confs.get('profiles', {})
+    for v in profs.itervalues():
+        if v.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
+            dbpass = v.get('AIIDADB_PASS')
+            print 'using found password for {}'.format(dbuser)
+            break
 
-    @click.command('quicksetup', context_settings=CONTEXT_SETTINGS)
-    @click.option('--email', prompt='Email Address (will be used to identify your data when sharing)', type=str,
-                  help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
-    @click.option('--first-name', prompt='First Name', type=str)
-    @click.option('--last-name', prompt='Last Name', type=str)
-    @click.option('--institution', prompt='Institution', type=str)
-    @click.option('--backend', type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]), default=BACKEND_DJANGO)
-    @click.option('--db-port', type=str)
-    @click.option('--db-user', type=str)
-    @click.option('--db-user-pw', type=str)
-    @click.option('--db-name', type=str)
-    @click.option('--profile', type=str)
-    @click.option('--repo', type=str)
-    @click.pass_obj
-    def _quicksetup_cmd(self, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                        profile, repo):
-        '''setup a sane aiida configuration with as little interaction as possible.'''
-        from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
-        create_base_dirs()
-
-        aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-
-        # access postgres
-        pg_info = self._get_pg_access()
-        pg_execute = pg_info['method']
-        dbinfo = pg_info['dbinfo']
-
-        # check if a database setup already exists
-        # otherwise setup the database user aiida
-        # setup the database aiida_qs_<username>
-        from getpass import getuser
-        from aiida.common.setup import generate_random_secret_key
-        osuser = getuser()
-        dbuser = db_user or 'aiida_qs_' + osuser
-        dbpass = db_user_pw or generate_random_secret_key()
-        dbname = db_name or 'aiidadb_qs_' + osuser
-
-        # check if there is a profile that contains the db user already
-        # and if yes, take the db user password from there
-        # This is ok because a user can only see his own config files
-        from aiida.common.setup import (set_default_profile, get_or_create_config)
-        confs = get_or_create_config()
-        profs = confs.get('profiles', {})
-        for v in profs.itervalues():
-            if v.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
-                dbpass = v.get('AIIDADB_PASS')
-                print 'using found password for {}'.format(dbuser)
-                break
-
-        try:
-            create = True
-            if not self._dbuser_exists(dbuser, pg_execute, **dbinfo):
-                self._create_dbuser(dbuser, dbpass, pg_execute, **dbinfo)
-            else:
-                dbname, create = self._check_db_name(dbname, pg_execute, **dbinfo)
-            if create:
-                self._create_db(dbuser, dbname, pg_execute, **dbinfo)
-        except Exception as e:
-            click.echo('\n'.join([
-                'Oops! Something went wrong while creating the database for you.',
-                'You may continue with the quicksetup, however:',
-                'For aiida to work correctly you will have to do that yourself as follows.',
-                'Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):',
-                '',
-                '\t$ psql template1',
-                '\t==> ' + self._create_user_command.format(dbuser, dbpass),
-                '\t==> ' + self._create_db_command.format(dbname, dbuser),
-                '\t==> ' + self._grant_priv_command.format(dbname, dbuser),
-                '',
-                'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.',
-                '']))
-            raise e
-
-        # create a profile, by default 'quicksetup' and prompt the user if
-        # already exists
-        profile_name = profile or 'quicksetup'
-        write_profile = False
-        confs = get_or_create_config()
-        profile_name = profile or 'quicksetup'
-        write_profile = False
-        while not write_profile:
-            if profile_name in confs.get('profiles', {}):
-                if click.confirm('overwrite existing profile {}?'.format(profile_name)):
-                    write_profile = True
-                else:
-                    profile_name = click.prompt('new profile name', type=str)
-            else:
-                write_profile = True
-
-        dbhost = dbinfo.get('host', 'localhost')
-        dbport = dbinfo.get('port', '5432')
-
-        from os.path import isabs
-        repo = repo or 'repository-{}/'.format(profile_name)
-        if not isabs(repo):
-            repo = os.path.join(aiida_dir, repo)
-
-        setup_args = {
-            'backend': backend,
-            'email': email,
-            'db_host': dbhost,
-            'db_port': dbport,
-            'db_name': dbname,
-            'db_user': dbuser,
-            'db_pass': dbpass,
-            'repo': repo,
-            'first_name': first_name,
-            'last_name': last_name,
-            'institution': institution,
-            'force_overwrite': write_profile,
-        }
-        setup(profile_name, only_config=False, non_interactive=True, **setup_args)
-
-        # Loop over all valid processes and check if a default profile is set for them
-        # If not set the newly created profile as default, otherwise prompt whether to override
-        from aiida.cmdline.commands.profile import valid_processes
-
-        default_profiles = confs.get('default_profiles', {})
-
-        for process in valid_processes:
-
-            default_profile = default_profiles.get(process, '')
-            default_override = False
-
-            if default_profile:
-                default_override = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                 "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                 .format(process, default_profile, profile_name))
-
-            if not default_profile or default_override:
-                set_default_profile(process, profile_name, force_rewrite=True)
-
-    def _try_connect(self, **kwargs):
-        '''
-        try to start a psycopg2 connection.
-
-        :return: True if successful, False otherwise
-        '''
-        from psycopg2 import connect
-        success = False
-        try:
-            connect(**kwargs)
-            success = True
-        except:
-            pass
-        return success
-
-    def _try_subcmd(self, **kwargs):
-        '''
-        try to run psql in a subprocess.
-
-        :return: True if successful, False otherwise
-        '''
-        success = False
-        try:
-            self._pg_execute_sh('\q', **kwargs)
-            success = True
-        except:
-            pass
-        return success
-
-    def _create_dbuser(self, dbuser, dbpass, method=None, **kwargs):
-        '''
-        create a database user in postgres
-
-        :param dbuser: Name of the user to be created.
-        :param dbpass: Password the user should be given.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._create_user_command.format(dbuser, dbpass), **kwargs)
-
-    def _create_db(self, dbuser, dbname, method=None, **kwargs):
-        '''create a database in postgres
-
-        :param dbuser: Name of the user which should own the db.
-        :param dbname: Name of the database.
-        :param method: callable with signature method(psql_command, **connection_info)
-            where connection_info contains keys for psycopg2.connect.
-        :param kwargs: connection info as for psycopg2.connect.
-        '''
-        method(self._create_db_command.format(dbname, dbuser), **kwargs)
-        method(self._grant_priv_command.format(dbname, dbuser), **kwargs)
-
-    def _pg_execute_psyco(self, command, **kwargs):
-        '''
-        executes a postgres commandline through psycopg2
-
-        :param command: A psql command line as a str
-        :param kwargs: will be forwarded to psycopg2.connect
-        '''
-        from psycopg2 import connect, ProgrammingError
-        conn = connect(**kwargs)
-        conn.autocommit = True
-        output = None
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(command)
-                try:
-                    output = cur.fetchall()
-                except ProgrammingError:
-                    pass
-        return output
-
-    def _pg_execute_sh(self, command, user='postgres', **kwargs):
-        '''
-        executes a postgres command line as another system user in a subprocess.
-
-        :param command: A psql command line as a str
-        :param user: Name of a system user with postgres permissions
-        :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
-        '''
-        options = ''
-        database = kwargs.pop('database', None)
-        if database:
-            options += '-d {}'.format(database)
-        kwargs.pop('password', None)
-        host = kwargs.pop('host', None)
-        if host:
-            options += '-h {}'.format(host)
-        port = kwargs.pop('port', None)
-        if port:
-            options += '-p {}'.format(port)
-        try:
-            import subprocess32 as sp
-        except ImportError:
-            import subprocess as sp
-        from aiida.common.utils import escape_for_bash
-        result = sp.check_output(
-            ['sudo', 'su', user, '-c', 'psql {options} -tc {}'.format(escape_for_bash(command), options=options)],
-            **kwargs)
-        if isinstance(result, str):
-            result = result.strip().split('\n')
-            result = [i for i in result if i]
-        return result
-
-    def _dbuser_exists(self, dbuser, method, **kwargs):
-        '''return True if postgres user with name dbuser exists, False otherwise.'''
-        return bool(method(self._get_users_command.format(dbuser), **kwargs))
-
-    def _check_db_name(self, dbname, method=None, **kwargs):
-        '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
+    try:
         create = True
-        while create and method("SELECT datname FROM pg_database WHERE datname='{}'".format(dbname), **kwargs):
-            click.echo('database {} already exists!'.format(dbname))
-            if not click.confirm('Use it (make sure it is not used by another profile)?'):
-                dbname = click.prompt('new name', type=str, default=dbname)
+        if not postgres.dbuser_exists(dbuser):
+            postgres.create_dbuser(dbuser, dbpass)
+        else:
+            dbname, create = _check_db_name(dbname, postgres)
+        if create:
+            postgres.create_db(dbuser, dbname)
+    except Exception as e:
+        click.echo('\n'.join([
+            'Oops! Something went wrong while creating the database for you.',
+            'You may continue with the quicksetup, however:',
+            'For aiida to work correctly you will have to do that yourself as follows.',
+            manual_setup_instructions(dbuser=dbuser, dbname=dbname),
+            '',
+            'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.',
+            ''
+        ]))
+        raise e
+
+    # create a profile, by default 'quicksetup' and prompt the user if
+    # already exists
+    confs = get_or_create_config()
+    profile_name = profile or 'quicksetup'
+    write_profile = False
+    while not write_profile:
+        if profile_name in confs.get('profiles', {}):
+            if click.confirm('overwrite existing profile {}?'.format(profile_name)):
+                write_profile = True
             else:
-                create = False
-        return dbname, create
+                profile_name = click.prompt('new profile name', type=str)
+        else:
+            write_profile = True
+
+    dbhost = postgres.dbinfo.get('host', 'localhost')
+    dbport = postgres.dbinfo.get('port', '5432')
+
+    from os.path import isabs
+    repo = repo or 'repository-{}/'.format(profile_name)
+    if not isabs(repo):
+        repo = os.path.join(aiida_dir, repo)
+
+    setup_args = {
+        'backend': backend,
+        'email': email,
+        'db_host': dbhost,
+        'db_port': dbport,
+        'db_name': dbname,
+        'db_user': dbuser,
+        'db_pass': dbpass,
+        'repo': repo,
+        'first_name': first_name,
+        'last_name': last_name,
+        'institution': institution,
+        'force_overwrite': write_profile,
+    }
+    setup(profile_name, only_config=False, non_interactive=True, **setup_args)
+
+    # Loop over all valid processes and check if a default profile is set for them
+    # If not set the newly created profile as default, otherwise prompt whether to override
+    from aiida.cmdline.commands.profile import valid_processes
+
+    default_profiles = confs.get('default_profiles', {})
+
+    for process in valid_processes:
+
+        # if the user specifies whether to override that's fine
+        if set_default in [True, False]:
+            _set_default = set_default
+        # otherwise we may need to ask
+        else:
+            default_profile = default_profiles.get(process, '')
+            if default_profile:
+                _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
+                                                    "do you want to set the newly created '{}' as the new default? (can be reverted later)"
+                                                    .format(process, default_profile, profile_name))
+            # if there are no other default profiles, we don't need to ask
+            else:
+                _set_default = True
+
+        if _set_default:
+            set_default_profile(process, profile_name, force_rewrite=True)
+
+def _check_db_name(dbname, postgres):
+    '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
+    create = True
+    while create and postgres.db_exists(dbname):
+        click.echo('database {} already exists!'.format(dbname))
+        if not click.confirm('Use it (make sure it is not used by another profile)?'):
+            dbname = click.prompt('new name', type=str, default=dbname)
+        else:
+            create = False
+    return dbname, create
 
 
 class Run(VerdiCommand):
@@ -1054,6 +886,7 @@ class Run(VerdiCommand):
 ########################################################################
 # From here on: utility functions
 
+
 def get_listparams():
     """
     Return a string with the list of parameters, to be printed
@@ -1119,12 +952,14 @@ def exec_from_cmdline(argv):
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands = {v.get_command_name(): v for v in
-                     verdilib_namespace.itervalues()
-                     if inspect.isclass(v) and not v == VerdiCommand and
-                     issubclass(v, VerdiCommand)
-                     and not v.__name__.startswith('_')
-                     and not v._abstract}
+    list_commands = {
+        verdi_subcmd.get_command_name(): verdi_subcmd
+        for verdi_subcmd in verdilib_namespace.itervalues()
+        if inspect.isclass(verdi_subcmd) and not verdi_subcmd == VerdiCommand
+        and issubclass(verdi_subcmd, VerdiCommand)
+        and not verdi_subcmd.__name__.startswith('_')
+        and not verdi_subcmd._abstract
+    }
 
     # Retrieve the list of docstrings, managing correctly the
     # case of empty docstrings. Each value is a list of lines
@@ -1133,10 +968,28 @@ def exec_from_cmdline(argv):
 
     short_doc = {}
     long_doc = {}
-    for k, v in raw_docstrings.iteritems():
+    for k, cmd in list_commands.iteritems():
         if k in hidden_commands:
             continue
-        lines = [l.strip() for l in v]
+
+        # assemble help string
+        # first from python docstring
+        if cmd.__doc__:
+            help_msg = cmd.__doc__
+        else:
+            help_msg = ""
+
+        # if command has parser written with the 'click' module
+        # we also add a dynamic help string documenting the options
+        # Note: to enable this for a command, simply add a static
+        # _ctx method (see e.g. Quicksetup)
+        if hasattr(cmd, '_ctx'):
+            help_msg += "\n"
+            # resilient_parsing suppresses interactive prompts
+            help_msg += cmd._ctx(args=[], resilient_parsing=True).get_help()
+        help_msg = help_msg.split('\n')  # need list of lines
+
+        lines = [l.strip() for l in help_msg]
         empty_lines = [bool(l) for l in lines]
         try:
             first_idx = empty_lines.index(True)  # The first non-empty line
@@ -1152,7 +1005,7 @@ def exec_from_cmdline(argv):
 
     try:
         profile, command_position = parse_profile(argv)
-    except ProfileParsingException as e:
+    except ProfileParsingException as err:
         print_usage(execname)
         sys.exit(1)
 
@@ -1176,12 +1029,12 @@ def exec_from_cmdline(argv):
         else:
             print >> sys.stderr, ("{}: '{}' is not a valid command. "
                                   "See '{} help' for more help.".format(
-                execname, command, execname))
+                                      execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
-    except ProfileConfigurationError as e:
+    except ProfileConfigurationError as err:
         print >> sys.stderr, "The profile specified is not valid!"
-        print >> sys.stderr, e.message
+        print >> sys.stderr, err.message
         sys.exit(1)
 
 

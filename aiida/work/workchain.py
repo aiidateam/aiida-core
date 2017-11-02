@@ -132,7 +132,6 @@ class WorkChain(Process):
         self._stepper = None
         self._barriers = []
         self._intersteps = []
-        self._aborted = False
 
     @property
     def ctx(self):
@@ -221,7 +220,25 @@ class WorkChain(Process):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
+    @property
+    def _do_abort(self):
+        return self.calc.get_attr(self.calc.DO_ABORT_KEY, False)
+
+    @property
+    def _aborted(self):
+        return self.calc.get_attr(self.calc.ABORTED_KEY, False)
+
+    @_aborted.setter
+    def _aborted(self, value):
+        # One is not allowed to unabort an aborted WorkChain
+        if self._aborted == True and value == False:
+            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
+            return
+
+        self.calc._set_attr(self.calc.ABORTED_KEY, value)
+
     def _do_step(self, wait_on=None):
+        self._handle_do_abort()
         if self._aborted:
             return
 
@@ -236,6 +253,7 @@ class WorkChain(Process):
             finished, retval = True, None
 
         # Could have aborted during the step
+        self._handle_do_abort()
         if self._aborted:
             return
 
@@ -287,6 +305,16 @@ class WorkChain(Process):
 
             self._aborted = saved_state[self._ABORTED]
 
+    def _handle_do_abort(self):
+        """
+        Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
+        attribute has been set, and if so call self.abort and remove the DO_ABORT_KEY attribute 
+        """
+        do_abort = self._do_abort
+        if do_abort:
+            self.abort(do_abort)
+            self.calc._del_attr(self.calc.DO_ABORT_KEY)
+
     def abort_nowait(self, msg=None):
         """
         Abort the workchain at the next state transition without waiting
@@ -297,6 +325,7 @@ class WorkChain(Process):
         """
         self.report("Aborting: {}".format(msg))
         self._aborted = True
+        self.stop()
 
     def abort(self, msg=None, timeout=None):
         """
@@ -311,6 +340,7 @@ class WorkChain(Process):
         """
         self.report("Aborting: {}".format(msg))
         self._aborted = True
+        self.stop()
 
 def ToContext(**kwargs):
     """

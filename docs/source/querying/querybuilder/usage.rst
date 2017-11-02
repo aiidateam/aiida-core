@@ -201,6 +201,59 @@ This is a list of all implemented operators:
 |            | expressions|                                     |                                  |
 +------------+------------+-------------------------------------+----------------------------------+
 
+There are also some advanced operators:
+
+.. table::
+    :widths: auto
+
+    +------------+-------------+------------------------------------------+----------------------------------+
+    |**Operator**|**Datatype** |  **Example**                             | Explanation                      |
+    +============+=============+==========================================+==================================+
+    | has_key    | dicts       | | 'attributes.mykey':{'has_key': 'foo'}  | Check that a dictionary          |
+    |            |             | | 'extras':{'has_key': 'my_extra'}       | (typically stored in the         |
+    |            |             |                                          | attributes or in the extras) has |
+    |            |             |                                          | a given key. This can also be    |
+    |            |             |                                          | used to check if a given         |
+    |            |             |                                          | attribute or extra exists.       |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | of_type    |    any      | | 'attributes.mykey':{'of_type': 'bool'} | Check that an attribute or an    |
+    |            |             |                                          | extra is of a given type. Valid  |
+    |            |             |                                          | types are: ``object`` (meaning a |
+    |            |             |                                          | dictionary), ``array`` (meaning a|
+    |            |             |                                          | list), ``string``, ``number``    |
+    |            |             |                                          | (both for integers and floats),  |
+    |            |             |                                          | ``boolean`` or ``null``)         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | of_length  |    lists    | | 'attributes.mylist': {'of_length': 4}  | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a given length   |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | shorter    |    lists    | | 'attributes.mylist': {'shorter': 4}    | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a length shorter |
+    |            |             |                                          | than the specified value         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | longer     |    lists    | | 'attributes.mylist': {'longer': 4}     | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) has a length longer  |
+    |            |             |                                          | than the specified value         |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+    | contains   |    lists    | | 'attributes.mykey': {'contains': 'a'}  | Check that a list (typically     |
+    |            |             |                                          | stored in the attributes or in   |
+    |            |             |                                          | the extras) contains a specific  |
+    |            |             |                                          | element or value                 |
+    |            |             |                                          | **(currently implemented only    |
+    |            |             |                                          | in the SQLA backend)**           |
+    +------------+-------------+------------------------------------------+----------------------------------+
+
 
 This showed you how to 'filter' by properties of a node.
 So far we can do that for a single a single node in the database.
@@ -480,9 +533,9 @@ That works the same for the extras.
 .. note::
     Comparisons in the attributes (extras) are also implicitly done by type.
 
-Let's do a last example. You are familiar with the :ref:`sec.quantumespresso` tutorial?
-Great, because this will be
-our use case here.
+Let's do a last example. You are familiar with the Quantum Espresso PWscf tutorial?
+Great, because this will be our use case here. (If not, you can find it on the
+`documentation of the aiida-quantumespresso package <http://aiida-quantumespresso.readthedocs.io/en/latest/user_guide/get_started/examples/pw_tutorial.html>`_.
 We will query for calculations that were done on a certain structure (*mystructure*),
 that fulfill certain requirements, such as a cutoff above 30.0.
 In our case, we have a structure (an instance of StructureData) and an instance

@@ -133,9 +133,11 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             Process pickles in.  If None they will be deleted on fail.
         :type failed_directory: str
         """
-        self._running_directory = running_directory
-        self._finished_directory = finished_directory
-        self._failed_directory = failed_directory
+        super(Persistence, self).__init__(
+            running_directory=running_directory,
+            finished_directory=finished_directory,
+            failed_directory=failed_directory
+        )
         self._filelocks = {}
 
     @property
@@ -168,7 +170,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                 continue
             except BaseException:
                 LOGGER.warning("Failed to load checkpoint '{}' (deleting)\n{}"
-                    .format(f, traceback.format_exc()))
+                               .format(f, traceback.format_exc()))
 
                 try:
                     os.remove(f)
@@ -289,15 +291,16 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     @override
     def on_process_finish(self, process):
         self._save_noraise(process)
-        try:
-            self._release_process(process.pid, self.finished_directory)
-        except ValueError:
-            pass
 
     @override
     def on_process_destroy(self, process):
-        self.unpersist_process(process)
-
+        if process.calc.has_finished():
+            try:
+                self._release_process(process.pid, self.finished_directory)
+            except ValueError:
+                pass
+        else:
+            self.unpersist_process(process)
 
     ############################################################################
 
@@ -305,7 +308,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     @override
     def on_monitored_process_failed(self, pid):
         try:
-            self._release_process(process.pid, self.failed_directory)
+            self._release_process(pid, self.failed_directory)
         except ValueError:
             pass
 
@@ -313,7 +316,8 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
 
     @override
     def on_monitored_process_created(self, process):
-        self.persist_process(process)
+        if self._auto_persist and process.pid not in self._filelocks:
+            self.persist_process(process)
 
     @staticmethod
     def _ensure_directory(dir_path):
@@ -332,7 +336,10 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         # Get the current location of the pickle
         pickle_path = self.get_running_path(pid)
-        lock = self._filelocks.pop(pid)
+        try:
+            lock = self._filelocks.pop(pid)
+        except KeyError:
+            raise ValueError("Unknown process with pid '{}'".format(pid))
 
         try:
             if path.isfile(pickle_path):

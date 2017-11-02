@@ -212,11 +212,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'aiida.backends.djsite.db',
 ]
-try:
-    import kombu
-    INSTALLED_APPS.append('kombu.transport.django')
-except ImportError:
-    pass
 
 # Automatic logging configuration for Django is disabled here
 # and done for all backends in aiida/__init__.py

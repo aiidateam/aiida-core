@@ -249,7 +249,10 @@ class DbWorkflowData(Base):
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
                 if arg.pk is None:
                     raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
-                self.aiida_obj = arg.dbnode
+                from aiida.backends.sqlalchemy import get_scoped_session
+                sess = get_scoped_session()
+                self.aiida_obj = sess.merge(arg.dbnode, load=True)
+                # self.aiida_obj = arg.dbnode
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()
             else:

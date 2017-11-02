@@ -20,7 +20,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import get_configured_user_email
 
 
-
 class TestSessionSqla(AiidaTestCase):
     """
     The following tests check that the session works as expected in some
@@ -181,3 +180,37 @@ class TestSessionSqla(AiidaTestCase):
         code.store()
 
         self.drop_connection()
+
+
+    def test_session_wfdata(self):
+        """
+        This test checks
+        :return:
+        """
+        from aiida.orm.node import Node
+        from aiida.workflows.test import WFTestSimpleWithSubWF
+        from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm.utils import load_node
+
+        # Create a node and store it
+        n = Node()
+        n.store()
+
+        # Keep some useful information
+        n_id = n.dbnode.id
+        old_dbnode = n.dbnode
+
+        # Get the session
+        sess = get_scoped_session()
+        # Remove everything from the session
+        sess.expunge_all()
+
+        # Create a workflow and store it
+        wf = WFTestSimpleWithSubWF()
+        wf.store()
+
+        # Load a new version of the node
+        n_reloaded = load_node(n_id)
+        sess.add(old_dbnode)
+
+        wf.add_attribute('a', n_reloaded)

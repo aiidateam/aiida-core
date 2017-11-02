@@ -68,6 +68,7 @@ def do_list(past_days, all_states, limit):
     from aiida.orm.calculation.work import WorkCalculation
 
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+    _ABORTED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.ABORTED_KEY)
     _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
     _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
@@ -81,17 +82,22 @@ def do_list(past_days, all_states, limit):
             max_num_fields=1
         )
 
-        if _FINISHED_ATTRIBUTE_KEY in calculation and calculation[_FINISHED_ATTRIBUTE_KEY]:
-            state = 'FINISHED'
-        elif _FAILED_ATTRIBUTE_KEY in calculation and calculation[_FAILED_ATTRIBUTE_KEY]:
-            state = 'FAILED'
-        else:
-            state = 'UNKNOWN'
-
         if _SEALED_ATTRIBUTE_KEY in calculation and calculation[_SEALED_ATTRIBUTE_KEY]:
             sealed = True
         else:
             sealed = False
+
+        if _FINISHED_ATTRIBUTE_KEY in calculation and calculation[_FINISHED_ATTRIBUTE_KEY]:
+            state = 'Finished'
+        elif _FAILED_ATTRIBUTE_KEY in calculation and calculation[_FAILED_ATTRIBUTE_KEY]:
+            state = 'Failed'
+        elif _ABORTED_ATTRIBUTE_KEY in calculation and calculation[_ABORTED_ATTRIBUTE_KEY]:
+            state = 'Aborted'
+        elif sealed:
+            # If it is not in terminal state but sealed, we have an inconsistent state
+            state = 'Unknown'
+        else:
+            state = 'Running'
 
         # By default we only display unsealed entries, unless all_states flag is set
         if sealed and not all_states:
@@ -298,12 +304,13 @@ def _build_query(order_by=None, limit=None, past_days=None):
     from aiida.orm.calculation.work import WorkCalculation
 
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+    _ABORTED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.ABORTED_KEY)
     _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
     _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
     calculation_projections = [
         'id', 'ctime', 'attributes._process_label',
-        _SEALED_ATTRIBUTE_KEY, _FAILED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY
+        _SEALED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FAILED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY
     ]
 
     # Define filters

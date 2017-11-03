@@ -217,7 +217,7 @@ class DbWorkflowData(Base):
 
     id = Column(Integer, primary_key=True)
 
-    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'))
+    parent_id = Column(Integer, ForeignKey('db_dbworkflow.id'), index=True)
 
     name = Column(String(255))  # Blank = false
     time = Column(DateTime(timezone=True), default=timezone.now)
@@ -225,7 +225,8 @@ class DbWorkflowData(Base):
     value_type = Column(String(255), default=wf_data_value_types.NONE)  # blank = false
     json_value = Column(Text)
 
-    aiida_obj_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=True)
+    aiida_obj_id = Column(Integer, ForeignKey('db_dbnode.id'), nullable=True,
+                          index=True)
     aiida_obj = relationship("DbNode")
 
     __table_args__ = (

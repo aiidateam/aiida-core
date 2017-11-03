@@ -10,6 +10,8 @@
 import sys
 import os
 import subprocess
+import gzip
+import shutil
 from datetime import timedelta, datetime
 from aiida.common import aiidalogger
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
@@ -67,6 +69,7 @@ class Daemon(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
+        import aiida
         from aiida.common import setup
 
         self.valid_subcommands = {
@@ -78,21 +81,16 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
-        self.conffile_full_path = os.path.expanduser(os.path.join(
-                setup.AIIDA_CONFIG_FOLDER,
-                setup.DAEMON_SUBDIR,
-                setup.DAEMON_CONF_FILE
-            ))
+        self.logfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log")
+        self.pidfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.pid")
+        self.workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
+        self.celerybeat_schedule = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule")
 
     def _get_pid_full_path(self):
         """
         Return the full path of the celery.pid file.
         """
-        from aiida.common import setup
-
-        return os.path.normpath(os.path.expanduser(
-            os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                         setup.DAEMON_SUBDIR, "celery.pid")))
+        return os.path.normpath(os.path.expanduser(self.pidfile))
 
     def get_daemon_pid(self):
         """
@@ -151,33 +149,25 @@ class Daemon(VerdiCommandWithSubcommands):
         from aiida.orm.lock import LockManager
         LockManager().clear_all()
 
-        import gzip
-        import shutil
-        from aiida.common import setup
-        import aiida  # ok, this should definitely change
-
         # rotate an existing log file out of the way
-        daemon_logfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log")
-        if os.path.isfile(daemon_logfile):
-            with open(daemon_logfile, 'rb') as curr_log_fh:
-                with gzip.open(daemon_logfile + '.0.gz', 'wb') as old_log_fh:
+        if os.path.isfile(self.logfile):
+            with open(self.logfile, 'rb') as curr_log_fh:
+                with gzip.open(self.logfile + '.-1.gz', 'wb') as old_log_fh:
                     shutil.copyfileobj(curr_log_fh, old_log_fh)
-            os.remove(daemon_logfile)
+            os.remove(self.logfile)
 
-        daemon_workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
-
-        print "Starting AiiDA Daemon (log file: {})...".format(daemon_logfile)
+        print "Starting AiiDA Daemon (log file: {})...".format(self.logfile)
         currenv = _get_env_with_venv_bin()
         process = subprocess.Popen([
                 "celery",  "worker",
                 "--app", "tasks",
                 "--loglevel", "INFO",
                 "--beat",
-                "--schedule", os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule"),
-                "--logfile", daemon_logfile,
+                "--schedule", self.celerybeat_schedule,
+                "--logfile", self.logfile,
                 "--pidfile", self._get_pid_full_path(),
                 ],
-            cwd=daemon_workdir,
+            cwd=self.workdir,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -359,12 +349,11 @@ class Daemon(VerdiCommandWithSubcommands):
             return
 
         try:
-            from aiida.common import setup
             currenv = _get_env_with_venv_bin()
             process = subprocess.Popen([
                     "tail",
                     "-f",
-                    os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log"),
+                    self.logfile,
                     ],
                 env=currenv)  # , stdout=subprocess.PIPE)
             process.wait()

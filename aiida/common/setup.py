@@ -18,9 +18,11 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
-DEFAULT_AIIDA_USER = "aiida@localhost"
+DEFAULT_AIIDA_USER = 'aiida@localhost'
 
-AIIDA_PATH = [path for path in os.environ.get('AIIDA_PATH', '').split(':') if path] + [os.path.expanduser('~')]
+AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
+AIIDA_PATH.append(os.path.expanduser('~'))
+
 for path in AIIDA_PATH:
     try:
         AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
@@ -28,7 +30,8 @@ for path in AIIDA_PATH:
     except OSError:
         pass
 else:
-    AIIDA_CONFIG_FOLDER = "~/.aiida"
+    AIIDA_CONFIG_FOLDER = '~/.aiida'
+
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 

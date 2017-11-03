@@ -9,10 +9,83 @@
 ###########################################################################
 from urllib import unquote
 
-from flask import request
+from flask import request, make_response
 from flask_restful import Resource
 
 from aiida.restapi.common.utils import Utils
+
+
+class ServerInfo(Resource):
+    def __init__(self, **kwargs):
+        # Configure utils
+        utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
+                            kwargs}
+        self.utils = Utils(**self.utils_confs)
+
+    def get(self):
+        """
+        It returns the general info about the REST API
+        :return: returns current AiiDA version defined in aiida/__init__.py
+        """
+
+        ## Decode url parts
+        path = unquote(request.path)
+        query_string = unquote(request.query_string)
+        url = unquote(request.url)
+        url_root = unquote(request.url_root)
+
+        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+
+        if(len(pathlist) > 1):
+            resource_type = pathlist.pop(1)
+        else:
+            resource_type = "info"
+
+        response = {}
+
+        import aiida.restapi.common.config as conf
+        from aiida import __version__
+
+        if(resource_type == "info"):
+            response = []
+
+            # Add Rest API version
+            response.append("REST API version: " + conf.PREFIX.split("/")[-1])
+
+            # Add Rest API prefix
+            response.append("REST API Prefix: " + conf.PREFIX)
+
+            # Add AiiDA version
+            response.append("AiiDA==" + __version__)
+
+        elif (resource_type == "endpoints"):
+
+            # TODO: remove hardcoded list
+            response["available_endpoints"] = [
+                "/api/v2/server",
+                "/api/v2/computers",
+                "/api/v2/nodes",
+                "/api/v2/calculations",
+                "/api/v2/data",
+                "/api/v2/codes",
+                "/api/v2/structures",
+                "/api/v2/kpoints",
+                "/api/v2/bands",
+                "/api/v2/groups"
+              ]
+
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
+        ## Build response and return it
+        data = dict(method=request.method,
+                    url=url,
+                    url_root=url_root,
+                    path=path,
+                    query_string=query_string,
+                    resource_type="Info",
+                    data=response)
+        return self.utils.build_response(status=200, headers=headers, data=data)
 
 
 ## TODO add the caching support. I cache total count, results, and possibly
@@ -48,7 +121,7 @@ class BaseResource(Resource):
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -132,10 +205,10 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -154,7 +227,7 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist) = self.utils.parse_query_string(query_string)
+             nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if len(filters) > 0:
                 usr = filters["user"]["=="]
@@ -166,12 +239,12 @@ class Node(Resource):
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_io_tree(id)
-
         else:
             ## Initialize the translator
             self.trans.set_query(filters=filters, orders=orderby,
                                  query_type=query_type, id=id, alist=alist,
-                                 nalist=nalist, elist=elist, nelist=nelist)
+                                 nalist=nalist, elist=elist, nelist=nelist,
+                                 downloadformat=downloadformat, visformat=visformat)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -181,16 +254,33 @@ class Node(Resource):
                 (limit, offset, rel_pages) = self.utils.paginate(page, perpage,
                                                                  total_count)
                 self.trans.set_limit_offset(limit=limit, offset=offset)
+
+                ## Retrieve results
+                results = self.trans.get_results()
+
                 headers = self.utils.build_headers(rel_pages=rel_pages,
                                                    url=request.url,
                                                    total_count=total_count)
             else:
+
                 self.trans.set_limit_offset(limit=limit, offset=offset)
+                ## Retrieve results
+                results = self.trans.get_results()
+
+                if query_type == "download" and len(results) > 0:
+                    if results["download"]["status"] == 200:
+                        data = results["download"]["data"]
+                        response = make_response(data)
+                        response.headers['content-type'] = 'application/octet-stream'
+                        response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
+                            results["download"]["filename"])
+                        return response
+
+                    else:
+                        results = results["download"]["data"]
+
                 headers = self.utils.build_headers(url=request.url,
                                                    total_count=total_count)
-
-            ## Retrieve results
-            results = self.trans.get_results()
 
         ## Build response
         data = dict(method=request.method,
@@ -201,6 +291,7 @@ class Node(Resource):
                     query_string=query_string,
                     resource_type=resource_type,
                     data=results)
+
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
@@ -273,6 +364,7 @@ class Data(Node):
 
 class StructureData(Data):
     def __init__(self, **kwargs):
+
         super(StructureData, self).__init__(**kwargs)
 
         from aiida.restapi.translator.data.structure import \

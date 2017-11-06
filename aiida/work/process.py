@@ -331,7 +331,7 @@ class Process(plum.process.Process):
         self._calc = self.create_db_record()
         self._setup_db_record()
         if self.inputs._store_provenance:
-            self.calc.store_all(use_cache=self._fast_forward_enabled())
+            self.calc.store_all(use_cache=self._use_cache_enabled())
             if self.calc.has_finished_ok():
                 self._state = plum.process.ProcessState.FINISHED
                 for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
@@ -408,15 +408,15 @@ class Process(plum.process.Process):
             if label is not None:
                 self._calc.label = label
 
-    def _fast_forward_enabled(self):
+    def _use_cache_enabled(self):
         # First priority: inputs
         try:
-            return self._parsed_inputs['_fast_forward']
+            return self._parsed_inputs['_use_cache']
         # Second priority: config
         except KeyError:
             return (
-                caching.get_fast_forward_enabled(type(self)) or
-                caching.get_fast_forward_enabled(type(self._calc))
+                caching.get_use_cache(type(self)) or
+                caching.get_use_cache(type(self._calc))
             )
 
 class FunctionProcess(Process):

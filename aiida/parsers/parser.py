@@ -52,15 +52,17 @@ class Parser(object):
         """
         Receives in input a dictionary of retrieved nodes.
         Implement all the logic in this function of the subclass.
+
+        :param retrieved: dictionary of retrieved nodes
         """
         raise NotImplementedError
 
-    def parse_from_calc(self):
+    def parse_from_calc(self, retrieved_temporary_folder=None):
         """
         Parses the datafolder, stores results.
         Main functionality of the class. If you only have one retrieved node,
         you do not need to reimplement this. Implement only the
-        parse_from_retrieved
+        parse_with_retrieved
         """
         # select the folder object
         out_folder = self._calc.get_retrieved_node()
@@ -68,8 +70,12 @@ class Parser(object):
             self.logger.error("No retrieved folder found")
             return False, ()
 
-        return self.parse_with_retrieved(
-            {self._calc._get_linkname_retrieved(): out_folder})
+        retrieved = {self._calc._get_linkname_retrieved(): out_folder}
+
+        if retrieved_temporary_folder is not None:
+            retrieved.update(retrieved_temporary_folder=retrieved_temporary_folder)
+
+        return self.parse_with_retrieved(retrieved)
 
     @classmethod
     def get_linkname_outparams(self):

@@ -114,8 +114,9 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'max_memory_kb',
         'rerunnable',
         'retrieve_list',  # a list of files or patterns to retrieve, with two
-        # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
-        # ['remotepath','localpath',depth]  ]
+        'retrieve_temporary_list', # a list of files or patters to retrieve that will only be kept during parsing and will be deleted after parsing is completed
+        # possible formats: ['remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repository with name os.path.split(item)[1]
+        # ['remotepath','localpath', depth]]
         # second format will copy the remotepath file/folder to localpath.
         # if remotepath is a file/folder, localpath will be its local name
         # if remotepath has file patterns, localpath should only be '.'
@@ -123,15 +124,15 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # where filename takes remotepath.split() and joins the last #depth elements
         # use the second option if you are using file patterns (*,[0-9],...)
         # ALL PATHS ARE RELATIVE!
-        'local_copy_list',  # a list of length-two tuples with (localabspath, relativedestpath)
-        'remote_copy_list',  # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
-        'remote_symlink_list',
-        # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
-        'retrieve_singlefile_list',  # a list of files, that will be retrieved
+        'retrieve_singlefile_list', # a list of files, that will be retrieved
         # from cluster and saved in SinglefileData nodes
         # in the following format:
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
+        'local_copy_list',  # a list of length-two tuples with (localabspath, relativedestpath)
+        'remote_copy_list',  # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
+        'remote_symlink_list',
+        # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
         'codes_run_mode', # a string used to specify the order in which multi codes can be executed
     )

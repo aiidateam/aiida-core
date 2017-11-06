@@ -1618,12 +1618,8 @@ class AbstractNode(object):
 
         # add CREATE links
         output_mapping = {}
-        for out_node in cache_node.get_outputs(link_type=LinkType.CREATE):
-            new_node = out_node.copy(include_updatable_attrs=True).store()
-            output_mapping[out_node.pk] = new_node
         for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
-            out_pk = out_node.pk
-            new_node = output_mapping[out_pk]
+            new_node = out_node.copy(include_updatable_attrs=True).store()
             new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
 
     @abstractmethod

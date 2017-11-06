@@ -1621,13 +1621,9 @@ class AbstractNode(object):
         for out_node in cache_node.get_outputs(link_type=LinkType.CREATE):
             new_node = out_node.copy(include_updatable_attrs=True).store()
             output_mapping[out_node.pk] = new_node
-        for linkname, out_node in cache_node.get_outputs_dict(link_type=LinkType.CREATE).items():
+        for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
             out_pk = out_node.pk
             new_node = output_mapping[out_pk]
-            suffix = '_{}'.format(out_pk)
-            if linkname.endswith(suffix):
-                linkname.rsplit(suffix, 1)[0]
-                linkname += '_{}'.format(new_node.pk)
             new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
 
     @abstractmethod
@@ -1695,7 +1691,7 @@ class AbstractNode(object):
     def get_same_node(self):
         if not self._cacheable:
             return None
-        
+
         from aiida.orm.querybuilder import QueryBuilder
 
         hash_ = self.get_hash()

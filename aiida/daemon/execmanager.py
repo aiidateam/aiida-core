@@ -742,14 +742,10 @@ def retrieve_computed_for_authinfo(authinfo):
                         for (linkname, subclassname, filename) in retrieve_singlefile_list:
                             execlogger.debug("[retrieval of calc {}] Trying "
                                              "to retrieve remote singlefile '{}'".format(
-                                calc.pk, filename),
-                                             extra=logger_extra)
-                            localfilename = os.path.join(
-                                folder.abspath, os.path.split(filename)[1])
-                            t.get(filename, localfilename,
-                                  ignore_nonexisting=True)
-                            singlefile_list.append((linkname, subclassname,
-                                                    localfilename))
+                                calc.pk, filename), extra=logger_extra)
+                            localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
+                            t.get(filename, localfilename, ignore_nonexisting=True)
+                            singlefile_list.append((linkname, subclassname, localfilename))
 
                         # ignore files that have not been retrieved
                         singlefile_list = [i for i in singlefile_list if
@@ -765,22 +761,18 @@ def retrieve_computed_for_authinfo(authinfo):
                                                      link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
-                    # Finally, store
-                    execlogger.debug("[retrieval of calc {}] "
-                                     "Storing retrieved_files={}".format(
-                        calc.pk, retrieved_files.dbnode.pk),
-                                     extra=logger_extra)
+                    # Finally, store the retrieved_files node. The retrieved_temporary_files node
+                    # is explicitly not stored, but will just be passed to the parser.parse_from calc call
+                    execlogger.debug("[retrieval of calc {}] Storing retrieved_files={}".format(
+                        calc.pk, retrieved_files.dbnode.pk), extra=logger_extra)
                     retrieved_files.store()
 
                     for fil in singlefiles:
-                        execlogger.debug("[retrieval of calc {}] "
-                                         "Storing retrieved_singlefile={}".format(
-                            calc.pk, fil.dbnode.pk),
-                                         extra=logger_extra)
+                        execlogger.debug("[retrieval of calc {}] Storing retrieved_singlefile={}".format(
+                            calc.pk, fil.dbnode.pk), extra=logger_extra)
                         fil.store()
 
-                    # If I was the one retrieving, I should also be the only
-                    # one parsing! I do not check
+                    # If I was the one retrieving, I should also be the only one parsing! I do not check
                     calc._set_state(calc_states.PARSING)
 
                     Parser = calc.get_parserclass()

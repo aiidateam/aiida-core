@@ -379,7 +379,7 @@ class TestFastForwardingWorkChain(TestWorkchain):
         res, pid = run(
             self.wf_class,
             a=Int(1), b=Int(2),
-            _fast_forward=True, _return_pid=True
+            _use_cache=True, _return_pid=True
         )
         wc = load_node(pid)
         self.assertEquals(wc.get_hash(), self.reference_wc.get_hash())

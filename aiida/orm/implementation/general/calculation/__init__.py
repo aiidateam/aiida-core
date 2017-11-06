@@ -346,6 +346,9 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()
 
     def _get_objects_to_hash(self):
+        """
+        Return a list of objects which should be included in the hash.
+        """
         res = super(AbstractCalculation, self)._get_objects_to_hash()
         res.append({
             key: value.get_hash()

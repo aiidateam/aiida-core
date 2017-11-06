@@ -1669,6 +1669,9 @@ class AbstractNode(object):
                 raise e
 
     def _get_objects_to_hash(self):
+        """
+        Return a list of objects which should be included in the hash.
+        """
         return [
             importlib.import_module(
                 self.__module__.split('.', 1)[0]

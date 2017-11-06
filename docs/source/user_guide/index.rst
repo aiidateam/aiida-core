@@ -8,5 +8,6 @@ User's guide
    ../get_started/index
    ../working_with_aiida/index
    ../tutorial/index
+   ../caching/index
    ../import_export/index
    ../restapi/index

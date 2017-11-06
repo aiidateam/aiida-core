@@ -29,28 +29,31 @@ class TemplatereplacerCalculation(JobCalculation):
 
     * template: can contain the following parameters:
 
-        * input_file_template: a string with substitutions to be managed with the format()\
-          function of python, i.e. if you want to substitute a variable called 'varname', you write\
-          {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more\
+        * input_file_template: a string with substitutions to be managed with the format()
+          function of python, i.e. if you want to substitute a variable called 'varname', you write
+          {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more
           details. The replaced file will be the input file.
 
-        * input_file_name: a string with the file name for the input. If it is not provided, no\
+        * input_file_name: a string with the file name for the input. If it is not provided, no
           file will be created.
 
-        * output_file_name: a string with the file name for the output. If it is not provided, no\
+        * output_file_name: a string with the file name for the output. If it is not provided, no
           redirection will be done and the output will go in the scheduler output file.
 
-        * cmdline_params: a list of strings, to be passed as command line parameters.\
+        * cmdline_params: a list of strings, to be passed as command line parameters.
           Each one is substituted with the same rule of input_file_template. Optional
 
-        * input_through_stdin: if True, the input file name is passed via stdin. Default is\
-          False if missing.
+        * input_through_stdin: if True, the input file name is passed via stdin. Default is False if missing.
 
         * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');
-             for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',
-             and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'
-             Errors are raised in the input links are non-existent, or of the wrong type, or if there are
-             unused input files.
+            for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',
+            and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'
+            Errors are raised in the input links are non-existent, or of the wrong type, or if there are
+            unused input files.
+
+        * retrieve_temporary_files: a list of relative filepaths, that if defined, will be retrieved and
+            temporarily stored in an unstored FolderData node that will be available during the
+            Parser.parser_with_retrieved call under the key specified by the Parser.retrieved_temporary_folder key
 
     TODO: probably use Python's Template strings instead??
     TODO: catch exceptions
@@ -75,6 +78,10 @@ class TemplatereplacerCalculation(JobCalculation):
             },
         })
         return retdict
+
+    def _init_internal_params(self):
+        super(TemplatereplacerCalculation, self)._init_internal_params()
+        self._default_parser = 'simpleplugins.templatereplacer'
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
@@ -108,6 +115,7 @@ class TemplatereplacerCalculation(JobCalculation):
         cmdline_params_tmpl = template.pop('cmdline_params', [])
         input_through_stdin = template.pop('input_through_stdin', False)
         files_to_copy = template.pop('files_to_copy', [])
+        retrieve_temporary_files = template.pop('retrieve_temporary_files', [])
 
         if template:
             raise InputValidationError('The following keys could not be used in the template node: {}'.format(
@@ -165,6 +173,7 @@ class TemplatereplacerCalculation(JobCalculation):
 
         calcinfo = CalcInfo()
         calcinfo.retrieve_list = []
+        calcinfo.retrieve_temporary_list = []
 
         calcinfo.uuid = self.uuid
         calcinfo.local_copy_list = local_copy_list
@@ -179,6 +188,9 @@ class TemplatereplacerCalculation(JobCalculation):
         if output_file_name:
             codeinfo.stdout_name = output_file_name
             calcinfo.retrieve_list.append(output_file_name)
+
+        if retrieve_temporary_files:
+            calcinfo.retrieve_temporary_list = retrieve_temporary_files
 
         codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]

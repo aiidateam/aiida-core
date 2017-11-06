@@ -104,13 +104,19 @@ def _reset_config():
     _CONFIG.update(config_copy)
 
 @contextmanager
-def enable_caching(node_class):
+def enable_caching(node_class=None):
     with _reset_config():
-        _CONFIG[config_keys.enabled].append(node_class)
+        if node_class is None:
+            _CONFIG[config_keys.default] = True
+        else:
+            _CONFIG[config_keys.enabled].append(node_class)
         yield
 
 @contextmanager
-def disable_caching(node_class):
+def disable_caching(node_class=None):
     with _reset_config():
-        _CONFIG[config_keys.disabled].append(node_class)
+        if node_class is None:
+            _CONFIG[config_keys.default] = True
+        else:
+            _CONFIG[config_keys.disabled].append(node_class)
         yield

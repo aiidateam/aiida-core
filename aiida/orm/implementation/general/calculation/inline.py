@@ -23,6 +23,14 @@ class InlineCalculation(Calculation):
 
     _cacheable = True
 
+    def get_desc(self):
+        """
+        Returns a string with infos retrieved from a InlineCalculation node's
+        properties.
+        :return: description string
+        """
+        return "{}()".format(self.get_function_name())
+
     def get_function_name(self):
         """
         Get the function name.

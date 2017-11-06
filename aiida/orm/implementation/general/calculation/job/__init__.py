@@ -131,6 +131,13 @@ class AbstractJobCalculation(object):
         # c = Calculation().store()
         return self
 
+    def _add_outputs_from_cache(self, cache_node):
+        self._set_state(calc_states.PARSING)
+        super(AbstractJobCalculation, self)._add_outputs_from_cache(
+            cache_node=cache_node
+        )
+        self._set_state(cache_node.get_state())
+
     def _validate(self):
         """
         Verify if all the input nodes are present and valid.

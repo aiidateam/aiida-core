@@ -1577,6 +1577,7 @@ class AbstractNode(object):
             same_node = self.get_same_node() if use_cache else None
             if same_node is not None:
                 self._store_from_cache(same_node, with_transaction=with_transaction)
+                self._add_outputs_from_cache(same_node)
             else:
                 # call implementation-dependent store method
                 self._db_store(with_transaction)
@@ -1616,6 +1617,7 @@ class AbstractNode(object):
         self.store(with_transaction=with_transaction, use_cache=False)
         self.set_extra('cached_from', cache_node.uuid)
 
+    def _add_outputs_from_cache(self, cache_node):
         # add CREATE links
         output_mapping = {}
         for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):

@@ -83,6 +83,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     calculations run via a scheduler.
     """
 
+    _cacheable = False
+
     @classproperty
     def _hash_ignored_attributes(cls):
         return super(AbstractCalculation, cls)._hash_ignored_attributes + [

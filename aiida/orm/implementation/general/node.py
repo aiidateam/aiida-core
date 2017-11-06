@@ -149,6 +149,9 @@ class AbstractNode(object):
     # A list of attribute names that will be ignored when creating the hash.
     _hash_ignored_attributes = []
 
+    # Flag that determines whether the class can be cached.
+    _cacheable = True
+
     def get_desc(self):
         """
         Returns a string with infos retrieved from a node's
@@ -1573,13 +1576,7 @@ class AbstractNode(object):
             # Retrieve the cached node.
             same_node = self.get_same_node() if use_cache else None
             if same_node is not None:
-                new_node = same_node.copy(include_updatable_attrs=True)
-                inputlinks_cache = self._inputlinks_cache
-                self.__dict__ = new_node.__dict__
-                self._inputlinks_cache = inputlinks_cache
-                # self._repo_folder = new_node._repo_folder
-                self.store(with_transaction=with_transaction, use_cache=False)
-                self.set_extra('cached_from', same_node.uuid)
+                self._store_from_cache(same_node, with_transaction=with_transaction)
             else:
                 # call implementation-dependent store method
                 self._db_store(with_transaction)
@@ -1603,6 +1600,35 @@ class AbstractNode(object):
         # This is useful because in this way I can do
         # n = Node().store()
         return self
+
+    def _store_from_cache(self, cache_node, with_transaction):
+        new_node = cache_node.copy(include_updatable_attrs=True)
+        inputlinks_cache = self._inputlinks_cache
+        # "impersonate" the copied node by getting all its attributes
+        self.__dict__ = new_node.__dict__
+        # restore the input links
+        self._inputlinks_cache = inputlinks_cache
+
+        # Make sure the node doesn't have any RETURN links
+        if cache_node.get_outputs(link_type=LinkType.RETURN):
+            raise ValueError("Cannot use cache from nodes with RETURN links.")
+
+        self.store(with_transaction=with_transaction, use_cache=False)
+        self.set_extra('cached_from', cache_node.uuid)
+
+        # add CREATE links
+        output_mapping = {}
+        for out_node in cache_node.get_outputs(link_type=LinkType.CREATE):
+            new_node = out_node.copy(include_updatable_attrs=True).store()
+            output_mapping[out_node.pk] = new_node
+        for linkname, out_node in cache_node.get_outputs_dict(link_type=LinkType.CREATE).items():
+            out_pk = out_node.pk
+            new_node = output_mapping[out_pk]
+            suffix = '_{}'.format(out_pk)
+            if linkname.endswith(suffix):
+                linkname.rsplit(suffix, 1)[0]
+                linkname += '_{}'.format(new_node.pk)
+            new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -1667,6 +1693,9 @@ class AbstractNode(object):
         self.set_extra('hash', self.get_hash())
 
     def get_same_node(self):
+        if not self._cacheable:
+            return None
+        
         from aiida.orm.querybuilder import QueryBuilder
 
         hash_ = self.get_hash()

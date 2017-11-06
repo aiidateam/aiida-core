@@ -21,6 +21,8 @@ class InlineCalculation(Calculation):
     for a simple calculation
     """
 
+    _cacheable = True
+
     def get_function_name(self):
         """
         Get the function name.

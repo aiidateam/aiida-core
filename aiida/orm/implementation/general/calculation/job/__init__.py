@@ -36,6 +36,8 @@ class AbstractJobCalculation(object):
     remotely on a job scheduler.
     """
 
+    _cacheable = True
+
     @classproperty
     def _hash_ignored_attributes(cls):
         # _updatable_attributes are ignored automatically.

@@ -18,19 +18,16 @@ from aiida.common.extendeddicts import Enumerate
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 from aiida.backends.utils import get_current_profile
 
-__all__ = ['get_fast_forward_enabled', 'get_use_cache_default']
+__all__ = ['get_use_cache', 'get_use_cache_default']
 
 config_keys = Enumerate((
-    'use_cache', 'fast_forward', 'default', 'enabled', 'disabled'
+    'default', 'enabled', 'disabled'
 ))
 
 DEFAULT_CONFIG = {
-    config_keys.use_cache: {config_keys.default: False},
-    config_keys.fast_forward: {
-        config_keys.default: False,
-        config_keys.enabled: [],
-        config_keys.disabled: [],
-    }
+    config_keys.default: False,
+    config_keys.enabled: [],
+    config_keys.disabled: [],
 }
 
 def _get_config(config_file):
@@ -42,26 +39,20 @@ def _get_config(config_file):
         return DEFAULT_CONFIG
 
     # validate configuration
-    for key, value in config.items():
-        error_msg = "Configuration error: Invalid key '{}' in cache_config.yml"
+    for key in config:
         if key not in DEFAULT_CONFIG:
-            raise ValueError(error_msg.format(key))
-        for sub_key in value:
-            if sub_key not in DEFAULT_CONFIG[key]:
-                raise ValueError(error_msg.format(sub_key))
+            raise ValueError(
+                "Configuration error: Invalid key '{}' in cache_config.yml".format(key)
+            )
 
     # add defaults where config is missing
     for key, default_config in DEFAULT_CONFIG.items():
-        config[key] = config.get(key, {})
-        for sub_key, sub_default_config in default_config.items():
-            config[key][sub_key] = config[key].get(sub_key, sub_default_config)
+        config[key] = config.get(key, default_config)
 
     # load classes
     try:
-        for config_part in config.values():
-            for key in [config_keys.enabled, config_keys.disabled]:
-                if key in config_part:
-                    config_part[key] = [load_class(c) for c in config_part[key]]
+        for key in [config_keys.enabled, config_keys.disabled]:
+            config[key] = [load_class(c) for c in config[key]]
     except (ImportError, ClassNotFoundException) as err:
         raise_from(
             ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)),
@@ -69,27 +60,26 @@ def _get_config(config_file):
         )
     return config
 
-CONFIG = {}
+_CONFIG = {}
 
 def configure(config_file=os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 'cache_config.yml')):
     """
-    Reads the caching configuration file and sets the CONFIG variable.
+    Reads the caching configuration file and sets the _CONFIG variable.
     """
-    global CONFIG
-    CONFIG.clear()
-    CONFIG.update(_get_config(config_file=config_file))
+    global _CONFIG
+    _CONFIG.clear()
+    _CONFIG.update(_get_config(config_file=config_file))
 
 def get_use_cache_default():
-    if not CONFIG:
+    if not _CONFIG:
         configure()
-    return CONFIG[config_keys.use_cache][config_keys.default]
+    return _CONFIG[config_keys.default]
 
-def get_fast_forward_enabled(calc_class):
-    if not CONFIG:
+def get_use_cache(calc_class):
+    if not _CONFIG:
         configure()
-    fast_forward_config = CONFIG[config_keys.fast_forward]
-    enabled = calc_class in fast_forward_config[config_keys.enabled]
-    disabled = calc_class in fast_forward_config[config_keys.disabled]
+    enabled = calc_class in _CONFIG[config_keys.enabled]
+    disabled = calc_class in _CONFIG[config_keys.disabled]
     if enabled and disabled:
         raise ValueError('Invalid configuration: Fast-forwarding for {} is both enabled and disabled.'.format(calc_class))
     elif enabled:
@@ -97,4 +87,4 @@ def get_fast_forward_enabled(calc_class):
     elif disabled:
         return False
     else:
-        return fast_forward_config[config_keys.default]
+        return get_use_cache_default()

@@ -13,7 +13,6 @@ to allow the reading of the outputs of a calculation.
 """
 
 
-
 class Parser(object):
     """
     Base class for a parser object.
@@ -24,16 +23,12 @@ class Parser(object):
     Get the child Folderdata, parse it and store the parsed data.
     """
     _linkname_outparams = 'output_parameters'
+    _retrieved_temporary_folder_key = 'retrieved_temporary_folder'
 
     def __init__(self, calc):
-        """
-        Init
-        """
         from aiida.common import aiidalogger
 
-        self._logger = aiidalogger.getChild('parser').getChild(
-            self.__class__.__name__)
-
+        self._logger = aiidalogger.getChild('parser').getChild( self.__class__.__name__)
         self._calc = calc
 
     @property
@@ -45,8 +40,15 @@ class Parser(object):
         import logging
         from aiida.utils.logger import get_dblogger_extra
 
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self._calc))
+        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self._calc))
+
+    @property
+    def retrieved_temporary_folder_key(self):
+        """
+        Return the key under which the retrieved_temporary_folder will be passed in the
+        dictionary of retrieved nodes in the parse_with_retrieved method
+        """
+        return self._retrieved_temporary_folder_key
 
     def parse_with_retrieved(self, retrieved):
         """
@@ -73,7 +75,8 @@ class Parser(object):
         retrieved = {self._calc._get_linkname_retrieved(): out_folder}
 
         if retrieved_temporary_folder is not None:
-            retrieved.update(retrieved_temporary_folder=retrieved_temporary_folder)
+            key = self.retrieved_temporary_folder_key
+            retrieved[key] = retrieved_temporary_folder
 
         return self.parse_with_retrieved(retrieved)
 

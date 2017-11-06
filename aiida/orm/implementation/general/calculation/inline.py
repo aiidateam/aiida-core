@@ -31,6 +31,9 @@ class InlineCalculation(Calculation):
         """
         return self.get_attr('function_name', None)
 
+    def has_finished_ok(self):
+        return self.is_sealed
+
 
 def make_inline(func):
     """

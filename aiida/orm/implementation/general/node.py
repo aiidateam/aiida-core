@@ -24,7 +24,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
-from aiida.common.caching import get_use_cache_default
+from aiida.common.caching import get_use_cache
 from aiida.common.links import LinkType
 from aiida.common.lang import override
 from aiida.common.old_pluginloader import get_query_type_string
@@ -1572,7 +1572,7 @@ class AbstractNode(object):
 
             # Get default for use_cache if it's not set explicitly.
             if use_cache is None:
-                use_cache = get_use_cache_default()
+                use_cache = get_use_cache(type(self))
             # Retrieve the cached node.
             same_node = self.get_same_node() if use_cache else None
             if same_node is not None:

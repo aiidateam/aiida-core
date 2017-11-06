@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
-import yaml
+import copy
+from functools import wraps
+from contextlib import contextmanager
 try:
     from collections import ChainMap
 except ImportError:
     from chainmap import ChainMap
 
+import yaml
 from plum.util import load_class
 from future.utils import raise_from
 from plum.exceptions import ClassNotFoundException
@@ -18,7 +21,7 @@ from aiida.common.extendeddicts import Enumerate
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 from aiida.backends.utils import get_current_profile
 
-__all__ = ['get_use_cache', 'get_use_cache_default']
+__all__ = ['get_use_cache', 'enable_caching', 'disable_caching']
 
 config_keys = Enumerate((
     'default', 'enabled', 'disabled'
@@ -70,21 +73,44 @@ def configure(config_file=os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 
     _CONFIG.clear()
     _CONFIG.update(_get_config(config_file=config_file))
 
-def get_use_cache_default():
-    if not _CONFIG:
-        configure()
+def _with_config(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if not _CONFIG:
+            configure()
+        return func(*args, **kwargs)
+    return inner
+
+@_with_config
+def get_use_cache(node_class=None):
+    if node_class is not None:
+        enabled = node_class in _CONFIG[config_keys.enabled]
+        disabled = node_class in _CONFIG[config_keys.disabled]
+        if enabled and disabled:
+            raise ValueError('Invalid configuration: Fast-forwarding for {} is both enabled and disabled.'.format(node_class))
+        elif enabled:
+            return True
+        elif disabled:
+            return False
     return _CONFIG[config_keys.default]
 
-def get_use_cache(calc_class):
-    if not _CONFIG:
-        configure()
-    enabled = calc_class in _CONFIG[config_keys.enabled]
-    disabled = calc_class in _CONFIG[config_keys.disabled]
-    if enabled and disabled:
-        raise ValueError('Invalid configuration: Fast-forwarding for {} is both enabled and disabled.'.format(calc_class))
-    elif enabled:
-        return True
-    elif disabled:
-        return False
-    else:
-        return get_use_cache_default()
+@contextmanager
+@_with_config
+def _reset_config():
+    global _CONFIG
+    config_copy = copy.deepcopy(_CONFIG)
+    yield
+    _CONFIG.clear()
+    _CONFIG.update(config_copy)
+
+@contextmanager
+def enable_caching(node_class):
+    with _reset_config():
+        _CONFIG[config_keys.enabled].append(node_class)
+        yield
+
+@contextmanager
+def disable_caching(node_class):
+    with _reset_config():
+        _CONFIG[config_keys.disabled].append(node_class)
+        yield

@@ -13,7 +13,8 @@ import tempfile
 import yaml
 
 from aiida.backends.utils import get_current_profile
-from aiida.common.caching import configure, get_use_cache, get_use_cache_default
+from aiida.common.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
 class CacheConfigTest(unittest.TestCase):
     """
@@ -38,8 +39,17 @@ class CacheConfigTest(unittest.TestCase):
         configure()
 
     def test_default(self):
-        self.assertTrue(get_use_cache_default())
+        self.assertTrue(get_use_cache())
 
     def test_caching_enabled(self):
-        from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
         self.assertFalse(get_use_cache(TemplatereplacerCalculation))
+
+    def test_invalid_config(self):
+        with enable_caching(TemplatereplacerCalculation):
+            self.assertRaises(ValueError, get_use_cache, TemplatereplacerCalculation)
+
+    def test_disable_caching(self):
+        from aiida.orm.data.base import Float
+        with disable_caching(Float):
+            self.assertFalse(get_use_cache(Float))
+        self.assertTrue(get_use_cache(Float))

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from aiida.orm import CalculationFactory
 from aiida.parsers.parser import Parser
 
 TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')

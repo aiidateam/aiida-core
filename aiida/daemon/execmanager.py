@@ -891,8 +891,5 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
                 local_names = [os.path.split(item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
-            transport.logger.debug("[retrieval of calc {}] "
-                             "Trying to retrieve remote item '{}'".format(calculation.pk, rem))
-            transport.get(rem,
-                  os.path.join(folder.abspath, loc),
-                  ignore_nonexisting=True)
+            transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
+            transport.get(rem, os.path.join(folder.abspath, loc), ignore_nonexisting=True)

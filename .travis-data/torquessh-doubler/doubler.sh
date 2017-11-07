@@ -11,3 +11,4 @@ fi
 
 INPUTVALUE=`cat value_to_double.txt`
 echo $(( $INPUTVALUE * 2 ))
+echo $(( $INPUTVALUE * 3 )) > 'triple_value.tmp'

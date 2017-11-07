@@ -13,7 +13,6 @@ to allow the reading of the outputs of a calculation.
 """
 
 
-
 class Parser(object):
     """
     Base class for a parser object.
@@ -24,16 +23,12 @@ class Parser(object):
     Get the child Folderdata, parse it and store the parsed data.
     """
     _linkname_outparams = 'output_parameters'
+    _retrieved_temporary_folder_key = 'retrieved_temporary_folder'
 
     def __init__(self, calc):
-        """
-        Init
-        """
         from aiida.common import aiidalogger
 
-        self._logger = aiidalogger.getChild('parser').getChild(
-            self.__class__.__name__)
-
+        self._logger = aiidalogger.getChild('parser').getChild( self.__class__.__name__)
         self._calc = calc
 
     @property
@@ -45,22 +40,31 @@ class Parser(object):
         import logging
         from aiida.utils.logger import get_dblogger_extra
 
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self._calc))
+        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self._calc))
+
+    @property
+    def retrieved_temporary_folder_key(self):
+        """
+        Return the key under which the retrieved_temporary_folder will be passed in the
+        dictionary of retrieved nodes in the parse_with_retrieved method
+        """
+        return self._retrieved_temporary_folder_key
 
     def parse_with_retrieved(self, retrieved):
         """
         Receives in input a dictionary of retrieved nodes.
         Implement all the logic in this function of the subclass.
+
+        :param retrieved: dictionary of retrieved nodes
         """
         raise NotImplementedError
 
-    def parse_from_calc(self):
+    def parse_from_calc(self, retrieved_temporary_folder=None):
         """
         Parses the datafolder, stores results.
         Main functionality of the class. If you only have one retrieved node,
         you do not need to reimplement this. Implement only the
-        parse_from_retrieved
+        parse_with_retrieved
         """
         # select the folder object
         out_folder = self._calc.get_retrieved_node()
@@ -68,8 +72,13 @@ class Parser(object):
             self.logger.error("No retrieved folder found")
             return False, ()
 
-        return self.parse_with_retrieved(
-            {self._calc._get_linkname_retrieved(): out_folder})
+        retrieved = {self._calc._get_linkname_retrieved(): out_folder}
+
+        if retrieved_temporary_folder is not None:
+            key = self.retrieved_temporary_folder_key
+            retrieved[key] = retrieved_temporary_folder
+
+        return self.parse_with_retrieved(retrieved)
 
     @classmethod
     def get_linkname_outparams(self):

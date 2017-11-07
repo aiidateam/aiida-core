@@ -726,12 +726,6 @@ def retrieve_computed_for_authinfo(authinfo):
                         # Here I retrieved everything; now I store them inside the calculation
                         retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
 
-                    # Retrieve the temporary files in a separate temporary folder
-                    retrieved_temporary_folder = FolderData()
-                    with SandboxFolder() as folder:
-                        retrieve_files_from_list(calc, t, folder, retrieve_temporary_list)
-                        retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
-
                     # Second, retrieve the singlefiles
                     with SandboxFolder() as folder:
                         singlefile_list = []
@@ -756,6 +750,21 @@ def retrieve_computed_for_authinfo(authinfo):
                             singlefile.add_link_from(calc, label=linkname, link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
+                    # Retrieve the temporary files in a separate temporary folder if any files were
+                    # specified in the 'retrieve_temporary_list' key
+                    if retrieve_temporary_list:
+                        retrieved_temporary_folder = FolderData()
+                        with SandboxFolder() as folder:
+                            retrieve_files_from_list(calc, t, folder, retrieve_temporary_list)
+                            retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
+
+                        # Log the files that were retrieved in the temporary folder
+                        for entry in retrieved_temporary_folder.get_folder_list():
+                            execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
+                                calc.pk, entry), extra=logger_extra)
+                    else:
+                        retrieved_temporary_folder = None
+
                     # Finally, store the retrieved_files node. The retrieved_temporary_folder node
                     # is explicitly not stored, but will just be passed to the parser.parse_from calc call
                     execlogger.debug("[retrieval of calc {}] Storing retrieved_files={}".format(
@@ -766,11 +775,6 @@ def retrieve_computed_for_authinfo(authinfo):
                         execlogger.debug("[retrieval of calc {}] Storing retrieved_singlefile={}".format(
                             calc.pk, fil.dbnode.pk), extra=logger_extra)
                         fil.store()
-
-                    # Log the files that were retrieved in the temporary folder
-                    for entry in retrieved_temporary_folder.get_folder_list():
-                        execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
-                            calc.pk, entry), extra=logger_extra)
 
                     # If I was the one retrieving, I should also be the only one parsing! I do not check
                     calc._set_state(calc_states.PARSING)

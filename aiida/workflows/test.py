@@ -40,6 +40,33 @@ class WFTestSimple(Workflow):
         self.next(self.exit)
 
 
+class FailingWFTestSimple(WFTestSimple):
+    @Workflow.step
+    def start(self):
+        # Testing calculations
+        self.attach_calculation(self.generate_calc())
+
+        # Test process
+        self.next(self.second_step)
+
+    def generate_calc(self):
+        from aiida.orm import Code, Computer, CalculationFactory
+        from aiida.common.datastructures import calc_states
+
+        CustomCalc = CalculationFactory(
+            'simpleplugins.templatereplacer')
+
+        computer = Computer.get("localhost")
+
+        calc = CustomCalc(computer=computer, withmpi=True)
+        calc.set_resources(
+            {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.store()
+        calc._set_state(calc_states.FAILED)
+
+        return calc
+
+
 class WFTestSimpleWithSubWF(Workflow):
     def __init__(self, **kwargs):
         super(WFTestSimpleWithSubWF, self).__init__(**kwargs)

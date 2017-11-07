@@ -17,7 +17,8 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
 from aiida.backends.utils import get_automatic_user
 from aiida.common import aiidalogger
-from aiida.common.datastructures import wf_states, wf_exit_call
+from aiida.common.datastructures import (wf_states, wf_exit_call,
+                                         wf_default_call)
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)

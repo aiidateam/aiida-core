@@ -4,7 +4,7 @@ from aiida.parsers.parser import Parser
 
 TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
 
-class TemplatereplacerParser(Parser):
+class TemplatereplacerDoublerParser(Parser):
 
     def __init__(self, calc):
         """
@@ -15,7 +15,7 @@ class TemplatereplacerParser(Parser):
         if not isinstance(calc, TemplatereplacerCalculation):
             raise ValueError('Input calculation must be of type {}'.format(type(TemplatereplacerCalculation)))
 
-        super(TemplatereplacerParser, self).__init__(calc)
+        super(TemplatereplacerDoublerParser, self).__init__(calc)
 
     def parse_with_retrieved(self, retrieved):
         """
@@ -40,5 +40,10 @@ class TemplatereplacerParser(Parser):
             except KeyError:
                 self.logger.error('the {} was not passed as an argument'.format(self.retrieved_temporary_folder_key))
                 return False, ()
+
+            for retrieved_file in retrieve_temporary_files:
+                if retrieved_file not in temporary_folder.get_folder_list():
+                    self.logger.error('the file {} was not found in the temporary retrieved folder'.format(retrieved_file))
+                    return False, ()
 
         return True, ()

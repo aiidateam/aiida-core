@@ -100,12 +100,13 @@ def main():
                 'input_file_template': "{value}", # File just contains the value to double
                 'input_file_name': 'value_to_double.txt',
                 'output_file_name': 'output.txt',
-                'retrieve_temporary_files': ['output.txt']
+                'retrieve_temporary_files': ['triple_value.tmp']
                 })
         calc = code.new_calc()
         calc.set_max_wallclock_seconds(5 * 60)  # 5 min
         calc.set_resources({"num_machines": 1})
         calc.set_withmpi(False)
+        calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
         
         calc.use_parameters(parameters)
         calc.use_template(template)

@@ -15,6 +15,8 @@ from aiida.orm import User
 from aiida.workflows.test import WFTestEmpty
 from aiida.orm.implementation import get_workflow_info
 from aiida.workflows.test import WFTestSimpleWithSubWF
+from aiida.workflows.wf_demo import WorkflowDemo
+from aiida.daemon.workflowmanager import execute_steps
 
 
 class TestWorkflowBasic(AiidaTestCase):
@@ -151,6 +153,30 @@ class TestWorkflowBasic(AiidaTestCase):
         # Checking that the get_state doesn't throw exceptions and that
         # it is a valid state
         self.assertIn(wf.get_state(), wf_states)
+
+    def test_old_wf_results(self):
+        class FailingWorkflowDemo(WorkflowDemo):
+            def generate_calc(self):
+                from aiida.orm import Code, Computer, CalculationFactory
+                from aiida.common.datastructures import calc_states
+
+                CustomCalc = CalculationFactory(
+                    'simpleplugins.templatereplacer')
+
+                computer = Computer.get("localhost")
+
+                calc = CustomCalc(computer=computer, withmpi=True)
+                calc.set_resources(
+                    {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+                calc.store()
+                calc._set_state(calc_states.FAILED)
+
+                return calc
+
+        wf = FailingWorkflowDemo()
+        wf.start()
+        while wf.is_running():
+            execute_steps()
 
 
     def tearDown(self):

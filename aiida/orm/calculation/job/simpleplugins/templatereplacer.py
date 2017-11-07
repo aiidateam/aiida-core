@@ -79,10 +79,6 @@ class TemplatereplacerCalculation(JobCalculation):
         })
         return retdict
 
-    def _init_internal_params(self):
-        super(TemplatereplacerCalculation, self)._init_internal_params()
-        self._default_parser = 'simpleplugins.templatereplacer'
-
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create

@@ -72,7 +72,7 @@ if __name__ == '__main__':
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [
-                'simpleplugins.templatereplacer = aiida.parsers.simpleplugins.templatereplacer:TemplatereplacerParser',
+                'simpleplugins.templatereplacer.test.doubler = aiida.parsers.simpleplugins.templatereplacer.test:TemplatereplacerDoublerParser',
             ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',

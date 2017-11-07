@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.orm import CalculationFactory
 from aiida.parsers.parser import Parser
+from aiida.orm.data.parameter import ParameterData
 
 TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
 
@@ -27,6 +28,26 @@ class TemplatereplacerDoublerParser(Parser):
 
         :param retrieved: a dictionary of retrieved nodes
         """
+        output_nodes = []
+
+        try:
+            output_file = self._calc.inp.template.get_dict()['output_file_name']
+        except KeyError:
+            self.logger.error("the output file name 'output_file_name' was not specified in the 'template' input node")
+            return False, ()
+
+        retrieved_folder = retrieved[self._calc._get_linkname_retrieved()]
+        try:
+            parsed_value = int(retrieved_folder.get_file_content(output_file).strip())
+        except (AttributeError, IOError, ValueError) as e:
+            self.logger.error("* UNABLE TO RETRIEVE VALUE for calc pk={}: I got {}: {}".format(self._calc.pk, type(e), e))
+            return False, ()
+
+        output_dict = {
+            'value': parsed_value,
+            'retrieved_temporary_files': []
+        }
+
         try:
             retrieve_temporary_files = self._calc.inp.template.get_dict()['retrieve_temporary_files']
         except KeyError:
@@ -46,4 +67,10 @@ class TemplatereplacerDoublerParser(Parser):
                     self.logger.error('the file {} was not found in the temporary retrieved folder'.format(retrieved_file))
                     return False, ()
 
-        return True, ()
+                # We always strip the content of the file from whitespace to simplify testing for expected output
+                output_dict['retrieved_temporary_files'].append((retrieved_file, temporary_folder.get_file_content(retrieved_file).strip()))
+
+        output_parameters = ParameterData(dict=output_dict)
+        output_nodes.append((self.get_linkname_outparams(), output_parameters))
+
+        return True, output_nodes

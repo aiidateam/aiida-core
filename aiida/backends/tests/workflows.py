@@ -15,8 +15,6 @@ from aiida.orm import User
 from aiida.workflows.test import WFTestEmpty
 from aiida.orm.implementation import get_workflow_info
 from aiida.workflows.test import WFTestSimpleWithSubWF
-from aiida.workflows.wf_demo import WorkflowDemo
-from aiida.daemon.tasks import workflow_stepper
 
 
 class TestWorkflowBasic(AiidaTestCase):
@@ -155,6 +153,11 @@ class TestWorkflowBasic(AiidaTestCase):
         self.assertIn(wf.get_state(), wf_states)
 
     def test_failing_calc_in_wf(self):
+        """
+        This test checks that a workflow (but also a workflow with
+        sub-workflows) that has an exception at one of its steps stops
+        properly and it is not left as RUNNING.
+        """
         import logging
         from aiida.daemon.workflowmanager import execute_steps
         from aiida.workflows.test import (FailingWFTestSimple,
@@ -198,7 +201,6 @@ class TestWorkflowBasic(AiidaTestCase):
         finally:
             if handler:
                 handler.setLevel(original_level)
-
 
     def tearDown(self):
         """

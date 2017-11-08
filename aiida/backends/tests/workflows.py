@@ -165,17 +165,23 @@ class TestWorkflowBasic(AiidaTestCase):
         wf = FailingWFTestSimpleWithSubWF()
         wf.store()
 
+        pks = [wf.pk]
+
         wf.start()
         while wf.is_running():
             # workflow_stepper()
             execute_steps()
             # manual_tick_all()
             sleep(.1)
+            self.print_wf(pks)
 
-        pks = [wf.pk]
+
+        print "=====> ", pks
+        self.print_wf(pks)
+
+
+    def print_wf(self, pks):
         workflows = get_workflow_list(pks)
-        print "=====> ", workflows
-
         tab_size = 2  # how many spaces to use for indentation of subworkflows
         for w in workflows:
             if not w.is_subworkflow() or w.pk in pks:

@@ -53,6 +53,9 @@ class FailingWFTestSimple(WFTestSimple):
     def second_step(self):
         # Testing calculations
         self.attach_calculation(self.generate_calc())
+        from aiida.common.datastructures import wf_states
+        # self.set_state(wf_states.ERROR)
+        raise Exception('Test exception')
 
         # Test process
         self.next(self.third_step)

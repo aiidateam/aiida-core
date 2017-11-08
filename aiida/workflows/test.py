@@ -49,6 +49,18 @@ class FailingWFTestSimple(WFTestSimple):
         # Test process
         self.next(self.second_step)
 
+    @Workflow.step
+    def second_step(self):
+        # Testing calculations
+        self.attach_calculation(self.generate_calc())
+
+        # Test process
+        self.next(self.third_step)
+
+    @Workflow.step
+    def third_step(self):
+        self.next(self.exit)
+
     def generate_calc(self):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
@@ -65,6 +77,30 @@ class FailingWFTestSimple(WFTestSimple):
         calc._set_state(calc_states.FAILED)
 
         return calc
+
+
+class FailingWFTestSimpleWithSubWF(Workflow):
+    def __init__(self, **kwargs):
+        super(FailingWFTestSimpleWithSubWF, self).__init__(**kwargs)
+
+    @Workflow.step
+    def start(self):
+        self.attach_calculation(generate_calc())
+
+        # Create two subworkflows
+        w = FailingWFTestSimple()
+        w.start()
+        self.attach_workflow(w)
+
+        w = FailingWFTestSimple()
+        w.start()
+        self.attach_workflow(w)
+
+        self.next(self.second)
+
+    @Workflow.step
+    def second(self):
+        self.next(self.exit)
 
 
 class WFTestSimpleWithSubWF(Workflow):

@@ -159,16 +159,28 @@ class TestWorkflowBasic(AiidaTestCase):
         from aiida.daemon.workflowmanager import execute_steps
         from aiida.workflows.test import WFTestSimple, WFTestSimpleWithSubWF
         from aiida.orm.workflow import Workflow
-        from aiida.workflows.test import FailingWFTestSimple
-
-        wf = FailingWFTestSimple()
+        from aiida.workflows.test import FailingWFTestSimple, FailingWFTestSimpleWithSubWF
+        from aiida.daemon.tasks import manual_tick_all
+        # wf = FailingWFTestSimple()
+        wf = FailingWFTestSimpleWithSubWF()
         wf.store()
 
         wf.start()
         while wf.is_running():
             # workflow_stepper()
             execute_steps()
-            sleep(1)
+            # manual_tick_all()
+            sleep(.1)
+
+        pks = [wf.pk]
+        workflows = get_workflow_list(pks)
+        print "=====> ", workflows
+
+        tab_size = 2  # how many spaces to use for indentation of subworkflows
+        for w in workflows:
+            if not w.is_subworkflow() or w.pk in pks:
+                print "\n".join(get_workflow_info(w, tab_size=tab_size,
+                                                  depth=16))
 
 
     def tearDown(self):

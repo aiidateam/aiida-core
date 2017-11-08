@@ -175,7 +175,6 @@ class TestWorkflowBasic(AiidaTestCase):
             sleep(.1)
             self.print_wf(pks)
 
-
         print "=====> ", pks
         self.print_wf(pks)
 

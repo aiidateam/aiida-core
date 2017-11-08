@@ -52,9 +52,8 @@ class FailingWFTestSimple(WFTestSimple):
     @Workflow.step
     def second_step(self):
         # Testing calculations
-        self.attach_calculation(self.generate_calc())
-        from aiida.common.datastructures import wf_states
-        # self.set_state(wf_states.ERROR)
+        self.attach_calculation(generate_calc())
+        # Raise a test exception that should make the workflow to stop
         raise Exception('Test exception')
 
         # Test process
@@ -63,23 +62,6 @@ class FailingWFTestSimple(WFTestSimple):
     @Workflow.step
     def third_step(self):
         self.next(self.exit)
-
-    def generate_calc(self):
-        from aiida.orm import Code, Computer, CalculationFactory
-        from aiida.common.datastructures import calc_states
-
-        CustomCalc = CalculationFactory(
-            'simpleplugins.templatereplacer')
-
-        computer = Computer.get("localhost")
-
-        calc = CustomCalc(computer=computer, withmpi=True)
-        calc.set_resources(
-            {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc.store()
-        calc._set_state(calc_states.FAILED)
-
-        return calc
 
 
 class FailingWFTestSimpleWithSubWF(Workflow):

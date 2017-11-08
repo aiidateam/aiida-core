@@ -155,37 +155,49 @@ class TestWorkflowBasic(AiidaTestCase):
         self.assertIn(wf.get_state(), wf_states)
 
     def test_failing_calc_in_wf(self):
-        from time import sleep
+        import logging
         from aiida.daemon.workflowmanager import execute_steps
-        from aiida.workflows.test import WFTestSimple, WFTestSimpleWithSubWF
-        from aiida.orm.workflow import Workflow
-        from aiida.workflows.test import FailingWFTestSimple, FailingWFTestSimpleWithSubWF
-        from aiida.daemon.tasks import manual_tick_all
-        # wf = FailingWFTestSimple()
-        wf = FailingWFTestSimpleWithSubWF()
-        wf.store()
+        from aiida.workflows.test import (FailingWFTestSimple,
+                                          FailingWFTestSimpleWithSubWF)
 
-        pks = [wf.pk]
+        try:
+            # First of all, I re-enable logging in case it was disabled by
+            # mistake by a previous test (e.g. one that disables and reenables
+            # again, but that failed)
+            logging.disable(logging.NOTSET)
+            # Temporarily disable logging to the stream handler (i.e. screen)
+            # because otherwise fix_calc_states will print warnings
+            handler = next((h for h in logging.getLogger('aiida').handlers if
+                            isinstance(h, logging.StreamHandler)), None)
+            if handler:
+                original_level = handler.level
+                handler.setLevel(logging.ERROR)
 
-        wf.start()
-        while wf.is_running():
-            # workflow_stepper()
-            execute_steps()
-            # manual_tick_all()
-            sleep(.1)
-            self.print_wf(pks)
+            # Testing the error propagation of a simple workflow
+            wf = FailingWFTestSimple()
+            wf.store()
+            step_no = 0
+            wf.start()
+            while wf.is_running():
+                execute_steps()
+                step_no += 1
+                self.assertLess(step_no, 5, "This workflow should have stopped "
+                                            "since it is failing")
 
-        print "=====> ", pks
-        self.print_wf(pks)
+            # Testing the error propagation of a workflow with subworkflows
+            wf = FailingWFTestSimpleWithSubWF()
+            wf.store()
 
-
-    def print_wf(self, pks):
-        workflows = get_workflow_list(pks)
-        tab_size = 2  # how many spaces to use for indentation of subworkflows
-        for w in workflows:
-            if not w.is_subworkflow() or w.pk in pks:
-                print "\n".join(get_workflow_info(w, tab_size=tab_size,
-                                                  depth=16))
+            step_no = 0
+            wf.start()
+            while wf.is_running():
+                execute_steps()
+                step_no += 1
+                self.assertLess(step_no, 5, "This workflow should have stopped "
+                                            "since it is failing")
+        finally:
+            if handler:
+                handler.setLevel(original_level)
 
 
     def tearDown(self):

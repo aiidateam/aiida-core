@@ -139,5 +139,5 @@ def manual_tick_all():
     submit_jobs()
     update_jobs()
     retrieve_jobs()
-    workflow_stepper() # legacy workflows
+    execute_steps() # legacy workflows
     tick_workflow_engine()

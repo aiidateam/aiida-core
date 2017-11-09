@@ -14,6 +14,7 @@ import aiida.backends.settings as settings
 
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
+from plum.persistence.bundle import Bundle
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.work.workchain import WorkChain, \
@@ -61,7 +62,7 @@ class Wf(WorkChain):
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-            }
+        }
 
     def s1(self):
         self._set_finished(inspect.stack()[0][3])
@@ -118,6 +119,33 @@ class TestContext(AiidaTestCase):
         del c['new_attr']
         with self.assertRaises(KeyError):
             c['new_attr']
+
+
+class IfTest(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(IfTest, cls).define(spec)
+        spec.outline(
+            if_(cls.condition)(
+                cls.step1,
+                cls.step2
+            )
+        )
+
+    def on_create(self, pid, inputs, saved_state):
+        super(IfTest, self).on_create(pid, inputs, saved_state)
+        if saved_state is None:
+            self.ctx.s1 = False
+            self.ctx.s2 = False
+
+    def condition(self):
+        return True
+
+    def step1(self):
+        self.ctx.s1 = True
+
+    def step2(self):
+        self.ctx.s2 = True
 
 
 class TestWorkchain(AiidaTestCase):
@@ -321,6 +349,29 @@ class TestWorkchain(AiidaTestCase):
 
         run(MainWorkChain)
 
+    def test_if_block_persistence(self):
+        """ This test was created to capture issue #902 """
+        wc = IfTest.new_instance()
+
+        while not wc.ctx.s1 and not wc.has_finished():
+            wc.tick()
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
+        # Now bundle the thing
+        b = Bundle()
+        wc.save_instance_state(b)
+        # Abort the current one
+        wc.stop()
+        wc.destroy(execute=True)
+
+        # Load from saved tate
+        wc = IfTest.create_from(b)
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
+        wc.run_until_complete()
+
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}
 
@@ -336,7 +387,6 @@ class TestWorkchain(AiidaTestCase):
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
-
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
         import logging
@@ -409,10 +459,12 @@ class TestHelpers(AiidaTestCase):
         self.assertEquals(outputs['a'], a)
         self.assertEquals(outputs['b'], b)
 
+
 class TestWorkChainAbort(AiidaTestCase):
     """
     Test the functionality to abort a workchain
     """
+
     class AbortableWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -490,11 +542,13 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(future.process.calc.has_aborted(), True)
         engine.shutdown()
 
+
 class TestWorkChainAbortChildren(AiidaTestCase):
     """
     Test the functionality to abort a workchain and verify that children
     are also aborted appropriately
     """
+
     class SubWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):

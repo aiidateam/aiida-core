@@ -7,77 +7,76 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This is a simple plugin that takes two node inputs, both of type ParameterData,
-with the following labels: template and parameters.
-You can also add other SinglefileData nodes as input, that will be copied according to
-what is written in 'template' (see below).
-
-* parameters: a set of parameters that will be used for substitution.
-
-* template: can contain the following parameters:
-
-    * input_file_template: a string with substitutions to be managed with the format()\
-      function of python, i.e. if you want to substitute a variable called 'varname', you write\
-      {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more\
-      details. The replaced file will be the input file.
-
-    * input_file_name: a string with the file name for the input. If it is not provided, no\
-      file will be created.
-
-    * output_file_name: a string with the file name for the output. If it is not provided, no\
-      redirection will be done and the output will go in the scheduler output file.
-
-    * cmdline_params: a list of strings, to be passed as command line parameters.\
-      Each one is substituted with the same rule of input_file_template. Optional
-
-    * input_through_stdin: if True, the input file name is passed via stdin. Default is\
-      False if missing.
-
-    * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');\
-         for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',\
-         and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'\
-         Errors are raised in the input links are non-existent, or of the wrong type, or if there are \
-         unused input files.
-
-TODO: probably use Python's Template strings instead??
-TODO: catch exceptions
-"""
-from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
+from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.parameter import ParameterData
-
-# TODO: write a 'input_type_checker' routine to automatically check the existence
-# and type of inputs + default values etc.
-
 
 
 class TemplatereplacerCalculation(JobCalculation):
     """
-    Simple stub of a plugin that can be used to replace some text in a given
-    template. Can be used for many different codes, or as a starting point
-    to develop a new plugin.
+    Simple stub of a plugin that can be used to replace some text in a given template.
+    Can be used for many different codes, or as a starting point to develop a new plugin.
+
+    This simple plugin takes two node inputs, both of type ParameterData, with the labels
+    'parameters' and 'template'
+
+    You can also add other SinglefileData nodes as input, that will be copied according to
+    what is written in 'template' (see below).
+
+    * parameters: a set of parameters that will be used for substitution.
+
+    * template: can contain the following parameters:
+
+        * input_file_template: a string with substitutions to be managed with the format()
+          function of python, i.e. if you want to substitute a variable called 'varname', you write
+          {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more
+          details. The replaced file will be the input file.
+
+        * input_file_name: a string with the file name for the input. If it is not provided, no
+          file will be created.
+
+        * output_file_name: a string with the file name for the output. If it is not provided, no
+          redirection will be done and the output will go in the scheduler output file.
+
+        * cmdline_params: a list of strings, to be passed as command line parameters.
+          Each one is substituted with the same rule of input_file_template. Optional
+
+        * input_through_stdin: if True, the input file name is passed via stdin. Default is False if missing.
+
+        * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');
+            for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',
+            and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'
+            Errors are raised in the input links are non-existent, or of the wrong type, or if there are
+            unused input files.
+
+        * retrieve_temporary_files: a list of relative filepaths, that if defined, will be retrieved and
+            temporarily stored in an unstored FolderData node that will be available during the
+            Parser.parser_with_retrieved call under the key specified by the Parser.retrieved_temporary_folder key
+
+    TODO: probably use Python's Template strings instead??
+    TODO: catch exceptions
+    TODO: write a 'input_type_checker' routine to automatically check the existence and type of inputs + default values etc.
     """
 
     @classproperty
     def _use_methods(cls):
         retdict = JobCalculation._use_methods
         retdict.update({
-            "template": {
-               'valid_types': ParameterData,
-               'additional_parameter': None,
-               'linkname': 'template',
-               'docstring': "A template for the input file",
-               },
-            "parameters": {
-               'valid_types': ParameterData,
-               'additional_parameter': None,
-               'linkname': 'parameters',
-               'docstring': "Parameters used to replace placeholders in the template",
-               },
-            })
+            'template': {
+                'valid_types': ParameterData,
+                'additional_parameter': None,
+                'linkname': 'template',
+                'docstring': 'A template for the input file',
+            },
+            'parameters': {
+                'valid_types': ParameterData,
+                'additional_parameter': None,
+                'linkname': 'parameters',
+                'docstring': 'Parameters used to replace placeholders in the template',
+            },
+        })
         return retdict
 
     def _prepare_for_submission(self, tempfolder, inputdict):
@@ -92,7 +91,6 @@ class TemplatereplacerCalculation(JobCalculation):
         """
         import StringIO
 
-        from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.singlefile import SinglefileData
         from aiida.orm.data.remote import RemoteData
         from aiida.common.utils import validate_list_of_string_tuples
@@ -107,16 +105,16 @@ class TemplatereplacerCalculation(JobCalculation):
         template_node = inputdict.pop('template', None)
         template = template_node.get_dict()
 
-        input_file_template = template.pop('input_file_template', "")
+        input_file_template = template.pop('input_file_template', '')
         input_file_name = template.pop('input_file_name', None)
         output_file_name = template.pop('output_file_name', None)
         cmdline_params_tmpl = template.pop('cmdline_params', [])
         input_through_stdin = template.pop('input_through_stdin', False)
         files_to_copy = template.pop('files_to_copy', [])
+        retrieve_temporary_files = template.pop('retrieve_temporary_files', [])
 
         if template:
-            raise InputValidationError("The following keys could not be "
-                                       "used in the template node: {}".format(
+            raise InputValidationError('The following keys could not be used in the template node: {}'.format(
                 template.keys()))
 
         try:
@@ -150,8 +148,7 @@ class TemplatereplacerCalculation(JobCalculation):
 
         if len(inputdict) > 0:
             raise InputValidationError("The input nodes with the following labels could not be "
-                                       "used by the templatereplacer plugin: {}".format(
-                inputdict.keys()))
+                                       "used by the templatereplacer plugin: {}".format(inputdict.keys()))
 
         if input_file_name is not None and not input_file_template:
             raise InputValidationError("If you give an input_file_name, you "
@@ -172,6 +169,7 @@ class TemplatereplacerCalculation(JobCalculation):
 
         calcinfo = CalcInfo()
         calcinfo.retrieve_list = []
+        calcinfo.retrieve_temporary_list = []
 
         calcinfo.uuid = self.uuid
         calcinfo.local_copy_list = local_copy_list
@@ -179,11 +177,17 @@ class TemplatereplacerCalculation(JobCalculation):
 
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = cmdline_params
+
         if input_through_stdin is not None:
             codeinfo.stdin_name = input_file_name
+
         if output_file_name:
             codeinfo.stdout_name = output_file_name
             calcinfo.retrieve_list.append(output_file_name)
+
+        if retrieve_temporary_files:
+            calcinfo.retrieve_temporary_list = retrieve_temporary_files
+
         codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
 

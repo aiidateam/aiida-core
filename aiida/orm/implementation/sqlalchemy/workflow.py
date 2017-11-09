@@ -637,6 +637,7 @@ class Workflow(AbstractWorkflow):
                         wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
+                cls.set_state(wf_states.ERROR)
             return None
 
         out = wrapper

@@ -708,6 +708,7 @@ def retrieve_computed_for_authinfo(authinfo):
                                      extra=logger_extra)
                     workdir = calc._get_remote_workdir()
                     retrieve_list = calc._get_retrieve_list()
+                    retrieve_temporary_list = calc._get_retrieve_temporary_list()
                     retrieve_singlefile_list = calc._get_retrieve_singlefile_list()
                     execlogger.debug("[retrieval of calc {}] "
                                      "chdir {}".format(calc.pk, workdir),
@@ -721,55 +722,9 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
-                        for item in retrieve_list:
-                            # I have two possibilities:
-                            # * item is a string
-                            # * or is a list
-                            # then I have other two possibilities:
-                            # * there are file patterns
-                            # * or not
-                            # First decide the name of the files
-                            if isinstance(item, list):
-                                tmp_rname, tmp_lname, depth = item
-                                # if there are more than one file I do something differently
-                                if t.has_magic(tmp_rname):
-                                    remote_names = t.glob(tmp_rname)
-                                    local_names = []
-                                    for rem in remote_names:
-                                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
-                                        local_names.append(os.path.sep.join([tmp_lname] + to_append))
-                                else:
-                                    remote_names = [tmp_rname]
-                                    to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
-                                    local_names = [os.path.sep.join([tmp_lname] + to_append)]
-                                if depth > 1:  # create directories in the folder, if needed
-                                    for this_local_file in local_names:
-                                        new_folder = os.path.join(
-                                            folder.abspath,
-                                            os.path.split(this_local_file)[0])
-                                        if not os.path.exists(new_folder):
-                                            os.makedirs(new_folder)
-                            else:  # it is a string
-                                if t.has_magic(item):
-                                    remote_names = t.glob(item)
-                                    local_names = [os.path.split(rem)[1] for rem in remote_names]
-                                else:
-                                    remote_names = [item]
-                                    local_names = [os.path.split(item)[1]]
-
-                            for rem, loc in zip(remote_names, local_names):
-                                execlogger.debug("[retrieval of calc {}] "
-                                                 "Trying to retrieve remote item '{}'".format(
-                                    calc.pk, rem),
-                                                 extra=logger_extra)
-                                t.get(rem,
-                                      os.path.join(folder.abspath, loc),
-                                      ignore_nonexisting=True)
-
-                        # Here I retrieved everything;
-                        # now I store them inside the calculation
-                        retrieved_files.replace_with_folder(folder.abspath,
-                                                            overwrite=True)
+                        retrieve_files_from_list(calc, t, folder, retrieve_list)
+                        # Here I retrieved everything; now I store them inside the calculation
+                        retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
 
                     # Second, retrieve the singlefiles
                     with SandboxFolder() as folder:
@@ -777,14 +732,10 @@ def retrieve_computed_for_authinfo(authinfo):
                         for (linkname, subclassname, filename) in retrieve_singlefile_list:
                             execlogger.debug("[retrieval of calc {}] Trying "
                                              "to retrieve remote singlefile '{}'".format(
-                                calc.pk, filename),
-                                             extra=logger_extra)
-                            localfilename = os.path.join(
-                                folder.abspath, os.path.split(filename)[1])
-                            t.get(filename, localfilename,
-                                  ignore_nonexisting=True)
-                            singlefile_list.append((linkname, subclassname,
-                                                    localfilename))
+                                calc.pk, filename), extra=logger_extra)
+                            localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
+                            t.get(filename, localfilename, ignore_nonexisting=True)
+                            singlefile_list.append((linkname, subclassname, localfilename))
 
                         # ignore files that have not been retrieved
                         singlefile_list = [i for i in singlefile_list if
@@ -796,38 +747,47 @@ def retrieve_computed_for_authinfo(authinfo):
                             SinglefileSubclass = DataFactory(subclassname)
                             singlefile = SinglefileSubclass()
                             singlefile.set_file(filename)
-                            singlefile.add_link_from(calc, label=linkname,
-                                                     link_type=LinkType.CREATE)
+                            singlefile.add_link_from(calc, label=linkname, link_type=LinkType.CREATE)
                             singlefiles.append(singlefile)
 
-                    # Finally, store
-                    execlogger.debug("[retrieval of calc {}] "
-                                     "Storing retrieved_files={}".format(
-                        calc.pk, retrieved_files.dbnode.pk),
-                                     extra=logger_extra)
+                    # Retrieve the temporary files in a separate temporary folder if any files were
+                    # specified in the 'retrieve_temporary_list' key
+                    if retrieve_temporary_list:
+                        retrieved_temporary_folder = FolderData()
+                        with SandboxFolder() as folder:
+                            retrieve_files_from_list(calc, t, folder, retrieve_temporary_list)
+                            retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
+
+                        # Log the files that were retrieved in the temporary folder
+                        for entry in retrieved_temporary_folder.get_folder_list():
+                            execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
+                                calc.pk, entry), extra=logger_extra)
+                    else:
+                        retrieved_temporary_folder = None
+
+                    # Finally, store the retrieved_files node. The retrieved_temporary_folder node
+                    # is explicitly not stored, but will just be passed to the parser.parse_from calc call
+                    execlogger.debug("[retrieval of calc {}] Storing retrieved_files={}".format(
+                        calc.pk, retrieved_files.dbnode.pk), extra=logger_extra)
                     retrieved_files.store()
+
                     for fil in singlefiles:
-                        execlogger.debug("[retrieval of calc {}] "
-                                         "Storing retrieved_singlefile={}".format(
-                            calc.pk, fil.dbnode.pk),
-                                         extra=logger_extra)
+                        execlogger.debug("[retrieval of calc {}] Storing retrieved_singlefile={}".format(
+                            calc.pk, fil.dbnode.pk), extra=logger_extra)
                         fil.store()
 
-                    # If I was the one retrieving, I should also be the only
-                    # one parsing! I do not check
+                    # If I was the one retrieving, I should also be the only one parsing! I do not check
                     calc._set_state(calc_states.PARSING)
 
                     Parser = calc.get_parserclass()
                     # If no parser is set, the calculation is successful
                     successful = True
                     if Parser is not None:
-                        # TODO: parse here
                         parser = Parser(calc)
-                        successful, new_nodes_tuple = parser.parse_from_calc()
+                        successful, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
 
                         for label, n in new_nodes_tuple:
-                            n.add_link_from(calc, label=label,
-                                            link_type=LinkType.CREATE)
+                            n.add_link_from(calc, label=label, link_type=LinkType.CREATE)
                             n.store()
 
                     if successful:
@@ -878,3 +838,62 @@ def retrieve_computed_for_authinfo(authinfo):
                         raise
 
     return retrieved
+
+def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
+    """
+    Retrieve all the files in the retrieve_list from the remote into the
+    local folder instance through the transport. The entries in the retrieve_list
+    can be of two types:
+
+        * a string
+        * a list
+
+    If it is a string, it represents the remote absolute filepath of the file.
+    If the item is a list, the elements will correspond to the following:
+
+        * remotepath
+        * localpath
+        * depth
+
+    If the remotepath contains file patterns with wildcards, the localpath will be
+    treated as the work directory of the folder and the depth integer determines
+    upto what level of the original remotepath nesting the files will be copied.
+
+    :param transport: the Transport instance
+    :param folder: a local Folder instance for the transport to store files into
+    :param retrieve_list: the list of files to retrieve
+    """
+    import os
+
+    for item in retrieve_list:
+        if isinstance(item, list):
+            tmp_rname, tmp_lname, depth = item
+            # if there are more than one file I do something differently
+            if transport.has_magic(tmp_rname):
+                remote_names = transport.glob(tmp_rname)
+                local_names = []
+                for rem in remote_names:
+                    to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                    local_names.append(os.path.sep.join([tmp_lname] + to_append))
+            else:
+                remote_names = [tmp_rname]
+                to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
+                local_names = [os.path.sep.join([tmp_lname] + to_append)]
+            if depth > 1:  # create directories in the folder, if needed
+                for this_local_file in local_names:
+                    new_folder = os.path.join(
+                        folder.abspath,
+                        os.path.split(this_local_file)[0])
+                    if not os.path.exists(new_folder):
+                        os.makedirs(new_folder)
+        else:  # it is a string
+            if transport.has_magic(item):
+                remote_names = transport.glob(item)
+                local_names = [os.path.split(rem)[1] for rem in remote_names]
+            else:
+                remote_names = [item]
+                local_names = [os.path.split(item)[1]]
+
+        for rem, loc in zip(remote_names, local_names):
+            transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
+            transport.get(rem, os.path.join(folder.abspath, loc), ignore_nonexisting=True)

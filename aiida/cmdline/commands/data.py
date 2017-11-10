@@ -1414,7 +1414,7 @@ class _Structure(VerdiCommandWithSubcommands,
         """
         from os.path import abspath
         try:
-            from qe_tools.parsers.qeinputparser import QeInputFile
+            from qe_tools.parsers.pwinputparser import PwInputFile
         except ImportError:
             import sys
             print ("You have not installed the package qe-tools. \n"
@@ -1428,7 +1428,7 @@ class _Structure(VerdiCommandWithSubcommands,
         filepath =  abspath(filename)
 
         try:
-            inputparser = QeInputFile(filepath)
+            inputparser = PwInputFile(filepath)
             new_structure = inputparser.get_structuredata()
 
             if not dont_store:

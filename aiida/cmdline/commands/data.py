@@ -1413,7 +1413,14 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
+        try:
+            from qe_tools.parsers.qeinputparser import QeInputFile
+        except ImportError:
+            import sys
+            print ("You have not installed the package qe-tools. \n"
+                "You can install it with: pip install qe-tools")
+            sys.exit(0)
+
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 
@@ -1421,7 +1428,8 @@ class _Structure(VerdiCommandWithSubcommands,
         filepath =  abspath(filename)
 
         try:
-            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+            inputparser = QeInputFile(filepath)
+            new_structure = inputparser.get_structuredata()
 
             if not dont_store:
                 new_structure.store()

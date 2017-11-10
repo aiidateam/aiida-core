@@ -155,4 +155,4 @@ class TestDaemon(AiidaTestCase):
             i += 1
 
         self.assertTrue(registry.has_finished(dp_rinfo.pid))
-        self.assertFalse(registry.has_finished(fail_rinfo.pid))
+        self.assertTrue(registry.has_finished(fail_rinfo.pid))

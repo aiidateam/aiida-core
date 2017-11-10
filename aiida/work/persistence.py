@@ -140,6 +140,10 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         )
         self._filelocks = {}
 
+        self._ensure_directory(running_directory)
+        self._ensure_directory(finished_directory)
+        self._ensure_directory(failed_directory)
+
     @property
     def store_directory(self):
         return self._running_directory
@@ -169,11 +173,12 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             except (portalocker.LockException, IOError):
                 continue
             except BaseException:
-                LOGGER.warning("Failed to load checkpoint '{}' (deleting)\n{}"
+                LOGGER.warning("Failed to load checkpoint '{}' (moving to failed directory)\n{}"
                                .format(f, traceback.format_exc()))
 
                 try:
-                    os.remove(f)
+                    filename = os.path.basename(f)
+                    os.rename(f, os.path.join(self.failed_directory, filename))
                 except OSError:
                     pass
 

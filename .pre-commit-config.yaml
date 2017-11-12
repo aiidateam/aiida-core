@@ -1,16 +1,19 @@
 # yet another python formatter
 - repo: git://github.com/pre-commit/mirrors-yapf
-  sha: v0.17.0
+  sha: v0.19.0
   hooks:
   - id: yapf
     language: system
-    files: >-
-      ^(aiida/control/)
-      |(aiida/cmdline/tests)
-      |(docs/update_req_for_rtd.py)
-      |(.travis_data/test_setup.py)
-      |(aiida/backends/tests/verdi_commands.py)
-      |(aiida/utils/.*fixtures.py)
+    files: >-  # begin multiline string
+      (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
+        aiida/control/.*.py|        # must match the whole path, therefore
+        aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
+        docs/update_req_for_rtd.py| # a|b -> match a OR b
+        .travis_data/test_setup.py|
+        .travis-data/test_plugin_testcase.py|
+        aiida/backends/tests/verdi_commands.py|
+        aiida/utils/fixtures.py
+      )$  # $ -> end of file path, to add a directory, give full/path/.*
 
 # prospector: collection of linters
 - repo: git://github.com/guykisel/prospector-mirror
@@ -18,14 +21,18 @@
   hooks:
   - id: prospector
     language: system
-    exclude: '^(tests/)|(examples/)'
+    exclude: ^(tests/|examples/)
+    types: [file, python]
     files: >-
-      ^(aiida/control/)
-      |(aiida/cmdline/tests)
-      |(docs/update_req_for_rtd.py)
-      |(.travis_data/test_setup.py)
-      |(aiida/backends/tests/verdi_commands.py)
-      |(aiida/utils/.*fixtures.py)
+      (?x)^(
+        aiida/control/.*.py|
+        aiida/cmdline/tests/.*.py|
+        docs/update_req_for_rtd.py|
+        .travis_data/test_setup.py|
+        .travis-data/test_plugin_testcase.py|
+        aiida/backends/tests/verdi_commands.py|
+        aiida/utils/fixtures.py
+      )$
 
 - repo: local
   hooks: 
@@ -34,13 +41,15 @@
     entry: python ./docs/update_req_for_rtd.py --pre-commit
     language: system
     files: >-
-      ^(setup_requirements.py)
-      |(docs/requirements_for_rtd.txt)
-      |(docs/update_req_for_rtd.py)
+      (?x)^(
+        setup_requirements.py|
+        docs/requirements_for_rtd.txt|
+        docs/update_req_for_rtd.py|
+      )$
     pass_filenames: false
 
 - repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: v0.9.4
+  sha: v1.1.1
   hooks:
   - id: check-yaml
 

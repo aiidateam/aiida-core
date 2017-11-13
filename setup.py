@@ -71,7 +71,9 @@ if __name__ == '__main__':
                 'upf = aiida.orm.data.upf:UpfData'
             ],
             'aiida.cmdline': [],
-            'aiida.parsers': [],
+            'aiida.parsers': [
+                'simpleplugins.templatereplacer.test.doubler = aiida.parsers.simpleplugins.templatereplacer.test:TemplatereplacerDoublerParser',
+            ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',
                 'slurm = aiida.scheduler.plugins.slurm:SlurmScheduler',

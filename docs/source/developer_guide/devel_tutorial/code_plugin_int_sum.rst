@@ -163,6 +163,7 @@ summation code (a detailed description of the different sections follows)::
             calcinfo.local_copy_list = []
             calcinfo.remote_copy_list = []
             calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
+            calcinfo.retrieve_temporary_list = [['path/hugefiles*[0-9].xml', '.', '1']]
 
             codeinfo = CodeInfo()
             codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
@@ -275,6 +276,29 @@ automatically after the code execution, and that will be stored permanently
 into the AiiDA database::
 
    calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
+
+The entries of the list should either be a string, which corresponds to the full
+filepath of the file on the remote, or if you want to specify a group of files with
+wildcards, it should be another list containing the following three items
+
+* Remote path with wildcards e.g. ``some/path/bigfiles*[0-9].xml``
+* Local path, which should always be ``'.'`` in this case of using wildcards
+* Depth, which is an integer that indicates to what level the nested subtree structure should be kept.
+  For example in this example, with a depth of ``1``, the matched files will be copied to the
+  root directory as ``bigfiles*[0-9].xml``. For ``depth=1``, the sub path ``path`` will be included
+  and the files will be copied as ``path/bigfiles*[0-9].xml``
+
+There is another field that follows exactly the same syntax as the ``retrieve_list`` but behaves a little differently.
+
+   calcinfo.retrieve_temporary_list = [['some/path/bigfiles*[0-9].xml', '.', 0]]
+
+The difference is that these files will be retrieved and stored in a temporary folder, that will only
+be available during the parsing of the calculation. After the parsing is completed, successfully or not, the
+files will be deleted. This is useful if during parsing, one wants to analyze the contents of big files and
+parse a small subset of the data to keep permanently, but does not want to have the store the raw files themselves
+which would unnecessarily increase the size of the repository. The files that are retrieved will be stored in
+a temporary ``FolderData`` and be passed as an argument to the ``parse_with_retrieved`` method of the ``Parser``
+class, which is implemented by the specific plugin. It will be passed under the key ``retrieved_temporary_folder``.
 
 For the time being, just define also the following variables as empty lists
 (we will describe them in the next sections)::

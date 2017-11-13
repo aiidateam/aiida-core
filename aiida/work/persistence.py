@@ -170,31 +170,9 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         for f in glob.glob(path.join(self._running_directory, "*.pickle")):
             try:
                 process = self.create_from_file_and_persist(f)
+                processes.append(process)
             except (portalocker.LockException, IOError):
                 continue
-            except BaseException:
-                LOGGER.warning("Failed to load checkpoint '{}'\n{}".format(f, traceback.format_exc()))
-
-                # Try to load the node corresponding to the corrupt pickle, set it to FAILED and seal it
-                # At the end we will also move the pickle to the failed directory so it can be inspected for debugging
-                try:
-                    from aiida.orm import load_node
-                    pk, extension = os.path.splitext(os.path.basename(f))
-                    node = load_node(int(pk))
-                    node._set_attr(node.FAILED_KEY, True)
-                    node.seal()
-                except BaseException as exception:
-                    LOGGER.warning('failed to clean up the node of the corrupt pickle {}'.format(traceback.format_exc()))
-                finally:
-                    LOGGER.warning("moving '{}' to failed directory".format(f))
-                    try:
-                        filename = os.path.basename(f)
-                        os.rename(f, os.path.join(self.failed_directory, filename))
-                    except OSError:
-                        pass
-
-            else:
-                processes.append(process)
 
         return processes
 
@@ -214,19 +192,45 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
 
         with lock as handle:
             checkpoint = self.load_checkpoint_from_file_object(handle)
-            process = Process.create_from(checkpoint)
-
             try:
-                # Listen to the process - state transitions will trigger pickling
-                process.add_process_listener(self)
-            except AssertionError:
-                # Happens if we're already listening
-                pass
+                process = Process.create_from(checkpoint)
+            except BaseException:
+                LOGGER.warning(
+                    "Failed to load checkpoint '{}'\n{}".format(filepath, traceback.format_exc())
+                )
 
-            lock.acquire()
-            self._filelocks[process.pid] = lock
+                # Try to load the node corresponding to the corrupt pickle, set it to FAILED and seal it
+                # At the end we will also move the pickle to the failed directory so it can be inspected for debugging
+                try:
+                    from aiida.orm import load_node
+                    pk, extension = os.path.splitext(os.path.basename(filepath))
+                    node = load_node(int(pk))
+                    node._set_attr(node.FAILED_KEY, True)
+                    node.seal()
+                except BaseException as exception:
+                    LOGGER.warning(
+                        'failed to clean up the node of the corrupt pickle {}'.format(traceback.format_exc()))
+                finally:
+                    LOGGER.warning("moving '{}' to failed directory".format(filepath))
+                    try:
+                        filename = os.path.basename(filepath)
+                        os.rename(filepath, os.path.join(self.failed_directory, filename))
+                    except OSError:
+                        pass
 
-        return process
+                    raise ValueError("Failed creating process from '{}'".format(filepath))
+            else:
+                try:
+                    # Listen to the process - state transitions will trigger pickling
+                    process.add_process_listener(self)
+                except AssertionError:
+                    # Happens if we're already listening
+                    pass
+
+                lock.acquire()
+                self._filelocks[process.pid] = lock
+
+            return process
 
     def persist_process(self, process):
         if process.pid in self._filelocks:

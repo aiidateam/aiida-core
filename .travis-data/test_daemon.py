@@ -26,10 +26,10 @@ number_workchains = 30 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']
-    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
+    print "Output of 'cat {}/.aiida/daemon/log/celery.log':".format(home)
     try:
         print subprocess.check_output(
-            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
+            ["cat", "{}/.aiida/daemon/log/celery.log".format(home)],
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:

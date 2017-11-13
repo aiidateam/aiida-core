@@ -168,11 +168,9 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         processes = []
         for f in glob.glob(path.join(self._running_directory, "*.pickle")):
-            try:
-                process = self.create_from_file_and_persist(f)
+            process = self.create_from_file_and_persist(f)
+            if process is not None:
                 processes.append(process)
-            except BaseException:
-                pass
 
         return processes
 
@@ -186,13 +184,14 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         we acquire the lock.
 
         :param filepath: path to the pickle to be loaded as a Process
-        :return: Process instance
+        :return: Process instance or None if process can't be loaded
         """
         lock = RLock(filepath, 'r+b', timeout=0)
 
         with lock as handle:
-            checkpoint = self.load_checkpoint_from_file_object(handle)
+            process = None
             try:
+                checkpoint = self.load_checkpoint_from_file_object(handle)
                 process = Process.create_from(checkpoint)
             except BaseException as e:
                 LOGGER.warning(
@@ -218,7 +217,6 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                     except OSError:
                         pass
 
-                raise
             else:
                 try:
                     # Listen to the process - state transitions will trigger pickling

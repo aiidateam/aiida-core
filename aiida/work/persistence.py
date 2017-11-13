@@ -140,6 +140,10 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         )
         self._filelocks = {}
 
+        self._ensure_directory(running_directory)
+        self._ensure_directory(finished_directory)
+        self._ensure_directory(failed_directory)
+
     @property
     def store_directory(self):
         return self._running_directory
@@ -164,20 +168,8 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         """
         processes = []
         for f in glob.glob(path.join(self._running_directory, "*.pickle")):
-            try:
-                process = self.create_from_file_and_persist(f)
-            except (portalocker.LockException, IOError):
-                continue
-            except BaseException:
-                LOGGER.warning("Failed to load checkpoint '{}' (deleting)\n{}"
-                               .format(f, traceback.format_exc()))
-
-                try:
-                    os.remove(f)
-                except OSError:
-                    pass
-
-            else:
+            process = self.create_from_file_and_persist(f)
+            if process is not None:
                 processes.append(process)
 
         return processes
@@ -192,25 +184,51 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         we acquire the lock.
 
         :param filepath: path to the pickle to be loaded as a Process
-        :return: Process instance
+        :return: Process instance or None if process can't be loaded
         """
         lock = RLock(filepath, 'r+b', timeout=0)
 
         with lock as handle:
-            checkpoint = self.load_checkpoint_from_file_object(handle)
-            process = Process.create_from(checkpoint)
-
+            process = None
             try:
-                # Listen to the process - state transitions will trigger pickling
-                process.add_process_listener(self)
-            except AssertionError:
-                # Happens if we're already listening
-                pass
+                checkpoint = self.load_checkpoint_from_file_object(handle)
+                process = Process.create_from(checkpoint)
+            except BaseException as e:
+                LOGGER.warning(
+                    "Failed to load checkpoint '{}'\n{}".format(filepath, traceback.format_exc())
+                )
 
-            lock.acquire()
-            self._filelocks[process.pid] = lock
+                # Try to load the node corresponding to the corrupt pickle, set it to FAILED and seal it
+                # At the end we will also move the pickle to the failed directory so it can be inspected for debugging
+                try:
+                    from aiida.orm import load_node
+                    pk, extension = os.path.splitext(os.path.basename(filepath))
+                    node = load_node(int(pk))
+                    node._set_attr(node.FAILED_KEY, True)
+                    node.seal()
+                except BaseException as exception:
+                    LOGGER.warning(
+                        'failed to clean up the node of the corrupt pickle {}'.format(traceback.format_exc()))
+                finally:
+                    LOGGER.warning("moving '{}' to failed directory".format(filepath))
+                    try:
+                        filename = os.path.basename(filepath)
+                        os.rename(filepath, os.path.join(self.failed_directory, filename))
+                    except OSError:
+                        pass
 
-        return process
+            else:
+                try:
+                    # Listen to the process - state transitions will trigger pickling
+                    process.add_process_listener(self)
+                except AssertionError:
+                    # Happens if we're already listening
+                    pass
+
+                lock.acquire()
+                self._filelocks[process.pid] = lock
+
+            return process
 
     def persist_process(self, process):
         if process.pid in self._filelocks:

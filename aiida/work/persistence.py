@@ -171,8 +171,8 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             try:
                 process = self.create_from_file_and_persist(f)
                 processes.append(process)
-            except (portalocker.LockException, IOError):
-                continue
+            except BaseException:
+                pass
 
         return processes
 
@@ -194,7 +194,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             checkpoint = self.load_checkpoint_from_file_object(handle)
             try:
                 process = Process.create_from(checkpoint)
-            except BaseException:
+            except BaseException as e:
                 LOGGER.warning(
                     "Failed to load checkpoint '{}'\n{}".format(filepath, traceback.format_exc())
                 )
@@ -218,7 +218,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                     except OSError:
                         pass
 
-                    raise ValueError("Failed creating process from '{}'".format(filepath))
+                raise
             else:
                 try:
                     # Listen to the process - state transitions will trigger pickling

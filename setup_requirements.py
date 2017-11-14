@@ -38,7 +38,7 @@ install_requires = [
     'billiard==3.3.0.23',
     'amqp==1.4.9',
     'anyjson==0.3.3',
-    'supervisor==3.1.3',
+    'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
     'plumpy==0.7.10',

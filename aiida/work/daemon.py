@@ -49,6 +49,7 @@ def tick_workflow_engine(storage=None, print_exceptions=True):
             proc.stop()
             proc.run_until(ProcessState.DESTROYED)
         except BaseException:
+            proc.logger.error('exception occurred:\n{}'.format(traceback.format_exc()))
             if print_exceptions:
                 traceback.print_exc()
             continue

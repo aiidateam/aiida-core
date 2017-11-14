@@ -19,18 +19,16 @@ _sorted_datastates = (
     'NEW',  # just created
     'TOSUBMIT',  # used by the executionmanager to submit new calculations scheduled to be submitted
     'SUBMITTING',  # being submitted to cluster
-    'WITHSCHEDULER',  # on the scheduler (on any unfinished status:
-    # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
-    'COMPUTED',  # Calculation finished on scheduler, not yet retrieved
-    # (both DONE and FAILED)
+    'WITHSCHEDULER',  # on the scheduler (on any unfinished status: QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
+    'COMPUTED',  # calculation finished on scheduler, not yet retrieved (both DONE and FAILED)
     'RETRIEVING',  # while retrieving data
     'PARSING',  # while parsing data
-    'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
+    'FINISHED',  # final state of the calculation: data retrieved and eventually parsed
     'SUBMISSIONFAILED',  # error occurred during submission phase
     'RETRIEVALFAILED',  # error occurred during retrieval phase
     'PARSINGFAILED',  # error occurred during parsing phase due to a problem in the parse
-    'FAILED',  # The parser recognized the calculation as failed
-    'IMPORTED',  # The calculation was imported from another DB
+    'FAILED',  # the parser recognized the calculation as failed
+    'IMPORTED',  # the calculation was imported from another DB
 )
 
 # The order of states is not random: is the order of precedence.
@@ -83,14 +81,44 @@ def sort_states(list_states, use_key=False):
 class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the calculation plugin and to be
-    passed to the ExecManager
+    passed to the ExecManager.
+
+    In the following descriptions all paths have to be considered relative
+
+    * retrieve_list: a list of strings or tuples that indicate files that are to be retrieved from the remote
+        after the calculation has finished and stored in the repository in a FolderData.
+        If the entry in the list is just a string, it is assumed to be the filepath on the remote and it will
+        be copied to '.' of the repository with name os.path.split(item)[1]
+        If the entry is a tuple it is expected to have the following format
+
+            ('remotepath', 'localpath', depth)
+
+        If the 'remotepath' is a file or folder, it will be copied in the repository to 'localpath'.
+        However, if the 'remotepath' contains file patterns with wildcards, the 'localpath' should be set to '.'
+        and the depth parameter should be an integer that decides the localname. The 'remotepath' will be split on
+        file separators and the local filename will be determined by joining the N last elements, where N is
+        given by the depth variable.
+
+        Example: ('some/remote/path/files/pattern*[0-9].xml', '.', 2)
+
+        Will result in all files that match the pattern to be copied to the local repository with path
+
+            'files/pattern*[0-9].xml'
+
+    * retrieve_temporary_list: a list of strings or tuples that indicate files that will be retrieved
+        and stored temporarily in a FolderData, that will be available only during the parsing call.
+        The format of the list is the same as that of 'retrieve_list'
+
+    * retrieve_singlefile_list: a list of tuples with format
+        ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
+        Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
+
+    * local_copy_list: a list of tuples with format ('localabspath', 'relativedestpath')
+    * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
+    * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
+    * codes_info: a list of dictionaries used to pass the info of the execution of a code
+    * codes_run_mode: a string used to specify the order in which multi codes can be executed
     """
-    # Note: some of the variables might have never been used in AiiDA
-    #       one might want to clean all this stuff in a future revision
-    # Note: probably some of the fields below are not used anymore inside
-    #       calcinfo, but are rather directly set from calculation attributes to
-    #       the JobInfo to be passed to the ExecManager
-    #       (see, for instance, 'queue_name').
 
     _default_fields = (
         'job_environment',  # TODO UNDERSTAND THIS!
@@ -100,40 +128,20 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'uuid',
         'prepend_text',
         'append_text',
-#        'cmdline_params',  # as a list of strings. These 5 variables are now in CalcInfo
-#        'stdin_name',
-#        'stdout_name',
-#        'stderr_name',
-#        'join_files',
-        # 'queue_name', This is not used in CalcInfo, it is automatically set from
-        # calculation attributes to JobInfo
         'num_machines',
         'num_mpiprocs_per_machine',
         'priority',
         'max_wallclock_seconds',
         'max_memory_kb',
         'rerunnable',
-        'retrieve_list',  # a list of files or patterns to retrieve, with two
-        # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
-        # ['remotepath','localpath',depth]  ]
-        # second format will copy the remotepath file/folder to localpath.
-        # if remotepath is a file/folder, localpath will be its local name
-        # if remotepath has file patterns, localpath should only be '.'
-        # depth is an integer to decide the localname: will be os.path.join(localpath, filename )
-        # where filename takes remotepath.split() and joins the last #depth elements
-        # use the second option if you are using file patterns (*,[0-9],...)
-        # ALL PATHS ARE RELATIVE!
-        'local_copy_list',  # a list of length-two tuples with (localabspath, relativedestpath)
-        'remote_copy_list',  # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
+        'retrieve_list',
+        'retrieve_temporary_list',
+        'retrieve_singlefile_list',
+        'local_copy_list',
+        'remote_copy_list',
         'remote_symlink_list',
-        # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
-        'retrieve_singlefile_list',  # a list of files, that will be retrieved
-        # from cluster and saved in SinglefileData nodes
-        # in the following format:
-        # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
-        # filename remote = filename local
-        'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
-        'codes_run_mode', # a string used to specify the order in which multi codes can be executed
+        'codes_info',
+        'codes_run_mode'
     )
 
 
@@ -148,8 +156,7 @@ class CodeRunmode(Enumerate):
 # if serial, it will be:
 #   code1.x
 #   code2.x
-code_run_modes = CodeRunmode(('PARALLEL',
-                              'SERIAL'))
+code_run_modes = CodeRunmode(('PARALLEL', 'SERIAL'))
 
 
 class CodeInfo(DefaultFieldsAttributeDict):

@@ -834,6 +834,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             group = UpfData.get_upf_group(group_name)
         except NotExistent:
             print >> sys.stderr, ("upf family {} not found".format(group_name))
+            sys.exit(1)
 
         for u in group.nodes:
             dest_path = os.path.join(folder,u.filename)

@@ -50,7 +50,7 @@ class SealableWithUpdatableAttributes(Sealable):
     _updatable_attributes = tuple()
 
     @override
-    def _set_attr(self, key, value):
+    def _set_attr(self, key, value, **kwargs):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
@@ -66,7 +66,7 @@ class SealableWithUpdatableAttributes(Sealable):
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
                 "Cannot change the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._set_attr(key, value)
+        super(SealableWithUpdatableAttributes, self)._set_attr(key, value, **kwargs)
 
     @override
     def _del_attr(self, key):

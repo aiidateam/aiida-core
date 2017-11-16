@@ -26,10 +26,10 @@ number_workchains = 30 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']
-    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
+    print "Output of 'cat {}/.aiida/daemon/log/celery.log':".format(home)
     try:
         print subprocess.check_output(
-            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
+            ["cat", "{}/.aiida/daemon/log/celery.log".format(home)],
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
@@ -108,7 +108,13 @@ def main():
         inputval = counter
         parameters = ParameterData(dict={'value': inputval})
         template = ParameterData(dict={
-                'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+                ## The following line adds a significant sleep time.
+                ## I set it to 1 second to speed up tests
+                ## I keep it to a non-zero value because I want
+                ## To test the case when AiiDA finds some calcs
+                ## in a queued state
+                #'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+                'cmdline_params': ["1"],
                 'input_file_template': "{value}", # File just contains the value to double
                 'input_file_name': 'value_to_double.txt',
                 'output_file_name': 'output.txt',

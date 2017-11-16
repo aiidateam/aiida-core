@@ -1,9 +1,9 @@
 recursive-include aiida/common/additions/migration_tests/test_migration_files *
+recursive-include aiida/common/additions/config_migrations/test_samples/ *
 include aiida/backends/tests/export_import_test_files/*.aiida
 include aiida/backends/sqlalchemy/migrations/script.py.mako
 include aiida/common/additions/backup_script/backup_info.json.tmpl
 include examples/testdata/qepseudos/*
-
 include fastentrypoints.py
 include setup_requirements.py
 include AUTHORS.txt

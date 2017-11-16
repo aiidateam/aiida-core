@@ -14,6 +14,7 @@ from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime', 'state', 'sealed']
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
@@ -54,7 +55,11 @@ class Work(VerdiCommandWithSubcommands):
     '-l', '--limit', type=int, default=None,
     help='limit the final result set to this size'
 )
-def do_list(past_days, all_states, limit):
+@click.option(
+    '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
+    multiple=True, help='define the list of properties to show'
+)
+def do_list(past_days, all_states, limit, project):
     """
     Return a list of running workflows on screen
     """
@@ -72,50 +77,87 @@ def do_list(past_days, all_states, limit):
     _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
     _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
+    if not project:
+        project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
+
+
+    # Mapping of projections to list table headers.
+    hmap_dict = {
+        'id': 'PID',
+        'ctime': 'Creation time',
+        'label': 'Process Label',
+        'uuid': 'UUID',
+        'descr': 'Description',
+        'mtime': 'Modification time'
+    }
+
+    def map_header(p):
+        try:
+            return hmap_dict[p]
+        except KeyError:
+            return p.capitalize()
+
+    # Mapping of querybuilder keys that differ from projections.
+    pmap_dict = {
+        'label': 'attributes._process_label',
+        'sealed': _SEALED_ATTRIBUTE_KEY,
+        'failed': _FAILED_ATTRIBUTE_KEY,
+        'aborted': _ABORTED_ATTRIBUTE_KEY,
+        'finished': _FINISHED_ATTRIBUTE_KEY,
+        'descr': 'description',
+    }
+
+    def map_projection(p):
+        try:
+            return pmap_dict[p]
+        except KeyError:
+            return p
+
+    def calculation_state(calculation):
+        if calculation[_FAILED_ATTRIBUTE_KEY]:
+            return 'FAILED'
+        elif calculation[_ABORTED_ATTRIBUTE_KEY]:
+            return 'ABORTED'
+        elif calculation[_FINISHED_ATTRIBUTE_KEY]:
+            return 'FINISHED'
+        else:
+            return 'RUNNING'
+
+    # Mapping of to-string formatting of projections that do need it.
+    rmap_dict = {
+        'ctime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('ctime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'mtime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('mtime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'sealed': lambda calc: str(calc[map_projection('sealed')]),
+        'state': lambda calc: calculation_state(calc),
+    }
+
+    def map_result(p, obj):
+        try:
+            print p, rmap_dict[p], obj
+            return rmap_dict[p](obj)
+        except:
+            return obj[map_projection(p)]
+
+
+    mapped_projections = list(map(lambda p: map_projection(p), project))
+    mapped_projections.extend([_FAILED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY])
     table = []
-    for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):
 
-        calculation = res['calculation']
-
-        creation_time = str_timedelta(
-            timezone.delta(calculation['ctime'], timezone.now()), negative_to_zero=True,
-            max_num_fields=1
-        )
-
-        if _SEALED_ATTRIBUTE_KEY in calculation and calculation[_SEALED_ATTRIBUTE_KEY]:
-            sealed = True
-        else:
-            sealed = False
-
-        if _FINISHED_ATTRIBUTE_KEY in calculation and calculation[_FINISHED_ATTRIBUTE_KEY]:
-            state = 'Finished'
-        elif _FAILED_ATTRIBUTE_KEY in calculation and calculation[_FAILED_ATTRIBUTE_KEY]:
-            state = 'Failed'
-        elif _ABORTED_ATTRIBUTE_KEY in calculation and calculation[_ABORTED_ATTRIBUTE_KEY]:
-            state = 'Aborted'
-        elif sealed:
-            # If it is not in terminal state but sealed, we have an inconsistent state
-            state = 'Unknown'
-        else:
-            state = 'Running'
-
-        # By default we only display unsealed entries, unless all_states flag is set
-        if sealed and not all_states:
+    for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days, order_by={'ctime': 'desc'}):
+        calc = res['calculation']
+        if calc[_SEALED_ATTRIBUTE_KEY] and not all_states:
             continue
-
-        table.append([
-            calculation['id'],
-            creation_time,
-            state,
-            str(sealed),
-            calculation['attributes._process_label']
-        ])
+        table.append(list(map(lambda p: map_result(p, calc), project)))
 
     # Since we sorted by descending creation time, we revert the list to print the most
     # recent entries last
     table = table[::-1]
 
-    print(tabulate(table, headers=['PK', 'Creation', 'State', 'Sealed', 'ProcessLabel']))
+    print(tabulate(table, headers=(list(map(lambda p: map_header(p), project)))))
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
@@ -296,22 +338,12 @@ def kill(pks):
         click.echo('No pks of valid running workchains given.')
 
 
-def _build_query(order_by=None, limit=None, past_days=None):
+def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     import datetime
     from aiida.utils import timezone
     from aiida.orm.mixins import Sealable
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
-
-    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    _ABORTED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.ABORTED_KEY)
-    _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
-    _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
-
-    calculation_projections = [
-        'id', 'ctime', 'attributes._process_label',
-        _SEALED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FAILED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY
-    ]
 
     # Define filters
     calculation_filters = {}
@@ -325,7 +357,7 @@ def _build_query(order_by=None, limit=None, past_days=None):
     qb.append(
         cls=WorkCalculation,
         filters=calculation_filters,
-        project=calculation_projections,
+        project=projections,
         tag='calculation'
     )
 

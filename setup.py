@@ -88,6 +88,7 @@ if __name__ == '__main__':
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'
             ],
+            'aiida.tests': [],
             'aiida.tools.dbimporters': [
                 'cod = aiida.tools.dbimporters.cod',
                 'icsd = aiida.tools.dbimporters.icsd',

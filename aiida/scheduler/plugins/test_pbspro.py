@@ -908,6 +908,7 @@ class TestSubmitScript(unittest.TestCase):
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash -l'
         job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
@@ -920,7 +921,7 @@ class TestSubmitScript(unittest.TestCase):
         submit_script_text = s.get_submit_script(job_tmpl)
 
         self.assertTrue('#PBS -r n' in submit_script_text)
-        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash -l'))
         self.assertTrue('#PBS -l walltime=24:00:00' in submit_script_text)
         self.assertTrue('#PBS -l select=1' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
@@ -937,6 +938,7 @@ class TestSubmitScript(unittest.TestCase):
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=2,
@@ -973,6 +975,7 @@ class TestSubmitScript(unittest.TestCase):
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
@@ -1013,6 +1016,7 @@ class TestSubmitScript(unittest.TestCase):
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,

@@ -122,7 +122,7 @@ If you use the TCOD database exporter, please cite the following work:
 .. highlights:: Andrius Merkys, Nicolas Mounet, Andrea Cepellotti,
   Nicola Marzari, Saulius Gražulis and Giovanni Pizzi, *A posteriori
   metadata from automated provenance tracking: Integration of AiiDA
-  and TCOD*, Journal of Cheminformatics 9 (2017);
+  and TCOD*, Journal of Cheminformatics 9, 56 (2017);
   http://doi.org/10.1186/s13321-017-0242-y.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/

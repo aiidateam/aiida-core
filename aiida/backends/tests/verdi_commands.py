@@ -25,6 +25,7 @@ computer_common_info = [
     "ssh",
     "torque",
     "/scratch/{username}/aiida_run",
+    "#!/bin/bash",
     "mpirun -np {tot_num_mpiprocs}",
     "1",
     EOFError,

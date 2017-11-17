@@ -104,6 +104,7 @@ class Computer(AbstractComputer):
         ret_lines.append(
             " * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
+        ret_lines.append(" * Shebang:        {}".format(self.get_shebang()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
         def_cpus_machine = self.get_default_mpiprocs_per_machine()
@@ -219,6 +220,19 @@ class Computer(AbstractComputer):
         except ConfigurationError:
             # This happens the first time: I provide a reasonable default value
             return "/scratch/{username}/aiida_run/"
+
+    def get_shebang(self):
+        try:
+            return self.dbcomputer.get_shebang()
+        except ConfigurationError:
+            # This happens the first time: I provide a reasonable default value
+            return "#!/bin/bash"
+
+    def set_shebang(self, val):
+        metadata = self._get_metadata()
+        # TODO: What are good checks?
+        metadata['shebang'] = val
+        self._set_metadata(metadata)
 
     def set_workdir(self, val):
         # if self.to_be_stored:

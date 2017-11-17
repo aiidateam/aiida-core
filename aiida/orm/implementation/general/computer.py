@@ -110,6 +110,11 @@ class AbstractComputer(object):
              "username on the remote computer",
              False,
              ),
+            ("shebang",
+             "shebang line at the beginning of the submission script",
+             "this line specifies the first line of the submission script for this computer",
+             False,
+             ),
             # Must be called after the scheduler!
             ("mpirun_command",
              "mpirun command",
@@ -449,6 +454,18 @@ class AbstractComputer(object):
         self._workdir_validator(string)
         self.set_workdir(string)
 
+
+    def _get_shebang_string(self):
+        return self.get_shebang()
+
+    def _set_shebang_string(self, string):
+        """
+        Set the shebang line.
+        """
+        # self._shebang_validator(string)
+        # Should we validate?
+        self.set_shebang(string)
+
     @classmethod
     def _workdir_validator(cls, workdir):
         """
@@ -683,7 +700,15 @@ class AbstractComputer(object):
         pass
 
     @abstractmethod
+    def get_shebang(self):
+        pass
+
+    @abstractmethod
     def set_workdir(self, val):
+        pass
+
+    @abstractmethod
+    def set_shebang(self, val):
         pass
 
     @abstractmethod

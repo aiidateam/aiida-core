@@ -145,11 +145,10 @@ class Scheduler(object):
 
         empty_line = ""
 
-        shebang = "#!/bin/bash"
 
         # I fill the list with the lines, and finally join them and return
         script_lines = []
-        script_lines.append(shebang)
+        script_lines.append(job_tmpl.shebang)
         script_lines.append(empty_line)
 
         script_lines.append(self._get_submit_script_header(job_tmpl))

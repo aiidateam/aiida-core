@@ -118,6 +118,42 @@ Troubleshooting
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
+
+* Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the 
+  command ``verdi data structure show --format=ase <PK>``), might end up with the following error message::
+  
+     ImportError: No module named pygtk
+
+  The issue is that ``pygtk`` is currently not pip-installable. One has to install it
+  separately and create the appropriate bindings manually in the virtual environment.
+  You can follow the following procedure to get around this issue:
+  
+  + Install the ``python-gtk2`` package. Under Ubuntu, do::
+     
+     sudo apt-get install python-gtk2
+  
+  + Create the ``lib/python2.7/dist-packages`` folder within your virtual
+    environment::
+    
+     mkdir <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
+     chmod 755 <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
+     
+    where ``<AIIDA_VENV_FOLDER>`` is the virtual environment folder you have created
+    during the installation process.
+
+  + Create several symbolic links from this folder, pointing to a number of files
+    in ``/usr/lib/python2.7/dist-packages/``::
+    
+     cd <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
+     ln -s /usr/lib/python2.7/dist-packages/glib glib
+     ln -s /usr/lib/python2.7/dist-packages/gobject gobject
+     ln -s /usr/lib/python2.7/dist-packages/gtk-2.0 gtk-2.0
+     ln -s /usr/lib/python2.7/dist-packages/pygtk.pth pygtk.pth
+     ln -s /usr/lib/python2.7/dist-packages/pygtk.py pygtk.py
+     ln -s /usr/lib/python2.7/dist-packages/cairo cairo
+
+  After that, ``verdi data structure show --format=ase <PK>`` should work.
+
 * [*Only for developers*] The developer tests of the *SSH* transport plugin are
   performed connecting to ``localhost``. The tests will fail if
   a passwordless ssh connection is not set up. Therefore, if you want to run

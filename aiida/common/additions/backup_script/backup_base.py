@@ -315,12 +315,12 @@ class AbstractBackup(object):
         from aiida.backends import settings
         from aiida.common.setup import (get_config, get_profile_config,
                                         parse_repository_uri)
-        from aiida.common.exceptions import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 
         try:
             confs = get_config()
-        except ConfigurationError:
-            raise ConfigurationError(
+        except MissingConfigurationError:
+            raise MissingConfigurationError(
                 "Please run the AiiDA Installation, no config found")
 
         if settings.AIIDADB_PROFILE is None:

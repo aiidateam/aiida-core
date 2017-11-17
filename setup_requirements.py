@@ -113,6 +113,7 @@ extras_require = {
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
         'seekpath==1.6.0',
+        'qe-tools==1.0',
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],

@@ -221,59 +221,47 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
-def conv_to_fortran(val):
+def conv_to_fortran(val, quote_strings=True):
     """
     :param val: the value to be read and converted to a Fortran-friendly string.
+
+    :param quote_strings: Determines whether strings are wrapped in single quotes or not.
+    :type quote_strings: bool
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
     if isinstance(val, (bool, np.bool_)):
-        if val:
-            val_str = '.true.'
+        return '.true.' if val else '.false.'
+    if isinstance(val, numbers.Integral):
+        return "{:d}".format(val)
+    if isinstance(val, numbers.Real):
+        return ("{:18.10e}".format(val)).replace('e', 'd')
+    if isinstance(val, basestring):
+        if quote_strings:
+            template = "{!s}"
         else:
-            val_str = '.false.'
-    elif isinstance(val, numbers.Integral):
-        val_str = "{:d}".format(val)
-    elif isinstance(val, numbers.Real):
-        val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif isinstance(val, basestring):
-        val_str = "'{!s}'".format(val)
-    else:
-        raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
+            template = "'{!s}'"
+        return  template.format(val)
 
-    return val_str
+    raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
 
-
-def conv_to_fortran_withlists(val):
+def conv_to_fortran_withlists(val, quote_strings=True):
     """
     Same as conv_to_fortran but with extra logic to handle lists
     :param val: the value to be read and converted to a Fortran-friendly string.
+
+    :param quote_strings: Determines whether strings are wrapped in single quotes or not.
+    :type quote_strings: bool
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
     if (isinstance(val, (list, tuple))):
         out_list = []
         for thing in val:
-            out_list.append(conv_to_fortran(thing))
+            out_list.append(conv_to_fortran(thing, quote_strings=quote_strings))
         val_str = ", ".join(out_list)
         return val_str
-    if (isinstance(val, bool)):
-        if val:
-            val_str = '.true.'
-        else:
-            val_str = '.false.'
-    elif (isinstance(val, (int, long))):
-        val_str = "{:d}".format(val)
-    elif (isinstance(val, float)):
-        val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif (isinstance(val, basestring)):
-        val_str = "'{!s}'".format(val)
-    else:
-        raise ValueError("Invalid value passed, accepts only bools, ints, "
-                         "floats and strings")
-
-    return val_str
-
+    return conv_to_fortran(val, quote_strings=quote_strings)
 
 def get_unique_filename(filename, list_of_filenames):
     """

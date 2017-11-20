@@ -137,7 +137,6 @@ def do_list(past_days, all_states, limit, project):
 
     def map_result(p, obj):
         try:
-            print p, rmap_dict[p], obj
             return rmap_dict[p](obj)
         except:
             return obj[map_projection(p)]

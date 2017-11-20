@@ -19,7 +19,8 @@ Other errors arising at deeper level, e.g. those raised by the QueryBuilder
 or internal errors, are not embedded into the HTTP response.
 """
 
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.common.exceptions import ValidationError, InputValidationError, \
+    FeatureNotAvailable
 
 class RestValidationError(ValidationError):
     """
@@ -31,4 +32,7 @@ class RestInputValidationError(InputValidationError):
     """
     document with an example
     """
+    pass
+
+class RestFeatureNotAvailable(FeatureNotAvailable):
     pass

@@ -1,4 +1,4 @@
-## v0.10.0rc3:
+## v0.10.0:
 
 ### Major changes
 - The `DbPath` table has been removed and replaced with a dynamic transitive closure, because, among others, nested workchains could lead to the `DbPath` table exploding in size

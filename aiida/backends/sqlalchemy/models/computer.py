@@ -102,7 +102,7 @@ class DbComputer(Base):
         try:
             return self._metadata['shebang']
         except KeyError:
-            raise ConfigurationError('No workdir found for DbComputer {} '.format(
+            raise ConfigurationError('No shebang found for DbComputer {} '.format(
                 self.name))
 
     @property

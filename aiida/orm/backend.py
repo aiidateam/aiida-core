@@ -53,7 +53,18 @@ class Backend(object):
         """
         Get an object that implements the logging utilities interface.
 
-        :return: An concrete log utils object
+        :return: A concrete log utils object
         :rtype: :class:`aiida.orm.log.Log`
+        """
+        pass
+
+    @abstractproperty
+    def repotable(self):
+        """
+        Get an instance of the Repotable class that allows one to query the contents of
+        a repository through the registry in the database
+
+        :return: A concrete implementation of the Repotable to query the repository registry
+        :rtype: :class:`aiida.orm.repotable.Repotable`
         """
         pass

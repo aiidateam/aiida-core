@@ -9,12 +9,18 @@
 ###########################################################################
 from aiida.orm.backend import Backend
 from aiida.orm.implementation.django.log import DjangoLog
+from aiida.orm.implementation.django.repotable import DjangoRepotable
 
 
 class DjangoBackend(Backend):
     def __init__(self):
         self._log = DjangoLog()
+        self._repotable = DjangoRepotable()
 
     @property
     def log(self):
         return self._log
+
+    @property
+    def repotable(self):
+        return self._repotable

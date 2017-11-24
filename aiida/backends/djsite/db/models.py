@@ -1883,3 +1883,67 @@ class DbWorkflowStep(m.Model):
     def __str__(self):
         return "Step {} for workflow {} [{}]".format(self.name,
                                                      self.parent.module_class, self.parent.pk)
+
+
+@python_2_unicode_compatible
+class DbRepository(m.Model):
+    """
+    Table of available and used repositories
+
+    Attributes:
+    * name: Human readable label that also corresponds to the appropriate key in the config
+    * uuid: UUID associated with the repository upon creation
+
+    """
+    name = m.CharField(max_length=255, unique=True, blank=False)
+    uuid = UUIDField(auto=False, version=AIIDANODES_UUID_VERSION)
+
+    def __str__(self):
+        return '<DbRepository {}> ({})'.format(self.name, self.uuid)
+
+
+@python_2_unicode_compatible
+class DbFile(m.Model):
+    """
+    Table of files stored in the repository
+
+    Attributes:
+    * uuid: Automatically uniquely generated
+    * key: Human readable label that also corresponds to the appropriate key in the config
+    * repository: Record to DbRepository entry that represents the repository in the database
+
+    """
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    key = m.CharField(max_length=255)
+    repository = m.ForeignKey('DbRepository', related_name='files', on_delete=m.PROTECT)
+
+    nodes = m.ManyToManyField(DbNode, symmetrical=False, related_name='files', through='DbNodeFile')
+
+    def __str__(self):
+        return '<DbFile {}> ({})'.format(self.key, self.uuid)
+
+
+@python_2_unicode_compatible
+class DbNodeFile(m.Model):
+    """
+    Join table of repository files and node
+
+    Attributes:
+    * uuid: Automatically uniquely generated
+    * node: Id of the corresponding DbNode entry
+    * file: Id of the corresponding DbFile entry, can be null in the case of a directory
+    * path: Relative path within the node's virtual hierarchy, must have trailing slash if directory
+    * metadata: Any file metadata such as permissions and ownership
+
+    """
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    node = m.ForeignKey('DbNode', related_name='dbnodefiles', on_delete=m.CASCADE)
+    file = m.ForeignKey('DbFile', related_name='dbnodefiles', on_delete=m.PROTECT, null=True)
+    path = m.CharField(max_length=255, db_index=True)
+    metadata = m.TextField(default='{}')
+
+    class Meta:
+        unique_together = ('node', 'path')
+
+    def __str__(self):
+        return '<DbNodeFile {}> ({})'.format(self.path, self.uuid)

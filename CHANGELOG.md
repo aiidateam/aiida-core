@@ -1,4 +1,4 @@
-## v0.10.0rc2:
+## v0.10.0:
 
 ### Major changes
 - The `DbPath` table has been removed and replaced with a dynamic transitive closure, because, among others, nested workchains could lead to the `DbPath` table exploding in size
@@ -13,18 +13,26 @@
     For a complete overview of available plugins you can visit [the registry](https://aiidateam.github.io/aiida-registry/).
 
 ### Improvements
+- A new entry `retrieve_temporary_list` in `CalcInfo` allows to retrieve files temporarily for parsing, while not having to store them permanently in the repository [[#903]](https://github.com/aiidateam/aiida_core/pull/903)
 - New verdi command: `verdi work kill` to kill running workchains [[#821]](https://github.com/aiidateam/aiida_core/pull/821)
 - New verdi command: `verdi data remote [ls,cat,show]` to inspect the contents of `RemoteData` objects [[#743]](https://github.com/aiidateam/aiida_core/pull/743)
 - New verdi command: `verdi export migrate` allows the migration of existing export archives to new formats [[#781]](https://github.com/aiidateam/aiida_core/pull/781)
 - New verdi command: `verdi profile delete` [[#606]](https://github.com/aiidateam/aiida_core/pull/606)
+- Implemented a new option `-m` for the `verdi work report` command to limit the number of nested levels to be printed [[#888]](https://github.com/aiidateam/aiida_core/pull/888)
+- Added a `running` field to the output of `verdi work list` to give the current state of the workchains [[#888]](https://github.com/aiidateam/aiida_core/pull/888)
 - Implemented faster query to obtain database statistics [[#738]](https://github.com/aiidateam/aiida_core/pull/738)
 - Added testing for automatic SqlAlchemy database migrations through alembic [[#834]](https://github.com/aiidateam/aiida_core/pull/834)
+- Exceptions that are triggered in steps of a `WorkChain` are now properly logged to the `Node` making them visible through `verdi work report` [[#908]](https://github.com/aiidateam/aiida_core/pull/908)
 
 ### Critical bug fixes
 - Export will now write the link types to the archive and import will properly recreate the link [[#760]](https://github.com/aiidateam/aiida_core/pull/760)
 - Fix bug in workchain persistence that would lead to crashed workchains under certain conditions being resubmitted [[#728]](https://github.com/aiidateam/aiida_core/pull/728)
+- Fix bug in the pickling of `WorkChain` instances containing an `_if` logical block in the outline [[#904]](https://github.com/aiidateam/aiida_core/pull/904)
 
 ### Minor bug fixes
+- The logger for subclasses of `AbstractNode` is now properly namespaced to `aiida.` such that it works in plugins outside of the `aiida-core` source tree [[#897]](https://github.com/aiidateam/aiida_core/pull/897)
+- Fixed a problem with the states of the direct scheduler that was causing the daemon process to hang during submission [[#879]](https://github.com/aiidateam/aiida_core/pull/879)
+- Various bug fixes related to the old workflows in combination with the SqlAlchemy backend [[#889]](https://github.com/aiidateam/aiida_core/pull/889) [[#898]](https://github.com/aiidateam/aiida_core/pull/898)
 - Fixed bug in `TCODexporter` [[#761]](https://github.com/aiidateam/aiida_core/pull/761)
 - `verdi profile delete` now respects the configured `dbport` setting [[#713]](https://github.com/aiidateam/aiida_core/pull/713)
 - Restore correct help text for `verdi --help` [[#704]](https://github.com/aiidateam/aiida_core/pull/704)

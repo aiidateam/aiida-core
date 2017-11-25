@@ -834,6 +834,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             group = UpfData.get_upf_group(group_name)
         except NotExistent:
             print >> sys.stderr, ("upf family {} not found".format(group_name))
+            sys.exit(1)
 
         for u in group.nodes:
             dest_path = os.path.join(folder,u.filename)
@@ -1413,7 +1414,14 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
+        try:
+            from qe_tools.parsers.pwinputparser import PwInputFile
+        except ImportError:
+            import sys
+            print ("You have not installed the package qe-tools. \n"
+                "You can install it with: pip install qe-tools")
+            sys.exit(0)
+
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 
@@ -1421,7 +1429,8 @@ class _Structure(VerdiCommandWithSubcommands,
         filepath =  abspath(filename)
 
         try:
-            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+            inputparser = PwInputFile(filepath)
+            new_structure = inputparser.get_structuredata()
 
             if not dont_store:
                 new_structure.store()

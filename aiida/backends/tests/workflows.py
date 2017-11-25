@@ -152,6 +152,55 @@ class TestWorkflowBasic(AiidaTestCase):
         # it is a valid state
         self.assertIn(wf.get_state(), wf_states)
 
+    def test_failing_calc_in_wf(self):
+        """
+        This test checks that a workflow (but also a workflow with
+        sub-workflows) that has an exception at one of its steps stops
+        properly and it is not left as RUNNING.
+        """
+        import logging
+        from aiida.daemon.workflowmanager import execute_steps
+        from aiida.workflows.test import (FailingWFTestSimple,
+                                          FailingWFTestSimpleWithSubWF)
+
+        try:
+            # First of all, I re-enable logging in case it was disabled by
+            # mistake by a previous test (e.g. one that disables and reenables
+            # again, but that failed)
+            logging.disable(logging.NOTSET)
+            # Temporarily disable logging to the stream handler (i.e. screen)
+            # because otherwise fix_calc_states will print warnings
+            handler = next((h for h in logging.getLogger('aiida').handlers if
+                            isinstance(h, logging.StreamHandler)), None)
+            if handler:
+                original_level = handler.level
+                handler.setLevel(logging.ERROR)
+
+            # Testing the error propagation of a simple workflow
+            wf = FailingWFTestSimple()
+            wf.store()
+            step_no = 0
+            wf.start()
+            while wf.is_running():
+                execute_steps()
+                step_no += 1
+                self.assertLess(step_no, 5, "This workflow should have stopped "
+                                            "since it is failing")
+
+            # Testing the error propagation of a workflow with subworkflows
+            wf = FailingWFTestSimpleWithSubWF()
+            wf.store()
+
+            step_no = 0
+            wf.start()
+            while wf.is_running():
+                execute_steps()
+                step_no += 1
+                self.assertLess(step_no, 5, "This workflow should have stopped "
+                                            "since it is failing")
+        finally:
+            if handler:
+                handler.setLevel(original_level)
 
     def tearDown(self):
         """

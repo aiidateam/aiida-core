@@ -158,7 +158,7 @@ def run_api(App, Api, *args, **kwargs):
     app.config.update(**confs.APP_CONFIG)
 
     # cors
-    cors_prefix = os.path.join(confs.PREFIX, "*");
+    cors_prefix = os.path.join(confs.PREFIX, "*")
     cors = CORS(app, resources={r"" + cors_prefix: {"origins": "*"}})
 
     # Config the serializer used by the app

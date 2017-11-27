@@ -152,6 +152,27 @@ class TestWorkflowBasic(AiidaTestCase):
         # it is a valid state
         self.assertIn(wf.get_state(), wf_states)
 
+    def test_wf_ctime(self):
+        import datetime
+        import pytz
+
+        # Get the current datetime (before the creation of the workflow)
+        dt_before = datetime.datetime.now(pytz.utc)
+
+        # Creating a simple workflow & storing it
+        wf = WFTestEmpty()
+        wf.store()
+
+        # Get the current datetime (after the creation of the workflow)
+        dt_after = datetime.datetime.now(pytz.utc)
+
+        self.assertLessEqual(dt_before, wf.ctime, "The workflow doesn't have"
+                                                  "a valid creation time")
+
+        self.assertGreaterEqual(dt_before, wf.ctime, "The workflow doesn't "
+                                                     "have a valid creation "
+                                                     "time")
+
     def test_failing_calc_in_wf(self):
         """
         This test checks that a workflow (but also a workflow with

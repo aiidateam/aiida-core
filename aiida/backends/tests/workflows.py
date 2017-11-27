@@ -144,13 +144,31 @@ class TestWorkflowBasic(AiidaTestCase):
                 get_workflow_info(w)
 
     def test_wf_get_state(self):
-        # Creating a simple workflow & storing it
-        wf = WFTestEmpty()
-        wf.store()
+        """
+        Simple test that checks the state of the workflows. We create two
+        workflows since the test order in the SQLA was influencing the value
+        of aiida.backends.sqlalchemy.models.workflow.DbWorkflow.state which
+        should be a Choice object, according to the SQLA doc. Sometimes it
+        was automatically converted to unicode.
+
+        Since we are interested to get a unicode from
+        aiida.orm.implementation.general.workflow.AbstractWorkflow#get_state
+        we enforce this conversion at
+        aiida.orm.implementation.sqlalchemy.workflow.Workflow#get_state
+
+        For more info, check issue #951
+        """
+        # Creating two simple workflows & storing them
+        wf1 = WFTestEmpty()
+        wf1.store()
+
+        wf2 = WFTestEmpty()
+        wf2.store()
 
         # Checking that the get_state doesn't throw exceptions and that
         # it is a valid state
-        self.assertIn(wf.get_state(), wf_states)
+        self.assertIn(wf1.get_state(), wf_states)
+        self.assertIn(wf2.get_state(), wf_states)
 
     def test_wf_ctime(self):
         import datetime
@@ -169,9 +187,9 @@ class TestWorkflowBasic(AiidaTestCase):
         self.assertLessEqual(dt_before, wf.ctime, "The workflow doesn't have"
                                                   "a valid creation time")
 
-        self.assertGreaterEqual(dt_before, wf.ctime, "The workflow doesn't "
-                                                     "have a valid creation "
-                                                     "time")
+        self.assertGreaterEqual(dt_after, wf.ctime, "The workflow doesn't "
+                                                    "have a valid creation "
+                                                    "time")
 
     def test_failing_calc_in_wf(self):
         """

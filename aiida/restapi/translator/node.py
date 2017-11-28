@@ -406,6 +406,19 @@ class NodeTranslator(BaseTranslator):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
 
+        def get_node_shape(ntype):
+            type = ntype.split(".")[0]
+
+            # default and data node shape
+            shape = "dot"
+
+            if type == "calculation":
+                shape = "square"
+            elif type == "code":
+                shape = "triangle"
+
+            return shape
+
         # Check whether uuid_pattern identifies a unique node
         self._check_id_validity(uuid_pattern)
 
@@ -434,7 +447,8 @@ class NodeTranslator(BaseTranslator):
                 "nodetype": nodetype,
                 "displaytype": display_type,
                 "group": "mainNode",
-                "description": description
+                "description": description,
+                "shape": get_node_shape(nodetype)
             })
         nodeCount += 1
 
@@ -466,6 +480,7 @@ class NodeTranslator(BaseTranslator):
                     "group": "inputs",
                     "description": description,
                     "linktype": linktype,
+                    "shape": get_node_shape(nodetype)
                 })
                 edges.append({
                     "from": nodeCount,
@@ -503,12 +518,13 @@ class NodeTranslator(BaseTranslator):
                     "group": "outputs",
                     "description": description,
                     "linktype": linktype,
+                    "shape": get_node_shape(nodetype)
                 })
                 edges.append({
                     "from": 0,
                     "to": nodeCount,
                     "arrows": "to",
-                    "color": {"inherit": 'from'},
+                    "color": {"inherit": 'to'},
                     "linktype": linktype
                 })
                 nodeCount += 1

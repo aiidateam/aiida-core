@@ -54,18 +54,25 @@ class SealableWithUpdatableAttributes(Sealable):
 
         :param str key: key name
         :param value: its value
-        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored, and the attribute is not listed
-            as updatable).
+        :raise ModificationNotAllowed: if such attribute cannot be added
+            (e.g. because the node was already stored, and the attribute
+            is not listed as updatable).
 
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
+        :raise ValidationError: if the key is not valid (e.g. it contains
+            the separator symbol).
         """
-        if self.is_sealed and key not in self._updatable_attributes:
+        if self.is_sealed:
             raise ModificationNotAllowed(
                 "Cannot change the attributes of a sealed calculation.\n"
                 "Attempted to set '{}'".format(key))
-        super(SealableWithUpdatableAttributes, self)._set_attr(key, value, **kwargs)
+        elif self.is_stored and key not in self._updatable_attributes \
+                and key is not self.SEALED_KEY:
+            raise ModificationNotAllowed(
+                "Cannot change the immutable attributes of a stored "
+                "calculation.\nAttempted to set '{}'".format(key))
+
+        super(SealableWithUpdatableAttributes, self)._set_attr(
+                key, value, **kwargs)
 
     @override
     def _del_attr(self, key):
@@ -76,10 +83,16 @@ class SealableWithUpdatableAttributes(Sealable):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
-        if self.is_sealed and key not in self._updatable_attributes:
+        if self.is_sealed:
             raise ModificationNotAllowed(
                 "Cannot delete the attributes of a sealed calculation.\n"
                 "Attempted to delete '{}'".format(key))
+
+        elif self.is_stored and key not in self._updatable_attributes:
+            raise ModificationNotAllowed(
+                "Cannot delete the immutable attributes of a sealed "
+                "calculation.\nAttempted to delete '{}'".format(key))
+
         super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
     def iter_updatable_attrs(self):

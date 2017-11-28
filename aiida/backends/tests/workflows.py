@@ -241,6 +241,58 @@ class TestWorkflowBasic(AiidaTestCase):
             if handler:
                 handler.setLevel(original_level)
 
+    def test_result_parameter_name_colision(self):
+        # Creating a simple workflow & storing it
+        wf = WFTestEmpty()
+        wf.store()
+
+        params = {u'band_calculation_set': {},
+                  u'band_group_name': u'bands_finished_pw_kpts_dist_0p2_smear_cold_psfam_SSSPv0p7effPBE_volthr_0p01_calc_vc-relax_deg_0p02',
+                  u'band_input': {
+                      u'automatic_parallelization': {u'max_num_machines': 1,
+                                                     u'max_wall_time_seconds': 86400},
+                      u'distance_kpoints_in_dispersion': 0.01},
+                  u'band_parameters_update': {
+                      u'ELECTRONS': {u'conv_thr': 4e-09,
+                                     u'diagonalization': u'cg'}},
+                  u'calculation_set': {},
+                  u'codename': u'pw-5.2.0',
+                  u'group_name': u'pw_finished_pw_kpts_dist_0p2_smear_cold_psfam_SSSPv0p7effPBE_volthr_0p01_calc_vc-relax_deg_0p02',
+                  u'input': {
+                      u'automatic_parallelization': {u'max_num_machines': 1,
+                                                     u'max_wall_time_seconds': 86400,
+                                                     u'target_time_seconds': 28800},
+                      u'clean_workdir': True,
+                      u'distance_kpoints_in_mesh': 0.2,
+                      u'finish_with_scf': False,
+                      u'relaxation_scheme': u'vc-relax',
+                      u'volume_convergence_threshold': 0.01},
+                  u'parameters': {u'ELECTRONS': {u'conv_thr': 8e-11,
+                                                 u'electron_maxstep': 100},
+                                  u'SYSTEM': {u'degauss': 0.02,
+                                              u'ecutrho': 840.0,
+                                              u'ecutwfc': 70.0,
+                                              u'occupations': u'smearing',
+                                              u'smearing': u'cold'}},
+                  u'pseudo_family': u'SSSP_v0.7_eff_PBE'}
+
+        params = {'band_calculation_set': 2,
+                  'codename': 'pw-5.2.0',
+                  'pseudo_family': 'SSSP_v0.7_eff_PBE'}
+        wf.set_params(params)
+
+        wf.add_result('structure', 'test_string_1')
+        wf.add_result('codename', 'test_string_2')
+
+        print "wf.get_parameters() ===> ", wf.get_parameters()
+        print "wf.get_results() ===> ", wf.get_results()
+
+        self.assertDictContainsSubset(
+            {'structure': 'test_string_1', 'codename': 'test_string_2'},
+            wf.get_results(), "The workflow results are not the expected "
+                              "ones.")
+
+
     def tearDown(self):
         """
         Cleaning the database after each test. Since I don't

@@ -13,7 +13,7 @@ import os
 
 class UpfDataTranslator(DataTranslator):
     """
-    Translator relative to resource 'bands' and aiida class BandsData
+    Translator relative to resource 'upfs' and aiida class UpfData
     """
 
     # A label associated to the present class (coincides with the resource name)
@@ -56,15 +56,17 @@ class UpfDataTranslator(DataTranslator):
         :param format: file extension format
         :returns: raise RestFeatureNotAvailable exception
         """
+
         response = {}
+
         if node.folder.exists():
             filepath = os.path.join(node.get_abs_path(), "path")
             filename = node.filename
+
             try:
                 response["status"] = 200
                 response["data"] = send_from_directory(filepath, filename)
                 response["filename"] = filename
-                return response
             except Exception as e:
                 response["status"] = 500
                 response["data"] = e.message
@@ -72,6 +74,7 @@ class UpfDataTranslator(DataTranslator):
         else:
             response["status"] = 200
             response["data"] = "file does not exist"
-            return response
+
+        return response
 
 

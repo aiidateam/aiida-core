@@ -53,7 +53,7 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
-extension_label = {
+dimensionality_label = {
     0: "",
     1: "length",
     2: "surface",
@@ -61,7 +61,7 @@ extension_label = {
 }
 
 
-def get_extension(cell, pbc):
+def get_dimensionality(cell, pbc):
     """
     This function checks the dimensionality of the structure and
     calculates its length/surface/volume
@@ -76,20 +76,23 @@ def get_extension(cell, pbc):
     dim = len(pbc[pbc])
 
     retdict['dim'] = dim
-    retdict['label'] = extension_label[dim]
+    retdict['label'] = dimensionality_label[dim]
 
     if dim == 0:
         pass
     elif dim == 1:
         v = cell[pbc]
         retdict['value'] = np.linalg.norm(v)
+        retdict['unit'] = "Angstrom"
     elif dim == 2:
         vectors = cell[pbc]
         retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
+        retdict['unit'] = "Angstrom^2"
     elif dim == 3:
         retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
+        retdict['unit'] = "Angstrom^3"
     else:
-        raise ValueError("Dimensionality {}: not available!".format(dim))
+        raise ValueError("Dimensionality {} must be <= 3".format(dim))
 
     return retdict
 
@@ -217,9 +220,10 @@ class StructureDataTranslator(DataTranslator):
 
         # Add extra information
         pbc = node.pbc
-        info = get_extension(node.cell, pbc)
-        response["dimensionality"] = info["dim"]
-        response[info["label"]] = info["value"]
+        info = get_dimensionality(node.cell, pbc)
+        if len(info) > 0:
+            response["dimensionality"] = info["dim"]
+            response[info["label"]] = info["value"] + " " + info["unit"]
         response["pbc"] = pbc
         response["formula"] = node.get_formula()
 

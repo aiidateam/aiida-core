@@ -241,6 +241,37 @@ class TestWorkflowBasic(AiidaTestCase):
             if handler:
                 handler.setLevel(original_level)
 
+    def test_result_parameter_name_colision(self):
+        """
+        This test checks that the the workflow parameters and results do not
+        collide. This was a problem in SQLA (Issue #960) but a test for both
+        backends is added (for completeness).
+        """
+        # Creating a simple workflow & storing it
+        wf = WFTestEmpty()
+        wf.store()
+
+        # Set some parameters
+        params = {'band_calculation_set': 2,
+                  'codename': 'pw-5.2.0',
+                  'pseudo_family': 'SSSP_v0.7_eff_PBE'}
+        wf.set_params(params)
+
+        # Add some results that their names collide with the parameter names
+        wf.add_result('structure', 'test_string_1')
+        wf.add_result('codename', 'test_string_2')
+
+        # Check that we have the correct results
+        self.assertDictEqual(
+            {'structure': 'test_string_1', 'codename': 'test_string_2'},
+            wf.get_results(), "The workflow results are not the expected "
+                              "ones.")
+
+        # Check that we have the correct parameters
+        self.assertDictEqual(params, wf.get_parameters(),
+                             "The workflow parameters are not the expected "
+                             "ones.")
+
     def tearDown(self):
         """
         Cleaning the database after each test. Since I don't

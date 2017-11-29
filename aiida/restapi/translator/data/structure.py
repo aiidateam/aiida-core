@@ -10,6 +10,7 @@
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.common.exceptions import LicensingException
+import numpy as np
 
 def atom_kinds_to_html(atom_kind):
     """
@@ -52,6 +53,47 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
+extension_label = {
+    0: "",
+    1: "length",
+    2: "surface",
+    3: "volume"
+}
+
+
+def get_extension(cell, pbc):
+    """
+    This function checks the dimensionality of the structure and
+    calculates its length/surface/volume
+    :param cell: structure cell
+    :param pbc: structure pbc
+    :return: returns the dimensionality and length/surface/volume
+    """
+    retdict = {}
+
+    cell = np.array(cell)
+    pbc = np.array(pbc)
+    dim = len(pbc[pbc])
+
+    retdict['dim'] = dim
+    retdict['label'] = extension_label[dim]
+
+    if dim == 0:
+        pass
+    elif dim == 1:
+        v = cell[pbc]
+        retdict['value'] = np.linalg.norm(v)
+    elif dim == 2:
+        vectors = cell[pbc]
+        retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
+    elif dim == 3:
+        retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
+    else:
+        raise ValueError("Dimensionality {}: not available!".format(dim))
+
+    return retdict
+
+
 
 class StructureDataTranslator(DataTranslator):
     """
@@ -86,10 +128,12 @@ class StructureDataTranslator(DataTranslator):
         in a format required by chemdoodle to visualize a structure.
         """
         response = {}
+        response["str_viz_info"] = {}
 
         if format in node.get_export_formats():
             try:
-                response[format] = node._exportstring(format)[0]
+                response["str_viz_info"]["data"] = node._exportstring(format)[0]
+                response["str_viz_info"]["format"] = format
             except LicensingException as e:
                 response = e.message
 
@@ -165,10 +209,19 @@ class StructureDataTranslator(DataTranslator):
                 }
 
             # These will be passed to ChemDoodle
-            response = {"s": [cell_json],
+            response["str_viz_info"]["data"] = {"s": [cell_json],
                             "m": [{"a": atoms_json}],
                             "units": '&Aring;'
                             }
+            response["str_viz_info"]["format"] = "default (chemDoodle)"
+
+        # Add extra information
+        pbc = node.pbc
+        info = get_extension(node.cell, pbc)
+        response["dimensionality"] = info["dim"]
+        response[info["label"]] = info["value"]
+        response["pbc"] = pbc
+        response["formula"] = node.get_formula()
 
         return response
 

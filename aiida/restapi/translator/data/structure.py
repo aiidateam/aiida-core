@@ -83,14 +83,14 @@ def get_dimensionality(cell, pbc):
     elif dim == 1:
         v = cell[pbc]
         retdict['value'] = np.linalg.norm(v)
-        retdict['unit'] = "Angstrom"
+        retdict['unit'] = "angstrom"
     elif dim == 2:
         vectors = cell[pbc]
         retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
-        retdict['unit'] = "Angstrom^2"
+        retdict['unit'] = "angstrom^2"
     elif dim == 3:
         retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
-        retdict['unit'] = "Angstrom^3"
+        retdict['unit'] = "angstrom^3"
     else:
         raise ValueError("Dimensionality {} must be <= 3".format(dim))
 
@@ -218,22 +218,16 @@ class StructureDataTranslator(DataTranslator):
                             }
             response["str_viz_info"]["format"] = "default (ChemDoodle)"
 
-        print "1:", response
-
         # Add extra information
         pbc = node.pbc
         info = get_dimensionality(node.cell, pbc)
-        print "2:", info
         if len(info) > 0:
             response["dimensionality"] = info["dim"]
             response[info["label"]] = info["value"]
             response["unit"] = info["unit"]
 
-        print "3:", response
         response["pbc"] = pbc
         response["formula"] = node.get_formula()
-
-        print "4:", response
 
         return response
 

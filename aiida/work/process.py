@@ -242,7 +242,19 @@ class Process(plum.process.Process):
         """
         super(Process, self).on_finish()
         self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
-        self.calc.seal()
+
+    @override
+    def on_destroy(self):
+        """
+        Called when a Process enters the DESTROYED state which should be
+        the final process state and so we seal the calculation node
+        """
+        super(Process, self).on_destroy()
+        if self.calc.has_finished():
+            try:
+                self.calc.seal()
+            except exceptions.ModificationNotAllowed:
+                pass
 
     @override
     def _on_output_emitted(self, output_port, value, dynamic):
@@ -511,9 +523,10 @@ class _ProcessFinaliser(plum.process_monitor.ProcessMonitorListener):
         except ValueError:
             pass
         else:
+            calc_node._set_attr(calc_node.FAILED_KEY, True)
             calc_node.seal()
-        aiida.work.util.ProcessStack.pop(pid=pid)
-
+        finally:
+            aiida.work.util.ProcessStack.pop(pid=pid)
 
 # Have a global singleton to take care of finalising all processes
 _finaliser = _ProcessFinaliser()

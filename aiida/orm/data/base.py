@@ -19,6 +19,7 @@ from past.builtins import basestring
 import numpy as np
 
 from aiida.orm import Data
+from aiida.orm.data.parameter import ParameterData 
 
 class BaseType(Data):
     """
@@ -356,3 +357,7 @@ def _(value):
 @to_aiida_type.register(np.bool_)
 def _(value):
     return Bool(value)
+
+@to_aiida_type.register(dict)
+def _(value):
+    return ParameterData(dict=value)

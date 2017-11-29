@@ -14,6 +14,7 @@ import aiida.backends.settings as settings
 
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
+from plum.persistence.bundle import Bundle
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.work.workchain import WorkChain, \
@@ -21,7 +22,7 @@ from aiida.work.workchain import WorkChain, \
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
 from aiida.work.run import run, async, legacy_workflow
-from aiida.orm.data.base import Int, Str
+from aiida.orm.data.base import Int, Str, Bool
 import aiida.work.util as util
 from aiida.common.links import LinkType
 from aiida.workflows.wf_demo import WorkflowDemo
@@ -61,7 +62,7 @@ class Wf(WorkChain):
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-            }
+        }
 
     def s1(self):
         self._set_finished(inspect.stack()[0][3])
@@ -120,6 +121,33 @@ class TestContext(AiidaTestCase):
             c['new_attr']
 
 
+class IfTest(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(IfTest, cls).define(spec)
+        spec.outline(
+            if_(cls.condition)(
+                cls.step1,
+                cls.step2
+            )
+        )
+
+    def on_create(self, pid, inputs, saved_state):
+        super(IfTest, self).on_create(pid, inputs, saved_state)
+        if saved_state is None:
+            self.ctx.s1 = False
+            self.ctx.s2 = False
+
+    def condition(self):
+        return True
+
+    def step1(self):
+        self.ctx.s1 = True
+
+    def step2(self):
+        self.ctx.s2 = True
+
+
 class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
@@ -171,6 +199,23 @@ class TestWorkchain(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             Wf.spec()
+
+    def test_same_input_node(self):
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                # Try defining an invalid outline
+                spec.outline(cls.check_a_b)
+
+            def check_a_b(self):
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+
+        x = Int(1)
+        run(Wf, a=x, b=x)
 
     def test_context(self):
         A = Str("a")
@@ -304,6 +349,29 @@ class TestWorkchain(AiidaTestCase):
 
         run(MainWorkChain)
 
+    def test_if_block_persistence(self):
+        """ This test was created to capture issue #902 """
+        wc = IfTest.new_instance()
+
+        while not wc.ctx.s1 and not wc.has_finished():
+            wc.tick()
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
+        # Now bundle the thing
+        b = Bundle()
+        wc.save_instance_state(b)
+        # Abort the current one
+        wc.stop()
+        wc.destroy(execute=True)
+
+        # Load from saved tate
+        wc = IfTest.create_from(b)
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
+        wc.run_until_complete()
+
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}
 
@@ -319,7 +387,6 @@ class TestWorkchain(AiidaTestCase):
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
-
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
         import logging
@@ -391,3 +458,175 @@ class TestHelpers(AiidaTestCase):
         self.assertListEqual(outputs.keys(), [u'a', u'b'])
         self.assertEquals(outputs['a'], a)
         self.assertEquals(outputs['b'], b)
+
+
+class TestWorkChainAbort(AiidaTestCase):
+    """
+    Test the functionality to abort a workchain
+    """
+
+    class AbortableWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
+            spec.outline(
+                cls.start,
+                cls.check
+            )
+
+        def start(self):
+            pass
+
+        def check(self):
+            raise RuntimeError('should have been aborted by now')
+
+    def setUp(self):
+        super(TestWorkChainAbort, self).setUp()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+
+    def tearDown(self):
+        super(TestWorkChainAbort, self).tearDown()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+
+    def test_simple_run(self):
+        """
+        Run the workchain which should hit the exception and therefore end
+        up in the FAILED state
+        """
+        engine = TickingEngine()
+        future = engine.submit(TestWorkChainAbort.AbortableWorkChain)
+
+        while not future.done():
+            engine.tick()
+
+        self.assertEquals(future.process.calc.has_finished_ok(), False)
+        self.assertEquals(future.process.calc.has_failed(), True)
+        self.assertEquals(future.process.calc.has_aborted(), False)
+        engine.shutdown()
+
+    def test_simple_kill_through_node(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the underlying WorkCalculation node. This should have the
+        workchain end up in the ABORTED state.
+        """
+        engine = TickingEngine()
+        future = engine.submit(TestWorkChainAbort.AbortableWorkChain)
+
+        while not future.done():
+            engine.tick()
+            future.process.calc.kill()
+
+        self.assertEquals(future.process.calc.has_finished_ok(), False)
+        self.assertEquals(future.process.calc.has_failed(), False)
+        self.assertEquals(future.process.calc.has_aborted(), True)
+        engine.shutdown()
+
+    def test_simple_kill_through_process(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the workchain itself. This should have the workchain end up
+        in the ABORTED state.
+        """
+        engine = TickingEngine()
+        future = engine.submit(TestWorkChainAbort.AbortableWorkChain)
+
+        while not future.done():
+            engine.tick()
+            future.process.abort()
+
+        self.assertEquals(future.process.calc.has_finished_ok(), False)
+        self.assertEquals(future.process.calc.has_failed(), False)
+        self.assertEquals(future.process.calc.has_aborted(), True)
+        engine.shutdown()
+
+
+class TestWorkChainAbortChildren(AiidaTestCase):
+    """
+    Test the functionality to abort a workchain and verify that children
+    are also aborted appropriately
+    """
+
+    class SubWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
+            spec.outline(
+                cls.start,
+                cls.check
+            )
+
+        def start(self):
+            pass
+
+        def check(self):
+            raise RuntimeError('should have been aborted by now')
+
+    class MainWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
+            spec.input('kill', default=Bool(False))
+            spec.outline(
+                cls.start,
+                cls.check
+            )
+
+        def start(self):
+            self.child = TestWorkChainAbortChildren.SubWorkChain.new_instance()
+            if self.inputs.kill:
+                self.calc.kill()
+            self.child.run_until_complete()
+
+        def check(self):
+            raise RuntimeError('should have been aborted by now')
+
+    def setUp(self):
+        super(TestWorkChainAbortChildren, self).setUp()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+
+    def tearDown(self):
+        super(TestWorkChainAbortChildren, self).tearDown()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+
+    def test_simple_run(self):
+        """
+        Run the workchain which should hit the exception and therefore end
+        up in the FAILED state
+        """
+        engine = TickingEngine()
+        future = engine.submit(TestWorkChainAbortChildren.MainWorkChain)
+
+        while not future.done():
+            engine.tick()
+
+        self.assertEquals(future.process.calc.has_finished_ok(), False)
+        self.assertEquals(future.process.calc.has_failed(), True)
+        self.assertEquals(future.process.calc.has_aborted(), False)
+        engine.shutdown()
+
+    def test_simple_kill_through_node(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the underlying WorkCalculation node. This should have the
+        workchain end up in the ABORTED state.
+        """
+        engine = TickingEngine()
+        future = engine.submit(TestWorkChainAbortChildren.MainWorkChain, {'kill': Bool(True)})
+
+        while not future.done():
+            engine.tick()
+
+        child = future.process.calc.get_outputs(link_type=LinkType.CALL)[0]
+        self.assertEquals(child.has_finished_ok(), False)
+        self.assertEquals(child.has_failed(), False)
+        self.assertEquals(child.has_aborted(), True)
+
+        self.assertEquals(future.process.calc.has_finished_ok(), False)
+        self.assertEquals(future.process.calc.has_failed(), False)
+        self.assertEquals(future.process.calc.has_aborted(), True)
+        engine.shutdown()

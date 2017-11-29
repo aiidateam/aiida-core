@@ -834,6 +834,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             group = UpfData.get_upf_group(group_name)
         except NotExistent:
             print >> sys.stderr, ("upf family {} not found".format(group_name))
+            sys.exit(1)
 
         for u in group.nodes:
             dest_path = os.path.join(folder,u.filename)
@@ -884,100 +885,12 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
+        from aiida.backends.utils import QueryFactory
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.backends.utils import get_automatic_user
-        from aiida.orm.implementation import User
-        from aiida.orm.implementation import Group
-        from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.data.array.bands import BandsData
-        from aiida.orm.data.structure import StructureData
-
-        qb = QueryBuilder()
-        if args.all_users is False:
-            au = get_automatic_user()
-            user = User(dbuser=au)
-            qb.append(User, tag="creator", filters={"email": user.email})
-        else:
-            qb.append(User, tag="creator")
-
-        bdata_filters = {}
-        self.query_past_days_qb(bdata_filters, args)
-        qb.append(BandsData, tag="bdata", created_by="creator",
-                  filters=bdata_filters,
-                  project=["id", "label", "ctime"]
-                  )
-
-        group_filters = {}
-        self.query_group_qb(group_filters, args)
-        if group_filters:
-            qb.append(Group, tag="group", filters=group_filters,
-                      group_of="bdata")
-
-        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
-                  # We don't care about the creator of StructureData
-                  project=["id", "attributes.kinds", "attributes.sites"])
-
-        qb.order_by({StructureData: {'ctime': 'desc'}})
-
-        list_data = qb.distinct()
-
-        entry_list = []
-        already_visited_bdata = set()
-        if list_data.count() > 0:
-            for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
-
-                # We process only one StructureData per BandsData.
-                # We want to process the closest StructureData to
-                # every BandsData.
-                # We hope that the StructureData with the latest
-                # creation time is the closest one.
-                # This will be updated when the QueryBuilder supports
-                # order_by by the distance of two nodes.
-                if already_visited_bdata.__contains__(bid):
-                    continue
-                already_visited_bdata.add(bid)
-
-                if args.element is not None:
-                    all_symbols = [_["symbols"][0] for _ in akinds]
-                    if not any([s in args.element for s in all_symbols]
-                               ):
-                        continue
-
-                if args.element_only is not None:
-                    all_symbols = [_["symbols"][0] for _ in akinds]
-                    if not all(
-                            [s in all_symbols for s in args.element_only]
-                            ):
-                        continue
-
-                # We want only the StructureData that have attributes
-                if akinds is None or asites is None:
-                    continue
-
-                symbol_dict = {}
-                for k in akinds:
-                    symbols = k['symbols']
-                    weights = k['weights']
-                    symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                                weights)
-
-                try:
-                    symbol_list = []
-                    for s in asites:
-                        symbol_list.append(symbol_dict[s['kind_name']])
-                    formula = get_formula(symbol_list,
-                                          mode=args.formulamode)
-                # If for some reason there is no kind with the name
-                # referenced by the site
-                except KeyError:
-                    formula = "<<UNKNOWN>>"
-                entry_list.append([str(bid), str(formula),
-                                   bdate.strftime('%d %b %Y'), blabel])
-
-        return entry_list
+        q = QueryFactory()()
+        return q.get_bands_and_parents_structure(args)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -1501,7 +1414,14 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
+        try:
+            from qe_tools.parsers.pwinputparser import PwInputFile
+        except ImportError:
+            import sys
+            print ("You have not installed the package qe-tools. \n"
+                "You can install it with: pip install qe-tools")
+            sys.exit(0)
+
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 
@@ -1509,7 +1429,8 @@ class _Structure(VerdiCommandWithSubcommands,
         filepath =  abspath(filename)
 
         try:
-            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+            inputparser = PwInputFile(filepath)
+            new_structure = inputparser.get_structuredata()
 
             if not dont_store:
                 new_structure.store()

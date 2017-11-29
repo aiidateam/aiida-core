@@ -256,9 +256,8 @@ class Utils(object):
             raise RestValidationError("perpage key requires that a page is "
                                       "requested (i.e. the path must contain "
                                       "/page/)")
-        # 4. No querystring if query type = schema', 'visualization', 'schema'
-        if query_type in ('schema', 'visualization', 'statistics') and \
-                is_querystring_defined:
+        # 4. No querystring if query type = schema'
+        if query_type in ('schema') and is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")
 
@@ -509,6 +508,8 @@ class Utils(object):
         nalist = None
         elist = None
         nelist = None
+        downloadformat = None
+        visformat = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -559,6 +560,14 @@ class Utils(object):
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
             raise RestInputValidationError(
                 "You cannot specify nelist more than "
+                "once")
+        if 'format' in field_counts.keys() and field_counts['format'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify format more than "
+                "once")
+        if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify visformat more than "
                 "once")
 
         ## Extract results
@@ -627,6 +636,22 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'orderby'")
+
+            elif field[0] == 'format':
+                if field[1] == '=':
+                    downloadformat = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'format'")
+            elif field[0] == 'visformat':
+                if field[1] == '=':
+                    visformat = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'visformat'")
+
             else:
 
                 ## Construct the filter entry.
@@ -659,7 +684,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist)
+                nelist, downloadformat, visformat)
 
     def parse_query_string(self, query_string):
         """
@@ -798,7 +823,13 @@ class Utils(object):
         ## Parse the query string
         try:
             fields = generalGrammar.parseString(query_string)
-            field_list = fields.asList()
+
+            # JQuery adds _=timestamp a parameter to not use cached data/response.
+            # To handle query, remove this "_" parameter from the query string
+            # For more details check issue #789
+            # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
+            field_list = [entry for entry in fields.asList() if entry[0] != "_"]
+
         except ParseException as e:
             raise RestInputValidationError(
                 "The query string format is invalid. "

@@ -675,12 +675,10 @@ class AbstractJobCalculation(object):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() not in (calc_states.SUBMITTING,
-                                    calc_states.NEW):
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_list for a calculation "
-                "that is neither NEW nor SUBMITTING (current state is "
-                "{})".format(self.get_state()))
+                "Cannot set the retrieve_list for a calculation that is neither "
+                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
@@ -717,16 +715,54 @@ class AbstractJobCalculation(object):
         """
         return self.get_attr('retrieve_list', None)
 
+    def _set_retrieve_temporary_list(self, retrieve_temporary_list):
+        """
+        Set the list of paths that are to retrieved for parsing and be deleted as soon
+        as the parsing has been completed.
+        """
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
+            raise ModificationNotAllowed(
+                'Cannot set the retrieve_temporary_list for a calculation that is neither '
+                'NEW nor SUBMITTING (current state is {})'.format(self.get_state()))
+
+        if not (isinstance(retrieve_temporary_list, (tuple, list))):
+            raise ValueError('You should pass a list/tuple')
+
+        for item in retrieve_temporary_list:
+            if not isinstance(item, basestring):
+                if (not (isinstance(item, (tuple, list))) or len(item) != 3):
+                    raise ValueError(
+                        'You should pass a list containing either '
+                        'strings or lists/tuples'
+                    )
+
+                if (not (isinstance(item[0], basestring)) or 
+                    not (isinstance(item[1], basestring)) or
+                    not (isinstance(item[2], int))):
+                    raise ValueError(
+                        'You have to pass a list (or tuple) of lists, with remotepath(string), '
+                        'localpath(string) and depth (integer)'
+                    )
+
+        self._set_attr('retrieve_temporary_list', retrieve_temporary_list)
+
+    def _get_retrieve_temporary_list(self):
+        """
+        Get the list of files/directories to be retrieved on the cluster and will be kept temporarily during parsing.
+        Their path is relative to the remote workdirectory path.
+
+        :return: a list of strings for file/directory names
+        """
+        return self.get_attr('retrieve_temporary_list', None)
+
     def _set_retrieve_singlefile_list(self, retrieve_singlefile_list):
         """
         Set the list of information for the retrieval of singlefiles
         """
-        if self.get_state() not in (calc_states.SUBMITTING,
-                                    calc_states.NEW):
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_singlefile_list for a calculation "
-                "that is neither NEW nor SUBMITTING (current state is "
-                "{})".format(self.get_state()))
+                "Cannot set the retrieve_singlefile_list for a calculation that is neither "
+                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
 
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
             raise ValueError("You have to pass a list (or tuple) of lists of "
@@ -1456,6 +1492,10 @@ class AbstractJobCalculation(object):
                                           "{} is not subclass of SinglefileData".format(
                     self.pk, FileSubclass.__name__))
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
+
+        # Handle the retrieve_temporary_list
+        retrieve_temporary_list = (calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
+        self._set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:

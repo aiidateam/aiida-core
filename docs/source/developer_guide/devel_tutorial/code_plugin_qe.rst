@@ -11,6 +11,14 @@ It will be assumed that you have already tried to run an example of Quantum
 Espresso, and you know more or less how the AiiDA interface works. We hope
 that in the end you will be able to replicate the task for other codes.
 
+.. note:: While we keep this documentation here, as it is a guide on how to write
+  a plugin, we mention that since AiiDA 0.10 the ``aiida-quantumespresso`` plugin
+  has been moved to a `different repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
+  You can find the documentation (including the tutorials on how to run Quantum ESPRESSO
+  calculations with the plugins that we describe here) on the
+  `respective Read The Docs page <http://aiida-quantumespresso.readthedocs.io/en/latest/index.html>`_.
+
+
 In fact, when writing your own plugin, keep in mind that you need to
 satisfy multiple users, and the interface needs to be simple (not the
 code below). But always try to follow the Zen of Python:
@@ -218,7 +226,9 @@ for submission without the need to store all nodes on the DB.
 
 For the sake of clarity, it's probably going to be easier looking at
 an implemented example. Take a look at the ``NamelistsCalculation`` located in 
-``aiida.orm.calculation.job.quantumespresso.namelists``.
+``aiida_quantumespresso.calculations.namelists`` (this is not in AiiDA-core but on
+the ``aiida-quantumespresso`` package - you can find the links to this repository
+and its documentation at the top of this page).
 
 How does the method ``_prepare_for_submission`` work in practice?
 
@@ -290,6 +300,8 @@ How does the method ``_prepare_for_submission`` work in practice?
         ### Modify here !
         calcinfo.retrieve_list.append('Every file/folder you want to store back locally')
         ### Modify here!
+        calcinfo.retrieve_temporary_list = []
+        ### Modify here!
         calcinfo.retrieve_singlefile_list = []
         
         ### Modify here and put a name for standard input/output files
@@ -306,44 +318,52 @@ How does the method ``_prepare_for_submission`` work in practice?
 
    There are a couple of things to be set on calcinfo.
 
-   1. ``retrieve_list``: a list of relative file pathnames, that will be copied
+   1. ``local_copy_list``: a list of length-two-tuples: ``('localabspath',
+      'relativedestpath')``. Files to be copied from the aiida server to the cluster.
+
+   2. ``remote_copy_list``: a list of tuples: ``('remotemachinename', 'remoteabspath',
+      'relativedestpath')``. Files/folders to be copied from a remote source to a
+      remote destination, sitting both on the same machine.
+
+   3. ``retrieve_list``: a list of relative file pathnames, that will be copied
       from the cluster to the aiida server, after the calculation has run on
       cluster.
       Note that all the file names you need to modify are not absolute path 
       names (you don't know the name of the folder where it will be created) but 
       rather the path relative to the scratch folder.
 
-   2. ``local_copy_list``: a list of length-two-tuples: (localabspath,
-      relativedestpath). Files to be copied from the aiida server to the cluster.
+   4. ``retrieve_temporary_list``: a list of relative file pathnames, that will be copied
+      from the cluster to the aiida server, after the calculation has run on the cluster,
+      that will only be available during the parsing. After parsing has completed,
+      be it successfully or not, the copied files will be lost. This is useful if one needs
+      to retrieve big files that are required for the parsing, but that one does not want to
+      store permanently in the repository. The input format follows the exact same rules as
+      that of the ``retrieve_list``.
 
-   3. ``remote_copy_list``: a list of tuples: (remotemachinename, remoteabspath,
-      relativedestpath). Files/folders to be copied from a remote source to a
-      remote destination, sitting both on the same machine.
-
-   4. ``retrieve_singlefile_list``: a list of triplets, in the form
-      ``["linkname_from calc to singlefile","subclass of
-      singlefile","filename"]``. If this is specified, at the end of the
-      calculation it will be created a SinglefileData-like object in the
+   5. ``retrieve_singlefile_list``: a list of triplets, in the form
+      ``['linkname_from calc to singlefile', 'subclass of
+      singlefile', 'filename']``. If this is specified, at the end of the
+      calculation it will be created a ``SinglefileData``-like object in the
       Database, children of the calculation, if of course the file is found
       on the cluster.
 
-   5. codes_info: a list of informations that needs to be passed on the command 
-      line to the code, passed in the form of a list of CalcInfo objects (see later).
+   6. codes_info: a list of informations that needs to be passed on the command 
+      line to the code, passed in the form of a list of ``CalcInfo`` objects (see later).
       Every element in this list corresponds to a call to a code that will be 
       executed in the *same* scheduling job.
       This can be useful if a code needs to execute a short preprocessing. For 
       long preprocessings, consider to develop a separate plugin.
    
-   6. ``codes_run_mode``: a string, only necessary if you want to run more than one code
+   7. ``codes_run_mode``: a string, only necessary if you want to run more than one code
       in the same scheduling job. Determines the order in which the multiple 
       codes are run (i.e. sequentially or all at the same time.
-      It assumes one of the values of aiida.common.datastructures.code_run_modes,
-      like code_run_modes.PARALLEL or code_run_modes.SERIAL
+      It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
+      like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
 
-   A CodeInfo object, as said before, describes how a code has to be executed.
-   The list of CodeInfo objects passed to calcinfo will determined the ordered
+   A ``CodeInfo`` object, as said before, describes how a code has to be executed.
+   The list of ``CodeInfo`` objects passed to ``CalcInfo`` will determined the ordered
    execution of one (or more) calls to executables.
-   The attributes that can be set to CodeInfo are:
+   The attributes that can be set to ``CodeInfo`` are:
 
    1. ``stdin_name``: the name of the standard input.
 

@@ -13,7 +13,7 @@ Setup
 
 To be able to export data to TCOD, one has to
 :ref:`install the atomic_tools dependencies to enable CIF manipulation <install_optional_dependencies>`
-as well as the aiida-codtools plugin, and set up an
+as well as the `aiida-codtools <https://github.com/aiidateam/aiida-codtools>`_ plugin, and set up an
 AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
@@ -113,6 +113,17 @@ The deposition process, which is of
 :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
 :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
+
+Citing
+++++++
+
+If you use the TCOD database exporter, please cite the following work:
+
+.. highlights:: Andrius Merkys, Nicolas Mounet, Andrea Cepellotti,
+  Nicola Marzari, Saulius Gražulis and Giovanni Pizzi, *A posteriori
+  metadata from automated provenance tracking: Integration of AiiDA
+  and TCOD*, Journal of Cheminformatics 9, 56 (2017);
+  http://doi.org/10.1186/s13321-017-0242-y.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
 .. _TCOD deposition type: http://wiki.crystallography.net/deposition_type/

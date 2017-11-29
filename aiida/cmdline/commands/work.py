@@ -14,6 +14,7 @@ from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime', 'state', 'sealed']
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
@@ -34,6 +35,7 @@ class Work(VerdiCommandWithSubcommands):
             'report': (self.cli, self.complete_none),
             'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
+            'kill': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):
@@ -41,65 +43,143 @@ class Work(VerdiCommandWithSubcommands):
 
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)
-@click.option('-p', '--past-days', type=int, default=1,
-              help="add a filter to show only workflows created in the past N"
-                   " days")
-@click.option('-a', '--all', 'all_nodes', is_flag=True, help='Return all nodes. Overrides the -l flag')
-@click.option('-l', '--limit', type=int, default=None,
-              help="Limit to this many results")
-def do_list(past_days, all_nodes, limit):
+@click.option(
+    '-p', '--past-days', type=int, default=1,
+    help='add a filter to show only work calculations created in the past N days'
+)
+@click.option(
+    '-a', '--all-states', 'all_states', is_flag=True,
+    help='return all work calculations regardless of their sealed state'
+)
+@click.option(
+    '-l', '--limit', type=int, default=None,
+    help='limit the final result set to this size'
+)
+@click.option(
+    '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
+    multiple=True, help='define the list of properties to show'
+)
+def do_list(past_days, all_states, limit, project):
     """
     Return a list of running workflows on screen
     """
-    from aiida.common.utils import str_timedelta
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
-    import aiida.utils.timezone as timezone
+
+    from aiida.common.utils import str_timedelta
+    from aiida.utils import timezone
     from aiida.orm.mixins import Sealable
+    from aiida.orm.calculation.work import WorkCalculation
+
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+    _ABORTED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.ABORTED_KEY)
+    _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
+    _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
-    now = timezone.now()
+    if not project:
+        project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
 
-    if all_nodes:
-        past_days = None
 
+    # Mapping of projections to list table headers.
+    hmap_dict = {
+        'id': 'PID',
+        'ctime': 'Creation time',
+        'label': 'Process Label',
+        'uuid': 'UUID',
+        'descr': 'Description',
+        'mtime': 'Modification time'
+    }
+
+    def map_header(p):
+        try:
+            return hmap_dict[p]
+        except KeyError:
+            return p.capitalize()
+
+    # Mapping of querybuilder keys that differ from projections.
+    pmap_dict = {
+        'label': 'attributes._process_label',
+        'sealed': _SEALED_ATTRIBUTE_KEY,
+        'failed': _FAILED_ATTRIBUTE_KEY,
+        'aborted': _ABORTED_ATTRIBUTE_KEY,
+        'finished': _FINISHED_ATTRIBUTE_KEY,
+        'descr': 'description',
+    }
+
+    def map_projection(p):
+        try:
+            return pmap_dict[p]
+        except KeyError:
+            return p
+
+    def calculation_state(calculation):
+        if calculation[_FAILED_ATTRIBUTE_KEY]:
+            return 'FAILED'
+        elif calculation[_ABORTED_ATTRIBUTE_KEY]:
+            return 'ABORTED'
+        elif calculation[_FINISHED_ATTRIBUTE_KEY]:
+            return 'FINISHED'
+        else:
+            return 'RUNNING'
+
+    # Mapping of to-string formatting of projections that do need it.
+    rmap_dict = {
+        'ctime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('ctime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'mtime': lambda calc: str_timedelta(timezone.delta(calc[map_projection('mtime')], now),
+                                            negative_to_zero=True,
+                                            max_num_fields=1),
+        'sealed': lambda calc: str(calc[map_projection('sealed')]),
+        'state': lambda calc: calculation_state(calc),
+    }
+
+    def map_result(p, obj):
+        try:
+            return rmap_dict[p](obj)
+        except:
+            return obj[map_projection(p)]
+
+
+    mapped_projections = list(map(lambda p: map_projection(p), project))
+    mapped_projections.extend([_FAILED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY])
     table = []
-    for res in _build_query(limit=limit, past_days=past_days, order_by={'ctime': 'desc'}):
+
+    for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days, order_by={'ctime': 'desc'}):
         calc = res['calculation']
-        creation_time = str_timedelta(
-            timezone.delta(calc['ctime'], now), negative_to_zero=True,
-            max_num_fields=1)
+        if calc[_SEALED_ATTRIBUTE_KEY] and not all_states:
+            continue
+        table.append(list(map(lambda p: map_result(p, calc), project)))
 
-        table.append([
-            calc['id'],
-            creation_time,
-            calc['attributes._process_label'],
-            str(calc[_SEALED_ATTRIBUTE_KEY])
-        ])
-
-    # Revert table:
-    # in this way, I order by 'desc', so I start by the most recent, but then
-    # I print this as the las one (like 'verdi calculation list' does)
-    # This is useful when 'limit' is set to not None
+    # Since we sorted by descending creation time, we revert the list to print the most
+    # recent entries last
     table = table[::-1]
-    print(tabulate(table, headers=["PID", "Creation time", "ProcessLabel", "Sealed"]))
+
+    print(tabulate(table, headers=(list(map(lambda p: map_header(p), project)))))
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
-@click.argument('pk', nargs=1, type=int)
-@click.option('-i', '--indent-size', type=int, default=2)
-@click.option('-l', '--levelname',
-              type=click.Choice(LOG_LEVELS),
-              default='REPORT',
-              help='Filter the results by name of the log level'
-              )
-@click.option('-o', '--order-by',
-              type=click.Choice(['id', 'time', 'levelname']),
-              default='time',
-              help='Order the results by column'
-              )
-def report(pk, levelname, order_by, indent_size):
+@click.argument(
+    'pk', nargs=1, type=int
+)
+@click.option(
+    '-i', '--indent-size', type=int, default=2,
+    help='Set the number of spaces to indent each level by'
+)
+@click.option(
+    '-l', '--levelname', type=click.Choice(LOG_LEVELS), default='REPORT',
+    help='Filter the results by name of the log level'
+)
+@click.option(
+    '-o', '--order-by', type=click.Choice(['id', 'time', 'levelname']), default='time',
+    help='Order the results by column'
+)
+@click.option(
+    '-m', '--max-depth', 'max_depth', type=int, default=None,
+    help='Limit the number of levels to be printed'
+)
+def report(pk, levelname, order_by, indent_size, max_depth):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -127,7 +207,7 @@ def report(pk, levelname, order_by, indent_size):
         return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
-        qb = QueryBuilder(with_dbpath=False)
+        qb = QueryBuilder()
         qb.append(
             cls=WorkCalculation,
             filters={'id': pk},
@@ -156,7 +236,12 @@ def report(pk, levelname, order_by, indent_size):
 
     workchain_tree = get_subtree(pk)
 
-    reports = list(itertools.chain(*[get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]))
+    if max_depth:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth]
+    else:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
+
+    reports = list(itertools.chain(*report_list))
     reports.sort(key=lambda r: r[0].time)
 
     if reports is None or len(reports) == 0:
@@ -223,43 +308,63 @@ def checkpoint(pks):
         except ValueError:
             print("Unable to show checkpoint for calculation '{}'".format(pk))
 
+@work.command('kill', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def kill(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    from aiida.orm import load_node
+    from aiida.orm.calculation.work import WorkCalculation
 
-def _build_query(order_by=None, limit=None, past_days=None):
+    nodes = [load_node(pk) for pk in pks]
+    workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
+    running_workchain_nodes = [n for n in nodes if not n.has_finished()]
+
+    num_workchains = len(running_workchain_nodes)
+    if num_workchains > 0:
+        answer = click.prompt(
+            'Are you sure you want to kill {} workflows and all their children? [y/n]'.format(
+                num_workchains
+            )
+        ).lower()
+        if answer == 'y':
+            click.echo('Killing workflows.')
+            for n in running_workchain_nodes:
+                n.kill()
+        else:
+            click.echo('Abort!')
+    else:
+        click.echo('No pks of valid running workchains given.')
+
+
+def _build_query(projections=None, order_by=None, limit=None, past_days=None):
+    import datetime
+    from aiida.utils import timezone
+    from aiida.orm.mixins import Sealable
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
-    import aiida.utils.timezone as timezone
-    import datetime
-    from aiida.orm.mixins import Sealable
-    _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 
-    # The things that we want to get out
-    calculation_projections = \
-        ['id', 'ctime', 'attributes._process_label', _SEALED_ATTRIBUTE_KEY]
-
-    now = timezone.now()
-
-    # The things to filter by
+    # Define filters
     calculation_filters = {}
 
     if past_days is not None:
-        n_days_ago = now - datetime.timedelta(days=past_days)
+        n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
         calculation_filters['ctime'] = {'>': n_days_ago}
 
+    # Build the query
     qb = QueryBuilder()
-
-    # Build the quiery
     qb.append(
         cls=WorkCalculation,
         filters=calculation_filters,
-        project=calculation_projections,
+        project=projections,
         tag='calculation'
     )
 
-    # ORDER
+    # Ordering of queryset
     if order_by is not None:
         qb.order_by({'calculation': order_by})
 
-    # LIMIT
+    # Limiting the queryset
     if limit is not None:
         qb.limit(limit)
 

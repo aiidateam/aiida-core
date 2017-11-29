@@ -3,26 +3,26 @@ as well as the known contributors to the code.
 
 The current members of the AiiDA team are, in alphabetical order:
 #################################################################
-* Andrea Cepellotti
-* Fernando Gargiulo
-* Leonid Kahle
-* Boris Kozinsky
 * Rico Häuselmann
 * Sebastiaan P. Huber
+* Leonid Kahle
+* Boris Kozinsky
+* Snehal Kumbhar
 * Nicola Marzari
 * Andrius Merkys
 * Nicolas Mounet
+* Elsa Passaro
 * Giovanni Pizzi
+* Leopold Talirz
 * Martin Uhrin
-* Snehal Waychal
 * Spyros Zoupanos
-
 
 
 Former members of the AiiDA team
 ################################
+* Andrea Cepellotti (2012-2016)
+* Fernando Gargiulo (2016-2017)
 * Riccardo Sabatini (2013-2015)
-
 
 
 Contributors
@@ -34,6 +34,7 @@ We would like to thank the following people for their contibution
   AiiDA web interface
 * Jocelyn Boullier (EPFL, Switzerland): for the first version of the 
   SQLAlchemy implementation
+* Jens Bröder: (FZ Jülich, Germany) contributions to the workflow engine
 * Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
 * Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
   the extension of the PW plugin to the ENVIRON code
@@ -45,11 +46,11 @@ We would like to thank the following people for their contibution
   the new plugin system (developed in 2017)
 * Phillippe Schwaller (EPFL, Switzerland): for the ICSD importer
 
-And the following people for corrections, improving the documentation, 
-spotting typos or useful suggestions:
+And the following people for general improvements to the code, fixing bugs,
+corrections and improvements to the documentation and useful suggestions:
 
-Jens Broeder, Ivano E. Castelli, Ian Lee, Gianluca Prandini, 
-Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic
+Ivano E. Castelli, Ian Lee, Gianluca Prandini, Jianxing Huang, Antimo Marrazzo,
+Nicola Varini, Mario Zic, Vladimir Dikan, Michael Atambo
 
 ---
 

@@ -75,7 +75,7 @@ class TestDataNode(AiidaTestCase):
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
-    Test the creation of the transitive closure table
+    Test the transitive closure functionality
     """
 
     def test_loop_not_allowed(self):
@@ -1580,13 +1580,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         This check verifies that the properties has_children has_parents of the
         Node class behave correctly.
         """
+        from aiida.common.links import LinkType
 
         # Create 2 nodes and store them
         n1 = Node().store()
         n2 = Node().store()
 
-        # Create a link between these 2 nodes
-        n2.add_link_from(n1, "N1")
+        # Create a link between these 2 nodes, link type CREATE so we track the provenance
+        n2.add_link_from(n1, "N1", link_type=LinkType.CREATE)
 
         self.assertTrue(n1.has_children, "It should be true since n2 is the "
                         "child of n1.")
@@ -1780,14 +1781,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Twice the same link name
         with self.assertRaises(UniquenessError):
             n3.add_link_from(n4, label='l2')
-
-        # Twice the link to the same node
-        with self.assertRaises(UniquenessError):
-            n3.add_link_from(n2, label='l4')
-
-        # Same error also in _replace_link_from
-        with self.assertRaises(UniquenessError):
-            n3._replace_link_from(n2, label='l4')
 
         n2.store_all()
         n3.store_all()

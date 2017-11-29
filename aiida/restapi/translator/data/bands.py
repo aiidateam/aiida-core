@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.restapi.translator.data import DataTranslator
 
 class BandsDataTranslator(DataTranslator):
@@ -26,7 +35,7 @@ class BandsDataTranslator(DataTranslator):
                                                   **kwargs)
 
     @staticmethod
-    def get_visualization_data(node):
+    def get_visualization_data(node, format=None):
         """
 
         Returns: data in a format required by dr.js to visualize a 2D plot
@@ -46,11 +55,26 @@ class BandsDataTranslator(DataTranslator):
 
         import ujson as uj
         json_string = node._exportstring('json', comments=False)
-        json_content = uj.decode(json_string)
+        json_content = uj.decode(json_string[0])
 
         # Add Ylabel which by default is not exported
         Y_label = node.label + ' ({})'.format(node.get_attr('units'))
         json_content['Y_label'] = Y_label
 
         return json_content
+
+    @staticmethod
+    def get_downloadable_data(node, format=None):
+        """
+        Generic function extented for kpoints data. Currently
+        it is not implemented.
+
+        :param node: node object that has to be visualized
+        :param format: file extension format
+        :returns: raise RestFeatureNotAvailable exception
+        """
+
+        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
+
+        raise RestFeatureNotAvailable("This endpoint is not available for Bands.")
 

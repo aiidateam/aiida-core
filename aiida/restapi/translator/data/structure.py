@@ -216,16 +216,24 @@ class StructureDataTranslator(DataTranslator):
                             "m": [{"a": atoms_json}],
                             "units": '&Aring;'
                             }
-            response["str_viz_info"]["format"] = "default (chemDoodle)"
+            response["str_viz_info"]["format"] = "default (ChemDoodle)"
+
+        print "1:", response
 
         # Add extra information
         pbc = node.pbc
         info = get_dimensionality(node.cell, pbc)
+        print "2:", info
         if len(info) > 0:
             response["dimensionality"] = info["dim"]
-            response[info["label"]] = info["value"] + " " + info["unit"]
+            response[info["label"]] = info["value"]
+            response["unit"] = info["unit"]
+
+        print "3:", response
         response["pbc"] = pbc
         response["formula"] = node.get_formula()
+
+        print "4:", response
 
         return response
 

@@ -53,51 +53,6 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
-dimensionality_label = {
-    0: "",
-    1: "length",
-    2: "surface",
-    3: "volume"
-}
-
-
-def get_dimensionality(cell, pbc):
-    """
-    This function checks the dimensionality of the structure and
-    calculates its length/surface/volume
-    :param cell: structure cell
-    :param pbc: structure pbc
-    :return: returns the dimensionality and length/surface/volume
-    """
-    retdict = {}
-
-    cell = np.array(cell)
-    pbc = np.array(pbc)
-    dim = len(pbc[pbc])
-
-    retdict['dim'] = dim
-    retdict['label'] = dimensionality_label[dim]
-
-    if dim == 0:
-        pass
-    elif dim == 1:
-        v = cell[pbc]
-        retdict['value'] = np.linalg.norm(v)
-        retdict['unit'] = "angstrom"
-    elif dim == 2:
-        vectors = cell[pbc]
-        retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
-        retdict['unit'] = "angstrom^2"
-    elif dim == 3:
-        retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
-        retdict['unit'] = "angstrom^3"
-    else:
-        raise ValueError("Dimensionality {} must be <= 3".format(dim))
-
-    return retdict
-
-
-
 class StructureDataTranslator(DataTranslator):
     """
     Translator relative to resource 'structures' and aiida class StructureData
@@ -219,14 +174,8 @@ class StructureDataTranslator(DataTranslator):
             response["str_viz_info"]["format"] = "default (ChemDoodle)"
 
         # Add extra information
-        pbc = node.pbc
-        info = get_dimensionality(node.cell, pbc)
-        if len(info) > 0:
-            response["dimensionality"] = info["dim"]
-            response[info["label"]] = info["value"]
-            response["unit"] = info["unit"]
-
-        response["pbc"] = pbc
+        response["dimensionality"] = node.get_dimensionality()
+        response["pbc"] = node.pbc
         response["formula"] = node.get_formula()
 
         return response

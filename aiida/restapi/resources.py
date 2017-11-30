@@ -122,7 +122,7 @@ class BaseResource(Resource):
         (resource_type, page, id, query_type) = self.utils.parse_path(path,
                                                                       parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, downloadformat, visformat, filename, type) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -209,7 +209,7 @@ class Node(Resource):
         (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, downloadformat, visformat, filename, type) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -228,7 +228,7 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist, downloadformat, visformat, filename, type) = self.utils.parse_query_string(query_string)
+             nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if len(filters) > 0:
                 usr = filters["user"]["=="]
@@ -246,7 +246,7 @@ class Node(Resource):
                                  query_type=query_type, id=id, alist=alist,
                                  nalist=nalist, elist=elist, nelist=nelist,
                                  downloadformat=downloadformat, visformat=visformat,
-                                 filename=filename, type=type)
+                                 filename=filename, rtype=rtype)
 
             ## Count results
             total_count = self.trans.get_total_count()

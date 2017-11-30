@@ -41,7 +41,7 @@ class CalculationTranslator(NodeTranslator):
             Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_retrieved_inputs(node, filename=None, type=None):
+    def get_retrieved_inputs(node, filename=None, rtype=None):
         """
         Get the retrieved input files for job calculation
         :param node: aiida node
@@ -53,11 +53,11 @@ class CalculationTranslator(NodeTranslator):
             fullpath = os.path.join(node.get_abs_path(), "raw_input")
 
             if filename is not None:
-                if type is None:
-                    type = "download"
+                if rtype is None:
+                    rtype = "download"
 
                 response = {}
-                if type == "download":
+                if rtype == "download":
                     try:
                         filepath = os.path.join(fullpath, filename)
                         dirpath = os.path.dirname(filepath)
@@ -95,7 +95,7 @@ class CalculationTranslator(NodeTranslator):
         return []
 
     @staticmethod
-    def get_retrieved_outputs(node, filename=None, type=None):
+    def get_retrieved_outputs(node, filename=None, rtype=None):
         """
         Get the retrieved output files for job calculation
         :param node: aiida node
@@ -112,11 +112,11 @@ class CalculationTranslator(NodeTranslator):
                 return response
 
             if filename is not None:
-                if type is None:
-                    type = "download"
+                if rtype is None:
+                    rtype = "download"
 
                 response = {}
-                if type == "download":
+                if rtype == "download":
                     try:
                         filepath = os.path.join(fullpath, filename)
                         dirpath = os.path.dirname(filepath)

@@ -42,7 +42,7 @@ class NodeTranslator(BaseTranslator):
     _downloadformat = None
     _visformat = None
     _filename = None
-    _type = None
+    _rtype = None
 
 
     def __init__(self, Class=None, **kwargs):
@@ -83,7 +83,7 @@ class NodeTranslator(BaseTranslator):
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
                        nelist=None, downloadformat=None, visformat=None,
-                       filename=None, type=None):
+                       filename=None, rtype=None):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
@@ -113,11 +113,11 @@ class NodeTranslator(BaseTranslator):
         elif query_type == "retrieved_inputs":
             self._content_type = 'retrieved_inputs'
             self._filename = filename
-            self._type = type
+            self._rtype = rtype
         elif query_type == "retrieved_outputs":
             self._content_type = 'retrieved_outputs'
             self._filename = filename
-            self._type = type
+            self._rtype = rtype
         else:
             raise InputValidationError("invalid result/content value: {"
                                        "}".format(query_type))
@@ -134,7 +134,7 @@ class NodeTranslator(BaseTranslator):
     def set_query(self, filters=None, orders=None, projections=None,
                   query_type=None, id=None, alist=None, nalist=None,
                   elist=None, nelist=None, downloadformat=None, visformat=None,
-                  filename=None, type=None):
+                  filename=None, rtype=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -156,7 +156,7 @@ class NodeTranslator(BaseTranslator):
         ## Set the type of query
         self.set_query_type(query_type, alist=alist, nalist=nalist,
                             elist=elist, nelist=nelist, downloadformat=downloadformat,
-                            visformat=visformat, filename=filename, type=type)
+                            visformat=visformat, filename=filename, rtype=rtype)
 
         ## Define projections
         if self._content_type is not None:
@@ -265,12 +265,12 @@ class NodeTranslator(BaseTranslator):
         elif self._content_type == 'retrieved_inputs':
             # This type is only available for calc nodes. In case of job calc it
             # returns calc inputs prepared to submit calc on the cluster else []
-            data = {self._content_type: self.get_retrieved_inputs(n, self._filename, self._type)}
+            data = {self._content_type: self.get_retrieved_inputs(n, self._filename, self._rtype)}
 
         elif self._content_type == 'retrieved_outputs':
             # This type is only available for calc nodes. In case of job calc it
             # returns calc outputs retrieved from the cluster else []
-            data = {self._content_type: self.get_retrieved_outputs(n, self._filename, self._type)}
+            data = {self._content_type: self.get_retrieved_outputs(n, self._filename, self._rtype)}
 
         else:
             raise ValidationError("invalid content type")
@@ -405,7 +405,7 @@ class NodeTranslator(BaseTranslator):
 
         return downloadable_data
 
-    def get_retrieved_inputs(self, node, filename=None, type=None):
+    def get_retrieved_inputs(self, node, filename=None, rtype=None):
         """
         Generic function to return output of calc inputls verdi command.
         Actual definition is in child classes as the content to be
@@ -418,10 +418,10 @@ class NodeTranslator(BaseTranslator):
 
         if node.dbnode.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrieved_inputs(node, filename=filename, type=type)
+            return CalculationTranslator.get_retrieved_inputs(node, filename=filename, rtype=rtype)
         return []
 
-    def get_retrieved_outputs(self, node, filename=None, type=None):
+    def get_retrieved_outputs(self, node, filename=None, rtype=None):
         """
         Generic function to return output of calc outputls verdi command.
         Actual definition is in child classes as the content to be
@@ -434,7 +434,7 @@ class NodeTranslator(BaseTranslator):
 
         if node.dbnode.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrieved_outputs(node, filename=filename, type=type)
+            return CalculationTranslator.get_retrieved_outputs(node, filename=filename, rtype=rtype)
         return []
 
     def get_results(self):

@@ -511,7 +511,7 @@ class Utils(object):
         downloadformat = None
         visformat = None
         filename = None
-        type = None
+        rtype = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -570,6 +570,14 @@ class Utils(object):
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
             raise RestInputValidationError(
                 "You cannot specify visformat more than "
+                "once")
+        if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify filename more than "
+                "once")
+        if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify rtype more than "
                 "once")
 
         ## Extract results
@@ -663,13 +671,13 @@ class Utils(object):
                         "only assignment operator '=' "
                         "is permitted after 'filename'")
 
-            elif field[0] == 'type':
+            elif field[0] == 'rtype':
                 if field[1] == '=':
-                    type = field[2]
+                    rtype = field[2]
                 else:
                     raise RestInputValidationError(
                         "only assignment operator '=' "
-                        "is permitted after 'type'")
+                        "is permitted after 'rtype'")
 
             else:
 
@@ -703,7 +711,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat, filename, type)
+                nelist, downloadformat, visformat, filename, rtype)
 
     def parse_query_string(self, query_string):
         """

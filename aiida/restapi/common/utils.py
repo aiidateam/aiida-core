@@ -510,6 +510,8 @@ class Utils(object):
         nelist = None
         downloadformat = None
         visformat = None
+        filename = None
+        type = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -644,6 +646,7 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'format'")
+
             elif field[0] == 'visformat':
                 if field[1] == '=':
                     visformat = field[2]
@@ -651,6 +654,22 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'visformat'")
+
+            elif field[0] == 'filename':
+                if field[1] == '=':
+                    filename = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'filename'")
+
+            elif field[0] == 'type':
+                if field[1] == '=':
+                    type = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'type'")
 
             else:
 
@@ -684,7 +703,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat)
+                nelist, downloadformat, visformat, filename, type)
 
     def parse_query_string(self, query_string):
         """

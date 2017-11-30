@@ -41,6 +41,8 @@ class NodeTranslator(BaseTranslator):
     _nelist = None
     _downloadformat = None
     _visformat = None
+    _filename = None
+    _type = None
 
 
     def __init__(self, Class=None, **kwargs):
@@ -80,7 +82,8 @@ class NodeTranslator(BaseTranslator):
         self._subclasses = self._get_subclasses()
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
-                       nelist=None, downloadformat=None, visformat=None):
+                       nelist=None, downloadformat=None, visformat=None,
+                       filename=None, type=None):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
@@ -107,10 +110,14 @@ class NodeTranslator(BaseTranslator):
         elif query_type == 'download':
             self._content_type = 'download'
             self._downloadformat = downloadformat
-        elif query_type == "retrived_inputs":
-            self._content_type = 'retrived_inputs'
-        elif query_type == "retrived_outputs":
-            self._content_type = 'retrived_outputs'
+        elif query_type == "retrieved_inputs":
+            self._content_type = 'retrieved_inputs'
+            self._filename = filename
+            self._type = type
+        elif query_type == "retrieved_outputs":
+            self._content_type = 'retrieved_outputs'
+            self._filename = filename
+            self._type = type
         else:
             raise InputValidationError("invalid result/content value: {"
                                        "}".format(query_type))
@@ -126,7 +133,8 @@ class NodeTranslator(BaseTranslator):
 
     def set_query(self, filters=None, orders=None, projections=None,
                   query_type=None, id=None, alist=None, nalist=None,
-                  elist=None, nelist=None, downloadformat=None, visformat=None):
+                  elist=None, nelist=None, downloadformat=None, visformat=None,
+                  filename=None, type=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -148,7 +156,7 @@ class NodeTranslator(BaseTranslator):
         ## Set the type of query
         self.set_query_type(query_type, alist=alist, nalist=nalist,
                             elist=elist, nelist=nelist, downloadformat=downloadformat,
-                            visformat=visformat)
+                            visformat=visformat, filename=filename, type=type)
 
         ## Define projections
         if self._content_type is not None:
@@ -254,15 +262,15 @@ class NodeTranslator(BaseTranslator):
             # specified format if available
             data = {self._content_type: self.get_downloadable_data(n, self._downloadformat)}
 
-        elif self._content_type == 'retrived_inputs':
+        elif self._content_type == 'retrieved_inputs':
             # This type is only available for calc nodes. In case of job calc it
             # returns calc inputs prepared to submit calc on the cluster else []
-            data = {self._content_type: self.get_retrived_inputs(n)}
+            data = {self._content_type: self.get_retrieved_inputs(n, self._filename, self._type)}
 
-        elif self._content_type == 'retrived_outputs':
+        elif self._content_type == 'retrieved_outputs':
             # This type is only available for calc nodes. In case of job calc it
-            # returns calc outputs retrived from the cluster else []
-            data = {self._content_type: self.get_retrived_outputs(n)}
+            # returns calc outputs retrieved from the cluster else []
+            data = {self._content_type: self.get_retrieved_outputs(n, self._filename, self._type)}
 
         else:
             raise ValidationError("invalid content type")
@@ -397,7 +405,7 @@ class NodeTranslator(BaseTranslator):
 
         return downloadable_data
 
-    def get_retrived_inputs(self, node):
+    def get_retrieved_inputs(self, node, filename=None, type=None):
         """
         Generic function to return output of calc inputls verdi command.
         Actual definition is in child classes as the content to be
@@ -407,12 +415,13 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :returns: list of calc inputls command
         """
+
         if node.dbnode.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrived_inputs(node)
+            return CalculationTranslator.get_retrieved_inputs(node, filename=filename, type=type)
         return []
 
-    def get_retrived_outputs(self, node):
+    def get_retrieved_outputs(self, node, filename=None, type=None):
         """
         Generic function to return output of calc outputls verdi command.
         Actual definition is in child classes as the content to be
@@ -422,9 +431,10 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :returns: list of calc outputls command
         """
+
         if node.dbnode.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrived_outputs(node)
+            return CalculationTranslator.get_retrieved_outputs(node, filename=filename, type=type)
         return []
 
     def get_results(self):

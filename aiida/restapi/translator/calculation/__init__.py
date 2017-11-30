@@ -11,6 +11,7 @@
 
 
 from aiida.restapi.translator.node import NodeTranslator
+from flask import send_from_directory
 import os
 
 class CalculationTranslator(NodeTranslator):
@@ -40,15 +41,46 @@ class CalculationTranslator(NodeTranslator):
             Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_retrived_inputs(node):
+    def get_retrieved_inputs(node, filename=None, type=None):
         """
         Get the retrieved input files for job calculation
         :param node: aiida node
         :return: the retrieved input files for job calculation
         """
+
         if node.dbnode.type.startswith("calculation.job."):
+
+            fullpath = os.path.join(node.get_abs_path(), "raw_input")
+
+            if filename is not None:
+                if type is None:
+                    type = "download"
+
+                response = {}
+                if type == "download":
+                    try:
+                        filepath = os.path.join(fullpath, filename)
+                        dirpath = os.path.dirname(filepath)
+                        fname = os.path.basename(filepath)
+
+                        if os.path.isfile(filepath):
+                            response["status"] = 200
+                            response["data"] = send_from_directory(dirpath, fname)
+                            response["filename"] = filename.replace("/", "_")
+                        else:
+                            response["status"] = 500
+                            response["data"] = "file {} does not exist".format(filename)
+                    except Exception as e:
+                        response["status"] = 500
+                        response["data"] = e.message
+                else:
+                    response["status"] = 500
+                    response["data"] = "type is not supported"
+
+                return response
+
+            # if filename is not provided, return list of all retrieved files
             try:
-                fullpath = os.path.join(node.get_abs_path(), "raw_input")
                 length = len(fullpath) + 1
                 retrieved = []
 
@@ -63,15 +95,52 @@ class CalculationTranslator(NodeTranslator):
         return []
 
     @staticmethod
-    def get_retrived_outputs(node):
+    def get_retrieved_outputs(node, filename=None, type=None):
         """
         Get the retrieved output files for job calculation
         :param node: aiida node
         :return: the retrieved output files for job calculation
         """
         if node.dbnode.type.startswith("calculation.job."):
+
             try:
                 fullpath = os.path.join(node.out.retrieved.get_abs_path(), "path")
+            except AttributeError:
+                response = {}
+                response["status"] = 500
+                response["data"] = "This node does not have an output with link retrieved"
+                return response
+
+            if filename is not None:
+                if type is None:
+                    type = "download"
+
+                response = {}
+                if type == "download":
+                    try:
+                        filepath = os.path.join(fullpath, filename)
+                        dirpath = os.path.dirname(filepath)
+                        fname = os.path.basename(filepath)
+
+                        if os.path.isfile(filepath):
+                            response["status"] = 200
+                            response["data"] = send_from_directory(dirpath, fname)
+                            response["filename"] = filename.replace("/", "_")
+                        else:
+                            response["status"] = 500
+                            response["data"] = "file {} does not exist".format(filename)
+
+                    except Exception as e:
+                        response["status"] = 500
+                        response["data"] = e.message
+                else:
+                    response["status"] = 500
+                    response["data"] = "type is not supported"
+
+                return response
+
+            # if filename is not provided, return list of all retrieved files
+            try:
                 length = len(fullpath) + 1
                 retrieved = []
 

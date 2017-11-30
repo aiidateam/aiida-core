@@ -10,6 +10,7 @@
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.common.exceptions import LicensingException
+import numpy as np
 
 def atom_kinds_to_html(atom_kind):
     """
@@ -52,7 +53,6 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
-
 class StructureDataTranslator(DataTranslator):
     """
     Translator relative to resource 'structures' and aiida class StructureData
@@ -86,10 +86,12 @@ class StructureDataTranslator(DataTranslator):
         in a format required by chemdoodle to visualize a structure.
         """
         response = {}
+        response["str_viz_info"] = {}
 
         if format in node.get_export_formats():
             try:
-                response[format] = node._exportstring(format)[0]
+                response["str_viz_info"]["data"] = node._exportstring(format)[0]
+                response["str_viz_info"]["format"] = format
             except LicensingException as e:
                 response = e.message
 
@@ -165,10 +167,16 @@ class StructureDataTranslator(DataTranslator):
                 }
 
             # These will be passed to ChemDoodle
-            response = {"s": [cell_json],
+            response["str_viz_info"]["data"] = {"s": [cell_json],
                             "m": [{"a": atoms_json}],
                             "units": '&Aring;'
                             }
+            response["str_viz_info"]["format"] = "default (ChemDoodle)"
+
+        # Add extra information
+        response["dimensionality"] = node.get_dimensionality()
+        response["pbc"] = node.pbc
+        response["formula"] = node.get_formula()
 
         return response
 

@@ -421,3 +421,16 @@ class BandsData(Data):
         self.tclass = BandsDataTclass
 
         self.parse_pk_uuid = 'uuid'
+
+class UpfData(Data):
+    def __init__(self, **kwargs):
+
+        super(UpfData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.upf import \
+            UpfDataTranslator
+        self.trans = UpfDataTranslator(**kwargs)
+        from aiida.orm.data.upf import UpfData as UpfDataTclass
+        self.tclass = UpfDataTclass
+
+        self.parse_pk_uuid = 'uuid'

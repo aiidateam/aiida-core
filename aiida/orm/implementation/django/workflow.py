@@ -157,6 +157,10 @@ class Workflow(AbstractWorkflow):
     def label(self, label):
         self._update_db_label_field(label)
 
+    @property
+    def ctime(self):
+        return self.dbworkflowinstance.ctime
+
     def _update_db_label_field(self, field_value):
         """
         Safety method to store the label of the workflow

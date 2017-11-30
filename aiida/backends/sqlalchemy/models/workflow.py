@@ -88,18 +88,14 @@ class DbWorkflow(Base):
         self.script_md5 = md5
         self.save()
 
-    #    def add_data(self, dict, d_type):
-    #        for k in dict.keys():
-    #            p, create = self.data.get_or_create(name=k, data_type=d_type)
-    #            p.set_value(dict[k])
-
     def add_data(self, dict, d_type):
         for k in dict.keys():
             p, create = self._get_or_create_data(name=k, data_type=d_type)
             p.set_value(dict[k])
 
     def _get_or_create_data(self, name, data_type):
-        match_data = {name: _ for _ in self.data if _.name == name}
+        match_data = {name: _ for _ in self.data if _.name == name
+                      and _.data_type == data_type}
 
         if not match_data:  # create case
             dbdata = DbWorkflowData(parent_id=self.id, name=name, data_type=data_type)
@@ -250,7 +246,8 @@ class DbWorkflowData(Base):
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
                 if arg.pk is None:
-                    raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
+                    raise ValueError("Cannot add an unstored node as an "
+                                     "attribute of a Workflow!")
                 sess = get_scoped_session()
                 self.aiida_obj = sess.merge(arg.dbnode, load=True)
                 self.value_type = wf_data_value_types.AIIDA

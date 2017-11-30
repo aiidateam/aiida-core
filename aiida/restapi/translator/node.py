@@ -107,6 +107,10 @@ class NodeTranslator(BaseTranslator):
         elif query_type == 'download':
             self._content_type = 'download'
             self._downloadformat = downloadformat
+        elif query_type == "retrived_inputs":
+            self._content_type = 'retrived_inputs'
+        elif query_type == "retrived_outputs":
+            self._content_type = 'retrived_outputs'
         else:
             raise InputValidationError("invalid result/content value: {"
                                        "}".format(query_type))
@@ -250,6 +254,16 @@ class NodeTranslator(BaseTranslator):
             # specified format if available
             data = {self._content_type: self.get_downloadable_data(n, self._downloadformat)}
 
+        elif self._content_type == 'retrived_inputs':
+            # This type is only available for calc nodes. In case of job calc it
+            # returns calc inputs prepared to submit calc on the cluster else []
+            data = {self._content_type: self.get_retrived_inputs(n)}
+
+        elif self._content_type == 'retrived_outputs':
+            # This type is only available for calc nodes. In case of job calc it
+            # returns calc outputs retrived from the cluster else []
+            data = {self._content_type: self.get_retrived_outputs(n)}
+
         else:
             raise ValidationError("invalid content type")
 
@@ -360,7 +374,7 @@ class NodeTranslator(BaseTranslator):
         returned and its format depends on the visualization plugin specific
         to the resource
 
-        :param node: node object that has to be visualized
+        :param node: node object
         :param format: file extension format
         :returns: data in selected format to download
         """
@@ -382,6 +396,36 @@ class NodeTranslator(BaseTranslator):
         downloadable_data = lowtrans.get_downloadable_data(node, format=format)
 
         return downloadable_data
+
+    def get_retrived_inputs(self, node):
+        """
+        Generic function to return output of calc inputls verdi command.
+        Actual definition is in child classes as the content to be
+        returned and its format depends on the visualization plugin specific
+        to the resource
+
+        :param node: node object
+        :returns: list of calc inputls command
+        """
+        if node.dbnode.type.startswith("calculation"):
+            from aiida.restapi.translator.calculation import CalculationTranslator
+            return CalculationTranslator.get_retrived_inputs(node)
+        return []
+
+    def get_retrived_outputs(self, node):
+        """
+        Generic function to return output of calc outputls verdi command.
+        Actual definition is in child classes as the content to be
+        returned and its format depends on the visualization plugin specific
+        to the resource
+
+        :param node: node object
+        :returns: list of calc outputls command
+        """
+        if node.dbnode.type.startswith("calculation"):
+            from aiida.restapi.translator.calculation import CalculationTranslator
+            return CalculationTranslator.get_retrived_outputs(node)
+        return []
 
     def get_results(self):
         """

@@ -11,6 +11,7 @@
 
 
 from aiida.restapi.translator.node import NodeTranslator
+import os
 
 class CalculationTranslator(NodeTranslator):
     """
@@ -37,4 +38,50 @@ class CalculationTranslator(NodeTranslator):
         # basic query_help object
         super(CalculationTranslator, self).__init__(
             Class=self.__class__, **kwargs)
+
+    @staticmethod
+    def get_retrived_inputs(node):
+        """
+        Get the retrieved input files for job calculation
+        :param node: aiida node
+        :return: the retrieved input files for job calculation
+        """
+        if node.dbnode.type.startswith("calculation.job."):
+            try:
+                fullpath = os.path.join(node.get_abs_path(), "raw_input")
+                length = len(fullpath) + 1
+                retrieved = []
+
+                for (dirpath, dirnames, filenames) in os.walk(fullpath):
+                    retrieved.extend([os.path.join(dirpath, f)[length:] for f in filenames])
+
+                return retrieved
+
+            except Exception as e:
+                return e
+
+        return []
+
+    @staticmethod
+    def get_retrived_outputs(node):
+        """
+        Get the retrieved output files for job calculation
+        :param node: aiida node
+        :return: the retrieved output files for job calculation
+        """
+        if node.dbnode.type.startswith("calculation.job."):
+            try:
+                fullpath = os.path.join(node.out.retrieved.get_abs_path(), "path")
+                length = len(fullpath) + 1
+                retrieved = []
+
+                for (dirpath, dirnames, filenames) in os.walk(fullpath):
+                    retrieved.extend([os.path.join(dirpath, f)[length:] for f in filenames])
+
+                return retrieved
+
+            except Exception as e:
+                return e
+        return []
+
 

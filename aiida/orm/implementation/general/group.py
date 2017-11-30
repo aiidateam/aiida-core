@@ -136,7 +136,7 @@ class AbstractGroup(object):
     @classmethod
     def create(cls, *args, **kwargs):
         """
-        Create a new group.
+        Create and store a new group.
         
         Note: This method does not check for presence of the group.
         You may want to use get_or_create().

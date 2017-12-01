@@ -44,7 +44,7 @@ DBPORT = profile_conf.get('AIIDADB_PORT', '')
 REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 
-## Checks on the REPOSITORY_* variables
+# Checks on the REPOSITORY_* variables
 try:
     REPOSITORY_URI
 except NameError:
@@ -71,3 +71,56 @@ elif REPOSITORY_PROTOCOL == 'file':
                 "(I was not able to create the directory.)")
 else:
     raise ConfigurationError("Only file protocol supported")
+
+
+def get_repository_config(name=None):
+    """
+    Retrieve the 'name' repository from the configuration file. If 'name' is not specified, the default
+    repository will be used. Returns the repository name and its configuration dictionary
+    
+    :param name: name of the repository configuration to retrieve, if not specified default is used
+    :return: repository name and the repository configuration dictionary
+    """
+    try:
+        repository_conf = profile_conf['repository']
+        repository_avail = repository_conf['available']
+        repository_default = repository_conf['default']
+    except KeyError as exception:
+        raise ConfigurationError("Invalid repository configuration")
+
+    if name is None:
+        repository_name = repository_default
+    else:
+        repository_name = name
+
+    try:
+        repository_config = repository_avail[repository_name]
+    except KeyError as exception:
+        raise ConfigurationError("The chosen repository '{}' is not defined in the configuration".format(repository_name))
+
+    return repository_name, repository_config
+
+def get_repository(name=None):
+    """
+    Retrieve a fully configured instance of Repository. The 'name' will determine the dictionary of parameters
+    that will be taken from the configuration, which should contain the key 'type' which will determine the
+    type of the Repository implementation that will be constructed
+
+    :param name: name of the repository configuration to retrieve, if not specified default is used
+    :return: Repository
+    """
+    from aiida.repository import construct_backend as construct_repository
+
+    try:
+        repository_name, repository_config = get_repository_config(name)
+    except ConfigurationError as exception:
+        raise
+
+    try:
+        repository_type = repository_config['type'];
+    except KeyError as exception:
+        raise ConfigurationError("The chosen repository '{}' does not specify a type in 'type'".format(repository_name))
+
+    repository = construct_repository(repository_type, repository_config)
+
+    return repository

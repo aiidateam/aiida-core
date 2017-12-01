@@ -123,7 +123,10 @@ class DjangoRepotable(Repotable):
         if dir_basepath:
 
             # Check whether the NodeFile for the basepath already exists
-            dbnodefile_base = DbNodeFile.objects.get(node__pk=dbnode.pk, path=dir_basepath)
+            try:
+                dbnodefile_base = DbNodeFile.objects.get(node__pk=dbnode.pk, path=dir_basepath)
+            except DbNodeFile.DoesNotExist as exception:
+                dbnodefile_base = None
 
             if dbnodefile_base:
                 dbnodefile = DbNodeFile(node=dbnode, path=dir_fullpath)

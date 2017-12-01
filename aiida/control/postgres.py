@@ -100,7 +100,7 @@ class Postgres(object):
                 break
 
         # This will work for the default Debian postgres setup
-        if not self.pg_execute:
+        if self.pg_execute == _pg_execute_not_connected:
             dbinfo['user'] = 'postgres'
             if _try_subcmd(
                     non_interactive=bool(not self.interactive), **dbinfo):

@@ -18,9 +18,11 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
-DEFAULT_AIIDA_USER = "aiida@localhost"
+DEFAULT_AIIDA_USER = 'aiida@localhost'
 
-AIIDA_PATH = [path for path in os.environ.get('AIIDA_PATH', '').split(':') if path] + [os.path.expanduser('~')]
+AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
+AIIDA_PATH.append(os.path.expanduser('~'))
+
 for path in AIIDA_PATH:
     try:
         AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
@@ -28,7 +30,8 @@ for path in AIIDA_PATH:
     except OSError:
         pass
 else:
-    AIIDA_CONFIG_FOLDER = "~/.aiida"
+    AIIDA_CONFIG_FOLDER = '~/.aiida'
+
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
@@ -132,73 +135,6 @@ def store_config(confs):
     try:
         with open(conf_file, "w") as json_file:
             json.dump(confs, json_file)
-    finally:
-        os.umask(old_umask)
-
-
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
-                         daemon_conf=None):
-    """
-    Install the files needed to run the daemon.
-    """
-    local_daemon_conf = """
-[unix_http_server]
-file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
-
-[supervisord]
-logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB
-logfile_backups=2
-loglevel=info
-pidfile={daemon_dir}/supervisord.pid
-nodaemon=false
-minfds=1024
-minprocs=200
-
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///{daemon_dir}/supervisord.sock
-
-;=======================================
-; Main AiiDA Daemon
-;=======================================
-[program:aiida-daemon]
-command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
-directory={aiida_code_home}/daemon/
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon.log
-stderr_logfile={log_dir}/aiida_daemon.log
-autostart=true
-autorestart=true
-startsecs=10
-
-; Need to wait for currently executing tasks to finish at shutdown.
-; Increase this if you have very long running tasks.
-stopwaitsecs = 600
-
-; When resorting to send SIGKILL to the program to terminate it
-; send SIGKILL to its whole process group instead,
-; taking care of its children as well.
-killasgroup=true
-
-; Set Celery priority higher than default (999)
-; so, if rabbitmq is supervised, it will start first.
-priority=1000
-"""
-    if daemon_conf is None:
-        daemon_conf = local_daemon_conf
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
-            f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
-                                       local_user=local_user,
-                                       aiida_code_home=os.path.split(
-                                           os.path.abspath(
-                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -320,9 +256,6 @@ def create_base_dirs(config_dir=None):
             os.makedirs(aiida_log_dir)
     finally:
         os.umask(old_umask)
-
-    # Install daemon files
-    install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
 
     # Create the secret key file, if needed
     try_create_secret_key()

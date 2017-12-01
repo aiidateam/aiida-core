@@ -373,8 +373,12 @@ class Calculation(VerdiCommandWithSubcommands):
                                      for _ in docstring.splitlines()])
                     print "  Inputs:"
                     for key, val in C._use_methods.iteritems():
-                        print "    {}: {}".format(key,
+                        try:
+                            print "    {}: {}".format(key,
                                                   val['valid_types'].__name__)
+                        except AttributeError:
+                            print "    {}: {}".format(key,
+                                                  ", ".join([i.__name__ for i in val['valid_types']]))
                     print("  Module location: {}".format(C.__module__))
 
                 except MissingPluginError:

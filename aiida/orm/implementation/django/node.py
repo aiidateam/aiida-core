@@ -23,8 +23,10 @@ from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
 from aiida.orm.mixins import Sealable
-# from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.orm.backend import construct as construct_backend
+from aiida.orm.node_repository import NodeRepository
+from aiida.settings import get_repository
 
 
 class Node(AbstractNode):
@@ -69,6 +71,11 @@ class Node(AbstractNode):
         # Set the internal parameters
         # Can be redefined in the subclasses
         self._init_internal_params()
+
+        # Construct the NodeRepository based on the configured repository and repotable
+        repotable = construct_backend().repotable
+        repository = get_repository()
+        self.node_repository = NodeRepository(self, repository, repotable)
 
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
@@ -447,8 +454,23 @@ class Node(AbstractNode):
             if k != Sealable.SEALED_KEY:
                 newobject._set_attr(k, v)
 
-        for path in self.get_folder_list():
-            newobject.add_path(self.get_abs_path(path), path)
+        # If unstored, files will be in the temporary sandbox folder, but otherwise we have to
+        # go through the NodeRepository, however, since the copied node will be unstored the files
+        # from the Repository have to be written to the sandbox folder of the copied node
+        if self._to_be_stored:
+            for path in self.get_folder_list():
+                newobject.add_path(self.get_abs_path(path), path)
+        else:
+            import tempfile
+            for dbnodefile in self.node_repository.ls():
+                # Directories we do not have to explicitly copy
+                if not dbnodefile.path.endswith('/'):
+                    with tempfile.NamedTemporaryFile() as handle:
+                        content = self.node_repository.get_file_content(dbnodefile.path)
+                        handle.write(content)
+                        handle.flush()
+                        newobject.add_path(handle.name, dbnodefile.path)
+
 
         return newobject
 
@@ -574,46 +596,32 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        # I save the corresponding django entry
-        # I set the folder
-        # NOTE: I first store the files, then only if this is successful,
-        # I store the DB entry. In this way,
-        # I assume that if a node exists in the DB, its folder is in place.
-        # On the other hand, periodically the user might need to run some
-        # bookkeeping utility to check for lone folders.
-        self._repository_folder.replace_with_folder(
-            self._get_temp_folder().abspath, move=True, overwrite=True)
-
         # I do the transaction only during storage on DB to avoid timeout
         # problems, especially with SQLite
-        try:
-            with context_man:
-                # Save the row
-                self._dbnode.save()
-                # Save its attributes 'manually' without incrementing
-                # the version for each add.
-                DbAttribute.reset_values_for_node(self.dbnode,
-                                                  attributes=self._attrs_cache,
-                                                  with_transaction=False)
-                # This should not be used anymore: I delete it to
-                # possibly free memory
-                del self._attrs_cache
+        with context_man:
+            # Save the row
+            self._dbnode.save()
 
-                self._temp_folder = None
-                self._to_be_stored = False
+            # Now that the node has a pk, we can store the contents of the temporary
+            # sandbox folder to the permanent repository
+            folder = self._get_temp_folder().get_subfolder(self._path_subfolder_name)
+            self.node_repository.copy_tree(folder.abspath)
 
-                # Here, I store those links that were in the cache and
-                # that are between stored nodes.
-                self._store_cached_input_links()
+            # Save its attributes 'manually' without incrementing
+            # the version for each add.
+            DbAttribute.reset_values_for_node(self.dbnode,
+                                              attributes=self._attrs_cache,
+                                              with_transaction=False)
+            # This should not be used anymore: I delete it to
+            # possibly free memory
+            del self._attrs_cache
 
-        # This is one of the few cases where it is ok to do a 'global'
-        # except, also because I am re-raising the exception
-        except:
-            # I put back the files in the sandbox folder since the
-            # transaction did not succeed
-            self._get_temp_folder().replace_with_folder(
-                self._repository_folder.abspath, move=True, overwrite=True)
-            raise
+            self._temp_folder = None
+            self._to_be_stored = False
+
+            # Here, I store those links that were in the cache and
+            # that are between stored nodes.
+            self._store_cached_input_links()
 
         return self
 

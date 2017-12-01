@@ -10,9 +10,12 @@
 """
 Base class for AiiDA tests
 """
-from django.utils import unittest
-import shutil
 import os
+import shutil
+import uuid as UUID
+from django.utils import unittest
+from aiida.settings import get_repository
+from aiida.backends.djsite.db.models import DbRepository
 from aiida.backends.testimplbase import AiidaTestImplementation
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
@@ -34,12 +37,24 @@ class DjangoTests(AiidaTestImplementation):
     def setUpClass_method(self):
         self.clean_db()
         self.insert_data()
+        self.create_repo()
 
     def setUp_method(self):
         pass
 
     def tearDown_method(self):
         pass
+
+    def create_repo(self):
+        """
+        Create the repository in the database
+        """
+        uuid = UUID.uuid4()
+        repository = get_repository()
+        with open(repository.uuid_path, 'w') as handle:
+            handle.write(str(uuid))
+        dbrepo = DbRepository(name=repository.get_name(), uuid=uuid)
+        dbrepo.save()
 
     def insert_data(self):
         """
@@ -110,6 +125,13 @@ class DjangoTests(AiidaTestImplementation):
         from aiida.backends.djsite.db.models import DbLog
 
         DbLog.objects.all().delete()
+
+        from aiida.backends.djsite.db.models import DbRepository, DbNodeFile, DbFile
+
+        # Delete repository
+        DbNodeFile.objects.all().delete()
+        DbFile.objects.all().delete()
+        DbRepository.objects.all().delete()
 
     # Note this is has to be a normal method, not a class method
     def tearDownClass_method(self):

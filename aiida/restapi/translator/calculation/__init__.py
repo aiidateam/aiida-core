@@ -11,6 +11,7 @@
 
 
 from aiida.restapi.translator.node import NodeTranslator
+from aiida.restapi.common.exceptions import RestInputValidationError
 from flask import send_from_directory
 import os
 
@@ -41,6 +42,16 @@ class CalculationTranslator(NodeTranslator):
             Class=self.__class__, **kwargs)
 
     @staticmethod
+    def get_files_list(base_path_length, dirobj, files=[]):
+        for fname in dirobj.get_content_list():
+            if dirobj.isfile(fname):
+                filename = os.path.join(dirobj.abspath, fname)[base_path_length:]
+                files.append(filename)
+            elif dirobj.isdir(fname):
+                CalculationTranslator.get_files_list(base_path_length, dirobj.get_subfolder(fname), files)
+        return files
+
+    @staticmethod
     def get_retrieved_inputs(node, filename=None, rtype=None):
         """
         Get the retrieved input files for job calculation
@@ -50,47 +61,37 @@ class CalculationTranslator(NodeTranslator):
 
         if node.dbnode.type.startswith("calculation.job."):
 
-            fullpath = os.path.join(node.get_abs_path(), "raw_input")
+            input_folder = node.folder.get_subfolder("raw_input")
+            input_folder_path = input_folder.abspath
 
             if filename is not None:
+                response = {}
+
                 if rtype is None:
                     rtype = "download"
 
-                response = {}
                 if rtype == "download":
-                    try:
-                        filepath = os.path.join(fullpath, filename)
-                        dirpath = os.path.dirname(filepath)
-                        fname = os.path.basename(filepath)
+                    filepath = os.path.join(input_folder_path, filename)
+                    dirpath = os.path.dirname(filepath)
+                    fname = os.path.basename(filepath)
 
-                        if os.path.isfile(filepath):
-                            response["status"] = 200
-                            response["data"] = send_from_directory(dirpath, fname)
-                            response["filename"] = filename.replace("/", "_")
-                        else:
-                            response["status"] = 500
-                            response["data"] = "file {} does not exist".format(filename)
-                    except Exception as e:
-                        response["status"] = 500
-                        response["data"] = e.message
+                    if os.path.isfile(filepath):
+                        response["status"] = 200
+                        response["data"] = send_from_directory(dirpath, fname)
+                        response["filename"] = filename.replace("/", "_")
+                    else:
+                        error = "file {} does not exist".format(filename)
+                        raise RestInputValidationError (error)
+
                 else:
-                    response["status"] = 500
-                    response["data"] = "type is not supported"
+                    raise RestInputValidationError ("rtype is not supported")
 
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            try:
-                length = len(fullpath) + 1
-                retrieved = []
-
-                for (dirpath, dirnames, filenames) in os.walk(fullpath):
-                    retrieved.extend([os.path.join(dirpath, f)[length:] for f in filenames])
-
-                return retrieved
-
-            except Exception as e:
-                return e
+            base_path_length = len(input_folder_path) + 1
+            retrieved = CalculationTranslator.get_files_list(base_path_length, input_folder, [])
+            return retrieved
 
         return []
 
@@ -102,11 +103,11 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved output files for job calculation
         """
         if node.dbnode.type.startswith("calculation.job."):
+            response = {}
 
             try:
                 fullpath = os.path.join(node.out.retrieved.get_abs_path(), "path")
             except AttributeError:
-                response = {}
                 response["status"] = 500
                 response["data"] = "This node does not have an output with link retrieved"
                 return response
@@ -115,42 +116,29 @@ class CalculationTranslator(NodeTranslator):
                 if rtype is None:
                     rtype = "download"
 
-                response = {}
                 if rtype == "download":
-                    try:
-                        filepath = os.path.join(fullpath, filename)
-                        dirpath = os.path.dirname(filepath)
-                        fname = os.path.basename(filepath)
 
-                        if os.path.isfile(filepath):
-                            response["status"] = 200
-                            response["data"] = send_from_directory(dirpath, fname)
-                            response["filename"] = filename.replace("/", "_")
-                        else:
-                            response["status"] = 500
-                            response["data"] = "file {} does not exist".format(filename)
+                    filepath = os.path.join(fullpath, filename)
+                    dirpath = os.path.dirname(filepath)
+                    fname = os.path.basename(filepath)
 
-                    except Exception as e:
-                        response["status"] = 500
-                        response["data"] = e.message
+                    if os.path.isfile(filepath):
+                        response["status"] = 200
+                        response["data"] = send_from_directory(dirpath, fname)
+                        response["filename"] = filename.replace("/", "_")
+                    else:
+                        error = "file {} does not exist".format(filename)
+                        raise RestInputValidationError (error)
+
                 else:
-                    response["status"] = 500
-                    response["data"] = "type is not supported"
+                    raise RestInputValidationError ("rtype is not supported")
 
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            try:
-                length = len(fullpath) + 1
-                retrieved = []
+            retrieved = node.out.retrieved.get_folder_list()
+            return retrieved
 
-                for (dirpath, dirnames, filenames) in os.walk(fullpath):
-                    retrieved.extend([os.path.join(dirpath, f)[length:] for f in filenames])
-
-                return retrieved
-
-            except Exception as e:
-                return e
         return []
 
 

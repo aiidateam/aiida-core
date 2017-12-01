@@ -166,9 +166,9 @@ class DjangoRepotable(Repotable):
             raise ValueError('The specified node with pk={} does not exist'.format(node.pk))
 
         try:
-            dbrepo = DbRepository.objects.get(name=repo.name)
+            dbrepo = DbRepository.objects.get(name=repo.repo_name)
         except DbRepository.DoesNotExist as exception:
-            raise ValueError()
+            raise ValueError("the configured repository '{}' does not exist in the database".format(repo.repo_name))
 
         try:
             sid = transaction.savepoint()

@@ -437,6 +437,29 @@ class NodeTranslator(BaseTranslator):
             return CalculationTranslator.get_retrieved_outputs(node, filename=filename, rtype=rtype)
         return []
 
+    @staticmethod
+    def get_file_content(node, file_name):
+        """
+        It reads the file from directory and returns its content.
+
+        Instead of using "send_from_directory" from flask, this method is written
+        because in next aiida releases the file can be stored locally or in object storage.
+
+        :param node: aiida folderData node which contains file
+        :param file_name: name of the file to return its contents
+        :return:
+        """
+        import os
+        file_parts = file_name.split(os.sep)
+
+        if len(file_parts) > 1:
+            file_name = file_parts.pop()
+            for folder in file_parts:
+                node = node.get_subfolder(folder)
+
+        with node.open(file_name) as f:
+            return f.read()
+
     def get_results(self):
         """
         Returns either a list of nodes or details of single node from database

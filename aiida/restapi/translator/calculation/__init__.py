@@ -42,19 +42,24 @@ class CalculationTranslator(NodeTranslator):
             Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_files_list(base_path_length, dirobj, files=[]):
+    def get_files_list(dirobj, files=None, prefix=None):
+        if files is None:
+            files = []
+        if prefix is None:
+            prefix = []
         for fname in dirobj.get_content_list():
             if dirobj.isfile(fname):
-                filename = os.path.join(dirobj.abspath, fname)[base_path_length:]
+                filename = os.path.join(*(prefix + [fname]))
                 files.append(filename)
             elif dirobj.isdir(fname):
-                CalculationTranslator.get_files_list(base_path_length, dirobj.get_subfolder(fname), files)
+                CalculationTranslator.get_files_list(dirobj.get_subfolder(fname), files, prefix + [fname])
         return files
+
 
     @staticmethod
     def get_retrieved_inputs(node, filename=None, rtype=None):
         """
-        Get the retrieved input files for job calculation
+        Get the submitted input files for job calculation
         :param node: aiida node
         :return: the retrieved input files for job calculation
         """
@@ -62,7 +67,6 @@ class CalculationTranslator(NodeTranslator):
         if node.dbnode.type.startswith("calculation.job."):
 
             input_folder = node.folder.get_subfolder("raw_input")
-            input_folder_path = input_folder.abspath
 
             if filename is not None:
                 response = {}
@@ -71,17 +75,15 @@ class CalculationTranslator(NodeTranslator):
                     rtype = "download"
 
                 if rtype == "download":
-                    filepath = os.path.join(input_folder_path, filename)
-                    dirpath = os.path.dirname(filepath)
-                    fname = os.path.basename(filepath)
-
-                    if os.path.isfile(filepath):
-                        response["status"] = 200
-                        response["data"] = send_from_directory(dirpath, fname)
-                        response["filename"] = filename.replace("/", "_")
-                    else:
-                        error = "file {} does not exist".format(filename)
+                    try:
+                        content = NodeTranslator.get_file_content(input_folder, filename)
+                    except IOError as e:
+                        error = "Error in getting {} content".format(filename)
                         raise RestInputValidationError (error)
+
+                    response["status"] = 200
+                    response["data"] = content
+                    response["filename"] = filename.replace("/", "_")
 
                 else:
                     raise RestInputValidationError ("rtype is not supported")
@@ -89,8 +91,7 @@ class CalculationTranslator(NodeTranslator):
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            base_path_length = len(input_folder_path) + 1
-            retrieved = CalculationTranslator.get_files_list(base_path_length, input_folder, [])
+            retrieved = CalculationTranslator.get_files_list(input_folder)
             return retrieved
 
         return []
@@ -103,32 +104,25 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved output files for job calculation
         """
         if node.dbnode.type.startswith("calculation.job."):
-            response = {}
 
-            try:
-                fullpath = os.path.join(node.out.retrieved.get_abs_path(), "path")
-            except AttributeError:
-                response["status"] = 500
-                response["data"] = "This node does not have an output with link retrieved"
-                return response
+            output_folder = node.out.retrieved._get_folder_pathsubfolder
 
             if filename is not None:
+                response = {}
+
                 if rtype is None:
                     rtype = "download"
 
                 if rtype == "download":
-
-                    filepath = os.path.join(fullpath, filename)
-                    dirpath = os.path.dirname(filepath)
-                    fname = os.path.basename(filepath)
-
-                    if os.path.isfile(filepath):
-                        response["status"] = 200
-                        response["data"] = send_from_directory(dirpath, fname)
-                        response["filename"] = filename.replace("/", "_")
-                    else:
-                        error = "file {} does not exist".format(filename)
+                    try:
+                        content = NodeTranslator.get_file_content(output_folder, filename)
+                    except IOError as e:
+                        error = "Error in getting {} content".format(filename)
                         raise RestInputValidationError (error)
+
+                    response["status"] = 200
+                    response["data"] = content
+                    response["filename"] = filename.replace("/", "_")
 
                 else:
                     raise RestInputValidationError ("rtype is not supported")
@@ -136,7 +130,7 @@ class CalculationTranslator(NodeTranslator):
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            retrieved = node.out.retrieved.get_folder_list()
+            retrieved = CalculationTranslator.get_files_list(output_folder)
             return retrieved
 
         return []

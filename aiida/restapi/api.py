@@ -145,6 +145,8 @@ class AiidaApi(Api):
                           '/calculations/page/',
                           '/calculations/page/<int:page>/',
                           '/calculations/<id>/',
+                          '/calculations/<id>/io/retrieved_inputs/',
+                          '/calculations/<id>/io/retrieved_outputs/',
                           '/calculations/<id>/io/inputs/',
                           '/calculations/<id>/io/inputs/page/',
                           '/calculations/<id>/io/inputs/page/<int:page>/',

@@ -40,6 +40,54 @@ class WFTestSimple(Workflow):
         self.next(self.exit)
 
 
+class FailingWFTestSimple(WFTestSimple):
+    @Workflow.step
+    def start(self):
+        # Testing calculations
+        self.attach_calculation(self.generate_calc())
+
+        # Test process
+        self.next(self.second_step)
+
+    @Workflow.step
+    def second_step(self):
+        # Testing calculations
+        self.attach_calculation(generate_calc())
+        # Raise a test exception that should make the workflow to stop
+        raise Exception('Test exception')
+
+        # Test process
+        self.next(self.third_step)
+
+    @Workflow.step
+    def third_step(self):
+        self.next(self.exit)
+
+
+class FailingWFTestSimpleWithSubWF(Workflow):
+    def __init__(self, **kwargs):
+        super(FailingWFTestSimpleWithSubWF, self).__init__(**kwargs)
+
+    @Workflow.step
+    def start(self):
+        self.attach_calculation(generate_calc())
+
+        # Create two subworkflows
+        w = FailingWFTestSimple()
+        w.start()
+        self.attach_workflow(w)
+
+        w = FailingWFTestSimple()
+        w.start()
+        self.attach_workflow(w)
+
+        self.next(self.second)
+
+    @Workflow.step
+    def second(self):
+        self.next(self.exit)
+
+
 class WFTestSimpleWithSubWF(Workflow):
     def __init__(self, **kwargs):
         super(WFTestSimpleWithSubWF, self).__init__(**kwargs)

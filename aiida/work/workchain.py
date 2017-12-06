@@ -221,16 +221,25 @@ class WorkChain(Process):
         return self._do_step()
 
     @property
+    def _do_abort(self):
+        return self.calc.get_attr(self.calc.DO_ABORT_KEY, False)
+
+    @property
     def _aborted(self):
         return self.calc.get_attr(self.calc.ABORTED_KEY, False)
 
     @_aborted.setter
     def _aborted(self, value):
-        self.calc._set_attr(self.calc.ABORTED_KEY, True)
+        # One is not allowed to unabort an aborted WorkChain
+        if self._aborted == True and value == False:
+            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
+            return
+
+        self.calc._set_attr(self.calc.ABORTED_KEY, value)
 
     def _do_step(self, wait_on=None):
+        self._handle_do_abort()
         if self._aborted:
-            self.abort()
             return
 
         for interstep in self._intersteps:
@@ -244,8 +253,8 @@ class WorkChain(Process):
             finished, retval = True, None
 
         # Could have aborted during the step
+        self._handle_do_abort()
         if self._aborted:
-            self.abort()
             return
 
         if not finished:
@@ -296,6 +305,16 @@ class WorkChain(Process):
 
             self._aborted = saved_state[self._ABORTED]
 
+    def _handle_do_abort(self):
+        """
+        Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
+        attribute has been set, and if so call self.abort and remove the DO_ABORT_KEY attribute 
+        """
+        do_abort = self._do_abort
+        if do_abort:
+            self.abort(do_abort)
+            self.calc._del_attr(self.calc.DO_ABORT_KEY)
+
     def abort_nowait(self, msg=None):
         """
         Abort the workchain at the next state transition without waiting
@@ -323,6 +342,7 @@ class WorkChain(Process):
         self._aborted = True
         self.stop()
 
+
 def ToContext(**kwargs):
     """
     Utility function that returns a list of UpdateContext Interstep instances
@@ -347,6 +367,7 @@ class _InterstepFactory(object):
     Factory to create the appropriate Interstep instance based
     on the class string that was written to the bundle
     """
+
     def create(self, bundle):
         class_string = bundle[Bundle.CLASS]
         if class_string == get_class_string(ToContext):
@@ -548,22 +569,21 @@ class _If(_Instruction):
         def __init__(self, workflow, if_spec):
             super(_If.Stepper, self).__init__(workflow)
             self._if_spec = if_spec
-            self._pos = 0
+            self._pos = -1
             self._current_stepper = None
 
         def step(self):
             if self._current_stepper is None:
-                stepper = self._get_next_stepper()
-                # If we can't get a stepper then no conditions match, return
-                if stepper is None:
-                    return True, None
-                self._current_stepper = stepper
+                self._create_stepper()
+
+            # If we can't get a stepper then no conditions match, return
+            if self._current_stepper is None:
+                return True, None
 
             finished, retval = self._current_stepper.step()
             if finished:
                 self._current_stepper = None
-            else:
-                self._pos += 1
+                self._pos = -1
 
             return finished, retval
 
@@ -577,15 +597,24 @@ class _If(_Instruction):
         def load_position(self, bundle):
             self._pos = bundle[self._POSITION]
             if self._STEPPER_POS in bundle:
-                self._current_stepper = self._get_next_stepper()
+                self._create_stepper()
                 self._current_stepper.load_position(bundle[self._STEPPER_POS])
+            else:
+                self._current_stepper = None
 
-        def _get_next_stepper(self):
-            # Check the conditions until we find that that is true
-            for conditional in self._if_spec.conditionals[self._pos:]:
-                if conditional.is_true(self._workflow):
-                    return conditional.body.create_stepper(self._workflow)
-            return None
+        def _create_stepper(self):
+            if self._pos == -1:
+                self._current_stepper = None
+                # Check the conditions until we find one that is true
+                for idx, condition in enumerate(self._if_spec.conditionals):
+                    if condition.is_true(self._workflow):
+                        stepper = condition.body.create_stepper(self._workflow)
+                        self._pos = idx
+                        self._current_stepper = stepper
+                        return
+            else:
+                branch = self._if_spec.conditionals[self._pos]
+                self._current_stepper = branch.body.create_stepper(self._workflow)
 
     def __init__(self, condition):
         super(_If, self).__init__()

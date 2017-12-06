@@ -437,24 +437,26 @@ def _collect_calculation_data(calc):
         stderr_name = '{}.err'.format(aiida_executable_name)
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
-        files_out.append({
-            'name'    : stdout_name,
-            'contents': calc.get_scheduler_output(),
-            'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
-            'role'    : 'stdout',
-            'type'    : 'file',
-            })
-        files_out.append({
-            'name'    : stderr_name,
-            'contents': calc.get_scheduler_error(),
-            'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
-            'role'    : 'stderr',
-            'type'    : 'file',
-            })
-        this_calc['stdout'] = stdout_name
-        this_calc['stderr'] = stderr_name
+        if calc.get_scheduler_output() is not None:
+            files_out.append({
+                'name'    : stdout_name,
+                'contents': calc.get_scheduler_output(),
+                'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+                'role'    : 'stdout',
+                'type'    : 'file',
+                })
+            this_calc['stdout'] = stdout_name
+        if calc.get_scheduler_error() is not None:
+            files_out.append({
+                'name'    : stderr_name,
+                'contents': calc.get_scheduler_error(),
+                'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+                'role'    : 'stderr',
+                'type'    : 'file',
+                })
+            this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
         python_script = _inline_to_standalone_script(calc)
@@ -817,20 +819,23 @@ def _collect_tags(node, calc,parameters=None,
     from aiida.common.exceptions import MultipleObjectsError
     from aiida.common.pluginloader import all_plugins, get_plugin
 
-    # Collecting code-specific data
+    category = 'tools.dbexporters.tcod_plugins'
+    plugins = list()
+
     if calc is not None:
-        category = 'tools.dbexporters.tcod_plugins'
-        plugins = all_plugins(category)
-
-        if len(plugins) > 1:
-            raise MultipleObjectsError('more than one plugin found for {}'.format(category))
-
-        if len(plugins) == 1:
-            plugin = get_plugin(category, plugins[0])
-
+        for entry_point in all_plugins(category):
+            plugin = get_plugin(category, entry_point)
             if calc._plugin_type_string.endswith(plugin._plugin_type_string + '.'):
-                translated_tags = translate_calculation_specific_values(calc, plugin)
-                tags.update(translated_tags)
+                plugins.append(plugin)
+
+    if len(plugins) > 1:
+        raise MultipleObjectsError('more than one plugin found for {}'
+                                   .format(calc._plugin_type_string))
+
+    if len(plugins) == 1:
+        plugin = plugins[0]
+        translated_tags = translate_calculation_specific_values(calc, plugin)
+        tags.update(translated_tags)
 
     return tags
 

@@ -2,10 +2,9 @@
 Documenting a plugin
 ====================
 
-The `aiida plugin template`_ already comes with
-a template for documentation that just needs to be adjusted to your needs.
+The `aiida plugin template`_ already comes with a template for documentation
+that just needs to be adjusted to your needs.
 In the following we, again, assume you wrote a plugin named ``aiida-compute``:
-
 
  #. Modify ``docs/source/conf.py`` template configuration file inserting the information about your plugin:
 
@@ -36,12 +35,18 @@ In the following we, again, assume you wrote a plugin named ``aiida-compute``:
     
  #. Make sure that AiiDA docs dependencies ``sphinx`` and ``sphinx_rtd_theme`` are installed
 
- #. Generate the ReadTheDocs page::
+ #. Generate the html documentation via sphinx::
 
         cd docs
         make
 
- #. When you update the plugin to a new version make sure to update the version number both in
-    ``setup.json`` and in ``aiida_compute/__init__.py``
+ #. Host your documentation online on ReadTheDocs_.
+    Simply sign up and import your project.  Make sure to add the path to the
+    requirements file ``docs/requirements_for_rtd.txt`` and the Python
+    configuration file ``docs/source/conf.py`` in Admin => Advanced settings.
+
+Note: When updating the plugin to a new version, remember to update the
+version number both in ``setup.json`` and ``aiida_compute/__init__.py``.
 
 .. _aiida plugin template: https://github.com/aiidateam/aiida-plugin-template
+.. _ReadTheDocs: http://readthedocs.org/

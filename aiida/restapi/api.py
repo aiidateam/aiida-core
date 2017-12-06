@@ -92,7 +92,7 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
-            Group, Node, StructureData, KpointsData, BandsData, ServerInfo
+            Group, Node, StructureData, KpointsData, BandsData, UpfData, ServerInfo
 
         self.app = app
 
@@ -145,6 +145,8 @@ class AiidaApi(Api):
                           '/calculations/page/',
                           '/calculations/page/<int:page>/',
                           '/calculations/<id>/',
+                          '/calculations/<id>/io/retrieved_inputs/',
+                          '/calculations/<id>/io/retrieved_outputs/',
                           '/calculations/<id>/io/inputs/',
                           '/calculations/<id>/io/inputs/page/',
                           '/calculations/<id>/io/inputs/page/<int:page>/',
@@ -259,6 +261,28 @@ class AiidaApi(Api):
                           '/bands/<id>/content/extras/',
                           '/bands/<id>/content/visualization/',
                           endpoint='bands',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(UpfData,
+                          '/upfs/',
+                          '/upfs/schema/',
+                          '/upfs/page/',
+                          '/upfs/page/<int:page>',
+                          '/upfs/<id>/',
+                          '/upfs/<id>/io/inputs/',
+                          '/upfs/<id>/io/inputs/page/',
+                          '/upfs/<id>/io/inputs/page/<int:page>/',
+                          '/upfs/<id>/io/outputs/',
+                          '/upfs/<id>/io/outputs/page/',
+                          '/upfs/<id>/io/outputs/page/<int:page>/',
+                          '/upfs/<id>/io/tree/',
+                          '/upfs/<id>/content/attributes/',
+                          '/upfs/<id>/content/extras/',
+                          '/upfs/<id>/content/visualization/',
+                          '/upfs/<id>/content/download/',
+                          endpoint='upfs',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )

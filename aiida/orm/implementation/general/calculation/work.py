@@ -74,3 +74,5 @@ class WorkCalculation(Calculation):
                 if isinstance(child, JobCalculation):
                     # Cannot kill calculations that are already killed: skip and go to the next step
                     pass
+                else:
+                    raise    

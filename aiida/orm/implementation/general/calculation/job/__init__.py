@@ -44,6 +44,7 @@ class AbstractJobCalculation(object):
         return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
             'queue_name',
             'max_wallclock_seconds',
+            'retrieve_temporary_list',
         ]
 
     def get_hash(
@@ -766,7 +767,7 @@ class AbstractJobCalculation(object):
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or 
+                if (not (isinstance(item[0], basestring)) or
                     not (isinstance(item[1], basestring)) or
                     not (isinstance(item[2], int))):
                     raise ValueError(

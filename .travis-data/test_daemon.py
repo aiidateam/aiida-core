@@ -87,7 +87,6 @@ def validate_workchains(expected_results):
         try:
             calc = load_node(pk)
             actual_value = calc.out.output
-            assert calc.get_hash() == calc.get_extra('hash')
         except (NotExistent, AttributeError) as exception:
             print "* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}".format(
                 pk, expected_value, type(exception), exception)
@@ -147,6 +146,7 @@ def create_cache_calc(code, counter, inputval):
     )
     print "[{}] created cached calculation.".format(counter)
     assert 'cached_from' in calc.extras()
+    assert calc.get_hash() == calc.get_extra('hash')
     return calc, expected_result
 
 def main():

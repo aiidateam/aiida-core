@@ -360,7 +360,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self.has_finished_ok() or self.has_failed()
 
     def _is_valid_cache(self):
-        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok() and self.is_sealed
+        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()
 
     def _get_objects_to_hash(self):
         """

@@ -249,6 +249,7 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         result = compare(
             self.db_url_left, self.db_url_right, set(['alembic_version']))
 
-        self.assertTrue(result.is_match, "The migration database doesn't"
-                                         "match to the one created by the"
-                                         "models.")
+        self.assertTrue(result.is_match,
+                        "The migration database doesn't match to the one "
+                        "created by the models.\nDifferences: " +
+                        result._dump_data(result.errors))

@@ -36,7 +36,7 @@ As you can see, passing ``use_cache=True`` to the ``store`` method enables using
 
 When running a ``JobCalculation`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag when the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
 
-Caching is **not** implemented for workchains and workfunctions. Unlike calculations, they can not only create new data nodes, but also return exsting ones. When copying a cached workchain, it's not clear which node should be returned without actually running the workchain.
+Caching is **not** implemented for workchains and workfunctions. Unlike calculations, they can not only create new data nodes, but also return exsting ones. When copying a cached workchain, it's not clear which node should be returned without actually running the workchain. This is explained in more detail in the section :ref:`caching_provenance`.
 
 Configuration
 -------------
@@ -65,6 +65,7 @@ By default, this hash is created from:
 * all attributes of a node, except the ``_updatable_attributes``
 * the ``__version__`` of the module which defines the node class
 * the content of the repository folder of the node
+* the UUID of the computer, if the node has one
 
 In the case of calculations, the hashes of the inputs are also included. When developing calculation and data classes, there are some methods you can use to determine how the hash is created:
 
@@ -76,3 +77,39 @@ Additionally, there are two methods you can use to disable caching for particula
 
 * The :meth:`._is_valid_cache` method determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cacheable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class. This avoids performing queries for the hash altogether.
+
+There are two ways in which the hash match can go wrong: False negatives, where two nodes should have the same hash but do not, or false positives, where two different nodes have the same hash. It is important to understand that false negatives are **highly preferrable**, because they only increase the runtime of your calculations, as if caching was disabled. False positives however can break the logic of your calculations. Be mindful of this when modifying the caching behaviour of your calculation and data classes.
+
+.. _caching_provenance:
+
+Caching and the Provenance Graph
+--------------------------------
+
+The goal of the caching mechanism is to speed up AiiDA calculations by re-using duplicate calculations. However, the resulting provenance graph should be exactly the same as if caching was disabled. This has important consequences on the kind of caching operations that are possible.
+
+The provenance graph consists of nodes describing data, calculations and workchains, and links describing the relationship between these nodes. We have seen that the hash of a node is used to determine whether two nodes are equivalent. To successfully use a cached node however, we also need to know how the new node should be linked to its parents and children.
+
+In the case of a plain data node, this is simple: Copying a data node from an equivalent node should not change its links, so we just need to preserve the links which this new node already has.
+
+For calculations, the situation is a bit more complex: The node can have inputs and creates new data nodes as outputs. Again, the new node needs to keep its existing links. For the outputs, the calculation needs to create a copy of each node and link these as its outputs. This makes it look as if the calculation had produced these outputs itself, without caching.
+
+Finally, workchains can create links not only to nodes which they create themselves, but also to nodes created by a calculation that they called, or even their ancestors. This is where caching becomes impossible. Consider the following example (using workfunctions for simplicity):
+
+.. code:: python
+
+    from aiida.orm.data.base import Int
+    from aiida.work.workfunction import workfunction
+
+    @workfunction
+    def select(a, b):
+        return b
+
+    d = Int(1)
+    r1 = select(d, d)
+    r2 = select(Int(1), Int(1))
+
+The two ``select`` workfunctions have the same inputs as far as their hashes go. However, the first call uses the same input node twice, while the second one has two different inputs. If the second call should be cached from the first one, it is not clear which of the two input nodes should be returned.
+
+While this example might seem contrived, the conclusion is valid more generally: Because workchains can return nodes from their history, they cannot be cached. Since even two equivalent workchains (with the same inputs) can have a different history, there is no way to deduce which links should be created on the new workchain without actually running it.
+
+Overall, this limitation is acceptable: The runtime of AiiDA workchains is usually dominated by time spent inside expensive calculations. Since these can be avoided with the caching mechanism, it still improves the runtime and required computer resources a lot.

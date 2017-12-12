@@ -42,6 +42,10 @@ class InlineCalculation(Calculation):
     def has_finished_ok(self):
         return self.is_sealed
 
+    def has_failed(self):
+        # The InlineCalculation wrapper doesn't catch errors, which means the
+        # calculation is returned only if it is valid.
+        return False
 
 def make_inline(func):
     """

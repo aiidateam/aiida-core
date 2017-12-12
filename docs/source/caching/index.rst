@@ -34,9 +34,9 @@ Caching is also implemented for Data nodes. This is not very useful in practice 
 
 As you can see, passing ``use_cache=True`` to the ``store`` method enables using the cache. The fact that ``n2`` was created from ``n1`` is stored in the ``cached_from`` extra of ``n2``.
 
-When running a ``JobCalculation`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
+When running a ``JobCalculation`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag when the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
 
-Caching is **not** implemented for workchains and workfunctions. Unlike calculations, they can not only create new data nodes, but only return exsting ones. When copying a cached workchain, it's not clear which node should be returned without actually running the workchain.
+Caching is **not** implemented for workchains and workfunctions. Unlike calculations, they can not only create new data nodes, but also return exsting ones. When copying a cached workchain, it's not clear which node should be returned without actually running the workchain.
 
 Configuration
 -------------

@@ -342,8 +342,25 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def has_failed(self):
+        """
+        Returns whether the Calculation has failed.
+        """
+        raise NotImplementedError
+
+    def has_finished(self):
+        """
+        Determine if the calculation is finished for whatever reason.
+        This may be because it finished successfully or because of a failure.
+
+        :return: True if the job has finished running, False otherwise.
+        :rtype: bool
+        """
+        return self.has_finished_ok() or self.has_failed()
+
     def _is_valid_cache(self):
-        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()
+        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok() and self.is_sealed
 
     def _get_objects_to_hash(self):
         """

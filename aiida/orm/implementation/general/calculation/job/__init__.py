@@ -658,16 +658,6 @@ class AbstractJobCalculation(object):
             calc_states.PARSING
         ]
 
-    def has_finished(self):
-        """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
-
-        :return: True if the job has finished running, False otherwise.
-        :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
     def has_finished_ok(self):
         """
         Get whether the calculation is in the FINISHED status.

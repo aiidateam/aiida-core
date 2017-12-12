@@ -1672,6 +1672,7 @@ class AbstractNode(object):
         """
         Return a list of objects which should be included in the hash.
         """
+        computer = self.get_computer()
         return [
             importlib.import_module(
                 self.__module__.split('.', 1)[0]
@@ -1683,7 +1684,8 @@ class AbstractNode(object):
                     (key not in getattr(self, '_updatable_attributes', tuple()))
                 )
             },
-            self.folder
+            self.folder,
+            computer.uuid if computer is not None else None
         ]
 
     def rehash(self):

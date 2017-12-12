@@ -1,14 +1,6 @@
 # -*- coding: utf-8 -*-
-
 import plum.class_loader
 from aiida.work.class_loader import ClassLoader
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.7.0"
-__authors__ = "The AiiDA team."
-
-
 
 # Have globals that can be used by all of AiiDA
 class_loader = plum.class_loader.ClassLoader(ClassLoader())
@@ -16,6 +8,13 @@ _loop = None
 _thread_executor = None
 _rmq_control_panel = None
 _persistence = None
+
+def get_thread_executor():
+    """
+    Dinges
+    """
+    from aiida.work.runner import create_runner
+    return create_runner()
 
 
 def get_persistence():

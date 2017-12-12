@@ -10,23 +10,20 @@ from apricotpy.persistable.core import Bundle
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
 
 
-def _object_factory(loop, process_class, *args, **kwargs):
+def _object_factory(process_class, *args, **kwargs):
     from aiida.work.process import FunctionProcess
 
     if utils.is_workfunction(process_class):
         wf_class = FunctionProcess.build(process_class._original, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
-        return wf_class(loop=loop, inputs=inputs)
+        return wf_class(inputs=inputs)
     else:
-        return process_class(loop=loop, *args, **kwargs)
+        return process_class(*args, **kwargs)
 
 
 class Runner(plum.PersistableEventLoop):
     def __init__(self, enable_transport=False, submit_to_daemon=True):
         super(Runner, self).__init__()
-
-        if submit_to_daemon and not rmq_control_panel:
-            raise ValueError("If you want to submit to daemon you must provide an RMQ control panel")
 
         self.set_object_factory(_object_factory)
         self._transport = None
@@ -78,11 +75,14 @@ class Runner(plum.PersistableEventLoop):
         else:
             enable_transport = False
 
-        return Runner(
+        runner = Runner(
             enable_transport,
-            self._submit_to_daemon,
-            rmq_control_panel=self._rmq_control_panel
+            self._submit_to_daemon
         )
+
+        runner.set_rmq_control_panel(self._rmq_control_panel)
+
+        return runner
 
 
 def create_runner(enable_transport=True, submit_to_daemon=True, rmq_control_panel={}):

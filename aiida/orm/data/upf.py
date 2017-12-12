@@ -349,7 +349,7 @@ class UpfData(SinglefileData):
         import aiida.common.utils
         import os
 
-        if not os.path.abspath(filename):
+        if not os.path.isabs(filename):
             raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
 

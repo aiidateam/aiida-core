@@ -26,10 +26,8 @@ import portalocker.utils
 from shutil import copyfile
 import tempfile
 import pickle
-from plum.persistence.bundle import Bundle
 from plum.process_listener import ProcessListener
 from plum.utils import override, protected
-from plum.persistence._base import LOGGER
 
 _RUNNING_DIRECTORY = path.join(tempfile.gettempdir(), "running")
 _FINISHED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "finished")
@@ -73,10 +71,9 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-Persistence = plum.persistence.pickle_persistence.PicklePersistence
+Persistence = plum.persistence.pickle_persistence.PicklePersister
 
 _GLOBAL_PERSISTENCE = None
-
 
 def get_global_persistence():
     global _GLOBAL_PERSISTENCE
@@ -85,7 +82,6 @@ def get_global_persistence():
         _create_storage()
 
     return _GLOBAL_PERSISTENCE
-
 
 def _create_storage():
     import aiida.common.setup as setup
@@ -98,7 +94,5 @@ def _create_storage():
             os.path.join(parts.path, setup.WORKFLOWS_SUBDIR))
 
         _GLOBAL_PERSISTENCE = Persistence(
-            running_directory=os.path.join(WORKFLOWS_DIR, 'running'),
-            finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
-            failed_directory=os.path.join(WORKFLOWS_DIR, 'failed')
+            pickle_directory=WORKFLOWS_DIR
         )

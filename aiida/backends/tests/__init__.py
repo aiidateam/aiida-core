@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+try:
+    from reentry import manager as epm
+except ImportError:
+    import pkg_resources as epm
 
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
@@ -72,6 +75,10 @@ def get_db_test_names():
         for name in db_test_list[backend]:
             retlist.append(name)
 
+    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
+    # have been made working and are released, we can replace this logic with them
+    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+        retlist.append(ep.name)
 
     # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
@@ -118,6 +125,11 @@ def get_db_test_list():
     for k, tests in be_tests.iteritems():
         for t in tests:
             retdict[k].append(t)
+
+    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
+    # have been made working and are released, we can replace this logic with them
+    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+        retdict[ep.name].append(ep.module_name)
 
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'

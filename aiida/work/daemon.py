@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import logging
 import time
 import traceback
-
 import aiida.work.default_loop
 import aiida.work.globals
 import aiida.work.persistence
@@ -15,6 +22,11 @@ from plum.exceptions import LockError
 
 _LOGGER = logging.getLogger(__name__)
 
+import traceback
+from plum.process import ProcessState
+from aiida.work.process import Process
+import aiida.work.persistence
+from portalocker import LockException
 
 def launch_pending_jobs(storage=None, loop=None):
     if storage is None:
@@ -40,7 +52,7 @@ def launch_pending_jobs(storage=None, loop=None):
 
 def _load_all_processes(storage, loop):
     procs = []
-    for cp in storage.load_all_checkpoints():
+    for cp in storage.get_checkpoints():
         try:
             procs.append(loop.create(cp))
         except KeyboardInterrupt:
@@ -51,7 +63,6 @@ def _load_all_processes(storage, loop):
                             "pid '{}'\n{}: {}".format(cp['pid'], exception.__class__.__name__, exception))
             _LOGGER.error(traceback.format_exc())
     return procs
-
 
 def launch_all_pending_job_calculations():
     """
@@ -73,6 +84,9 @@ def launch_all_pending_job_calculations():
             _LOGGER.error("Failed to launch job '{}'\n{}".format(
                 calc.pk, traceback.format_exc()))
 
+        # Check if the process finished or was stopped early
+        if not proc.has_finished():
+            more_work = True
 
 def get_all_pending_job_calculations():
     """

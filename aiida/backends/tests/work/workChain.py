@@ -10,12 +10,15 @@
 
 import inspect
 import plum
+import unittest
+import aiida.backends.settings as settings
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
+from aiida.work.launch import run, legacy_workflow
 from aiida.orm.data.base import Int, Str, Bool
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.common.links import LinkType
@@ -104,6 +107,26 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
+class TestContext(AiidaTestCase):
+    def test_attributes(self):
+        c = WorkChain.Context()
+        c.new_attr = 5
+        self.assertEqual(c.new_attr, 5)
+
+        del c.new_attr
+        with self.assertRaises(AttributeError):
+            c.new_attr
+
+    def test_dict(self):
+        c = WorkChain.Context()
+        c['new_attr'] = 5
+        self.assertEqual(c['new_attr'], 5)
+
+        del c['new_attr']
+        with self.assertRaises(KeyError):
+            c['new_attr']
+
+
 class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
@@ -112,6 +135,8 @@ class TestWorkchain(AiidaTestCase):
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         self.assertEquals(len(ProcessStack.stack()), 0)
+        import logging
+        logging.disable(logging.NOTSET)
 
     def test_run(self):
         A = Str('A')

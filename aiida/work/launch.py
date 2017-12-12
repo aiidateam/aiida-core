@@ -100,5 +100,4 @@ def run_get_pid(process_or_workfunction, *args, **inputs):
 
 
 def rrun_get_pid(runner, process_or_workfunction, *args, **inputs):
-    proc = runner.create(process_or_workfunction, *args, **inputs)
-    return runner.ResultAndPid(runner.run_until_complete(proc), proc.pid)
+    return runner.run_get_pid(process_or_workfunction, *args, **inputs)

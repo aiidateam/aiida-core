@@ -38,7 +38,7 @@ install_requires = [
     'billiard==3.3.0.23',
     'amqp==1.4.9',
     'anyjson==0.3.3',
-    'supervisor==3.1.3',
+    'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
     'portalocker==1.1.0',
@@ -112,6 +112,7 @@ extras_require = {
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
         'seekpath==1.6.0',
+        'qe-tools==1.0',
         # support for the AiiDA CifData class. Update to version 4 ddoes
         # break tests
     ],

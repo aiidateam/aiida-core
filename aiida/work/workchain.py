@@ -65,8 +65,8 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(WorkChain, self).__init__(inputs, pid, logger)
+    def __init__(self, inputs=None, pid=None, logger=None, loop=None):
+        super(WorkChain, self).__init__(inputs, pid, logger, loop)
         self._stepper = None
         self._awaitables = []
 
@@ -118,6 +118,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         a user to add multiple intersteps that will assign a certain value
         to the corresponding key in the context of the workchain
         """
+        intersteps = []
         for key, value in kwargs.iteritems():
             if not isinstance(value, ContextAction):
                 value = assign_(value)
@@ -201,7 +202,6 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         :type msg: str
         """
         return self.abort(msg=msg)
-
 
 ToContext = dict
 
@@ -389,47 +389,52 @@ class _If(_Instruction):
         def __init__(self, workflow, if_spec):
             super(_If.Stepper, self).__init__(workflow)
             self._if_spec = if_spec
-            self._pos = 0
+            self._pos = -1
             self._current_stepper = None
 
         def step(self):
             if self._current_stepper is None:
-                stepper = self._get_next_stepper()
-                # If we can't get a stepper then no conditions match, return
-                if stepper is None:
-                    return True, None
-                self._current_stepper = stepper
+                self._create_stepper()
+
+            # If we can't get a stepper then no conditions match, return
+            if self._current_stepper is None:
+                return True, None
 
             finished, retval = self._current_stepper.step()
             if finished:
                 self._current_stepper = None
-            else:
-                self._pos += 1
+                self._pos = -1
 
             return finished, retval
 
-        def save_instance_state(self, out_state):
-            super(Stepper, self).save_instance_state(out_state)
-
-            out_state[self._POSITION] = self._pos
+        def save_position(self, out_position):
+            out_position[self._POSITION] = self._pos
             if self._current_stepper is not None:
-                stepper_pos = utils.Parcel()
-                self._current_stepper.save_instance_state(stepper_pos)
-                out_state[self._STEPPER_POS] = stepper_pos
+                stepper_pos = Bundle()
+                self._current_stepper.save_position(stepper_pos)
+                out_position[self._STEPPER_POS] = stepper_pos
 
-        def load_instance_state(self, saved_state):
-            super(Stepper, self).load_instance_state(saved_state)
+        def load_position(self, bundle):
+            self._pos = bundle[self._POSITION]
+            if self._STEPPER_POS in bundle:
+                self._create_stepper()
+                self._current_stepper.load_position(bundle[self._STEPPER_POS])
+            else:
+                self._current_stepper = None
 
-            self._pos = saved_state[self._POSITION]
-            if self._STEPPER_POS in saved_state:
-                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
-
-        def _get_next_stepper(self):
-            # Check the conditions until we find that that is true
-            for conditional in self._if_spec.conditionals[self._pos:]:
-                if conditional.is_true(self._workflow):
-                    return conditional.body.create_stepper(self._workflow)
-            return None
+        def _create_stepper(self):
+            if self._pos == -1:
+                self._current_stepper = None
+                # Check the conditions until we find one that is true
+                for idx, condition in enumerate(self._if_spec.conditionals):
+                    if condition.is_true(self._workflow):
+                        stepper = condition.body.create_stepper(self._workflow)
+                        self._pos = idx
+                        self._current_stepper = stepper
+                        return
+            else:
+                branch = self._if_spec.conditionals[self._pos]
+                self._current_stepper = branch.body.create_stepper(self._workflow)
 
     def __init__(self, condition):
         super(_If, self).__init__()

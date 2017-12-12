@@ -93,8 +93,7 @@ class AbstractNode(object):
         def __new__(cls, name, bases, attrs):
 
             newcls = ABCMeta.__new__(cls, name, bases, attrs)
-            newcls._logger = logging.getLogger('{:s}.{:s}'.format(
-                attrs['__module__'], name))
+            newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
 
             # Note: the reverse logic (from type_string to name that can
             # be passed to the plugin loader) is implemented in

@@ -14,17 +14,15 @@ from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'sealed', 'uuid',
-                                'finished', 'descr', 'mtime']
+LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime', 'state', 'sealed']
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
-    (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
-]
+        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
+    ]
     if not levelname.startswith('Level')
 }
 LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
-
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -62,7 +60,7 @@ class Work(VerdiCommandWithSubcommands):
 )
 @click.option(
     '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES),
-    multiple=True, help="Define the list of properties to show"
+    multiple=True, help='define the list of properties to show'
 )
 def do_list(past_days, all_states, limit, project):
     """
@@ -83,7 +81,8 @@ def do_list(past_days, all_states, limit, project):
     _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
 
     if not project:
-        project = ('id', 'ctime', 'label', 'sealed')  # default projections
+        project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
+
 
     # Mapping of projections to list table headers.
     hmap_dict = {
@@ -105,7 +104,9 @@ def do_list(past_days, all_states, limit, project):
     pmap_dict = {
         'label': 'attributes._process_label',
         'sealed': _SEALED_ATTRIBUTE_KEY,
-        'finished': 'attributes._finished',
+        'failed': _FAILED_ATTRIBUTE_KEY,
+        'aborted': _ABORTED_ATTRIBUTE_KEY,
+        'finished': _FINISHED_ATTRIBUTE_KEY,
         'descr': 'description',
     }
 
@@ -114,6 +115,16 @@ def do_list(past_days, all_states, limit, project):
             return pmap_dict[p]
         except KeyError:
             return p
+
+    def calculation_state(calculation):
+        if calculation[_FAILED_ATTRIBUTE_KEY]:
+            return 'FAILED'
+        elif calculation[_ABORTED_ATTRIBUTE_KEY]:
+            return 'ABORTED'
+        elif calculation[_FINISHED_ATTRIBUTE_KEY]:
+            return 'FINISHED'
+        else:
+            return 'RUNNING'
 
     # Mapping of to-string formatting of projections that do need it.
     rmap_dict = {
@@ -124,7 +135,7 @@ def do_list(past_days, all_states, limit, project):
                                             negative_to_zero=True,
                                             max_num_fields=1),
         'sealed': lambda calc: str(calc[map_projection('sealed')]),
-        'finished': lambda calc: str(calc[map_projection('finished')]),
+        'state': lambda calc: calculation_state(calc),
     }
 
     def map_result(p, obj):
@@ -134,16 +145,19 @@ def do_list(past_days, all_states, limit, project):
             return obj[map_projection(p)]
 
     mapped_projections = list(map(lambda p: map_projection(p), project))
+    mapped_projections.extend([_FAILED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY])
     table = []
 
     for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days, order_by={'ctime': 'desc'}):
-        calculation = res['calculation']
-        if not map_result('sealed', calculation) or all_states:
-            table.append(list(map(lambda p: map_result(p, calculation), project)))
+        calc = res['calculation']
+        if calc[_SEALED_ATTRIBUTE_KEY] and not all_states:
+            continue
+        table.append(list(map(lambda p: map_result(p, calc), project)))
 
     # Since we sorted by descending creation time, we revert the list to print the most
     # recent entries last
     table = table[::-1]
+
     print(tabulate(table, headers=(list(map(lambda p: map_header(p), project)))))
 
 

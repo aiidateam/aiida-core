@@ -49,7 +49,7 @@ def workfunction(func):
         # Build up the Process representing this function
         wf_class = process.FunctionProcess.build(func, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
-        result = launch.run(wf_class, **inputs)
+        result = launch.run(wf_class, inputs=inputs)
 
         # Check if there is just one value returned
         if len(result) == 1 and wf_class.SINGLE_RETURN_LINKNAME in result:

@@ -189,8 +189,8 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, loop=None, inputs=None, pid=None, logger=None):
-        super(Process, self).__init__(loop, inputs, pid, logger)
+    def __init__(self, inputs=None, pid=None, logger=None, loop=None):
+        super(Process, self).__init__(inputs, pid, logger, loop)
 
         self._calc = None
         # Get the parent from the top of the process stack

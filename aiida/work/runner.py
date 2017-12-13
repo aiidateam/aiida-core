@@ -18,7 +18,7 @@ def _object_factory(process_class, *args, **kwargs):
         inputs = wf_class.create_inputs(*args, **kwargs)
         return wf_class(inputs=inputs)
     else:
-        return process_class(*args, **kwargs)
+        return process_class(*args, inputs=kwargs)
 
 
 class Runner(object):
@@ -27,6 +27,7 @@ class Runner(object):
 
         self._transport = None
         self._submit_to_daemon = submit_to_daemon
+        self._rmq_control_panel = None
 
     def __enter__(self):
         return self

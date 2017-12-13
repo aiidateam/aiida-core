@@ -6,7 +6,7 @@ import json
 import uuid
 
 from plum import rmq
-from plum.utils import override, load_class, fullname
+from plum.utils import override
 from aiida.orm import load_node, Node
 from aiida.work.class_loader import _CLASS_LOADER
 from aiida.utils.serialize import serialize_data, deserialize_data

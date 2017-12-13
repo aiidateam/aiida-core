@@ -98,6 +98,16 @@ def validate_workchains(expected_results):
 
     return valid
 
+def validate_cached(cached_calcs):
+    """
+    Check that the calculations with created with caching are indeed cached.
+    """
+    return all(
+        'cached_from' in calc.extras() and
+        calc.get_hash() == calc.get_extra('hash')
+        for calc in cached_calcs
+    )
+
 def create_calculation(code, counter, inputval, use_cache=False):
     parameters = ParameterData(dict={'value': inputval})
     template = ParameterData(dict={
@@ -145,8 +155,6 @@ def create_cache_calc(code, counter, inputval):
         code=code, counter=counter, inputval=inputval, use_cache=True
     )
     print "[{}] created cached calculation.".format(counter)
-    assert 'cached_from' in calc.extras()
-    assert calc.get_hash() == calc.get_extra('hash')
     return calc, expected_result
 
 def main():
@@ -227,14 +235,17 @@ def main():
         sys.exit(2)
     else:
         # create cached calculations -- these should be FINISHED immediately
+        cached_calcs = []
         for counter in range(1, number_calculations + 1):
             inputval = counter
             calc, expected_result = create_cache_calc(
                 code=code, counter=counter, inputval=inputval
             )
+            cached_calcs.append(calc)
             expected_results_calculations[calc.pk] = expected_result
         if (validate_calculations(expected_results_calculations)
-            and validate_workchains(expected_results_workchains)):
+            and validate_workchains(expected_results_workchains)
+            and validate_cached(cached_calcs)):
             print_daemon_log()
             print ""
             print "OK, all calculations have the expected parsed result"

@@ -29,12 +29,25 @@ class Sealable(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        assert not self.is_sealed, \
-            "Cannot add incoming links to a sealed calculation node"
+        if self.is_sealed:
+            raise ValueError("Cannot add incoming links to a sealed "
+                              "calculation node")
 
         super(Sealable, self).add_link_from(src, label=label,
                                             link_type=link_type)
 
+    def _linking_as_output (self, dest, link_type):
+        """
+        Raise a ValueError if a link from Calculation object to dest is not allowed.
+        
+        :param dest: the destination output Node
+        :return: a boolean (True)
+        """
+        if self.is_sealed:
+            raise ValueError("Cannot add outcoming links from a sealed "
+                              "calculation node")
+        return super(Sealable, self)._linking_as_output(dest=dest, link_type=link_type)
+        
     @property
     def is_sealed(self):
         return self.get_attr(self.SEALED_KEY, False)

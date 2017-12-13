@@ -1,5 +1,8 @@
 from aiida.orm.calculation import Calculation
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.data import Data
+from aiida.common.links import LinkType
+
 
 
 class TestParsers(AiidaTestCase):
@@ -24,3 +27,23 @@ class TestParsers(AiidaTestCase):
         c.seal()
         self.assertRaises(Exception, c._del_attr, 'c')
         self.assertRaises(Exception, c._set_attr, 'd', 4)
+    
+    def test_output_links(self):
+        """
+        Output links from sealed calculations should not be allowed
+        """
+        c = Calculation()
+        c.store()
+        c.seal()
+        d = Data()
+        self.assertRaises(Exception, d.add_link_from, c, label="test", link_type=LinkType.CREATE)
+    
+    def test_input_links(self):
+        """
+        Input links to sealed calculations should not be allowed
+        """
+        d = Data()
+        c = Calculation()
+        c.store()
+        c.seal()
+        self.assertRaises(Exception, c.add_link_from, d, label="test")

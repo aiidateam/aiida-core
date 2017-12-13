@@ -1,16 +1,12 @@
-import apricotpy
-import collections
-import pika
-import pickle
 import json
+import pickle
 import uuid
 
-from plum import rmq
-from plum.utils import override
-from aiida.orm import load_node, Node
-from aiida.work.class_loader import _CLASS_LOADER
+import apricotpy
+import pika
+
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from plum import rmq
 
 _CONTROL_EXCHANGE = 'process.control'
 _EVENT_EXCHANGE = 'process.event'

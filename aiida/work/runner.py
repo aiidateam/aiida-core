@@ -21,16 +21,18 @@ def _object_factory(process_class, *args, **kwargs):
         return process_class(*args, **kwargs)
 
 
-class Runner(plum.PersistableEventLoop):
-    def __init__(self, enable_transport=False, submit_to_daemon=True):
+class Runner(object):
+    def __init__(self, submit_to_daemon=True):
         super(Runner, self).__init__()
 
-        self.set_object_factory(_object_factory)
         self._transport = None
         self._submit_to_daemon = submit_to_daemon
 
-        if enable_transport:
-            self._transport = transport.TransportQueue(self)
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
     def set_rmq_control_panel(self, rmq_control_panel):
         self._rmq_control_panel = rmq_control_panel
@@ -53,43 +55,33 @@ class Runner(plum.PersistableEventLoop):
         :return: The process outputs
         """
         with self._create_child_runner() as child:
-            proc = child.create(process_class, *args, **inputs)
-            return child.run_until_complete(proc)
+            proc = _object_factory(process_class, *args, **inputs)
+            return proc.execute()
 
     def run_get_pid(self, process_class, *args, **inputs):
         with self._create_child_runner() as child:
-            proc = self.create(process_class, *args, **inputs)
-            return ResultAndPid(~proc, proc.pid)
+            proc = _object_factory(process_class, *args, **inputs)
+            return ResultAndPid(proc.execute(), proc.pid)
 
     def submit(self, process_class, *args, **inputs):
         if self._submit_to_daemon:
-            process = _self.create(process_class, *args, **inputs)
+            process = _object_factory(process_class, *args, **inputs)
             bundle = Bundle(process, class_loader=class_loader._CLASS_LOADER)
             return self.rmq.launch(bundle)
         else:
-            return self.create(process_class, *args, **inputs)
+            return _object_factory(process_class, *args, **inputs)
 
     def _create_child_runner(self):
-        if self._transport:
-            enable_transport = True
-        else:
-            enable_transport = False
 
-        runner = Runner(
-            enable_transport,
-            self._submit_to_daemon
-        )
+        runner = Runner(self._submit_to_daemon)
 
         runner.set_rmq_control_panel(self._rmq_control_panel)
 
         return runner
 
 
-def create_runner(enable_transport=True, submit_to_daemon=True, rmq_control_panel={}):
-    runner = Runner(
-        enable_transport=enable_transport,
-        submit_to_daemon=submit_to_daemon
-    )
+def create_runner(submit_to_daemon=True, rmq_control_panel={}):
+    runner = Runner(submit_to_daemon=submit_to_daemon)
 
     if rmq_control_panel is not None:
         rmq_panel = rmq.create_control_panel(loop=runner, **rmq_control_panel)
@@ -99,15 +91,12 @@ def create_runner(enable_transport=True, submit_to_daemon=True, rmq_control_pane
 
 
 def create_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
-    runner = Runner(
-        enable_transport=True,
-        submit_to_daemon=False,
-    )
+    runner = Runner(submit_to_daemon=False)
 
     if rmq_create_connection is None:
         rmq_create_connection = rmq._create_connection
 
-    rmq_panel = rmq_control_panel=rmq.create_control_panel(
+    rmq_panel = rmq.create_control_panel(
         prefix=rmq_prefix, create_connection=rmq_create_connection, loop=runner
     )
     runner.set_rmq_control_panel(rmq_panel)

@@ -13,7 +13,7 @@ from collections import namedtuple
 from enum import Enum
 
 from aiida.work.default_loop import enqueue
-from runner import create_runner
+from runner import create_runner, _object_factory
 from . import legacy
 
 __all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
@@ -90,7 +90,7 @@ def rrun(runner, process_or_workfunction, *args, **inputs):
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    proc = runner.create(process_or_workfunction, *args, **inputs)
+    proc = _object_factory(process_or_workfunction, *args, **inputs)
     return runner.run_until_complete(proc)
 
 

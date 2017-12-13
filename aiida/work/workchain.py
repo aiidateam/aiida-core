@@ -13,7 +13,7 @@ import abc
 from aiida.common.lang import override
 from apricotpy import persistable
 import inspect
-from plum.wait_ons import Checkpoint
+from plum import Continue
 
 from .interstep import *
 from . import process
@@ -181,7 +181,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
             if self._awaitables:
                 return persistable.gather(self._awaitables, self.loop()), self._do_step
             else:
-                return self.loop().create(Checkpoint), self._do_step
+                return Continue(self._do_step)
 
     def _handle_do_abort(self):
         """

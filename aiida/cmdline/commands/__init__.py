@@ -30,11 +30,6 @@ def user():
     pass
 
 
-@verdi.group()
-def data():
-    pass
-
-
-@data.group('plug')
-def data_plug():
+@verdi.group('data')
+def data_cmd():
     pass

@@ -46,20 +46,10 @@ class Data(VerdiCommandRouter):
             'label': _Label,
             'remote': _Remote,
             'description': _Description,
-            'plug': Plugin,
         }
-
-
-class Plugin(VerdiCommandWithSubcommands):
-    def __init__(self):
-        self.valid_subcommands = {}
         for ep in plugin_list('cmdline.data'):
             cmd = get_plugin('cmdline.data', ep)
-            self.valid_subcommands[cmd.name] = (self.cli, self.complete_none)
-
-    def cli(self, *args):
-        verdi()
-
+            self.routed_subcommands[cmd.name] = verdi
 
 
 class Listable(object):

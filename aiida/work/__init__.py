@@ -14,11 +14,8 @@ from .runner import *
 from .workfunctions import *
 from .workchain import *
 from .utils import *
+from plum import ProcessState
 
-__all__ = (
-    process.__all__ +
-    runner.__all__ +
-    utils.__all__ +
-    workchain.__all__ +
-    launch.__all__ +
-    workfunctions.__all__)
+__all__ = (process.__all__ + runner.__all__ + utils.__all__ +
+           workchain.__all__ + launch.__all__ + workfunctions.__all__ +
+           ['ProcessState'])

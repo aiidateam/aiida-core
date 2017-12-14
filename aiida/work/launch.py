@@ -17,18 +17,7 @@ from runner import create_runner, _object_factory
 from . import legacy
 from . import process
 
-__all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
-
-
-class RunningType(Enum):
-    """
-    A type to indicate what type of object is running: a process,
-    a calculation or a workflow
-    """
-    PROCESS = 0
-    LEGACY_CALC = 1
-    LEGACY_WORKFLOW = 2
-
+__all__ = ['run', 'run_get_pid', 'async', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
@@ -36,18 +25,6 @@ ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 def legacy_workflow(pk):
     return legacy.WaitOnWorkflow(pk)
-
-
-def legacy_calc(pk):
-    """
-    Create a :class:`.RunningInfo` object for a legacy calculation
-
-    :param pk: The calculation pk
-    :type pk: int
-    :return: The running info
-    :rtype: :class:`.RunningInfo`
-    """
-    return RunningInfo(RunningType.LEGACY_CALC, pk)
 
 
 def async(process_class, *args, **inputs):
@@ -82,27 +59,9 @@ def run(process_or_workfunction, *args, **inputs):
     return proc.execute()
 
 
-def rrun(runner, process_or_workfunction, *args, **inputs):
-    """
-    Run with the supplied runner.
-    
-    :param runner: The runner to run with
-    :param process_or_workfunction: The process class, instance or workfunction
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of keyword inputs
-    :return: The result of the process
-    """
-    proc = _object_factory(process_or_workfunction, *args, **inputs)
-    return runner.run_until_complete(proc)
-
-
 def run_get_pid(process_or_workfunction, *args, **inputs):
     proc = _ensure_process(process_or_workfunction, *args, **inputs)
     return ResultAndPid(proc.execute(), proc.pid)
-
-
-def rrun_get_pid(runner, process_or_workfunction, *args, **inputs):
-    return runner.run_get_pid(process_or_workfunction, *args, **inputs)
 
 
 def _ensure_process(proc, *args, **kwargs):

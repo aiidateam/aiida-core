@@ -254,25 +254,23 @@ class Process(plum.process.Process):
 
     # region Process messages
     @override
-    def on_finish(self):
-        super(Process, self).on_finish()
-        self.calc._set_attr(WorkCalculation.FINISHED_KEY, True)
+    def on_entered(self):
+        super(Process, self).on_entered()
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
 
     @override
-    def on_destroy(self):
+    def on_terminated(self):
         """
-        Called when a Process enters the DESTROYED state which should be
-        the final process state and so we seal the calculation node
+        Called when a Process enters a terminal state.
         """
-        super(Process, self).on_destroy()
-        if self.calc.has_finished():
-            try:
-                self.calc.seal()
-            except exceptions.ModificationNotAllowed:
-                pass
+        super(Process, self).on_terminated()
+        try:
+            self.calc.seal()
+        except exceptions.ModificationNotAllowed:
+            pass
 
     @override
-    def on_fail(self, exc_info):
+    def on_failed(self, exc_info):
         import traceback
         super(Process, self).on_fail(exc_info)
 

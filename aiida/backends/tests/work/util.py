@@ -12,7 +12,7 @@ import time
 from aiida.backends.testbase import AiidaTestCase
 
 from aiida.work.process import Process
-from aiida.work.workfunction import workfunction
+from aiida.work.workfunctions import workfunction
 from aiida.common.lang import override
 from aiida.orm.data.base import Int
 from aiida.orm.calculation import Calculation

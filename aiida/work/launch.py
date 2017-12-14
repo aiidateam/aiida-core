@@ -15,6 +15,7 @@ from enum import Enum
 from aiida.work.default_loop import enqueue
 from runner import create_runner, _object_factory
 from . import legacy
+from . import process
 
 __all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
 
@@ -30,6 +31,7 @@ class RunningType(Enum):
 
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
+ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 
 def legacy_workflow(pk):
@@ -76,8 +78,8 @@ def run(process_or_workfunction, *args, **inputs):
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    with create_runner() as runner:
-        return rrun(runner, process_or_workfunction, *args, **inputs)
+    proc = _ensure_process(process_or_workfunction, *args, **inputs)
+    return proc.execute()
 
 
 def rrun(runner, process_or_workfunction, *args, **inputs):
@@ -95,9 +97,16 @@ def rrun(runner, process_or_workfunction, *args, **inputs):
 
 
 def run_get_pid(process_or_workfunction, *args, **inputs):
-    with create_runner() as runner:
-        return rrun_get_pid(runner, process_or_workfunction, *args, **inputs)
+    proc = _ensure_process(process_or_workfunction, *args, **inputs)
+    return ResultAndPid(proc.execute(), proc.pid)
 
 
 def rrun_get_pid(runner, process_or_workfunction, *args, **inputs):
     return runner.run_get_pid(process_or_workfunction, *args, **inputs)
+
+
+def _ensure_process(proc, *args, **kwargs):
+    if isinstance(proc, process.Process):
+        return proc
+
+    return _object_factory(proc, *args, **kwargs)

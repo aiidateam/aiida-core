@@ -718,7 +718,7 @@ class TestSimple(AiidaTestCase):
     def test_workfunction_1(self):
         import shutil,  os, tempfile
 
-        from aiida.work.workfunction import workfunction
+        from aiida.work.workfunctions import workfunction
         from aiida.orm.data.base import Float
         from aiida.orm import load_node
         from aiida.orm.importexport import export

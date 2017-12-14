@@ -10,7 +10,6 @@
 
 
 import threading
-import uuid
 
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
@@ -19,18 +18,7 @@ from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.work.test_utils import DummyProcess, BadOutput
-from aiida.work.workfunction import workfunction
 from aiida import work
-
-
-def run(process_or_workfunction, *args, **inputs):
-    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
-        return work.rrun(runner, process_or_workfunction, *args, **inputs)
-
-
-def run_get_pid(process_or_workfunction, *args, **inputs):
-    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
-        return work.rrun_get_pid(runner, process_or_workfunction, *args, **inputs)
 
 
 class ProcessStackTest(work.Process):
@@ -63,11 +51,11 @@ class TestProcess(AiidaTestCase):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_process_stack(self):
-        run(ProcessStackTest)
+        work.run(ProcessStackTest)
 
     def test_inputs(self):
         with self.assertRaises(TypeError):
-            run(BadOutput)
+            work.run(BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
@@ -86,10 +74,10 @@ class TestProcess(AiidaTestCase):
 
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        run(DummyProcess)
+        work.run(DummyProcess)
 
     def test_seal(self):
-        pid = run_get_pid(DummyProcess).pid
+        pid = work.run_get_pid(DummyProcess).pid
         self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
@@ -109,19 +97,19 @@ class TestProcess(AiidaTestCase):
     def test_work_calc_finish(self):
         p = DummyProcess()
         self.assertFalse(p.calc.has_finished_ok())
-        run(p)
+        work.run(p)
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
-        @workfunction
+        @work.workfunction
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
-        outputs, pid = run_get_pid(simple_wf)
+        outputs, pid = work.run_get_pid(simple_wf)
         calc = load_node(pid)
 
         dp = DummyProcess(inputs={'calc': calc})
-        run(dp)
+        work.run(dp)
 
         input_calc = dp.calc.get_inputs_dict()['calc']
         self.assertTrue(isinstance(input_calc, FrozenDict))
@@ -134,8 +122,8 @@ class TestFunctionProcess(AiidaTestCase):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        FP = work.FunctionProcess.build(wf)
-        self.assertEqual(run(FP, **inputs), inputs)
+        function_process_class = work.FunctionProcess.build(wf)
+        self.assertEqual(work.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -151,13 +139,13 @@ class TestFunctionProcess(AiidaTestCase):
         inputs = {'a': a}
 
         FP = work.FunctionProcess.build(wf_with_kwargs)
-        outs = run(FP, **inputs)
+        outs = work.run(FP, **inputs)
         self.assertEqual(outs, inputs)
 
         FP = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            run(FP, **inputs)
+            work.run(FP, **inputs)
 
         FP = work.FunctionProcess.build(wf_fixed_args)
-        outs = run(FP, **inputs)
+        outs = work.run(FP, **inputs)
         self.assertEqual(outs, inputs)

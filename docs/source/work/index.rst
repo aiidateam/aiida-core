@@ -27,7 +27,7 @@ A workfunction is simply a python function with a decorator and a couple of cons
 Let's dive in.
 
 >>> from aiida.orm.data.base import Int
->>> from aiida.work.workfunction import workfunction as wf
+>>> from aiida.work.workfunction import workfunctions as wf
 >>>
 >>> @wf
 >>> def sum(a, b):

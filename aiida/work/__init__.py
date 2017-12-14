@@ -11,7 +11,7 @@
 from .launch import *
 from .process import *
 from .runner import *
-from . import workfunction
+from .workfunctions import *
 from .workchain import *
 from .utils import *
 
@@ -21,4 +21,4 @@ __all__ = (
     utils.__all__ +
     workchain.__all__ +
     launch.__all__ +
-    workfunction.__all__)
+    workfunctions.__all__)

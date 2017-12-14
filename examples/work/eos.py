@@ -13,7 +13,7 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.work.launch import async, run
 from aiida.work.utils import ProcessStack
-from aiida.work.workfunction import workfunction
+from aiida.work.workfunctions import workfunction
 from aiida.work.workchain import WorkChain, ToContext, while_, Outputs
 from examples.work.common import run_scf, generate_scf_input_params
 

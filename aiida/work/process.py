@@ -272,9 +272,9 @@ class Process(plum.process.Process):
                 pass
 
     @override
-    def on_fail(self, exc_info):
+    def on_failed(self, exc_info):
         import traceback
-        super(Process, self).on_fail(exc_info)
+        super(Process, self).on_failed(exc_info)
 
         exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
         self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))

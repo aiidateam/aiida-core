@@ -18,7 +18,7 @@ from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunctions import workfunction
-from aiida.work.launch import run, legacy_workflow
+from aiida.work.launch import run, legacy_workflow, submit
 from aiida.orm.data.base import Int, Str, Bool
 from aiida.common.links import LinkType
 from aiida.work.utils import ProcessStack
@@ -103,22 +103,22 @@ class Wf(WorkChain):
 
 class TestContext(AiidaTestCase):
     def test_attributes(self):
-        c = WorkChain.Context()
-        c.new_attr = 5
-        self.assertEqual(c.new_attr, 5)
+        wc = WorkChain()
+        wc.ctx.new_attr = 5
+        self.assertEqual(wc.ctx.new_attr, 5)
 
-        del c.new_attr
+        del wc.ctx.new_attr
         with self.assertRaises(AttributeError):
-            c.new_attr
+            wc.ctx.new_attr
 
     def test_dict(self):
-        c = WorkChain.Context()
-        c['new_attr'] = 5
-        self.assertEqual(c['new_attr'], 5)
+        wc = WorkChain()
+        wc.ctx['new_attr'] = 5
+        self.assertEqual(wc.ctx['new_attr'], 5)
 
-        del c['new_attr']
-        with self.assertRaises(KeyError):
-            c['new_attr']
+        del wc.ctx['new_attr']
+        with self.assertRaises(AttributeError):
+            wc.ctx['new_attr']
 
 
 class TestWorkchain(AiidaTestCase):
@@ -210,15 +210,15 @@ class TestWorkchain(AiidaTestCase):
 
             def s1(self):
                 return ToContext(
-                    r1=Outputs(self.runner.submit(a)),
-                    r2=Outputs(self.runner.submit(b)))
+                    r1=Outputs(submit(a)),
+                    r2=Outputs(submit(b)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(self.runner.submit(b)))
+                return ToContext(r1=Outputs(submit(b)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -307,7 +307,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=self.runner.submit(SubWorkChain))
+                return ToContext(subwc=submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -332,7 +332,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=self.runner.submit(SubWorkChain))
+                return ToContext(subwc=submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -390,8 +390,8 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.run, cls.result)
 
             def run(self):
-                self.to_context(result_a=Outputs(self.runner.submit(wf)))
-                return ToContext(result_b=Outputs(self.runner.submit(wf)))
+                self.to_context(result_a=Outputs(submit(wf)))
+                return ToContext(result_b=Outputs(submit(wf)))
 
             def result(self):
                 assert self.ctx.result_a['_return'] == val
@@ -421,7 +421,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=self.runner.submit(work.legacy.WaitOnWorkflow, wf.pk))
+                return ToContext(wf=submit(work.legacy.WaitOnWorkflow, wf.pk))
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -441,7 +441,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(self.runner.submit(work.legacy.WaitOnWorkflow, wf.pk)))
+                return ToContext(res=Outputs(submit(work.legacy.WaitOnWorkflow, wf.pk)))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
@@ -483,8 +483,8 @@ class TestWorkChainAbort(AiidaTestCase):
         Run the workchain which should hit the exception and therefore end
         up in the FAILED state
         """
-        process = self.runner.create(TestWorkChainAbort.AbortableWorkChain)
-        self.runner.run_until_complete(process)
+        process = TestWorkChainAbort.AbortableWorkChain()
+        process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), True)
@@ -496,8 +496,8 @@ class TestWorkChainAbort(AiidaTestCase):
         on the underlying WorkCalculation node. This should have the
         workchain end up in the ABORTED state.
         """
-        process = self.runner.create(TestWorkChainAbort.AbortableWorkChain)
-        self.runner.run_until_complete(process)
+        process = TestWorkChainAbort.AbortableWorkChain()
+        process.execute()
 
         while not process.done():
             engine.tick()
@@ -513,8 +513,8 @@ class TestWorkChainAbort(AiidaTestCase):
         on the workchain itself. This should have the workchain end up
         in the ABORTED state.
         """
-        process = self.runner.create(TestWorkChainAbort.AbortableWorkChain)
-        self.runner.run_until_complete(process)
+        process = TestWorkChainAbort.AbortableWorkChain()
+        process.execute()
 
         while not process.done():
             engine.tick()
@@ -580,8 +580,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         Run the workchain which should hit the exception and therefore end
         up in the FAILED state
         """
-        process = self.runner.create(TestWorkChainAbortChildren.MainWorkChain)
-        self.runner.run_until_complete(process)
+        process = TestWorkChainAbortChildren.MainWorkChain()
+        process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), True)
@@ -593,8 +593,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         on the underlying WorkCalculation node. This should have the
         workchain end up in the ABORTED state.
         """
-        process = self.runner.create(TestWorkChainAbortChildren.MainWorkChain, inputs={'kill': Bool(True)})
-        self.runner.run_until_complete(process)
+        process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        process.execute()
 
         while not process.done():
             engine.tick()

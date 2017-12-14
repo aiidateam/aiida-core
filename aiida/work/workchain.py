@@ -11,9 +11,9 @@
 import apricotpy
 import abc
 from aiida.common.lang import override
-from apricotpy import persistable
 import inspect
 from plum import Continue
+from plum import ContextMixin
 
 from .interstep import *
 from . import process
@@ -49,7 +49,7 @@ class _WorkChainSpec(process.ProcessSpec):
         return self._outline
 
 
-class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin):
+class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -383,6 +383,7 @@ class _Conditional(object):
 
 class _If(_Instruction):
     class Stepper(Stepper):
+        _IF_SPEC = 'if_spec'
         _POSITION = 'pos'
         _STEPPER_POS = 'stepper_pos'
 
@@ -435,6 +436,16 @@ class _If(_Instruction):
             else:
                 branch = self._if_spec.conditionals[self._pos]
                 self._current_stepper = branch.body.create_stepper(self._workflow)
+
+        def save_instance_state(self, out_state):
+            super(_If.Stepper, self).save_instance_state(out_state)
+            self.save_position(out_state)
+            out_state[self._IF_SPEC] = self._if_spec
+
+        def load_instance_state(self, saved_state):
+            super(_If.Stepper, self).load_instance_state(saved_state)
+            self.save_position(out_state)
+            self._if_spec = saved_state[self._IF_SPEC]
 
     def __init__(self, condition):
         super(_If, self).__init__()

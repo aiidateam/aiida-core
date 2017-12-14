@@ -11,8 +11,7 @@ from aiida.backends.testbase import AiidaTestCase
 import tempfile
 from shutil import rmtree
 import unittest
-
-from plum.wait_ons import Checkpoint
+import plum
 
 from aiida.work.persistence import Persistence
 from aiida.orm.calculation.job import JobCalculation
@@ -89,7 +88,7 @@ class ProcessEventsTester(Process):
 
     @override
     def _run(self):
-        return Checkpoint(), self.finish
+        return plum.Continue(self.finish)
 
     def finish(self, wait_on):
         pass

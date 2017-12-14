@@ -421,7 +421,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=submit(work.legacy.WaitOnWorkflow, wf.pk))
+                return ToContext(wf=submit(work.legacy.WaitOnWorkflow, pk=wf.pk))
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -441,7 +441,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(submit(work.legacy.WaitOnWorkflow, wf.pk)))
+                return ToContext(res=Outputs(submit(work.legacy.WaitOnWorkflow, pk=wf.pk)))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
@@ -464,7 +464,7 @@ class TestWorkChainAbort(AiidaTestCase):
             )
 
         def start(self):
-            pass
+            return self.pause()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -484,7 +484,7 @@ class TestWorkChainAbort(AiidaTestCase):
         up in the FAILED state
         """
         process = TestWorkChainAbort.AbortableWorkChain()
-        process.execute()
+        process.execute(True)
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), True)
@@ -497,11 +497,11 @@ class TestWorkChainAbort(AiidaTestCase):
         workchain end up in the ABORTED state.
         """
         process = TestWorkChainAbort.AbortableWorkChain()
-        process.execute()
 
-        while not process.done():
-            engine.tick()
+        with self.assertRaises(plum.CancelledError):
+            process.execute(True)
             process.calc.kill()
+            process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), False)
@@ -514,11 +514,11 @@ class TestWorkChainAbort(AiidaTestCase):
         in the ABORTED state.
         """
         process = TestWorkChainAbort.AbortableWorkChain()
-        process.execute()
 
-        while not process.done():
-            engine.tick()
-            process.abort()
+        with self.assertRaises(plum.CancelledError):
+            process.execute(True)
+            process.calc.kill()
+            process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), False)
@@ -557,11 +557,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             )
 
         def start(self):
-            child_runner = self._create_child_runner()
-            process = child_runner.create(TestWorkChainAbortChildren.SubWorkChain)
+            process = TestWorkChainAbortChildren.SubWorkChain()
             if self.inputs.kill:
-                self.calc.kill()
-            child_runner.run_until_complete(process)
+                self.abort()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -581,7 +579,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         up in the FAILED state
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
-        process.execute()
+
+        with self.assertRaises(plum.CancelledError):
+            process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), True)
@@ -594,10 +594,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         workchain end up in the ABORTED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
-        process.execute()
 
-        while not process.done():
-            engine.tick()
+        with self.assertRaises(plum.CancelledError):
+            process.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.has_finished_ok(), False)

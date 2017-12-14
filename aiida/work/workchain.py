@@ -183,6 +183,12 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
             else:
                 return Continue(self._do_step)
 
+    def abort(self, message=None):
+        """
+        Cancel is the new abort, just like orange is the new black
+        """
+        self.cancel(message)
+
     def _handle_do_abort(self):
         """
         Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
@@ -190,7 +196,7 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
         """
         do_abort = self._do_abort
         if do_abort:
-            self.abort(do_abort)
+            self.cancel(do_abort)
             self.calc._del_attr(self.calc.DO_ABORT_KEY)
 
     def abort_nowait(self, msg=None):

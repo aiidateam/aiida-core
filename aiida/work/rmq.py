@@ -1,9 +1,7 @@
 import json
 import pickle
-import uuid
-
-import apricotpy
 import pika
+import uuid
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from plum import rmq
@@ -74,15 +72,13 @@ def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     insert_process_status_subscriber(loop, prefix, get_conn)
     insert_process_launch_subscriber(loop, prefix, get_conn)
 
-class ProcessControlPanel(apricotpy.LoopObject):
+class ProcessControlPanel(object):
     """
     RMQ control panel for launching, controlling and getting status of
     Processes over the RMQ protocol.
     """
 
     def __init__(self, prefix, create_connection=_create_connection, loop=None):
-        super(ProcessControlPanel, self).__init__(loop=loop)
-
         self._connection = create_connection()
 
         self._control = rmq.control.ProcessControlPublisher(
@@ -97,7 +93,7 @@ class ProcessControlPanel(apricotpy.LoopObject):
         )
 
         self._launch = rmq.launch.ProcessLaunchPublisher(
-            self._connection,
+            'amqp://quest:quest',
             "{}.{}".format(prefix, _LAUNCH_QUEUE),
             pickle.dumps,
             decode_response

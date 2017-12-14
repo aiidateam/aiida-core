@@ -72,7 +72,7 @@ class JobProcess(process.Process):
         # Dynamically create the type for this Process
         return type(class_name, (cls,),
                     {
-                        plum.Process.define.__name__: classmethod(define),
+                        plum.process.Process.define.__name__: classmethod(define),
                         '_CALC_CLASS': calc_class
                     })
 

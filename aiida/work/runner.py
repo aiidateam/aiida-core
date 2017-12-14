@@ -5,7 +5,6 @@ from . import rmq
 from . import transport
 from . import utils
 from .default_loop import ResultAndPid
-from apricotpy.persistable.core import Bundle
 
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
 
@@ -18,7 +17,7 @@ def _object_factory(process_class, *args, **kwargs):
         inputs = wf_class.create_inputs(*args, **kwargs)
         return wf_class(inputs=inputs)
     else:
-        return process_class(*args, inputs=kwargs)
+        return process_class(*args, **kwargs)
 
 
 class Runner(object):
@@ -67,8 +66,7 @@ class Runner(object):
     def submit(self, process_class, *args, **inputs):
         if self._submit_to_daemon:
             process = _object_factory(process_class, *args, **inputs)
-            bundle = Bundle(process, class_loader=class_loader._CLASS_LOADER)
-            return self.rmq.launch(bundle)
+            return self.rmq.launch(process.uuid)
         else:
             return _object_factory(process_class, *args, **inputs)
 
@@ -85,7 +83,7 @@ def create_runner(submit_to_daemon=True, rmq_control_panel={}):
     runner = Runner(submit_to_daemon=submit_to_daemon)
 
     if rmq_control_panel is not None:
-        rmq_panel = rmq.create_control_panel(loop=runner, **rmq_control_panel)
+        rmq_panel = rmq.create_control_panel(loop=plum.get_event_loop(), **rmq_control_panel)
         runner.set_rmq_control_panel(rmq_panel)
 
     return runner
@@ -98,7 +96,7 @@ def create_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
         rmq_create_connection = rmq._create_connection
 
     rmq_panel = rmq.create_control_panel(
-        prefix=rmq_prefix, create_connection=rmq_create_connection, loop=runner
+        prefix=rmq_prefix, create_connection=rmq_create_connection, loop=plum.get_event_loop()
     )
     runner.set_rmq_control_panel(rmq_panel)
 

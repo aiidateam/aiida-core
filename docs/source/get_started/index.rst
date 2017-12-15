@@ -265,9 +265,9 @@ The configuration of computers happens in two steps.
      :doc:`here <../scheduler/index>` for a documentation of scheduler plugins
      in AiiDA.
 
-     * **shebang line** This is the first line in the beginning of the submission script.
-       The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
-       as for example the -l option. Note that AiiDA only supports bash at this point!
+   * **shebang line** This is the first line in the beginning of the submission script.
+     The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
+     as for example the -l option. Note that AiiDA only supports bash at this point!
 
    * **AiiDA work directory**: The absolute path of the directory on the
      remote computer where AiiDA will run the calculations

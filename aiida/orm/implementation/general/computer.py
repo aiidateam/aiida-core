@@ -102,17 +102,17 @@ class AbstractComputer(object):
                  ",".join(Scheduler.get_valid_schedulers())),
              False,
              ),
+            ("shebang",
+             "shebang line at the beginning of the submission script",
+             "this line specifies the first line of the submission script for this computer",
+             False,
+             ),
             ("workdir",
              "AiiDA work directory",
              "The absolute path of the directory on the computer where AiiDA will\n"
              "run the calculations (typically, the scratch of the computer). You\n"
              "can use the {username} replacement, that will be replaced by your\n"
              "username on the remote computer",
-             False,
-             ),
-            ("shebang",
-             "shebang line at the beginning of the submission script",
-             "this line specifies the first line of the submission script for this computer",
              False,
              ),
             # Must be called after the scheduler!

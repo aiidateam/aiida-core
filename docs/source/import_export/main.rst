@@ -60,18 +60,21 @@ how the data is organised in the database (database schema).
 Let's have a look at the contents of the metadata.json::
 
     {
-        "export_version": "0.2",
-        "aiida_version": "0.6.0",
+        "conversion_info": [
+            "Converted from version 0.2 to 0.3 with external script"
+        ],
+        "export_version": "0.3",
+        "aiida_version": "0.10.0",
         "unique_identifiers": {
-            "aiida.backends.djsite.db.models.DbComputer": "uuid",
-            "aiida.backends.djsite.db.models.DbGroup": "uuid",
-            "aiida.backends.djsite.db.models.DbUser": "email",
-            "aiida.backends.djsite.db.models.DbNode": "uuid",
-            "aiida.backends.djsite.db.models.DbAttribute": null,
-            "aiida.backends.djsite.db.models.DbLink": null
+            "Computer": "uuid",
+            "Group": "uuid",
+            "User": "email",
+            "Node": "uuid",
+            "Attribute": null,
+            "Link": null
         },
         "all_fields_info": {
-            "aiida.backends.djsite.db.models.DbComputer": {
+            "Computer": {
                 "description": {},
                 "transport_params": {},
                 "hostname": {},
@@ -82,46 +85,54 @@ Let's have a look at the contents of the metadata.json::
                 "scheduler_type": {},
                 "uuid": {}
             },
-            "aiida.backends.djsite.db.models.DbLink": {
+            "Link": {
                 "input": {
                     "related_name": "output_links",
-                    "requires": "aiida.backends.djsite.db.models.DbNode"},
+                    "requires": "Node"
+                },
                 "label": {},
+                "type": {},
                 "output": {
                     "related_name": "input_links",
-                    "requires": "aiida.backends.djsite.db.models.DbNode"}
+                    "requires": "Node"
+                }
             },
-            "aiida.backends.djsite.db.models.DbUser": {
+            "User": {
                 "first_name": {},
                 "last_name": {},
                 "email": {},
                 "institution": {}
             },
-            "aiida.backends.djsite.db.models.DbNode": {
+            "Node": {
                 "nodeversion": {},
                 "description": {},
                 "dbcomputer": {
                     "related_name": "dbnodes",
-                    "requires": "aiida.backends.djsite.db.models.DbComputer"},
+                    "requires": "Computer"
+                },
                 "ctime": {
-                    "convert_type": "date"},
+                    "convert_type": "date"
+                },
                 "user": {
                     "related_name": "dbnodes",
-                    "requires": "aiida.backends.djsite.db.models.DbUser"},
+                    "requires": "User"
+                },
                 "mtime": {
-                    "convert_type": "date"},
+                    "convert_type": "date"
+                },
                 "label": {},
                 "type": {},
                 "public": {},
                 "uuid": {}
             },
-            "aiida.backends.djsite.db.models.DbAttribute": {
+            "Attribute": {
                 "dbnode": {
                     "related_name": "dbattributes",
-                    "requires": "aiida.backends.djsite.db.models.DbNode"
+                    "requires": "Node"
                 },
                 "dval": {
-                    "convert_type": "date"},
+                    "convert_type": "date"
+                },
                 "datatype": {},
                 "fval": {},
                 "tval": {},
@@ -129,14 +140,16 @@ Let's have a look at the contents of the metadata.json::
                 "ival": {},
                 "bval": {}
             },
-            "aiida.backends.djsite.db.models.DbGroup": {
+            "Group": {
                 "description": {},
                 "name": {},
                 "user": {
                     "related_name": "dbgroups",
-                    "requires": "aiida.backends.djsite.db.models.DbUser"},
+                    "requires": "User"
+                },
                 "time": {
-                    "convert_type": "date"},
+                    "convert_type": "date"
+                },
                 "type": {},
                 "uuid": {}
             }
@@ -153,9 +166,8 @@ identifiers. Knowing the unique IDs is useful for duplicate avoidance
 
 Then in the *all_fields_info*, the properties of each entity are mentioned. It
 is also mentioned the correlations with other entities. For example, the entity
-*aiida.backends.djsite.db.models.DbNode* is related to a computer and a user.
-The corresponding entity names appear nested next to the properties to show
-this correlation.
+*Node* is related to a computer and a user. The corresponding entity names appear
+nested next to the properties to show this correlation.
 
 .. _data-json:
 
@@ -169,11 +181,12 @@ A sample of the *data.json* file follows::
                 "output": "c208c9da-23b4-4c32-8f99-f9141ab28363",
                 "label": "parent_calc_folder",
                 "input": "eaaa114d-3d5b-42eb-a269-cf0e7a3a935d"
+                "type": "inputlink"
             },
             ...
         ],
         "export_data": {
-            "aiida.backends.djsite.db.models.DbUser": {
+            "User": {
                 "2": {
                     "first_name": "AiiDA",
                     "last_name": "theossrv2",
@@ -182,7 +195,7 @@ A sample of the *data.json* file follows::
                 },
                 ...
             },
-            "aiida.backends.djsite.db.models.DbComputer": {
+            "Computer": {
                 "1": {
                     "name": "theospc14-direct_",
                     "transport_params": "{}",
@@ -196,7 +209,7 @@ A sample of the *data.json* file follows::
                 },
                 ...
             },
-            "aiida.backends.djsite.db.models.DbNode": {
+            "Node": {
                 "5921143": {
                     "uuid": "628ba258-ccc1-47bf-bab7-8aee64b563ea",
                     "description": "",

@@ -712,9 +712,9 @@ class AbstractComputer(object):
         :param str val: A valid shebang line
         """
         if not isinstance(val, basestring):
-            raise ValueError("Input has to be a string")
+            raise ValueError("{} is invalid. Input has to be a string".format(val))
         if not val.startswith('!#'):
-            raise ValueError("A shebang line has to start with #!")
+            raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
         metadata = self._get_metadata()
         metadata['shebang'] = val
         self._set_metadata(metadata)

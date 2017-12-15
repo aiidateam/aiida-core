@@ -122,7 +122,7 @@ class Scheduler(object):
 
         The plugin returns something like
 
-        #!/bin/bash <- this shebang line could be configurable in the future
+        #!/bin/bash <- this shebang line is configurable to some extent
         scheduler_dependent stuff to choose numnodes, numcores, walltime, ...
         prepend_computer [also from calcinfo, joined with the following?]
         prepend_code [from calcinfo]

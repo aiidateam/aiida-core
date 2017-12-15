@@ -241,13 +241,6 @@ class Computer(AbstractComputer):
             # This happens the first time: I provide a reasonable default value
             return "#!/bin/bash"
 
-    def set_shebang(self, val):
-
-        metadata = self._get_metadata()
-        metadata['shebang'] = val
-        self._set_metadata(metadata)
-
-
     def get_name(self):
         return self.dbcomputer.name
 

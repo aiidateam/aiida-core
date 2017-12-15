@@ -228,11 +228,6 @@ class Computer(AbstractComputer):
             # This happens the first time: I provide a reasonable default value
             return "#!/bin/bash"
 
-    def set_shebang(self, val):
-        metadata = self._get_metadata()
-        # TODO: What are good checks?
-        metadata['shebang'] = val
-        self._set_metadata(metadata)
 
     def set_workdir(self, val):
         # if self.to_be_stored:
@@ -242,8 +237,7 @@ class Computer(AbstractComputer):
         metadata = self._get_metadata()
         metadata['workdir'] = val
         self._set_metadata(metadata)
-        # else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+
 
     def get_name(self):
         return self.dbcomputer.name

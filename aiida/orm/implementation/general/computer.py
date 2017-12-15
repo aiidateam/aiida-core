@@ -707,9 +707,17 @@ class AbstractComputer(object):
     def set_workdir(self, val):
         pass
 
-    @abstractmethod
     def set_shebang(self, val):
-        pass
+        """
+        :param str val: A valid shebang line
+        """
+        if not isinstance(val, basestring):
+            raise ValueError("Input has to be a string")
+        if not val.startswith('!#'):
+            raise ValueError("A shebang line has to start with #!")
+        metadata = self._get_metadata()
+        metadata['shebang'] = val
+        self._set_metadata(metadata)
 
     @abstractmethod
     def get_name(self):

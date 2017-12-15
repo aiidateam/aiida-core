@@ -24,7 +24,6 @@ from aiida.common.links import LinkType
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.work.runner import create_runner
 from aiida import work
 
 
@@ -53,8 +52,8 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(Wf, self).__init__(inputs, pid, logger)
+    def __init__(self, inputs=None, pid=None, logger=None, runner=None):
+        super(Wf, self).__init__(inputs, pid, logger, runner)
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -464,7 +463,7 @@ class TestWorkChainAbort(AiidaTestCase):
             )
 
         def start(self):
-            return self.pause()
+            self.pause()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -472,7 +471,6 @@ class TestWorkChainAbort(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = create_runner(submit_to_daemon=False, rmq_control_panel=None)
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
@@ -484,7 +482,10 @@ class TestWorkChainAbort(AiidaTestCase):
         up in the FAILED state
         """
         process = TestWorkChainAbort.AbortableWorkChain()
-        process.execute(True)
+
+        with self.assertRaises(RuntimeError):
+            process.execute(True)
+            process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), True)
@@ -517,7 +518,7 @@ class TestWorkChainAbort(AiidaTestCase):
 
         with self.assertRaises(plum.CancelledError):
             process.execute(True)
-            process.calc.kill()
+            process.abort()
             process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)
@@ -558,6 +559,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         def start(self):
             process = TestWorkChainAbortChildren.SubWorkChain()
+            process.execute()
             if self.inputs.kill:
                 self.abort()
 
@@ -567,7 +569,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = create_runner(submit_to_daemon=False, rmq_control_panel=None)
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()

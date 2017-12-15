@@ -138,14 +138,14 @@ class TestFunctionProcess(AiidaTestCase):
         a = Int(4)
         inputs = {'a': a}
 
-        FP = work.FunctionProcess.build(wf_with_kwargs)
-        outs = work.run(FP, **inputs)
+        function_process_class = work.FunctionProcess.build(wf_with_kwargs)
+        outs = work.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
-        FP = work.FunctionProcess.build(wf_without_kwargs)
+        function_process_class = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            work.run(FP, **inputs)
+            work.run(function_process_class, **inputs)
 
-        FP = work.FunctionProcess.build(wf_fixed_args)
-        outs = work.run(FP, **inputs)
+        function_process_class = work.FunctionProcess.build(wf_fixed_args)
+        outs = work.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)

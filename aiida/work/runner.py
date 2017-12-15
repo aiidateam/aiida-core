@@ -1,9 +1,7 @@
 import plum
-from . import class_loader
-from . import process
 from . import rmq
-from . import transport
 from . import utils
+from . import process
 from .default_loop import ResultAndPid
 
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
@@ -16,8 +14,12 @@ def _object_factory(process_class, *args, **kwargs):
         wf_class = FunctionProcess.build(process_class._original, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         return wf_class(inputs=inputs)
-    else:
+    elif issubclass(process_class, process.Process):
         return process_class(*args, **kwargs)
+    else:
+        raise ValueError(
+            "The type to build must a be process class or workfunction, got "
+            "'{}'".format(type(process_class)))
 
 
 class Runner(object):

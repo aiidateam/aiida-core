@@ -68,4 +68,4 @@ def _ensure_process(proc, *args, **kwargs):
     if isinstance(proc, process.Process):
         return proc
 
-    return _object_factory(proc, *args, **kwargs)
+    return _object_factory(proc, *args, inputs=kwargs)

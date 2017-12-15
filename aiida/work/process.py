@@ -189,15 +189,15 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None, loop=None):
+    def __init__(self, inputs=None, pid=None, logger=None, loop=None, parent_pid=None):
         super(Process, self).__init__(inputs, pid, logger, loop)
 
-        self._calc = None
         # Get the parent from the top of the process stack
-        try:
-            self._parent_pid = utils.ProcessStack.top().pid
-        except IndexError:
-            self._parent_pid = None
+        if parent_pid is None:
+            try:
+                self._parent_pid = utils.ProcessStack.top().pid
+            except IndexError:
+                self._parent_pid = None
 
         self._pid = self._create_and_setup_db_record()
 

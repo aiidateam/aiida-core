@@ -151,9 +151,14 @@ class Scheduler(object):
 
         if job_tmpl.shebang:
             script_lines.append(job_tmpl.shebang)
-        else:
-            # The else catches None and an empty string, and I resort to a good default:
+        elif job_tmpl.shebang == '':
+            # Here I check whether the shebang was set explicitly as an empty line.
+            # In such a case, the first line is empty, if that's what the user wants:
+            script_lines.append(job_tmpl.shebang)
+        elif job_tmpl.shebang is None:
             script_lines.append('#!/bin/bash')
+        else:
+            raise ValueError("Invalid shebang set: {}".format(job_tmpl.shebang))
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 

@@ -207,7 +207,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
 
-        for shebang in (None, "", "NOSET"):
+        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ("",""), ("NOSET", '#!/bin/bash')):
             job_tmpl = JobTemplate()
             if shebang == "NOSET":
                 pass
@@ -220,7 +220,7 @@ class TestSubmitScript(unittest.TestCase):
             submit_script_text = s.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            self.assertEquals(submit_script_text.split('\n')[0], '#!/bin/bash')
+            self.assertEquals(submit_script_text.split('\n')[0], expected_first_line)
 
 
     def test_submit_script_with_num_cores_per_machine(self):

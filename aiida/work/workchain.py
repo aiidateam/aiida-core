@@ -65,8 +65,8 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, inputs=None, pid=None, logger=None, loop=None):
-        super(WorkChain, self).__init__(inputs, pid, logger, loop)
+    def __init__(self, inputs=None, pid=None, logger=None, runner=None):
+        super(WorkChain, self).__init__(inputs, pid, logger, runner)
         self._stepper = None
         self._awaitables = []
 
@@ -157,8 +157,7 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
     def _do_step(self, wait_on=None):
         self._awaitables = []
 
-        self._handle_do_abort()
-        if self._aborted:
+        if self._handle_do_abort():
             return
 
         try:
@@ -167,8 +166,7 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
             finished, retval = True, None
 
         # Could have aborted during the step
-        self._handle_do_abort()
-        if self._aborted:
+        if self._handle_do_abort():
             return
 
         if not finished:
@@ -198,6 +196,8 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
         if do_abort:
             self.cancel(do_abort)
             self.calc._del_attr(self.calc.DO_ABORT_KEY)
+            return True
+        return False
 
     def abort_nowait(self, msg=None):
         """

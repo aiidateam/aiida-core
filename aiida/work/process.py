@@ -30,6 +30,7 @@ from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
+from aiida.work.runner import get_runner
 from aiida import LOG_LEVEL_REPORT
 from . import utils
 
@@ -189,8 +190,13 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None, loop=None):
-        super(Process, self).__init__(inputs, pid, logger, loop)
+    def __init__(self, inputs=None, pid=None, logger=None, runner=None):
+        if runner is None:
+            self._runner = get_runner()
+        else:
+            self._runner = runner
+
+        super(Process, self).__init__(inputs, pid, logger, self._runner.loop)
 
         self._calc = None
         # Get the parent from the top of the process stack
@@ -272,6 +278,11 @@ class Process(plum.process.Process):
                 pass
 
     @override
+    def on_cancelled(self, msg):
+        super(Process, self).on_cancelled(msg)
+        self.calc._set_attr(WorkCalculation.ABORTED_KEY, True)
+
+    @override
     def on_failed(self, exc_info):
         import traceback
         super(Process, self).on_failed(exc_info)
@@ -280,7 +291,7 @@ class Process(plum.process.Process):
         self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))
 
         exception = exc_info[1]
-        self.calc._set_attr(WorkCalculation.FAILED_KEY, exception.message)
+        self.calc._set_attr(WorkCalculation.FAILED_KEY, True)
         self.calc.seal()
 
     @override

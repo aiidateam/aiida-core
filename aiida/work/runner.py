@@ -1,32 +1,62 @@
 import plum
-from . import class_loader
-from . import process
+import inspect
+from contextlib import contextmanager
 from . import rmq
 from . import transport
 from . import utils
-from .default_loop import ResultAndPid
+
 
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
+
+
+_runner = None
+
+def get_runner():
+    global _runner
+    if _runner is None:
+        _runner = Runner({})
+    return _runner
+
+
+def set_runner(runner):
+    global _runner
+    _runnner = runner
+
+
+
+def convert_to_inputs(workfunction, *args, **kwargs):
+    """
+    """
+    arg_labels, varargs, keywords, defaults = inspect.getargspec(workfunction)
+
+    inputs = {}
+    inputs.update(kwargs)
+    inputs.update(dict(zip(arg_labels, args)))
+
+    return inputs
 
 
 def _object_factory(process_class, *args, **kwargs):
     from aiida.work.process import FunctionProcess
 
     if utils.is_workfunction(process_class):
-        wf_class = FunctionProcess.build(process_class._original, **kwargs)
-        inputs = wf_class.create_inputs(*args, **kwargs)
-        return wf_class(inputs=inputs)
+        wf_class = FunctionProcess.build(process_class._original, **kwargs['inputs'])
+        return wf_class(**kwargs)
     else:
         return process_class(*args, **kwargs)
 
 
 class Runner(object):
-    def __init__(self, submit_to_daemon=True):
-        super(Runner, self).__init__()
+    def __init__(self, rmq_config, loop=None):
 
-        self._transport = None
-        self._submit_to_daemon = submit_to_daemon
-        self._rmq_control_panel = None
+        if loop is None:
+            self._loop = loop
+        else:
+            self._loop = plum.new_event_loop()
+
+        self._transport = transport.TransportQueue(self._loop)
+        self._rmq_config = rmq_config
+        self._rmq = None # construct from config
 
     def __enter__(self):
         return self
@@ -34,16 +64,17 @@ class Runner(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def set_rmq_control_panel(self, rmq_control_panel):
-        self._rmq_control_panel = rmq_control_panel
+    @property
+    def loop(self):
+        return self._loop
+
+    @property
+    def rmq(self):
+        return self._rmq
 
     @property
     def transport(self):
         return self._transport
-
-    @property
-    def rmq(self):
-        return self._rmq_control_panel
 
     def run(self, process_class, *args, **inputs):
         """
@@ -54,29 +85,42 @@ class Runner(object):
         :param inputs: The process inputs 
         :return: The process outputs
         """
-        with self._create_child_runner() as child:
-            proc = _object_factory(process_class, *args, **inputs)
-            return proc.execute()
+        with self.child_runner() as runner:
+            process = self._ensure_process(process_class, runner, input_args=args, input_kwargs=inputs)
+            return process.execute()
 
     def run_get_pid(self, process_class, *args, **inputs):
-        with self._create_child_runner() as child:
-            proc = _object_factory(process_class, *args, **inputs)
-            return ResultAndPid(proc.execute(), proc.pid)
+        with self.child_runner() as runner:
+            process = self._ensure_process(process_class, runner, input_args=args, input_kwargs=inputs)
+            return ResultAndPid(process.execute(), process.pid)
 
     def submit(self, process_class, *args, **inputs):
-        if self._submit_to_daemon:
-            process = _object_factory(process_class, *args, **inputs)
-            return self.rmq.launch(process.uuid)
+        process = self._ensure_process(process_class, self, input_args=args, input_kwargs=inputs)
+        process.play()
+        return process.calc
+
+    @contextmanager
+    def child_runner(self):
+        try:
+            yield Runner(self._rmq_config)
+        finally:
+            pass
+
+    def _ensure_process(self, process, runner, input_args, input_kwargs):
+        from aiida.work.process import Process
+        if isinstance(process, Process):
+            assert len(input_args) == 0
+            assert len(input_kwargs) == 0
+            return process
+
+        if utils.is_workfunction(process):
+            inputs = convert_to_inputs(process, *input_args, **input_kwargs)
         else:
-            return _object_factory(process_class, *args, **inputs)
+            inputs = input_kwargs
+            assert len(input_args) == 0
 
-    def _create_child_runner(self):
+        return _object_factory(process, runner=runner, inputs=inputs)
 
-        runner = Runner(self._submit_to_daemon)
-
-        runner.set_rmq_control_panel(self._rmq_control_panel)
-
-        return runner
 
 
 def create_runner(submit_to_daemon=True, rmq_control_panel={}):

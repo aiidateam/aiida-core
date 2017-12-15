@@ -1,4 +1,3 @@
-import apricotpy
 from collections import namedtuple
 import logging
 import threading
@@ -7,7 +6,7 @@ import traceback
 _LOGGER = logging.getLogger(__name__)
 
 
-class TransportQueue(apricotpy.LoopObject):
+class TransportQueue(object):
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at
@@ -22,7 +21,7 @@ class TransportQueue(apricotpy.LoopObject):
     AuthinfoEntry = namedtuple("AuthinfoEntry", ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
     def __init__(self, loop=None, interval=DEFAULT_INTERVAL):
-        super(TransportQueue, self).__init__(loop=loop)
+        super(TransportQueue, self).__init__()
 
         self._entries = {}
         self._interval = interval

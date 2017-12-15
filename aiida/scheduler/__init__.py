@@ -148,9 +148,12 @@ class Scheduler(object):
 
         # I fill the list with the lines, and finally join them and return
         script_lines = []
-        script_lines.append(job_tmpl.shebang)
-        script_lines.append(empty_line)
 
+        if job_tmpl.shebang:
+            script_lines.append(job_tmpl.shebang)
+        else:
+            # The else catches None and an empty string, and I resort to a good default:
+            script_lines.append('#!/bin/bash')
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 

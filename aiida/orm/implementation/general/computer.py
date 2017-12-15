@@ -713,7 +713,7 @@ class AbstractComputer(object):
         """
         if not isinstance(val, basestring):
             raise ValueError("{} is invalid. Input has to be a string".format(val))
-        if not val.startswith('!#'):
+        if not val.startswith('#!'):
             raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
         metadata = self._get_metadata()
         metadata['shebang'] = val

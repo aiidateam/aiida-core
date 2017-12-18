@@ -249,9 +249,8 @@ The command ``verdi devel getproperty [propertyname]`` will give you the set val
 ``verdi export``
 ++++++++++++++++
 
-Export data from the AiiDA database to a file. 
-See also ``verdi import`` to import this data on another database.
-
+ * **create**: Export a selection of nodes to an aiida export file. See also :ref:`import` and the :ref:`export-file-format`.
+ * **migrate**: Migrate export archives between file format versions.
 
 .. _graph:
 
@@ -280,7 +279,8 @@ See also ``verdi import`` to import this data on another database.
 ``verdi import``
 ++++++++++++++++
 
-Imports data (coming from other AiiDA databases) in the current database 
+Import AiiDA export file into the AiiDA database.
+See also :ref:`export` and the :ref:`export-file-format`.
 
 
 .. _install:

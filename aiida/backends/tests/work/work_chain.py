@@ -193,13 +193,15 @@ class TestWorkchain(AiidaTestCase):
         A = Str("a")
         B = Str("b")
 
-        @workfunction
-        def a():
-            return A
+        class ReturnA(work.Process):
+            def _run(self):
+                self.out('_return', A)
+                return self.outputs
 
-        @workfunction
-        def b():
-            return B
+        class ReturnB(work.Process):
+            def _run(self):
+                self.out('_return', B)
+                return self.outputs
 
         class Wf(WorkChain):
             @classmethod
@@ -209,15 +211,15 @@ class TestWorkchain(AiidaTestCase):
 
             def s1(self):
                 return ToContext(
-                    r1=Outputs(submit(a)),
-                    r2=Outputs(submit(b)))
+                    r1=Outputs(submit(ReturnA)),
+                    r2=Outputs(submit(ReturnB)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(submit(b)))
+                return ToContext(r1=Outputs(submit(ReturnB)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -378,19 +380,20 @@ class TestWorkchain(AiidaTestCase):
     def test_to_context(self):
         val = Int(5)
 
-        @workfunction
-        def wf():
-            return val
+        class SimpleWc(work.Process):
+            def _run(self):
+                self.out('_return', val)
+                return self.outputs
 
         class Workchain(WorkChain):
             @classmethod
             def define(cls, spec):
                 super(Workchain, cls).define(spec)
-                spec.outline(cls.run, cls.result)
+                spec.outline(cls.start, cls.result)
 
-            def run(self):
-                self.to_context(result_a=Outputs(submit(wf)))
-                return ToContext(result_b=Outputs(submit(wf)))
+            def start(self):
+                self.to_context(result_a=Outputs(submit(SimpleWc)))
+                return ToContext(result_b=Outputs(submit(SimpleWc)))
 
             def result(self):
                 assert self.ctx.result_a['_return'] == val
@@ -420,7 +423,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=submit(work.legacy.WaitOnWorkflow, pk=wf.pk))
+                return ToContext(wf=work.LegacyWorkflow(wf.pk))
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -440,7 +443,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(submit(work.legacy.WaitOnWorkflow, pk=wf.pk)))
+                return ToContext(res=Outputs(work.LegacyWorkflow(wf.pk)))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
@@ -581,7 +584,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(RuntimeError):
             process.execute()
 
         self.assertEquals(process.calc.has_finished_ok(), False)

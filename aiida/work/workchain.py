@@ -8,16 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import apricotpy
 import abc
 from aiida.common.lang import override
 import inspect
+import plum
 from plum import Continue
 from plum import ContextMixin
 
 from .interstep import *
 from . import processes
 from . import utils
+from . import waits
 
 __all__ = ['WorkChain']
 
@@ -125,10 +126,11 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
 
             awaitable = value.awaitable
 
-            if not isinstance(awaitable, apricotpy.Awaitable):
-                raise TypeError("Could not find an awaitable to place in the context")
+            if not isinstance(awaitable, waits.Wait):
+                raise TypeError("Could not find a wait object to place in the context")
 
-            awaitable.add_done_callback(persistable.Function(value.fn, key, self))
+            # TODO: Ask the runner to call us back when the 'wait' is done
+            # self.runner.add_done_callback(wait, self.some_callback)
 
             self.insert_barrier(awaitable)
 
@@ -177,9 +179,12 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                return persistable.gather(self._awaitables, self.loop()), self._do_step
+                return plum.Continue(self._do_step)
+                # return plum.Wait('Waiting')
             else:
-                return Continue(self._do_step)
+                return plum.Continue(self._do_step)
+        else:
+            return self.outputs
 
     def abort(self, message=None):
         """

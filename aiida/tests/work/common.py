@@ -11,7 +11,6 @@
 from aiida.work.processes import Process
 
 
-
 class DummyProcess(Process):
     """
     A Process that does nothing when it runs.

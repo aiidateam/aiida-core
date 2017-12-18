@@ -132,7 +132,9 @@ class Runner(object):
         return ResultAndPid(result, node.pid)
 
     def submit(self, process_class, *args, **inputs):
-        process = _ensure_process(process_class, self, input_args=args, input_kwargs=inputs)
+        assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
+
+        process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
         process.play()
         return process.calc
 

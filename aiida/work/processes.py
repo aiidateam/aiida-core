@@ -197,12 +197,16 @@ class Process(plum.process.Process):
         else:
             self._runner = runner
 
-        super(Process, self).__init__(inputs, pid, logger, self._runner.loop)
+        super(Process, self).__init__(
+            inputs=inputs,
+            pid=pid,
+            logger=logger,
+            loop=self._runner.loop)
 
         self._calc = None
         # If parent PID hasn't been supplied try to get it from the stack
         if parent_pid is None and not plum.stack.is_empty():
-            self._parent_pid = plum.stack.top()
+            self._parent_pid = plum.stack.top().pid
         else:
             self._parent_pid = parent_pid
         self._pid = self._create_and_setup_db_record()
@@ -328,7 +332,7 @@ class Process(plum.process.Process):
         if self._parent_pid is None:
             return None
 
-        return load_node(uuid=self._parent_pid)
+        return load_node(pk=self._parent_pid)
 
     @protected
     def report(self, msg, *args, **kwargs):

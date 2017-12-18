@@ -24,6 +24,7 @@ def legacy_workflow(pk):
 
 
 def submit(process_class, **inputs):
+    assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
     runner = runners.get_runner()
     return runner.submit(process_class, **inputs)
 

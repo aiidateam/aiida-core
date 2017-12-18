@@ -9,9 +9,8 @@
 ###########################################################################
 
 import abc
-import apricotpy.persistable.utils
-from apricotpy import persistable
 import plum
+import apricotpy.persistable.utils
 from threading import local
 import time
 import random
@@ -26,8 +25,8 @@ __all__ = ['ProcessStack']
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
 
-class_name = persistable.utils.class_name
-load_object = persistable.utils.load_object
+class_name = plum.utils.class_name
+load_object = plum.utils.load_object
 load_class = load_object
 
 

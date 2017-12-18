@@ -350,6 +350,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
     tjn1_id = None
     tjn2_id = None
+    group_name = "trj_group"
+    group_id = None
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
@@ -407,9 +409,10 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         # Create a group and add the data inside
         from aiida.orm.group import Group
-        g1 = Group(name="trj_group")
+        g1 = Group(name=cls.group_name)
         g1.store()
         g1.add_nodes([tjn2])
+        cls.group_id = g1.id
 
 
     def test_trajectory_simple_listing(self):
@@ -425,71 +428,56 @@ class TestVerdiDataCommands(AiidaTestCase):
         self.assertEqual(
             ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
             str(self.tjn2_id), out_str,
-            "The trajectory was not found")
-
-    # def test_trajectory_past_days_listing(self):
-    #     from aiida.cmdline.commands.data import _Trajectory
-    #
-    #     traj_cmd = _Trajectory()
-    #     with Capturing() as output:
-    #         traj_cmd.list('-p 0')
-    #     out_str = ''.join(output)
-    #
-    #     # This should be an empty output
-    #     self.assertEqual('', out_str,
-    #                      "No data objects should be retrieved and "
-    #                      "some were retrieved.")
-    #
-    #     traj_cmd = _Trajectory()
-    #     with Capturing() as output:
-    #         traj_cmd.list('-p 1')
-    #     out_str = ''.join(output)
-    #
-    #     self.assertEqual(
-    #         ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
-    #         str(self.tjn2_id), out_str,
-    #         "The trajectory was not found")
-
+            "The data objects with ids {} and {} were not found".format(
+                    self.tjn1_id, self.tjn2_id))
 
     def test_trajectory_past_days_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
 
-        args_to_test = ['-p 0', '--past-days 0']
+        args_to_test = [['-p', '0'], ['--past-days', '0']]
         for arg in args_to_test:
             traj_cmd = _Trajectory()
             with Capturing() as output:
-                traj_cmd.list('-p 0')
+                traj_cmd.list(*arg)
             out_str = ''.join(output)
 
             # This should be an empty output
             self.assertEqual('', out_str,
                              "No data objects should be retrieved and "
-                             "some were retrieved.")
+                             "some were retrieved. The (conctenation of the) "
+                             "output was: {}".format(out_str))
 
-        args_to_test = ['-p 1', '--past-days 1']
+        args_to_test = [['-p', '1'], ['--past-days', '1']]
         for arg in args_to_test:
             traj_cmd = _Trajectory()
             with Capturing() as output:
-                traj_cmd.list(arg)
+                traj_cmd.list(*arg)
             out_str = ''.join(output)
 
             self.assertEqual(
                 ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
                 str(self.tjn2_id), out_str,
-                "The trajectory was not found")
+                "The data objects with ids {} and {} were not found".format(
+                    self.tjn1_id, self.tjn2_id))
 
 
-    # def test_trajectory_group_listing(self):
-    #     from aiida.cmdline.commands.data import _Trajectory
-    #
-    #     traj_cmd = _Trajectory()
-    #
-    #     with Capturing() as output:
-    #         traj_cmd.list()
-    #
-    #     out_str = ''.join(output)
-    #
-    #     self.assertEqual(
-    #         ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
-    #         str(self.tjn2_id), out_str,
-    #         "The trajectory was not found")
+    def test_trajectory_group_listing(self):
+        from aiida.cmdline.commands.data import _Trajectory
+
+        args_to_test = [
+            ['-g', self.group_name],
+            ['--group-name', self.group_name],
+            ['-G', str(self.group_id)],
+            ['--group-pk', str(self.group_id)]
+        ]
+        for arg in args_to_test:
+            traj_cmd = _Trajectory()
+            with Capturing() as output:
+                traj_cmd.list(*arg)
+            out_str = ''.join(output)
+
+            self.assertEqual(
+                ''.join(traj_cmd.get_column_names()) + str(self.tjn2_id),
+                out_str,
+                "The data object with id {} was not found".format(
+                    self.tjn1_id))

@@ -82,6 +82,7 @@ class Listable(object):
                             help="do not print a header with column names.",
                             dest="header", action='store_false')
 
+        # sys.stderr("self ===>")
         # print "self ===>", self
         # print "args ===>", args
 

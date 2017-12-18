@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.utils.capturing import Capturing
 from aiida.common.datastructures import calc_states
+from aiida.orm.data import Data
 
 # Common computer information
 computer_common_info = [
@@ -344,3 +345,151 @@ class TestVerdiUserCommands(AiidaTestCase):
             configure, cli_options, catch_exceptions=False)
         self.assertTrue(user_2['email'] in result.output)
         self.assertTrue("is already present" in result.output)
+
+class TestVerdiDataCommands(AiidaTestCase):
+
+    tjn1_id = None
+    tjn2_id = None
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create some data needed for the tests
+        """
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        import numpy
+
+        super(TestVerdiDataCommands, cls).setUpClass()
+
+        # Create a node with two arrays
+        tjn1 = TrajectoryData()
+
+        # I create sample data
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
+        cells = numpy.array([
+            [[2., 0., 0., ],
+             [0., 2., 0., ],
+             [0., 0., 2., ]],
+            [[3., 0., 0., ],
+             [0., 3., 0., ],
+             [0., 0., 3., ]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]],
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]]])
+        velocities = numpy.array([
+            [[0., 0., 0.],
+             [0., 0., 0.],
+             [0., 0., 0.]],
+            [[0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5],
+             [-0.5, -0.5, -0.5]]])
+
+        # I set the node
+        tjn1.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+        tjn1.store()
+
+        tjn2 = TrajectoryData()
+        tjn2.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+        tjn2.store()
+
+        cls.tjn1_id = tjn1.id
+        cls.tjn2_id = tjn2.id
+
+        # Create a group and add the data inside
+        from aiida.orm.group import Group
+        g1 = Group(name="trj_group")
+        g1.store()
+        g1.add_nodes([tjn2])
+
+
+    def test_trajectory_simple_listing(self):
+        from aiida.cmdline.commands.data import _Trajectory
+
+        traj_cmd = _Trajectory()
+
+        with Capturing() as output:
+            traj_cmd.list()
+
+        out_str = ''.join(output)
+
+        self.assertEqual(
+            ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
+            str(self.tjn2_id), out_str,
+            "The trajectory was not found")
+
+    # def test_trajectory_past_days_listing(self):
+    #     from aiida.cmdline.commands.data import _Trajectory
+    #
+    #     traj_cmd = _Trajectory()
+    #     with Capturing() as output:
+    #         traj_cmd.list('-p 0')
+    #     out_str = ''.join(output)
+    #
+    #     # This should be an empty output
+    #     self.assertEqual('', out_str,
+    #                      "No data objects should be retrieved and "
+    #                      "some were retrieved.")
+    #
+    #     traj_cmd = _Trajectory()
+    #     with Capturing() as output:
+    #         traj_cmd.list('-p 1')
+    #     out_str = ''.join(output)
+    #
+    #     self.assertEqual(
+    #         ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
+    #         str(self.tjn2_id), out_str,
+    #         "The trajectory was not found")
+
+
+    def test_trajectory_past_days_listing(self):
+        from aiida.cmdline.commands.data import _Trajectory
+
+        args_to_test = ['-p 0', '--past-days 0']
+        for arg in args_to_test:
+            traj_cmd = _Trajectory()
+            with Capturing() as output:
+                traj_cmd.list('-p 0')
+            out_str = ''.join(output)
+
+            # This should be an empty output
+            self.assertEqual('', out_str,
+                             "No data objects should be retrieved and "
+                             "some were retrieved.")
+
+        args_to_test = ['-p 1', '--past-days 1']
+        for arg in args_to_test:
+            traj_cmd = _Trajectory()
+            with Capturing() as output:
+                traj_cmd.list(arg)
+            out_str = ''.join(output)
+
+            self.assertEqual(
+                ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
+                str(self.tjn2_id), out_str,
+                "The trajectory was not found")
+
+
+    # def test_trajectory_group_listing(self):
+    #     from aiida.cmdline.commands.data import _Trajectory
+    #
+    #     traj_cmd = _Trajectory()
+    #
+    #     with Capturing() as output:
+    #         traj_cmd.list()
+    #
+    #     out_str = ''.join(output)
+    #
+    #     self.assertEqual(
+    #         ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
+    #         str(self.tjn2_id), out_str,
+    #         "The trajectory was not found")

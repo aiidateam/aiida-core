@@ -18,6 +18,23 @@ package.
 
 .. _packages: https://docs.python.org/2/tutorial/modules.html?highlight=package#packages
 
+Design guidelines
+------------------
+
+ * **Start simple.** Make use of existing classes like
+   :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`,
+   :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`,
+   :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>`,
+   ...
+   Write only what is necessary to pass information from and to AiiDA. 
+ * **Don't break data provenance.** Store what is needed for full reproducibility.
+ * **Parse what you want to query for.** Think about which files to parse into the database and which files to keep on disk.
+ * **Expose the full functionality.** 
+   Don't artificially limit the power of a code you are wrapping - or your users
+   will get frustrated. 
+   If the code can do it, there should be *some* way to do it with your plugin.
+
+
 What a Plugin Can Do
 --------------------
 
@@ -48,7 +65,6 @@ An AiiDA plugin should not:
 
 * change the database schema AiiDA uses
 * use protected functions, methods or classes of AiiDA (those starting with an underscore ``_``)
-* circumvent data provenance
 * monkey patch anything within the ``aiida`` namespace (or the namespace itself)
 
 Failure to comply will likely prevent your plugin
@@ -57,6 +73,7 @@ from being listed on the official `AiiDA plugin registry <registry>`_.
 If you find yourself tempted to do any of the above, please open an issue on
 the `AiiDA repository <aiida_core>`_ and explain why.
 We will advise on how to proceed.
+
 
 .. _aiida_core: https://github.com/aiidateam/aiida_core
 .. _registry: https://github.com/aiidateam/aiida-registry

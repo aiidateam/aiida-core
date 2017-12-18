@@ -559,7 +559,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         def start(self):
             process = TestWorkChainAbortChildren.SubWorkChain()
-            process.execute()
+            process.play()
             if self.inputs.kill:
                 self.abort()
 
@@ -592,7 +592,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         Run the workchain for one step and then kill it by calling kill
         on the underlying WorkCalculation node. This should have the
-        workchain end up in the ABORTED state.
+        workchain end up in the CANCELLED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 

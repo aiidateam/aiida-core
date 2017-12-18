@@ -9,10 +9,11 @@
 ###########################################################################
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.workfunctions import workfunction
+from aiida.work import workfunction
 from aiida.orm.data.base import get_true_node
-from aiida.work.launch import async, run
+import aiida.orm
 import aiida.work.utils as util
+from aiida import work
 
 
 @workfunction
@@ -23,6 +24,11 @@ def simple_wf():
 @workfunction
 def return_input(inp):
     return {'result': inp}
+
+
+@workfunction
+def single_return_value():
+    return get_true_node()
 
 
 class TestWf(AiidaTestCase):
@@ -39,5 +45,15 @@ class TestWf(AiidaTestCase):
         self.assertTrue(return_input(get_true_node())['result'])
 
     def test_run(self):
-        self.assertTrue(run(simple_wf)['result'])
-        self.assertTrue(run(return_input, get_true_node())['result'])
+        self.assertTrue(work.run(simple_wf)['result'])
+        self.assertTrue(work.run(return_input, get_true_node())['result'])
+
+    def test_run_and_get_node(self):
+        result, calc_node = single_return_value.run_get_node()
+        self.assertEqual(result, get_true_node())
+        self.assertIsInstance(calc_node, aiida.orm.Calculation)
+
+    def test_single_return_value(self):
+        result = single_return_value()
+        self.assertIsInstance(result, aiida.orm.Data)
+        self.assertEqual(result, get_true_node())

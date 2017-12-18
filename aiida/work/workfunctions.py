@@ -49,14 +49,18 @@ def workfunction(func):
         # Build up the Process representing this function
         wf_class = process.FunctionProcess.build(func, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
-        result = launch.run(wf_class, inputs=inputs)
+        return wf_class(inputs=inputs).execute()
 
-        # Check if there is just one value returned
-        if len(result) == 1 and wf_class.SINGLE_RETURN_LINKNAME in result:
-            result = result[wf_class.SINGLE_RETURN_LINKNAME]
+    def run_get_node(*args, **kwargs):
+        # Build up the Process representing this function
+        wf_class = process.FunctionProcess.build(func, **kwargs)
+        inputs = wf_class.create_inputs(*args, **kwargs)
+        proc = wf_class(inputs=inputs)
+        return proc.execute(), proc.calc
 
-        return result
+    wrapped_function.run_get_node = run_get_node
 
     wrapped_function._original = func
     wrapped_function._is_workfunction = True
+
     return wrapped_function

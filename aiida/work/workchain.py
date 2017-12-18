@@ -133,7 +133,7 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
             self.insert_barrier(awaitable)
 
     @override
-    def _run(self, **kwargs):
+    def _run(self):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
@@ -208,6 +208,7 @@ class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
         :type msg: str
         """
         return self.abort(msg=msg)
+
 
 ToContext = dict
 

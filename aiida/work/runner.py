@@ -1,20 +1,22 @@
 import plum
 import inspect
+from collections import namedtuple
 from contextlib import contextmanager
 from . import rmq
 from . import transport
 from . import utils
 
-
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
 
+ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 _runner = None
+
 
 def get_runner():
     global _runner
     if _runner is None:
-        _runner = Runner({})
+        _runner = new_runner()
     return _runner
 
 
@@ -22,6 +24,9 @@ def set_runner(runner):
     global _runner
     _runnner = runner
 
+
+def new_runner():
+    return Runner({})
 
 
 def convert_to_inputs(workfunction, *args, **kwargs):
@@ -37,26 +42,45 @@ def convert_to_inputs(workfunction, *args, **kwargs):
 
 
 def _object_factory(process_class, *args, **kwargs):
-    from aiida.work.process import FunctionProcess
+    return process_class(*args, **kwargs)
 
-    if utils.is_workfunction(process_class):
-        wf_class = FunctionProcess.build(process_class._original, **kwargs['inputs'])
-        return wf_class(**kwargs)
+
+def _ensure_process(process, runner, input_args, input_kwargs, *args, **kwargs):
+    """ Take a process class, a process instance or a workfunction along with
+    arguments and return a process instance"""
+    from aiida.work.process import Process
+    if isinstance(process, Process):
+        assert len(input_args) == 0
+        assert len(input_kwargs) == 0
+        return process
+
+    return _create_process(process, runner, input_args, input_kwargs, *args, **kwargs)
+
+
+def _create_process(process, runner, input_args=(), input_kwargs={}, *args, **kwargs):
+    """ Create a process instance from a process class or workfunction """
+    inputs = _create_inputs_dictionary(process, *input_args, **input_kwargs)
+    return _object_factory(process, runner=runner, inputs=inputs, *args, **kwargs)
+
+
+def _create_inputs_dictionary(process, *args, **kwargs):
+    """ Create an inputs dictionary for a process or workfunction """
+    if utils.is_workfunction(process):
+        inputs = convert_to_inputs(process, *args, **kwargs)
     else:
-        return process_class(*args, **kwargs)
+        inputs = kwargs
+        assert len(args) == 0, "Processes do not take positional arguments"
+
+    return inputs
 
 
 class Runner(object):
     def __init__(self, rmq_config, loop=None):
 
-        if loop is None:
-            self._loop = loop
-        else:
-            self._loop = plum.new_event_loop()
-
+        self._loop = loop if loop is not None else plum.new_event_loop()
         self._transport = transport.TransportQueue(self._loop)
         self._rmq_config = rmq_config
-        self._rmq = None # construct from config
+        self._rmq = None  # construct from config
 
     def __enter__(self):
         return self
@@ -76,51 +100,52 @@ class Runner(object):
     def transport(self):
         return self._transport
 
-    def run(self, process_class, *args, **inputs):
+    def close(self):
+        pass
+
+    def run(self, process, *args, **inputs):
         """
         This method blocks and runs the given process with the supplied inputs.
         It returns the outputs as produced by the process. 
         
-        :param process_class: The process class to run 
-        :param inputs: The process inputs 
+        :param process: The process class or workfunction to run
+        :param inputs: Workfunction positional arguments
         :return: The process outputs
         """
-        with self.child_runner() as runner:
-            process = self._ensure_process(process_class, runner, input_args=args, input_kwargs=inputs)
-            return process.execute()
+        if utils.is_workfunction(process):
+            return process(*args, **inputs)
+        else:
+            with self.child_runner() as runner:
+                process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
+                return process.execute()
 
-    def run_get_pid(self, process_class, *args, **inputs):
+    def run_get_node(self, process, *args, **inputs):
+        if utils.is_workfunction(process):
+            return process.run_get_node(*args, **inputs)
         with self.child_runner() as runner:
-            process = self._ensure_process(process_class, runner, input_args=args, input_kwargs=inputs)
-            return ResultAndPid(process.execute(), process.pid)
+            process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
+            return ResultAndPid(process.execute(), process.calc)
+
+    def run_get_pid(self, process, *args, **inputs):
+        result, node = self.run_get_node(process, *args, **inputs)
+        return ResultAndPid(result, node.pid)
 
     def submit(self, process_class, *args, **inputs):
-        process = self._ensure_process(process_class, self, input_args=args, input_kwargs=inputs)
+        process = _ensure_process(process_class, self, input_args=args, input_kwargs=inputs)
         process.play()
         return process.calc
 
+    def _submit(self, process, *args, **kwargs):
+
+        pass
+
     @contextmanager
     def child_runner(self):
+        runner = Runner(self._rmq_config)
         try:
-            yield Runner(self._rmq_config)
+            yield runner
         finally:
-            pass
-
-    def _ensure_process(self, process, runner, input_args, input_kwargs):
-        from aiida.work.process import Process
-        if isinstance(process, Process):
-            assert len(input_args) == 0
-            assert len(input_kwargs) == 0
-            return process
-
-        if utils.is_workfunction(process):
-            inputs = convert_to_inputs(process, *input_args, **input_kwargs)
-        else:
-            inputs = input_kwargs
-            assert len(input_args) == 0
-
-        return _object_factory(process, runner=runner, inputs=inputs)
-
+            runner.close()
 
 
 def create_runner(submit_to_daemon=True, rmq_control_panel={}):

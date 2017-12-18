@@ -12,12 +12,11 @@ from collections import namedtuple
 
 from enum import Enum
 
-from aiida.work.default_loop import enqueue
-from runner import get_runner, _object_factory
+from runner import get_runner
 from . import legacy
-from . import process
+from . import utils
 
-__all__ = ['run', 'run_get_pid', 'submit']
+__all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
@@ -32,19 +31,30 @@ def submit(process_class, **inputs):
     return runner.submit(process_class, **inputs)
 
 
-def run(process_or_workfunction, *args, **inputs):
+def run(process, *args, **inputs):
     """
     Run a workfunction or process and return the result.
 
-    :param process_or_workfunction: The process class, instance or workfunction
+    :param process: The process class, instance or workfunction
     :param args: Positional arguments for a workfunction
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    runner = get_runner()
-    return runner.run(process_or_workfunction, *args, **inputs)
+    if utils.is_workfunction(process):
+        return process(*args, **inputs)
+    else:
+        runner = get_runner()
+        return runner.run(process, *args, **inputs)
 
 
-def run_get_pid(process_or_workfunction, *args, **inputs):
-    runner = get_runner()
-    return runner.run_get_pid(process_or_workfunction, *args, **inputs)
+def run_get_node(process, *args, **inputs):
+    if utils.is_workfunction(process):
+        process.run_get_node(*args, **inputs)
+    else:
+        runner = get_runner()
+        return runner.run_get_node(process, *args, **inputs)
+
+
+def run_get_pid(process, *args, **inputs):
+    result, node = run_get_node(process, *args, **inputs)
+    return result, node.pid

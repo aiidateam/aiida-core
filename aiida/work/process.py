@@ -147,7 +147,7 @@ class Process(plum.process.Process):
     """
     __metaclass__ = abc.ABCMeta
 
-    SINGLE_RETURN_LINKNAME = '_return'
+    SINGLE_RETURN_LINKNAME = '[result]'
     # This is used for saving node pks in the saved instance state
     NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
 
@@ -192,20 +192,19 @@ class Process(plum.process.Process):
 
     def __init__(self, inputs=None, pid=None, logger=None, runner=None, parent_pid=None):
         if runner is None:
-            self._runner = get_runner()
+            from .runner import new_runner
+            self._runner = new_runner()
         else:
             self._runner = runner
 
         super(Process, self).__init__(inputs, pid, logger, self._runner.loop)
 
         self._calc = None
-        # Get the parent from the top of the process stack
-        if parent_pid is None:
-            try:
-                self._parent_pid = utils.ProcessStack.top().pid
-            except IndexError:
-                self._parent_pid = None
-
+        # If parent PID hasn't been supplied try to get it from the stack
+        if parent_pid is None and not plum.stack.is_empty():
+            self._parent_pid = plum.stack.top()
+        else:
+            self._parent_pid = parent_pid
         self._pid = self._create_and_setup_db_record()
 
         if logger is None:
@@ -286,7 +285,6 @@ class Process(plum.process.Process):
 
         exception = exc_info[1]
         self.calc._set_attr(WorkCalculation.FAILED_KEY, True)
-        self.calc.seal()
 
     @override
     def on_output_emitted(self, output_port, value, dynamic):
@@ -317,24 +315,12 @@ class Process(plum.process.Process):
 
     # end region
 
+    def submit(self, process_or_workfunction, *args, **kwargs):
+        pass
+
     @property
     def runner(self):
         return self.loop()
-
-    @override
-    def do_run(self):
-        # Only keep calculation inputs
-        ins = {}
-        for name, value in self.inputs.iteritems():
-            try:
-                port = self.spec().get_input(name)
-            except ValueError:
-                ins[name] = value
-            else:
-                if not port.non_db:
-                    ins[name] = value
-
-        return self._run(**ins)
 
     @protected
     def get_parent_calc(self):
@@ -342,13 +328,7 @@ class Process(plum.process.Process):
         if self._parent_pid is None:
             return None
 
-        try:
-            return load_node(uuid=self._parent_pid)
-        except exceptions.NotExistent:
-            pass
-
-        # Out of options
-        return None
+        return load_node(uuid=self._parent_pid)
 
     @protected
     def report(self, msg, *args, **kwargs):
@@ -572,21 +552,38 @@ class FunctionProcess(Process):
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)
 
     @override
-    def _run(self, **kwargs):
+    def _run(self):
         from aiida.orm.data import Data
 
         args = []
-        for arg in self._func_args:
-            args.append(kwargs.pop(arg))
-        outs = self._func(*args, **kwargs)
-        if outs is not None:
-            if isinstance(outs, Data):
-                self.out(self.SINGLE_RETURN_LINKNAME, outs)
-            elif isinstance(outs, collections.Mapping):
-                for name, value in outs.iteritems():
+
+        # Split the inputs into positional and keyword arguments
+        args = []
+        kwargs = {}
+        for name, value in self.inputs.items():
+            try:
+                if self.spec().get_input(name).non_db:
+                    # Don't consider non-database inputs
+                    continue
+            except ValueError:
+                pass  # No port found
+
+            if name in self._func_args:
+                args.append(value)
+            else:
+                kwargs[name] = value
+
+        result = self._func(*args, **kwargs)
+        if result is not None:
+            if isinstance(result, Data):
+                self.out(self.SINGLE_RETURN_LINKNAME, result)
+            elif isinstance(result, collections.Mapping):
+                for name, value in result.iteritems():
                     self.out(name, value)
             else:
                 raise TypeError(
                     "Workfunction returned unsupported type '{}'\n"
-                    "Must be a Data type or a Mapping of string => Data".
-                        format(outs.__class__))
+                    "Must be a Data type or a Mapping of {{string: Data}}".
+                        format(result.__class__))
+
+        return result

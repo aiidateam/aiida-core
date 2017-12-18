@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import time
+import unittest
 from aiida.backends.testbase import AiidaTestCase
 
-from aiida.work.process import Process
+from aiida.work.processes import Process
 from aiida.work.workfunctions import workfunction
 from aiida.common.lang import override
 from aiida.orm.data.base import Int
@@ -34,6 +34,7 @@ def nested_tester():
             'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
 
 
+@unittest.skip("This is being deprecated")
 class TestCalculationHeartbeat(AiidaTestCase):
     def setUp(self):
         super(TestCalculationHeartbeat, self).setUp()

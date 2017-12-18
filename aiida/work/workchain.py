@@ -16,13 +16,13 @@ from plum import Continue
 from plum import ContextMixin
 
 from .interstep import *
-from . import process
+from . import processes
 from . import utils
 
 __all__ = ['WorkChain']
 
 
-class _WorkChainSpec(process.ProcessSpec):
+class _WorkChainSpec(processes.ProcessSpec):
     def __init__(self):
         super(_WorkChainSpec, self).__init__()
         self._outline = None
@@ -49,7 +49,7 @@ class _WorkChainSpec(process.ProcessSpec):
         return self._outline
 
 
-class WorkChain(ContextMixin, process.Process, utils.HeartbeatMixin):
+class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -258,7 +258,7 @@ class _Instruction(object):
     @staticmethod
     def check_command(command):
         if not isinstance(command, _Instruction):
-            assert issubclass(command.im_class, process.Process)
+            assert issubclass(command.im_class, processes.Process)
             args = inspect.getargspec(command)[0]
             assert len(args) == 1, "Instruction must take one argument only: self"
 

@@ -17,7 +17,7 @@ from aiida.work.persistence import Persistence
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
-from aiida.work.process import Process
+from aiida.work.processes import Process
 from aiida.work.launch import submit
 from aiida.common.lang import override
 from aiida.orm import load_node

@@ -13,7 +13,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 """
 
 import functools
-from . import process
+from . import processes
 from . import launch
 
 __all__ = ['workfunction']
@@ -47,13 +47,13 @@ def workfunction(func):
         This wrapper function is the actual function that is called.
         """
         # Build up the Process representing this function
-        wf_class = process.FunctionProcess.build(func, **kwargs)
+        wf_class = processes.FunctionProcess.build(func, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         return wf_class(inputs=inputs).execute()
 
     def run_get_node(*args, **kwargs):
         # Build up the Process representing this function
-        wf_class = process.FunctionProcess.build(func, **kwargs)
+        wf_class = processes.FunctionProcess.build(func, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         proc = wf_class(inputs=inputs)
         return proc.execute(), proc.calc

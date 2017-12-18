@@ -9,8 +9,6 @@
 ###########################################################################
 import logging
 import time
-import traceback
-import aiida.work.default_loop
 import aiida.work.globals
 import aiida.work.persistence
 from aiida.orm.calculation.job import JobCalculation
@@ -19,20 +17,22 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.work.legacy.job_process import ContinueJobCalculation
 from aiida.work.utils import CalculationHeartbeat
 from plum.exceptions import LockError
+from . import runners
 
 _LOGGER = logging.getLogger(__name__)
 
 import traceback
 from plum.process import ProcessState
-from aiida.work.process import Process
+from aiida.work.processes import Process
 import aiida.work.persistence
 from portalocker import LockException
+
 
 def launch_pending_jobs(storage=None, loop=None):
     if storage is None:
         storage = aiida.work.globals.get_persistence()
     if loop is None:
-        loop = aiida.work.default_loop.get_loop()
+        loop = runners.get_runner()
 
     executor = aiida.work.globals.get_thread_executor()
     for proc in _load_all_processes(storage, loop):
@@ -64,6 +64,7 @@ def _load_all_processes(storage, loop):
             _LOGGER.error(traceback.format_exc())
     return procs
 
+
 def launch_all_pending_job_calculations():
     """
     Launch all JobCalculations that are not currently being processed
@@ -87,6 +88,7 @@ def launch_all_pending_job_calculations():
         # Check if the process finished or was stopped early
         if not proc.has_finished():
             more_work = True
+
 
 def get_all_pending_job_calculations():
     """

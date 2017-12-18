@@ -30,7 +30,7 @@ from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
-from aiida.work.runner import get_runner
+from aiida.work.runners import get_runner
 from aiida import LOG_LEVEL_REPORT
 from . import utils
 
@@ -192,7 +192,7 @@ class Process(plum.process.Process):
 
     def __init__(self, inputs=None, pid=None, logger=None, runner=None, parent_pid=None):
         if runner is None:
-            from .runner import new_runner
+            from .runners import new_runner
             self._runner = new_runner()
         else:
             self._runner = runner
@@ -558,7 +558,7 @@ class FunctionProcess(Process):
         args = []
 
         # Split the inputs into positional and keyword arguments
-        args = []
+        args = [None] * len(self._func_args)
         kwargs = {}
         for name, value in self.inputs.items():
             try:
@@ -568,9 +568,10 @@ class FunctionProcess(Process):
             except ValueError:
                 pass  # No port found
 
-            if name in self._func_args:
-                args.append(value)
-            else:
+            # Check if it is a positional arg, if not then keyword
+            try:
+                args[self._func_args.index(name)] = value
+            except ValueError:
                 kwargs[name] = value
 
         result = self._func(*args, **kwargs)

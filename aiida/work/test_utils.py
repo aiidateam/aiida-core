@@ -10,7 +10,7 @@
 
 
 from plum.wait_ons import Barrier
-from aiida.work.process import Process
+from aiida.work.processes import Process
 
 
 class DummyProcess(Process):

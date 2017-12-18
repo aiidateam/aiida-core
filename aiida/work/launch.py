@@ -10,16 +10,13 @@
 
 from collections import namedtuple
 
-from enum import Enum
-
-from runner import get_runner
+from . import runners
 from . import legacy
 from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
-ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 
 def legacy_workflow(pk):
@@ -27,7 +24,7 @@ def legacy_workflow(pk):
 
 
 def submit(process_class, **inputs):
-    runner = get_runner()
+    runner = runners.get_runner()
     return runner.submit(process_class, **inputs)
 
 
@@ -43,18 +40,18 @@ def run(process, *args, **inputs):
     if utils.is_workfunction(process):
         return process(*args, **inputs)
     else:
-        runner = get_runner()
+        runner = runners.get_runner()
         return runner.run(process, *args, **inputs)
 
 
 def run_get_node(process, *args, **inputs):
     if utils.is_workfunction(process):
-        process.run_get_node(*args, **inputs)
+        return process.run_get_node(*args, **inputs)
     else:
-        runner = get_runner()
+        runner = runners.get_runner()
         return runner.run_get_node(process, *args, **inputs)
 
 
 def run_get_pid(process, *args, **inputs):
-    result, node = run_get_node(process, *args, **inputs)
-    return result, node.pid
+    result, calc = run_get_node(process, *args, **inputs)
+    return runners.ResultAndPid(result, calc.pk)

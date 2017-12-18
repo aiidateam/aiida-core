@@ -8,6 +8,7 @@ from . import utils
 
 __all__ = ['Runner', 'create_daemon_runner', 'create_runner']
 
+ResultAndCalcNode = namedtuple("ResultWithPid", ["result", "calc"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 _runner = None
@@ -48,7 +49,7 @@ def _object_factory(process_class, *args, **kwargs):
 def _ensure_process(process, runner, input_args, input_kwargs, *args, **kwargs):
     """ Take a process class, a process instance or a workfunction along with
     arguments and return a process instance"""
-    from aiida.work.process import Process
+    from aiida.work.processes import Process
     if isinstance(process, Process):
         assert len(input_args) == 0
         assert len(input_kwargs) == 0
@@ -124,7 +125,7 @@ class Runner(object):
             return process.run_get_node(*args, **inputs)
         with self.child_runner() as runner:
             process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
-            return ResultAndPid(process.execute(), process.calc)
+            return ResultAndCalcNode(process.execute(), process.calc)
 
     def run_get_pid(self, process, *args, **inputs):
         result, node = self.run_get_node(process, *args, **inputs)

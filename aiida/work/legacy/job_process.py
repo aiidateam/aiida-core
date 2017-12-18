@@ -19,11 +19,11 @@ from aiida.common import exceptions
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
-from aiida.work import process
+from aiida.work import processes
 from aiida.work import utils
 
 
-class JobProcess(process.Process):
+class JobProcess(processes.Process):
     TRANSPORT_OPERATION = 'TRANSPORT_OPERATION'
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = '_options'
@@ -53,7 +53,7 @@ class JobProcess(process.Process):
                 "prepend_text": unicode,
                 "append_text": unicode,
             }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=process.DictSchema(options))
+            spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options))
 
             # Inputs from use methods
             for k, v in calc_class._use_methods.iteritems():

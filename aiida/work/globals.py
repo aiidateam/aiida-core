@@ -13,7 +13,7 @@ def get_thread_executor():
     """
     Dinges
     """
-    from aiida.work.runner import create_runner
+    from aiida.work.runners import create_runner
     return create_runner()
 
 

@@ -12,7 +12,7 @@ from collections import namedtuple, MutableSequence
 from aiida.work.legacy.wait_on import WaitOnWorkflow
 from apricotpy import futures
 from aiida.orm import load_node
-from . import process
+from . import processes
 
 Action = namedtuple("Action", "running_info fn")
 
@@ -48,7 +48,7 @@ append_ = Append
 def _assign(key, workchain, awaitable):
     if isinstance(awaitable, WaitOnWorkflow):
         workchain.ctx[key] = awaitable.workflow
-    elif isinstance(awaitable, process.Process):
+    elif isinstance(awaitable, processes.Process):
         workchain.ctx[key] = awaitable.calc
     elif isinstance(awaitable, futures.Awaitable):
         workchain.ctx[key] = load_node(awaitable.pid)
@@ -63,7 +63,7 @@ def _assign_result(key, workchain, awaitable):
 def _append(key, workchain, awaitable):
     if isinstance(awaitable, WaitOnWorkflow):
         workchain.ctx.setdefault(key, []).append(awaitable.workflow)
-    elif isinstance(awaitable, process.Process):
+    elif isinstance(awaitable, processes.Process):
         workchain.ctx.setdefault(key, []).append(awaitable.calc)
     elif isinstance(awaitable, futures.Awaitable):
         workchain.ctx.setdefault(key, []).append(load_node(awaitable.pid))

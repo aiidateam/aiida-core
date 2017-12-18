@@ -348,8 +348,9 @@ class TestVerdiUserCommands(AiidaTestCase):
 
 class TestVerdiDataCommands(AiidaTestCase):
 
-    tjn1_id = None
-    tjn2_id = None
+    cmd_to_nodeid_map = dict()
+    # tjn1_id = None
+    # tjn2_id = None
     group_name = "trj_group"
     group_id = None
 
@@ -359,11 +360,22 @@ class TestVerdiDataCommands(AiidaTestCase):
         Create some data needed for the tests
         """
         from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.data.cif import CifData
+        from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Cif
         import numpy
+        import tempfile
 
         super(TestVerdiDataCommands, cls).setUpClass()
 
-        # Create a node with two arrays
+
+        # Create a group to add specific data inside
+        from aiida.orm.group import Group
+        g1 = Group(name=cls.group_name)
+        g1.store()
+        cls.group_id = g1.id
+
+        # Create the Trajectory data nodes
         tjn1 = TrajectoryData()
 
         # I create sample data
@@ -404,32 +416,79 @@ class TestVerdiDataCommands(AiidaTestCase):
                          velocities=velocities)
         tjn2.store()
 
-        cls.tjn1_id = tjn1.id
-        cls.tjn2_id = tjn2.id
+        # Keep track of the created objects
+        cls.cmd_to_nodeid_map[_Trajectory] = [tjn1.id, tjn2.id]
 
-        # Create a group and add the data inside
-        from aiida.orm.group import Group
-        g1 = Group(name=cls.group_name)
-        g1.store()
+        # Add the second Trajectory data to the group
         g1.add_nodes([tjn2])
-        cls.group_id = g1.id
+
+
+        # Create the CIF data nodes
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_9012064
+                _space_group_IT_number           166
+                _symmetry_space_group_name_H-M   'R -3 m :H'
+                _cell_angle_alpha                90
+                _cell_angle_beta                 90
+                _cell_angle_gamma                120
+                _cell_length_a                   4.395
+                _cell_length_b                   4.395
+                _cell_length_c                   30.440
+                _cod_database_code               9012064
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_U_iso_or_equiv
+                Bi 0.00000 0.00000 0.40046 0.02330
+                Te1 0.00000 0.00000 0.00000 0.01748
+                Te2 0.00000 0.00000 0.79030 0.01912
+            ''')
+            f.flush()
+            c1 = CifData(file=f.name)
+            c1.store()
+            c2 = CifData(file=f.name)
+            c2.store()
+
+            # Keep track of the created objects
+            cls.cmd_to_nodeid_map[_Cif] = [c1.id, c2.id]
+
+            # Add the second CIF data to the group
+            g1.add_nodes([c2])
+
+
 
 
     def test_trajectory_simple_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Cif
 
-        traj_cmd = _Trajectory()
+        sub_cmds = [_Trajectory, _Cif]
+        # traj_cmd = _Trajectory()
+        for sub_cmd in sub_cmds:
+            with Capturing() as output:
+                sub_cmd().list()
 
-        with Capturing() as output:
-            traj_cmd.list()
+            out_str = ''.join(output)
 
-        out_str = ''.join(output)
+            for id in self.cmd_to_nodeid_map[sub_cmd]:
+                if str(id) not in out_str:
+                    self.fail(
+                        "The data objects with ids {} and {} were not found. "
+                        .format(str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                        "The output was {}".format(out_str))
 
-        self.assertEqual(
-            ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
-            str(self.tjn2_id), out_str,
-            "The data objects with ids {} and {} were not found".format(
-                    self.tjn1_id, self.tjn2_id))
+            # self.assertEqual(
+            #     ''.join(sub_cmd().get_column_names()) +
+            #     str(self.cmd_to_nodeid_map[sub_cmd][0]) +
+            #     str(self.cmd_to_nodeid_map[sub_cmd][1]), out_str,
+            #     "The data objects with ids {} and {} were not found. ".format(
+            #         str(self.cmd_to_nodeid_map[sub_cmd][0]),
+            #         str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+            #     "The output was {}".format(out_str))
 
     def test_trajectory_past_days_listing(self):
         from aiida.cmdline.commands.data import _Trajectory

@@ -11,10 +11,10 @@ Developer's guide
    devel_tutorial/code_plugin_float_sum
    devel_tutorial/cmdline_plugin
    devel_tutorial/code_plugin_qe
+   dev_workflow
    devel_tutorial/parser_warnings_policy
    devel_tutorial/extend_restapi
    workflows
-   dev_workflow
    data_cmdline
    tcod_exporter
    git_cheatsheet

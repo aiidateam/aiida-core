@@ -11,6 +11,7 @@ Provides:
 
 """
 from contextlib import contextmanager
+from functools import wraps
 
 from click_spinner import spinner as cli_spinner
 
@@ -37,6 +38,7 @@ def with_dbenv(function):
             my_calc = CalculationFactory('mycalc.mycalc')
     """
 
+    @wraps(function)
     def decorated_function(*args, **kwargs):
         """load dbenv if not yet loaded, then run the original function"""
         load_dbenv_if_not_loaded()

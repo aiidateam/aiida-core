@@ -324,7 +324,7 @@ class Process(plum.process.Process):
 
     @property
     def runner(self):
-        return self.loop()
+        return self._runner
 
     @protected
     def get_parent_calc(self):

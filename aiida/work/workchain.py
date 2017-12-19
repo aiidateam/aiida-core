@@ -7,18 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import abc
-from aiida.common.lang import override
+import functools
 import inspect
 import plum
-from plum import Continue
-from plum import ContextMixin
 
-from .interstep import *
+from aiida.orm.utils import load_node, load_workflow
+from aiida.common.lang import override
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from . import processes
 from . import utils
 from . import waits
+from .waits import *
 
 __all__ = ['WorkChain']
 
@@ -50,7 +50,7 @@ class _WorkChainSpec(processes.ProcessSpec):
         return self._outline
 
 
-class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
+class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -92,9 +92,9 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
 
         self.set_logger(self._calc.logger)
 
-    def insert_barrier(self, awaitable):
+    def insert_awaitable(self, awaitable):
         """
-        Insert a barrier that will cause the workchain to wait until the wait
+        Insert a awaitable that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
         :param awaitable: The thing to await
@@ -102,16 +102,16 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
         """
         self._awaitables.append(awaitable)
 
-    def remove_barrier(self, awaitable):
+    def remove_awaitable(self, awaitable):
         """
-        Remove a barrier.
+        Remove a awaitable.
 
-        Precondition: must be a barrier that was previously inserted
+        Precondition: must be a awaitable that was previously inserted
 
-        :param awaitable:  The awaitable to remove
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :param awaitable: The awaitable to remove
         """
-        del self._awaitables[awaitable]
+        index = self._awaitables.index(awaitable)
+        del self._awaitables[index]
 
     def to_context(self, **kwargs):
         """
@@ -119,20 +119,10 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
         a user to add multiple intersteps that will assign a certain value
         to the corresponding key in the context of the workchain
         """
-        intersteps = []
         for key, value in kwargs.iteritems():
-            if not isinstance(value, ContextAction):
-                value = assign_(value)
-
-            awaitable = value.awaitable
-
-            if not isinstance(awaitable, waits.Wait):
-                raise TypeError("Could not find a wait object to place in the context")
-
-            # TODO: Ask the runner to call us back when the 'wait' is done
-            # self.runner.add_done_callback(wait, self.some_callback)
-
-            self.insert_barrier(awaitable)
+            awaitable = waits.construct_awaitable(value)
+            awaitable.key = key
+            self.insert_awaitable(awaitable)
 
     @override
     def _run(self):
@@ -179,8 +169,8 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                return plum.Continue(self._do_step)
-                # return plum.Wait('Waiting')
+                self.action_awaitables()
+                return plum.Wait('Waiting')
             else:
                 return plum.Continue(self._do_step)
         else:
@@ -213,6 +203,66 @@ class WorkChain(ContextMixin, processes.Process, utils.HeartbeatMixin):
         :type msg: str
         """
         return self.abort(msg=msg)
+
+
+    def action_awaitables(self):
+        """
+        """
+        for awaitable in self._awaitables:
+            if awaitable.target == waits.AwaitableTarget.CALCULATION:
+                fn = functools.partial(self.on_calculation_finished, awaitable)
+                self.runner.call_on_calculation_finish(awaitable.pk, fn)
+            elif awaitable.target == waits.AwaitableTarget.WORKFLOW:
+                fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
+                self.runner.call_on_legacy_worklow_finish(awaitable.pk, fn)
+            else:
+                assert "invalid awaitable target '{}'".format(awaitable.target)
+
+
+    def on_calculation_finished(self, awaitable, pk):
+        """
+        """
+        try:
+            node = load_node(pk)
+        except (MultipleObjectsError, NotExistent) as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
+
+        if awaitable.outputs:
+            value = node.get_outputs()
+        else:
+            value = node
+
+        if awaitable.action == waits.AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == waits.AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
+
+
+    def on_legacy_workflow_finished(self, awaitable, pk):
+        """
+        """
+        try:
+            workflow = load_workflow(pk=pk)
+        except ValueError as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Workflow instance'.format(pk))
+
+        if awaitable.outputs:
+            value = workflow.get_results()
+        else:
+            value = workflow
+
+        if awaitable.action == waits.AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == waits.AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
 
 
 ToContext = dict

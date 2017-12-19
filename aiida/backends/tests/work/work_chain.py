@@ -423,7 +423,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(wf=work.LegacyWorkflow(wf.pk))
+                return ToContext(wf=wf)
 
             def check(self):
                 assert self.ctx.wf is not None
@@ -443,7 +443,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.start, cls.check)
 
             def start(self):
-                return ToContext(res=Outputs(work.LegacyWorkflow(wf.pk)))
+                return ToContext(res=Outputs(wf))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())

@@ -66,7 +66,7 @@ class CalculationTranslator(NodeTranslator):
 
         if node.dbnode.type.startswith("calculation.job."):
 
-            input_folder = node.folder.get_subfolder("raw_input")
+            input_folder = node._raw_input_folder
 
             if filename is not None:
                 response = {}
@@ -103,12 +103,21 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved output files for job calculation
         """
+
         if node.dbnode.type.startswith("calculation.job."):
 
-            output_folder = node.out.retrieved._get_folder_pathsubfolder
+            retrieved_folder = node.out.retrieved
+            response = {}
+
+            if retrieved_folder is None:
+                response["status"] = 200
+                response["data"] = "This node does not have retrieved folder"
+                return response
+
+            output_folder = retrieved_folder._get_folder_pathsubfolder
 
             if filename is not None:
-                response = {}
+
 
                 if rtype is None:
                     rtype = "download"

@@ -12,7 +12,6 @@
 
 from aiida.restapi.translator.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
-from flask import send_from_directory
 import os
 
 class CalculationTranslator(NodeTranslator):

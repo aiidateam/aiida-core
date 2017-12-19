@@ -99,7 +99,7 @@ Append to file ``float_cmd.py``::
 
    @float_cmd.command()
    @click.option('--outfile', '-o', type=click.Path(dir_okay=False), help='write output to this file (by default print to stout).'
-   @click.argument('pk')
+   @click.argument('pk', type=int)
    def export(outfile, pk):
       """Export a FloatData node, identified by PK to plain text format"""
       load_dbenv_if_not_loaded()  # Important to load the dbenv in the last moment

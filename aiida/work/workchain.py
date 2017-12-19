@@ -11,6 +11,7 @@ import abc
 import functools
 import inspect
 import plum
+from plum import ProcessState
 
 from aiida.orm.utils import load_node, load_workflow
 from aiida.common.lang import override
@@ -214,7 +215,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
                 self.runner.call_on_calculation_finish(awaitable.pk, fn)
             elif awaitable.target == waits.AwaitableTarget.WORKFLOW:
                 fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
-                self.runner.call_on_legacy_worklow_finish(awaitable.pk, fn)
+                self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
@@ -241,6 +242,10 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
 
         self.remove_awaitable(awaitable)
 
+        if len(self._awaitables) == 0:
+            assert self.state == ProcessState.WAITING
+            self.resume()
+
 
     def on_legacy_workflow_finished(self, awaitable, pk):
         """
@@ -263,6 +268,10 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
+
+        if len(self._awaitables) == 0:
+            assert self.state == ProcessState.WAITING
+            self.resume()
 
 
 ToContext = dict

@@ -21,6 +21,10 @@ class TransportQueue(object):
     AuthinfoEntry = namedtuple("AuthinfoEntry", ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
     def __init__(self, loop=None, interval=DEFAULT_INTERVAL):
+        """
+        :param loop: The io loop
+        :param interval: The callback interval in seconds
+        """
         super(TransportQueue, self).__init__()
 
         self._loop = loop
@@ -36,12 +40,6 @@ class TransportQueue(object):
         with self._entries_lock:
             self._get_or_create_entry(authinfo).callbacks.append(callback)
 
-    def get_num_waiting(self):
-        total = 0
-        for entry in self._entries.itervalues():
-            total += len(entry.callbacks)
-        return total
-
     def _get_or_create_entry(self, authinfo):
         if authinfo.id in self._entries:
             return self._entries[authinfo.id]
@@ -51,10 +49,10 @@ class TransportQueue(object):
         # Check if the transport is happy to be opened with any frequency
         safe_open_interval = transport.get_safe_open_interval()
         if safe_open_interval == 0.:
-            callback_handle = self.loop().call_soon(self._do_callback, authinfo.id)
+            callback_handle = self._loop.add_callback(self._do_callback, authinfo.id)
         else:
             # Ok, we have to use a delay
-            callback_handle = self.loop().call_later(safe_open_interval, self._do_callback, authinfo.id)
+            callback_handle = self._loop.call_later(safe_open_interval, self._do_callback, authinfo.id)
 
         entry = self.AuthinfoEntry(authinfo, transport, [], callback_handle)
         self._entries[authinfo.id] = entry
@@ -66,7 +64,6 @@ class TransportQueue(object):
         with entry.transport:
             for fn in entry.callbacks:
                 _LOGGER.debug("Passing transport to {}...".format(fn))
-
                 try:
                     fn(entry.authinfo, entry.transport)
                 except BaseException:

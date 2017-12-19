@@ -1573,37 +1573,54 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
 
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        st_data_filters = {}
+        self.query_past_days(st_data_filters, args)
+        qb.append(self.dataclass, tag="struc", created_by="creator",
+                  filters=st_data_filters,
+                  project=["*"])
 
-        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="struc")
+
+        qb.order_by({self.dataclass: {'ctime': 'asc'}})
+        res = qb.distinct()
 
         entry_list = []
-        for obj in object_list:
-            formulae = '?'
-            try:
-                formulae = ",".join(obj.get_attr('formulae'))
-            except AttributeError:
-                pass
-            except TypeError:
-                pass
-            source_uri = '?'
-            try:
-                source_uri = obj.get_attr('source')['uri']
-            except AttributeError:
-                pass
-            except KeyError:
-                pass
-            entry_list.append([str(obj.pk), formulae, source_uri])
+        if res.count() > 0:
+            for [obj] in res.iterall():
+                formulae = '?'
+                try:
+                    formulae = ",".join(obj.get_attr('formulae'))
+                except AttributeError:
+                    pass
+                except TypeError:
+                    pass
+                source_uri = '?'
+                try:
+                    source_uri = obj.get_attr('source')['uri']
+                except AttributeError:
+                    pass
+                except KeyError:
+                    pass
+                entry_list.append([str(obj.pk), formulae, source_uri])
         return entry_list
 
     def get_column_names(self):

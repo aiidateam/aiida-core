@@ -349,8 +349,7 @@ class TestVerdiUserCommands(AiidaTestCase):
 class TestVerdiDataCommands(AiidaTestCase):
 
     cmd_to_nodeid_map = dict()
-    # tjn1_id = None
-    # tjn2_id = None
+    cmd_to_nodeid_map_for_groups = dict()
     group_name = "trj_group"
     group_id = None
 
@@ -421,6 +420,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         # Add the second Trajectory data to the group
         g1.add_nodes([tjn2])
+        # Keep track of the id of the node that you added to the group
+        cls.cmd_to_nodeid_map_for_groups[_Trajectory] = tjn2.id
 
 
         # Create the CIF data nodes
@@ -457,8 +458,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
             # Add the second CIF data to the group
             g1.add_nodes([c2])
-
-
+            # Keep track of the id of the node that you added to the group
+            cls.cmd_to_nodeid_map_for_groups[_Cif] = c2.id
 
 
     def test_trajectory_simple_listing(self):
@@ -466,12 +467,11 @@ class TestVerdiDataCommands(AiidaTestCase):
         from aiida.cmdline.commands.data import _Cif
 
         sub_cmds = [_Trajectory, _Cif]
-        # traj_cmd = _Trajectory()
         for sub_cmd in sub_cmds:
             with Capturing() as output:
                 sub_cmd().list()
 
-            out_str = ''.join(output)
+            out_str = ' '.join(output)
 
             for id in self.cmd_to_nodeid_map[sub_cmd]:
                 if str(id) not in out_str:
@@ -481,47 +481,50 @@ class TestVerdiDataCommands(AiidaTestCase):
                                 str(self.cmd_to_nodeid_map[sub_cmd][1])) +
                         "The output was {}".format(out_str))
 
-            # self.assertEqual(
-            #     ''.join(sub_cmd().get_column_names()) +
-            #     str(self.cmd_to_nodeid_map[sub_cmd][0]) +
-            #     str(self.cmd_to_nodeid_map[sub_cmd][1]), out_str,
-            #     "The data objects with ids {} and {} were not found. ".format(
-            #         str(self.cmd_to_nodeid_map[sub_cmd][0]),
-            #         str(self.cmd_to_nodeid_map[sub_cmd][1])) +
-            #     "The output was {}".format(out_str))
 
     def test_trajectory_past_days_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Cif
 
-        args_to_test = [['-p', '0'], ['--past-days', '0']]
-        for arg in args_to_test:
-            traj_cmd = _Trajectory()
-            with Capturing() as output:
-                traj_cmd.list(*arg)
-            out_str = ''.join(output)
+        sub_cmds = [_Trajectory, _Cif]
+        for sub_cmd in sub_cmds:
+            args_to_test = [['-p', '0'], ['--past-days', '0']]
+            for arg in args_to_test:
+                curr_scmd = sub_cmd()
+                with Capturing() as output:
+                    curr_scmd.list(*arg)
+                out_str = ' '.join(output)
 
-            # This should be an empty output
-            self.assertEqual('', out_str,
-                             "No data objects should be retrieved and "
-                             "some were retrieved. The (conctenation of the) "
-                             "output was: {}".format(out_str))
+                # This should be an empty output
+                for id in self.cmd_to_nodeid_map[sub_cmd]:
+                    if str(id) in out_str:
+                        self.fail(
+                            '', out_str,
+                            "No data objects should be retrieved and "
+                            "some were retrieved. The (concatenation of the) "
+                            "output was: {}".format(out_str))
 
-        args_to_test = [['-p', '1'], ['--past-days', '1']]
-        for arg in args_to_test:
-            traj_cmd = _Trajectory()
-            with Capturing() as output:
-                traj_cmd.list(*arg)
-            out_str = ''.join(output)
+            args_to_test = [['-p', '1'], ['--past-days', '1']]
+            for arg in args_to_test:
+                curr_scmd = sub_cmd()
+                with Capturing() as output:
+                    curr_scmd.list(*arg)
+                out_str = ' '.join(output)
 
-            self.assertEqual(
-                ''.join(traj_cmd.get_column_names()) + str(self.tjn1_id) +
-                str(self.tjn2_id), out_str,
-                "The data objects with ids {} and {} were not found".format(
-                    self.tjn1_id, self.tjn2_id))
+                for id in self.cmd_to_nodeid_map[sub_cmd]:
+                    if str(id) not in out_str:
+                        self.fail(
+                            "The data objects ({}) with ids {} and {} "
+                            "were not found. "
+                            .format(sub_cmd,
+                                    str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                    str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                            "The output was {}".format(out_str))
 
 
     def test_trajectory_group_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Cif
 
         args_to_test = [
             ['-g', self.group_name],
@@ -529,14 +532,19 @@ class TestVerdiDataCommands(AiidaTestCase):
             ['-G', str(self.group_id)],
             ['--group-pk', str(self.group_id)]
         ]
-        for arg in args_to_test:
-            traj_cmd = _Trajectory()
-            with Capturing() as output:
-                traj_cmd.list(*arg)
-            out_str = ''.join(output)
 
-            self.assertEqual(
-                ''.join(traj_cmd.get_column_names()) + str(self.tjn2_id),
-                out_str,
-                "The data object with id {} was not found".format(
-                    self.tjn1_id))
+        sub_cmds = [_Trajectory, _Cif]
+        for sub_cmd in sub_cmds:
+            for arg in args_to_test:
+                curr_scmd = sub_cmd()
+                with Capturing() as output:
+                    curr_scmd.list(*arg)
+                out_str = ' '.join(output)
+
+                if str(self.cmd_to_nodeid_map_for_groups[
+                           sub_cmd]) not in out_str:
+                    self.fail(
+                        "The data objects with id {} was not found. "
+                        .format(
+                            str(self.cmd_to_nodeid_map_for_groups[sub_cmd])
+                            + "The output was {}".format(out_str)))

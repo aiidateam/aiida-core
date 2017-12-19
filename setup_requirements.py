@@ -79,7 +79,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'Flask==0.10.1',
-        'Flask-RESTful==0.3.5',
+        'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
         'pyparsing==2.1.10',
         'Pattern==2.6',

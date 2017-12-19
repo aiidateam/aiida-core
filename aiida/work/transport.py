@@ -23,6 +23,7 @@ class TransportQueue(object):
     def __init__(self, loop=None, interval=DEFAULT_INTERVAL):
         super(TransportQueue, self).__init__()
 
+        self._loop = loop
         self._entries = {}
         self._interval = interval
         self._entries_lock = threading.Lock()

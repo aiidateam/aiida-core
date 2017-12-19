@@ -139,7 +139,6 @@ class Runner(object):
         return process.calc
 
     def _submit(self, process, *args, **kwargs):
-
         pass
 
     @contextmanager

@@ -98,7 +98,7 @@ The last step is now implementing ``verdi data yourplugin-float export`` command
 Append to file ``float_cmd.py``::
 
    @float_cmd.command()
-   @click.option('--outfile', '-o', type=click.Path(dir_ok=False), help='write output to this file (by default print to stout).'
+   @click.option('--outfile', '-o', type=click.Path(dir_okay=False), help='write output to this file (by default print to stout).'
    @click.argument('pk')
    def export(outfile, pk):
       """Export a FloatData node, identified by PK to plain text format"""
@@ -112,7 +112,21 @@ Append to file ``float_cmd.py``::
       else:
          click.echo(file_content)
 
-As is mentioned in the commands, it is important to load the dbenv as late as possible. Particularly it should never be done at import time (on module level) but only inside whichever function requires it. This ensures that command completion does not get slowed down while importing your command.
+A subcommand to a group can be defined using the following pattern::
+
+   @float_cmd.command()
+   def export(...):
+      ...
+
+Where the subcommand will now automatically have the name of the function. If you want it to have a different name, simply pass it as an argument to the ``<group>.command('<subcmd name>')`` decorator.
+
+::
+   
+   def export(...):
+      """..."""
+      load_dbenv_if_not_loaded()  # Important to load the dbenv in the last moment
+
+As is mentioned in the comment, it is important to load the dbenv as late as possible. Particularly it should never be done at import time (on module level) but only inside whichever function requires it. This ensures that command completion does not get slowed down while importing your command.
 
 Last but by no means least, it is important to test our plugin command, this example will use the builtin unittest framework but it is just as well possible to use pytest.
 
@@ -168,6 +182,6 @@ Understanding commandline plugins
 
 The discovery of plugins via entry points follows exactly the same mechanisms as all other plugin types.
 
-The possibility of pluging cli commands into each other is a feature of ``click`` a python library that greatly simplifies the task. You can find in-debth documentation here: `Click 6.0 docs <click_docs>`_.
+The possibility of plugging cli commands into each other is a feature of ``click`` a python library that greatly simplifies the task. You can find in-depth documentation here: `Click 6.0 docs <click_docs>`_.
 
 .. _click_docs: http://click.pocoo.org/6/

@@ -13,6 +13,7 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
+__all__ = ['Node', 'Computer', 'Group', 'Lock', 'LockManager', 'Workflow', 'kill_all', 'get_all_running_steps', 'get_workflow_info', 'Code', 'delete_code', 'Comment', 'User']
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node

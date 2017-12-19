@@ -354,25 +354,12 @@ class TestVerdiDataCommands(AiidaTestCase):
     group_id = None
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create some data needed for the tests
-        """
+    def create_trajectory_data(cls, cmd_to_nodeid_map,
+                               cmd_to_nodeid_map_for_groups, group):
+
         from aiida.orm.data.array.trajectory import TrajectoryData
-        from aiida.orm.data.cif import CifData
         from aiida.cmdline.commands.data import _Trajectory
-        from aiida.cmdline.commands.data import _Cif
         import numpy
-        import tempfile
-
-        super(TestVerdiDataCommands, cls).setUpClass()
-
-
-        # Create a group to add specific data inside
-        from aiida.orm.group import Group
-        g1 = Group(name=cls.group_name)
-        g1.store()
-        cls.group_id = g1.id
 
         # Create the Trajectory data nodes
         tjn1 = TrajectoryData()
@@ -416,37 +403,44 @@ class TestVerdiDataCommands(AiidaTestCase):
         tjn2.store()
 
         # Keep track of the created objects
-        cls.cmd_to_nodeid_map[_Trajectory] = [tjn1.id, tjn2.id]
+        cmd_to_nodeid_map[_Trajectory] = [tjn1.id, tjn2.id]
 
         # Add the second Trajectory data to the group
-        g1.add_nodes([tjn2])
+        group.add_nodes([tjn2])
         # Keep track of the id of the node that you added to the group
-        cls.cmd_to_nodeid_map_for_groups[_Trajectory] = tjn2.id
+        cmd_to_nodeid_map_for_groups[_Trajectory] = tjn2.id
 
+    @classmethod
+    def create_cif_data(cls, cmd_to_nodeid_map,
+                               cmd_to_nodeid_map_for_groups, group):
+
+        from aiida.orm.data.cif import CifData
+        from aiida.cmdline.commands.data import _Cif
+        import tempfile
 
         # Create the CIF data nodes
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
-                data_9012064
-                _space_group_IT_number           166
-                _symmetry_space_group_name_H-M   'R -3 m :H'
-                _cell_angle_alpha                90
-                _cell_angle_beta                 90
-                _cell_angle_gamma                120
-                _cell_length_a                   4.395
-                _cell_length_b                   4.395
-                _cell_length_c                   30.440
-                _cod_database_code               9012064
-                loop_
-                _atom_site_label
-                _atom_site_fract_x
-                _atom_site_fract_y
-                _atom_site_fract_z
-                _atom_site_U_iso_or_equiv
-                Bi 0.00000 0.00000 0.40046 0.02330
-                Te1 0.00000 0.00000 0.00000 0.01748
-                Te2 0.00000 0.00000 0.79030 0.01912
-            ''')
+                 data_9012064
+                 _space_group_IT_number           166
+                 _symmetry_space_group_name_H-M   'R -3 m :H'
+                 _cell_angle_alpha                90
+                 _cell_angle_beta                 90
+                 _cell_angle_gamma                120
+                 _cell_length_a                   4.395
+                 _cell_length_b                   4.395
+                 _cell_length_c                   30.440
+                 _cod_database_code               9012064
+                 loop_
+                 _atom_site_label
+                 _atom_site_fract_x
+                 _atom_site_fract_y
+                 _atom_site_fract_z
+                 _atom_site_U_iso_or_equiv
+                 Bi 0.00000 0.00000 0.40046 0.02330
+                 Te1 0.00000 0.00000 0.00000 0.01748
+                 Te2 0.00000 0.00000 0.79030 0.01912
+             ''')
             f.flush()
             c1 = CifData(file=f.name)
             c1.store()
@@ -454,12 +448,41 @@ class TestVerdiDataCommands(AiidaTestCase):
             c2.store()
 
             # Keep track of the created objects
-            cls.cmd_to_nodeid_map[_Cif] = [c1.id, c2.id]
+            cmd_to_nodeid_map[_Cif] = [c1.id, c2.id]
 
             # Add the second CIF data to the group
-            g1.add_nodes([c2])
+            group.add_nodes([c2])
             # Keep track of the id of the node that you added to the group
-            cls.cmd_to_nodeid_map_for_groups[_Cif] = c2.id
+            cmd_to_nodeid_map_for_groups[_Cif] = c2.id
+
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create some data needed for the tests
+        """
+        import tempfile
+
+        super(TestVerdiDataCommands, cls).setUpClass()
+
+        # Create a group to add specific data inside
+        from aiida.orm.group import Group
+        g1 = Group(name=cls.group_name)
+        g1.store()
+        cls.group_id = g1.id
+
+        cls.create_trajectory_data(cls.cmd_to_nodeid_map,
+                                   cls.cmd_to_nodeid_map_for_groups, g1)
+        cls.create_cif_data(cls.cmd_to_nodeid_map,
+                            cls.cmd_to_nodeid_map_for_groups, g1)
+
+        # with tempfile.NamedTemporaryFile(prefix="Fe") as f:
+        #     f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
+        #     f.flush()
+        #     upf = UpfData(file=f.name)
+        #     upf.store()
+
+
 
 
     def test_trajectory_simple_listing(self):

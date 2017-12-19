@@ -138,12 +138,11 @@ class Runner(object):
 
     def submit(self, process_class, *args, **inputs):
         assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
-
         process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
         process.play()
         return process.calc
 
-    def call_on_legacy_wf_finish(self, pk, callback):
+    def call_on_legacy_workflow_finish(self, pk, callback):
         legacy_wf = aiida.orm.load_workflow(pk=pk)
         self._poll_legacy_wf(legacy_wf, callback)
 
@@ -164,13 +163,13 @@ class Runner(object):
 
     def _poll_legacy_wf(self, workflow, callback):
         if workflow.has_finished_ok() or workflow.has_failed():
-            callback(workflow.pk)
+            self._loop.add_callback(callback, workflow.pk)
         else:
             self._loop.call_later(self._poll_interval, self._poll_legacy_wf, workflow, callback)
 
     def _poll_calculation(self, calc_node, callback):
         if calc_node.has_finished():
-            callback(calc_node.pk)
+            self._loop.add_callback(callback, calc_node.pk)
         else:
             self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node, callback)
 

@@ -319,8 +319,8 @@ class Process(plum.process.Process):
 
     # end region
 
-    def submit(self, process_or_workfunction, *args, **kwargs):
-        pass
+    def submit(self, process, *args, **kwargs):
+        return self.runner.submit(process, *args, **kwargs)
 
     @property
     def runner(self):

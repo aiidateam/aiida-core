@@ -211,15 +211,15 @@ class TestWorkchain(AiidaTestCase):
 
             def s1(self):
                 return ToContext(
-                    r1=Outputs(submit(ReturnA)),
-                    r2=Outputs(submit(ReturnB)))
+                    r1=Outputs(self.submit(ReturnA)),
+                    r2=Outputs(self.submit(ReturnB)))
 
             def s2(self):
                 assert self.ctx.r1['_return'] == A
                 assert self.ctx.r2['_return'] == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(submit(ReturnB)))
+                return ToContext(r1=Outputs(self.submit(ReturnB)))
 
             def s3(self):
                 assert self.ctx.r1['_return'] == B
@@ -308,7 +308,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=submit(SubWorkChain))
+                return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -333,7 +333,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.dynamic_output()
 
             def run(self):
-                return ToContext(subwc=submit(SubWorkChain))
+                return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
                 assert self.ctx.subwc.out.value == Int(5)
@@ -392,8 +392,8 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.start, cls.result)
 
             def start(self):
-                self.to_context(result_a=Outputs(submit(SimpleWc)))
-                return ToContext(result_b=Outputs(submit(SimpleWc)))
+                self.to_context(result_a=Outputs(self.submit(SimpleWc)))
+                return ToContext(result_b=Outputs(self.submit(SimpleWc)))
 
             def result(self):
                 assert self.ctx.result_a['_return'] == val

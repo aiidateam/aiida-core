@@ -2,11 +2,13 @@ import plum
 import inspect
 from collections import namedtuple
 from contextlib import contextmanager
+
+import aiida.orm
 from . import rmq
 from . import transport
 from . import utils
 
-__all__ = ['Runner', 'create_daemon_runner', 'create_runner']
+__all__ = ['Runner', 'create_daemon_runner', 'create_runner', 'new_runner']
 
 ResultAndCalcNode = namedtuple("ResultWithPid", ["result", "calc"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
@@ -26,8 +28,8 @@ def set_runner(runner):
     _runnner = runner
 
 
-def new_runner():
-    return Runner({})
+def new_runner(**kwargs):
+    return Runner({}, **kwargs)
 
 
 def convert_to_inputs(workfunction, *args, **kwargs):
@@ -76,9 +78,12 @@ def _create_inputs_dictionary(process, *args, **kwargs):
 
 
 class Runner(object):
-    def __init__(self, rmq_config, loop=None):
+    _poll_interval = 5.
 
+    def __init__(self, rmq_config, loop=None, poll_interval=5.):
         self._loop = loop if loop is not None else plum.new_event_loop()
+        self._poll_interval = poll_interval
+
         self._transport = transport.TransportQueue(self._loop)
         self._rmq_config = rmq_config
         self._rmq = None  # construct from config
@@ -138,8 +143,15 @@ class Runner(object):
         process.play()
         return process.calc
 
-    def _submit(self, process, *args, **kwargs):
+    def call_on_legacy_wf_finish(self, pk, callback):
+        legacy_wf = aiida.orm.load_workflow(pk=pk)
+        self._poll_legacy_wf(legacy_wf, callback)
 
+    def call_on_calculation_finish(self, pk, callback):
+        calc_node = aiida.orm.load_node(pk=pk)
+        self._poll_calculation(calc_node, callback)
+
+    def _submit(self, process, *args, **kwargs):
         pass
 
     @contextmanager
@@ -149,6 +161,18 @@ class Runner(object):
             yield runner
         finally:
             runner.close()
+
+    def _poll_legacy_wf(self, workflow, callback):
+        if workflow.has_finished_ok() or workflow.has_failed():
+            callback(workflow.pk)
+        else:
+            self._loop.call_later(self._poll_interval, self._poll_legacy_wf, workflow, callback)
+
+    def _poll_calculation(self, calc_node, callback):
+        if calc_node.has_finished():
+            callback(calc_node.pk)
+        else:
+            self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node, callback)
 
 
 def create_runner(submit_to_daemon=True, rmq_control_panel={}):

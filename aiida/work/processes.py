@@ -30,8 +30,8 @@ from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
-from aiida.work.runners import get_runner
 from aiida import LOG_LEVEL_REPORT
+from .runners import get_runner
 from . import utils
 
 __all__ = ['Process', 'FunctionProcess']

@@ -182,7 +182,7 @@ class Listable(object):
                             help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
         parser.add_argument('-A', '--all-users', action='store_true', default=False,
-                            help="show groups for all users, rather than only for the"
+                            help="show objects for all users, rather than only for the"
                                  "current user")
 
     def get_column_names(self):
@@ -1517,7 +1517,6 @@ class _Cif(VerdiCommandWithSubcommands,
         from aiida.backends.utils import get_automatic_user
         from aiida.orm.implementation import User
         from aiida.orm.implementation import Group
-        from aiida.orm.data.structure import (get_formula, get_symbols_string)
 
         qb = QueryBuilder()
         if args.all_users is False:

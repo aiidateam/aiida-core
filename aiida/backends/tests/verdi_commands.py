@@ -348,12 +348,15 @@ class TestVerdiDataCommands(AiidaTestCase):
 
     cmd_to_nodeid_map = dict()
     cmd_to_nodeid_map_for_groups = dict()
+    cmd_to_nodeid_map_for_nuser = dict()
+
     group_name = "trj_group"
     group_id = None
 
     @classmethod
     def create_trajectory_data(cls, cmd_to_nodeid_map,
-                               cmd_to_nodeid_map_for_groups, group):
+                               cmd_to_nodeid_map_for_groups,
+                               cmd_to_nodeid_map_for_nuser, group, new_user):
 
         from aiida.orm.data.array.trajectory import TrajectoryData
         from aiida.cmdline.commands.data import _Trajectory
@@ -408,9 +411,21 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Keep track of the id of the node that you added to the group
         cmd_to_nodeid_map_for_groups[_Trajectory] = tjn2.id
 
+        # Create a trajectory data that belongs to another user
+        tjn3 = TrajectoryData()
+        tjn3.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+        tjn3.dbnode.user = new_user._dbuser
+        tjn3.store()
+
+        # Put it is to the right map
+        cmd_to_nodeid_map_for_nuser[_Trajectory] = [tjn3.id]
+
     @classmethod
     def create_cif_data(cls, cmd_to_nodeid_map,
-                               cmd_to_nodeid_map_for_groups, group):
+                        cmd_to_nodeid_map_for_groups,
+                        cmd_to_nodeid_map_for_nuser, group, new_user):
 
         from aiida.orm.data.cif import CifData
         from aiida.cmdline.commands.data import _Cif
@@ -453,9 +468,18 @@ class TestVerdiDataCommands(AiidaTestCase):
             # Keep track of the id of the node that you added to the group
             cmd_to_nodeid_map_for_groups[_Cif] = c2.id
 
+            # Create a Cif node belonging to another user
+            c3 = CifData(file=f.name)
+            c3.dbnode.user = new_user._dbuser
+            c3.store()
+
+            # Put it is to the right map
+            cmd_to_nodeid_map_for_nuser[_Cif] = [c3.id]
+
     @classmethod
     def create_bands_data(cls, cmd_to_nodeid_map,
-                          cmd_to_nodeid_map_for_groups, group):
+                          cmd_to_nodeid_map_for_groups,
+                          cmd_to_nodeid_map_for_nuser, group, new_user):
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
@@ -489,9 +513,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         b1 = BandsData()
         b1.set_kpointsdata(k1)
-        # 4 bands with linearly increasing energies, it does not make sense
-        # but is good for testing
-        input_bands = numpy.array([numpy.ones(4)*i for i in range(k1.get_kpoints().shape[0]) ])
+        input_bands = numpy.array([numpy.ones(4)*i for i
+                                   in range(k1.get_kpoints().shape[0]) ])
         b1.set_bands(input_bands, units='eV')
         b1.store()
 
@@ -504,9 +527,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         b2 = BandsData()
         b2.set_kpointsdata(k2)
-        # 4 bands with linearly increasing energies, it does not make sense
-        # but is good for testing
-        input_bands = numpy.array([numpy.ones(4)*i for i in range(k2.get_kpoints().shape[0]) ])
+        input_bands = numpy.array([numpy.ones(4)*i for i
+                                   in range(k2.get_kpoints().shape[0]) ])
         b2.set_bands(input_bands, units='eV')
         b2.store()
 
@@ -520,9 +542,43 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Keep track of the id of the node that you added to the group
         cmd_to_nodeid_map_for_groups[_Bands] = b2.id
 
+        s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s3.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
+                       weights=(1., 0.), name='mytype')
+        s3.dbnode.user = new_user._dbuser
+        s3.store()
+
+        calc3 = JobCalculation(computer=cls.computer,
+                              resources={'num_machines': 1,
+                                         'num_mpiprocs_per_machine': 1})
+        calc3.dbnode.user = new_user._dbuser
+        calc3.store()
+        calc3.add_link_from(s3, "S3", LinkType.INPUT)
+        calc3._set_state(calc_states.RETRIEVING)
+
+        k3 = KpointsData()
+        k3.set_cell(cell)
+        k3.set_kpoints_path()
+        k3.dbnode.user = new_user._dbuser
+        k3.store()
+
+        b3 = BandsData()
+        b3.set_kpointsdata(k2)
+        input_bands = numpy.array([numpy.ones(4)*i for i in
+                                   range(k3.get_kpoints().shape[0]) ])
+        b3.set_bands(input_bands, units='eV')
+        b3.dbnode.user = new_user._dbuser
+        b3.store()
+
+        b3.add_link_from(calc3, link_type=LinkType.CREATE)
+
+        # Put it is to the right map (of the different user)
+        cmd_to_nodeid_map_for_nuser[_Bands] = [b3.id]
+
     @classmethod
     def create_structure_data(cls, cmd_to_nodeid_map,
-                          cmd_to_nodeid_map_for_groups, group):
+                              cmd_to_nodeid_map_for_groups,
+                              cmd_to_nodeid_map_for_nuser, group, new_user):
         from aiida.orm.data.structure import StructureData
         from aiida.cmdline.commands.data import _Structure
 
@@ -544,6 +600,16 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Keep track of the id of the node that you added to the group
         cmd_to_nodeid_map_for_groups[_Structure] = s2.id
 
+        # Create a StructureData node belonging to another user
+        s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s3.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+        s3.dbnode.user = new_user._dbuser
+        s3.store()
+
+        # Put it is to the right map
+        cmd_to_nodeid_map_for_nuser[_Structure] = [s3.id]
+
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """
@@ -551,23 +617,35 @@ class TestVerdiDataCommands(AiidaTestCase):
         """
         super(TestVerdiDataCommands, cls).setUpClass()
 
-        # Create a group to add specific data inside
+        from aiida.orm.user import User
         from aiida.orm.group import Group
+
+        # Create a secondary user
+        new_email = "newuser@new.n"
+        new_user = User(email=new_email)
+        new_user.force_save()
+
+        # Create a group to add specific data inside
         g1 = Group(name=cls.group_name)
         g1.store()
         cls.group_id = g1.id
 
         cls.create_bands_data(cls.cmd_to_nodeid_map,
-                              cls.cmd_to_nodeid_map_for_groups, g1)
+                              cls.cmd_to_nodeid_map_for_groups,
+                              cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
 
         cls.create_structure_data(cls.cmd_to_nodeid_map,
-                                  cls.cmd_to_nodeid_map_for_groups, g1)
+                                  cls.cmd_to_nodeid_map_for_groups,
+                                  cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
 
         cls.create_cif_data(cls.cmd_to_nodeid_map,
-                            cls.cmd_to_nodeid_map_for_groups, g1)
+                            cls.cmd_to_nodeid_map_for_groups,
+                            cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
 
         cls.create_trajectory_data(cls.cmd_to_nodeid_map,
-                                   cls.cmd_to_nodeid_map_for_groups, g1)
+                                   cls.cmd_to_nodeid_map_for_groups,
+                                   cls.cmd_to_nodeid_map_for_nuser,g1,
+                                   new_user)
 
     def test_trajectory_simple_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -591,6 +669,33 @@ class TestVerdiDataCommands(AiidaTestCase):
                                 str(self.cmd_to_nodeid_map[sub_cmd][0]),
                                 str(self.cmd_to_nodeid_map[sub_cmd][1])) +
                         "The output was {}".format(out_str))
+
+    def test_trajectory_all_user_listing(self):
+        from aiida.cmdline.commands.data import _Bands
+        from aiida.cmdline.commands.data import _Structure
+        from aiida.cmdline.commands.data import _Cif
+        from aiida.cmdline.commands.data import _Trajectory
+
+        sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
+        for sub_cmd in sub_cmds:
+            args_to_test = [['-A'], ['--all-users']]
+            for arg in args_to_test:
+                curr_scmd = sub_cmd()
+                with Capturing() as output:
+                    curr_scmd.list(*arg)
+
+                out_str = ' '.join(output)
+
+                for id in (self.cmd_to_nodeid_map[sub_cmd] +
+                               self.cmd_to_nodeid_map_for_nuser[sub_cmd]):
+                    if str(id) not in out_str:
+                        self.fail(
+                            "The data objects ({}) with ids {} and {} "
+                            "were not found. "
+                            .format(sub_cmd,
+                                    str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                    str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                            "The output was {}".format(out_str))
 
 
     def test_trajectory_past_days_listing(self):

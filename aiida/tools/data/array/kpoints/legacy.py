@@ -375,7 +375,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
     # I still have some duplicates in the labels: eliminate them
     sorted(set(labels), key=lambda x: x[0])
 
-    return kpoints, labels, bravais_info
+    return kpoints, path, bravais_info, labels
 
 
 def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,

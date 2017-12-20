@@ -66,7 +66,7 @@ class TestWorkchain(AiidaTestCase):
             loop.stop()
             future.set_result(True)
 
-        self.runner.call_on_legacy_wf_finish(wf.pk, wf_done)
+        self.runner.call_on_legacy_workflow_finish(wf.pk, wf_done)
 
         # Run the wf
         while wf.is_running():

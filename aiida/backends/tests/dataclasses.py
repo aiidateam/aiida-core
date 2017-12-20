@@ -2807,7 +2807,7 @@ class TestKpointsData(AiidaTestCase):
       k.set_cell(cell_x)
       points = k.get_special_points(cartesian=True)
 
-      self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat )
+      self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat)
       self.assertAlmostEqual(points[0]['Z'][1], 0.)
 
     def test_tetra_z(self):

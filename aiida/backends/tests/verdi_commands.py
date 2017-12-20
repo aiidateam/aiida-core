@@ -344,6 +344,7 @@ class TestVerdiUserCommands(AiidaTestCase):
         self.assertTrue(user_2['email'] in result.output)
         self.assertTrue("is already present" in result.output)
 
+
 class TestVerdiDataCommands(AiidaTestCase):
 
     cmd_to_nodeid_map = dict()
@@ -368,39 +369,57 @@ class TestVerdiDataCommands(AiidaTestCase):
         # I create sample data
         stepids = numpy.array([60, 70])
         times = stepids * 0.01
-        cells = numpy.array([
-            [[2., 0., 0., ],
-             [0., 2., 0., ],
-             [0., 0., 2., ]],
-            [[3., 0., 0., ],
-             [0., 3., 0., ],
-             [0., 0., 3., ]]])
+        cells = numpy.array([[[
+            2.,
+            0.,
+            0.,
+        ], [
+            0.,
+            2.,
+            0.,
+        ], [
+            0.,
+            0.,
+            2.,
+        ]], [[
+            3.,
+            0.,
+            0.,
+        ], [
+            0.,
+            3.,
+            0.,
+        ], [
+            0.,
+            0.,
+            3.,
+        ]]])
         symbols = numpy.array(['H', 'O', 'C'])
-        positions = numpy.array([
-            [[0., 0., 0.],
-             [0.5, 0.5, 0.5],
-             [1.5, 1.5, 1.5]],
-            [[0., 0., 0.],
-             [0.5, 0.5, 0.5],
-             [1.5, 1.5, 1.5]]])
-        velocities = numpy.array([
-            [[0., 0., 0.],
-             [0., 0., 0.],
-             [0., 0., 0.]],
-            [[0.5, 0.5, 0.5],
-             [0.5, 0.5, 0.5],
-             [-0.5, -0.5, -0.5]]])
+        positions = numpy.array(
+            [[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
+             [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
+        velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
+                                  [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
+                                   [-0.5, -0.5, -0.5]]])
 
         # I set the node
-        tjn1.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
-                         positions=positions, times=times,
-                         velocities=velocities)
+        tjn1.set_trajectory(
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities)
         tjn1.store()
 
         tjn2 = TrajectoryData()
-        tjn2.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
-                         positions=positions, times=times,
-                         velocities=velocities)
+        tjn2.set_trajectory(
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities)
         tjn2.store()
 
         # Keep track of the created objects
@@ -413,9 +432,13 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         # Create a trajectory data that belongs to another user
         tjn3 = TrajectoryData()
-        tjn3.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
-                         positions=positions, times=times,
-                         velocities=velocities)
+        tjn3.set_trajectory(
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities)
         tjn3.dbnode.user = new_user._dbuser
         tjn3.store()
 
@@ -423,8 +446,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         cmd_to_nodeid_map_for_nuser[_Trajectory] = [tjn3.id]
 
     @classmethod
-    def create_cif_data(cls, cmd_to_nodeid_map,
-                        cmd_to_nodeid_map_for_groups,
+    def create_cif_data(cls, cmd_to_nodeid_map, cmd_to_nodeid_map_for_groups,
                         cmd_to_nodeid_map_for_nuser, group, new_user):
 
         from aiida.orm.data.cif import CifData
@@ -476,9 +498,9 @@ class TestVerdiDataCommands(AiidaTestCase):
             # Put it is to the right map
             cmd_to_nodeid_map_for_nuser[_Cif] = [c3.id]
 
+
     @classmethod
-    def create_bands_data(cls, cmd_to_nodeid_map,
-                          cmd_to_nodeid_map_for_groups,
+    def create_bands_data(cls, cmd_to_nodeid_map, cmd_to_nodeid_map_for_groups,
                           cmd_to_nodeid_map_for_nuser, group, new_user):
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.array.bands import BandsData
@@ -488,35 +510,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         from aiida.common.links import LinkType
         import numpy
 
-        s1 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s1.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
-                      weights=(1., 0.), name='mytype')
-        s1.store()
 
-        calc = JobCalculation(computer=cls.computer,
-                              resources={'num_machines': 1,
-                                         'num_mpiprocs_per_machine': 1}).store()
-        calc.add_link_from(s1, "S1", LinkType.INPUT)
-        calc._set_state(calc_states.RETRIEVING)
-
-        # define a cell
-        alat = 4.
-        cell = numpy.array([[alat, 0., 0.],
-                            [0., alat, 0.],
-                            [0., 0., alat],
-                            ])
-
-        k1 = KpointsData()
-        k1.set_cell(cell)
-        k1.set_kpoints_path()
-        k1.store()
-
-        b1 = BandsData()
-        b1.set_kpointsdata(k1)
-        input_bands = numpy.array([numpy.ones(4)*i for i
-                                   in range(k1.get_kpoints().shape[0]) ])
-        b1.set_bands(input_bands, units='eV')
-        b1.store()
 
         b1.add_link_from(calc, link_type=LinkType.CREATE)
 
@@ -527,8 +521,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         b2 = BandsData()
         b2.set_kpointsdata(k2)
-        input_bands = numpy.array([numpy.ones(4)*i for i
-                                   in range(k2.get_kpoints().shape[0]) ])
+        input_bands = numpy.array(
+            [numpy.ones(4) * i for i in range(k2.get_kpoints().shape[0])])
         b2.set_bands(input_bands, units='eV')
         b2.store()
 
@@ -543,14 +537,20 @@ class TestVerdiDataCommands(AiidaTestCase):
         cmd_to_nodeid_map_for_groups[_Bands] = b2.id
 
         s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s3.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
-                       weights=(1., 0.), name='mytype')
+        s3.append_atom(
+            position=(0., 0., 0.),
+            symbols=['Ba', 'Ti'],
+            weights=(1., 0.),
+            name='mytype')
         s3.dbnode.user = new_user._dbuser
         s3.store()
 
-        calc3 = JobCalculation(computer=cls.computer,
-                              resources={'num_machines': 1,
-                                         'num_mpiprocs_per_machine': 1})
+        calc3 = JobCalculation(
+            computer=cls.computer,
+            resources={
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            })
         calc3.dbnode.user = new_user._dbuser
         calc3.store()
         calc3.add_link_from(s3, "S3", LinkType.INPUT)
@@ -564,8 +564,8 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         b3 = BandsData()
         b3.set_kpointsdata(k2)
-        input_bands = numpy.array([numpy.ones(4)*i for i in
-                                   range(k3.get_kpoints().shape[0]) ])
+        input_bands = numpy.array(
+            [numpy.ones(4) * i for i in range(k3.get_kpoints().shape[0])])
         b3.set_bands(input_bands, units='eV')
         b3.dbnode.user = new_user._dbuser
         b3.store()
@@ -583,13 +583,19 @@ class TestVerdiDataCommands(AiidaTestCase):
         from aiida.cmdline.commands.data import _Structure
 
         s1 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s1.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
-                      weights=(1., 0.), name='mytype')
+        s1.append_atom(
+            position=(0., 0., 0.),
+            symbols=['Ba', 'Ti'],
+            weights=(1., 0.),
+            name='mytype')
         s1.store()
 
         s2 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s2.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
-                      weights=(1., 0.), name='mytype')
+        s2.append_atom(
+            position=(0., 0., 0.),
+            symbols=['Ba', 'Ti'],
+            weights=(1., 0.),
+            name='mytype')
         s2.store()
 
         # Keep track of the created objects
@@ -602,8 +608,11 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         # Create a StructureData node belonging to another user
         s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s3.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
-                      weights=(1., 0.), name='mytype')
+        s3.append_atom(
+            position=(0., 0., 0.),
+            symbols=['Ba', 'Ti'],
+            weights=(1., 0.),
+            name='mytype')
         s3.dbnode.user = new_user._dbuser
         s3.store()
 
@@ -632,20 +641,19 @@ class TestVerdiDataCommands(AiidaTestCase):
 
         cls.create_bands_data(cls.cmd_to_nodeid_map,
                               cls.cmd_to_nodeid_map_for_groups,
-                              cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
+                              cls.cmd_to_nodeid_map_for_nuser, g1, new_user)
 
         cls.create_structure_data(cls.cmd_to_nodeid_map,
                                   cls.cmd_to_nodeid_map_for_groups,
-                                  cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
+                                  cls.cmd_to_nodeid_map_for_nuser, g1, new_user)
 
         cls.create_cif_data(cls.cmd_to_nodeid_map,
                             cls.cmd_to_nodeid_map_for_groups,
-                            cls.cmd_to_nodeid_map_for_nuser,g1, new_user)
+                            cls.cmd_to_nodeid_map_for_nuser, g1, new_user)
 
-        cls.create_trajectory_data(cls.cmd_to_nodeid_map,
-                                   cls.cmd_to_nodeid_map_for_groups,
-                                   cls.cmd_to_nodeid_map_for_nuser,g1,
-                                   new_user)
+        cls.create_trajectory_data(
+            cls.cmd_to_nodeid_map, cls.cmd_to_nodeid_map_for_groups,
+            cls.cmd_to_nodeid_map_for_nuser, g1, new_user)
 
     def test_trajectory_simple_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -660,15 +668,14 @@ class TestVerdiDataCommands(AiidaTestCase):
 
             out_str = ' '.join(output)
 
-            for id in self.cmd_to_nodeid_map[sub_cmd]:
-                if str(id) not in out_str:
-                    self.fail(
-                        "The data objects ({}) with ids {} and {} "
-                        "were not found. "
-                        .format(sub_cmd,
-                                str(self.cmd_to_nodeid_map[sub_cmd][0]),
-                                str(self.cmd_to_nodeid_map[sub_cmd][1])) +
-                        "The output was {}".format(out_str))
+            for nid in self.cmd_to_nodeid_map[sub_cmd]:
+                if str(nid) not in out_str:
+                    self.fail("The data objects ({}) with ids {} and {} "
+                              "were not found. "
+                              .format(sub_cmd,
+                                      str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                      str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                              "The output was {}".format(out_str))
 
     def test_trajectory_all_user_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -686,17 +693,15 @@ class TestVerdiDataCommands(AiidaTestCase):
 
                 out_str = ' '.join(output)
 
-                for id in (self.cmd_to_nodeid_map[sub_cmd] +
-                               self.cmd_to_nodeid_map_for_nuser[sub_cmd]):
-                    if str(id) not in out_str:
-                        self.fail(
-                            "The data objects ({}) with ids {} and {} "
-                            "were not found. "
-                            .format(sub_cmd,
-                                    str(self.cmd_to_nodeid_map[sub_cmd][0]),
-                                    str(self.cmd_to_nodeid_map[sub_cmd][1])) +
-                            "The output was {}".format(out_str))
-
+                for nid in (self.cmd_to_nodeid_map[sub_cmd] +
+                            self.cmd_to_nodeid_map_for_nuser[sub_cmd]):
+                    if str(nid) not in out_str:
+                        self.fail("The data objects ({}) with ids {} and {} "
+                                  "were not found. ".format(
+                                      sub_cmd,
+                                      str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                      str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                                  "The output was {}".format(out_str))
 
     def test_trajectory_past_days_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -714,13 +719,11 @@ class TestVerdiDataCommands(AiidaTestCase):
                 out_str = ' '.join(output)
 
                 # This should be an empty output
-                for id in self.cmd_to_nodeid_map[sub_cmd]:
-                    if str(id) in out_str:
-                        self.fail(
-                            '', out_str,
-                            "No data objects should be retrieved and "
-                            "some were retrieved. The (concatenation of the) "
-                            "output was: {}".format(out_str))
+                for nid in self.cmd_to_nodeid_map[sub_cmd]:
+                    if str(nid) in out_str:
+                        self.fail("No data objects should be retrieved and "
+                                  "some were retrieved. The (concatenation of "
+                                  "the) output was: {}".format(out_str))
 
             args_to_test = [['-p', '1'], ['--past-days', '1']]
             for arg in args_to_test:
@@ -729,16 +732,14 @@ class TestVerdiDataCommands(AiidaTestCase):
                     curr_scmd.list(*arg)
                 out_str = ' '.join(output)
 
-                for id in self.cmd_to_nodeid_map[sub_cmd]:
-                    if str(id) not in out_str:
-                        self.fail(
-                            "The data objects ({}) with ids {} and {} "
-                            "were not found. "
-                            .format(sub_cmd,
-                                    str(self.cmd_to_nodeid_map[sub_cmd][0]),
-                                    str(self.cmd_to_nodeid_map[sub_cmd][1])) +
-                            "The output was {}".format(out_str))
-
+                for nid in self.cmd_to_nodeid_map[sub_cmd]:
+                    if str(nid) not in out_str:
+                        self.fail("The data objects ({}) with ids {} and {} "
+                                  "were not found. ".format(
+                                      sub_cmd,
+                                      str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                      str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                                  "The output was {}".format(out_str))
 
     def test_trajectory_group_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -746,12 +747,10 @@ class TestVerdiDataCommands(AiidaTestCase):
         from aiida.cmdline.commands.data import _Cif
         from aiida.cmdline.commands.data import _Trajectory
 
-        args_to_test = [
-            ['-g', self.group_name],
-            ['--group-name', self.group_name],
-            ['-G', str(self.group_id)],
-            ['--group-pk', str(self.group_id)]
-        ]
+        args_to_test = [['-g', self.group_name], [
+            '--group-name', self.group_name
+        ], ['-G', str(self.group_id)], ['--group-pk',
+                                        str(self.group_id)]]
 
         sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
         for sub_cmd in sub_cmds:
@@ -762,10 +761,10 @@ class TestVerdiDataCommands(AiidaTestCase):
                 out_str = ' '.join(output)
 
                 if str(self.cmd_to_nodeid_map_for_groups[
-                           sub_cmd]) not in out_str:
+                        sub_cmd]) not in out_str:
                     self.fail(
                         "The data object ({}) with id {} "
-                        "was not found. "
-                        .format(sub_cmd,
-                                str(self.cmd_to_nodeid_map_for_groups[sub_cmd])
-                                + "The output was {}".format(out_str)))
+                        "was not found. ".format(
+                            sub_cmd,
+                            str(self.cmd_to_nodeid_map_for_groups[sub_cmd]) +
+                            "The output was {}".format(out_str)))

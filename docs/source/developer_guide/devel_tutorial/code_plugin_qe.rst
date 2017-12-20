@@ -1,5 +1,5 @@
-Developer code plugin tutorial - Quantum Espresso
-=================================================
+Tutorial: Calculation plugin - Quantum Espresso
+===============================================
 
 .. toctree::
    :maxdepth: 2

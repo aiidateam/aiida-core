@@ -53,6 +53,8 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-plugins',
+    'click-spinner',
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
@@ -64,7 +66,7 @@ install_requires = [
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
-    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
+    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {

@@ -369,31 +369,8 @@ class TestVerdiDataCommands(AiidaTestCase):
         # I create sample data
         stepids = numpy.array([60, 70])
         times = stepids * 0.01
-        cells = numpy.array([[[
-            2.,
-            0.,
-            0.,
-        ], [
-            0.,
-            2.,
-            0.,
-        ], [
-            0.,
-            0.,
-            2.,
-        ]], [[
-            3.,
-            0.,
-            0.,
-        ], [
-            0.,
-            3.,
-            0.,
-        ], [
-            0.,
-            0.,
-            3.,
-        ]]])
+        cells = numpy.array([[[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]],
+                             [[3., 0., 0.], [0., 3., 0.], [0., 0., 3.]]])
         symbols = numpy.array(['H', 'O', 'C'])
         positions = numpy.array(
             [[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
@@ -498,35 +475,72 @@ class TestVerdiDataCommands(AiidaTestCase):
             # Put it is to the right map
             cmd_to_nodeid_map_for_nuser[_Cif] = [c3.id]
 
+    @classmethod
+    def sub_create_bands_data(cls, user=None):
+        from aiida.orm.data.array.kpoints import KpointsData
+        from aiida.orm import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.links import LinkType
+        from aiida.orm.data.array.bands import BandsData
+        import numpy
+
+        s = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s.append_atom(
+            position=(0., 0., 0.),
+            symbols=['Ba', 'Ti'],
+            weights=(1., 0.),
+            name='mytype')
+        if user is not None:
+            s.dbnode.user = user._dbuser
+        s.store()
+
+        c = JobCalculation(
+            computer=cls.computer,
+            resources={
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            })
+        if user is not None:
+            c.dbnode.user = user._dbuser
+        c.store()
+        c.add_link_from(s, "S1", LinkType.INPUT)
+        c._set_state(calc_states.RETRIEVING)
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([
+            [alat, 0., 0.],
+            [0., alat, 0.],
+            [0., 0., alat],
+        ])
+
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        if user is not None:
+            k.dbnode.user = user._dbuser
+        k.store()
+
+        b = BandsData()
+        b.set_kpointsdata(k)
+        input_bands = numpy.array(
+            [numpy.ones(4) * i for i in range(k.get_kpoints().shape[0])])
+        b.set_bands(input_bands, units='eV')
+        if user is not None:
+            b.dbnode.user = user._dbuser
+        b.store()
+
+        b.add_link_from(c, link_type=LinkType.CREATE)
+
+        return b
 
     @classmethod
     def create_bands_data(cls, cmd_to_nodeid_map, cmd_to_nodeid_map_for_groups,
                           cmd_to_nodeid_map_for_nuser, group, new_user):
-        from aiida.orm.data.array.kpoints import KpointsData
-        from aiida.orm.data.array.bands import BandsData
-        from aiida.orm.data.structure import StructureData
         from aiida.cmdline.commands.data import _Bands
-        from aiida.orm import JobCalculation
-        from aiida.common.links import LinkType
-        import numpy
 
-
-
-        b1.add_link_from(calc, link_type=LinkType.CREATE)
-
-        k2 = KpointsData()
-        k2.set_cell(cell)
-        k2.set_kpoints_path()
-        k2.store()
-
-        b2 = BandsData()
-        b2.set_kpointsdata(k2)
-        input_bands = numpy.array(
-            [numpy.ones(4) * i for i in range(k2.get_kpoints().shape[0])])
-        b2.set_bands(input_bands, units='eV')
-        b2.store()
-
-        b2.add_link_from(calc, link_type=LinkType.CREATE)
+        b1 = cls.sub_create_bands_data()
+        b2 = cls.sub_create_bands_data()
 
         # Keep track of the created objects
         cmd_to_nodeid_map[_Bands] = [b1.id, b2.id]
@@ -536,42 +550,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Keep track of the id of the node that you added to the group
         cmd_to_nodeid_map_for_groups[_Bands] = b2.id
 
-        s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
-        s3.append_atom(
-            position=(0., 0., 0.),
-            symbols=['Ba', 'Ti'],
-            weights=(1., 0.),
-            name='mytype')
-        s3.dbnode.user = new_user._dbuser
-        s3.store()
-
-        calc3 = JobCalculation(
-            computer=cls.computer,
-            resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            })
-        calc3.dbnode.user = new_user._dbuser
-        calc3.store()
-        calc3.add_link_from(s3, "S3", LinkType.INPUT)
-        calc3._set_state(calc_states.RETRIEVING)
-
-        k3 = KpointsData()
-        k3.set_cell(cell)
-        k3.set_kpoints_path()
-        k3.dbnode.user = new_user._dbuser
-        k3.store()
-
-        b3 = BandsData()
-        b3.set_kpointsdata(k2)
-        input_bands = numpy.array(
-            [numpy.ones(4) * i for i in range(k3.get_kpoints().shape[0])])
-        b3.set_bands(input_bands, units='eV')
-        b3.dbnode.user = new_user._dbuser
-        b3.store()
-
-        b3.add_link_from(calc3, link_type=LinkType.CREATE)
-
+        b3 = cls.sub_create_bands_data(user=new_user)
         # Put it is to the right map (of the different user)
         cmd_to_nodeid_map_for_nuser[_Bands] = [b3.id]
 

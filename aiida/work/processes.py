@@ -132,7 +132,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         for name, value_spec in self.inputs.iteritems():
             if isinstance(value_spec.validator, DictSchema):
                 template[name] = value_spec.validator.get_template()
-            elif value_spec.default is not None:
+            elif value_spec.has_default():
                 template[name] = value_spec.default
             else:
                 template[name] = None

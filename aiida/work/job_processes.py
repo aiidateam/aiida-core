@@ -30,12 +30,14 @@ RETRIEVE_COMMAND = 'retrieve'
 
 class Waiting(plum.Waiting):
     def enter(self):
+        super(Waiting, self).enter()
+
         if self.data == SUBMIT_COMMAND:
             op = self.process._submit_with_transport
         elif self.data == UPDATE_SCHEDULER_COMMAND:
             op = self.process._update_scheduler_state_with_transport
         elif self.data == RETRIEVE_COMMAND:
-            op = self._retrieve_with_transport
+            op = self.process._retrieve_with_transport
         else:
             raise RuntimeError("Unknown waiting command")
 
@@ -60,7 +62,8 @@ class Waiting(plum.Waiting):
                 operation(authinfo, transport)
             except BaseException:
                 import sys
-                self.process.fail(sys.exc_info())
+                exc_info = sys.exc_info()
+                self.process.fail(exc_info[1], exc_info[2])
 
 
 class JobProcess(processes.Process):
@@ -188,7 +191,7 @@ class JobProcess(processes.Process):
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation
-        return processes.Wait(self._submitted, 'Waiting to submit', SUBMIT_COMMAND)
+        return plum.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
     # endregion
 
@@ -284,7 +287,7 @@ class JobProcess(processes.Process):
 
     # endregion
 
-    def _retrieved(self, result):
+    def _retrieved(self):
         """
         Parse a retrieved job calculation.
         """

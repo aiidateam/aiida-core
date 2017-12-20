@@ -3,14 +3,15 @@ from aiida import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from aiida.work import *
+
+from aiida import work
 from aiida.orm.data.base import *
 import aiida.work.globals as globals
 
 persistence = globals.get_persistence()
 
 
-class ProdSum(WorkChain):
+class ProdSum(work.WorkChain):
     @classmethod
     def define(cls, spec):
         super(ProdSum, cls).define(spec)

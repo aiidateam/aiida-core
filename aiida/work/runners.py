@@ -79,8 +79,6 @@ def _create_inputs_dictionary(process, *args, **kwargs):
 
 
 class Runner(object):
-    _poll_interval = 5.
-
     def __init__(self, rmq_config, loop=None, poll_interval=5.):
         self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval

@@ -17,8 +17,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
-from aiida.work.workfunctions import workfunction
-from aiida.work.launch import run, legacy_workflow, submit
+from aiida.work.launch import run
 from aiida.orm.data.base import Int, Str, Bool
 from aiida.common.links import LinkType
 from aiida.work.utils import ProcessStack

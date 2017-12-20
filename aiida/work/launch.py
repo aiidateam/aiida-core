@@ -11,16 +11,11 @@
 from collections import namedtuple
 
 from . import runners
-from . import legacy
 from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
-
-
-def legacy_workflow(pk):
-    return legacy.WaitOnWorkflow(pk)
 
 
 def submit(process_class, **inputs):

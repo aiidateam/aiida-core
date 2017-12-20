@@ -780,10 +780,10 @@ def retrieve_all(job, transport, logger_extra=None):
                 retrieve_files_from_list(job, transport, folder, retrieve_temporary_list)
                 retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
 
-        # Log the files that were retrieved in the temporary folder
-        for entry in retrieved_temporary_folder.get_folder_list():
-            execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
-            job.pk, entry), extra=logger_extra)
+            # Log the files that were retrieved in the temporary folder
+            for entry in retrieved_temporary_folder.get_folder_list():
+                execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
+                job.pk, entry), extra=logger_extra)
         else:
             retrieved_temporary_folder = None
 

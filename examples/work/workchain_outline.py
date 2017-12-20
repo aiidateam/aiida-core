@@ -9,8 +9,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.base import Int
-from aiida.work.run import run
-from aiida.work.workchain import WorkChain, while_, if_
+from aiida import work
+from aiida.work.workchain import while_, if_
 
 """
 This WorkChain example is a very contrived implementation of the infamous FizzBuzz
@@ -19,8 +19,7 @@ into the outline of the workchain's spec.
 """
 
 
-class OutlineWorkChain(WorkChain):
-
+class OutlineWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
         super(OutlineWorkChain, cls).define(spec)
@@ -73,7 +72,7 @@ class OutlineWorkChain(WorkChain):
 
 
 def main():
-    results = run(OutlineWorkChain, a=Int(16))
+    results = work.run(OutlineWorkChain, a=Int(16))
 
 
 if __name__ == '__main__':

@@ -583,8 +583,7 @@ class KpointsData(ArrayData):
             self.bravais_lattice = bravais_lattice
         return bravais_lattice
 
-    def set_kpoints_path(self, value=None, kpoint_distance=None,
-                         cartesian=False,
+    def set_kpoints_path(self, value=None, kpoint_distance=None, cartesian=False,
                          epsilon_length=_default_epsilon_length,
                          epsilon_angle=_default_epsilon_angle):
         """
@@ -621,7 +620,7 @@ class KpointsData(ArrayData):
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
-        from aiida.tools.data.array.kpoints.legacy import set_kpoints_path
+        from aiida.tools.data.array.kpoints.legacy import get_explicit_kpoints_path
 
         try:
             cell = self.cell
@@ -633,8 +632,8 @@ class KpointsData(ArrayData):
         except AttributeError:
             pbc = None
 
-        kpoints, labels = set_kpoints_path(
-            value=value, cell=cell, pbc=pbc,
+        kpoints, labels, bravais_info = get_explicit_kpoints_path(
+            value=value, cell=cell, pbc=pbc, kpoint_distance=kpoint_distance, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle
         )
@@ -720,22 +719,23 @@ class KpointsData(ArrayData):
             to get the bravais lattice info
         :param epsilon_angle: threshold on angles comparison, used
             to get the bravais lattice info
-        :return special_points,path: special_points: a dictionary of
-            point_name:point_coords key,values.
-
+        :return point_coords, path:
+            point_coords: a dictionary of point_name:point_coords key,values.
             path: the suggested path which goes through all high symmetry
-            lines. A list of lists for all path segments.
-            e.g. [('G','X'),('X','M'),...]
-            It's not necessarily a continuous line.
+                lines. A list of lists for all path segments.
+                e.g. [('G','X'),('X','M'),...]
+                It's not necessarily a continuous line.
         :note: We assume that the cell given by the cell property is the
             primitive unit cell
         """
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
-        from aiida.tools.data.array.kpoints.legacy import get_special_points
-        return get_special_points(
+        from aiida.tools.data.array.kpoints.legacy import get_kpoints_path
+        point_coords, path, bravais_info = get_kpoints_path(
             cell=self.cell, pbc=self.pbc, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle
         )
+
+        return point_coords, path

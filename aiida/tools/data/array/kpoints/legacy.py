@@ -74,7 +74,7 @@ def analyze_cell(cell, pbc=None):
     return result
 
 
-def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cartesian=False,
+def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cartesian=False,
                      epsilon_length=_default_epsilon_length,
                      epsilon_angle=_default_epsilon_angle):
     """
@@ -109,7 +109,15 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
     :param float epsilon_angle: threshold on angles comparison, used
         to get the bravais lattice info. It has to be used if the
         user wants to be sure the right symmetries are recognized.
+
+    :returns: kpoints, labels, bravais_info
     """
+    bravais_info = find_bravais_info(
+        cell=cell, pbc=pbc,
+        epsilon_length=epsilon_length,
+        epsilon_angle=epsilon_angle
+    )
+
     analysis = analyze_cell(cell, pbc)
     dimension = analysis['dimension']
     reciprocal_cell = analysis['reciprocal_cell']
@@ -117,7 +125,7 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
 
     if dimension == 0:
         # case with zero dimension: only gamma-point is set
-        return [[0., 0., 0.]], None
+        return [[0., 0., 0.]], None, bravais_info
 
     def _is_path_1(path):
         try:
@@ -202,8 +210,7 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
             return False
         return True
 
-    def _num_points_from_coordinates(path, point_coordinates,
-                                     kpoint_distance=None):
+    def _num_points_from_coordinates(path, point_coordinates, kpoint_distance=None):
         # NOTE: this way of creating intervals ensures equispaced objects
         #       in crystal coordinates of b1,b2,b3
         distances = [numpy.linalg.norm(numpy.array(point_coordinates[i[0]]) -
@@ -239,12 +246,11 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
         if cell is None:
             raise ValueError("Cannot set a path not even knowing the "
                              "kpoints or at least the cell")
-        point_coordinates, path = get_special_points(
+        point_coordinates, path, bravais_info = get_kpoints_path(
             cell=cell, pbc=pbc,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
-        num_points = _num_points_from_coordinates(path, point_coordinates,
-                                                  kpoint_distance)
+        num_points = _num_points_from_coordinates(path, point_coordinates, kpoint_distance)
 
     elif _is_path_1(value):
         # in the form [('X','M'),(...),...]
@@ -253,12 +259,11 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
                              "kpoints or at least the cell")
 
         path = value
-        point_coordinates, _ = get_special_points(
+        point_coordinates, _, bravais_info = get_kpoints_path(
             cell=cell, pbc=pbc,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
-        num_points = _num_points_from_coordinates(path, point_coordinates,
-                                                  kpoint_distance)
+        num_points = _num_points_from_coordinates(path, point_coordinates, kpoint_distance)
 
     elif _is_path_2(value):
         # [('G','M',30), (...), ...]
@@ -267,7 +272,7 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
                              "kpoints or at least the cell")
 
         path = [(i[0], i[1]) for i in value]
-        point_coordinates, _ = get_special_points(
+        point_coordinates, _, bravais_info = get_kpoints_path(
             cell=cell, pbc=pbc,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
@@ -302,8 +307,7 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
                 else:
                     point_coordinates[piece[2]] = piece[3]
 
-        num_points = _num_points_from_coordinates(path, point_coordinates,
-                                                  kpoint_distance)
+        num_points = _num_points_from_coordinates(path, point_coordinates, kpoint_distance)
 
     elif _is_path_4(value):
         # [('G',(0,0,0),'M',(1,1,1),30), (...), ...]
@@ -371,7 +375,7 @@ def set_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=None, cart
     # I still have some duplicates in the labels: eliminate them
     sorted(set(labels), key=lambda x: x[0])
 
-    return kpoints, labels
+    return kpoints, labels, bravais_info
 
 
 def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
@@ -394,7 +398,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
     :return: a dictionary, with keys short_name, extended_name, index
             (index of the Bravais lattice), and sometimes variation (name of
             the variation of the Bravais lattice) and extra (a dictionary
-            with extra parameters used by the get_special_points method)
+            with extra parameters used by the get_kpoints_path method)
     """
     analysis = analyze_cell(cell, pbc)
     a1 = analysis['a1']
@@ -1067,7 +1071,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
 
 
 
-def get_special_points(cell, pbc=None, cartesian=False,
+def get_kpoints_path(cell, pbc=None, cartesian=False,
                        epsilon_length=_default_epsilon_length,
                        epsilon_angle=_default_epsilon_angle):
     """
@@ -1852,6 +1856,6 @@ def get_special_points(cell, pbc=None, cartesian=False,
                 reciprocal_cell, numpy.array(the_special_points[k]), to_cartesian=True
             )
 
-        return the_abs_special_points, path
+        return the_abs_special_points, path, bravais_info
     else:
-        return the_special_points, path
+        return the_special_points, path, bravais_info

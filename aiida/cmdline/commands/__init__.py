@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+from click_plugins import with_plugins
 
 
 @click.group()
@@ -28,3 +29,7 @@ def work():
 def user():
     pass
 
+
+@verdi.group('data')
+def data_cmd():
+    pass

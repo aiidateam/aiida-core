@@ -266,7 +266,8 @@ class Process(plum.process.Process):
     @override
     def on_entered(self):
         super(Process, self).on_entered()
-        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
+        # Update the node attributes every time we enter a new state
+        self._update_node_state()
 
     @override
     def on_terminated(self):
@@ -306,16 +307,6 @@ class Process(plum.process.Process):
                 "Values outputted from process must be instances of AiiDA Data " \
                 "types.  Got: {}".format(value.__class__)
             )
-
-        # Try making us the creator
-        try:
-            value.add_link_from(self.calc, output_port, LinkType.CREATE)
-        except ValueError:
-            # Must have already been created...nae dramas
-            pass
-
-        value.store()
-        value.add_link_from(self.calc, output_port, LinkType.RETURN)
 
     # end region
 
@@ -468,6 +459,24 @@ class Process(plum.process.Process):
             label = self.raw_inputs.get('_label', None)
             if label is not None:
                 self._calc.label = label
+
+    def _update_node_state(self):
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
+
+        # Link up any new outputs
+        new_outputs = set(self.outputs.keys()) - \
+                      set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
+        for label in new_outputs:
+            value = self.outputs[label]
+            # Try making us the creator
+            try:
+                value.add_link_from(self.calc, label, LinkType.CREATE)
+            except ValueError:
+                # Must have already been created...nae dramas
+                pass
+
+            value.store()
+            value.add_link_from(self.calc, label, LinkType.RETURN)
 
 
 class FunctionProcess(Process):

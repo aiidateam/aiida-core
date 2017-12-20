@@ -124,9 +124,16 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
+        
+        self.runner = work.new_runner(poll_interval=0.)
+        work.set_runner(self.runner)
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+
         self.assertEquals(len(ProcessStack.stack()), 0)
         import logging
         logging.disable(logging.NOTSET)

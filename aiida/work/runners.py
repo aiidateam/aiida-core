@@ -8,7 +8,8 @@ from . import rmq
 from . import transport
 from . import utils
 
-__all__ = ['Runner', 'create_daemon_runner', 'create_runner', 'new_runner']
+__all__ = ['Runner', 'create_daemon_runner', 'create_runner', 'new_runner',
+           'set_runner']
 
 ResultAndCalcNode = namedtuple("ResultWithPid", ["result", "calc"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
@@ -25,7 +26,7 @@ def get_runner():
 
 def set_runner(runner):
     global _runner
-    _runnner = runner
+    _runner = runner
 
 
 def new_runner(**kwargs):

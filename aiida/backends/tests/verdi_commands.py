@@ -10,13 +10,11 @@
 # pylint: disable=missing-docstring,invalid-name
 
 import mock
-
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.utils.capturing import Capturing
 from aiida.common.datastructures import calc_states
-from aiida.orm.data import Data
+from aiida.utils.capturing import Capturing
 
 # Common computer information
 computer_common_info = [
@@ -456,30 +454,95 @@ class TestVerdiDataCommands(AiidaTestCase):
             cmd_to_nodeid_map_for_groups[_Cif] = c2.id
 
     @classmethod
-    def create_upf_data(cls, cmd_to_nodeid_map,
-                        cmd_to_nodeid_map_for_groups, group):
+    def create_bands_data(cls, cmd_to_nodeid_map,
+                          cmd_to_nodeid_map_for_groups, group):
+        from aiida.orm.data.array.kpoints import KpointsData
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.structure import StructureData
+        from aiida.cmdline.commands.data import _Bands
+        from aiida.orm import JobCalculation
+        from aiida.common.links import LinkType
+        import numpy
 
-        from aiida.orm.data.upf import UpfData
-        from aiida.cmdline.commands.data import _Upf
-        import tempfile
+        s1 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s1.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+        s1.store()
 
-        with tempfile.NamedTemporaryFile(prefix="Fe") as f:
-            f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
-            f.flush()
-            upf1 = UpfData(file=f.name)
-            upf1.store()
+        calc = JobCalculation(computer=cls.computer,
+                              resources={'num_machines': 1,
+                                         'num_mpiprocs_per_machine': 1}).store()
+        calc.add_link_from(s1, "S1", LinkType.INPUT)
+        calc._set_state(calc_states.RETRIEVING)
 
-            upf2 = UpfData(file=f.name)
-            upf2.store()
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
 
-            # Keep track of the created objects
-            cmd_to_nodeid_map[_Upf] = [upf1.id, upf2.id]
+        k1 = KpointsData()
+        k1.set_cell(cell)
+        k1.set_kpoints_path()
+        k1.store()
 
-            # Add the second UPF data to the group
-            group.add_nodes([upf2])
-            # Keep track of the id of the node that you added to the group
-            cmd_to_nodeid_map_for_groups[_Upf] = upf2.id
+        b1 = BandsData()
+        b1.set_kpointsdata(k1)
+        # 4 bands with linearly increasing energies, it does not make sense
+        # but is good for testing
+        input_bands = numpy.array([numpy.ones(4)*i for i in range(k1.get_kpoints().shape[0]) ])
+        b1.set_bands(input_bands, units='eV')
+        b1.store()
 
+        b1.add_link_from(calc, link_type=LinkType.CREATE)
+
+        k2 = KpointsData()
+        k2.set_cell(cell)
+        k2.set_kpoints_path()
+        k2.store()
+
+        b2 = BandsData()
+        b2.set_kpointsdata(k2)
+        # 4 bands with linearly increasing energies, it does not make sense
+        # but is good for testing
+        input_bands = numpy.array([numpy.ones(4)*i for i in range(k2.get_kpoints().shape[0]) ])
+        b2.set_bands(input_bands, units='eV')
+        b2.store()
+
+        b2.add_link_from(calc, link_type=LinkType.CREATE)
+
+        # Keep track of the created objects
+        cmd_to_nodeid_map[_Bands] = [b1.id, b2.id]
+
+        # Add the second Kpoint & Bands data to the group
+        group.add_nodes([b2])
+        # Keep track of the id of the node that you added to the group
+        cmd_to_nodeid_map_for_groups[_Bands] = b2.id
+
+    @classmethod
+    def create_structure_data(cls, cmd_to_nodeid_map,
+                          cmd_to_nodeid_map_for_groups, group):
+        from aiida.orm.data.structure import StructureData
+        from aiida.cmdline.commands.data import _Structure
+
+        s1 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s1.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+        s1.store()
+
+        s2 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        s2.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+        s2.store()
+
+        # Keep track of the created objects
+        cmd_to_nodeid_map[_Structure] = [s1.id, s2.id]
+
+        # Add the second Kpoint & Bands data to the group
+        group.add_nodes([s2])
+        # Keep track of the id of the node that you added to the group
+        cmd_to_nodeid_map_for_groups[_Structure] = s2.id
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
@@ -494,21 +557,25 @@ class TestVerdiDataCommands(AiidaTestCase):
         g1.store()
         cls.group_id = g1.id
 
-        cls.create_trajectory_data(cls.cmd_to_nodeid_map,
-                                   cls.cmd_to_nodeid_map_for_groups, g1)
+        cls.create_bands_data(cls.cmd_to_nodeid_map,
+                              cls.cmd_to_nodeid_map_for_groups, g1)
+
+        cls.create_structure_data(cls.cmd_to_nodeid_map,
+                                  cls.cmd_to_nodeid_map_for_groups, g1)
+
         cls.create_cif_data(cls.cmd_to_nodeid_map,
                             cls.cmd_to_nodeid_map_for_groups, g1)
 
-        cls.create_upf_data(cls.cmd_to_nodeid_map,
-                            cls.cmd_to_nodeid_map_for_groups, g1)
-
+        cls.create_trajectory_data(cls.cmd_to_nodeid_map,
+                                   cls.cmd_to_nodeid_map_for_groups, g1)
 
     def test_trajectory_simple_listing(self):
-        from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Bands
+        from aiida.cmdline.commands.data import _Structure
         from aiida.cmdline.commands.data import _Cif
-        from aiida.cmdline.commands.data import _Upf
+        from aiida.cmdline.commands.data import _Trajectory
 
-        sub_cmds = [_Trajectory, _Cif, _Upf]
+        sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
         for sub_cmd in sub_cmds:
             with Capturing() as output:
                 sub_cmd().list()
@@ -518,18 +585,21 @@ class TestVerdiDataCommands(AiidaTestCase):
             for id in self.cmd_to_nodeid_map[sub_cmd]:
                 if str(id) not in out_str:
                     self.fail(
-                        "The data objects with ids {} and {} were not found. "
-                        .format(str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                        "The data objects ({}) with ids {} and {} "
+                        "were not found. "
+                        .format(sub_cmd,
+                                str(self.cmd_to_nodeid_map[sub_cmd][0]),
                                 str(self.cmd_to_nodeid_map[sub_cmd][1])) +
                         "The output was {}".format(out_str))
 
 
     def test_trajectory_past_days_listing(self):
-        from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Bands
+        from aiida.cmdline.commands.data import _Structure
         from aiida.cmdline.commands.data import _Cif
-        from aiida.cmdline.commands.data import _Upf
+        from aiida.cmdline.commands.data import _Trajectory
 
-        sub_cmds = [_Trajectory, _Cif, _Upf]
+        sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
         for sub_cmd in sub_cmds:
             args_to_test = [['-p', '0'], ['--past-days', '0']]
             for arg in args_to_test:
@@ -566,8 +636,10 @@ class TestVerdiDataCommands(AiidaTestCase):
 
 
     def test_trajectory_group_listing(self):
-        from aiida.cmdline.commands.data import _Trajectory
+        from aiida.cmdline.commands.data import _Bands
+        from aiida.cmdline.commands.data import _Structure
         from aiida.cmdline.commands.data import _Cif
+        from aiida.cmdline.commands.data import _Trajectory
 
         args_to_test = [
             ['-g', self.group_name],
@@ -576,7 +648,7 @@ class TestVerdiDataCommands(AiidaTestCase):
             ['--group-pk', str(self.group_id)]
         ]
 
-        sub_cmds = [_Trajectory, _Cif]
+        sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
         for sub_cmd in sub_cmds:
             for arg in args_to_test:
                 curr_scmd = sub_cmd()
@@ -587,7 +659,8 @@ class TestVerdiDataCommands(AiidaTestCase):
                 if str(self.cmd_to_nodeid_map_for_groups[
                            sub_cmd]) not in out_str:
                     self.fail(
-                        "The data objects with id {} was not found. "
-                        .format(
-                            str(self.cmd_to_nodeid_map_for_groups[sub_cmd])
-                            + "The output was {}".format(out_str)))
+                        "The data object ({}) with id {} "
+                        "was not found. "
+                        .format(sub_cmd,
+                                str(self.cmd_to_nodeid_map_for_groups[sub_cmd])
+                                + "The output was {}".format(out_str)))

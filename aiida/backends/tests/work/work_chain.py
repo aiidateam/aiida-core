@@ -124,7 +124,7 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-        
+
         self.runner = work.new_runner(poll_interval=0.)
         work.set_runner(self.runner)
 
@@ -568,13 +568,19 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             )
 
         def start(self):
-            process = TestWorkChainAbortChildren.SubWorkChain()
-            process.play()
+            self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
+            self.ctx.child.play()
             if self.inputs.kill:
                 self.abort()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
+
+        def on_cancelled(self, msg):
+            super(TestWorkChainAbortChildren.MainWorkChain, self).on_cancelled(msg)
+            if self.inputs.kill:
+                assert self.ctx.child.calc.get_attr(self.calc.DO_ABORT_KEY, False), \
+                    "Abort key not set on child"
 
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
@@ -608,6 +614,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         with self.assertRaises(plum.CancelledError):
             process.execute()
+
+        plum.run_until_complete(process.ctx.child.future(), process.ctx.child.runner.loop)
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.has_finished_ok(), False)

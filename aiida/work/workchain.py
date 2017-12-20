@@ -141,7 +141,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
     @_aborted.setter
     def _aborted(self, value):
         # One is not allowed to unabort an aborted WorkChain
-        if self._aborted == True and value == False:
+        if self._aborted and value == False:
             self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
             return
 

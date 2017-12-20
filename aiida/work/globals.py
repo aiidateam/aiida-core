@@ -13,8 +13,8 @@ def get_thread_executor():
     """
     Dinges
     """
-    from aiida.work.runners import create_runner
-    return create_runner()
+    from aiida.work.runners import get_runner
+    return get_runner()
 
 
 def get_persistence():

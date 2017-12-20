@@ -181,6 +181,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         """
         Cancel is the new abort, just like orange is the new black
         """
+        self.calc.kill()
         self.cancel(message)
 
     def _handle_do_abort(self):

@@ -133,10 +133,7 @@ class TestWorkchain(AiidaTestCase):
         work.set_runner(None)
         self.runner.close()
         self.runner = None
-
         self.assertEquals(len(ProcessStack.stack()), 0)
-        import logging
-        logging.disable(logging.NOTSET)
 
     def test_run(self):
         A = Str('A')
@@ -482,8 +479,14 @@ class TestWorkChainAbort(AiidaTestCase):
         super(TestWorkChainAbort, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
 
+        self.runner = work.new_runner(poll_interval=0.)
+        work.set_runner(self.runner)
+
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_simple_run(self):
@@ -586,8 +589,14 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         super(TestWorkChainAbortChildren, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
 
+        self.runner = work.new_runner(poll_interval=0.)
+        work.set_runner(self.runner)
+
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_simple_run(self):
@@ -615,7 +624,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         with self.assertRaises(plum.CancelledError):
             process.execute()
 
-        plum.run_until_complete(process.ctx.child.future(), process.ctx.child.runner.loop)
+        with self.assertRaises(plum.CancelledError):
+            process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.has_finished_ok(), False)

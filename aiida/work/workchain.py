@@ -171,7 +171,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
 
             if self._awaitables:
                 self.action_awaitables()
-                return plum.Wait('Waiting')
+                return plum.Wait(self._do_step, 'Waiting before next step')
             else:
                 return plum.Continue(self._do_step)
         else:
@@ -205,7 +205,6 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         """
         return self.abort(msg=msg)
 
-
     def action_awaitables(self):
         """
         """
@@ -218,7 +217,6 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
                 self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
-
 
     def on_calculation_finished(self, awaitable, pk):
         """
@@ -245,7 +243,6 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         if len(self._awaitables) == 0:
             assert self.state == ProcessState.WAITING
             self.resume()
-
 
     def on_legacy_workflow_finished(self, awaitable, pk):
         """

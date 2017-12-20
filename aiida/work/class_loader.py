@@ -17,13 +17,13 @@ from aiida.common.lang import override
 class ClassLoader(plum.class_loader.ClassLoader):
     @staticmethod
     def is_wrapped_job_calculation(name):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
 
         return name.find(JobProcess.__name__) != -1
 
     @override
     def find_class(self, name):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
 
         if self.is_wrapped_job_calculation(name):
             idx = name.find(JobProcess.__name__)

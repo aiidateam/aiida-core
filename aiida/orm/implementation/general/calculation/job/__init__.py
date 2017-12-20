@@ -8,17 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from abc import abstractmethod
-import datetime
 import copy
+from abc import abstractmethod
 
-from aiida.utils import timezone
-from aiida.common.utils import str_timedelta
+import datetime
+
+from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.backends.utils import get_automatic_user
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.common.utils import str_timedelta
+from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -39,7 +40,7 @@ class AbstractJobCalculation(object):
 
     @classmethod
     def process(cls):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
 
     def _init_internal_params(self):
@@ -834,7 +835,6 @@ class AbstractJobCalculation(object):
         return self.get_attr('scheduler_lastchecktime', None)
 
     def _set_last_jobinfo(self, last_jobinfo):
-        import pickle
 
         self._set_attr('last_jobinfo', last_jobinfo.serialize())
 
@@ -845,7 +845,6 @@ class AbstractJobCalculation(object):
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
-        import pickle
         from aiida.scheduler.datastructures import JobInfo
 
         last_jobinfo_serialized = self.get_attr('last_jobinfo', None)
@@ -1152,7 +1151,6 @@ class AbstractJobCalculation(object):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
-        from aiida.orm.user import User
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1279,7 +1277,6 @@ class AbstractJobCalculation(object):
 
         :return: a string.
         """
-        from aiida.parsers import ParserFactory
 
         return self.get_attr('parser', None)
 

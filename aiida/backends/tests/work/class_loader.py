@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-
-from plum.utils import class_name
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.globals import class_loader
-import aiida.work.utils as util
-from aiida.work.legacy.job_process import JobProcess
+from aiida.work.job_processes import JobProcess
+from plum.utils import class_name
 
 
 class TestJobProcess(AiidaTestCase):

@@ -62,7 +62,7 @@ db_test_list = {
         'work.util': ['aiida.backends.tests.work.util'],
         'work.work_chain': ['aiida.backends.tests.work.work_chain'],
         'work.workfunction': ['aiida.backends.tests.work.workfunction'],
-        # 'work.legacy.job_process': ['aiida.backends.tests.work.legacy.job_process'],
+        'work.job_processes': ['aiida.backends.tests.work.legacy.job_process'],
         'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
         'daemon': ['aiida.backends.tests.daemon'],
         'verdi_commands': ['aiida.backends.tests.verdi_commands'],

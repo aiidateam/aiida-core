@@ -71,5 +71,4 @@ class TransportQueue(object):
                         "Callback '{}' raised exception when passed transport:\n{}".format(
                             fn, traceback.format_exc())
                     )
-
                 _LOGGER.debug("...callback finished")

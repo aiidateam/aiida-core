@@ -14,14 +14,14 @@ import collections
 import uuid
 from enum import Enum
 import itertools
-
+import voluptuous
 import plum.port
+from plum import ProcessState
 
 import aiida.orm
 from aiida.orm.data import Data
 from aiida.orm import load_node
 from aiida.orm.implementation.general.calculation.work import WorkCalculation
-import voluptuous
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.exceptions import ModificationNotAllowed
@@ -31,10 +31,10 @@ from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida import LOG_LEVEL_REPORT
-from .runners import get_runner
+from . import runners
 from . import utils
 
-__all__ = ['Process', 'FunctionProcess']
+__all__ = ['Process', 'ProcessState', 'FunctionProcess']
 
 
 class DictSchema(object):
@@ -192,8 +192,7 @@ class Process(plum.process.Process):
 
     def __init__(self, inputs=None, pid=None, logger=None, runner=None, parent_pid=None):
         if runner is None:
-            from .runners import new_runner
-            self._runner = new_runner()
+            self._runner = runners.new_runner()
         else:
             self._runner = runner
 
@@ -267,7 +266,7 @@ class Process(plum.process.Process):
     def on_entered(self):
         super(Process, self).on_entered()
         # Update the node attributes every time we enter a new state
-        self._update_node_state()
+        self.update_node_state()
 
     @override
     def on_terminated(self):
@@ -292,7 +291,7 @@ class Process(plum.process.Process):
         self.calc._set_attr(WorkCalculation.FAILED_KEY, True)
 
     @override
-    def on_output_emitted(self, output_port, value, dynamic):
+    def on_output_emitting(self, output_port, value):
         """
         The process has emitted a value on the given output port.
 
@@ -301,7 +300,7 @@ class Process(plum.process.Process):
         :param dynamic: Was the output port a dynamic one (i.e. not known
         beforehand?)
         """
-        super(Process, self).on_output_emitted(output_port, value, dynamic)
+        super(Process, self).on_output_emitting(output_port, value)
         if not isinstance(value, Data):
             raise TypeError(
                 "Values outputted from process must be instances of AiiDA Data " \
@@ -371,6 +370,26 @@ class Process(plum.process.Process):
         :return: The decoded input args
         """
         return {k: self._decode_input(v) for k, v in encoded.iteritems()}
+
+    def update_node_state(self):
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
+        self.update_outputs()
+
+    def update_outputs(self):
+        # Link up any new outputs
+        new_outputs = set(self.outputs.keys()) - \
+                      set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
+        for label in new_outputs:
+            value = self.outputs[label]
+            # Try making us the creator
+            try:
+                value.add_link_from(self.calc, label, LinkType.CREATE)
+            except ValueError:
+                # Must have already been created...nae dramas
+                pass
+
+            value.store()
+            value.add_link_from(self.calc, label, LinkType.RETURN)
 
     def _encode_input(self, inp):
         if isinstance(inp, aiida.orm.data.Node):
@@ -459,24 +478,6 @@ class Process(plum.process.Process):
             label = self.raw_inputs.get('_label', None)
             if label is not None:
                 self._calc.label = label
-
-    def _update_node_state(self):
-        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
-
-        # Link up any new outputs
-        new_outputs = set(self.outputs.keys()) - \
-                      set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
-        for label in new_outputs:
-            value = self.outputs[label]
-            # Try making us the creator
-            try:
-                value.add_link_from(self.calc, label, LinkType.CREATE)
-            except ValueError:
-                # Must have already been created...nae dramas
-                pass
-
-            value.store()
-            value.add_link_from(self.calc, label, LinkType.RETURN)
 
 
 class FunctionProcess(Process):

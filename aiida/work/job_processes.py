@@ -19,8 +19,48 @@ from aiida.common import exceptions
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
-from aiida.work import processes
-from aiida.work import utils
+
+from . import processes
+from . import utils
+
+SUBMIT_COMMAND = 'submit'
+UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
+RETRIEVE_COMMAND = 'retrieve'
+
+
+class Waiting(plum.Waiting):
+    def enter(self):
+        if self.data == SUBMIT_COMMAND:
+            op = self.process._submit_with_transport
+        elif self.data == UPDATE_SCHEDULER_COMMAND:
+            op = self.process._update_scheduler_state_with_transport
+        elif self.data == RETRIEVE_COMMAND:
+            op = self._retrieve_with_transport
+        else:
+            raise RuntimeError("Unknown waiting command")
+
+        self._launch_transport_operation(op)
+
+    def _launch_transport_operation(self, operation):
+        """
+        Schedule a callback to a function that requires transport
+
+        :param operation:
+        :return: A future corresponding to the operation
+        """
+        fn = partial(self._do_transport_operation, operation)
+        self._callback_handle = \
+            self.process.runner.transport.call_me_with_transport(
+                self.process._get_authinfo(), fn)
+
+    def _do_transport_operation(self, operation, authinfo, transport):
+        # Guard in case we left the state already
+        if self.in_state:
+            try:
+                operation(authinfo, transport)
+            except BaseException:
+                import sys
+                self.process.fail(sys.exc_info())
 
 
 class JobProcess(processes.Process):
@@ -28,6 +68,10 @@ class JobProcess(processes.Process):
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = '_options'
     _CALC_CLASS = None
+
+    # Class defaults
+    _transport_operation = None
+    _authinfo = None
 
     @classmethod
     def build(cls, calc_class):
@@ -76,39 +120,19 @@ class JobProcess(processes.Process):
                         '_CALC_CLASS': calc_class
                     })
 
-    def __init__(self, inputs, pid=None, logger=None):
-        super(JobProcess, self).__init__(inputs, pid, logger)
-
-        self._transport_operation = None
-
-        # Everything below here doesn't need to be saved
-        self._authinfo = None
+    @classmethod
+    def get_state_classes(cls):
+        # Overwrite the waiting state
+        states_map = super(JobProcess, cls).get_state_classes()
+        states_map[processes.ProcessState.WAITING] = Waiting
+        return states_map
 
     # region Process overrides
     @override
-    def save_instance_state(self, out_state):
-        super(JobProcess, self).save_instance_state(out_state)
-
-        if self._transport_operation is not None:
-            out_state[self.TRANSPORT_OPERATION] = self._transport_operation
-
-    @override
-    def load_instance_state(self, saved_state):
-        super(JobProcess, self).load_instance_state(saved_state)
-
-        try:
-            self._transport_operation = saved_state[self.TRANSPORT_OPERATION]
-            self._relaunch_transport_operation()
-        except KeyError:
-            self._transport_operation = None
-
-        self._authinfo = None
-
-    @override
-    def on_output_emitted(self, output_port, value, dynamic):
-        # Skip over parent on_output_emitted because it will try to store stuff
-        # which is already done for us by the Calculation
-        plum.Process.on_output_emitted(self, output_port, value, dynamic)
+    def update_outputs(self):
+        # DO NOT REMOVE:
+        # Don't do anything, this is taken care of by the job calculation node itself
+        pass
 
     @override
     def get_or_create_db_record(self):
@@ -164,13 +188,15 @@ class JobProcess(processes.Process):
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation
-        return self._submit()
+        return processes.Wait(self._submitted, 'Waiting to submit', SUBMIT_COMMAND)
 
     # endregion
 
     def _get_authinfo(self):
         if self._authinfo is None:
-            self._authinfo = get_authinfo(self.calc.get_computer(), self.calc.get_user())
+            self._authinfo = \
+                get_authinfo(self.calc.get_computer(),
+                             self.calc.get_user())
 
         return self._authinfo
 
@@ -183,35 +209,11 @@ class JobProcess(processes.Process):
         :param operation: 
         :return: A future corresponding to the operation 
         """
-        self._transport_operation = self.loop().create_future()
-
         fn = partial(self._do_transport_operation, operation)
         self._callback_handle = self.runner.transport.call_me_with_transport(
             self._get_authinfo(), fn)
 
-        return self._transport_operation
-
-    def _relaunch_transport_operation(self):
-        assert self._transport_operation is not None, \
-            "Not currently performing transport operation"
-
-        state = self.calc.get_state()
-        if state in (calc_states.TOSUBMIT, calc_states.SUBMITTING):
-            op = self._submit_with_transport
-        elif state == calc_states.WITHSCHEDULER:
-            op = self._update_scheduler_state_with_transport
-        elif state == calc_states.COMPUTED:
-            op = self._retrieve_with_transport
-        else:
-            raise RuntimeError("Job calculation is not in a state that requires transport")
-
-        fn = partial(self._do_transport_operation, op)
-        self._callback_handle = self.runner.transport.call_me_with_transport(
-            self._get_authinfo(), fn)
-
     def _do_transport_operation(self, operation, authinfo, transp):
-        self._callback_handle = None
-
         try:
             result = operation(authinfo, transp)
             self._transport_operation.set_result(result)
@@ -220,7 +222,7 @@ class JobProcess(processes.Process):
 
     def _submit_with_transport(self, authinfo, transp):
         execmanager.submit_calc(self.calc, authinfo, transp)
-        return True
+        self.wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
 
     def _update_scheduler_state_with_transport(self, authinfo, trans):
         """
@@ -269,30 +271,18 @@ class JobProcess(processes.Process):
 
             self.calc._set_state(calc_states.COMPUTED)
 
-        return job_done
+        if job_done:
+            self.wait(done_callback=self._retrieved,
+                      msg='Waiting to retrieve',
+                      data=RETRIEVE_COMMAND)
+        else:
+            self.wait(msg='Waiting for scheduler update', data=UPDATE_SCHEDULER_COMMAND)
 
-    def _retrieve_with_transport(self, authinfo, transp):
-        execmanager.retrieve_all(self.calc, transp)
-        return True
+    def _retrieve_with_transport(self, authinfo, transport):
+        execmanager.retrieve_all(self.calc, transport)
+        self.resume()
 
     # endregion
-
-    def _submit(self):
-        # Submit the calculation
-        future = self._launch_transport_operation(self._submit_with_transport)
-        return future, self._submitted
-
-    def _update_scheduler_state(self, job_done):
-        if job_done:
-            future = self._launch_transport_operation(self._retrieve_with_transport)
-            return future, self._retrieved
-        else:
-            future = self._launch_transport_operation(self._update_scheduler_state_with_transport)
-            return future, self._update_scheduler_state
-
-    def _submitted(self, result):
-        future = self._launch_transport_operation(self._update_scheduler_state_with_transport)
-        return future, self._update_scheduler_state
 
     def _retrieved(self, result):
         """

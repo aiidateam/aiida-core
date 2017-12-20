@@ -9,12 +9,13 @@
 ###########################################################################
 import logging
 import time
+
 import aiida.work.globals
 import aiida.work.persistence
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.mixins import Sealable
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.work.legacy.job_process import ContinueJobCalculation
+from aiida.work.job_processes import ContinueJobCalculation
 from aiida.work.utils import CalculationHeartbeat
 from plum.exceptions import LockError
 from . import runners
@@ -22,10 +23,7 @@ from . import runners
 _LOGGER = logging.getLogger(__name__)
 
 import traceback
-from plum.process import ProcessState
-from aiida.work.processes import Process
 import aiida.work.persistence
-from portalocker import LockException
 
 
 def launch_pending_jobs(storage=None, loop=None):

@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from aiida import work
 from aiida.work.class_loader import ClassLoader
-from aiida.work.legacy.job_process import JobProcess
+from aiida.work.job_processes import JobProcess
 
 Job = TemplatereplacerCalculation.process()
 

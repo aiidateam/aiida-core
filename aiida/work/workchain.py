@@ -227,7 +227,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
 
         if awaitable.outputs:
-            value = node.get_outputs()
+            value = node.get_outputs_dict()
         else:
             value = node
 

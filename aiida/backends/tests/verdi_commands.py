@@ -455,14 +455,37 @@ class TestVerdiDataCommands(AiidaTestCase):
             # Keep track of the id of the node that you added to the group
             cmd_to_nodeid_map_for_groups[_Cif] = c2.id
 
+    @classmethod
+    def create_upf_data(cls, cmd_to_nodeid_map,
+                        cmd_to_nodeid_map_for_groups, group):
+
+        from aiida.orm.data.upf import UpfData
+        from aiida.cmdline.commands.data import _Upf
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(prefix="Fe") as f:
+            f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
+            f.flush()
+            upf1 = UpfData(file=f.name)
+            upf1.store()
+
+            upf2 = UpfData(file=f.name)
+            upf2.store()
+
+            # Keep track of the created objects
+            cmd_to_nodeid_map[_Upf] = [upf1.id, upf2.id]
+
+            # Add the second UPF data to the group
+            group.add_nodes([upf2])
+            # Keep track of the id of the node that you added to the group
+            cmd_to_nodeid_map_for_groups[_Upf] = upf2.id
+
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """
         Create some data needed for the tests
         """
-        import tempfile
-
         super(TestVerdiDataCommands, cls).setUpClass()
 
         # Create a group to add specific data inside
@@ -476,20 +499,16 @@ class TestVerdiDataCommands(AiidaTestCase):
         cls.create_cif_data(cls.cmd_to_nodeid_map,
                             cls.cmd_to_nodeid_map_for_groups, g1)
 
-        # with tempfile.NamedTemporaryFile(prefix="Fe") as f:
-        #     f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
-        #     f.flush()
-        #     upf = UpfData(file=f.name)
-        #     upf.store()
-
-
+        cls.create_upf_data(cls.cmd_to_nodeid_map,
+                            cls.cmd_to_nodeid_map_for_groups, g1)
 
 
     def test_trajectory_simple_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
         from aiida.cmdline.commands.data import _Cif
+        from aiida.cmdline.commands.data import _Upf
 
-        sub_cmds = [_Trajectory, _Cif]
+        sub_cmds = [_Trajectory, _Cif, _Upf]
         for sub_cmd in sub_cmds:
             with Capturing() as output:
                 sub_cmd().list()
@@ -508,8 +527,9 @@ class TestVerdiDataCommands(AiidaTestCase):
     def test_trajectory_past_days_listing(self):
         from aiida.cmdline.commands.data import _Trajectory
         from aiida.cmdline.commands.data import _Cif
+        from aiida.cmdline.commands.data import _Upf
 
-        sub_cmds = [_Trajectory, _Cif]
+        sub_cmds = [_Trajectory, _Cif, _Upf]
         for sub_cmd in sub_cmds:
             args_to_test = [['-p', '0'], ['--past-days', '0']]
             for arg in args_to_test:

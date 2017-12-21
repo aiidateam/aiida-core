@@ -31,7 +31,13 @@ RETRIEVE_COMMAND = 'retrieve'
 class Waiting(plum.Waiting):
     def enter(self):
         super(Waiting, self).enter()
+        self._action_command()
 
+    def load_instance_state(self, process, saved_state):
+        super(Waiting, self).load_instance_state(process, saved_state)
+        self._action_command()
+
+    def _action_command(self):
         if self.data == SUBMIT_COMMAND:
             op = self.process._submit_with_transport
         elif self.data == UPDATE_SCHEDULER_COMMAND:
@@ -204,28 +210,6 @@ class JobProcess(processes.Process):
         return self._authinfo
 
     # region Functions that require transport
-
-    def _launch_transport_operation(self, operation):
-        """
-        Schedule a callback to a function that requires transport
-        
-        :param operation: 
-        :return: A future corresponding to the operation 
-        """
-        fn = partial(self._do_transport_operation, operation)
-        self._callback_handle = self.runner.transport.call_me_with_transport(
-            self._get_authinfo(), fn)
-
-    def _do_transport_operation(self, operation, authinfo, transp):
-        try:
-            result = operation(authinfo, transp)
-            self._transport_operation.set_result(result)
-        except BaseException as e:
-            self._transport_operation.set_exception(e)
-
-    def _submit_with_transport(self, authinfo, transp):
-        execmanager.submit_calc(self.calc, authinfo, transp)
-        self.wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
 
     def _update_scheduler_state_with_transport(self, authinfo, trans):
         """

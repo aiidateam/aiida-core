@@ -27,6 +27,15 @@ __paper_short__ = """G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016)."""
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
+
+# A logging filter that can be used to disable logging
+class NotInTestingFilter(logging.Filter):
+
+    def filter(self, record):
+        from aiida import settings
+        return not settings.TESTING_MODE
+
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
@@ -45,11 +54,17 @@ LOGGING = {
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
+    'filters': {
+        'testing': {
+            '()': NotInTestingFilter
+        }
+    },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'halfverbose',
+            'filters': ['testing']
         },
         'dblogger': {
             # get_property takes the property from the config json file

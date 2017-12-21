@@ -207,13 +207,6 @@ class TestWorkflowBasic(AiidaTestCase):
             # mistake by a previous test (e.g. one that disables and reenables
             # again, but that failed)
             logging.disable(logging.NOTSET)
-            # Temporarily disable logging to the stream handler (i.e. screen)
-            # because otherwise fix_calc_states will print warnings
-            handler = next((h for h in logging.getLogger('aiida').handlers if
-                            isinstance(h, logging.StreamHandler)), None)
-            if handler:
-                original_level = handler.level
-                handler.setLevel(logging.ERROR)
 
             # Testing the error propagation of a simple workflow
             wf = FailingWFTestSimple()
@@ -238,8 +231,7 @@ class TestWorkflowBasic(AiidaTestCase):
                 self.assertLess(step_no, 5, "This workflow should have stopped "
                                             "since it is failing")
         finally:
-            if handler:
-                handler.setLevel(original_level)
+            pass
 
     def test_result_parameter_name_colision(self):
         """

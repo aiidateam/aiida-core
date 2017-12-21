@@ -715,18 +715,13 @@ class KpointsData(ArrayData):
 
         :param cartesian: If true, returns points in cartesian coordinates.
             Crystal coordinates otherwise. Default=False
-        :param epsilon_length: threshold on lengths comparison, used
-            to get the bravais lattice info
-        :param epsilon_angle: threshold on angles comparison, used
-            to get the bravais lattice info
-        :return point_coords, path:
-            point_coords: a dictionary of point_name:point_coords key,values.
-            path: the suggested path which goes through all high symmetry
-                lines. A list of lists for all path segments.
-                e.g. [('G','X'),('X','M'),...]
-                It's not necessarily a continuous line.
-        :note: We assume that the cell given by the cell property is the
-            primitive unit cell
+        :param epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
+        :param epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
+        :returns point_coords: a dictionary of point_name:point_coords key,values.
+        :returns path: the suggested path which goes through all high symmetry lines.
+            A list of lists for all path segments. e.g. [('G','X'),('X','M'),...]
+            It's not necessarily a continuous line.
+        :note: We assume that the cell given by the cell property is the primitive unit cell
         """
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)

@@ -203,8 +203,12 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     Call the get_explicit_kpoints_path of the legacy implementation
 
     :param structure: a StructureData node
-    :param epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
-    :param epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
+    :param float kpoint_distance: parameter controlling the distance between kpoints. Distance is
+        given in crystal coordinates, i.e. the distance is computed in the space of b1, b2, b3.
+        The distance set will be the closest possible to this value, compatible with the requirement
+        of putting equispaced points between two special points (since extrema are included).
+    :param float epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
+    :param float epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
     """
     args_recognized = ['epsilon_length', 'epsilon_angle']
     args_unknown = set(kwargs).difference(args_recognized)

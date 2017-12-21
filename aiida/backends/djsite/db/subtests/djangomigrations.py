@@ -10,11 +10,11 @@
 from aiida.backends.testbase import AiidaTestCase
 
 
-
 class CalcStateChanges(AiidaTestCase):
     # Class to check if the migration code that deals with removing the
     # NOTFOUND and UNDETERMINED calc states works properly
     def test_unexpected_calc_states(self):
+        import logging
         from django.utils import timezone
         from aiida.orm.calculation import Calculation
 

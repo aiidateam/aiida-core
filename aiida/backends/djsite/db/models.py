@@ -1426,21 +1426,28 @@ class DbComputer(m.Model):
         from aiida.orm.computer import Computer
         return Computer(dbcomputer=self)
 
-    def get_workdir(self):
+
+    def _get_val_from_metadata(self, key):
         import json
 
         try:
             metadata = json.loads(self.metadata)
         except ValueError:
             raise DbContentError(
-                "Error while reading metadata for DbComputer {} ({})".format(
-                    self.name, self.hostname))
-
+                "Error while reading metadata for DbComputer {} ({})".format(self.name, self.hostname))
         try:
-            return metadata['workdir']
+            return metadata[key]
         except KeyError:
-            raise ConfigurationError('No workdir found for DbComputer {} '.format(
-                self.name))
+            raise ConfigurationError('No {} found for DbComputer {} '.format(key,self.name))
+
+    def get_workdir(self):
+        return self._get_val_from_metadata('workdir')
+
+    def get_shebang(self):
+        """
+        Return the shebang line
+        """
+        return self._get_val_from_metadata('shebang')
 
     def __str__(self):
         if self.enabled:

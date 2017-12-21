@@ -134,9 +134,6 @@ class TestBackendLog(AiidaTestCase):
         message = 'Testing logging of critical failure'
         calc = Calculation()
 
-        # Make sure that global logging is not accidentally disabled
-        logging.disable(logging.NOTSET)
-
         # Firing a log for an unstored should not end up in the database
         calc.logger.critical(message)
 

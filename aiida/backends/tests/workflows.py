@@ -197,17 +197,11 @@ class TestWorkflowBasic(AiidaTestCase):
         sub-workflows) that has an exception at one of its steps stops
         properly and it is not left as RUNNING.
         """
-        import logging
         from aiida.daemon.workflowmanager import execute_steps
         from aiida.workflows.test import (FailingWFTestSimple,
                                           FailingWFTestSimpleWithSubWF)
 
         try:
-            # First of all, I re-enable logging in case it was disabled by
-            # mistake by a previous test (e.g. one that disables and reenables
-            # again, but that failed)
-            logging.disable(logging.NOTSET)
-
             # Testing the error propagation of a simple workflow
             wf = FailingWFTestSimple()
             wf.store()

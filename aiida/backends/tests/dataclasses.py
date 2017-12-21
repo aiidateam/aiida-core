@@ -2794,37 +2794,104 @@ class TestKpointsData(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             k.set_kpoints_path()
 
-    def test_tetra_x(self):
-      """
-      testing tetragonal cells with axis along X
-      """
-      import numpy
-      from aiida.orm import DataFactory
-      alat = 1.5
-      cell_x = [[alat,0,0],[0,1,0],[0,0,1]]
-      K = DataFactory('array.kpoints')
-      k = K()
-      k.set_cell(cell_x)
-      points = k.get_special_points(cartesian=True)
+    def test_path_wrapper_legacy(self):
+        """
+        This is a clone of the test_path test but instead it goes through the new wrapper
+        calling the deprecated legacy implementation. This tests that the wrapper maintains
+        the same behavior of the old implementation
+        """
+        import numpy
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.array.kpoints import KpointsData
+        from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
 
-      self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat)
-      self.assertAlmostEqual(points[0]['Z'][1], 0.)
+        # Shouldn't get anything without having set the cell
+        with self.assertRaises(AttributeError):
+            get_explicit_kpoints_path(None)
+
+        # Define a cell
+        alat = 4.
+        cell = numpy.array([
+            [alat, 0., 0.],
+            [0., alat, 0.],
+            [0., 0., alat],
+        ])
+
+        structure = StructureData(cell=cell)
+
+        # test the various formats for specifying the path
+        get_explicit_kpoints_path(structure, method='legacy', value=[('G','M'),])
+        get_explicit_kpoints_path(structure, method='legacy', value=[('G','M',30),])
+        get_explicit_kpoints_path(structure, method='legacy', value=[('G',(0.,0.,0.),'M',(1.,1.,1.)),])
+        get_explicit_kpoints_path(structure, method='legacy', value=[('G',(0.,0.,0.),'M',(1.,1.,1.),30),])
+
+        # at least 2 points per segment
+        with self.assertRaises(ValueError):
+            get_explicit_kpoints_path(structure, method='legacy', value=[('G','M',1),])
+
+        with self.assertRaises(ValueError):
+            get_explicit_kpoints_path(structure, method='legacy', value=[('G',(0.,0.,0.),'M',(1.,1.,1.),1),])
+
+        # try to set points with a spacing
+        get_explicit_kpoints_path(structure, method='legacy', kpoint_distance=0.1)
+
+
+    def test_tetra_x(self):
+        """
+        testing tetragonal cells with axis along X
+        """
+        import numpy
+        from aiida.orm import DataFactory
+        alat = 1.5
+        cell_x = [[alat,0,0],[0,1,0],[0,0,1]]
+        K = DataFactory('array.kpoints')
+        k = K()
+        k.set_cell(cell_x)
+        points = k.get_special_points(cartesian=True)
+
+        self.assertAlmostEqual(points[0]['Z'][0], numpy.pi/alat)
+        self.assertAlmostEqual(points[0]['Z'][1], 0.)
 
     def test_tetra_z(self):
-      """
-      testing tetragonal cells with axis along X
-      """
-      import numpy
-      from aiida.orm import DataFactory
-      alat = 1.5
-      cell_x = [[1,0,0],[0,1,0],[0,0,alat]]
-      K = DataFactory('array.kpoints')
-      k = K()
-      k.set_cell(cell_x)
-      points = k.get_special_points(cartesian=True)
+        """
+        testing tetragonal cells with axis along X
+        """
+        import numpy
+        from aiida.orm import DataFactory
+        alat = 1.5
+        cell_x = [[1,0,0],[0,1,0],[0,0,alat]]
+        K = DataFactory('array.kpoints')
+        k = K()
+        k.set_cell(cell_x)
+        points = k.get_special_points(cartesian=True)
 
-      self.assertAlmostEqual(points[0]['Z'][2], numpy.pi/alat )
-      self.assertAlmostEqual(points[0]['Z'][0], 0.)
+        self.assertAlmostEqual(points[0]['Z'][2], numpy.pi/alat )
+        self.assertAlmostEqual(points[0]['Z'][0], 0.)
+
+    def test_tetra_z_wrapper_legacy(self):
+        """
+        This is a clone of the test_tetra_z test but instead it goes through the new wrapper
+        calling the deprecated legacy implementation. This tests that the wrapper maintains
+        the same behavior of the old implementation
+        """
+        import numpy
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.structure import StructureData
+        from aiida.tools.data.array.kpoints import get_kpoints_path
+
+        alat = 1.5
+        cell_x = [[1,0,0],[0,1,0],[0,0,alat]]
+        s = StructureData(cell=cell_x)
+        result = get_kpoints_path(s, method='legacy', cartesian=True)
+
+        self.assertIsInstance(result['parameters'], ParameterData)
+
+        point_coords = result['parameters'].dict.point_coords
+        path = result['parameters'].dict.path
+
+        self.assertAlmostEqual(point_coords['Z'][2], numpy.pi/alat )
+        self.assertAlmostEqual(point_coords['Z'][0], 0.)
 
             
 class TestBandsData(AiidaTestCase):
@@ -2925,27 +2992,3 @@ class TestBandsData(AiidaTestCase):
                 for file in files_created:
                     if os.path.exists(file):
                         os.remove(file)
-
-
-# class TestData(AiidaTestCase):
-#     """
-#     Tests generic Data class.
-#     """
-# 
-#     "Validation for source is disabled due to Issue #9 on https://bitbucket.org/epfl_theos/aiida_epfl/issues/9"
-#     def test_license_validation(self):
-#         """
-#         Test the validation of source licenses.
-#         """
-#         from aiida.orm.data import Data
-# 
-#         data = Data(source={'license': 'CC0'})
-#         data.store()
-# 
-#         data = Data(source={'license': 'CC-BY-SA'})
-#         # CC-BY* type licenses must be accompanied by attribution, given
-#         # in 'description' key of source dictionary. This is enforced in
-#         # Data._validate(), thus the ValidationError.
-#         with self.assertRaises(ValidationError):
-#             data.store()
-#

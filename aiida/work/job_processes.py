@@ -263,24 +263,23 @@ class JobProcess(processes.Process):
             self.calc._set_state(calc_states.COMPUTED)
 
         if job_done:
-            self.wait(done_callback=self._retrieved,
-                      msg='Waiting to retrieve',
-                      data=RETRIEVE_COMMAND)
+            self.wait(self._link_outputs, msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
         else:
             self.wait(msg='Waiting for scheduler update', data=UPDATE_SCHEDULER_COMMAND)
 
     def _retrieve_with_transport(self, authinfo, transport):
-        execmanager.retrieve_all(self.calc, transport)
+        retrieved_temporary_folder = execmanager.retrieve_all(self.calc, transport)
+        self._retrieved(retrieved_temporary_folder)
         self.resume()
 
     # endregion
 
-    def _retrieved(self):
+    def _retrieved(self, retrieved_temporary_folder=None):
         """
         Parse a retrieved job calculation.
         """
         try:
-            execmanager.parse_results(self.calc)
+            execmanager.parse_results(self.calc, retrieved_temporary_folder)
         except BaseException:
             try:
                 self.calc._set_state(calc_states.PARSINGFAILED)
@@ -288,6 +287,7 @@ class JobProcess(processes.Process):
                 pass
             raise
 
+    def _link_outputs(self):
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)

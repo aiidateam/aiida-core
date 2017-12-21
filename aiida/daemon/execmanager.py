@@ -318,7 +318,6 @@ def submit_jobs():
                 aiidauser.email,
                 computer.name,
                 e.__class__.__name__, traceback.format_exc()))
-            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue

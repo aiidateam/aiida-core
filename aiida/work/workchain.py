@@ -195,15 +195,15 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             return True
         return False
 
-    def abort_nowait(self, msg=None):
+    def abort_nowait(self, message=None):
         """
         Abort the workchain at the next state transition without waiting
         which is achieved by passing a timeout value of zero
 
-        :param msg: The abort message
-        :type msg: str
+        :param message: The abort message
+        :type message: str
         """
-        return self.abort(msg=msg)
+        return self.abort(message=message)
 
     def action_awaitables(self):
         """

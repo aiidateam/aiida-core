@@ -4,7 +4,7 @@ from plum.utils import AttributesDict
 from aiida.orm.calculation import Calculation
 from aiida.orm.workflow import Workflow
 
-__all__ = ['AwaitableTarget', 'AwaitableAction', 'construct_awaitable', 'Outputs', 'assign_', 'append_']
+__all__ = ['AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
 
 
 class AwaitableTarget(Enum):
@@ -29,14 +29,26 @@ class Awaitable(AttributesDict):
 
 def construct_awaitable(target):
     """
+    Construct an instance of the Awaitable class that will contain the information
+    related to the action to be taken with respect to the context once the awaitable
+    object is completed.
+
+    The awaitable is a simple dictionary with the following keys
+
+        * pk: the pk of the node that is being waited on
+        * action: the context action to be performed upon completion
+        * outputs: a boolean that toggles whether the node itself
+
+    Currently the only awaitable classes are Calculation and Workflow
+    The only awaitable actions are the Assign and Append operators
     """
     if isinstance(target, Awaitable):
         return target
 
     awaitable = Awaitable(**{
         'pk': target.pk,
+        'action': AwaitableAction.ASSIGN,
         'outputs': False,
-        'action': AwaitableAction.ASSIGN
     })
 
     if isinstance(target, Calculation):
@@ -44,30 +56,6 @@ def construct_awaitable(target):
     elif isinstance(target, Workflow):
         awaitable.target = AwaitableTarget.WORKFLOW
     else:
-        raise ValueError('incorrect type bla')
+        raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
 
-    return awaitable
-
-
-def Outputs(target):
-    """
-    """
-    awaitable = construct_awaitable(target)
-    awaitable.outputs = True
-    return awaitable
-
-
-def assign_(target):
-    """
-    """
-    awaitable = construct_awaitable(target)
-    awaitable.action = AwaitableAction.ASSIGN
-    return awaitable
-
-
-def append_(target):
-    """
-    """
-    awaitable = construct_awaitable(target)
-    awaitable.action = AwaitableAction.APPEND
     return awaitable

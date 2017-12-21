@@ -11,15 +11,14 @@ import abc
 import functools
 import inspect
 import plum
-from plum import ProcessState
 
 from aiida.orm.utils import load_node, load_workflow
 from aiida.common.lang import override
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from . import processes
 from . import utils
-from . import waits
-from .waits import *
+from .awaitable import *
+from .context import *
 
 __all__ = ['WorkChain']
 
@@ -121,7 +120,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         to the corresponding key in the context of the workchain
         """
         for key, value in kwargs.iteritems():
-            awaitable = waits.construct_awaitable(value)
+            awaitable = construct_awaitable(value)
             awaitable.key = key
             self.insert_awaitable(awaitable)
 
@@ -208,12 +207,17 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
 
     def action_awaitables(self):
         """
+        Handle the awaitables that are currently registered with the workchain
+
+        Depending on the class type of the awaitable's target a different callback
+        function will be bound with the awaitable and the runner will be asked to
+        call it when the target is completed
         """
         for awaitable in self._awaitables:
-            if awaitable.target == waits.AwaitableTarget.CALCULATION:
+            if awaitable.target == AwaitableTarget.CALCULATION:
                 fn = functools.partial(self.on_calculation_finished, awaitable)
                 self.runner.call_on_calculation_finish(awaitable.pk, fn)
-            elif awaitable.target == waits.AwaitableTarget.WORKFLOW:
+            elif awaitable.target == AwaitableTarget.WORKFLOW:
                 fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
                 self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
             else:
@@ -221,6 +225,13 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
 
     def on_calculation_finished(self, awaitable, pk):
         """
+        Callback function called by the runner when the calculation instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
         """
         try:
             node = load_node(pk)
@@ -232,9 +243,9 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         else:
             value = node
 
-        if awaitable.action == waits.AwaitableAction.ASSIGN:
+        if awaitable.action == AwaitableAction.ASSIGN:
             self.ctx[awaitable.key] = value
-        elif awaitable.action == waits.AwaitableAction.APPEND:
+        elif awaitable.action == AwaitableAction.APPEND:
             self.ctx.setdefault(awaitable.key, []).append(value)
         else:
             assert "invalid awaitable action '{}'".format(awaitable.action)
@@ -242,11 +253,18 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         self.remove_awaitable(awaitable)
 
         if len(self._awaitables) == 0:
-            assert self.state == ProcessState.WAITING
+            assert self.state == plum.ProcessState.WAITING
             self.resume()
 
     def on_legacy_workflow_finished(self, awaitable, pk):
         """
+        Callback function called by the runner when the legacy workflow instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
         """
         try:
             workflow = load_workflow(pk=pk)
@@ -258,9 +276,9 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         else:
             value = workflow
 
-        if awaitable.action == waits.AwaitableAction.ASSIGN:
+        if awaitable.action == AwaitableAction.ASSIGN:
             self.ctx[awaitable.key] = value
-        elif awaitable.action == waits.AwaitableAction.APPEND:
+        elif awaitable.action == AwaitableAction.APPEND:
             self.ctx.setdefault(awaitable.key, []).append(value)
         else:
             assert "invalid awaitable action '{}'".format(awaitable.action)
@@ -268,11 +286,8 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         self.remove_awaitable(awaitable)
 
         if len(self._awaitables) == 0:
-            assert self.state == ProcessState.WAITING
+            assert self.state == plum.ProcessState.WAITING
             self.resume()
-
-
-ToContext = dict
 
 
 class Stepper(utils.Savable):

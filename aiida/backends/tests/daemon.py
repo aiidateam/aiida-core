@@ -51,7 +51,7 @@ class TestDaemonBasic(AiidaTestCase):
 
         # Killing the head workflow
         wf_cmd = WfCmd()
-        wf_cmd.workflow_kill(*[str(head_wf.pk), "-f"])
+        wf_cmd.workflow_kill(*[str(head_wf.pk), '-f', '-q'])
 
         # At this point no running workflow should be found
         running_no = 0

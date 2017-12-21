@@ -211,6 +211,10 @@ class JobProcess(processes.Process):
 
     # region Functions that require transport
 
+    def _submit_with_transport(self, authinfo, transport):
+        execmanager.submit_calc(self.calc, authinfo, transport)
+        self.wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
+
     def _update_scheduler_state_with_transport(self, authinfo, trans):
         """
         Given a transport this method updates the calculation scheduler state.

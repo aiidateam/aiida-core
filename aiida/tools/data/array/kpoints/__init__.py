@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.parameter import ParameterData
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
@@ -176,17 +177,18 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     Call the get_kpoints_path of the legacy implementation
 
     :param structure: a StructureData node
+    :param bool cartesian: if set to true, reads the coordinates eventually passed in value as cartesian coordinates
     :param epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
     :param epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
     """
-    args_recognized = ['epsilon_length', 'epsilon_angle']
+    args_recognized = ['cartesian', 'epsilon_length', 'epsilon_angle']
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
         raise ValueError("unknown arguments {}".format(args_unknown))
 
     point_coords, path, bravais_info = legacy.get_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, cartesian=False, **kwargs
+        cell=structure.cell, pbc=structure.pbc, **kwargs
     )
 
     parameters = {
@@ -207,18 +209,24 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         given in crystal coordinates, i.e. the distance is computed in the space of b1, b2, b3.
         The distance set will be the closest possible to this value, compatible with the requirement
         of putting equispaced points between two special points (since extrema are included).
+    :param bool cartesian: if set to true, reads the coordinates eventually passed in value as cartesian coordinates
     :param float epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
     :param float epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
     """
-    args_recognized = ['epsilon_length', 'epsilon_angle']
+    args_recognized = ['value', 'kpoint_distance', 'cartesian', 'epsilon_length', 'epsilon_angle']
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
         raise ValueError("unknown arguments {}".format(args_unknown))
 
-    point_coords, path, bravais_info, labels = legacy.get_explicit_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, cartesian=False, **kwargs
+    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
+        cell=structure.cell, pbc=structure.pbc, **kwargs
     )
+
+    kpoints = KpointsData()
+    kpoints.set_cell(structure.cell)
+    kpoints.set_kpoints(explicit_kpoints)
+    kpoints.labels = labels
 
     parameters = {
         'bravais_info': bravais_info,
@@ -226,7 +234,11 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': ParameterData(dict=parameters)}
+    return {
+        'parameters': ParameterData(dict=parameters),
+        'explicit_kpoints': kpoints
+    }
+
 
 
 _get_kpoints_path_methods = {

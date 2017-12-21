@@ -632,13 +632,13 @@ class KpointsData(ArrayData):
         except AttributeError:
             pbc = None
 
-        kpoints, path, bravais_info, labels = get_explicit_kpoints_path(
+        point_coords, path, bravais_info, explicit_kpoints, labels = get_explicit_kpoints_path(
             value=value, cell=cell, pbc=pbc, kpoint_distance=kpoint_distance, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle
         )
 
-        self.set_kpoints(kpoints)
+        self.set_kpoints(explicit_kpoints)
         self.labels = labels
 
 

@@ -110,7 +110,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         to get the bravais lattice info. It has to be used if the
         user wants to be sure the right symmetries are recognized.
 
-    :returns: kpoints, labels, bravais_info
+    :returns: point_coordinates, path, bravais_info, explicit_kpoints, labels
     """
     bravais_info = find_bravais_info(
         cell=cell, pbc=pbc,
@@ -247,7 +247,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             raise ValueError("Cannot set a path not even knowing the "
                              "kpoints or at least the cell")
         point_coordinates, path, bravais_info = get_kpoints_path(
-            cell=cell, pbc=pbc,
+            cell=cell, pbc=pbc, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
         num_points = _num_points_from_coordinates(path, point_coordinates, kpoint_distance)
@@ -260,7 +260,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
 
         path = value
         point_coordinates, _, bravais_info = get_kpoints_path(
-            cell=cell, pbc=pbc,
+            cell=cell, pbc=pbc, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
         num_points = _num_points_from_coordinates(path, point_coordinates, kpoint_distance)
@@ -273,7 +273,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
 
         path = [(i[0], i[1]) for i in value]
         point_coordinates, _, bravais_info = get_kpoints_path(
-            cell=cell, pbc=pbc,
+            cell=cell, pbc=pbc, cartesian=cartesian,
             epsilon_length=epsilon_length,
             epsilon_angle=epsilon_angle)
         num_points = [i[2] for i in value]
@@ -343,7 +343,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
     else:
         raise ValueError("Input format not recognized")
 
-    kpoints = [tuple(point_coordinates[path[0][0]])]
+    explicit_kpoints = [tuple(point_coordinates[path[0][0]])]
     labels = [(0, path[0][0])]
 
     for count_piece, i in enumerate(path):
@@ -361,21 +361,21 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                          )
 
         for count, j in enumerate(path_piece):
-            if all(numpy.array(kpoints[-1]) == j):
+            if all(numpy.array(explicit_kpoints[-1]) == j):
                 continue  # avoid duplcates
             else:
-                kpoints.append(j)
+                explicit_kpoints.append(j)
 
             # add labels for the first and last point
             if count == 0:
-                labels.append((len(kpoints) - 1, ini_label))
+                labels.append((len(explicit_kpoints) - 1, ini_label))
             if count == len(path_piece) - 1:
-                labels.append((len(kpoints) - 1, end_label))
+                labels.append((len(explicit_kpoints) - 1, end_label))
 
     # I still have some duplicates in the labels: eliminate them
     sorted(set(labels), key=lambda x: x[0])
 
-    return kpoints, path, bravais_info, labels
+    return point_coordinates, path, bravais_info, explicit_kpoints, labels
 
 
 def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,

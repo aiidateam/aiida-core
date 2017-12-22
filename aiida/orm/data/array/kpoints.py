@@ -125,7 +125,7 @@ class KpointsData(ArrayData):
     def labels(self):
         """
         Labels associated with the list of kpoints.
-        List of tuples with kpoint index and kpoint name: [(0,'G'),(13,'M'),...]
+        List of tuples with kpoint index and kpoint name: ``[(0,'G'),(13,'M'),...]``
         """
         label_numbers = self.get_attr('label_numbers', None)
         labels = self.get_attr('labels', None)
@@ -139,7 +139,7 @@ class KpointsData(ArrayData):
 
     def _set_labels(self, value):
         """
-        set label names. Must pass in input a list like: [[0,'X'],[34,'L'],... ]
+        set label names. Must pass in input a list like: ``[[0,'X'],[34,'L'],... ]``
         """
         # check if kpoints were set
         try:
@@ -515,6 +515,8 @@ class KpointsData(ArrayData):
     def bravais_lattice(self):
         """
         The dictionary containing informations about the cell symmetry
+
+        .. deprecated:: 0.11
         """
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
@@ -524,6 +526,8 @@ class KpointsData(ArrayData):
     def bravais_lattice(self, value):
         """
         Set the bravais lattice dictionary
+
+        .. deprecated:: 0.11
         """
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
@@ -532,6 +536,8 @@ class KpointsData(ArrayData):
     def _set_bravais_lattice(self, value):
         """
         Validating function to set the bravais_lattice dictionary
+
+        .. deprecated:: 0.11
         """
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
@@ -566,10 +572,15 @@ class KpointsData(ArrayData):
         """
         Try to get the bravais_lattice info if stored already, otherwise analyze
         the cell with the default settings and save this in the attribute.
+
+        .. deprecated:: 0.11
+           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
+
         :param epsilon_length: threshold on lengths comparison, used
-                                to get the bravais lattice info
+             to get the bravais lattice info
         :param epsilon_angle: threshold on angles comparison, used
-                                to get the bravais lattice info
+             to get the bravais lattice info
+
         :return bravais_lattice: the dictionary containing the symmetry info
         """
         import warnings
@@ -588,6 +599,9 @@ class KpointsData(ArrayData):
                          epsilon_angle=_default_epsilon_angle):
         """
         Set a path of kpoints in the Brillouin zone.
+
+        .. deprecated:: 0.11
+           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
 
         :param value: description of the path, in various possible formats.
 
@@ -649,6 +663,9 @@ class KpointsData(ArrayData):
         :note: We assume that the cell given by the cell property is the
         primitive unit cell.
 
+        .. deprecated:: 0.11
+           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
+
         :return: a dictionary, with keys short_name, extended_name, index
                 (index of the Bravais lattice), and sometimes variation (name of
                 the variation of the Bravais lattice) and extra (a dictionary
@@ -681,6 +698,9 @@ class KpointsData(ArrayData):
         If node is already stored, just returns the symmetry found before
         storing (if any).
 
+        .. deprecated:: 0.11
+           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
+
         :return (str) lattice_name: the name of the bravais lattice and its
              eventual variation
         """
@@ -707,11 +727,16 @@ class KpointsData(ArrayData):
         """
         Get the special point and path of a given structure.
 
-        In 2D, coordinates are based on the paper:
-        R. Ramirez and M. C. Bohm,  Int. J. Quant. Chem., XXX, pp. 391-411 (1986)
+        References:
 
-        In 3D, coordinates are based on the paper:
-        arXiv:1004.2974, W. Setyawan, S. Curtarolo
+        - In 2D, coordinates are based on the paper:
+          R. Ramirez and M. C. Bohm,  Int. J. Quant. Chem., XXX, pp. 391-411 (1986)
+
+        - In 3D, coordinates are based on the paper:
+          W. Setyawan, S. Curtarolo, Comp. Mat. Sci. 49, 299 (2010)
+
+        .. deprecated:: 0.11
+           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
 
         :param cartesian: If true, returns points in cartesian coordinates.
             Crystal coordinates otherwise. Default=False

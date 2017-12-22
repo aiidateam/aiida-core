@@ -85,12 +85,12 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         None: automatically sets all irreducible high symmetry paths.
         Requires that a cell was set
 
-        or
+        or::
 
-        [('G','M'), (...), ...]
-        [('G','M',30), (...), ...]
-        [('G',(0,0,0),'M',(1,1,1)), (...), ...]
-        [('G',(0,0,0),'M',(1,1,1),30), (...), ...]
+          [('G','M'), (...), ...]
+          [('G','M',30), (...), ...]
+          [('G',(0,0,0),'M',(1,1,1)), (...), ...]
+          [('G',(0,0,0),'M',(1,1,1),30), (...), ...]
 
     :param cell: 3x3 array representing the structure cell lattice vectors
     :param pbc: 3-dimensional array of booleans signifying the periodic boundary
@@ -384,6 +384,13 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
     Finds the Bravais lattice of the cell passed in input to the Kpoint class
     :note: We assume that the cell given by the cell property is the
     primitive unit cell.
+
+    .. note:: in 3D, this implementation expects
+       that the structure is already standardized according to the Setyawan
+       paper. If this is not the case, the kpoints and band structure returned will be incorrect. The only case
+       that is dealt correctly by the library is the case when axes are swapped, where the library correctly
+       takes this swapping/rotation into account to assign kpoint labels and coordinates.
+
 
     :param cell: 3x3 array representing the structure cell lattice vectors
     :param pbc: 3-dimensional array of booleans signifying the periodic boundary
@@ -1077,11 +1084,17 @@ def get_kpoints_path(cell, pbc=None, cartesian=False,
     """
     Get the special point and path of a given structure.
 
-    In 2D, coordinates are based on the paper:
-    R. Ramirez and M. C. Bohm,  Int. J. Quant. Chem., XXX, pp. 391-411 (1986)
+    .. note:: in 3D, this implementation expects
+       that the structure is already standardized according to the Setyawan
+       paper. If this is not the case, the kpoints and band structure returned will be incorrect. The only case
+       that is dealt correctly by the library is the case when axes are swapped, where the library correctly
+       takes this swapping/rotation into account to assign kpoint labels and coordinates.
 
-    In 3D, coordinates are based on the paper:
-    arXiv:1004.2974, W. Setyawan, S. Curtarolo
+    - In 2D, coordinates are based on the paper:
+      R. Ramirez and M. C. Bohm,  Int. J. Quant. Chem., XXX, pp. 391-411 (1986)
+
+    - In 3D, coordinates are based on the paper:
+      W. Setyawan, S. Curtarolo, Comp. Mat. Sci. 49, 299 (2010)
 
     :param cell: 3x3 array representing the structure cell lattice vectors
     :param pbc: 3-dimensional array of booleans signifying the periodic boundary
@@ -1097,7 +1110,7 @@ def get_kpoints_path(cell, pbc=None, cartesian=False,
 
         path: the suggested path which goes through all high symmetry
         lines. A list of lists for all path segments.
-        e.g. [('G','X'),('X','M'),...]
+        e.g. ``[('G','X'),('X','M'),...]``
         It's not necessarily a continuous line.
     :note: We assume that the cell given by the cell property is the
         primitive unit cell

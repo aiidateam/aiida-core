@@ -20,3 +20,4 @@ Modules (API documentation)
    ../import_export/dbimporters/dev
    ../import_export/dbexporters/dev
    ../testing/dev
+   ../tools/dev

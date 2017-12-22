@@ -113,6 +113,8 @@ KpointsData
 * **What is stored in the database**: like ``ArrayData``
 * **What is stored in the file repository**: the array data in numpy format
 
+  * :ref:`Automatically compute k-points path given a crystal structure<AutomaticKpoints>`
+
 BandsData
 +++++++++
 

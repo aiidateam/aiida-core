@@ -40,7 +40,8 @@ def get_explicit_kpoints_path(structure, parameters):
           (with labels set).
 
         - ``parameters``: a ParameterData, whose content is
-          the same dictionary as returned by the ``seekpath.get_explicit_k_path`` function,
+          the same dictionary as returned by the ``seekpath.get_explicit_k_path`` function
+          (see `seekpath documentation <https://seekpath.readthedocs.io/>`_),
           except that:
 
           - ``conv_lattice``, ``conv_positions``, ``conv_types``
@@ -119,7 +120,8 @@ def get_kpoints_path(structure, parameters):
     :return: A dictionary with three nodes:
 
         - ``parameters``: a ParameterData, whose content is
-          the same dictionary as returned by the ``seekpath.get_path`` function,
+          the same dictionary as returned by the ``seekpath.get_path`` function
+          (see `seekpath documentation <https://seekpath.readthedocs.io/>`_),
           except that:
 
           - ``conv_lattice``, ``conv_positions``, ``conv_types``

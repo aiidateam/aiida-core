@@ -2915,7 +2915,7 @@ class TestKpointsData(AiidaTestCase):
         self.assertAlmostEqual(point_coords['Z'][0], 0.)
 
 
-class TestSpglibTupleConversion(unittest.TestCase):
+class TestSpglibTupleConversion(AiidaTestCase):
 
     def test_simple_to_aiida(self):
         """
@@ -3138,7 +3138,7 @@ class TestSpglibTupleConversion(unittest.TestCase):
                     np.array([_.position for _ in roundtrip_struc.sites]))), 0.)
 
 
-class TestSeekpathExplicitPath(unittest.TestCase):
+class TestSeekpathExplicitPath(AiidaTestCase):
 
     @unittest.skipIf(not has_seekpath(), "No seekpath available")
     def test_simple(self):
@@ -3227,7 +3227,7 @@ class TestSeekpathExplicitPath(unittest.TestCase):
                     np.array([_.position for _ in ret_convs.sites]))), 0.)
 
 
-class TestSeekpathPath(unittest.TestCase):
+class TestSeekpathPath(AiidaTestCase):
 
     @unittest.skipIf(not has_seekpath(), "No seekpath available")
     def test_simple(self):

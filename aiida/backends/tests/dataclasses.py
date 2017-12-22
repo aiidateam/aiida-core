@@ -17,6 +17,29 @@ import unittest
 
 
 
+def has_seekpath():
+    """
+    Check if there is the seekpath dependency
+
+    :return: True if seekpath is installed, False otherwise
+    """
+    try:
+        import seekpath
+        return True
+    except ImportError:
+        return False
+
+def to_list_of_lists(lofl):
+    """
+    Converts an iterable of iterables to a list of lists, needed
+    for some tests (e.g. when one has a tuple of lists, a list of tuples, ...)
+
+    :param lofl: an iterable of iterables
+
+    :return: a list of lists
+    """
+    return [[el for el in l] for l in lofl]
+
 def simplify(string):
     """
     Takes a string, strips spaces in each line and returns it
@@ -2617,8 +2640,6 @@ class TestKpointsData(AiidaTestCase):
     Tests the TrajectoryData objects.
     """
 
-    # TODO: I should find a way to check the special points, case by case
-
     def test_mesh(self):
         """
         Check the methods to set and retrieve a mesh.
@@ -2893,7 +2914,399 @@ class TestKpointsData(AiidaTestCase):
         self.assertAlmostEqual(point_coords['Z'][2], numpy.pi/alat )
         self.assertAlmostEqual(point_coords['Z'][0], 0.)
 
-            
+
+class TestSpglibTupleConversion(unittest.TestCase):
+
+    def test_simple_to_aiida(self):
+        """
+        Test conversion of a simple tuple to an AiiDA structure
+        """
+        import numpy as np
+        from aiida.tools import spglib_tuple_to_structure
+
+        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+
+        relcoords = np.array([[0.09493671, 0., 0.], [0.59493671, 0.5, 0.5],
+                              [0.59493671, 0.5, 0.], [0.59493671, 0., 0.5],
+                              [0.09493671, 0.5, 0.5]])
+
+        abscoords = np.dot(cell.T, relcoords.T).T
+
+        numbers = [56, 22, 8, 8, 8]
+
+        struc = spglib_tuple_to_structure((cell, relcoords, numbers))
+
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(struc.cell) - np.array(cell))), 0.)
+        self.assertAlmostEqual(
+            np.sum(
+                np.abs(
+                    np.array([site.position
+                              for site in struc.sites]) - np.array(abscoords))),
+            0.)
+        self.assertEqual([site.kind_name for site in struc.sites],
+                         ['Ba', 'Ti', 'O', 'O', 'O'])
+
+    def test_complex1_to_aiida(self):
+        """
+        Test conversion of a  tuple to an AiiDA structure when passing also information on the kinds
+        """
+        import numpy as np
+        from aiida.tools import spglib_tuple_to_structure
+        from aiida.orm.data.structure import Kind
+
+        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+
+        relcoords = np.array([[0.09493671, 0., 0.], [0.59493671, 0.5, 0.5], [
+            0.59493671, 0.5, 0.
+        ], [0.59493671, 0., 0.5], [0.09493671, 0.5, 0.5],
+                              [0.09493671, 0.5, 0.5], [0.09493671, 0.5, 0.5],
+                              [0.09493671, 0.5, 0.5], [0.09493671, 0.5, 0.5]])
+
+        abscoords = np.dot(cell.T, relcoords.T).T
+
+        numbers = [56, 22, 8, 8, 8, 56000, 200000, 200001, 56001]
+
+        kind_info = {
+            'Ba': 56,
+            'Ba2': 56000,
+            'Ba3': 56001,
+            'BaTi': 200000,
+            'BaTi2': 200001,
+            'O': 8,
+            'Ti': 22
+        }
+
+        kind_info_wrong = {
+            'Ba': 56,
+            'Ba2': 56000,
+            'Ba3': 56002,
+            'BaTi': 200000,
+            'BaTi2': 200001,
+            'O': 8,
+            'Ti': 22
+        }
+
+        kinds = [
+            Kind(name='Ba', symbols="Ba"),
+            Kind(name='Ti', symbols="Ti"),
+            Kind(name='O', symbols="O"),
+            Kind(name='Ba2', symbols="Ba", mass=100.),
+            Kind(
+                name='BaTi',
+                symbols=("Ba", "Ti"),
+                weights=(0.5, 0.5),
+                mass=100.),
+            Kind(
+                name='BaTi2',
+                symbols=("Ba", "Ti"),
+                weights=(0.4, 0.6),
+                mass=100.),
+            Kind(name='Ba3', symbols="Ba", mass=100.)
+        ]
+
+        kinds_wrong = [
+            Kind(name='Ba', symbols="Ba"),
+            Kind(name='Ti', symbols="Ti"),
+            Kind(name='O', symbols="O"),
+            Kind(name='Ba2', symbols="Ba", mass=100.),
+            Kind(
+                name='BaTi',
+                symbols=("Ba", "Ti"),
+                weights=(0.5, 0.5),
+                mass=100.),
+            Kind(
+                name='BaTi2',
+                symbols=("Ba", "Ti"),
+                weights=(0.4, 0.6),
+                mass=100.),
+            Kind(name='Ba4', symbols="Ba", mass=100.)
+        ]
+
+        # Must specify also kind_info and kinds
+        with self.assertRaises(ValueError):
+            struc = spglib_tuple_to_structure(
+                (cell, relcoords, numbers),)
+
+        # There is no kind_info for one of the numbers
+        with self.assertRaises(ValueError):
+            struc = spglib_tuple_to_structure(
+                (cell, relcoords, numbers),
+                kind_info=kind_info_wrong,
+                kinds=kinds)
+
+        # There is no kind in the kinds for one of the labels
+        # specified in kind_info
+        with self.assertRaises(ValueError):
+            struc = spglib_tuple_to_structure(
+                (cell, relcoords, numbers),
+                kind_info=kind_info,
+                kinds=kinds_wrong)
+
+        struc = spglib_tuple_to_structure(
+            (cell, relcoords, numbers), kind_info=kind_info, kinds=kinds)
+
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(struc.cell) - np.array(cell))), 0.)
+        self.assertAlmostEqual(
+            np.sum(
+                np.abs(
+                    np.array([site.position
+                              for site in struc.sites]) - np.array(abscoords))),
+            0.)
+        self.assertEqual(
+            [site.kind_name for site in struc.sites],
+            ['Ba', 'Ti', 'O', 'O', 'O', 'Ba2', 'BaTi', 'BaTi2', 'Ba3'])
+
+
+    def test_from_aiida(self):
+        """
+        Test conversion of an AiiDA structure to a spglib tuple
+        """
+        import numpy as np
+        from aiida.orm.data.structure import StructureData, Site, Kind
+        from aiida.tools import structure_to_spglib_tuple
+
+        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+
+        struc = StructureData(cell=cell)
+        struc.append_atom(symbols='Ba', position=(0, 0, 0))
+        struc.append_atom(symbols='Ti', position=(1, 2, 3))
+        struc.append_atom(symbols='O', position=(-1, -2, -4))
+        struc.append_kind(Kind(name='Ba2', symbols="Ba", mass=100.))
+        struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
+        struc.append_kind(
+            Kind(
+                name='Test',
+                symbols=["Ba", "Ti"],
+                weights=[0.2, 0.4],
+                mass=120.))
+        struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
+
+        struc_tuple, kind_info, kinds = structure_to_spglib_tuple(struc)
+
+        abscoords = np.array([_.position for _ in struc.sites])
+        struc_relpos = np.dot(np.linalg.inv(cell.T), abscoords.T).T
+
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(struc.cell) - np.array(struc_tuple[0]))), 0.)
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(struc_tuple[1]) - struc_relpos)), 0.)
+
+        expected_kind_info = [kind_info[site.kind_name] for site in struc.sites]
+        self.assertEqual(struc_tuple[2], expected_kind_info)
+
+    def test_aiida_roundtrip(self):
+        """
+        Convert an AiiDA structure to a tuple and go back to see if we get the same results
+        """
+        import numpy as np
+        from aiida.orm.data.structure import StructureData, Site, Kind
+        from aiida.tools import structure_to_spglib_tuple, spglib_tuple_to_structure
+
+        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+
+        struc = StructureData(cell=cell)
+        struc.append_atom(symbols='Ba', position=(0, 0, 0))
+        struc.append_atom(symbols='Ti', position=(1, 2, 3))
+        struc.append_atom(symbols='O', position=(-1, -2, -4))
+        struc.append_kind(Kind(name='Ba2', symbols="Ba", mass=100.))
+        struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
+        struc.append_kind(
+            Kind(
+                name='Test',
+                symbols=["Ba", "Ti"],
+                weights=[0.2, 0.4],
+                mass=120.))
+        struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
+
+        struc_tuple, kind_info, kinds = structure_to_spglib_tuple(struc)
+        roundtrip_struc = spglib_tuple_to_structure(struc_tuple, kind_info, kinds)
+
+        self.assertAlmostEqual(
+            np.sum(
+                np.abs(np.array(struc.cell) - np.array(roundtrip_struc.cell))),
+            0.)
+        self.assertEqual(
+            struc.get_attr('kinds'), roundtrip_struc.get_attr('kinds'))
+        self.assertEqual([_.kind_name for _ in struc.sites],
+                         [_.kind_name for _ in roundtrip_struc.sites])
+        self.assertEqual(
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in struc.sites]) -
+                    np.array([_.position for _ in roundtrip_struc.sites]))), 0.)
+
+
+class TestSeekpathExplicitPath(unittest.TestCase):
+
+    @unittest.skipIf(not has_seekpath(), "No seekpath available")
+    def test_simple(self):
+        import numpy as np
+        from aiida.orm import DataFactory
+
+        from aiida.tools import get_explicit_kpoints_path
+
+        structure = DataFactory('structure')(
+            cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure.append_atom(symbols='Ba', position=[0, 0, 0])
+        structure.append_atom(symbols='Ti', position=[2, 2, 3])
+        structure.append_atom(symbols='O', position=[2, 2, 0])
+        structure.append_atom(symbols='O', position=[2, 0, 3])
+        structure.append_atom(symbols='O', position=[0, 2, 3])
+
+        params = {
+            'with_time_reversal': True,
+            'reference_distance': 0.025,
+            'recipe': 'hpkot',
+            'threshold': 1.e-7
+        }
+
+        return_value = get_explicit_kpoints_path(structure, method='seekpath', **params)
+        retdict = return_value['parameters'].get_dict()
+
+        self.assertTrue(retdict['has_inversion_symmetry'])
+        self.assertFalse(retdict['augmented_path'])
+        self.assertAlmostEqual(retdict['volume_original_wrt_prim'], 1.0)
+        self.assertEqual(
+            to_list_of_lists(retdict['explicit_segments']),
+            [[0, 31], [30, 61], [60, 104], [103, 123], [122, 153], [152, 183],
+             [182, 226], [226, 246], [246, 266]])
+
+        ret_k = return_value['explicit_kpoints']
+        self.assertEqual(
+            to_list_of_lists(ret_k.labels),
+            [[0, 'GAMMA'], [30, 'X'], [60, 'M'], [103, 'GAMMA'], [122, 'Z'],
+             [152, 'R'], [182, 'A'], [225, 'Z'], [226, 'X'], [245, 'R'],
+             [246, 'M'], [265, 'A']])
+        kpts = ret_k.get_kpoints(cartesian=False)
+        highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.labels]
+        self.assertAlmostEqual(
+            np.sum(
+                np.abs(
+                    np.array([
+                        [0., 0., 0.],  # Gamma
+                        [0., 0.5, 0.],  # X
+                        [0.5, 0.5, 0.],  # M
+                        [0., 0., 0.],  # Gamma
+                        [0., 0., 0.5],  # Z
+                        [0., 0.5, 0.5],  # R
+                        [0.5, 0.5, 0.5],  # A
+                        [0., 0., 0.5],  # Z
+                        [0., 0.5, 0.],  # X
+                        [0., 0.5, 0.5],  # R
+                        [0.5, 0.5, 0.],  # M
+                        [0.5, 0.5, 0.5],  # A
+                    ]) - np.array(highsympoints_relcoords))),
+            0.)
+
+        ret_prims = return_value['primitive_structure']
+        ret_convs = return_value['conv_structure']
+        # The primitive structure should be the same as the one I input
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))),
+            0.)
+        self.assertEqual([_.kind_name for _ in structure.sites],
+                         [_.kind_name for _ in ret_prims.sites])
+        self.assertEqual(
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in structure.sites]) -
+                    np.array([_.position for _ in ret_prims.sites]))), 0.)
+
+        # Also the conventional structure should be the same as the one I input
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))),
+            0.)
+        self.assertEqual([_.kind_name for _ in structure.sites],
+                         [_.kind_name for _ in ret_convs.sites])
+        self.assertEqual(
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in structure.sites]) -
+                    np.array([_.position for _ in ret_convs.sites]))), 0.)
+
+
+class TestSeekpathPath(unittest.TestCase):
+
+    @unittest.skipIf(not has_seekpath(), "No seekpath available")
+    def test_simple(self):
+        import numpy as np
+        from aiida.orm import DataFactory
+
+        from aiida.tools import get_kpoints_path
+
+        structure = DataFactory('structure')(
+            cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure.append_atom(symbols='Ba', position=[0, 0, 0])
+        structure.append_atom(symbols='Ti', position=[2, 2, 3])
+        structure.append_atom(symbols='O', position=[2, 2, 0])
+        structure.append_atom(symbols='O', position=[2, 0, 3])
+        structure.append_atom(symbols='O', position=[0, 2, 3])
+
+        params = {
+            'with_time_reversal': True,
+            'recipe': 'hpkot',
+            'threshold': 1.e-7
+        }
+
+        return_value = get_kpoints_path(structure, method='seekpath', **params)
+        retdict = return_value['parameters'].get_dict()
+
+        self.assertTrue(retdict['has_inversion_symmetry'])
+        self.assertFalse(retdict['augmented_path'])
+        self.assertAlmostEqual(retdict['volume_original_wrt_prim'], 1.0)
+        self.assertAlmostEqual(retdict['volume_original_wrt_conv'], 1.0)
+        self.assertEqual(retdict['bravais_lattice'], 'tP')
+        self.assertEqual(retdict['bravais_lattice_extended'], 'tP1')
+        self.assertEqual(
+            to_list_of_lists(retdict['path']),
+            [['GAMMA', 'X'], ['X', 'M'], ['M', 'GAMMA'], ['GAMMA', 'Z'],
+             ['Z', 'R'], ['R', 'A'], ['A', 'Z'], ['X', 'R'], ['M', 'A']])
+
+        self.assertEqual(
+            retdict['point_coords'], {
+                'A': [0.5, 0.5, 0.5],
+                'M': [0.5, 0.5, 0.0],
+                'R': [0.0, 0.5, 0.5],
+                'X': [0.0, 0.5, 0.0],
+                'Z': [0.0, 0.0, 0.5],
+                'GAMMA': [0.0, 0.0, 0.0]
+            })
+
+        self.assertAlmostEqual(
+            np.sum(
+                np.abs(
+                    np.array(retdict['inverse_primitive_transformation_matrix'])
+                    - np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]))), 0.)
+
+        ret_prims = return_value['primitive_structure']
+        ret_convs = return_value['conv_structure']
+        # The primitive structure should be the same as the one I input
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))),
+            0.)
+        self.assertEqual([_.kind_name for _ in structure.sites],
+                         [_.kind_name for _ in ret_prims.sites])
+        self.assertEqual(
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in structure.sites]) -
+                    np.array([_.position for _ in ret_prims.sites]))), 0.)
+
+        # Also the conventional structure should be the same as the one I input
+        self.assertAlmostEqual(
+            np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))),
+            0.)
+        self.assertEqual([_.kind_name for _ in structure.sites],
+                         [_.kind_name for _ in ret_convs.sites])
+        self.assertEqual(
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in structure.sites]) -
+                    np.array([_.position for _ in ret_convs.sites]))), 0.)
+
+
 class TestBandsData(AiidaTestCase):
     """
     Tests the BandsData objects.

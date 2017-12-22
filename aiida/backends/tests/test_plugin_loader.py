@@ -11,6 +11,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.pluginloader import all_plugins
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.orm import Workflow
+from aiida.parsers import Parser, ParserFactory
 from aiida.orm.data import Data
 from aiida.orm import JobCalculation
 from aiida.scheduler import Scheduler, SchedulerFactory
@@ -48,6 +49,17 @@ class TestExistingPlugins(AiidaTestCase):
             cls = DataFactory(i)
             self.assertTrue(issubclass(cls, Data),
                 'Data plugin class {} is not subclass of {}'.format(cls, Data))
+
+    def test_existing_parsers(self):
+        """
+        Test listing all preinstalled parsers
+        """
+        parsers = all_plugins('parsers')
+        self.assertIsInstance(parsers, list)
+        for i in parsers:
+            cls = ParserFactory(i)
+            self.assertTrue(issubclass(cls, Parser),
+                'Parser plugin class {} is not subclass of {}'.format(cls, Parser))
 
     def test_existing_schedulers(self):
         """

@@ -27,7 +27,7 @@ from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
 _category_mapping = {
     'calculations': 'aiida.orm.calculation.job',
     'data': 'aiida.orm.data',
-    'parsers': 'aiida.parsers.plugins',
+    'parsers': 'aiida.parsers',
     'schedulers': 'aiida.scheduler.plugins',
     'transports': 'aiida.transport.plugins',
     'workflows': 'aiida.workflows',

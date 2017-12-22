@@ -14,7 +14,7 @@ from aiida.common.setup import get_property
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 __authors__ = "The AiiDA team."
 __paper__ = """G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, "AiiDA: automated interactive infrastructure and database for computational science", Comp. Mat. Sci 111, 218-230 (2016); http://dx.doi.org/10.1016/j.commatsci.2015.09.013 - http://www.aiida.net."""
 __paper_short__ = """G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016)."""
@@ -26,6 +26,15 @@ __paper_short__ = """G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016)."""
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
+
+
+# A logging filter that can be used to disable logging
+class NotInTestingFilter(logging.Filter):
+
+    def filter(self, record):
+        from aiida import settings
+        return not settings.TESTING_MODE
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -45,11 +54,17 @@ LOGGING = {
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
+    'filters': {
+        'testing': {
+            '()': NotInTestingFilter
+        }
+    },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'halfverbose',
+            'filters': ['testing']
         },
         'dblogger': {
             # get_property takes the property from the config json file

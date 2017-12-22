@@ -168,8 +168,6 @@ class QueryManagerDjango(AbstractQueryManager):
     def get_bands_and_parents_structure(self, args):
         """
         Returns bands and closest parent structure     
-
-
         """
         from collections import defaultdict
         from django.db.models import Q
@@ -179,8 +177,6 @@ class QueryManagerDjango(AbstractQueryManager):
 
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
-
-
 
         query_group_size = 100
         q_object = None
@@ -197,18 +193,19 @@ class QueryManagerDjango(AbstractQueryManager):
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
 
         # split data in chunks
-        grouped_bands_list_data = grouper(query_group_size,
-                                          [(_[0], _[1], _[2]) for _ in bands_list_data])
+        grouped_bands_list_data = grouper(
+            query_group_size,
+            [(_[0], _[1], _[2]) for _ in bands_list_data])
 
         entry_list = []
         for this_chunk in grouped_bands_list_data:
             # gather all banddata pks
             pks = [_[0] for _ in this_chunk]
 
-
             # get the closest structures (WITHOUT DbPath)
             q_object = Q(type='data.structure.StructureData.')
             structure_dict = get_closest_parents(pks,q_object, chunk_size=1)
+
             struc_pks = [structure_dict[pk] for pk in pks]
 
             # query for the attributes needed for the structure formula

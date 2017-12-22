@@ -137,6 +137,13 @@ class AbstractWorkflow(object):
         """
         pass
 
+    @abstractproperty
+    def ctime(self):
+        """
+        Get the creation time of the workflow
+        """
+        pass
+
     @abstractmethod
     def _update_db_label_field(self, field_value):
         """

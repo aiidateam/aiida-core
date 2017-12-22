@@ -134,6 +134,7 @@ class Workflow(VerdiCommandWithSubcommands):
 
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
+        If you pass the -q option, additional information will be suppressed
         """
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
         if not is_dbenv_loaded():
@@ -145,6 +146,7 @@ class Workflow(VerdiCommandWithSubcommands):
         from aiida.orm.workflow import WorkflowKillError, WorkflowUnkillable
 
         force = False
+        verbose = True
         wfs = []
 
         args = list(args)
@@ -153,6 +155,8 @@ class Workflow(VerdiCommandWithSubcommands):
             param = args.pop()
             if param == '-f':
                 force = True
+            elif param == '-q':
+                verbose = False
             else:
                 try:
                     wfs.append(int(param))
@@ -177,7 +181,7 @@ class Workflow(VerdiCommandWithSubcommands):
         counter = 0
         for wf_pk in wfs:
             try:
-                kill_from_pk(wf_pk, verbose=True)
+                kill_from_pk(wf_pk, verbose=verbose)
                 counter += 1
             except NotExistent:
                 print >> sys.stderr, ("WARNING: workflow {} "
@@ -192,8 +196,9 @@ class Workflow(VerdiCommandWithSubcommands):
                 sys.stdout.write("{}: {}\n".format(e.__class__.__name__,
                                                    e.message))
 
-        print >> sys.stderr, "{} workflow{} killed.".format(counter,
-                                                            "" if counter <= 1 else "s")
+        if verbose:
+            print >> sys.stderr, "{} workflow{} killed.".format(counter,
+                                                                "" if counter <= 1 else "s")
 
     def print_logshow(self, *args):
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded

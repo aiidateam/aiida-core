@@ -118,8 +118,10 @@ def get_plugin(category, name):
 
     try:
         plugin = entrypoint.load()
-    except ImportError:
-        raise LoadingPluginFailed("Loading the plugin '{}' failed".format(name))
+    except ImportError as exception:
+        import traceback
+        raise LoadingPluginFailed("Loading the plugin '{}' failed:\n{}"
+            .format(name, traceback.format_exc()))
 
     return plugin
 

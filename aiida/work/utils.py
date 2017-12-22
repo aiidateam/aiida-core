@@ -10,7 +10,6 @@
 
 import abc
 import plum
-import apricotpy.persistable.utils
 from threading import local
 import time
 import random
@@ -125,7 +124,7 @@ class HeartbeatError(BaseException):
     pass
 
 
-class CalculationHeartbeat(apricotpy.LoopObject):
+class CalculationHeartbeat(object):
     """
     This class implements a thread that runs in the background updating the
     heartbeat expiry of a calculation.  The intended behaviour is that while

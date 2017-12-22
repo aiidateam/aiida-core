@@ -159,6 +159,7 @@ class TestDaemon(AiidaTestCase):
         self.assertFalse(registry.has_finished(fail_rinfo.pid))
 
 
+@unittest.skip("Moving to new daemon")
 class TestJobCalculationDaemon(AiidaTestCase):
     def test_launch_pending_submitted(self):
         num_at_start = len(work_daemon.get_all_pending_job_calculations())

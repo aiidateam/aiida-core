@@ -98,7 +98,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         on is finished before continuing to the next step.
 
         :param awaitable: The thing to await
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :type awaitable: :class:`aiida.work.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
 

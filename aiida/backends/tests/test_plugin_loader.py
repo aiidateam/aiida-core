@@ -10,15 +10,13 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.pluginloader import all_plugins
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
-from aiida.scheduler import SchedulerFactory
-from aiida.transport import TransportFactory
 from aiida.orm import Workflow
 from aiida.orm.data import Data
 from aiida.orm import JobCalculation
+from aiida.scheduler import Scheduler, SchedulerFactory
+from aiida.transport import Transport, TransportFactory
+from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
 from aiida.work import WorkChain
-from aiida.scheduler import Scheduler
-from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-from aiida.transport import Transport
 
 
 class TestExistingPlugins(AiidaTestCase):
@@ -88,5 +86,9 @@ class TestExistingPlugins(AiidaTestCase):
         """
         Test listing all preinstalled tcod exporter plugins
         """
-        tcod_plugins = all_plugins('transports')
+        tcod_plugins = all_plugins('tools.dbexporters.tcod_plugins')
         self.assertIsInstance(tcod_plugins, list)
+        for i in tcod_plugins:
+            cls = TcodExporterFactory(i)
+            self.assertTrue(issubclass(cls, BaseTcodtranslator),
+                'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))

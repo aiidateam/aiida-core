@@ -36,19 +36,20 @@ class TestExistingPlugins(AiidaTestCase):
         calculations = all_plugins('calculations')
         self.assertIsInstance(calculations, list)
         for i in calculations:
-            self.assertTrue(
-                issubclass(CalculationFactory(i), JobCalculation),
-                'Calculation plugin class {} is not subclass of JobCalculation'.format(
-                    CalculationFactory(i)))
+            cls = CalculationFactory(i)
+            self.assertTrue(issubclass(cls, JobCalculation),
+                'Calculation plugin class {} is not subclass of {}'.format(cls, JobCalculation))
 
     def test_existing_data(self):
         """
-        Test listing all preinstalled data formats
+        Test listing all preinstalled data classes
         """
         data = all_plugins('data')
         self.assertIsInstance(data, list)
         for i in data:
-            self.assertTrue(issubclass(DataFactory(i), Data))
+            cls = DataFactory(i)
+            self.assertTrue(issubclass(cls, Data),
+                'Data plugin class {} is not subclass of {}'.format(cls, Data))
 
     def test_existing_schedulers(self):
         """
@@ -57,7 +58,9 @@ class TestExistingPlugins(AiidaTestCase):
         schedulers = all_plugins('schedulers')
         self.assertIsInstance(schedulers, list)
         for i in schedulers:
-            self.assertTrue(issubclass(SchedulerFactory(i), Scheduler))
+            cls = SchedulerFactory(i)
+            self.assertTrue(issubclass(cls, Scheduler),
+                'Scheduler plugin class {} is not subclass of {}'.format(cls, Scheduler))
 
     def test_existing_transports(self):
         """
@@ -66,7 +69,9 @@ class TestExistingPlugins(AiidaTestCase):
         transports = all_plugins('transports')
         self.assertIsInstance(transports, list)
         for i in transports:
-            self.assertTrue(issubclass(TransportFactory(i), Transport))
+            cls = TransportFactory(i)
+            self.assertTrue(issubclass(cls, Transport),
+                'Transport plugin class {} is not subclass of {}'.format(cls, Transport))
 
     def test_existing_workflows(self):
         """
@@ -75,7 +80,9 @@ class TestExistingPlugins(AiidaTestCase):
         workflows = all_plugins('workflows')
         self.assertIsInstance(workflows, list)
         for i in workflows:
-            self.assertTrue(issubclass(WorkflowFactory(i), (Workflow, WorkChain)))
+            cls = WorkflowFactory(i)
+            self.assertTrue(issubclass(cls, (Workflow, WorkChain)),
+                'Workflow plugin class {} is neither a subclass of {} nor {}'.format(cls, Workflow, WorkChain))
 
     def test_existing_tcod_plugins(self):
         """

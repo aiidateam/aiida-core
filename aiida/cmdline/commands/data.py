@@ -85,6 +85,8 @@ class Listable(object):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
+        # print "parsed_args ===>", parsed_args
+
         entry_list = self.query(parsed_args)
 
         vsep = parsed_args.vseparator
@@ -98,34 +100,45 @@ class Listable(object):
 
     def query(self, args):
         """
-        Perform the query and return information for the list.
-
-        :param args: a namespace with parsed command line parameters.
-        :return: table (list of lists) with information, describing nodes.
-            Each row describes a single hit.
+        Perform the query
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
 
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        data_filters = dict()
+        self.query_past_days(data_filters, args)
+        qb.append(self.dataclass, tag="data", created_by="creator",
+                  filters=data_filters, project=["id"])
 
-        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="data")
+
+        qb.order_by({self.dataclass: {'ctime': 'asc'}})
+
+        object_list = qb.distinct()
 
         entry_list = []
-        for obj in object_list:
-            entry_list.append([str(obj.pk)])
+        for [id] in object_list.all():
+            entry_list.append([str(id)])
         return entry_list
 
-    def query_past_days_qb(self, filters, args):
+    def query_past_days(self, filters, args):
         """
         Subselect to filter data nodes by their age.
 
@@ -140,22 +153,7 @@ class Listable(object):
             filters.update({"ctime": {'>=': n_days_ago}})
         return filters
 
-    def query_past_days(self, q_object, args):
-        """
-        Subselect to filter data nodes by their age.
-
-        :param q_object: a query object
-        :param args: a namespace with parsed command line parameters.
-        """
-        from aiida.utils import timezone
-        from django.db.models import Q
-        import datetime
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-    def query_group_qb(self, filters, args):
+    def query_group(self, filters, args):
         """
         Subselect to filter data nodes by their group.
 
@@ -166,19 +164,6 @@ class Listable(object):
             filters.update({"name": {"in": args.group_name}})
         if args.group_pk is not None:
             filters.update({"id": {"in": args.group_pk}})
-
-    def query_group(self, q_object, args):
-        """
-        Subselect to filter data nodes by their group.
-
-        :param q_object: a query object
-        :param args: a namespace with parsed command line parameters.
-        """
-        from django.db.models import Q
-        if args.group_name is not None:
-            q_object.add(Q(dbgroups__name__in=args.group_name), Q.AND)
-        if args.group_pk is not None:
-            q_object.add(Q(dbgroups__pk__in=args.group_pk), Q.AND)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -197,7 +182,7 @@ class Listable(object):
                             help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
         parser.add_argument('-A', '--all-users', action='store_true', default=False,
-                            help="show groups for all users, rather than only for the"
+                            help="show objects for all users, rather than only for the"
                                  "current user")
 
     def get_column_names(self):
@@ -1131,14 +1116,14 @@ class _Structure(VerdiCommandWithSubcommands,
             qb.append(User, tag="creator")
 
         st_data_filters = {}
-        self.query_past_days_qb(st_data_filters, args)
+        self.query_past_days(st_data_filters, args)
         qb.append(StructureData, tag="struc", created_by="creator",
                   filters=st_data_filters,
                   project=["id", "label", "attributes.kinds",
                            "attributes.sites"])
 
         group_filters = {}
-        self.query_group_qb(group_filters, args)
+        self.query_group(group_filters, args)
         if group_filters:
             qb.append(Group, tag="group", filters=group_filters,
                       group_of="struc")
@@ -1527,37 +1512,53 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
 
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        st_data_filters = {}
+        self.query_past_days(st_data_filters, args)
+        qb.append(self.dataclass, tag="struc", created_by="creator",
+                  filters=st_data_filters,
+                  project=["*"])
 
-        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="struc")
+
+        qb.order_by({self.dataclass: {'ctime': 'asc'}})
+        res = qb.distinct()
 
         entry_list = []
-        for obj in object_list:
-            formulae = '?'
-            try:
-                formulae = ",".join(obj.get_attr('formulae'))
-            except AttributeError:
-                pass
-            except TypeError:
-                pass
-            source_uri = '?'
-            try:
-                source_uri = obj.get_attr('source')['uri']
-            except AttributeError:
-                pass
-            except KeyError:
-                pass
-            entry_list.append([str(obj.pk), formulae, source_uri])
+        if res.count() > 0:
+            for [obj] in res.iterall():
+                formulae = '?'
+                try:
+                    formulae = ",".join(obj.get_attr('formulae'))
+                except AttributeError:
+                    pass
+                except TypeError:
+                    pass
+                source_uri = '?'
+                try:
+                    source_uri = obj.get_attr('source')['uri']
+                except AttributeError:
+                    pass
+                except KeyError:
+                    pass
+                entry_list.append([str(obj.pk), formulae, source_uri])
         return entry_list
 
     def get_column_names(self):

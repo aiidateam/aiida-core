@@ -667,6 +667,11 @@ class Calculation(VerdiCommandWithSubcommands):
                                                                "" if counter == 1 else "s")
 
     def calculation_cleanworkdir(self, *args):
+        """
+        Clean the working directory of calculations by removing all the content of the
+        associated RemoteFolder node. Calculations can be identified by pk with the -k flag
+        or by specifying limits on the modification times with -p/-o flags
+        """
         import argparse
 
         parser = argparse.ArgumentParser(

@@ -668,40 +668,45 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_cleanworkdir(self, *args):
         """
-        Clean all the content of all the output remote folders of calculations,
-        passed as a list of pks, or identified by modification time.
-
-        If a list of calculation PKs is not passed through -c option, one of
-        the option -p or -u has to be specified (if both are given, a logical
-        AND is done between the 2 - you clean out calculations modified AFTER
-        [-p option] days from now but BEFORE [-o option] days from now).
-        If you also pass the -f option, no confirmation will be asked.
+        Clean the working directory of calculations by removing all the content of the
+        associated RemoteFolder node. Calculations can be identified by pk with the -k flag
+        or by specifying limits on the modification times with -p/-o flags
         """
         import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description="Clean work directory (i.e. remote folder) of AiiDA "
-                        "calculations.")
-        parser.add_argument("-k", "--pk", metavar="PK", type=int, nargs="+",
-                            help="The principal key (PK) of the calculations "
-                                 "to clean the workdir of", dest="pk")
-        parser.add_argument("-f", "--force", action="store_true",
-                            help="Force the cleaning (no prompt)")
-        parser.add_argument("-p", "--past-days", metavar="N",
-                            help="Add a filter to clean workdir of "
-                                 "calculations modified during the past N "
-                                 "days", type=int, action="store",
-                            dest="past_days")
-        parser.add_argument("-o", "--older-than", metavar="N",
-                            help="Add a filter to clean workdir of "
-                                 "calculations that have been modified on a "
-                                 "date before N days ago", type=int,
-                            action="store", dest="older_than")
-        parser.add_argument("-c", "--computers", metavar="label", nargs="+",
-                            help="Add a filter to clean workdir of "
-                                 "calculations on this computer(s) only",
-                            type=str, action="store", dest="computer")
+            description="""
+                Clean all content of all output remote folders of calculations,
+                passed as a list of pks, or identified by modification time.
+
+                If a list of calculation PKs is not passed with the -k option, one or both
+                of the -p and -o options has to be specified. If both are specified, a logical
+                AND is done between the two, i.e. the calculations that will be cleaned have been
+                modified AFTER [-p option] days from now but BEFORE [-o option] days from now.
+                Passing the -f option will prevent the confirmation dialog from being prompted.
+                """
+        )
+        parser.add_argument(
+            '-k', '--pk', metavar='PK', type=int, nargs='+', dest='pk',
+            help='The principal key (PK) of the calculations of which to clean the work directory'
+        )
+        parser.add_argument(
+            '-f', '--force', action='store_true',
+            help='Force the cleaning (no prompt)'
+        )
+        parser.add_argument(
+            '-p', '--past-days', metavar='N', type=int, action='store', dest='past_days',
+            help='Include calculations that have been modified within the last N days', 
+        )
+        parser.add_argument(
+            '-o', '--older-than', metavar='N', type=int, action='store', dest='older_than',
+            help='Include calculations that have been modified more than N days ago',
+        )
+        parser.add_argument(
+            '-c', '--computers', metavar='label', nargs='+', type=str, action='store', dest='computer',
+            help='Include only calculations that were ran on these computers'
+        )
 
         if not is_dbenv_loaded():
             load_dbenv()
@@ -720,29 +725,15 @@ class Calculation(VerdiCommandWithSubcommands):
 
         # If a pk is given then the -o & -p options should not be specified
         if parsed_args.pk is not None:
-            if ((parsed_args.past_days is not None) or
-                    (parsed_args.older_than is not None)):
-                print("You cannot specify both a list of calculation pks and "
-                      "the -p or -o options")
+            if (parsed_args.past_days is not None or parsed_args.older_than is not None):
+                print("You cannot specify both a list of calculation pks and the -p or -o options")
                 return
-        # If no pk is given then at least one of the -o & -p options should be
-        # specified
+
+        # If no pk is given then at least one of the -o & -p options should be specified
         else:
-            if ((parsed_args.past_days is None) and
-                    (parsed_args.older_than is None)):
-                print("You should specify at least a list of calculations or "
-                      "the -p, -o options")
+            if (parsed_args.past_days is None and parsed_args.older_than is None):
+                print("You should specify at least a list of calculations or the -p, -o options")
                 return
-
-        # At this point we know that either the pk or the -p -o options are
-        # specified
-
-        # We also check that not both -o & -p options are specified
-        if ((parsed_args.past_days is not None) and
-                (parsed_args.older_than is not None)):
-            print("Not both of the -p, -o options can be specified in the "
-                  "same time")
-            return
 
         qb_user_filters = dict()
         user = OrmUser(dbuser=get_automatic_user())
@@ -754,12 +745,10 @@ class Calculation(VerdiCommandWithSubcommands):
 
         qb_calc_filters = dict()
         if parsed_args.past_days is not None:
-            pd_ts = timezone.now() - datetime.timedelta(
-                days=parsed_args.past_days)
+            pd_ts = timezone.now() - datetime.timedelta(days=parsed_args.past_days)
             qb_calc_filters["mtime"] = {">": pd_ts}
         if parsed_args.older_than is not None:
-            ot_ts = timezone.now() - datetime.timedelta(
-                days=parsed_args.older_than)
+            ot_ts = timezone.now() - datetime.timedelta(days=parsed_args.older_than)
             qb_calc_filters["mtime"] = {"<": ot_ts}
         if parsed_args.pk is not None:
             print("parsed_args.pk: ", parsed_args.pk)

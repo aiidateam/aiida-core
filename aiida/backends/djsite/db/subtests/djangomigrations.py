@@ -10,13 +10,11 @@
 from aiida.backends.testbase import AiidaTestCase
 
 
-
 class CalcStateChanges(AiidaTestCase):
     # Class to check if the migration code that deals with removing the
     # NOTFOUND and UNDETERMINED calc states works properly
     def test_unexpected_calc_states(self):
         import logging
-
         from django.utils import timezone
         from aiida.orm.calculation import Calculation
 
@@ -32,8 +30,7 @@ class CalcStateChanges(AiidaTestCase):
 
         calc_params = {
             'computer': self.computer,
-            'resources': {'num_machines': 1,
-                          'num_mpiprocs_per_machine': 1}
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
         }
 
         for state in ['NOTFOUND', 'UNDETERMINED']:
@@ -45,24 +42,8 @@ class CalcStateChanges(AiidaTestCase):
 
             time_before_fix = timezone.now()
 
-            # First of all, I re-enable logging in case it was disabled by
-            # mistake by a previous test (e.g. one that disables and reenables
-            # again, but that failed)
-            logging.disable(logging.NOTSET)
-            # Temporarily disable logging to the stream handler (i.e. screen)
-            # because otherwise fix_calc_states will print warnings
-            handler = next((h for h in logging.getLogger('aiida').handlers if
-                            isinstance(h, logging.StreamHandler)), None)
-
-            if handler:
-                original_level = handler.level
-                handler.setLevel(logging.ERROR)
-
             # Call the code that deals with updating these states
             state_change.fix_calc_states(None, None)
-
-            if handler:
-                handler.setLevel(original_level)
 
             current_state = job.get_state()
             self.assertNotEqual(current_state, state,

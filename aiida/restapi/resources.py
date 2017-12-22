@@ -14,7 +14,6 @@ from flask_restful import Resource
 
 from aiida.restapi.common.utils import Utils
 
-
 class ServerInfo(Resource):
     def __init__(self, **kwargs):
         # Configure utils
@@ -88,11 +87,15 @@ class ServerInfo(Resource):
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
+
 ## TODO add the caching support. I cache total count, results, and possibly
 # set_query
 class BaseResource(Resource):
-    ## Each derived class will instantiate a different type of translator.
-    # This is the only difference in the classes.
+    """
+    Each derived class will instantiate a different type of translator.
+    This is the only difference in the classes.
+    """
+
     def __init__(self, **kwargs):
 
         self.trans = None
@@ -105,6 +108,7 @@ class BaseResource(Resource):
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
                             kwargs}
         self.utils = Utils(**self.utils_confs)
+        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
     def get(self, id=None, page=None):
         """
@@ -173,8 +177,11 @@ class BaseResource(Resource):
 
 
 class Node(Resource):
-    ##Differs from BaseResource in trans.set_query() mostly because it takes
-    # query_type as an input and the presence of "tree" result type
+    """
+    Differs from BaseResource in trans.set_query() mostly because it takes
+    query_type as an input and the presence of additional result types like "tree"
+    """
+
     def __init__(self, **kwargs):
 
         # Set translator
@@ -192,6 +199,7 @@ class Node(Resource):
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
                             kwargs}
         self.utils = Utils(**self.utils_confs)
+        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
     def get(self, id=None, page=None):
         """

@@ -7,6 +7,8 @@ amqp==1.4.9
 anyjson==0.3.3
 billiard==3.3.0.23
 celery==3.1.25
+click-plugins
+click-spinner
 click==6.7
 django-extensions==1.5.0
 django==1.7.11

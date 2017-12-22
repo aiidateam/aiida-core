@@ -24,6 +24,7 @@ computer_common_info = [
     "True",
     "ssh",
     "torque",
+    "#!/bin/bash",
     "/scratch/{username}/aiida_run",
     "mpirun -np {tot_num_mpiprocs}",
     "1",

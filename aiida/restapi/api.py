@@ -74,7 +74,6 @@ class App(Flask):
         else:
             pass
 
-
 class AiidaApi(Api):
     """
     AiiDA customized version of the flask_restful Api class
@@ -306,7 +305,6 @@ class AiidaApi(Api):
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
-
     def handle_error(self, e):
         """
         this method handles the 404 "URL not found" exception and return custom message
@@ -336,3 +334,4 @@ class AiidaApi(Api):
 
         else:
             raise e
+

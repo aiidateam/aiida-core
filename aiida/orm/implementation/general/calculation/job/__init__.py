@@ -1453,6 +1453,7 @@ class AbstractJobCalculation(object):
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = computer.get_shebang()
         ## TODO: in the future, allow to customize the following variables
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False

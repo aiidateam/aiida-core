@@ -15,6 +15,7 @@ from aiida.transport import TransportFactory
 from aiida.orm import Workflow
 from aiida.orm.data import Data
 from aiida.orm import JobCalculation
+from aiida.work import WorkChain
 from aiida.scheduler import Scheduler
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 from aiida.transport import Transport
@@ -74,7 +75,7 @@ class TestExistingPlugins(AiidaTestCase):
         workflows = all_plugins('workflows')
         self.assertIsInstance(workflows, list)
         for i in workflows:
-            self.assertTrue(issubclass(WorkflowFactory(i), Workflow))
+            self.assertTrue(issubclass(WorkflowFactory(i), (Workflow, WorkChain)))
 
     def test_existing_tcod_plugins(self):
         """

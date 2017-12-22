@@ -1396,7 +1396,7 @@ class TestStructureData(AiidaTestCase):
 
         # Generated from COD entry 1507756
         # (http://www.crystallography.net/cod/1507756.cif@87343)
-        from ase.lattice.spacegroup import crystal
+        from ase.spacegroup import crystal
         a = crystal(['Ba', 'Ti', 'O', 'O'],
                     [
                         [0, 0, 0],

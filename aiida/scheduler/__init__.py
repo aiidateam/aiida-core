@@ -122,7 +122,7 @@ class Scheduler(object):
 
         The plugin returns something like
 
-        #!/bin/bash <- this shebang line could be configurable in the future
+        #!/bin/bash <- this shebang line is configurable to some extent
         scheduler_dependent stuff to choose numnodes, numcores, walltime, ...
         prepend_computer [also from calcinfo, joined with the following?]
         prepend_code [from calcinfo]
@@ -145,13 +145,20 @@ class Scheduler(object):
 
         empty_line = ""
 
-        shebang = "#!/bin/bash"
 
         # I fill the list with the lines, and finally join them and return
         script_lines = []
-        script_lines.append(shebang)
-        script_lines.append(empty_line)
 
+        if job_tmpl.shebang:
+            script_lines.append(job_tmpl.shebang)
+        elif job_tmpl.shebang == '':
+            # Here I check whether the shebang was set explicitly as an empty line.
+            # In such a case, the first line is empty, if that's what the user wants:
+            script_lines.append(job_tmpl.shebang)
+        elif job_tmpl.shebang is None:
+            script_lines.append('#!/bin/bash')
+        else:
+            raise ValueError("Invalid shebang set: {}".format(job_tmpl.shebang))
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 

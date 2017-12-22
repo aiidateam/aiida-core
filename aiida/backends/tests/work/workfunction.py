@@ -14,6 +14,7 @@ from aiida.orm.data.base import get_true_node
 import aiida.orm
 import aiida.work.utils as util
 from aiida import work
+from aiida.work.launch import run, run_get_pid
 
 
 @workfunction
@@ -45,8 +46,8 @@ class TestWf(AiidaTestCase):
         self.assertTrue(return_input(get_true_node())['result'])
 
     def test_run(self):
-        self.assertTrue(work.run(simple_wf)['result'])
-        self.assertTrue(work.run(return_input, get_true_node())['result'])
+        self.assertTrue(run(simple_wf)['result'])
+        self.assertTrue(run(return_input, get_true_node())['result'])
 
     def test_run_and_get_node(self):
         result, calc_node = single_return_value.run_get_node()

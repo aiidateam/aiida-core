@@ -102,6 +102,11 @@ class AbstractComputer(object):
                  ",".join(Scheduler.get_valid_schedulers())),
              False,
              ),
+            ("shebang",
+             "shebang line at the beginning of the submission script",
+             "this line specifies the first line of the submission script for this computer",
+             False,
+             ),
             ("workdir",
              "AiiDA work directory",
              "The absolute path of the directory on the computer where AiiDA will\n"
@@ -449,6 +454,18 @@ class AbstractComputer(object):
         self._workdir_validator(string)
         self.set_workdir(string)
 
+
+    def _get_shebang_string(self):
+        return self.get_shebang()
+
+    def _set_shebang_string(self, string):
+        """
+        Set the shebang line.
+        """
+        # self._shebang_validator(string)
+        # Should we validate?
+        self.set_shebang(string)
+
     @classmethod
     def _workdir_validator(cls, workdir):
         """
@@ -683,8 +700,24 @@ class AbstractComputer(object):
         pass
 
     @abstractmethod
+    def get_shebang(self):
+        pass
+
+    @abstractmethod
     def set_workdir(self, val):
         pass
+
+    def set_shebang(self, val):
+        """
+        :param str val: A valid shebang line
+        """
+        if not isinstance(val, basestring):
+            raise ValueError("{} is invalid. Input has to be a string".format(val))
+        if not val.startswith('#!'):
+            raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
+        metadata = self._get_metadata()
+        metadata['shebang'] = val
+        self._set_metadata(metadata)
 
     @abstractmethod
     def get_name(self):

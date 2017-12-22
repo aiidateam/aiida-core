@@ -846,7 +846,7 @@ _property_table = {
         "logging_alembic_log_level",
         "string",
         "Minimum level to log to the console",
-        "INFO",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.sqlalchemy_loglevel": (
         "logging_sqlalchemy_loglevel",

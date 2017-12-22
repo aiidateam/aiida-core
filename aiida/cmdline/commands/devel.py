@@ -495,6 +495,9 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends import settings
         from aiida.backends.testbase import run_aiida_db_tests
         from aiida.backends.testbase import check_if_tests_can_run
+        from aiida import settings
+
+        settings.TESTING_MODE = True
 
         # For final summary
         test_failures = []

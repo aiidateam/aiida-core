@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import logging
 import os
 import django
 from aiida.utils.logger import get_dblogger_extra

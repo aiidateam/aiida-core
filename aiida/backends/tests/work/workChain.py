@@ -387,15 +387,6 @@ class TestWorkchain(AiidaTestCase):
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
-    def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
-        import logging
-        logging.disable(logging.CRITICAL)
-
-    def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
-        import logging
-        logging.disable(logging.NOTSET)
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()

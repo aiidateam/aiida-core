@@ -23,7 +23,7 @@ import os
 import os.path as path
 import portalocker
 import portalocker.utils
-from shutil import copyfile
+import shutil
 import tempfile
 import pickle
 from plum.persistence.bundle import Bundle
@@ -189,7 +189,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                     LOGGER.warning("moving '{}' to failed directory".format(f))
                     try:
                         filename = os.path.basename(f)
-                        os.rename(f, os.path.join(self.failed_directory, filename))
+                        shutil.move(f, os.path.join(self.failed_directory, filename))
                     except OSError:
                         pass
 
@@ -362,7 +362,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                 if save_dir is not None:
                     self._ensure_directory(save_dir)
                     to = path.join(save_dir, self.pickle_filename(pid))
-                    copyfile(pickle_path, to)
+                    shutil.copyfile(pickle_path, to)
                 os.remove(pickle_path)
             else:
                 raise ValueError(

@@ -38,7 +38,7 @@ install_requires = [
     'billiard==3.3.0.23',
     'amqp==1.4.9',
     'anyjson==0.3.3',
-    'supervisor==3.1.3',
+    'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
     'plumpy==0.7.10',
@@ -53,6 +53,8 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-plugins',
+    'click-spinner',
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
@@ -64,7 +66,7 @@ install_requires = [
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
-    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
+    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {
@@ -79,7 +81,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'Flask==0.10.1',
-        'Flask-RESTful==0.3.5',
+        'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
         'pyparsing==2.1.10',
         'Pattern==2.6',

@@ -98,6 +98,13 @@ class DbComputer(Base):
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))
 
+    def get_shebang(self):
+        try:
+            return self._metadata['shebang']
+        except KeyError:
+            raise ConfigurationError('No shebang found for DbComputer {} '.format(
+                self.name))
+
     @property
     def pk(self):
         return self.id

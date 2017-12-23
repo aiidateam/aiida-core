@@ -113,9 +113,9 @@ extras_require = {
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
-        'seekpath==1.6.0',
+        'seekpath==1.8.0',
         'qe-tools==1.0',
-        # support for the AiiDA CifData class. Update to version 4 ddoes
+        # support for the AiiDA CifData class. Update to version 4 does
         # break tests
     ],
     # Requirements for jupyter notebook

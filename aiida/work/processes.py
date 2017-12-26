@@ -232,7 +232,7 @@ class Process(plum.process.Process):
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state):
+    def load_instance_state(self, saved_state, loop=None):
         super(Process, self).load_instance_state(saved_state)
 
         is_copy = saved_state.get('COPY', False)
@@ -297,8 +297,6 @@ class Process(plum.process.Process):
 
         :param output_port: The output port name the value was emitted on
         :param value: The value emitted
-        :param dynamic: Was the output port a dynamic one (i.e. not known
-        beforehand?)
         """
         super(Process, self).on_output_emitting(output_port, value)
         if not isinstance(value, Data):

@@ -8,13 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from plum import Bundle
+from plum import ProcessState
 from .launch import *
 from .processes import *
 from .runners import *
 from .utils import *
 from .workfunctions import *
 from .workchain import *
-from plum import ProcessState
 
 __all__ = (processes.__all__ + runners.__all__ + utils.__all__ +
            workchain.__all__ + launch.__all__ + workfunctions.__all__ +

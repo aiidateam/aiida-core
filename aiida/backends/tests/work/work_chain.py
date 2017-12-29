@@ -10,8 +10,6 @@
 
 import inspect
 import plum
-import unittest
-import aiida.backends.settings as settings
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workchain import WorkChain, \
@@ -24,6 +22,8 @@ from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
 from aiida import work
+
+from . import utils
 
 
 class Wf(WorkChain):
@@ -51,8 +51,8 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, inputs=None, pid=None, logger=None, runner=None):
-        super(Wf, self).__init__(inputs, pid, logger, runner)
+    def __init__(self, *args, **kwargs):
+        super(Wf, self).__init__(*args, **kwargs)
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -123,9 +123,7 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-
-        self.runner = work.new_runner(poll_interval=0.)
-        work.set_runner(self.runner)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
@@ -413,6 +411,18 @@ class TestWorkchain(AiidaTestCase):
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
+    def setUp(self):
+        super(TestWorkchainWithOldWorkflows, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
     def test_call_old_wf(self):
         wf = WorkflowDemo()
         wf.start()
@@ -459,6 +469,18 @@ class TestWorkChainAbort(AiidaTestCase):
     Test the functionality to abort a workchain
     """
 
+    def setUp(self):
+        super(TestWorkchainWithOldWorkflows, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
     class AbortableWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -477,9 +499,7 @@ class TestWorkChainAbort(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-
-        self.runner = work.new_runner(poll_interval=0.)
-        work.set_runner(self.runner)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
@@ -544,6 +564,18 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     are also aborted appropriately
     """
 
+    def setUp(self):
+        super(TestWorkchainWithOldWorkflows, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
     class SubWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -587,9 +619,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-
-        self.runner = work.new_runner(poll_interval=0.)
-        work.set_runner(self.runner)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()

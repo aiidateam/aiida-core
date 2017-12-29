@@ -14,6 +14,8 @@ from aiida.orm.calculation.job.simpleplugins.templatereplacer import Templaterep
 from aiida.work.class_loader import ClassLoader
 from aiida.work.job_processes import JobProcess
 
+from . import utils
+
 Job = TemplatereplacerCalculation.process()
 
 
@@ -21,10 +23,14 @@ class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
         self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
         self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.runner.close()
+        self.runner = None
+        work.set_runner(None)
 
     def test_class_loader(self):
         cl = ClassLoader()

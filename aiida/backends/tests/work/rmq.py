@@ -20,8 +20,8 @@ class TestProcess(AiidaTestCase):
         super(TestProcess, self).setUp()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
 
-        self.runner = work.create_runner(rmq_control_panel={'prefix': prefix})
-        self.daemon_runner = work.create_daemon_runner(rmq_prefix=prefix)
+        self.runner = work.new_runner()
+        self.daemon_runner = work.new_daemon_runner(rmq_prefix=prefix)
 
     def tearDown(self):
         self.daemon_runner.close()

@@ -12,6 +12,7 @@ _LAUNCH_QUEUE = 'process.queue'
 _STATUS_REQUEST_EXCHANGE = 'process.status_request'
 _LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
 
+
 def _create_connection():
     # Set up communications
     try:
@@ -19,13 +20,16 @@ def _create_connection():
     except pika.exceptions.ConnectionClosed:
         raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
 
+
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
 
+
 def decode_response(response):
     response = json.loads(response)
     return deserialize_data(response)
+
 
 def status_decode(msg):
     decoded = rmq.status.status_decode(msg)
@@ -48,12 +52,14 @@ def insert_process_control_subscriber(loop, prefix, get_connection=_create_conne
         "{}.{}".format(prefix, _CONTROL_EXCHANGE),
     )
 
+
 def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
     return loop.create(
         rmq.status.ProcessStatusSubscriber,
         get_connection(),
         "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
     )
+
 
 def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
     return loop.create(
@@ -63,6 +69,7 @@ def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connec
         response_encoder=encode_response
     )
 
+
 def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     # Give them all the same connection instance
     connection = get_connection()
@@ -71,6 +78,7 @@ def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
     insert_process_control_subscriber(loop, prefix, get_conn)
     insert_process_status_subscriber(loop, prefix, get_conn)
     insert_process_launch_subscriber(loop, prefix, get_conn)
+
 
 class ProcessControlPanel(object):
     """
@@ -99,18 +107,10 @@ class ProcessControlPanel(object):
             decode_response
         )
 
-    def on_loop_inserted(self, loop):
-        super(ProcessControlPanel, self).on_loop_inserted(loop)
-        loop._insert(self._control)
-        loop._insert(self._status)
-        loop._insert(self._launch)
-
-    def on_loop_removed(self):
-        loop = self.loop()
-        loop._remove(self._control)
-        loop._remove(self._status)
-        loop._remove(self._launch)
-        super(ProcessControlPanel, self).on_loop_removed()
+    def set_connection(self, connection):
+        self._control.set_connection(connection)
+        self._status.set_connection(connection)
+        self._launch.set_connection(connection)
 
     @property
     def control(self):

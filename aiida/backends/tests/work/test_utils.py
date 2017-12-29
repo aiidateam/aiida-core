@@ -39,7 +39,7 @@ class TestCalculationHeartbeat(AiidaTestCase):
     def setUp(self):
         super(TestCalculationHeartbeat, self).setUp()
         self.lock_lost = False
-        self.runner = work.create_runner()
+        self.runner = work.new_runner()
 
     def test_acquire_locked(self):
         c = Calculation()

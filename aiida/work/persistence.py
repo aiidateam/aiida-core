@@ -8,30 +8,23 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import traceback
-import collections
 import uritools
 import os.path
-
-import plum.persistence.pickle_persistence
-from plum.process import Process
-from aiida.common.lang import override
-from aiida.work.globals import class_loader
-
-import glob
+import plum
 import os
 import os.path as path
 import portalocker
 import portalocker.utils
-from shutil import copyfile
 import tempfile
-import pickle
-from plum.process_listener import ProcessListener
-from plum.utils import override, protected
+import yaml
+
+from aiida import orm
 
 _RUNNING_DIRECTORY = path.join(tempfile.gettempdir(), "running")
 _FINISHED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "finished")
 _FAILED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "failed")
+
+Bundle = plum.Bundle
 
 
 # If portalocker accepts my pull request to have this incorporated into the
@@ -71,9 +64,10 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-Persistence = plum.persistence.pickle_persistence.PicklePersister
+Persistence = plum.PicklePersister
 
 _GLOBAL_PERSISTENCE = None
+
 
 def get_global_persistence():
     global _GLOBAL_PERSISTENCE
@@ -82,6 +76,7 @@ def get_global_persistence():
         _create_storage()
 
     return _GLOBAL_PERSISTENCE
+
 
 def _create_storage():
     import aiida.common.setup as setup
@@ -96,3 +91,58 @@ def _create_storage():
         _GLOBAL_PERSISTENCE = Persistence(
             pickle_directory=WORKFLOWS_DIR
         )
+
+
+class AiiDAPersister(plum.Persister):
+    """
+    This node is responsible to taking saved process instance states and
+    persisting them to the database.
+    """
+    CALC_NODE_CHECKPOINT_KEY = 'checkpoints'
+
+    def save_checkpoint(self, process, tag=None):
+        if tag is not None:
+            raise NotImplementedError("Checkpoint tags not supported yet")
+
+        bundle = Bundle(process)
+        calc = process.calc
+        calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY,
+                       yaml.dump(bundle))
+
+    def load_checkpoint(self, pid, tag=None):
+        if tag is not None:
+            raise NotImplementedError("Checkpoint tags not supported yet")
+
+        calc = orm.load_node(pid)
+        return yaml.load(calc[self.CALC_NODE_CHECKPOINT_KEY])
+
+    def get_checkpoints(self):
+        """
+        Return a list of all the current persisted process checkpoints
+        with each element containing the process id and optional checkpoint tag
+
+        :return: list of PersistedCheckpoint tuples
+        """
+        pass
+
+    def get_process_checkpoints(self, pid):
+        """
+        Return a list of all the current persisted process checkpoints for the
+        specified process with each element containing the process id and
+        optional checkpoint tag
+
+        :param pid: the process pid
+        :return: list of PersistedCheckpoint tuples
+        """
+        pass
+
+    def delete_checkpoint(self, pid, tag=None):
+        orm.load_node(pid)._del_attr(self.CALC_NODE_CHECKPOINT_KEY)
+
+    def delete_process_checkpoints(self, pid):
+        """
+        Delete all persisted checkpoints related to the given process id
+
+        :param pid: the process id of the :class:`plum.process.Process`
+        """
+        pass

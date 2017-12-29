@@ -190,9 +190,10 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None, runner=None, parent_pid=None):
+    def __init__(self, inputs=None, pid=None, logger=None, runner=None,
+                 parent_pid=None, enable_persistence=True):
         if runner is None:
-            self._runner = runners.new_runner()
+            self._runner = runners.get_runner()
         else:
             self._runner = runner
 
@@ -212,6 +213,12 @@ class Process(plum.process.Process):
 
         if logger is None:
             self.set_logger(self._calc.logger)
+
+        self._enable_persistence = enable_persistence
+        if self._enable_persistence and self.runner.persister is None:
+            self.logger.warning(
+                "Disabling persistence, runner does not have a persister")
+            self._enable_persistence = False
 
     @property
     def calc(self):
@@ -267,6 +274,8 @@ class Process(plum.process.Process):
         super(Process, self).on_entered()
         # Update the node attributes every time we enter a new state
         self.update_node_state()
+        if self._enable_persistence and not self.done():
+            self.runner.persister.save_checkpoint(self)
 
     @override
     def on_terminated(self):
@@ -274,6 +283,8 @@ class Process(plum.process.Process):
         Called when a Process enters a terminal state.
         """
         super(Process, self).on_terminated()
+        if self._enable_persistence:
+            self.runner.persister.delete_checkpoint(self.pid)
         try:
             self.calc.seal()
         except exceptions.ModificationNotAllowed:
@@ -555,6 +566,10 @@ class FunctionProcess(Process):
         """
         assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
+
+    def __init__(self, *args, **kwargs):
+        super(FunctionProcess, self).__init__(
+            enable_persistence=False, *args, **kwargs)
 
     @override
     def _setup_db_record(self):

@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import plum
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida import work
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-
-import plum
+from . import utils
 
 
 class Proc(work.Process):
@@ -29,7 +29,7 @@ def the_hans_klok_comeback(loop):
 class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.runner = work.new_runner(poll_interval=1.)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         self.runner.close()
@@ -79,3 +79,15 @@ class TestWorkchain(AiidaTestCase):
         loop = self.runner.loop
         loop.call_later(seconds, the_hans_klok_comeback, self.runner.loop)
         loop.start()
+
+
+class TestRunner(AiidaTestCase):
+    def setUp(self):
+        super(TestWorkchain, self).setUp()
+        self.runner = work.runners.new_runner(rmq_submit=True)
+
+    def tearDown(self):
+        super(TestWorkchain, self).tearDown()
+        self.runner.close()
+        self.runner = None
+        work.runners.set_runner(None)

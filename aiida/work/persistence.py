@@ -65,8 +65,11 @@ class RLock(portalocker.Lock):
 
 
 Persistence = plum.PicklePersister
-
 _GLOBAL_PERSISTENCE = None
+
+
+class PersistenceError(BaseException):
+    pass
 
 
 def get_global_persistence():
@@ -106,15 +109,17 @@ class AiiDAPersister(plum.Persister):
 
         bundle = Bundle(process)
         calc = process.calc
-        calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY,
-                       yaml.dump(bundle))
+        calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY, yaml.dump(bundle))
 
     def load_checkpoint(self, pid, tag=None):
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        calc = orm.load_node(pid)
-        return yaml.load(calc[self.CALC_NODE_CHECKPOINT_KEY])
+        calc_node = orm.load_node(pid)
+        try:
+            return yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
+        except ValueError:
+            raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")
 
     def get_checkpoints(self):
         """

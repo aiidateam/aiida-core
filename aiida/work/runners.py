@@ -7,10 +7,11 @@ import logging
 
 import aiida.orm
 from . import persistence
+from . import rmq
 from . import transport
 from . import utils
 
-__all__ = ['Runner', 'new_daemon_runner', 'new_runner',
+__all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner',
            'set_runner']
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,8 +62,10 @@ def _object_factory(process_class, *args, **kwargs):
 
 
 def _ensure_process(process, runner, input_args, input_kwargs, *args, **kwargs):
-    """ Take a process class, a process instance or a workfunction along with
-    arguments and return a process instance"""
+    """
+    Take a process class, a process instance or a workfunction along with
+    arguments and return a process instance
+    """
     from aiida.work.processes import Process
     if isinstance(process, Process):
         assert len(input_args) == 0
@@ -108,8 +111,7 @@ class Runner(object):
 
         self._rmq_submit = rmq_submit
         if rmq_config is not None:
-            self._rmq_connector = plum.rmq.RmqConnector(**rmq_config)
-            self._rmq = None  # construct from config
+            self._setup_rmq(**rmq_config)
         elif self._rmq_submit:
             _LOGGER.warning('Disabling rmq submission, no RMQ config provided')
             self._rmq_submit = False
@@ -180,7 +182,7 @@ class Runner(object):
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
-            # TODO: self.rmq.run(process.pid)
+            self.rmq.launch.continue_process(process.pid)
             return process.calc
         else:
             # Run in this runner
@@ -196,9 +198,6 @@ class Runner(object):
         calc_node = aiida.orm.load_node(pk=pk)
         self._poll_calculation(calc_node, callback)
 
-    def _submit(self, process, *args, **kwargs):
-        pass
-
     @contextmanager
     def child_runner(self):
         runner = self._create_child_runner()
@@ -206,6 +205,21 @@ class Runner(object):
             yield runner
         finally:
             runner.close()
+
+    def run_until_complete(self, future):
+        """ Run the loop until the future has finished and return the result """
+        def stop():
+            self._loop.stop()
+        future.add_done_callback(stop)
+        self._loop.start()
+        return future.result()
+
+    def _setup_rmq(self, url, prefix=None, testing_mode=False):
+        self._rmq_connector = plum.rmq.RmqConnector(amqp_url=url, loop=self._loop)
+        self._rmq = rmq.ProcessControlPanel(
+            prefix=prefix, rmq_connector=self._rmq_connector, testing_mode=testing_mode)
+
+        self._rmq_connector.connect()
 
     def _create_child_runner(self):
         return Runner(transp=self._transport, **self._kwargs)
@@ -221,3 +235,15 @@ class Runner(object):
             self._loop.add_callback(callback, calc_node.pk)
         else:
             self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node, callback)
+
+
+class DaemonRunner(Runner):
+    """ Overwrites some of the behaviour of a runner to be daemon specific"""
+
+    def _setup_rmq(self, url, prefix=None, testing_mode=False):
+        super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
+        # Listen for incoming launch requests
+        self._launcher = plum.rmq.ProcessLaunchSubscriber(
+            self._rmq_connector, loop=self.loop, persister=self.persister,
+            queue_name=rmq.get_launch_queue_name(prefix),
+            testing_mode=testing_mode, unbunble_kwargs={'runner': self})

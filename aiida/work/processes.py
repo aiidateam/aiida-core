@@ -233,14 +233,19 @@ class Process(plum.process.Process):
 
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state['_enable_persistence'] = self._enable_persistence
 
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state, loop=None):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, runner=None):
+        if runner is None:
+            self._runner = runners.get_runner()
+        else:
+            self._runner = runner
+        super(Process, self).load_instance_state(saved_state, loop=self._runner.loop)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -258,6 +263,8 @@ class Process(plum.process.Process):
 
         if self.SaveKeys.PARENT_PID.value in saved_state:
             self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
+
+        self._enable_persistence = saved_state['_enable_persistence']
 
     @override
     def out(self, output_port, value=None):

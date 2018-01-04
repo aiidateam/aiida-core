@@ -31,7 +31,10 @@ from aiida.utils.logger import get_dblogger_extra
 import os
 
 
-execlogger = aiidalogger.getChild('execmanager')
+# Until we fix the broken daemon logger https://github.com/aiidateam/aiida_core/issues/943
+# execlogger = aiidalogger.getChild('execmanager')
+import logging
+execlogger = logging.getLogger('execmanager')
 
 
 def update_running_calcs_status(authinfo):

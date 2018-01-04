@@ -20,7 +20,9 @@ from aiida.work.utils import CalculationHeartbeat
 from plum.exceptions import LockError
 from . import runners
 
-_LOGGER = logging.getLogger('some_random_test_name')
+# Until we fix the broken daemon logger https://github.com/aiidateam/aiida_core/issues/943
+# _LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger('daemon')
 
 import traceback
 import aiida.work.persistence
@@ -34,9 +36,9 @@ def launch_pending_jobs(storage=None, loop=None):
 
     executor = aiida.work.globals.get_thread_executor()
     for proc in _load_all_processes(storage, loop):
-        if executor.has_process(proc.pid):
-            # If already playing, skip
-            continue
+        # if executor.has_process(proc.pid):
+        #     # If already playing, skip
+        #     continue
 
         try:
             storage.persist_process(proc)
@@ -71,9 +73,9 @@ def launch_all_pending_job_calculations():
     executor = aiida.work.globals.get_thread_executor()
     for calc in get_all_pending_job_calculations():
         try:
-            if executor.has_process(calc.pk):
-                # If already playing, skip
-                continue
+            # if executor.has_process(calc.pk):
+            #     # If already playing, skip
+            #     continue
 
             proc = ContinueJobCalculation(inputs={'_calc': calc})
             storage.persist_process(proc)

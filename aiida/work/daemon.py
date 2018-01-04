@@ -20,7 +20,7 @@ from aiida.work.utils import CalculationHeartbeat
 from plum.exceptions import LockError
 from . import runners
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger('some_random_test_name')
 
 import traceback
 import aiida.work.persistence

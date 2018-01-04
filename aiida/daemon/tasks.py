@@ -70,7 +70,7 @@ if DAEMON_USE_NEW:
             launch_all_pending_job_calculations.__name__))
         import aiida.work.daemon as work_daemon
         work_daemon.launch_all_pending_job_calculations()
-else:
+
     @periodic_task(
         run_every=timedelta(
             seconds=config.get("DAEMON_INTERVALS_SUBMIT", DAEMON_INTERVALS_SUBMIT)

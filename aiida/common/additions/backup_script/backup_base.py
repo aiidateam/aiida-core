@@ -82,7 +82,7 @@ class AbstractBackup(object):
             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         # The logger of the backup script
-        self._logger = logging.getLogger("aiida_backup")
+        self._logger = logging.getLogger('aiida.aiida_backup')
 
     def _read_backup_info_from_file(self, backup_info_file_name):
         """

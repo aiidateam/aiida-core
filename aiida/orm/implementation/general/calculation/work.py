@@ -9,6 +9,7 @@
 ###########################################################################
 
 from aiida.orm.implementation.calculation import Calculation
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 # TODO: Replace with local process state (i.e. in AiiDA)
@@ -65,8 +66,18 @@ class WorkCalculation(Calculation):
         """
         Kill a WorkCalculation and all its children.
         """
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.common.exceptions import InvalidOperation
+
         if not self.is_sealed:
             self._set_attr(self.DO_ABORT_KEY, 'killed by user')
 
         for child in self.get_outputs(link_type=LinkType.CALL):
-            child.kill()
+            try:
+                child.kill()
+            except InvalidOperation as e:
+                if isinstance(child, JobCalculation):
+                    # Cannot kill calculations that are already killed: skip and go to the next step
+                    pass
+                else:
+                    raise

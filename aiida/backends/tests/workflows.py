@@ -144,13 +144,52 @@ class TestWorkflowBasic(AiidaTestCase):
                 get_workflow_info(w)
 
     def test_wf_get_state(self):
+        """
+        Simple test that checks the state of the workflows. We create two
+        workflows since the test order in the SQLA was influencing the value
+        of aiida.backends.sqlalchemy.models.workflow.DbWorkflow.state which
+        should be a Choice object, according to the SQLA doc. Sometimes it
+        was automatically converted to unicode.
+
+        Since we are interested to get a unicode from
+        aiida.orm.implementation.general.workflow.AbstractWorkflow#get_state
+        we enforce this conversion at
+        aiida.orm.implementation.sqlalchemy.workflow.Workflow#get_state
+
+        For more info, check issue #951
+        """
+        # Creating two simple workflows & storing them
+        wf1 = WFTestEmpty()
+        wf1.store()
+
+        wf2 = WFTestEmpty()
+        wf2.store()
+
+        # Checking that the get_state doesn't throw exceptions and that
+        # it is a valid state
+        self.assertIn(wf1.get_state(), wf_states)
+        self.assertIn(wf2.get_state(), wf_states)
+
+    def test_wf_ctime(self):
+        import datetime
+        import pytz
+
+        # Get the current datetime (before the creation of the workflow)
+        dt_before = datetime.datetime.now(pytz.utc)
+
         # Creating a simple workflow & storing it
         wf = WFTestEmpty()
         wf.store()
 
-        # Checking that the get_state doesn't throw exceptions and that
-        # it is a valid state
-        self.assertIn(wf.get_state(), wf_states)
+        # Get the current datetime (after the creation of the workflow)
+        dt_after = datetime.datetime.now(pytz.utc)
+
+        self.assertLessEqual(dt_before, wf.ctime, "The workflow doesn't have"
+                                                  "a valid creation time")
+
+        self.assertGreaterEqual(dt_after, wf.ctime, "The workflow doesn't "
+                                                    "have a valid creation "
+                                                    "time")
 
     def test_failing_calc_in_wf(self):
         """
@@ -158,24 +197,11 @@ class TestWorkflowBasic(AiidaTestCase):
         sub-workflows) that has an exception at one of its steps stops
         properly and it is not left as RUNNING.
         """
-        import logging
         from aiida.daemon.workflowmanager import execute_steps
         from aiida.workflows.test import (FailingWFTestSimple,
                                           FailingWFTestSimpleWithSubWF)
 
         try:
-            # First of all, I re-enable logging in case it was disabled by
-            # mistake by a previous test (e.g. one that disables and reenables
-            # again, but that failed)
-            logging.disable(logging.NOTSET)
-            # Temporarily disable logging to the stream handler (i.e. screen)
-            # because otherwise fix_calc_states will print warnings
-            handler = next((h for h in logging.getLogger('aiida').handlers if
-                            isinstance(h, logging.StreamHandler)), None)
-            if handler:
-                original_level = handler.level
-                handler.setLevel(logging.ERROR)
-
             # Testing the error propagation of a simple workflow
             wf = FailingWFTestSimple()
             wf.store()
@@ -199,8 +225,38 @@ class TestWorkflowBasic(AiidaTestCase):
                 self.assertLess(step_no, 5, "This workflow should have stopped "
                                             "since it is failing")
         finally:
-            if handler:
-                handler.setLevel(original_level)
+            pass
+
+    def test_result_parameter_name_colision(self):
+        """
+        This test checks that the the workflow parameters and results do not
+        collide. This was a problem in SQLA (Issue #960) but a test for both
+        backends is added (for completeness).
+        """
+        # Creating a simple workflow & storing it
+        wf = WFTestEmpty()
+        wf.store()
+
+        # Set some parameters
+        params = {'band_calculation_set': 2,
+                  'codename': 'pw-5.2.0',
+                  'pseudo_family': 'SSSP_v0.7_eff_PBE'}
+        wf.set_params(params)
+
+        # Add some results that their names collide with the parameter names
+        wf.add_result('structure', 'test_string_1')
+        wf.add_result('codename', 'test_string_2')
+
+        # Check that we have the correct results
+        self.assertDictEqual(
+            {'structure': 'test_string_1', 'codename': 'test_string_2'},
+            wf.get_results(), "The workflow results are not the expected "
+                              "ones.")
+
+        # Check that we have the correct parameters
+        self.assertDictEqual(params, wf.get_parameters(),
+                             "The workflow parameters are not the expected "
+                             "ones.")
 
     def tearDown(self):
         """

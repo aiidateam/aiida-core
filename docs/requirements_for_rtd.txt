@@ -7,6 +7,8 @@ amqp==1.4.9
 anyjson==0.3.3
 billiard==3.3.0.23
 celery==3.1.25
+click-plugins
+click-spinner
 click==6.7
 django-extensions==1.5.0
 django==1.7.11
@@ -20,6 +22,7 @@ numpy==1.12.0
 paramiko==2.1.2
 passlib==1.7.1
 pathlib2==2.3.0
+pika==0.11.2
 pip==9.0.1
 portalocker==1.1.0
 psutil==5.4.0

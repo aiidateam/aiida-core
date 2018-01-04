@@ -182,7 +182,6 @@ class Process(plum.process.Process):
         Create a database calculation node that represents what happened in
         this process.
         :return: A calculation
-        :rtype: :class:`Calculation`
         """
         from aiida.orm.calculation.work import WorkCalculation
         calc = WorkCalculation()
@@ -368,8 +367,7 @@ class Process(plum.process.Process):
     @override
     def encode_input_args(self, inputs):
         """ 
-        Encode input arguments such that they may be saved in a 
-        :class:`apricotpy.persistable.Bundle`
+        Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded inputs
@@ -379,8 +377,7 @@ class Process(plum.process.Process):
     @override
     def decode_input_args(self, encoded):
         """
-        Decode saved input arguments as they came from the saved instance state 
-        :class:`apricotpy.persistable.Bundle`
+        Decode saved input arguments as they came from the saved instance state Bundle
 
         :param encoded: 
         :return: The decoded input args

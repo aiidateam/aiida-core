@@ -52,6 +52,8 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-plugins',
+    'click-spinner',
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
@@ -60,10 +62,11 @@ install_requires = [
     'paramiko==2.1.2',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
+    'pika==0.11.2',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
-    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
+    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {
@@ -78,7 +81,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'Flask==0.10.1',
-        'Flask-RESTful==0.3.5',
+        'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
         'pyparsing==2.1.10',
         'Pattern==2.6',
@@ -111,9 +114,9 @@ extras_require = {
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==3.6.2.1',
-        'seekpath==1.6.0',
+        'seekpath==1.8.0',
         'qe-tools==1.0',
-        # support for the AiiDA CifData class. Update to version 4 ddoes
+        # support for the AiiDA CifData class. Update to version 4 does
         # break tests
     ],
     # Requirements for jupyter notebook

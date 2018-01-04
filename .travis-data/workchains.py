@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.base import Int
-from aiida.work.run import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
 class ParentWorkChain(WorkChain):
@@ -27,8 +26,8 @@ class ParentWorkChain(WorkChain):
         inputs = {
             'inp': self.inputs.inp
         }
-        running = submit(SubWorkChain, **inputs)
-        self.report('launching SubWorkChain<{}>'.format(running.pid))
+        running = self.submit(SubWorkChain, **inputs)
+        self.report('launching SubWorkChain<{}>'.format(running.pk))
 
         return ToContext(workchains=append_(running))
 

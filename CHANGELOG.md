@@ -1,3 +1,18 @@
+## v0.10.1:
+
+### Improvements
+- Improved exception handling for loading db tests [[#968]](https://github.com/aiidateam/aiida_core/pull/968)
+- `verdi work kill` on workchains: skip calculation if it cannot be killed, rather than stopping [[#980]](https://github.com/aiidateam/aiida_core/pull/980)
+- Remove unnecessary INFO messages of Alembic for SQLAlchemy backend [[#1012]](https://github.com/aiidateam/aiida_core/pull/1012)
+- Add filter to suppress unnecessary log messages during testing [[#1014]](https://github.com/aiidateam/aiida_core/pull/1014)
+
+### Critical bug fixes
+- Fix bug in `verdi quicksetup` on Ubuntu 16.04 and add regression tests to catch similar problems in the future [[#976]](https://github.com/aiidateam/aiida_core/pull/976)
+- Fix bug in `verdi data` list commands for SQLAlchemy backend [[#1007]](https://github.com/aiidateam/aiida_core/pull/1007)
+
+### Minor bug fixes
+- Various bug fixes related to workflows for the SQLAlchemy backend [[#952]](https://github.com/aiidateam/aiida_core/pull/952) [[#960]](https://github.com/aiidateam/aiida_core/pull/960)
+
 ## v0.10.0:
 
 ### Major changes

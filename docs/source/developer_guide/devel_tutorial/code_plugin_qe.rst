@@ -1,5 +1,5 @@
-Developer code plugin tutorial - Quantum Espresso
-=================================================
+Tutorial: Calculation plugin - Quantum Espresso
+===============================================
 
 .. toctree::
    :maxdepth: 2
@@ -491,12 +491,6 @@ A kind of template for writing such parser for the calculation class
                 are the link names of retrieved nodes, and the values are the
                 nodes.
             """           
-            # check the calc status, not to overwrite anything
-            state = calc.get_state()
-            if state != calc_states.PARSING:
-                raise InvalidOperation("Calculation not in {} state"
-                                       .format(calc_states.PARSING) )
-
             # retrieve the whole list of input links
             calc_input_parameterdata = self._calc.get_inputs(node_type=ParameterData,
                                                              also_labels=True)

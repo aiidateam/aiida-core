@@ -15,6 +15,7 @@ import click
 def verdi(profile):
     pass
 
+
 @verdi.group()
 def export():
     pass
@@ -24,7 +25,12 @@ def export():
 def work():
     pass
 
+
 @verdi.group()
 def user():
     pass
 
+
+@verdi.group('data')
+def data_cmd():
+    pass

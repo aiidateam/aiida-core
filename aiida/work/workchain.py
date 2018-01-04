@@ -98,7 +98,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         on is finished before continuing to the next step.
 
         :param awaitable: The thing to await
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :type awaitable: :class:`aiida.work.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
 
@@ -181,6 +181,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         Cancel is the new abort, just like orange is the new black
         """
         self.calc.kill()
+        self.report(message)
         self.cancel(message)
 
     def _handle_do_abort(self):
@@ -195,15 +196,15 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             return True
         return False
 
-    def abort_nowait(self, msg=None):
+    def abort_nowait(self, message=None):
         """
         Abort the workchain at the next state transition without waiting
         which is achieved by passing a timeout value of zero
 
-        :param msg: The abort message
-        :type msg: str
+        :param message: The abort message
+        :type message: str
         """
-        return self.abort(msg=msg)
+        return self.abort(message=message)
 
     def action_awaitables(self):
         """

@@ -389,6 +389,7 @@ nitpick_ignore = [
     ('py:exc', 'Warning'),
     ('py:exc', 'WindowsError'),
     ('py:exc', 'ZeroDivisionError'),
+    ('py:class', 'dict'),
     ('py:obj', 'str'),
     ('py:obj', 'list'),
     ('py:obj', 'tuple'),

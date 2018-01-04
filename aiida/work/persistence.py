@@ -10,9 +10,9 @@
 
 import uritools
 import os.path
-import plum
 import os
 import os.path as path
+import plum
 import portalocker
 import portalocker.utils
 import tempfile

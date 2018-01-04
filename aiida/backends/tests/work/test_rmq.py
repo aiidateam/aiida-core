@@ -4,7 +4,9 @@ import plum
 import uuid
 from aiida.backends.testbase import AiidaTestCase
 import aiida.work.test_utils as test_utils
+from aiida.orm.data import base
 import aiida.work as work
+from aiida.orm.calculation.work import WorkCalculation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -37,18 +39,51 @@ class TestProcess(AiidaTestCase):
         self.daemon_runner.close()
         self.runner.close()
 
-    def test_launch_simple(self):
+    def test_submit_simple(self):
         # Launch the process
         calc_node = self.runner.submit(test_utils.DummyProcess)
+        self._wait_for_calc(calc_node)
 
+        self.assertTrue(calc_node.has_finished_ok())
+        self.assertEqual(
+            calc_node.get_attr(WorkCalculation.PROCESS_STATE_KEY),
+            work.ProcessState.FINISHED.value
+        )
+
+    def test_launch_with_inputs(self):
+        a = base.Int(5)
+        b = base.Int(10)
+
+        calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
+        self._wait_for_calc(calc_node)
+        self.assertTrue(calc_node.has_finished_ok())
+        self.assertEqual(
+            calc_node.get_attr(WorkCalculation.PROCESS_STATE_KEY),
+            work.ProcessState.FINISHED.value
+        )
+
+    def test_submit_bad_input(self):
+        with self.assertRaises(ValueError):
+            self.runner.submit(test_utils.AddProcess, a=base.Int(5))
+
+    def test_exception_process(self):
+        calc_node = self.runner.submit(test_utils.ExceptionProcess)
+        self._wait_for_calc(calc_node)
+
+        self.assertFalse(calc_node.has_finished_ok())
+        self.assertEqual(
+            calc_node.get_attr(WorkCalculation.PROCESS_STATE_KEY),
+            work.ProcessState.FAILED.value
+        )
+
+    def _wait_for_calc(self, calc_node, timeout=5.):
         def stop(*args):
             self.loop.stop()
 
         self.runner.call_on_calculation_finish(calc_node.pk, stop)
-        self.loop.call_later(5, stop)
+        self.loop.call_later(timeout, stop)
         self.loop.start()
 
-        self.assertTrue(calc_node.has_finished_ok())
 
 
         # def test_launch_and_get_status(self):

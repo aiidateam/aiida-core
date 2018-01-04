@@ -8,7 +8,7 @@ import logging
 import aiida.orm
 from . import persistence
 from . import rmq
-from . import transport
+from . import transports
 from . import utils
 
 __all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner',
@@ -97,14 +97,14 @@ class Runner(object):
     _rmq_connector = None
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
-                 rmq_submit=False, enable_persistence=True, transp=None):
+                 rmq_submit=False, enable_persistence=True, transport=None):
         self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval
 
-        if transp is None:
-            self._transport = transport.TransportQueue(self._loop)
+        if transport is None:
+            self._transport = transports.TransportQueue(self._loop)
         else:
-            self._transport = transp
+            self._transport = transport
 
         if enable_persistence:
             self._persister = persistence.AiiDAPersister()
@@ -146,6 +146,18 @@ class Runner(object):
     def persister(self):
         return self._persister
 
+    def start(self):
+        """ Start the internal event loop """
+        self._loop.start()
+
+    def stop(self):
+        """ Stop the internal event loop """
+        self._loop.stop()
+
+    def run_until_complete(self, future):
+        """ Run the loop until the future has finished and return the result """
+        return plum.run_until_complete(future, self._loop)
+
     def close(self):
         if self._rmq_connector is not None:
             self._rmq_connector.close()
@@ -153,8 +165,8 @@ class Runner(object):
     def run(self, process, *args, **inputs):
         """
         This method blocks and runs the given process with the supplied inputs.
-        It returns the outputs as produced by the process. 
-        
+        It returns the outputs as produced by the process.
+
         :param process: The process class or workfunction to run
         :param inputs: Workfunction positional arguments
         :return: The process outputs
@@ -206,23 +218,17 @@ class Runner(object):
         finally:
             runner.close()
 
-    def run_until_complete(self, future):
-        """ Run the loop until the future has finished and return the result """
-        def stop():
-            self._loop.stop()
-        future.add_done_callback(stop)
-        self._loop.start()
-        return future.result()
-
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
         self._rmq_connector = plum.rmq.RmqConnector(amqp_url=url, loop=self._loop)
         self._rmq = rmq.ProcessControlPanel(
             prefix=prefix, rmq_connector=self._rmq_connector, testing_mode=testing_mode)
 
         self._rmq_connector.connect()
+        # Run the loop until the RMQ control panel is ready
+        self.run_until_complete(self._rmq.ready_future())
 
     def _create_child_runner(self):
-        return Runner(transp=self._transport, **self._kwargs)
+        return Runner(transport=self._transport, **self._kwargs)
 
     def _poll_legacy_wf(self, workflow, callback):
         if workflow.has_finished_ok() or workflow.has_failed():

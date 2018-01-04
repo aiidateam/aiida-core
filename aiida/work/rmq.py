@@ -1,6 +1,5 @@
 import json
-import pickle
-import pika
+import plum
 import uuid
 
 from aiida.utils.serialize import serialize_data, deserialize_data
@@ -69,6 +68,9 @@ class ProcessControlPanel(object):
             self._connector,
             queue_name=launch_queue_name, testing_mode=testing_mode
         )
+
+    def ready_future(self):
+        return plum.gather(self._launch.initialised_future())
 
     #
     # @property

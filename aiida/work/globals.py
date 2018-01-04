@@ -22,7 +22,6 @@ def get_persistence():
     Get the global persistence object
 
     :return: The persistence object
-    :rtype: :class:`aiida.work.persistence.Persistence`
     """
     from aiida.work.persistence import get_global_persistence
     return get_global_persistence()

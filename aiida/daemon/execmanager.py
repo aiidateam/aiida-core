@@ -119,7 +119,6 @@ def update_job(job, scheduler=None):
     * scheduler._transport is not None
 
     :param job: The job calculation to update
-    :type job: :class:`aiida.orm.calculation.job.JobCalculation`
     :return: True if the job has is 'computed', False otherwise
     :rtype: bool
     """
@@ -152,7 +151,6 @@ def update_job_calc_from_job_info(calc, job_info):
     as obtained from the scheduler.
 
     :param calc: The job calculation
-    :type calc: :class:`aiida.orm.calculation.job.JobCalculation`
     :param job_info: the information returned by the scheduler for this job
     :return: True if the job state is DONE, False otherwise
     :rtype: bool
@@ -169,7 +167,6 @@ def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
     the scheduler
 
     :param calc: The job calculation
-    :type calc: :class:`aiida.orm.calculation.job.JobCalculation`
     :param detailed_job_info: the detailed information as returned by the
         scheduler for this job
     """

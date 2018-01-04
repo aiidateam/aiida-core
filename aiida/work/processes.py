@@ -182,7 +182,6 @@ class Process(plum.process.Process):
         Create a database calculation node that represents what happened in
         this process.
         :return: A calculation
-        :rtype: :class:`Calculation`
         """
         from aiida.orm.calculation.work import WorkCalculation
         calc = WorkCalculation()

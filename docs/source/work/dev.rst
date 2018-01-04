@@ -6,9 +6,13 @@ Workflows
 
 This section describes the different classes related to workflows, workfunctions and WorkChains.
 
-
+.. automodule:: aiida.work.awaitable
+   :members:
 
 .. automodule:: aiida.work.class_loader
+   :members:
+
+.. automodule:: aiida.work.context
    :members:
 
 .. automodule:: aiida.work.daemon
@@ -18,6 +22,9 @@ This section describes the different classes related to workflows, workfunctions
    :members:
 
 .. automodule:: aiida.work.globals
+   :members:
+
+.. automodule:: aiida.work.launch
    :members:
 
 .. automodule:: aiida.work.persistence
@@ -40,5 +47,3 @@ This section describes the different classes related to workflows, workfunctions
 
 .. automodule:: aiida.work.workfunctions
    :members:
-
-

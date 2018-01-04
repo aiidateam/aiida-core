@@ -4,7 +4,7 @@ from plum.utils import AttributesDict
 from aiida.orm.calculation import Calculation
 from aiida.orm.workflow import Workflow
 
-__all__ = ['AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
+__all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
 
 
 class AwaitableTarget(Enum):
@@ -24,6 +24,9 @@ class AwaitableAction(Enum):
 
 
 class Awaitable(AttributesDict):
+    """
+    This is some reference
+    """
     pass
 
 

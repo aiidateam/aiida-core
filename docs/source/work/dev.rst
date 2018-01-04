@@ -17,19 +17,13 @@ This section describes the different classes related to workflows, workfunctions
 .. automodule:: aiida.work.db_types
    :members:
 
-.. automodule:: aiida.work.defaults
-   :members:
-
-.. automodule:: aiida.work.execution_engine
+.. automodule:: aiida.work.globals
    :members:
 
 .. automodule:: aiida.work.persistence
    :members:
 
-.. automodule:: aiida.work.process
-   :members:
-
-.. automodule:: aiida.work.process_registry
+.. automodule:: aiida.work.processes
    :members:
 
 .. automodule:: aiida.work.run
@@ -38,16 +32,13 @@ This section describes the different classes related to workflows, workfunctions
 .. automodule:: aiida.work.test_utils
    :members:
 
-.. automodule:: aiida.work.util
+.. automodule:: aiida.work.utils
    :members:
 
 .. automodule:: aiida.work.workchain
    :members:
 
-.. automodule:: aiida.work.workflow
-   :members:
-
-.. automodule:: aiida.work.workfunction
+.. automodule:: aiida.work.workfunctions
    :members:
 
 

@@ -13,7 +13,7 @@ import collections
 import uritools
 import os.path
 
-import plum.persistence.pickle_persistence
+from plum.persisters import PicklePersister
 from plum.process import Process
 from aiida.common.lang import override
 from aiida.work.globals import class_loader
@@ -71,7 +71,7 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-Persistence = plum.persistence.pickle_persistence.PicklePersister
+Persistence = PicklePersister
 
 _GLOBAL_PERSISTENCE = None
 

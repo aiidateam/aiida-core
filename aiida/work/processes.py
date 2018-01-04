@@ -297,8 +297,7 @@ class Process(plum.process.Process):
 
         :param output_port: The output port name the value was emitted on
         :param value: The value emitted
-        :param dynamic: Was the output port a dynamic one (i.e. not known
-        beforehand?)
+        :param dynamic: Was the output port a dynamic one (i.e. not known beforehand?)
         """
         super(Process, self).on_output_emitting(output_port, value)
         if not isinstance(value, Data):

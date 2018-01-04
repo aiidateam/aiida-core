@@ -62,6 +62,7 @@ install_requires = [
     'paramiko==2.1.2',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
+    'pika==0.11.2',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',

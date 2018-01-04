@@ -146,7 +146,7 @@ def main():
     for index in range(1, number_workchains + 1):
         inp = Int(index)
         future = submit(ParentWorkChain, inp=inp)
-        expected_results_workchains[future.pid] = index * 2
+        expected_results_workchains[future.pk] = index * 2
 
 
     calculation_pks = sorted(expected_results_calculations.keys())

@@ -28,7 +28,7 @@ class ParentWorkChain(WorkChain):
             'inp': self.inputs.inp
         }
         running = submit(SubWorkChain, **inputs)
-        self.report('launching SubWorkChain<{}>'.format(running.pid))
+        self.report('launching SubWorkChain<{}>'.format(running.pk))
 
         return ToContext(workchains=append_(running))
 

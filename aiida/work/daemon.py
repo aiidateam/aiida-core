@@ -67,7 +67,6 @@ def launch_all_pending_job_calculations():
     """
     Launch all JobCalculations that are not currently being processed
     """
-
     storage = aiida.work.globals.get_persistence()
     executor = aiida.work.globals.get_thread_executor()
     for calc in get_all_pending_job_calculations():
@@ -82,10 +81,10 @@ def launch_all_pending_job_calculations():
         except BaseException:
             _LOGGER.error("Failed to launch job '{}'\n{}".format(
                 calc.pk, traceback.format_exc()))
-
-        # Check if the process finished or was stopped early
-        if not proc.has_finished():
-            more_work = True
+        else:
+            # Check if the process finished or was stopped early
+            if not proc.has_finished():
+                more_work = True
 
 
 def get_all_pending_job_calculations():

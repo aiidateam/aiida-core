@@ -98,6 +98,11 @@ LOGGING = {
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
+        'celery': {
+            'handlers': ['console'],
+            'level': get_property('logging.aiida_loglevel'),
+            'propagate': True,
+        },
     },
 }
 

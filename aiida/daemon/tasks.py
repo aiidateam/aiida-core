@@ -50,6 +50,16 @@ broker = (
 app = Celery('tasks', broker=broker)
 
 
+def setup_logging():
+    """
+    Setup the logging from the dictionary configuration in aiida.LOGGING
+    This is necessary for the console handlers to be properly configured in the celery workers
+    that handle the various tasks below
+    """
+    import logging
+    from aiida import LOGGING
+    logging.config.dictConfig(LOGGING)
+
 # the tasks as taken from the djsite.db.tasks, same tasks and same functionalities
 # will now of course fail because set_daemon_timestep has not be implementd for SA
 
@@ -59,6 +69,7 @@ app = Celery('tasks', broker=broker)
     )
 )
 def submitter():
+    setup_logging()
     from aiida.daemon.execmanager import submit_jobs
     print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
     set_daemon_timestamp(task_name='submitter', when='start')
@@ -72,6 +83,7 @@ def submitter():
     )
 )
 def updater():
+    setup_logging()
     from aiida.daemon.execmanager import update_jobs
     print "aiida.daemon.tasks.update:  Checking for calculations to update"
     set_daemon_timestamp(task_name='updater', when='start')
@@ -86,6 +98,7 @@ def updater():
     )
 )
 def retriever():
+    setup_logging()
     from aiida.daemon.execmanager import retrieve_jobs
     print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
     set_daemon_timestamp(task_name='retriever', when='start')
@@ -100,6 +113,7 @@ def retriever():
     )
 )
 def tick_work():
+    setup_logging()
     from aiida.work.daemon import tick_workflow_engine
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
     tick_workflow_engine()
@@ -109,7 +123,8 @@ def tick_work():
                                                       )
                                    )
                )
-def workflow_stepper(): # daemon for legacy workflow 
+def workflow_stepper(): # daemon for legacy workflow
+    setup_logging()
     from aiida.daemon.workflowmanager import execute_steps
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
     # RUDIMENTARY way to check if this task is already running (to avoid acting

@@ -45,6 +45,18 @@ broker = (
 
 app = Celery('tasks', broker=broker)
 
+
+def setup_logging():
+    """
+    Setup the logging from the dictionary configuration in aiida.LOGGING
+    This is necessary for the console handlers to be properly configured in the celery workers
+    that handle the various tasks below
+    """
+    import logging
+    from aiida import LOGGING
+    logging.config.dictConfig(LOGGING)
+
+
 if DAEMON_USE_NEW:
 
     @periodic_task(
@@ -54,6 +66,7 @@ if DAEMON_USE_NEW:
         )
     )
     def tick_work():
+        setup_logging()
         from aiida.work.daemon import launch_pending_jobs
         print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
         launch_pending_jobs()
@@ -66,6 +79,7 @@ if DAEMON_USE_NEW:
         )
     )
     def launch_all_pending_job_calculations():
+        setup_logging()
         print("aiida.daemon.tasks.{}:  Launching any pending jobs".format(
             launch_all_pending_job_calculations.__name__))
         import aiida.work.daemon as work_daemon

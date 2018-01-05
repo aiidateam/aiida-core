@@ -189,9 +189,10 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None, runner=None, parent_pid=None):
+    def __init__(self, inputs=None, pid=None, logger=None, runner=None,
+                 parent_pid=None, enable_persistence=True):
         if runner is None:
-            self._runner = runners.new_runner()
+            self._runner = runners.get_runner()
         else:
             self._runner = runner
 
@@ -212,6 +213,12 @@ class Process(plum.process.Process):
         if logger is None:
             self.set_logger(self._calc.logger)
 
+        self._enable_persistence = enable_persistence
+        if self._enable_persistence and self.runner.persister is None:
+            self.logger.warning(
+                "Disabling persistence, runner does not have a persister")
+            self._enable_persistence = False
+
     @property
     def calc(self):
         return self._calc
@@ -225,14 +232,19 @@ class Process(plum.process.Process):
 
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state['_enable_persistence'] = self._enable_persistence
 
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, runner=None):
+        if runner is None:
+            self._runner = runners.get_runner()
+        else:
+            self._runner = runner
+        super(Process, self).load_instance_state(saved_state, loop=self._runner.loop)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -251,6 +263,8 @@ class Process(plum.process.Process):
         if self.SaveKeys.PARENT_PID.value in saved_state:
             self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
 
+        self._enable_persistence = saved_state['_enable_persistence']
+
     @override
     def out(self, output_port, value=None):
         if value is None:
@@ -266,6 +280,8 @@ class Process(plum.process.Process):
         super(Process, self).on_entered()
         # Update the node attributes every time we enter a new state
         self.update_node_state()
+        if self._enable_persistence and not self.done():
+            self.runner.persister.save_checkpoint(self)
 
     @override
     def on_terminated(self):
@@ -273,6 +289,8 @@ class Process(plum.process.Process):
         Called when a Process enters a terminal state.
         """
         super(Process, self).on_terminated()
+        if self._enable_persistence:
+            self.runner.persister.delete_checkpoint(self.pid)
         try:
             self.calc.seal()
         except exceptions.ModificationNotAllowed:
@@ -296,7 +314,6 @@ class Process(plum.process.Process):
 
         :param output_port: The output port name the value was emitted on
         :param value: The value emitted
-        :param dynamic: Was the output port a dynamic one (i.e. not known beforehand?)
         """
         super(Process, self).on_output_emitting(output_port, value)
         if not isinstance(value, Data):
@@ -553,6 +570,10 @@ class FunctionProcess(Process):
         """
         assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
+
+    def __init__(self, *args, **kwargs):
+        super(FunctionProcess, self).__init__(
+            enable_persistence=False, *args, **kwargs)
 
     @override
     def _setup_db_record(self):

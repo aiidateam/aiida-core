@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from click_plugins import with_plugins
 
 
 @click.group()
 @click.option('--profile', '-p')
 def verdi(profile):
     pass
+
 
 @verdi.group()
 def export():
@@ -24,6 +24,7 @@ def export():
 @verdi.group()
 def work():
     pass
+
 
 @verdi.group()
 def user():

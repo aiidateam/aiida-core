@@ -116,6 +116,13 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 
+    def test_save_instance_state(self):
+        proc = DummyProcess()
+        # Save the instance state
+        bundle = work.Bundle(proc)
+
+        proc2 = bundle.unbundle()
+
 
 class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):

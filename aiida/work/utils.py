@@ -352,7 +352,7 @@ class Savable(object):
         try:
             class_name = saved_state[Savable.CLASS_NAME]
             cls = load_object(class_name)
-            return cls.create_from(saved_state)
+            return cls.recreate_from(saved_state)
         except IndexError:
             raise ValueError("Not a valid saved state with type")
 

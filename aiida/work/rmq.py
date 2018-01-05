@@ -1,6 +1,5 @@
 import json
-import pickle
-import pika
+import plum
 import uuid
 
 from aiida.utils.serialize import serialize_data, deserialize_data
@@ -12,20 +11,16 @@ _LAUNCH_QUEUE = 'process.queue'
 _STATUS_REQUEST_EXCHANGE = 'process.status_request'
 _LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
 
-def _create_connection():
-    # Set up communications
-    try:
-        return pika.BlockingConnection()
-    except pika.exceptions.ConnectionClosed:
-        raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
 
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
 
+
 def decode_response(response):
     response = json.loads(response)
     return deserialize_data(response)
+
 
 def status_decode(msg):
     decoded = rmq.status.status_decode(msg)
@@ -41,36 +36,12 @@ def status_decode(msg):
     return decoded
 
 
-def insert_process_control_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.control.ProcessControlSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _CONTROL_EXCHANGE),
-    )
+def get_launch_queue_name(prefix=None):
+    if prefix is not None:
+        return "{}.{}".format(prefix, _LAUNCH_QUEUE)
 
-def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.status.ProcessStatusSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
-    )
+    return _LAUNCH_QUEUE
 
-def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.launch.ProcessLaunchSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _LAUNCH_QUEUE),
-        response_encoder=encode_response
-    )
-
-def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
-    # Give them all the same connection instance
-    connection = get_connection()
-    get_conn = lambda: connection
-
-    insert_process_control_subscriber(loop, prefix, get_conn)
-    insert_process_status_subscriber(loop, prefix, get_conn)
-    insert_process_launch_subscriber(loop, prefix, get_conn)
 
 class ProcessControlPanel(object):
     """
@@ -78,51 +49,38 @@ class ProcessControlPanel(object):
     Processes over the RMQ protocol.
     """
 
-    def __init__(self, prefix, create_connection=_create_connection, loop=None):
-        self._connection = create_connection()
+    def __init__(self, prefix, rmq_connector, testing_mode=False):
+        self._connector = rmq_connector
 
-        self._control = rmq.control.ProcessControlPublisher(
-            self._connection,
-            "{}.{}".format(prefix, _CONTROL_EXCHANGE)
-        )
+        # self._control = rmq.control.ProcessControlPublisher(
+        #     self._connection,
+        #     "{}.{}".format(prefix, _CONTROL_EXCHANGE)
+        # )
+        #
+        # self._status = rmq.status.ProcessStatusRequester(
+        #     self._connection,
+        #     "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
+        #     status_decode
+        # )
 
-        self._status = rmq.status.ProcessStatusRequester(
-            self._connection,
-            "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
-            status_decode
-        )
-
+        launch_queue_name = "{}.{}".format(prefix, _LAUNCH_QUEUE)
         self._launch = rmq.launch.ProcessLaunchPublisher(
-            'amqp://quest:quest',
-            "{}.{}".format(prefix, _LAUNCH_QUEUE),
-            pickle.dumps,
-            decode_response
+            self._connector,
+            queue_name=launch_queue_name, testing_mode=testing_mode
         )
 
-    def on_loop_inserted(self, loop):
-        super(ProcessControlPanel, self).on_loop_inserted(loop)
-        loop._insert(self._control)
-        loop._insert(self._status)
-        loop._insert(self._launch)
+    def ready_future(self):
+        return plum.gather(self._launch.initialised_future())
 
-    def on_loop_removed(self):
-        loop = self.loop()
-        loop._remove(self._control)
-        loop._remove(self._status)
-        loop._remove(self._launch)
-        super(ProcessControlPanel, self).on_loop_removed()
-
-    @property
-    def control(self):
-        return self._control
+    #
+    # @property
+    # def control(self):
+    #     return self._control
+    #
+    # @property
+    # def status(self):
+    #     return self._status
 
     @property
-    def status(self):
-        return self._status
-
-    def launch(self, process_bundle):
-        return self._launch.launch(process_bundle)
-
-
-def create_control_panel(prefix="aiida", create_connection=_create_connection, loop=None):
-    return ProcessControlPanel(prefix, create_connection, loop=loop)
+    def launch(self):
+        return self._launch

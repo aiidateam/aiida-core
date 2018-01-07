@@ -11,18 +11,13 @@
 import uritools
 import os.path
 import os
-import os.path as path
 import plum
 import portalocker
 import portalocker.utils
-import tempfile
 import yaml
 
 from aiida import orm
-
-_RUNNING_DIRECTORY = path.join(tempfile.gettempdir(), "running")
-_FINISHED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "finished")
-_FAILED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "failed")
+from . import class_loader
 
 Bundle = plum.Bundle
 
@@ -107,7 +102,7 @@ class AiiDAPersister(plum.Persister):
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        bundle = Bundle(process)
+        bundle = Bundle(process, class_loader.CLASS_LOADER)
         calc = process.calc
         calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY, yaml.dump(bundle))
 
@@ -117,7 +112,9 @@ class AiiDAPersister(plum.Persister):
 
         calc_node = orm.load_node(pid)
         try:
-            return yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
+            bundle = yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
+            bundle.set_class_loader(class_loader.CLASS_LOADER)
+            return bundle
         except ValueError:
             raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")
 

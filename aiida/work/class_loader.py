@@ -29,11 +29,8 @@ class ClassLoader(plum.class_loader.ClassLoader):
             idx = name.find(JobProcess.__name__)
             wrapped_class = name[idx + len(JobProcess.__name__) + 1:]
             # Recreate the class
-            return JobProcess.build(plum.utils.load_class(wrapped_class))
+            return JobProcess.build(plum.utils.load_object(wrapped_class))
 
 
 # The default class loader instance
-_CLASS_LOADER = plum.class_loader.ClassLoader(ClassLoader())
-
-def get_default():
-    pass
+CLASS_LOADER = plum.class_loader.ClassLoader(ClassLoader())

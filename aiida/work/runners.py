@@ -98,14 +98,11 @@ class Runner(object):
     _communicator = None
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
-                 rmq_submit=False, enable_persistence=True, transport=None):
+                 rmq_submit=False, enable_persistence=True):
         self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval
 
-        if transport is None:
-            self._transport = transports.TransportQueue(self._loop)
-        else:
-            self._transport = transport
+        self._transport = transports.TransportQueue(self._loop)
 
         if enable_persistence:
             self._persister = persistence.AiiDAPersister()
@@ -234,7 +231,7 @@ class Runner(object):
         self.run_until_complete(self._rmq.ready_future())
 
     def _create_child_runner(self):
-        return Runner(transport=self._transport, **self._kwargs)
+        return Runner(**self._kwargs)
 
     def _poll_legacy_wf(self, workflow, callback):
         if workflow.has_finished_ok() or workflow.has_failed():

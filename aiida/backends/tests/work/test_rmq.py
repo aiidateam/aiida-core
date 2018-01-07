@@ -76,6 +76,16 @@ class TestProcess(AiidaTestCase):
             work.ProcessState.FAILED.value
         )
 
+    def test_launch_and_get_status(self):
+        a = base.Int(5)
+        b = base.Int(10)
+
+        calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
+        self._wait_for_calc(calc_node)
+        future = self.runner.rmq.request_status(calc_node.pk)
+        result = plum.run_until_complete(future, self.loop)
+        self.assertIsNotNone(result)
+
     def _wait_for_calc(self, calc_node, timeout=5.):
         def stop(*args):
             self.loop.stop()
@@ -83,27 +93,3 @@ class TestProcess(AiidaTestCase):
         self.runner.call_on_calculation_finish(calc_node.pk, stop)
         self.loop.call_later(timeout, stop)
         self.loop.start()
-
-
-
-        # def test_launch_and_get_status(self):
-        #     from plum.rmq.status import PROCS_KEY
-        #
-        #     # Launch the process
-        #     self.runner.submit(test_utils.WaitChain)
-        #
-        #     # Tick the daemon runner a few times
-        #     proc = None
-        #     for _ in range(3):
-        #         self.daemon_runner.tick()
-        #         objs = self.daemon_runner.objects(obj_type=test_utils.WaitChain)
-        #         if len(objs) == 1:
-        #             proc = objs[0]
-        #             break
-        #
-        #     self.assertIsNotNone(proc, "The process wasn't launched in the timeout")
-        #
-        #     responses = ~self.runner.rmq.status.send_request(timeout=2.)
-        #     self.assertEqual(len(responses), 1)
-        #     procs = responses[0][PROCS_KEY]
-        #     self.assertIn(proc.process.pid, procs)

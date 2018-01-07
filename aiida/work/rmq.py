@@ -5,11 +5,8 @@ import uuid
 from aiida.utils.serialize import serialize_data, deserialize_data
 from plum import rmq
 
-_CONTROL_EXCHANGE = 'process.control'
-_EVENT_EXCHANGE = 'process.event'
+_MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
-_STATUS_REQUEST_EXCHANGE = 'process.status_request'
-_LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
 
 
 def encode_response(response):
@@ -22,25 +19,19 @@ def decode_response(response):
     return deserialize_data(response)
 
 
-def status_decode(msg):
-    decoded = rmq.status.status_decode(msg)
-    # Just need to fix up the special case of PIDs being PKs (i.e. ints)
-    procs = decoded[rmq.status.PROCS_KEY]
-    for pid in procs.keys():
-        try:
-            if not isinstance(pid, uuid.UUID):
-                new_pid = int(pid)
-                procs[new_pid] = procs.pop(pid)
-        except ValueError:
-            pass
-    return decoded
-
-
 def get_launch_queue_name(prefix=None):
     if prefix is not None:
         return "{}.{}".format(prefix, _LAUNCH_QUEUE)
 
     return _LAUNCH_QUEUE
+
+
+def create_communicator():
+    pass
+
+
+def get_message_exchange_name(prefix):
+    return "{}.{}".format(prefix, _MESSAGE_EXCHANGE)
 
 
 class ProcessControlPanel(object):
@@ -52,34 +43,35 @@ class ProcessControlPanel(object):
     def __init__(self, prefix, rmq_connector, testing_mode=False):
         self._connector = rmq_connector
 
-        # self._control = rmq.control.ProcessControlPublisher(
-        #     self._connection,
-        #     "{}.{}".format(prefix, _CONTROL_EXCHANGE)
-        # )
-        #
-        # self._status = rmq.status.ProcessStatusRequester(
-        #     self._connection,
-        #     "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
-        #     status_decode
-        # )
+        message_exchange = get_message_exchange_name(prefix)
+        self.communicator = plum.rmq.RmqCommunicator(
+            rmq_connector,
+            exchange_name=message_exchange)
 
-        launch_queue_name = "{}.{}".format(prefix, _LAUNCH_QUEUE)
+        task_queue_name = "{}.{}".format(prefix, _LAUNCH_QUEUE)
         self._launch = rmq.launch.ProcessLaunchPublisher(
             self._connector,
-            queue_name=launch_queue_name, testing_mode=testing_mode
+            exchange_name=get_message_exchange_name(prefix),
+            task_queue_name=task_queue_name,
+            testing_mode=testing_mode
         )
 
     def ready_future(self):
-        return plum.gather(self._launch.initialised_future())
+        return plum.gather(
+            self._launch.initialised_future(),
+            self.communicator.initialised_future())
 
-    #
-    # @property
-    # def control(self):
-    #     return self._control
-    #
-    # @property
-    # def status(self):
-    #     return self._status
+    def pause_process(self, pid):
+        return self.communicator.rpc_send(pid, plum.PAUSE_MSG)
+
+    def play_process(self, pid):
+        return self.communicator.rpc_send(pid, plum.PLAY_MSG)
+
+    def cancel_process(self, pid, msg=None):
+        return self.communicator.rpc_send(pid, plum.CANCEL_MSG)
+
+    def request_status(self, pid):
+        return self.communicator.rpc_send(pid, plum.STATUS_MSG)
 
     @property
     def launch(self):

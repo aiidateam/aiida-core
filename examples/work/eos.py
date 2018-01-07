@@ -96,10 +96,10 @@ class EquationOfState(WorkChain):
 
 
 structure = create_diamond_fcc(Str('C'), Float(3.57))
-codename = 'pwx@localhost'
-pseudo_family_name = 'sssp_eff'
+codename = 'pw.x@localhost'
+pseudo_family_name = 'SSSP_eff_PBE_0.7'
 
-result = work.submit(EquationOfState,
+result = work.run(EquationOfState,
                      structure=structure,
                      codename=Str(codename),
                      pseudo_family=Str(pseudo_family_name)

@@ -71,7 +71,7 @@ class EquationOfState(WorkChain):
         )
 
     def init(self):
-        self.ctx.scales = (0.96, 0.98, 1., 1.02, 1.04)
+        self.ctx.scales = (0.94, 0.96, 0.98, 1., 1.02, 1.04, 1.06)
         self.ctx.i = 0
 
     def not_finished(self):

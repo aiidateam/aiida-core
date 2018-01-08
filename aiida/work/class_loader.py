@@ -13,6 +13,8 @@ import plum.class_loader
 import plum.utils
 from aiida.common.lang import override
 
+__all__ = ['CLASS_LOADER']
+
 
 class ClassLoader(plum.class_loader.ClassLoader):
     @staticmethod

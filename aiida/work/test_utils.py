@@ -59,7 +59,7 @@ class ExceptionProcess(Process):
         raise RuntimeError("CRASH")
 
 
-class WaitChain(Process):
+class WaitProcess(Process):
     """
     This waits until it is asked to continue
     """

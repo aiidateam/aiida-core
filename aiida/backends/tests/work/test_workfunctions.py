@@ -12,9 +12,9 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work import workfunction
 from aiida.orm.data.base import get_true_node
 import aiida.orm
+from aiida.orm.data.base import Int
 import aiida.work.utils as util
 from aiida import work
-from aiida.work.launch import run, run_get_pid
 
 
 @workfunction
@@ -46,8 +46,8 @@ class TestWf(AiidaTestCase):
         self.assertTrue(return_input(get_true_node())['result'])
 
     def test_run(self):
-        self.assertTrue(run(simple_wf)['result'])
-        self.assertTrue(run(return_input, get_true_node())['result'])
+        self.assertTrue(work.run(simple_wf)['result'])
+        self.assertTrue(work.run(return_input, get_true_node())['result'])
 
     def test_run_and_get_node(self):
         result, calc_node = single_return_value.run_get_node()
@@ -58,3 +58,19 @@ class TestWf(AiidaTestCase):
         result = single_return_value()
         self.assertIsInstance(result, aiida.orm.Data)
         self.assertEqual(result, get_true_node())
+
+    def test_simple_workflow(self):
+        @work.workfunction
+        def add(a, b):
+            return a + b
+
+        @work.workfunction
+        def mul(a, b):
+            return a * b
+
+        @work.workfunction
+        def add_mul_wf(a, b, c):
+            return mul(add(a, b), c)
+
+        result = add_mul_wf(Int(3), Int(4), Int(5))
+        print(result)

@@ -18,11 +18,12 @@ LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime'
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
-        (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
-    ]
+    (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
+]
     if not levelname.startswith('Level')
 }
 LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
+
 
 class Work(VerdiCommandWithSubcommands):
     """
@@ -82,7 +83,6 @@ def do_list(past_days, all_states, limit, project):
 
     if not project:
         project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
-
 
     # Mapping of projections to list table headers.
     hmap_dict = {
@@ -148,7 +148,8 @@ def do_list(past_days, all_states, limit, project):
     mapped_projections.extend([_FAILED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY])
     table = []
 
-    for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days, order_by={'ctime': 'desc'}):
+    for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days,
+                            order_by={'ctime': 'desc'}):
         calc = res['calculation']
         if calc[_SEALED_ATTRIBUTE_KEY] and not all_states:
             continue
@@ -338,6 +339,23 @@ def kill(pks):
             click.echo('Abort!')
     else:
         click.echo('No pks of valid running workchains given.')
+
+
+@work.command('pause', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def pause(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import plum
+    from aiida import work
+
+    runner = work.get_runner()
+
+    futures = []
+    for pk in pks:
+        futures.append(runner.rmq.pause_process(pk))
+
+    print(runner.run_until_complete(plum.gather(*futures)))
 
 
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):

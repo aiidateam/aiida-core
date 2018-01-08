@@ -91,6 +91,14 @@ class Data(Node):
         """
         self.source = source
 
+    @property
+    def created_by(self):
+        inputs = self.get_inputs(link_type=LinkType.CREATE)
+        if inputs:
+            return inputs[0]
+        else:
+            return None
+
     @override
     def _set_attr(self, key, value, **kwargs):
         """

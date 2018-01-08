@@ -23,6 +23,8 @@ from aiida.scheduler.datastructures import job_states
 from . import processes
 from . import utils
 
+__all__ = ['JobProcess']
+
 SUBMIT_COMMAND = 'submit'
 UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
@@ -291,6 +293,9 @@ class JobProcess(processes.Process):
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
+
+        # Done, so return the output
+        return self.outputs
 
 
 class ContinueJobCalculation(JobProcess):

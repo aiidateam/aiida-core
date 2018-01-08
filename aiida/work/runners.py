@@ -12,7 +12,7 @@ from . import transports
 from . import utils
 
 __all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner',
-           'set_runner']
+           'set_runner', 'get_runner']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,12 @@ def set_runner(runner):
 
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
+    # TODO: Create policy object to create new runners
+    if 'rmq_config' not in kwargs:
+        kwargs['rmq_config'] = {
+            'url': 'amqp://localhost',
+            'prefix': 'aiida',
+        }
     return Runner(**kwargs)
 
 

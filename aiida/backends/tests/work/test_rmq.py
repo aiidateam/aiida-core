@@ -2,6 +2,8 @@
 
 import plum
 import uuid
+import unittest
+
 from aiida.backends.testbase import AiidaTestCase
 import aiida.work.test_utils as test_utils
 from aiida.orm.data import base
@@ -76,15 +78,23 @@ class TestProcess(AiidaTestCase):
             work.ProcessState.FAILED.value
         )
 
-    def test_launch_and_get_status(self):
-        a = base.Int(5)
-        b = base.Int(10)
+    @unittest.skip("Need to get pause working by accepting PID")
+    def test_pause(self):
+        calc_node = self.runner.submit(test_utils.WaitProcess)
+        future = self.runner.rmq.pause_process(calc_node.pk)
 
-        calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
-        self._wait_for_calc(calc_node)
-        future = self.runner.rmq.request_status(calc_node.pk)
-        result = plum.run_until_complete(future, self.loop)
-        self.assertIsNotNone(result)
+        result = self.runner.run_until_complete(future)
+        self.assertTrue(result)
+
+    # def test_launch_and_get_status(self):
+    #     a = base.Int(5)
+    #     b = base.Int(10)
+    #
+    #     calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
+    #     self._wait_for_calc(calc_node)
+    #     future = self.runner.rmq.request_status(calc_node.pk)
+    #     result = plum.run_until_complete(future, self.loop)
+    #     self.assertIsNotNone(result)
 
     def _wait_for_calc(self, calc_node, timeout=5.):
         def stop(*args):

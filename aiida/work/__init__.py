@@ -10,6 +10,8 @@
 
 from plum import Bundle
 from plum import ProcessState
+from .class_loader import *
+from .job_processes import *
 from .launch import *
 from .processes import *
 from .runners import *
@@ -19,4 +21,4 @@ from .workchain import *
 
 __all__ = (processes.__all__ + runners.__all__ + utils.__all__ +
            workchain.__all__ + launch.__all__ + workfunctions.__all__ +
-           ['ProcessState'])
+           ['ProcessState'] + class_loader.__all__ + job_processes.__all__)

@@ -14,7 +14,7 @@ Do not delete, otherwise 'verdi developertest' will stop to work.
 
 import functools
 from . import processes
-from . import launch
+from . import runners
 
 __all__ = ['workfunction']
 
@@ -49,7 +49,11 @@ def workfunction(func):
         # Build up the Process representing this function
         wf_class = processes.FunctionProcess.build(func, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
-        return wf_class(inputs=inputs).execute()
+        # Have to create a new runner for the workfunction instead of using
+        # the global because otherwise a workfunction that calls another from
+        # within its scope would be blocking the event loop
+        runner = runners.new_runner(rmq_config=None, enable_persistence=False)
+        return wf_class(inputs=inputs, runner=runner).execute()
 
     def run_get_node(*args, **kwargs):
         # Build up the Process representing this function

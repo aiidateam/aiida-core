@@ -201,8 +201,7 @@ class Process(plum.process.Process):
             pid=pid,
             logger=logger,
             loop=self._runner.loop,
-            communicator=self._runner.communicator
-        )
+            communicator=self.runner.communicator)
 
         self._calc = None
         # If parent PID hasn't been supplied try to get it from the stack

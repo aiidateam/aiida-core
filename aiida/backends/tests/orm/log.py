@@ -10,7 +10,7 @@
 import logging
 import unittest
 from aiida.utils.timezone import now
-from aiida import LOG_LEVEL_REPORT
+from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
 from aiida.orm.backend import construct
 from aiida.orm.calculation import Calculation

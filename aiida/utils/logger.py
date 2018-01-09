@@ -9,7 +9,7 @@
 ###########################################################################
 
 import logging
-from aiida import LOG_LEVEL_REPORT
+from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.backends.utils import is_dbenv_loaded
 
 LOG_LEVELS = {

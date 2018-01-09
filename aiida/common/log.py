@@ -99,14 +99,6 @@ LOGGING = {
             'formatter': 'halfverbose',
             'filters': ['testing']
         },
-        'daemon_logfile': {
-            'level': 'DEBUG',
-            'formatter': 'halfverbose',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': setup.DAEMON_LOG_FILE,
-            'encoding': 'utf8',
-            'maxBytes': 100000,
-        },
         'dblogger': {
             # setup.get_property takes the property from the config json file
             # The key used in the json, and the default value, are
@@ -142,26 +134,39 @@ LOGGING = {
     },
 }
 
-def configure_logging(daemon=False, daemon_handler='daemon_logfile'):
+def configure_logging(daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
-    daemon running a task for one of the celery workers, set the argument 'daemon' to True.
-    This will cause the 'daemon_handler' to be added to all the configured loggers. This
-    handler needs to be defined in the LOGGING dictionary and is 'daemon_logfile' by
-    default. If this changes in the dictionary, be sure to pass the correct handle name.
-    The daemon handler should be a RotatingFileHandler that writes to the daemon log file.
+    daemon running a task for one of the celery workers, set the argument 'daemon' to True
+    and specify the path to the log file. This will cause a 'daemon_handler' to be added
+    to all the configured loggers, that is a RotatingFileHandler that writes to the log file.
 
     :param daemon: configure the logging for a daemon task by adding a file handler instead
         of the default 'console' StreamHandler
-    :param daemon_handler: name of the file handler in the LOGGING dictionary
+    :param daemon_log_file: absolute filepath of the log file for the RotatingFileHandler
     """
     config = deepcopy(LOGGING)
+    daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
+
+        if daemon_log_file is None:
+            raise ValueError('daemon_log_file has to be defined when configuring for the daemon')
+
+        config.setdefault('handlers', {})
+        config['handlers'][daemon_handler_name] = {
+            'level': 'DEBUG',
+            'formatter': 'halfverbose',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': daemon_log_file,
+            'encoding': 'utf8',
+            'maxBytes': 100000,
+        }
+
         for name, logger in config.get('loggers', {}).iteritems():
-            logger.setdefault('handlers', []).append(daemon_handler)
+            logger.setdefault('handlers', []).append(daemon_handler_name)
 
     logging.config.dictConfig(config)
 

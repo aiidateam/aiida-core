@@ -12,7 +12,7 @@ import logging
 aiidalogger = logging.getLogger('aiida')
 
 
-def setup_logging(daemon=False, daemon_handler='daemon_logfile'):
+def configure_logging(daemon=False, daemon_handler='daemon_logfile'):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the

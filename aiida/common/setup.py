@@ -35,11 +35,16 @@ else:
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = "daemon"
-LOG_SUBDIR = "daemon/log"
-DAEMON_CONF_FILE = "aiida_daemon.conf"
+DAEMON_SUBDIR = 'daemon'
+LOG_SUBDIR = 'daemon/log'
+DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-WORKFLOWS_SUBDIR = "workflows"
+CELERY_LOG_FILE = 'celery.log'
+CELERY_PID_FILE = 'celery.pid'
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+
+WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
@@ -51,17 +56,17 @@ DEFAULT_PROCESS = 'verdi'
 DEFAULT_UMASK = 0o0077
 
 # Profile keys
-aiidadb_backend_key = "AIIDADB_BACKEND"
+aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
-aiidadb_backend_value_django = "django"
+aiidadb_backend_value_django = 'django'
 
 # Repository for tests
 TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
-TEST_KEYWORD = "test_"
+TEST_KEYWORD = 'test_'
 
 
 def get_aiida_dir():

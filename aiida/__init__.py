@@ -10,7 +10,7 @@
 import logging
 import warnings
 from logging import config
-from aiida.common.setup import get_property
+from aiida.common import setup
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file."
@@ -34,7 +34,6 @@ class NotInTestingFilter(logging.Filter):
     def filter(self, record):
         from aiida import settings
         return not settings.TESTING_MODE
-
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -66,42 +65,45 @@ LOGGING = {
             'formatter': 'halfverbose',
             'filters': ['testing']
         },
+        'daemon_logfile': {
+            'level': 'DEBUG',
+            'formatter': 'halfverbose',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': setup.DAEMON_LOG_FILE,
+            'encoding': 'utf8',
+            'maxBytes': 100000,
+        },
         'dblogger': {
-            # get_property takes the property from the config json file
+            # setup.get_property takes the property from the config json file
             # The key used in the json, and the default value, are
             # specified in the _property_table inside aiida.common.setup
             # NOTE: To modify properties, use the 'verdi devel setproperty'
             #   command and similar ones (getproperty, describeproperties, ...)
-            'level': get_property('logging.db_loglevel'),
+            'level': setup.get_property('logging.db_loglevel'),
             'class': 'aiida.utils.logger.DBLogHandler',
         },
     },
     'loggers': {
         'aiida': {
             'handlers': ['console', 'dblogger'],
-            'level': get_property('logging.aiida_loglevel'),
+            'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
         'paramiko': {
             'handlers': ['console'],
-            'level': get_property('logging.paramiko_loglevel'),
+            'level': setup.get_property('logging.paramiko_loglevel'),
             'propagate': False,
         },
         'alembic': {
             'handlers': ['console'],
-            'level': get_property('logging.alembic_loglevel'),
+            'level': setup.get_property('logging.alembic_loglevel'),
             'propagate': False,
         },
         'sqlalchemy': {
             'handlers': ['console'],
-            'level': get_property('logging.sqlalchemy_loglevel'),
+            'level': setup.get_property('logging.sqlalchemy_loglevel'),
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
-        },
-        'celery': {
-            'handlers': ['console'],
-            'level': get_property('logging.aiida_loglevel'),
-            'propagate': True,
         },
     },
 }
@@ -109,7 +111,7 @@ LOGGING = {
 # Configure the global logger through the LOGGING dictionary
 logging.config.dictConfig(LOGGING)
 
-if get_property("warnings.showdeprecations"):
+if setup.get_property("warnings.showdeprecations"):
     # print out the warnings coming from deprecation
     # in Python 2.7 it is suppressed by default
     warnings.simplefilter('default', DeprecationWarning)

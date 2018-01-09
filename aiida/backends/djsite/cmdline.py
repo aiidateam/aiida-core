@@ -16,7 +16,7 @@ from django.db.models import Q
 
 from aiida.common.datastructures import wf_states
 from aiida.utils import timezone
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 
 
 

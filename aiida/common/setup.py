@@ -952,7 +952,7 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import MissingConfigurationError
-    import aiida.utils.logger as logger
+    from aiida.common.log import LOG_LEVELS
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -979,7 +979,7 @@ def get_property(name, default=_NoDefaultValue()):
     # will return the corresponding integer, even though a string is stored in
     # the config.
     if name.startswith('logging.') and name.endswith('loglevel'):
-        value = logger.LOG_LEVELS[value]
+        value = LOG_LEVELS[value]
 
     return value
 

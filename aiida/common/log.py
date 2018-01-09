@@ -11,6 +11,7 @@ import logging
 from copy import deepcopy
 from logging import config
 from aiida.common import setup
+from aiida.backends.utils import is_dbenv_loaded
 
 # Custom logging level, intended specifically for informative log messages
 # reported during WorkChains and Workflows. We want the level between INFO(20)
@@ -19,8 +20,21 @@ from aiida.common import setup
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
+
+# Convenience dictionary of available log level names and their log level integer
+LOG_LEVELS = {
+    logging.getLevelName(logging.DEBUG): logging.DEBUG,
+    logging.getLevelName(logging.INFO): logging.INFO,
+    logging.getLevelName(LOG_LEVEL_REPORT): LOG_LEVEL_REPORT,
+    logging.getLevelName(logging.WARNING): logging.WARNING,
+    logging.getLevelName(logging.ERROR): logging.ERROR,
+    logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
+}
+
+
 # The AiiDA logger
 aiidalogger = logging.getLogger('aiida')
+
 
 # A logging filter that can be used to disable logging
 class NotInTestingFilter(logging.Filter):
@@ -28,6 +42,35 @@ class NotInTestingFilter(logging.Filter):
     def filter(self, record):
         from aiida import settings
         return not settings.TESTING_MODE
+
+
+# A logging handler that will store the log record in the database DbLog table
+class DBLogHandler(logging.Handler):
+
+    def emit(self, record):
+        # If this is reached before a backend is defined, simply pass
+        if not is_dbenv_loaded():
+            return
+
+        from aiida.orm.backend import construct
+        from django.core.exceptions import ImproperlyConfigured
+
+        try:
+            backend = construct()
+            backend.log.create_entry_from_record(record)
+
+        except ImproperlyConfigured:
+            # Probably, the logger was called without the
+            # Django settings module loaded. Then,
+            # This ignore should be a no-op.
+            pass
+        except Exception:
+            # To avoid loops with the error handler, I just print.
+            # Hopefully, though, this should not happen!
+            import traceback
+
+            traceback.print_exc()
+
 
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
@@ -71,7 +114,7 @@ LOGGING = {
             # NOTE: To modify properties, use the 'verdi devel setproperty'
             #   command and similar ones (getproperty, describeproperties, ...)
             'level': setup.get_property('logging.db_loglevel'),
-            'class': 'aiida.utils.logger.DBLogHandler',
+            'class': 'aiida.common.log.DBLogHandler',
         },
     },
     'loggers': {
@@ -121,3 +164,22 @@ def configure_logging(daemon=False, daemon_handler='daemon_logfile'):
             logger.setdefault('handlers', []).append(daemon_handler)
 
     logging.config.dictConfig(config)
+
+
+def get_dblogger_extra(obj):
+    """
+    Given an object (Node, Calculation, ...) return a dictionary to be passed
+    as extra to the aiidalogger in order to store the exception also in the DB.
+    If no such extra is passed, the exception is only logged on file.
+    """
+    from aiida.orm import Node
+
+    if isinstance(obj, Node):
+        if obj._plugin_type_string:
+            objname = "node." + obj._plugin_type_string
+        else:
+            objname = "node"
+    else:
+        objname = obj.__class__.__module__ + "." + obj.__class__.__name__
+    objpk = obj.pk
+    return {'objpk': objpk, 'objname': objname}

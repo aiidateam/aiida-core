@@ -7,12 +7,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Internal functionality that is needed by multiple modules of AiiDA"""
-import logging
-import sys
-
-
-aiidalogger = logging.getLogger("aiida")
-# aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
-#FORMAT = '[%(name)s@%(levelname)s] %(message)s'
-#logging.basicConfig(format=FORMAT)
+from aiida.common.log import aiidalogger

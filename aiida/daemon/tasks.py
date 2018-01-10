@@ -20,7 +20,8 @@ from aiida.common.setup import AIIDA_CONFIG_FOLDER, DAEMON_SUBDIR
 if not is_dbenv_loaded():
     load_dbenv(process="daemon")
 
-from aiida.common.setup import get_profile_config
+from aiida.common.log import configure_logging
+from aiida.common.setup import get_profile_config, DAEMON_LOG_FILE
 from aiida.common.exceptions import ConfigurationError
 from aiida.daemon.timestamps import set_daemon_timestamp,get_last_daemon_timestamp
 
@@ -59,6 +60,7 @@ app = Celery('tasks', broker=broker)
     )
 )
 def submitter():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.execmanager import submit_jobs
     print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
     set_daemon_timestamp(task_name='submitter', when='start')
@@ -72,6 +74,7 @@ def submitter():
     )
 )
 def updater():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.execmanager import update_jobs
     print "aiida.daemon.tasks.update:  Checking for calculations to update"
     set_daemon_timestamp(task_name='updater', when='start')
@@ -81,11 +84,11 @@ def updater():
 
 @periodic_task(
     run_every=timedelta(
-        seconds=config.get("DAEMON_INTERVALS_RETRIEVE",
-                           DAEMON_INTERVALS_RETRIEVE)
+        seconds=config.get("DAEMON_INTERVALS_RETRIEVE", DAEMON_INTERVALS_RETRIEVE)
     )
 )
 def retriever():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.execmanager import retrieve_jobs
     print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
     set_daemon_timestamp(task_name='retriever', when='start')
@@ -95,21 +98,22 @@ def retriever():
 
 @periodic_task(
     run_every=timedelta(
-        seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS",
-                           DAEMON_INTERVALS_TICK_WORKFLOWS)
+        seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS", DAEMON_INTERVALS_TICK_WORKFLOWS)
     )
 )
 def tick_work():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.work.daemon import tick_workflow_engine
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
     tick_workflow_engine()
 
-@periodic_task(run_every=timedelta(seconds=config.get("DAEMON_INTERVALS_WFSTEP",
-                                                      DAEMON_INTERVALS_WFSTEP
-                                                      )
-                                   )
-               )
-def workflow_stepper(): # daemon for legacy workflow 
+@periodic_task(
+    run_every=timedelta(
+        seconds=config.get("DAEMON_INTERVALS_WFSTEP", DAEMON_INTERVALS_WFSTEP)
+    )
+)
+def workflow_stepper(): # daemon for legacy workflow
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.workflowmanager import execute_steps
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
     # RUDIMENTARY way to check if this task is already running (to avoid acting

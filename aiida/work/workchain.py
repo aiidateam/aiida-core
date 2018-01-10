@@ -20,7 +20,7 @@ from . import utils
 from .awaitable import *
 from .context import *
 
-__all__ = ['WorkChain']
+__all__ = ['WorkChain', 'if_', 'while_']
 
 
 class _WorkChainSpec(processes.ProcessSpec):
@@ -66,8 +66,8 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, inputs=None, pid=None, logger=None, runner=None):
-        super(WorkChain, self).__init__(inputs, pid, logger, runner)
+    def __init__(self, inputs=None, logger=None, runner=None):
+        super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
         self._stepper = None
         self._awaitables = []
 

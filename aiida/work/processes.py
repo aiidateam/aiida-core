@@ -189,32 +189,31 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, pid=None, logger=None, runner=None,
+    def __init__(self, inputs=None, logger=None, runner=None,
                  parent_pid=None, enable_persistence=True):
-        if runner is None:
-            self._runner = runners.get_runner()
-        else:
-            self._runner = runner
+        self._runner = runner if runner is not None else runners.get_runner()
 
         super(Process, self).__init__(
             inputs=inputs,
-            pid=pid,
             logger=logger,
             loop=self._runner.loop,
             communicator=self.runner.communicator)
 
         self._calc = None
+        self._parent_pid = parent_pid
+        self._enable_persistence = enable_persistence
+
+    def on_create(self):
+        super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
-        if parent_pid is None and not plum.stack.is_empty():
+        if self._parent_pid is None and not plum.stack.is_empty():
             self._parent_pid = plum.stack.top().pid
-        else:
-            self._parent_pid = parent_pid
         self._pid = self._create_and_setup_db_record()
 
-        if logger is None:
+    def init(self):
+        super(Process, self).init()
+        if self._logger is None:
             self.set_logger(self._calc.logger)
-
-        self._enable_persistence = enable_persistence
         if self._enable_persistence and self.runner.persister is None:
             self.logger.warning(
                 "Disabling persistence, runner does not have a persister")
@@ -240,12 +239,8 @@ class Process(plum.process.Process):
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state, runner=None):
-        if runner is None:
-            self._runner = runners.get_runner()
-        else:
-            self._runner = runner
-        super(Process, self).load_instance_state(saved_state, loop=self._runner.loop)
+    def load_instance_state(self, saved_state):
+        super(Process, self).load_instance_state(saved_state)
 
         is_copy = saved_state.get('COPY', False)
 

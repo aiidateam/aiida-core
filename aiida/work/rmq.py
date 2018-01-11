@@ -67,7 +67,7 @@ class ProcessControlPanel(object):
     def play_process(self, pid):
         return self.communicator.rpc_send(pid, plum.PLAY_MSG)
 
-    def cancel_process(self, pid, msg=None):
+    def kill_process(self, pid, msg=None):
         return self.communicator.rpc_send(pid, plum.CANCEL_MSG)
 
     def request_status(self, pid):

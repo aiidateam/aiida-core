@@ -410,6 +410,7 @@ class TestWorkchain(AiidaTestCase):
 
         return wf_class.finished_steps
 
+
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
@@ -470,12 +471,12 @@ class TestWorkChainAbort(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
+        super(TestWorkChainAbort, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        super(TestWorkChainAbort, self).tearDown()
         work.set_runner(None)
         self.runner.close()
         self.runner = None
@@ -496,18 +497,6 @@ class TestWorkChainAbort(AiidaTestCase):
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-    def setUp(self):
-        super(TestWorkChainAbort, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = utils.create_test_runner()
-
-    def tearDown(self):
-        super(TestWorkChainAbort, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
     def test_simple_run(self):
         """
         Run the workchain which should hit the exception and therefore end
@@ -523,39 +512,40 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(process.calc.has_failed(), True)
         self.assertEquals(process.calc.has_aborted(), False)
 
-    def test_simple_kill_through_node(self):
-        """
-        Run the workchain for one step and then kill it by calling kill
-        on the underlying WorkCalculation node. This should have the
-        workchain end up in the ABORTED state.
-        """
-        process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
-            process.execute(True)
-            process.calc.kill()
-            process.execute()
-
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), False)
-        self.assertEquals(process.calc.has_aborted(), True)
-
-    def test_simple_kill_through_process(self):
-        """
-        Run the workchain for one step and then kill it by calling kill
-        on the workchain itself. This should have the workchain end up
-        in the ABORTED state.
-        """
-        process = TestWorkChainAbort.AbortableWorkChain()
-
-        with self.assertRaises(plum.CancelledError):
-            process.execute(True)
-            process.abort()
-            process.execute()
-
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), False)
-        self.assertEquals(process.calc.has_aborted(), True)
+# def test_simple_kill_through_node(self):
+#         """
+#         Run the workchain for one step and then kill it by calling kill
+#         on the underlying WorkCalculation node. This should have the
+#         workchain end up in the ABORTED state.
+#         """
+#         process = TestWorkChainAbort.AbortableWorkChain()
+#
+#         with self.assertRaises(plum.CancelledError):
+#             process.execute(True)
+#             process.calc.kill()
+#             process.execute()
+#
+#         self.assertEquals(process.calc.has_finished_ok(), False)
+#         self.assertEquals(process.calc.has_failed(), False)
+#         self.assertEquals(process.calc.has_aborted(), True)
+#
+#     def test_simple_kill_through_process(self):
+#         """
+#         Run the workchain for one step and then kill it by calling kill
+#         on the workchain itself. This should have the workchain end up
+#         in the ABORTED state.
+#         """
+#         process = TestWorkChainAbort.AbortableWorkChain()
+#
+#         with self.assertRaises(plum.CancelledError):
+#             process.execute(True)
+#             process.abort()
+#             process.execute()
+#
+#         self.assertEquals(process.calc.has_finished_ok(), False)
+#         self.assertEquals(process.calc.has_failed(), False)
+#         self.assertEquals(process.calc.has_aborted(), True)
 
 
 class TestWorkChainAbortChildren(AiidaTestCase):

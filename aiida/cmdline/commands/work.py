@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+from functools import partial
 import logging
 from tabulate import tabulate
+
 from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
@@ -314,7 +316,7 @@ def checkpoint(pks):
 
 @work.command('kill', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
-def kill(pks):
+def kill_old(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
     from aiida.orm import load_node
@@ -341,6 +343,25 @@ def kill(pks):
         click.echo('No pks of valid running workchains given.')
 
 
+@work.command('kill', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def kill(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import plum
+    from aiida import work
+
+    runner = work.get_runner()
+
+    futures = []
+    for pk in pks:
+        future = runner.rmq.kill_process(pk)
+        future.add_done_callback(partial(_action_done, "pause", pk))
+        futures.append(future)
+
+    runner.run_until_complete(plum.gather(*futures))
+
+
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def pause(pks):
@@ -353,9 +374,37 @@ def pause(pks):
 
     futures = []
     for pk in pks:
-        futures.append(runner.rmq.pause_process(pk))
+        future = runner.rmq.pause_process(pk)
+        future.add_done_callback(partial(_action_done, "pause", pk))
+        futures.append(future)
 
-    print(runner.run_until_complete(plum.gather(*futures)))
+    runner.run_until_complete(plum.gather(*futures))
+
+
+@work.command('play', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def play(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import plum
+    from aiida import work
+
+    runner = work.get_runner()
+
+    futures = []
+    for pk in pks:
+        future = runner.rmq.play_process(pk)
+        future.add_done_callback(partial(_action_done, "play", pk))
+        futures.append(future)
+
+    runner.run_until_complete(plum.gather(*futures))
+
+
+def _action_done(intent, pk, future):
+    if future.exception() is not None:
+        click.echo("Failed to {} process {}: {}".format(intent, pk, future.exception()))
+    else:
+        click.echo("{} {} OK".format(intent, pk))
 
 
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):

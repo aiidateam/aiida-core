@@ -78,12 +78,30 @@ class TestProcess(AiidaTestCase):
             work.ProcessState.FAILED.value
         )
 
-    @unittest.skip("Need to get pause working by accepting PID")
     def test_pause(self):
+        """ Testing sending a pause message to the process """
         calc_node = self.runner.submit(test_utils.WaitProcess)
         future = self.runner.rmq.pause_process(calc_node.pk)
-
         result = self.runner.run_until_complete(future)
+        self.assertTrue(result)
+
+    def test_pause_play(self):
+        """ Test sending a pause and then a play message """
+        calc_node = self.runner.submit(test_utils.WaitProcess)
+        future = self.runner.rmq.pause_process(calc_node.pk)
+        result = self.runner.run_until_complete(future)
+        self.assertTrue(result)
+
+        future = self.runner.rmq.play_process(calc_node.pk)
+        result = self.runner.run_until_complete(future)
+        self.assertTrue(result)
+
+    def test_kill(self):
+        """ Test sending a kill message """
+        calc_node = self.runner.submit(test_utils.WaitProcess)
+        future = self.runner.rmq.kill_process(calc_node.pk, "You've been a bad boy")
+        result = self.runner.run_until_complete(future)
+        # TODO: Check kill message
         self.assertTrue(result)
 
     # def test_launch_and_get_status(self):

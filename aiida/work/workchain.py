@@ -50,7 +50,11 @@ class _WorkChainSpec(processes.ProcessSpec):
         return self._outline
 
 
-class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
+class WorkChain(
+    plum.ContextMixin,
+    processes.Process,
+    # utils.HeartbeatMixin
+):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -110,8 +114,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
 
         :param awaitable: The awaitable to remove
         """
-        index = self._awaitables.index(awaitable)
-        del self._awaitables[index]
+        self._awaitables.remove(awaitable)
 
     def to_context(self, **kwargs):
         """
@@ -169,12 +172,18 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                self.action_awaitables()
                 return plum.Wait(self._do_step, 'Waiting before next step')
             else:
                 return plum.Continue(self._do_step)
         else:
             return self.outputs
+
+    def on_wait(self, awaitables):
+        super(WorkChain, self).on_wait(awaitables)
+        if self._awaitables:
+            self.action_awaitables()
+        else:
+            self.call_soon(self.resume)
 
     def abort(self, message=None):
         """
@@ -252,9 +261,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
-
-        if len(self._awaitables) == 0:
-            assert self.state == plum.ProcessState.WAITING
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
             self.resume()
 
     def on_legacy_workflow_finished(self, awaitable, pk):
@@ -285,9 +292,7 @@ class WorkChain(plum.ContextMixin, processes.Process, utils.HeartbeatMixin):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
-
-        if len(self._awaitables) == 0:
-            assert self.state == plum.ProcessState.WAITING
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
             self.resume()
 
 

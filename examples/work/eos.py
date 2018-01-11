@@ -63,14 +63,14 @@ class EquationOfState(WorkChain):
         spec.input("codename", valid_type=BaseType)
         spec.input("pseudo_family", valid_type=BaseType)
         spec.outline(
-            cls.init,
+            cls.begin,
             while_(cls.not_finished)(
                 cls.run_pw,
                 cls.print_result
             )
         )
 
-    def init(self):
+    def begin(self):
         self.ctx.scales = (0.94, 0.96, 0.98, 1., 1.02, 1.04, 1.06)
         self.ctx.i = 0
 

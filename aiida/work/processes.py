@@ -202,6 +202,10 @@ class Process(plum.process.Process):
         self._calc = None
         self._parent_pid = parent_pid
         self._enable_persistence = enable_persistence
+        if self._enable_persistence and self.runner.persister is None:
+            self.logger.warning(
+                "Disabling persistence, runner does not have a persister")
+            self._enable_persistence = False
 
     def on_create(self):
         super(Process, self).on_create()
@@ -214,10 +218,16 @@ class Process(plum.process.Process):
         super(Process, self).init()
         if self._logger is None:
             self.set_logger(self._calc.logger)
-        if self._enable_persistence and self.runner.persister is None:
-            self.logger.warning(
-                "Disabling persistence, runner does not have a persister")
-            self._enable_persistence = False
+
+    def has_finished(self):
+        """
+        Has the process finished i.e. completed running normally, without abort
+        or an exception.
+
+        :return: True if finished, False otherwise
+        :rtype: bool
+        """
+        return self.state == ProcessState.FINISHED
 
     @property
     def calc(self):
@@ -293,9 +303,9 @@ class Process(plum.process.Process):
             pass
 
     @override
-    def on_failed(self, exc_info):
+    def on_fail(self, exc_info):
         import traceback
-        super(Process, self).on_failed(exc_info)
+        super(Process, self).on_fail(exc_info)
 
         exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
         self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))

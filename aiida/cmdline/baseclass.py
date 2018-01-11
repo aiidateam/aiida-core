@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import click
 
 
 class VerdiCommand(object):
@@ -146,8 +146,16 @@ class VerdiCommandRouter(VerdiCommand):
                 first_subarg = ''
 
             try:
-                complete_function = self.routed_subcommands[
-                    first_subarg]().complete
+                cmd_or_class = self.routed_subcommands[first_subarg]
+                if isinstance(cmd_or_class, (click.Command, click.MultiCommand)):
+                    import sys
+                    from aiida.cmdline.commands import click_subcmd_complete
+
+                    for i in sys.argv[4:len(sys.argv)-1]:
+                        cmd_or_class = cmd_or_class.commands[i]
+                    complete_function = click_subcmd_complete(cmd_or_class)
+                else:
+                    complete_function = cmd_or_class().complete
             except KeyError:
                 print ""
                 return

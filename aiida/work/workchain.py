@@ -498,21 +498,6 @@ class _If(_Instruction):
 
             return finished, retval
 
-        def save_position(self, out_position):
-            out_position[self._POSITION] = self._pos
-            if self._current_stepper is not None:
-                stepper_pos = Bundle()
-                self._current_stepper.save_position(stepper_pos)
-                out_position[self._STEPPER_POS] = stepper_pos
-
-        def load_position(self, bundle):
-            self._pos = bundle[self._POSITION]
-            if self._STEPPER_POS in bundle:
-                self._create_stepper()
-                self._current_stepper.load_position(bundle[self._STEPPER_POS])
-            else:
-                self._current_stepper = None
-
         def _create_stepper(self):
             if self._pos == -1:
                 self._current_stepper = None
@@ -529,12 +514,21 @@ class _If(_Instruction):
 
         def save_instance_state(self, out_state):
             super(_If.Stepper, self).save_instance_state(out_state)
-            self.save_position(out_state)
+            out_state[self._POSITION] = self._pos
+            if self._current_stepper is not None:
+                stepper_pos = {}
+                self._current_stepper.save_instance_state(stepper_pos)
+                out_state[self._STEPPER_POS] = stepper_pos
             out_state[self._IF_SPEC] = self._if_spec
 
         def load_instance_state(self, saved_state):
             super(_If.Stepper, self).load_instance_state(saved_state)
-            self.save_position(out_state)
+            self._pos = saved_state[self._POSITION]
+            if self._STEPPER_POS in saved_state:
+                self._create_stepper()
+                self._current_stepper.load_instance_state(saved_state[self._STEPPER_POS])
+            else:
+                self._current_stepper = None
             self._if_spec = saved_state[self._IF_SPEC]
 
     def __init__(self, condition):

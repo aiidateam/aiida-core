@@ -282,12 +282,12 @@ class Process(plum.process.Process):
 
     # region Process messages
     @override
-    def on_entered(self):
-        super(Process, self).on_entered()
+    def on_entering(self, state):
+        super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
-        self.update_node_state()
-        if self._enable_persistence and not self.done():
-            self.runner.persister.save_checkpoint(self)
+        self.update_node_state(state)
+        if self._enable_persistence and not state.is_terminal():
+            self.call_soon(self.runner.persister.save_checkpoint, self)
 
     @override
     def on_terminated(self):
@@ -390,8 +390,8 @@ class Process(plum.process.Process):
         """
         return {k: self._decode_input(v) for k, v in encoded.iteritems()}
 
-    def update_node_state(self):
-        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, self.state.value)
+    def update_node_state(self, state):
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, state.LABEL.value)
         self.update_outputs()
 
     def update_outputs(self):

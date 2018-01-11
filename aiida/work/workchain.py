@@ -20,7 +20,7 @@ from . import utils
 from .awaitable import *
 from .context import *
 
-__all__ = ['WorkChain', 'if_', 'while_']
+__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs']
 
 
 class _WorkChainSpec(processes.ProcessSpec):

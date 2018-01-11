@@ -104,14 +104,14 @@ class Runner(object):
     _communicator = None
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
-                 rmq_submit=False, enable_persistence=True):
+                 rmq_submit=False, enable_persistence=True, persister=None):
         self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)
 
         if enable_persistence:
-            self._persister = persistence.AiiDAPersister()
+            self._persister = persister if persister is not None else persistence.AiiDAPersister()
 
         self._rmq_submit = rmq_submit
         if rmq_config is not None:

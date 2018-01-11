@@ -10,32 +10,30 @@
 
 import inspect
 import plum
+import plum.test_utils
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.workchain import WorkChain, \
-    ToContext, _Block, _If, _While, if_, while_, return_
-from aiida.work.workchain import _WorkChainSpec, Outputs
-from aiida.work.launch import run
+from aiida.work.workchain import _WorkChainSpec
 from aiida.orm.data.base import Int, Str, Bool
 from aiida.common.links import LinkType
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
 from aiida import work
-from aiida.work.launch import run
+from aiida.work.workchain import *
 
 from . import utils
 
 
-class Wf(WorkChain):
+class Wf(work.WorkChain):
     # Keep track of which steps were completed by the workflow
     finished_steps = {}
 
     @classmethod
     def define(cls, spec):
         super(Wf, cls).define(spec)
-        spec.input("value")
-        spec.input("n")
+        spec.input("value", default=Str('A'))
+        spec.input("n", default=Int(3))
         spec.dynamic_output()
         spec.outline(
             cls.s1,
@@ -52,8 +50,8 @@ class Wf(WorkChain):
             ),
         )
 
-    def __init__(self, *args, **kwargs):
-        super(Wf, self).__init__(*args, **kwargs)
+    def on_create(self):
+        super(Wf, self).on_create()
         # Reset the finished step
         self.finished_steps = {
             k: False for k in
@@ -102,7 +100,7 @@ class Wf(WorkChain):
 
 class TestContext(AiidaTestCase):
     def test_attributes(self):
-        wc = WorkChain()
+        wc = work.WorkChain()
         wc.ctx.new_attr = 5
         self.assertEqual(wc.ctx.new_attr, 5)
 
@@ -111,7 +109,7 @@ class TestContext(AiidaTestCase):
             wc.ctx.new_attr
 
     def test_dict(self):
-        wc = WorkChain()
+        wc = work.WorkChain()
         wc.ctx['new_attr'] = 5
         self.assertEqual(wc.ctx['new_attr'], 5)
 
@@ -140,7 +138,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        run(Wf, value=A, n=three)
+        work.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -148,7 +146,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = run(Wf, value=B, n=three)
+        finished_steps = work.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -156,7 +154,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = run(Wf, value=C, n=three)
+        finished_steps = work.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -189,7 +187,7 @@ class TestWorkchain(AiidaTestCase):
                 assert 'b' in self.inputs
 
         x = Int(1)
-        run(Wf, a=x, b=x)
+        work.run(Wf, a=x, b=x)
 
     def test_context(self):
         A = Str("a")
@@ -227,7 +225,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['_return'] == B
                 assert self.ctx.r2['_return'] == B
 
-        run(Wf)
+        work.run(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -299,7 +297,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        run(WcWithReturn)
+        work.run(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
@@ -324,7 +322,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        run(MainWorkChain)
+        work.run(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
@@ -349,7 +347,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        run(MainWorkChain)
+        work.run(MainWorkChain)
 
     def test_report_dbloghandler(self):
         """
@@ -377,7 +375,7 @@ class TestWorkchain(AiidaTestCase):
                 logs = self._backend.log.find()
                 assert len(logs) == 1
 
-        run(TestWorkChain)
+        work.run(TestWorkChain)
 
     def test_to_context(self):
         val = Int(5)
@@ -402,12 +400,18 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.result_b['_return'] == val
                 return
 
-        run(Workchain)
+        work.run(Workchain)
+
+    def test_persisting(self):
+        persister = plum.test_utils.TestPersister()
+        runner = work.new_runner(persister=persister)
+        workchain = Wf(runner=runner)
+        workchain.execute()
+
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         proc = wf_class(inputs=inputs)
-        run(proc)
-
+        work.run(proc)
         return wf_class.finished_steps
 
 
@@ -442,7 +446,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert self.ctx.wf is not None
 
-        run(_TestWf)
+        work.run(_TestWf)
 
     def test_old_wf_results(self):
         wf = WorkflowDemo()
@@ -462,7 +466,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
-        run(_TestWf)
+        work.run(_TestWf)
 
 
 class TestWorkChainAbort(AiidaTestCase):
@@ -512,40 +516,39 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(process.calc.has_failed(), True)
         self.assertEquals(process.calc.has_aborted(), False)
 
+    def test_simple_kill_through_node(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the underlying WorkCalculation node. This should have the
+        workchain end up in the ABORTED state.
+        """
+        process = TestWorkChainAbort.AbortableWorkChain()
 
-# def test_simple_kill_through_node(self):
-#         """
-#         Run the workchain for one step and then kill it by calling kill
-#         on the underlying WorkCalculation node. This should have the
-#         workchain end up in the ABORTED state.
-#         """
-#         process = TestWorkChainAbort.AbortableWorkChain()
-#
-#         with self.assertRaises(plum.CancelledError):
-#             process.execute(True)
-#             process.calc.kill()
-#             process.execute()
-#
-#         self.assertEquals(process.calc.has_finished_ok(), False)
-#         self.assertEquals(process.calc.has_failed(), False)
-#         self.assertEquals(process.calc.has_aborted(), True)
-#
-#     def test_simple_kill_through_process(self):
-#         """
-#         Run the workchain for one step and then kill it by calling kill
-#         on the workchain itself. This should have the workchain end up
-#         in the ABORTED state.
-#         """
-#         process = TestWorkChainAbort.AbortableWorkChain()
-#
-#         with self.assertRaises(plum.CancelledError):
-#             process.execute(True)
-#             process.abort()
-#             process.execute()
-#
-#         self.assertEquals(process.calc.has_finished_ok(), False)
-#         self.assertEquals(process.calc.has_failed(), False)
-#         self.assertEquals(process.calc.has_aborted(), True)
+        with self.assertRaises(plum.CancelledError):
+            process.execute(True)
+            process.calc.kill()
+            process.execute()
+
+        self.assertEquals(process.calc.has_finished_ok(), False)
+        self.assertEquals(process.calc.has_failed(), False)
+        self.assertEquals(process.calc.has_aborted(), True)
+
+    def test_simple_kill_through_process(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the workchain itself. This should have the workchain end up
+        in the ABORTED state.
+        """
+        process = TestWorkChainAbort.AbortableWorkChain()
+
+        with self.assertRaises(plum.CancelledError):
+            process.execute(True)
+            process.abort()
+            process.execute()
+
+        self.assertEquals(process.calc.has_finished_ok(), False)
+        self.assertEquals(process.calc.has_failed(), False)
+        self.assertEquals(process.calc.has_aborted(), True)
 
 
 class TestWorkChainAbortChildren(AiidaTestCase):
@@ -600,8 +603,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-        def on_cancelled(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_cancelled(msg)
+        def on_cancel(self, msg):
+            super(TestWorkChainAbortChildren.MainWorkChain, self).on_cancel(msg)
             if self.inputs.kill:
                 assert self.ctx.child.calc.get_attr(self.calc.DO_ABORT_KEY, False), \
                     "Abort key not set on child"

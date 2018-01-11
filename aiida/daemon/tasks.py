@@ -96,9 +96,9 @@ def retriever():
 )
 def tick_work():
     configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
-    from aiida.work.daemon import tick_workflow_engine
+    from aiida.work.daemon import launch_pending_jobs
     print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
-    tick_workflow_engine()
+    launch_pending_jobs()
 
 @periodic_task(
     run_every=timedelta(

@@ -17,6 +17,7 @@ import itertools
 import voluptuous
 import plum.port
 from plum import ProcessState
+import traceback
 
 import aiida.orm
 from aiida.orm.data import Data
@@ -296,7 +297,11 @@ class Process(plum.process.Process):
         """
         super(Process, self).on_terminated()
         if self._enable_persistence:
-            self.runner.persister.delete_checkpoint(self.pid)
+            try:
+                self.runner.persister.delete_checkpoint(self.pid)
+            except BaseException as e:
+                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(
+                    e, traceback.format_exc()))
         try:
             self.calc.seal()
         except exceptions.ModificationNotAllowed:

@@ -19,14 +19,11 @@
 - KpointsData: deprecate buggy legacy implementation of k-point generation in favor of Seekpath [[#1015]](https://github.com/aiidateam/aiida_core/pull/1015)
 - plugin development: no longer swallow ImportErrors during import of plugins [[#1029]](https://github.com/aiidateam/aiida_core/pull/1029)
 
-
 ### Minor bug fixes
 - fix bug with repository on external hard drive [[#982]](https://github.com/aiidateam/aiida_core/pull/982)
 - fix bug in configuration of pre-commit hooks [[#863]](https://github.com/aiidateam/aiida_core/pull/863)
 - fix and improve plugin loader tests [[#1025]](https://github.com/aiidateam/aiida_core/pull/1025)
 - fix broken celery logging [[#1033]](https://github.com/aiidateam/aiida_core/pull/1033)
-
-### Documentation
 
 
 ## v0.10.1:

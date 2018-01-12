@@ -131,7 +131,7 @@ def workflow_stepper(): # daemon for legacy workflow
 
 def manual_tick_all():
     from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
-    from aiida.work.daemon import launch_pending_jobs
+    from aiida.work.daemon import launch_pending_jobs, launch_all_pending_job_calculations
     from aiida.daemon.workflowmanager import execute_steps
     if DAEMON_USE_NEW:
         tick_work()
@@ -141,4 +141,3 @@ def manual_tick_all():
         update_jobs()
         retrieve_jobs()
     execute_steps()  # legacy workflows
-    # launch_pending_jobs()

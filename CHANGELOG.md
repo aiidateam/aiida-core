@@ -1,29 +1,37 @@
 ## v0.11.0:
 
 ### Improvements
-- plugin fixtures: simple-to-use decorators for writing tests of aiida plugins [[#716]](https://github.com/aiidateam/aiida_core/pull/716) [[#865]](https://github.com/aiidateam/aiida_core/pull/865)
-- supervisor removal: dependency on unix-only supervisor package removed [[#790]](https://github.com/aiidateam/aiida_core/pull/790)
-- projections for verdi work list [[#847]](https://github.com/aiidateam/aiida_core/pull/847)
-- tests using daemon run faster [[#870]](https://github.com/aiidateam/aiida_core/pull/870)
+
+#### Core entities
+- `Computer`: the shebang line is now customizable [[#940]](https://github.com/aiidateam/aiida_core/pull/940)
+- `KpointsData`: deprecate buggy legacy implementation of k-point generation in favor of Seekpath [[#1015]](https://github.com/aiidateam/aiida_core/pull/1015)
+- `ParameterData`: `to_aiida_type` used on dictionaries now automatically converted to `ParameterData` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
+- `JobCalculation`: parsers can now specify files that are retrieved locally for parsing, but only temporarily, as they are deleted after parsing is completed [[#886]](https://github.com/aiidateam/aiida_core/pull/886) [[#894]](https://github.com/aiidateam/aiida_core/pull/894)
+
+#### Plugins
+- Plugin data hooks: plugins can now add custom commands to `verdi data` [[#993]](https://github.com/aiidateam/aiida_core/pull/993)
+- Plugin fixtures: simple-to-use decorators for writing tests of plugins [[#716]](https://github.com/aiidateam/aiida_core/pull/716) [[#865]](https://github.com/aiidateam/aiida_core/pull/865)
+- Plugin development: no longer swallow `ImportError` exception during import of plugins [[#1029]](https://github.com/aiidateam/aiida_core/pull/1029)
+
+#### Verdi
+- `verdi shell`: improve tab completion of imports in  [[#1008]](https://github.com/aiidateam/aiida_core/pull/1008)
+- `verdi work list`: projections for verdi work list [[#847]](https://github.com/aiidateam/aiida_core/pull/847)
+
+#### Miscellaneous
+- Supervisor removal: dependency on unix-only supervisor package removed [[#790]](https://github.com/aiidateam/aiida_core/pull/790)
 - REST API: add server info endpoint, structure endpoint can return different file formats [[#878]](https://github.com/aiidateam/aiida_core/pull/878)
-- Calculation: parsers can now specify temporary files that are kept locally only for the duration parsing, deleted afterwards [[#886]](https://github.com/aiidateam/aiida_core/pull/886) [[#894]](https://github.com/aiidateam/aiida_core/pull/894)
-- Computer: shebang line is now customizable [[#940]](https://github.com/aiidateam/aiida_core/pull/940)
-- `to_aiida_type` used on dicts now converts to `ParameterData` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
-- update outdated workflow examples [[#948]](https://github.com/aiidateam/aiida_core/pull/948)
-- REST API: update endpoints for structure visualization, calculation (includes retrieved input & output list), add endpoints for upf & more [[#977]](https://github.com/aiidateam/aiida_core/pull/977) [[#991]](https://github.com/aiidateam/aiida_core/pull/991)
-- aiida plugins can now add custom commands to `verdi data` [[#993]](https://github.com/aiidateam/aiida_core/pull/993)
-- updates to documentation of import/export [[#994]](https://github.com/aiidateam/aiida_core/pull/994), 
-  plugin quickstart [[#996]](https://github.com/aiidateam/aiida_core/pull/996), 
-  parser example [[#1003]](https://github.com/aiidateam/aiida_core/pull/1003) 
-- improve tab completion of imports in verdi shell [[#1008]](https://github.com/aiidateam/aiida_core/pull/1008)
-- KpointsData: deprecate buggy legacy implementation of k-point generation in favor of Seekpath [[#1015]](https://github.com/aiidateam/aiida_core/pull/1015)
-- plugin development: no longer swallow ImportErrors during import of plugins [[#1029]](https://github.com/aiidateam/aiida_core/pull/1029)
+- REST API: update endpoints for structure visualization, calculation (includes retrieved input & output list), add endpoints for `UpfData` and more [[#977]](https://github.com/aiidateam/aiida_core/pull/977) [[#991]](https://github.com/aiidateam/aiida_core/pull/991)
+- Tests using daemon run faster [[#870]](https://github.com/aiidateam/aiida_core/pull/870)
+- Documentation: updated outdated workflow examples [[#948]](https://github.com/aiidateam/aiida_core/pull/948)
+- Documentation: updated import/export [[#994]](https://github.com/aiidateam/aiida_core/pull/994), 
+- Documentation: plugin quickstart [[#996]](https://github.com/aiidateam/aiida_core/pull/996), 
+- Documentation: parser example [[#1003]](https://github.com/aiidateam/aiida_core/pull/1003) 
 
 ### Minor bug fixes
-- fix bug with repository on external hard drive [[#982]](https://github.com/aiidateam/aiida_core/pull/982)
-- fix bug in configuration of pre-commit hooks [[#863]](https://github.com/aiidateam/aiida_core/pull/863)
-- fix and improve plugin loader tests [[#1025]](https://github.com/aiidateam/aiida_core/pull/1025)
-- fix broken celery logging [[#1033]](https://github.com/aiidateam/aiida_core/pull/1033)
+- Fix bug with repository on external hard drive [[#982]](https://github.com/aiidateam/aiida_core/pull/982)
+- Fix bug in configuration of pre-commit hooks [[#863]](https://github.com/aiidateam/aiida_core/pull/863)
+- Fix and improve plugin loader tests [[#1025]](https://github.com/aiidateam/aiida_core/pull/1025)
+- Fix broken celery logging [[#1033]](https://github.com/aiidateam/aiida_core/pull/1033)
 
 
 ## v0.10.1:

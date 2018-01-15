@@ -7,16 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from aiida.backends.testbase import AiidaTestCase
-
-from aiida.work.process import Process
-from aiida.work.workfunction import workfunction
 from aiida.common.lang import override
-from aiida.work.run import async
 from aiida.orm.data.base import Int
+from aiida.work.process import Process
+from aiida.work.run import run
 from aiida.work.util import ProcessStack
-
+from aiida.work.workfunction import workfunction
 
 
 class StackTester(Process):
@@ -30,22 +27,25 @@ class StackTester(Process):
 @workfunction
 def registry_tester():
     # Call a wf
-    future = async(nested_tester)
-    out = future.result()
-    assert future.pid == out['pid']
-    assert future.pid == out['node_pk']
+    result, pid = run(nested_tester, _return_pid=True)
+    assert pid == result['pid']
+    assert pid == result['node_pk']
 
     # Call a Process
     StackTester.run()
 
-    return {'pid': Int(ProcessStack.get_active_process_id()),
-            'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
+    return {
+        'pid': Int(ProcessStack.get_active_process_id()),
+        'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)
+    }
 
 
 @workfunction
 def nested_tester():
-    return {'pid': Int(ProcessStack.get_active_process_id()),
-            'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)}
+    return {
+        'pid': Int(ProcessStack.get_active_process_id()),
+        'node_pk': Int(ProcessStack.get_active_process_calc_node().pk)
+    }
 
 
 class TestProcessRegistry(AiidaTestCase):
@@ -65,13 +65,7 @@ class TestProcessRegistry(AiidaTestCase):
         StackTester.run()
 
     def test_wf_pid_and_calc(self):
-        future = async(registry_tester)
-        out = future.result()
+        result, pid = run(nested_tester, _return_pid=True)
 
-        self.assertEqual(out['pid'], future.pid)
-        self.assertEqual(out['node_pk'], future.pid)
-
-
-
-
-
+        self.assertEqual(result['pid'], pid)
+        self.assertEqual(result['node_pk'], pid)

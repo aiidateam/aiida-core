@@ -74,14 +74,6 @@ def legacy_calc(pk):
     return RunningInfo(RunningType.LEGACY_CALC, pk)
 
 
-def async(process_class, *args, **kwargs):
-    if util.is_workfunction(process_class):
-        kwargs['__async'] = True
-        return process_class(*args, **kwargs)
-    elif issubclass(process_class, Process):
-        return parallel_engine.submit(process_class, inputs=kwargs)
-
-
 def run(process_class, *args, **inputs):
     """
     Synchronously (i.e. blocking) run a workfunction or process.
@@ -92,6 +84,12 @@ def run(process_class, *args, **inputs):
     :param inputs: The list of inputs
     """
     if util.is_workfunction(process_class):
+        # return_pid = inputs.pop('_return_pid', False)
+        # if return_pid:
+
+        #     return process_class(*args, **inputs),
+        # else:
+        #     return process_class(*args, **inputs)
         return process_class(*args, **inputs)
     elif issubclass(process_class, Process):
         return_pid = inputs.pop('_return_pid', False)

@@ -639,7 +639,7 @@ class KpointsData(ArrayData):
         try:
             cell = self.cell
         except AttributeError:
-            raise ValueError('The cell has not been defined, cannot set the kpoints path without a cell definition')
+            cell = None
 
         try:
             pbc = self.pbc

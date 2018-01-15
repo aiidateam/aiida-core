@@ -2640,6 +2640,53 @@ class TestKpointsData(AiidaTestCase):
     Tests the TrajectoryData objects.
     """
 
+    def test_set_kpoints_path_legacy(self):
+        """
+        Regression test for the deprecated KpointsData.set_kpoints_path method.
+        For certain formats of a direct kpoint list, it is not necessary to have defined a cell.
+        """
+        import numpy
+        from aiida.orm.data.array.kpoints import KpointsData
+
+        # Create a node with two arrays
+        kpoints_01 = KpointsData()
+        kpoints_02 = KpointsData()
+        kpoints_03 = KpointsData()
+        kpoints_04 = KpointsData()
+
+        # The various allowed formats
+        format_01 = [('G', 'M')]
+        format_02 = [('G', 'M', 30)]
+        format_03 = [('G', (0, 0, 0), 'M', (1, 1, 1))]
+        format_04 = [('G', (0, 0, 0), 'M', (1, 1, 1), 30)]
+
+        # Without a cell defined, the first two should fail, the last two should work
+        with self.assertRaises(ValueError):
+            kpoints_01.set_kpoints_path(format_01)
+
+        with self.assertRaises(ValueError):
+            kpoints_02.set_kpoints_path(format_02)
+
+        kpoints_03.set_kpoints_path(format_03)
+        kpoints_04.set_kpoints_path(format_04)
+
+        # Define a cell and settings it enable the usage of formats 1 and 2
+        alat = 4.
+        cell = numpy.array([
+            [alat, 0., 0.],
+            [0., alat, 0.],
+            [0., 0., alat],
+        ])
+
+        kpoints_01.set_cell(cell)
+        kpoints_02.set_cell(cell)
+
+        kpoints_01.set_kpoints_path(format_01)
+        kpoints_02.set_kpoints_path(format_02)
+        kpoints_03.set_kpoints_path(format_03)
+        kpoints_04.set_kpoints_path(format_04)
+
+
     def test_mesh(self):
         """
         Check the methods to set and retrieve a mesh.

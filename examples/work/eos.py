@@ -99,7 +99,7 @@ structure = create_diamond_fcc(Str('C'), Float(3.57))
 codename = 'pw.x@localhost'
 pseudo_family_name = 'SSSP_eff_PBE_0.7'
 
-result = work.run(EquationOfState,
+result = work.submit(EquationOfState,
                      structure=structure,
                      codename=Str(codename),
                      pseudo_family=Str(pseudo_family_name)

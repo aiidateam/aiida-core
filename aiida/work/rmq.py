@@ -1,9 +1,10 @@
 import json
 import plum
-import uuid
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from plum import rmq
+
+from . import events
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
@@ -76,3 +77,53 @@ class ProcessControlPanel(object):
     @property
     def launch(self):
         return self._launch
+
+
+class BlockingProcessControlPanel(object):
+    """
+    A blocking adapter for the ProcessControlPanel.
+    """
+    class _Launcher(object):
+        def __init__(self, parent):
+            self._parent = parent
+
+        def launch_process(self, process_class, init_args=None, init_kwargs=None):
+            future = self._parent._control_panel.launch.launch_process(process_class, init_args, init_kwargs)
+            return self._parent._run(future)
+
+        def continue_process(self, pid, tag=None):
+            future = self._parent._control_panel.launch.continue_process(pid, tag)
+            return self._parent._run(future)
+
+    def __init__(self, prefix, rmq_config=None, testing_mode=False):
+        if rmq_config is None:
+            rmq_config = {
+                'url': 'amqp://localhost',
+                'prefix': 'aiida',
+            }
+
+        self._loop = events.new_event_loop()
+        self._connector = plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
+        self._control_panel = ProcessControlPanel(prefix, self._connector, testing_mode)
+        self.launch = self._Launcher(self)
+
+        self._connector.connect()
+
+    def pause_process(self, pid):
+        future = self._control_panel.pause_process(pid)
+        return self._run(future)
+
+    def play_process(self, pid):
+        future = self._control_panel.pause_process(pid)
+        return self._run(future)
+
+    def kill_process(self, pid, msg=None):
+        future = self._control_panel.kill_process(pid, msg)
+        return self._run(future)
+
+    def request_status(self, pid):
+        future = self._control_panel.request_status(pid)
+        return self._run(future)
+
+    def _run(self, future):
+        return events.run_until_complete(future, self._loop)

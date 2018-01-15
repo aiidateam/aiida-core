@@ -6,6 +6,7 @@ import inspect
 import logging
 
 import aiida.orm
+from . import events
 from . import persistence
 from . import rmq
 from . import transports
@@ -20,7 +21,6 @@ ResultAndCalcNode = namedtuple("ResultWithPid", ["result", "calc"])
 ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 _runner = None
-
 
 def get_runner():
     global _runner
@@ -49,6 +49,10 @@ def new_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
     """ Create a daemon runner """
     runner = Runner({}, rmq_submit=False, enable_persistence=True)
     return runner
+
+
+def create_connector(rmq_config):
+    return plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
 
 
 def convert_to_inputs(workfunction, *args, **kwargs):
@@ -105,7 +109,7 @@ class Runner(object):
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else plum.new_event_loop()
+        self._loop = loop if loop is not None else events.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)

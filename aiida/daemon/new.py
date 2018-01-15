@@ -31,7 +31,6 @@ if __name__ == "__main__":
     logging.getLogger('').addHandler(console)
 
     logger = logging.getLogger(__name__)
-    logger.warning("TEST")
 
     config = get_profile_config(backends.settings.AIIDADB_PROFILE)
 

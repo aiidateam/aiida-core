@@ -26,7 +26,7 @@ def change_reference(reciprocal_cell, kpoints, to_cartesian=True):
     # hence, first transpose kpoints, then multiply, finally transpose it back
     return numpy.transpose(numpy.dot(matrix, numpy.transpose(kpoints)))
 
-def analyze_cell(cell, pbc=None):
+def analyze_cell(cell=None, pbc=None):
     """
     A function executed by the __init__ or by set_cell.
     If a cell is set, properties like a1, a2, a3, cosalpha, reciprocal_cell are
@@ -34,6 +34,18 @@ def analyze_cell(cell, pbc=None):
     :note: units are Angstrom for the cell parameters, 1/Angstrom for the
     reciprocal cell parameters.
     """
+    if pbc is None:
+        pbc = [True, True, True]
+
+    dimension = sum(pbc)
+
+    if cell is None:
+        return {
+            'reciprocal_cell': None,
+            'dimension': dimension,
+            'pbc': pbc
+        }
+
     the_cell = numpy.array(cell)
     reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()
     a1 = numpy.array(the_cell[0, :])  # units = Angstrom
@@ -49,10 +61,6 @@ def analyze_cell(cell, pbc=None):
     cosbeta = numpy.dot(a3, a1) / c / a
     cosgamma = numpy.dot(a1, a2) / a / b
 
-    if pbc is None:
-        pbc = [True, True, True]
-
-    dimension = sum(pbc)
 
     result = {
         'a1': a1,
@@ -68,7 +76,8 @@ def analyze_cell(cell, pbc=None):
         'cosbeta': cosbeta,
         'cosgamma': cosgamma,
         'dimension': dimension,
-        'reciprocal_cell': reciprocal_cell
+        'reciprocal_cell': reciprocal_cell,
+        'pbc': pbc,
     }
 
     return result
@@ -121,7 +130,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
     analysis = analyze_cell(cell, pbc)
     dimension = analysis['dimension']
     reciprocal_cell = analysis['reciprocal_cell']
-    pbc = list(pbc)
+    pbc = list(analysis['pbc'])
 
     if dimension == 0:
         # case with zero dimension: only gamma-point is set
@@ -407,6 +416,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             the variation of the Bravais lattice) and extra (a dictionary
             with extra parameters used by the get_kpoints_path method)
     """
+    if cell is None:
+        return None
+
     analysis = analyze_cell(cell, pbc)
     a1 = analysis['a1']
     a2 = analysis['a2']

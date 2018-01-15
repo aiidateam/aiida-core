@@ -36,11 +36,26 @@ class Work(VerdiCommandWithSubcommands):
             'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
             'kill': (self.cli, self.complete_none),
-            'plugins': (self.cli, self.complete_none),
+            'plugins': (self.cli, self.complete_plugins),
         }
 
     def cli(self, *args):
         verdi()
+
+    def complete_plugins(self, subargs_idx, subargs):
+        """
+        Return the list of plugins registered under the 'workflows' category
+        """
+        from aiida import try_load_dbenv
+        try_load_dbenv()
+
+        from aiida.common.pluginloader import plugin_list
+
+        plugins = sorted(plugin_list('workflows'))
+        # Do not return plugins that are already on the command line
+        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
+        return_plugins = [_ for _ in plugins if _ not in other_subargs]
+        return "\n".join(return_plugins)
 
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)

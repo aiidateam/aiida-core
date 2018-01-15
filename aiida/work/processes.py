@@ -22,16 +22,16 @@ import traceback
 import aiida.orm
 from aiida.orm.data import Data
 from aiida.orm import load_node
-from aiida.orm.implementation.general.calculation.work import WorkCalculation
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
+from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.orm.calculation import Calculation
+from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data.parameter import ParameterData
-from aiida import LOG_LEVEL_REPORT
 from . import runners
 from . import utils
 

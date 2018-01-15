@@ -27,7 +27,7 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 
 
 logger = aiidalogger.getChild('Workflow')

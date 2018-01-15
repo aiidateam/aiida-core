@@ -79,9 +79,7 @@ def do_list(past_days, all_states, limit, project):
     from aiida.orm.calculation.work import WorkCalculation
 
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    _ABORTED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.ABORTED_KEY)
-    _FAILED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FAILED_KEY)
-    _FINISHED_ATTRIBUTE_KEY = 'attributes.{}'.format(WorkCalculation.FINISHED_KEY)
+    _PROCESS_STATE_KEY = 'attributes.{}'.format(WorkCalculation.PROCESS_STATE_KEY)
 
     if not project:
         project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
@@ -106,9 +104,7 @@ def do_list(past_days, all_states, limit, project):
     pmap_dict = {
         'label': 'attributes._process_label',
         'sealed': _SEALED_ATTRIBUTE_KEY,
-        'failed': _FAILED_ATTRIBUTE_KEY,
-        'aborted': _ABORTED_ATTRIBUTE_KEY,
-        'finished': _FINISHED_ATTRIBUTE_KEY,
+        'state': _PROCESS_STATE_KEY,
         'descr': 'description',
     }
 
@@ -117,16 +113,6 @@ def do_list(past_days, all_states, limit, project):
             return pmap_dict[p]
         except KeyError:
             return p
-
-    def calculation_state(calculation):
-        if calculation[_FAILED_ATTRIBUTE_KEY]:
-            return 'FAILED'
-        elif calculation[_ABORTED_ATTRIBUTE_KEY]:
-            return 'ABORTED'
-        elif calculation[_FINISHED_ATTRIBUTE_KEY]:
-            return 'FINISHED'
-        else:
-            return 'RUNNING'
 
     # Mapping of to-string formatting of projections that do need it.
     rmap_dict = {
@@ -137,7 +123,7 @@ def do_list(past_days, all_states, limit, project):
                                             negative_to_zero=True,
                                             max_num_fields=1),
         'sealed': lambda calc: str(calc[map_projection('sealed')]),
-        'state': lambda calc: calculation_state(calc),
+        'state': lambda calc: str(calc[map_projection('state')]),
     }
 
     def map_result(p, obj):
@@ -147,7 +133,6 @@ def do_list(past_days, all_states, limit, project):
             return obj[map_projection(p)]
 
     mapped_projections = list(map(lambda p: map_projection(p), project))
-    mapped_projections.extend([_FAILED_ATTRIBUTE_KEY, _ABORTED_ATTRIBUTE_KEY, _FINISHED_ATTRIBUTE_KEY])
     table = []
 
     for res in _build_query(limit=limit, projections=mapped_projections, past_days=past_days,

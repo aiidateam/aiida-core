@@ -81,8 +81,8 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
-        self.logfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.log")
-        self.pidfile = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.LOG_SUBDIR, "celery.pid")
+        self.logfile = setup.DAEMON_LOG_FILE
+        self.pidfile = setup.DAEMON_PID_FILE
         self.workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
         self.celerybeat_schedule = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule")
 

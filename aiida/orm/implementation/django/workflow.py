@@ -254,7 +254,7 @@ class Workflow(AbstractWorkflow):
           the 'extra' embedded
         """
         import logging
-        from aiida.utils.logger import get_dblogger_extra
+        from aiida.common.log import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))

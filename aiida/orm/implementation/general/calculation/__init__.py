@@ -14,7 +14,6 @@ from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
 
 
-
 def _parse_single_arg(function_name, additional_parameter,
                       args, kwargs):
     """
@@ -218,6 +217,14 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     @property
     def called(self):
         return self.get_outputs(link_type=LinkType.CALL)
+
+    @property
+    def called_by(self):
+        called_by = self.get_inputs(link_type=LinkType.CALL)
+        if called_by:
+            return called_by[0]
+        else:
+            return None
 
     def get_linkname(self, link, *args, **kwargs):
         """

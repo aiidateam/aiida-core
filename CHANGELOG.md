@@ -33,6 +33,9 @@
 - Fix and improve plugin loader tests [[#1025]](https://github.com/aiidateam/aiida_core/pull/1025)
 - Fix broken celery logging [[#1033]](https://github.com/aiidateam/aiida_core/pull/1033)
 
+### Deprecations
+- async from aiida.work.run has been deprecated because it can lead to race conditions and thereby unexpected behavior [[#1040]](https://github.com/aiidateam/aiida_core/pull/1040)
+
 
 ## v0.10.1:
 

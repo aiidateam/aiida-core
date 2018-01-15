@@ -10,6 +10,7 @@
 
 from collections import namedtuple
 
+from . import persistence
 from . import rmq
 from . import runners
 from . import utils
@@ -18,6 +19,7 @@ __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
+_persister = None
 _rmq_control_panel = None
 
 
@@ -28,14 +30,20 @@ def get_rmq_control_panel():
     return _rmq_control_panel
 
 
+def _get_persister():
+    global _persister
+    if _persister is None:
+        _persister = persistence.AiiDAPersister()
+    return _persister
+
+
 def submit(process_class, **inputs):
     assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
 
-    submit_runner = runners.new_runner(rmq_submit=True, enable_persistence=True)
-    future = submit_runner.submit(process_class, **inputs)
-    return submit_runner.run_until_complete(future)
-
-    return runner.submit(process_class, **inputs)
+    process = runners._create_process(process_class, None, input_kwargs=inputs)
+    _get_persister().save_checkpoint(process)
+    get_rmq_control_panel().launch.continue_process(process.pid)
+    return process.calc
 
 
 def run(process, *args, **inputs):

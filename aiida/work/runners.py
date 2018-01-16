@@ -103,7 +103,7 @@ class Runner(object):
     _rmq_connector = None
     _communicator = None
 
-    def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
+    def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
                  rmq_submit=False, enable_persistence=True, persister=None):
         self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval

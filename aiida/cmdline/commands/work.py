@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import click
-from functools import partial
 import logging
+from functools import partial
+
+import click
 from tabulate import tabulate
 
-from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import work, verdi
+from aiida.utils.ascii_vis import print_tree_descending
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime', 'state', 'sealed']
@@ -179,7 +181,6 @@ def report(pk, levelname, order_by, indent_size, max_depth):
 
     import itertools
     from aiida.orm.backend import construct
-    from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 
@@ -341,7 +342,7 @@ def kill(pks):
     futures = []
     for pk in pks:
         future = runner.rmq.kill_process(pk)
-        future.add_done_callback(partial(_action_done, "pause", pk))
+        future.add_done_callback(partial(_action_done, "kill", pk))
         futures.append(future)
 
     runner.run_until_complete(plum.gather(*futures))
@@ -392,10 +393,48 @@ def _action_done(intent, pk, future):
         click.echo("{} {} OK".format(intent, pk))
 
 
+@work.command('status', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def status(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import aiida.orm
+    from aiida.utils.ascii_vis import print_call_graph
+
+    for pk in pks:
+        calc_node = aiida.orm.load_node(pk)
+        print_call_graph(calc_node)
+        # status_info = _create_status_info(calc_node)
+        # print_tree_descending(status_info)
+
+
+def _create_status_info(calc_node):
+    status_line = _format_status_line(calc_node)
+    called = calc_node.called
+    if called:
+        return status_line, [_create_status_info(child) for child in called]
+    else:
+        return status_line
+
+
+def _format_status_line(calc_node):
+    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.calculation.job import JobCalculation
+
+    if isinstance(calc_node, WorkCalculation):
+        label = calc_node.get_attr('_process_label')
+        state = calc_node.get_attr('process_state')
+    elif isinstance(calc_node, JobCalculation):
+        label = type(calc_node).__name__
+        state = str(calc_node.get_state())
+    else:
+        raise TypeError("Unknown type")
+    return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
+
+
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     import datetime
     from aiida.utils import timezone
-    from aiida.orm.mixins import Sealable
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 

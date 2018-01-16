@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from aiida.common.links import LinkType
 from ete3 import Tree
 
 
+__all__ = ['draw_children', 'draw_parents', 'print_call_graph']
+
+
 def draw_parents(node, node_label=None, show_pk=True, dist=2,
-                  follow_links_of_type=None):
+                 follow_links_of_type=None):
     """
     Print an ASCII tree of the parents of the given node.
 
@@ -77,7 +79,7 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1,
     :rtype: str
     """
     tree_string = build_tree(
-       node, node_label, show_pk, max_depth, follow_links_of_type, descend
+        node, node_label, show_pk, max_depth, follow_links_of_type, descend
     )
     t = Tree("({});".format(tree_string), format=1)
     return t.get_ascii(show_internal=True)
@@ -157,3 +159,84 @@ def _generate_node_label(node, node_attr, show_pk):
 
 def _ctime(node):
     return node.ctime
+
+
+def calc_info(calc_node):
+    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.calculation.job import JobCalculation
+
+    if isinstance(calc_node, WorkCalculation):
+        label = calc_node.get_attr('_process_label')
+        state = calc_node.get_attr('process_state')
+    elif isinstance(calc_node, JobCalculation):
+        label = type(calc_node).__name__
+        state = str(calc_node.get_state())
+    else:
+        raise TypeError("Unknown type")
+    return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
+
+
+def print_call_graph(calc_node, info_fn=calc_info):
+    """
+    Print a tree like the POSIX tree command for the calculation call graph
+    :param calc_node: The calculation node
+    :param info_fn: An optional function that takes the node and returns a string
+        of information to be displayed for each node.
+    """
+    call_tree = build_call_graph(calc_node, info_fn=info_fn)
+    print_tree_descending(call_tree)
+
+
+def build_call_graph(calc_node, info_fn=calc_info):
+    info_string = info_fn(calc_node)
+    called = calc_node.called
+    if called:
+        return info_string, [build_call_graph(child, info_fn) for child in called]
+    else:
+        return info_string
+
+
+def format_tree_descending(tree, prefix=u"", pos=-1):
+    text = []
+
+    if isinstance(tree, tuple):
+        info = tree[0]
+    else:
+        info = tree
+
+    if pos == -1:
+        pre = ""
+    elif pos == 0:
+        pre = u"{}{}".format(prefix, TREE_FIRST_ENTRY)
+    elif pos == 1:
+        pre = u"{}{}".format(prefix, TREE_MIDDLE_ENTRY)
+    else:
+        pre = u"{}{}".format(prefix, TREE_LAST_ENTRY)
+    text.append(u"{}{}".format(pre, info))
+
+    if isinstance(tree, tuple):
+        key, value = tree
+        num_entries = len(value)
+        if pos == -1 or pos == 2:
+            new_prefix = u"{}    ".format(prefix)
+        else:
+            new_prefix = u"{}\u2502   ".format(prefix)
+        for i, entry in enumerate(value):
+            if i == num_entries - 1:
+                pos = 2
+            elif i == 0:
+                pos = 0
+            else:
+                pos = 1
+            text.append(format_tree_descending(entry, new_prefix, pos))
+
+    return "\n".join(text)
+
+
+def print_tree_descending(tree, prefix=u"", pos=-1):
+    print(format_tree_descending(tree, prefix, pos))
+
+
+TREE_MIDDLE_ENTRY = u"\u251C\u2500\u2500 "
+TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
+TREE_LAST_ENTRY = u"\u2514\u2500\u2500 "

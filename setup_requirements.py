@@ -19,7 +19,7 @@ install_requires = [
     'django-extensions==1.5.0',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'six==1.10.0',
+    'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
     'singledispatch==3.4.0.3',
@@ -60,7 +60,7 @@ install_requires = [
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==2.1.2',
+    'paramiko==2.4.0',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
@@ -102,7 +102,7 @@ extras_require = {
         'Jinja2==2.9.5',
         'MarkupSafe==0.23',
         # Required by readthedocs
-        'sphinx-rtd-theme==0.1.9',
+        'sphinx-rtd-theme==0.2.5b2',
     ],
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software

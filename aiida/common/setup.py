@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-
+from .additions.config_migrations import check_and_migrate_config, add_config_version
 
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 
@@ -35,11 +35,16 @@ else:
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = "daemon"
-LOG_SUBDIR = "daemon/log"
-DAEMON_CONF_FILE = "aiida_daemon.conf"
+DAEMON_SUBDIR = 'daemon'
+LOG_SUBDIR = 'daemon/log'
+DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-WORKFLOWS_SUBDIR = "workflows"
+CELERY_LOG_FILE = 'celery.log'
+CELERY_PID_FILE = 'celery.pid'
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+
+WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
@@ -51,17 +56,17 @@ DEFAULT_PROCESS = 'verdi'
 DEFAULT_UMASK = 0o0077
 
 # Profile keys
-aiidadb_backend_key = "AIIDADB_BACKEND"
+aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
-aiidadb_backend_value_django = "django"
+aiidadb_backend_value_django = 'django'
 
 # Repository for tests
 TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
-TEST_KEYWORD = "test_"
+TEST_KEYWORD = 'test_'
 
 
 def get_aiida_dir():
@@ -88,8 +93,15 @@ def get_config():
     """
     Return all the configurations
     """
+    return check_and_migrate_config(_load_config())
+
+
+def _load_config():
+    """
+    Return the current configurations, without checking their version.
+    """
     import json
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     from aiida.backends.settings import IN_DOC_MODE, DUMMY_CONF_FILE
 
     if IN_DOC_MODE:
@@ -102,14 +114,13 @@ def get_config():
             return json.load(json_file)
     except IOError:
         # No configuration file
-        raise ConfigurationError("No configuration file found")
-
+        raise MissingConfigurationError("No configuration file found")
 
 def get_or_create_config():
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     try:
         config = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         config = {}
         store_config(config)
     return config
@@ -129,73 +140,6 @@ def store_config(confs):
     try:
         with open(conf_file, "w") as json_file:
             json.dump(confs, json_file)
-    finally:
-        os.umask(old_umask)
-
-
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
-                         daemon_conf=None):
-    """
-    Install the files needed to run the daemon.
-    """
-    local_daemon_conf = """
-[unix_http_server]
-file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
-
-[supervisord]
-logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB
-logfile_backups=2
-loglevel=info
-pidfile={daemon_dir}/supervisord.pid
-nodaemon=false
-minfds=1024
-minprocs=200
-
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///{daemon_dir}/supervisord.sock
-
-;=======================================
-; Main AiiDA Daemon
-;=======================================
-[program:aiida-daemon]
-command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
-directory={aiida_code_home}/daemon/
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon.log
-stderr_logfile={log_dir}/aiida_daemon.log
-autostart=true
-autorestart=true
-startsecs=10
-
-; Need to wait for currently executing tasks to finish at shutdown.
-; Increase this if you have very long running tasks.
-stopwaitsecs = 600
-
-; When resorting to send SIGKILL to the program to terminate it
-; send SIGKILL to its whole process group instead,
-; taking care of its children as well.
-killasgroup=true
-
-; Set Celery priority higher than default (999)
-; so, if rabbitmq is supervised, it will start first.
-priority=1000
-"""
-    if daemon_conf is None:
-        daemon_conf = local_daemon_conf
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
-            f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
-                                       local_user=local_user,
-                                       aiida_code_home=os.path.split(
-                                           os.path.abspath(
-                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -317,9 +261,6 @@ def create_base_dirs(config_dir=None):
             os.makedirs(aiida_log_dir)
     finally:
         os.umask(old_umask)
-
-    # Install daemon files
-    install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
 
     # Create the secret key file, if needed
     try_create_secret_key()
@@ -586,7 +527,7 @@ def create_configuration(profile='default'):
     :return: The populated profile that was also stored.
     """
     import readline
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
     from validate_email import validate_email
     from aiida.common.utils import query_yes_no
 
@@ -603,7 +544,7 @@ def create_configuration(profile='default'):
 
     try:
         confs = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         # No configuration file found
         confs = {}
 
@@ -837,6 +778,7 @@ def create_configuration(profile='default'):
         confs['profiles'][profile] = this_new_confs
 
         backup_config()
+        add_config_version(confs)
         store_config(confs)
 
         return this_new_confs
@@ -982,7 +924,7 @@ def exists_property(name):
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -992,7 +934,7 @@ def exists_property(name):
     try:
         config = get_config()
         return key in config
-    except ConfigurationError:  # No file found
+    except MissingConfigurationError:  # No file found
         return False
 
 
@@ -1009,8 +951,8 @@ def get_property(name, default=_NoDefaultValue()):
     :raise KeyError: if the given property is not found in the config file, and
       no default value is given or provided in _property_table.
     """
-    from aiida.common.exceptions import ConfigurationError
-    import aiida.utils.logger as logger
+    from aiida.common.exceptions import MissingConfigurationError
+    from aiida.common.log import LOG_LEVELS
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -1021,7 +963,7 @@ def get_property(name, default=_NoDefaultValue()):
     try:
         config = get_config()
         value = config[key]
-    except (KeyError, ConfigurationError):
+    except (KeyError, MissingConfigurationError):
         if isinstance(default, _NoDefaultValue):
             if isinstance(table_defval, _NoDefaultValue):
                 raise
@@ -1037,7 +979,7 @@ def get_property(name, default=_NoDefaultValue()):
     # will return the corresponding integer, even though a string is stored in
     # the config.
     if name.startswith('logging.') and name.endswith('loglevel'):
-        value = logger.LOG_LEVELS[value]
+        value = LOG_LEVELS[value]
 
     return value
 
@@ -1049,7 +991,7 @@ def del_property(name):
     :param name: the name of the property to delete.
     :raise: KeyError if the key is not found in the configuration file.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, _, _, _, _ = _property_table[name]
@@ -1059,7 +1001,7 @@ def del_property(name):
     try:
         config = get_config()
         del config[key]
-    except ConfigurationError:
+    except MissingConfigurationError:
         raise KeyError("No configuration file found")
 
     # If we are here, no exception was raised
@@ -1079,7 +1021,7 @@ def set_property(name, value):
       properties, or if the value provided as a string cannot be casted to the
       correct type.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     try:
         key, type_string, _, _, valid_values = _property_table[name]
@@ -1117,7 +1059,7 @@ def set_property(name, value):
 
     try:
         config = get_config()
-    except ConfigurationError:
+    except MissingConfigurationError:
         config = {}
 
     config[key] = actual_value

@@ -256,9 +256,8 @@ class Utils(object):
             raise RestValidationError("perpage key requires that a page is "
                                       "requested (i.e. the path must contain "
                                       "/page/)")
-        # 4. No querystring if query type = schema', 'visualization', 'schema'
-        if query_type in ('schema', 'visualization', 'statistics') and \
-                is_querystring_defined:
+        # 4. No querystring if query type = schema'
+        if query_type in ('schema') and is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow "
                                            "specifying a query string")
 
@@ -509,6 +508,10 @@ class Utils(object):
         nalist = None
         elist = None
         nelist = None
+        downloadformat = None
+        visformat = None
+        filename = None
+        rtype = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -559,6 +562,22 @@ class Utils(object):
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
             raise RestInputValidationError(
                 "You cannot specify nelist more than "
+                "once")
+        if 'format' in field_counts.keys() and field_counts['format'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify format more than "
+                "once")
+        if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify visformat more than "
+                "once")
+        if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify filename more than "
+                "once")
+        if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify rtype more than "
                 "once")
 
         ## Extract results
@@ -627,6 +646,39 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'orderby'")
+
+            elif field[0] == 'format':
+                if field[1] == '=':
+                    downloadformat = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'format'")
+
+            elif field[0] == 'visformat':
+                if field[1] == '=':
+                    visformat = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'visformat'")
+
+            elif field[0] == 'filename':
+                if field[1] == '=':
+                    filename = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'filename'")
+
+            elif field[0] == 'rtype':
+                if field[1] == '=':
+                    rtype = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'rtype'")
+
             else:
 
                 ## Construct the filter entry.
@@ -659,7 +711,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist)
+                nelist, downloadformat, visformat, filename, rtype)
 
     def parse_query_string(self, query_string):
         """

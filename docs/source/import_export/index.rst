@@ -6,5 +6,4 @@ Import and Export
     :maxdepth: 4
 
     main
-    ../dbimporters/index
-    ../dbexporters/index
+    external_dbs

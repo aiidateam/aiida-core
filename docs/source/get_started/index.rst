@@ -120,7 +120,6 @@ line before and after)::
 
   Host YOURCLUSTERADDRESS
     User YOURUSERNAME
-    HostKeyAlgorithms ssh-rsa
     IdentityFile YOURRSAKEY
 
 replacing ``YOURRSAKEY`` by the path to the rsa private key you want to use 
@@ -141,21 +140,6 @@ via ``sftp`` (needed to copy files). The following command::
 
 should show you a prompt without errors (possibly with a message saying
 ``Connected to YOURCLUSTERADDRESS``).
-
-.. Warning:: Due to a current limitation of the current ssh transport module, we 
-  do not support ECDSA, but only RSA or DSA keys. In the present guide we've 
-  shown RSA only for simplicity. The first time you connect to 
-  the cluster, you should see something like this::
-    
-    The authenticity of host 'YOURCLUSTERADDRESS (IP)' can't be established.
-    RSA key fingerprint is xx:xx:xx:xx:xx.
-    Are you sure you want to continue connecting (yes/no)?
-  
-  Make sure you see RSA written. If you already installed the keys in the past, 
-  and you don't know which keys you are using, you could remove the cluster
-  YOURCLUSTERADDRESS from the file ~/.ssh/known-hosts (backup it first!) and try
-  to ssh again. If you are not using a RSA or DSA key, you may see later on a 
-  submitted calculation going in the state SUBMISSIONFAILED. 
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be
@@ -242,20 +226,20 @@ The configuration of computers happens in two steps.
      you have to pick up a computer to launch a calculation on it). Names must 
      be unique. This command should be thought as a AiiDA-wise configuration of 
      computer, independent of the AiiDA user that will actually use it.
-   
+
    * **Fully-qualified hostname**: the fully-qualified hostname of the computer
      to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, 
      and not just ``bellatrix``). Type ``localhost`` for the local transport.
-   
+
    * **Description**:  A human-readable description of this computer; this is 
      useful if you have a lot of computers and you want to add some text to
      distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
-   
+
    * **Enabled**: either True or False; if False, the computer is disabled
      and calculations associated with it will not be submitted. This allows to
      disable temporarily a computer if it is giving problems or it is down for
      maintenance, without the need to delete it from the DB.  
-   
+
    * **Transport type**: The name of the transport to be used. A list of valid 
      transport types can be obtained typing ``?``
 
@@ -264,7 +248,11 @@ The configuration of computers happens in two steps.
      scheduler plugins can be obtained typing ``?``. See
      :doc:`here <../scheduler/index>` for a documentation of scheduler plugins
      in AiiDA.
-     
+
+   * **shebang line** This is the first line in the beginning of the submission script.
+     The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
+     as for example the -l option. Note that AiiDA only supports bash at this point!
+
    * **AiiDA work directory**: The absolute path of the directory on the
      remote computer where AiiDA will run the calculations
      (often, it is the scratch of the computer). You can (should) use the
@@ -272,19 +260,19 @@ The configuration of computers happens in two steps.
      remote computer automatically: this allows the same computer to be used
      by different users, without the need to setup a different computer for
      each one. Example::
-       
+
        /scratch/{username}/aiida_work/
-   
+
    * **mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
      programs. You can (should) use the ``{tot_num_mpiprocs}`` replacement,
      that will be replaced by the total number of cpus, or the other
      scheduler-dependent fields (see the :doc:`scheduler docs <../scheduler/index>`
      for more information). Some examples::
-      
+
         mpirun -np {tot_num_mpiprocs}
         aprun -n {tot_num_mpiprocs}
         poe
-      
+
    * **Text to prepend to each command execution**: This is a multiline string,
      whose content will be prepended inside the submission script before the
      real execution of the job. It is your responsibility to write proper ``bash`` code!

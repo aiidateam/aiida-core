@@ -24,6 +24,7 @@ from abc import ABCMeta
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
 from aiida.common.lang import override, protected
+from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.links import LinkType
 from aiida.utils.calculation import add_source_info
 from aiida.work.defaults import class_loader
@@ -32,7 +33,6 @@ from aiida.work.util import PROCESS_LABEL_ATTR, get_or_create_output_group
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.work import WorkCalculation
-from aiida import LOG_LEVEL_REPORT
 
 
 

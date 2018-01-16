@@ -134,6 +134,18 @@ class AbstractGroup(object):
         pass
 
     @classmethod
+    def create(cls, *args, **kwargs):
+        """
+        Create and store a new group.
+        
+        Note: This method does not check for presence of the group.
+        You may want to use get_or_create().
+
+        :return: group
+        """
+        return cls(*args, **kwargs).store()
+
+    @classmethod
     def get_or_create(cls, *args, **kwargs):
         """
         Try to retrieve a group from the DB with the given arguments;
@@ -146,8 +158,7 @@ class AbstractGroup(object):
                         type_string=kwargs.get("type_string"))
 
         if res is None or len(res) == 0:
-            bla = cls(*args, **kwargs).store(), True
-            return bla
+            return cls.create(*args, **kwargs), True
         elif len(res) > 1:
             raise MultipleObjectsError("More than one groups found in the "
                                        "database")

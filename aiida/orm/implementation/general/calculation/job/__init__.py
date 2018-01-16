@@ -1089,9 +1089,14 @@ class AbstractJobCalculation(object):
         d = copy.deepcopy(res)
 
         try:
-            d['calculation']['type'] = from_type_to_pluginclassname(
-                d['calculation']['type']
-            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+            prefix = 'calculation.job.'
+            calculation_type = d['calculation']['type']
+            calculation_class = from_type_to_pluginclassname(calculation_type)
+            module, class_name = calculation_class.rsplit('.', 1)
+
+            assert(module.startswith(prefix))
+
+            d['calculation']['type'] = module[len(prefix):]
         except KeyError:
             pass
         for proj in ('ctime', 'mtime'):

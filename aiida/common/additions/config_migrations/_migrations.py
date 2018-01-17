@@ -46,7 +46,7 @@ class ConfigMigration(object):
         return config
 
 def _1_add_rmq_prefix(config):
-    for profile in config['profiles'].values():
+    for profile in config.get('profiles', {}).values():
         profile['RMQ_PREFIX'] = uuid.uuid4().hex
     return config
 

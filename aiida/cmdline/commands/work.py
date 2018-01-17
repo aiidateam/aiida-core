@@ -404,8 +404,6 @@ def status(pks):
     for pk in pks:
         calc_node = aiida.orm.load_node(pk)
         print_call_graph(calc_node)
-        # status_info = _create_status_info(calc_node)
-        # print_tree_descending(status_info)
 
 
 def _create_status_info(calc_node):

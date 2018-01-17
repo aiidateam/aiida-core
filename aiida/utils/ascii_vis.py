@@ -173,7 +173,7 @@ def calc_info(calc_node):
         state = str(calc_node.get_state())
     else:
         raise TypeError("Unknown type")
-    return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
+    return u"{} <pk={}> [{}]".format(label, calc_node.pk, state)
 
 
 def print_call_graph(calc_node, info_fn=calc_info):
@@ -205,7 +205,7 @@ def format_tree_descending(tree, prefix=u"", pos=-1):
         info = tree
 
     if pos == -1:
-        pre = ""
+        pre = u""
     elif pos == 0:
         pre = u"{}{}".format(prefix, TREE_FIRST_ENTRY)
     elif pos == 1:
@@ -230,7 +230,7 @@ def format_tree_descending(tree, prefix=u"", pos=-1):
                 pos = 1
             text.append(format_tree_descending(entry, new_prefix, pos))
 
-    return "\n".join(text)
+    return u"\n".join(text)
 
 
 def print_tree_descending(tree, prefix=u"", pos=-1):

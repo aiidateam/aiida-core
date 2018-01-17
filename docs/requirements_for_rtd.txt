@@ -24,7 +24,6 @@ passlib==1.7.1
 pathlib2==2.3.0
 pika==0.11.2
 pip==9.0.1
-plumpy>=0.9.0
 portalocker==1.1.0
 psutil==5.4.0
 pycrypto==2.6.1

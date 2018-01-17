@@ -70,6 +70,7 @@ install_requires = [
 ]
 
 extras_require = {
+    ':python_version < "3.3"': ['mock'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.

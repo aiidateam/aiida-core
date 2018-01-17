@@ -8,8 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
-import unittest
+import uuid
 import json
+import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from ._utils import check_and_migrate_config
 from ._migrations import _MIGRATION_LOOKUP
@@ -28,7 +33,8 @@ class TestConfigMigration(unittest.TestCase):
         Test the full config migration.
         """
         initial_config = load_config_sample('input/0.json')
-        final_config = check_and_migrate_config(initial_config, store=False)
+        with mock.patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0'*32)):
+            final_config = check_and_migrate_config(initial_config, store=False)
         reference_config = load_config_sample('reference/final.json')
         self.assertEqual(final_config, reference_config)
 

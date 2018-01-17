@@ -2,12 +2,21 @@ import json
 import plum
 
 from aiida.utils.serialize import serialize_data, deserialize_data
+
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
+from aiida.backends import settings
 from plum import rmq
 
 from . import events
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
+
+
+def _get_prefix():
+    """Get the queue prefix from the profile."""
+    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
 def encode_response(response):
@@ -83,6 +92,7 @@ class BlockingProcessControlPanel(object):
     """
     A blocking adapter for the ProcessControlPanel.
     """
+
     class _Launcher(object):
         def __init__(self, parent):
             self._parent = parent

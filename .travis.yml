@@ -11,6 +11,7 @@ python:
 cache: pip
 
 services:
+    - rabbitmq
     - postgresql
     - docker
 
@@ -18,15 +19,15 @@ addons:
     postgresql: "9.4"
 #  postgresql: "9.5" # Available in Trusty only
     apt:
-       packages:
-           - texlive-base
-           - texlive-generic-recommended
-           - texlive-fonts-recommended
-           - texlive-latex-base
-           - texlive-latex-recommended
-           - texlive-latex-extra
-           - dvipng
-           - dvidvi
+        packages:
+            - texlive-base
+            - texlive-generic-recommended
+            - texlive-fonts-recommended
+            - texlive-latex-base
+            - texlive-latex-recommended
+            - texlive-latex-extra
+            - dvipng
+            - dvidvi
 
 before_install:
     # This is needed for the SSH tests (being able to ssh to localhost)

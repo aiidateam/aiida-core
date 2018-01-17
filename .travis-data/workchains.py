@@ -17,12 +17,12 @@ class ParentWorkChain(WorkChain):
         super(ParentWorkChain, cls).define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
-            cls.run,
+            cls.run_step,
             cls.results
         )
         spec.output('output', valid_type=Int, required=True)
 
-    def run(self):
+    def run_step(self):
         inputs = {
             'inp': self.inputs.inp
         }
@@ -42,9 +42,9 @@ class SubWorkChain(WorkChain):
         super(SubWorkChain, cls).define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
-            cls.run
+            cls.run_step
         )
         spec.output('output', valid_type=Int, required=True)
 
-    def run(self):
+    def run_step(self):
         self.out('output', Int(self.inputs.inp.value * 2))

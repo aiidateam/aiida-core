@@ -1089,9 +1089,19 @@ class AbstractJobCalculation(object):
         d = copy.deepcopy(res)
 
         try:
-            d['calculation']['type'] = from_type_to_pluginclassname(
-                d['calculation']['type']
-            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+            prefix = 'calculation.job.'
+            calculation_type = d['calculation']['type']
+            calculation_class = from_type_to_pluginclassname(calculation_type)
+            module, class_name = calculation_class.rsplit('.', 1)
+
+            # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
+            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
+            # to strip the prefix to get the proper sub module
+            if module == prefix.rstrip('.'):
+                d['calculation']['type'] = module[len(prefix):]
+            else:
+                assert module.startswith(prefix), "module '{}' does not start with '{}'".format(module, prefix)
+                d['calculation']['type'] = module[len(prefix):]
         except KeyError:
             pass
         for proj in ('ctime', 'mtime'):

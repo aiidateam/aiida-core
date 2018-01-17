@@ -1094,9 +1094,14 @@ class AbstractJobCalculation(object):
             calculation_class = from_type_to_pluginclassname(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
-            assert(module.startswith(prefix))
-
-            d['calculation']['type'] = module[len(prefix):]
+            # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
+            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
+            # to strip the prefix to get the proper sub module
+            if module == prefix.rstrip('.'):
+                d['calculation']['type'] = module[len(prefix):]
+            else:
+                assert module.startswith(prefix), "module '{}' does not start with '{}'".format(module, prefix)
+                d['calculation']['type'] = module[len(prefix):]
         except KeyError:
             pass
         for proj in ('ctime', 'mtime'):

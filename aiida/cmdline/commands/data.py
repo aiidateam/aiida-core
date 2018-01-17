@@ -17,6 +17,8 @@ from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.common.exceptions import MultipleObjectsError
+from aiida.cmdline.commands import verdi
+from aiida.common.pluginloader import plugin_list, get_plugin
 
 
 
@@ -45,6 +47,9 @@ class Data(VerdiCommandRouter):
             'remote': _Remote,
             'description': _Description,
         }
+        for ep in plugin_list('cmdline.data'):
+            cmd = get_plugin('cmdline.data', ep)
+            self.routed_subcommands[cmd.name] = verdi
 
 
 class Listable(object):
@@ -85,6 +90,8 @@ class Listable(object):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
+        # print "parsed_args ===>", parsed_args
+
         entry_list = self.query(parsed_args)
 
         vsep = parsed_args.vseparator
@@ -98,34 +105,45 @@ class Listable(object):
 
     def query(self, args):
         """
-        Perform the query and return information for the list.
-
-        :param args: a namespace with parsed command line parameters.
-        :return: table (list of lists) with information, describing nodes.
-            Each row describes a single hit.
+        Perform the query
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
 
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        data_filters = dict()
+        self.query_past_days(data_filters, args)
+        qb.append(self.dataclass, tag="data", created_by="creator",
+                  filters=data_filters, project=["id"])
 
-        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="data")
+
+        qb.order_by({self.dataclass: {'ctime': 'asc'}})
+
+        object_list = qb.distinct()
 
         entry_list = []
-        for obj in object_list:
-            entry_list.append([str(obj.pk)])
+        for [id] in object_list.all():
+            entry_list.append([str(id)])
         return entry_list
 
-    def query_past_days_qb(self, filters, args):
+    def query_past_days(self, filters, args):
         """
         Subselect to filter data nodes by their age.
 
@@ -140,22 +158,7 @@ class Listable(object):
             filters.update({"ctime": {'>=': n_days_ago}})
         return filters
 
-    def query_past_days(self, q_object, args):
-        """
-        Subselect to filter data nodes by their age.
-
-        :param q_object: a query object
-        :param args: a namespace with parsed command line parameters.
-        """
-        from aiida.utils import timezone
-        from django.db.models import Q
-        import datetime
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-    def query_group_qb(self, filters, args):
+    def query_group(self, filters, args):
         """
         Subselect to filter data nodes by their group.
 
@@ -166,19 +169,6 @@ class Listable(object):
             filters.update({"name": {"in": args.group_name}})
         if args.group_pk is not None:
             filters.update({"id": {"in": args.group_pk}})
-
-    def query_group(self, q_object, args):
-        """
-        Subselect to filter data nodes by their group.
-
-        :param q_object: a query object
-        :param args: a namespace with parsed command line parameters.
-        """
-        from django.db.models import Q
-        if args.group_name is not None:
-            q_object.add(Q(dbgroups__name__in=args.group_name), Q.AND)
-        if args.group_pk is not None:
-            q_object.add(Q(dbgroups__pk__in=args.group_pk), Q.AND)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -197,7 +187,7 @@ class Listable(object):
                             help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
         parser.add_argument('-A', '--all-users', action='store_true', default=False,
-                            help="show groups for all users, rather than only for the"
+                            help="show objects for all users, rather than only for the"
                                  "current user")
 
     def get_column_names(self):
@@ -834,6 +824,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             group = UpfData.get_upf_group(group_name)
         except NotExistent:
             print >> sys.stderr, ("upf family {} not found".format(group_name))
+            sys.exit(1)
 
         for u in group.nodes:
             dest_path = os.path.join(folder,u.filename)
@@ -884,100 +875,12 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         :return: table (list of lists) with information, describing nodes.
             Each row describes a single hit.
         """
+        from aiida.backends.utils import QueryFactory
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.backends.utils import get_automatic_user
-        from aiida.orm.implementation import User
-        from aiida.orm.implementation import Group
-        from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.data.array.bands import BandsData
-        from aiida.orm.data.structure import StructureData
-
-        qb = QueryBuilder()
-        if args.all_users is False:
-            au = get_automatic_user()
-            user = User(dbuser=au)
-            qb.append(User, tag="creator", filters={"email": user.email})
-        else:
-            qb.append(User, tag="creator")
-
-        bdata_filters = {}
-        self.query_past_days_qb(bdata_filters, args)
-        qb.append(BandsData, tag="bdata", created_by="creator",
-                  filters=bdata_filters,
-                  project=["id", "label", "ctime"]
-                  )
-
-        group_filters = {}
-        self.query_group_qb(group_filters, args)
-        if group_filters:
-            qb.append(Group, tag="group", filters=group_filters,
-                      group_of="bdata")
-
-        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
-                  # We don't care about the creator of StructureData
-                  project=["id", "attributes.kinds", "attributes.sites"])
-
-        qb.order_by({StructureData: {'ctime': 'desc'}})
-
-        list_data = qb.distinct()
-
-        entry_list = []
-        already_visited_bdata = set()
-        if list_data.count() > 0:
-            for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
-
-                # We process only one StructureData per BandsData.
-                # We want to process the closest StructureData to
-                # every BandsData.
-                # We hope that the StructureData with the latest
-                # creation time is the closest one.
-                # This will be updated when the QueryBuilder supports
-                # order_by by the distance of two nodes.
-                if already_visited_bdata.__contains__(bid):
-                    continue
-                already_visited_bdata.add(bid)
-
-                if args.element is not None:
-                    all_symbols = [_["symbols"][0] for _ in akinds]
-                    if not any([s in args.element for s in all_symbols]
-                               ):
-                        continue
-
-                if args.element_only is not None:
-                    all_symbols = [_["symbols"][0] for _ in akinds]
-                    if not all(
-                            [s in all_symbols for s in args.element_only]
-                            ):
-                        continue
-
-                # We want only the StructureData that have attributes
-                if akinds is None or asites is None:
-                    continue
-
-                symbol_dict = {}
-                for k in akinds:
-                    symbols = k['symbols']
-                    weights = k['weights']
-                    symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                                weights)
-
-                try:
-                    symbol_list = []
-                    for s in asites:
-                        symbol_list.append(symbol_dict[s['kind_name']])
-                    formula = get_formula(symbol_list,
-                                          mode=args.formulamode)
-                # If for some reason there is no kind with the name
-                # referenced by the site
-                except KeyError:
-                    formula = "<<UNKNOWN>>"
-                entry_list.append([str(bid), str(formula),
-                                   bdate.strftime('%d %b %Y'), blabel])
-
-        return entry_list
+        q = QueryFactory()()
+        return q.get_bands_and_parents_structure(args)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -1218,14 +1121,14 @@ class _Structure(VerdiCommandWithSubcommands,
             qb.append(User, tag="creator")
 
         st_data_filters = {}
-        self.query_past_days_qb(st_data_filters, args)
+        self.query_past_days(st_data_filters, args)
         qb.append(StructureData, tag="struc", created_by="creator",
                   filters=st_data_filters,
                   project=["id", "label", "attributes.kinds",
                            "attributes.sites"])
 
         group_filters = {}
-        self.query_group_qb(group_filters, args)
+        self.query_group(group_filters, args)
         if group_filters:
             qb.append(Group, tag="group", filters=group_filters,
                       group_of="struc")
@@ -1501,7 +1404,14 @@ class _Structure(VerdiCommandWithSubcommands,
         Imports a structure from a quantumespresso input file.
         """
         from os.path import abspath
-        from aiida.tools.codespecific.quantumespresso.qeinputparser import get_structuredata_from_qeinput
+        try:
+            from qe_tools.parsers.pwinputparser import PwInputFile
+        except ImportError:
+            import sys
+            print ("You have not installed the package qe-tools. \n"
+                "You can install it with: pip install qe-tools")
+            sys.exit(0)
+
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
 
@@ -1509,7 +1419,8 @@ class _Structure(VerdiCommandWithSubcommands,
         filepath =  abspath(filename)
 
         try:
-            new_structure = get_structuredata_from_qeinput(filepath=filepath)
+            inputparser = PwInputFile(filepath)
+            new_structure = inputparser.get_structuredata()
 
             if not dont_store:
                 new_structure.store()
@@ -1606,37 +1517,53 @@ class _Cif(VerdiCommandWithSubcommands,
         """
         if not is_dbenv_loaded():
             load_dbenv()
-        from django.db.models import Q
+
+        from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.utils import get_automatic_user
+        from aiida.orm.implementation import User
+        from aiida.orm.implementation import Group
 
-        q_object = None
+        qb = QueryBuilder()
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            au = get_automatic_user()
+            user = User(dbuser=au)
+            qb.append(User, tag="creator", filters={"email": user.email})
         else:
-            q_object = Q()
+            qb.append(User, tag="creator")
 
-        self.query_past_days(q_object, args)
-        self.query_group(q_object, args)
+        st_data_filters = {}
+        self.query_past_days(st_data_filters, args)
+        qb.append(self.dataclass, tag="struc", created_by="creator",
+                  filters=st_data_filters,
+                  project=["*"])
 
-        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+        group_filters = {}
+        self.query_group(group_filters, args)
+        if group_filters:
+            qb.append(Group, tag="group", filters=group_filters,
+                      group_of="struc")
+
+        qb.order_by({self.dataclass: {'ctime': 'asc'}})
+        res = qb.distinct()
 
         entry_list = []
-        for obj in object_list:
-            formulae = '?'
-            try:
-                formulae = ",".join(obj.get_attr('formulae'))
-            except AttributeError:
-                pass
-            except TypeError:
-                pass
-            source_uri = '?'
-            try:
-                source_uri = obj.get_attr('source')['uri']
-            except AttributeError:
-                pass
-            except KeyError:
-                pass
-            entry_list.append([str(obj.pk), formulae, source_uri])
+        if res.count() > 0:
+            for [obj] in res.iterall():
+                formulae = '?'
+                try:
+                    formulae = ",".join(obj.get_attr('formulae'))
+                except AttributeError:
+                    pass
+                except TypeError:
+                    pass
+                source_uri = '?'
+                try:
+                    source_uri = obj.get_attr('source')['uri']
+                except AttributeError:
+                    pass
+                except KeyError:
+                    pass
+                entry_list.append([str(obj.pk), formulae, source_uri])
         return entry_list
 
     def get_column_names(self):

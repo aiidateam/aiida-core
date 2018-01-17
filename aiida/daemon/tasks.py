@@ -22,7 +22,8 @@ from aiida.common.setup import AIIDA_CONFIG_FOLDER, DAEMON_SUBDIR
 if not is_dbenv_loaded():
     load_dbenv(process="daemon")
 
-from aiida.common.setup import get_profile_config
+from aiida.common.log import configure_logging
+from aiida.common.setup import get_profile_config, DAEMON_LOG_FILE
 from aiida.common.exceptions import ConfigurationError
 from aiida.daemon.timestamps import set_daemon_timestamp, get_last_daemon_timestamp
 
@@ -45,83 +46,67 @@ broker = (
 
 app = Celery('tasks', broker=broker)
 
-if DAEMON_USE_NEW:
 
-    @periodic_task(
-        run_every=timedelta(
-            seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS",
-                               DAEMON_INTERVALS_TICK_WORKFLOWS)
-        )
+@periodic_task(
+    run_every=timedelta(
+        seconds=config.get("DAEMON_INTERVALS_SUBMIT", DAEMON_INTERVALS_SUBMIT)
     )
-    def tick_work():
-        from aiida.work.daemon import launch_pending_jobs
-        print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
-        launch_pending_jobs()
-
-
-    @periodic_task(
-        run_every=timedelta(
-            seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS",
-                               DAEMON_INTERVALS_TICK_WORKFLOWS)
-        )
-    )
-    def launch_all_pending_job_calculations():
-        print("aiida.daemon.tasks.{}:  Launching any pending jobs".format(
-            launch_all_pending_job_calculations.__name__))
-        import aiida.work.daemon as work_daemon
-        work_daemon.launch_all_pending_job_calculations()
-else:
-    @periodic_task(
-        run_every=timedelta(
-            seconds=config.get("DAEMON_INTERVALS_SUBMIT", DAEMON_INTERVALS_SUBMIT)
-        )
-    )
-    def submitter():
-        from aiida.daemon.execmanager import submit_jobs
-        print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
-        set_daemon_timestamp(task_name='submitter', when='start')
-        submit_jobs()
-        set_daemon_timestamp(task_name='submitter', when='stop')
-
-
-    # the tasks as taken from the djsite.db.tasks, same tasks and same functionalities
-    # will now of course fail because set_daemon_timestep has not be implementd for SA
-
-    @periodic_task(
-        run_every=timedelta(
-            seconds=config.get("DAEMON_INTERVALS_UPDATE", DAEMON_INTERVALS_UPDATE)
-        )
-    )
-    def updater():
-        from aiida.daemon.execmanager import update_jobs
-        print "aiida.daemon.tasks.update:  Checking for calculations to update"
-        set_daemon_timestamp(task_name='updater', when='start')
-        update_jobs()
-        set_daemon_timestamp(task_name='updater', when='stop')
-
-
-    @periodic_task(
-        run_every=timedelta(
-            seconds=config.get("DAEMON_INTERVALS_RETRIEVE",
-                               DAEMON_INTERVALS_RETRIEVE)
-        )
-    )
-    def retriever():
-        from aiida.daemon.execmanager import retrieve_jobs
-        print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
-        set_daemon_timestamp(task_name='retriever', when='start')
-        retrieve_jobs()
-        set_daemon_timestamp(task_name='retriever', when='stop')
+)
+def submitter():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
+    from aiida.daemon.execmanager import submit_jobs
+    print "aiida.daemon.tasks.submitter:  Checking for calculations to submit"
+    set_daemon_timestamp(task_name='submitter', when='start')
+    submit_jobs()
+    set_daemon_timestamp(task_name='submitter', when='stop')
 
 
 @periodic_task(
     run_every=timedelta(
-        seconds=config.get(
-            "DAEMON_INTERVALS_WFSTEP", DAEMON_INTERVALS_WFSTEP
-        )
+        seconds=config.get("DAEMON_INTERVALS_UPDATE", DAEMON_INTERVALS_UPDATE)
     )
 )
-def workflow_stepper():  # daemon for legacy workflow
+def updater():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
+    from aiida.daemon.execmanager import update_jobs
+    print "aiida.daemon.tasks.update:  Checking for calculations to update"
+    set_daemon_timestamp(task_name='updater', when='start')
+    update_jobs()
+    set_daemon_timestamp(task_name='updater', when='stop')
+
+
+@periodic_task(
+    run_every=timedelta(
+        seconds=config.get("DAEMON_INTERVALS_RETRIEVE", DAEMON_INTERVALS_RETRIEVE)
+    )
+)
+def retriever():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
+    from aiida.daemon.execmanager import retrieve_jobs
+    print "aiida.daemon.tasks.retrieve:  Checking for calculations to retrieve"
+    set_daemon_timestamp(task_name='retriever', when='start')
+    retrieve_jobs()
+    set_daemon_timestamp(task_name='retriever', when='stop')
+
+
+@periodic_task(
+    run_every=timedelta(
+        seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS", DAEMON_INTERVALS_TICK_WORKFLOWS)
+    )
+)
+def tick_work():
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
+    from aiida.work.daemon import launch_pending_jobs
+    print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
+    launch_pending_jobs()
+
+@periodic_task(
+    run_every=timedelta(
+        seconds=config.get("DAEMON_INTERVALS_WFSTEP", DAEMON_INTERVALS_WFSTEP)
+    )
+)
+def workflow_stepper(): # daemon for legacy workflow
+    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.workflowmanager import execute_steps
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
     # RUDIMENTARY way to check if this task is already running (to avoid acting
@@ -146,7 +131,7 @@ def workflow_stepper():  # daemon for legacy workflow
 
 def manual_tick_all():
     from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
-    from aiida.work.daemon import launch_pending_jobs
+    from aiida.work.daemon import launch_pending_jobs, launch_all_pending_job_calculations
     from aiida.daemon.workflowmanager import execute_steps
     if DAEMON_USE_NEW:
         tick_work()
@@ -156,4 +141,3 @@ def manual_tick_all():
         update_jobs()
         retrieve_jobs()
     execute_steps()  # legacy workflows
-    # launch_pending_jobs()

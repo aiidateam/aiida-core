@@ -23,7 +23,7 @@ from sqlalchemy.types import Float,  String
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
-from sqlalchemy.sql.expression import cast
+from sqlalchemy.sql.expression import cast, ColumnClause
 from sqlalchemy.sql.elements import Cast, Label
 from aiida.common.exceptions import InputValidationError
 from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
@@ -104,7 +104,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label)):
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label, ColumnClause)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column
@@ -280,14 +280,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         if negation:
             return not_(expr)
         return expr
-
-
-
-
-    def prepare_with_dbpath(self):
-        #~ from aiida.backends.querybuild.dummy_model import DbPath as DummyPath
-        self.Path = dummy_model.DbPath
-
 
 
     def get_session(self):

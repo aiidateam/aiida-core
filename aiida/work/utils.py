@@ -9,8 +9,6 @@
 ###########################################################################
 
 import abc
-import apricotpy.persistable.utils
-from apricotpy import persistable
 import plum
 from threading import local
 import time
@@ -21,14 +19,19 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.frozendict import FrozenDict
 
+from . import class_loader
+
 __all__ = ['ProcessStack']
 
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
 
-class_name = persistable.utils.class_name
-load_object = persistable.utils.load_object
+load_object = plum.utils.load_object
 load_class = load_object
+
+
+def class_name(identifier, verify=True):
+    return plum.utils.class_name(identifier, class_loader.CLASS_LOADER, verify)
 
 
 class ProcessStack(object):
@@ -126,7 +129,7 @@ class HeartbeatError(BaseException):
     pass
 
 
-class CalculationHeartbeat(apricotpy.LoopObject):
+class CalculationHeartbeat(object):
     """
     This class implements a thread that runs in the background updating the
     heartbeat expiry of a calculation.  The intended behaviour is that while
@@ -353,8 +356,8 @@ class Savable(object):
     def load(saved_state):
         try:
             class_name = saved_state[Savable.CLASS_NAME]
-            cls = load_object(class_name)
-            return cls.create_from(saved_state)
+            cls = class_loader.CLASS_LOADER.load_class(class_name)
+            return cls.recreate_from(saved_state)
         except IndexError:
             raise ValueError("Not a valid saved state with type")
 

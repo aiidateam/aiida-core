@@ -1,7 +1,3 @@
-
-.. contents :: Contents
-    :local:
-
 .. _my-ref-to-pseudo-tutorial:
 
 Introduction: Pseudopotential families
@@ -13,14 +9,14 @@ That's why we added the *pseudopotential families*. Each family is a set of pseu
 
 Of course, a pseudopotential family does not have to completely cover the periodic table (also because such pseudopotential sets do not exist). This means that you can create a pseudopotential family containing only the pseudopotentials for a few elements that you are interested in.
 
-.. note ::
+.. note::
     In principle, you can group different kinds of pseudopotentials into the same family. It is your responsibility to group only those with the same type, or obtained using the same functionals, approximations and / or levels of theory.
 
 Creating a pseudopotential family
 +++++++++++++++++++++++++++++++++
 
-.. note ::
-    The following commands are specific to the Quantum ESPRESSO interface. For interfaces to other codes, please refer to the respective plugin documentation.
+.. note::
+    The following commands are specific to the `Quantum ESPRESSO interface <https://github.com/aiidateam/aiida-quantumespresso/>`_. For interfaces to other codes, please refer to the respective plugin documentation.
 
 In the following, we will go through creating a pseudopotential family. First, you need to collect the pseudopotential files which should go into the family in a single folder -- we'll call it ``path/to/folder``. You can then add the family to the AiiDA database with ``verdi``::
 

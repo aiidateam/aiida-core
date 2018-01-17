@@ -18,14 +18,13 @@ The code is hosted on GitHub at https://github.com/aiidateam/aiida_core
 
 The documentation is hosted on Read The Docs at: 
 
-- (stable version) http://aiida-core.readthedocs.io/en/stable
-- (develop version) http://aiida-core.readthedocs.io/en/latest
+- `stable version <http://aiida-core.readthedocs.io/en/stable>`_
+- `develop version <http://aiida-core.readthedocs.io/en/latest>`_
 
 Which branch should you use?
 ----------------------------
-
-For users, the stable version of the code is in the "master" branch (switch to it with the command "git checkout master").
-Developers can make pull requests into the "develop" branch".
+* **Users**: the stable version of the code is in the `master branch <https://github.com/aiidateam/aiida_core/tree/master>`_
+* **Developers**: the procedure to contribute through pull-requests can be found in the `wiki <https://github.com/aiidateam/aiida_core/wiki/Contributing-guide-and-branch-descriptions>`_
 
 How to cite AiiDA
 -----------------

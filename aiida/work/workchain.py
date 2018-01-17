@@ -7,22 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import apricotpy
 import abc
-from aiida.common.lang import override
-from apricotpy import persistable
+import functools
 import inspect
-from plum.wait_ons import Checkpoint
+import plum
 
-from .interstep import *
-from . import process
+from aiida.orm.utils import load_node, load_workflow
+from aiida.common.lang import override
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from . import processes
 from . import utils
+from .awaitable import *
+from .context import *
 
-__all__ = ['WorkChain']
+__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs']
 
 
-class _WorkChainSpec(process.ProcessSpec):
+class _WorkChainSpec(processes.ProcessSpec):
     def __init__(self):
         super(_WorkChainSpec, self).__init__()
         self._outline = None
@@ -49,7 +50,11 @@ class _WorkChainSpec(process.ProcessSpec):
         return self._outline
 
 
-class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin):
+class WorkChain(
+    plum.ContextMixin,
+    processes.Process,
+    # utils.HeartbeatMixin
+):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -65,8 +70,8 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(WorkChain, self).__init__(inputs, pid, logger)
+    def __init__(self, inputs=None, logger=None, runner=None):
+        super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
         self._stepper = None
         self._awaitables = []
 
@@ -91,26 +96,25 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
 
         self.set_logger(self._calc.logger)
 
-    def insert_barrier(self, awaitable):
+    def insert_awaitable(self, awaitable):
         """
-        Insert a barrier that will cause the workchain to wait until the wait
+        Insert a awaitable that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
         :param awaitable: The thing to await
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :type awaitable: :class:`aiida.work.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
 
-    def remove_barrier(self, awaitable):
+    def remove_awaitable(self, awaitable):
         """
-        Remove a barrier.
+        Remove a awaitable.
 
-        Precondition: must be a barrier that was previously inserted
+        Precondition: must be a awaitable that was previously inserted
 
-        :param awaitable:  The awaitable to remove
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :param awaitable: The awaitable to remove
         """
-        del self._awaitables[awaitable]
+        self._awaitables.remove(awaitable)
 
     def to_context(self, **kwargs):
         """
@@ -119,30 +123,46 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         to the corresponding key in the context of the workchain
         """
         for key, value in kwargs.iteritems():
-            if not isinstance(value, ContextAction):
-                value = assign_(value)
-
-            awaitable = value.awaitable
-
-            if not isinstance(awaitable, apricotpy.Awaitable):
-                raise TypeError("Could not find an awaitable to place in the context")
-
-            awaitable.add_done_callback(persistable.Function(value.fn, key, self))
-
-            self.insert_barrier(awaitable)
+            awaitable = construct_awaitable(value)
+            awaitable.key = key
+            self.insert_awaitable(awaitable)
 
     @override
-    def _run(self, **kwargs):
+    def _run(self):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
+    @property
+    def _do_abort(self):
+        return self.calc.get_attr(self.calc.DO_ABORT_KEY, False)
+
+    @property
+    def _aborted(self):
+        return self.calc.get_attr(self.calc.ABORTED_KEY, False)
+
+    @_aborted.setter
+    def _aborted(self, value):
+        # One is not allowed to unabort an aborted WorkChain
+        if self._aborted and value == False:
+            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
+            return
+
+        self.calc._set_attr(self.calc.ABORTED_KEY, value)
+
     def _do_step(self, wait_on=None):
         self._awaitables = []
+
+        if self._handle_do_abort():
+            return
 
         try:
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
+
+        # Could have aborted during the step
+        if self._handle_do_abort():
+            return
 
         if not finished:
             if retval is not None:
@@ -152,22 +172,128 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                return persistable.gather(self._awaitables, self.loop()), self._do_step
+                return plum.Wait(self._do_step, 'Waiting before next step')
             else:
-                return self.loop().create(Checkpoint), self._do_step
+                return plum.Continue(self._do_step)
+        else:
+            return self.outputs
 
-    def abort_nowait(self, msg=None):
+    def on_wait(self, awaitables):
+        super(WorkChain, self).on_wait(awaitables)
+        if self._awaitables:
+            self.action_awaitables()
+        else:
+            self.call_soon(self.resume)
+
+    def abort(self, message=None):
+        """
+        Cancel is the new abort, just like orange is the new black
+        """
+        self.calc.kill()
+        self.report(message)
+        self.cancel(message)
+
+    def _handle_do_abort(self):
+        """
+        Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
+        attribute has been set, and if so call self.abort and remove the DO_ABORT_KEY attribute 
+        """
+        do_abort = self._do_abort
+        if do_abort:
+            self.cancel(do_abort)
+            self.calc._del_attr(self.calc.DO_ABORT_KEY)
+            return True
+        return False
+
+    def abort_nowait(self, message=None):
         """
         Abort the workchain at the next state transition without waiting
         which is achieved by passing a timeout value of zero
 
-        :param msg: The abort message
-        :type msg: str
+        :param message: The abort message
+        :type message: str
         """
-        return self.abort(msg=msg)
+        return self.abort(message=message)
 
+    def action_awaitables(self):
+        """
+        Handle the awaitables that are currently registered with the workchain
 
-ToContext = dict
+        Depending on the class type of the awaitable's target a different callback
+        function will be bound with the awaitable and the runner will be asked to
+        call it when the target is completed
+        """
+        for awaitable in self._awaitables:
+            if awaitable.target == AwaitableTarget.CALCULATION:
+                fn = functools.partial(self.on_calculation_finished, awaitable)
+                self.runner.call_on_calculation_finish(awaitable.pk, fn)
+            elif awaitable.target == AwaitableTarget.WORKFLOW:
+                fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
+                self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
+            else:
+                assert "invalid awaitable target '{}'".format(awaitable.target)
+
+    def on_calculation_finished(self, awaitable, pk):
+        """
+        Callback function called by the runner when the calculation instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
+        """
+        try:
+            node = load_node(pk)
+        except (MultipleObjectsError, NotExistent) as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
+
+        if awaitable.outputs:
+            value = node.get_outputs_dict()
+        else:
+            value = node
+
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+            self.resume()
+
+    def on_legacy_workflow_finished(self, awaitable, pk):
+        """
+        Callback function called by the runner when the legacy workflow instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
+        """
+        try:
+            workflow = load_workflow(pk=pk)
+        except ValueError as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Workflow instance'.format(pk))
+
+        if awaitable.outputs:
+            value = workflow.get_results()
+        else:
+            value = workflow
+
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+            self.resume()
 
 
 class Stepper(utils.Savable):
@@ -215,7 +341,7 @@ class _Instruction(object):
     @staticmethod
     def check_command(command):
         if not isinstance(command, _Instruction):
-            assert issubclass(command.im_class, process.Process)
+            assert issubclass(command.im_class, processes.Process)
             args = inspect.getargspec(command)[0]
             assert len(args) == 1, "Instruction must take one argument only: self"
 
@@ -347,53 +473,63 @@ class _Conditional(object):
 
 class _If(_Instruction):
     class Stepper(Stepper):
+        _IF_SPEC = 'if_spec'
         _POSITION = 'pos'
         _STEPPER_POS = 'stepper_pos'
 
         def __init__(self, workflow, if_spec):
             super(_If.Stepper, self).__init__(workflow)
             self._if_spec = if_spec
-            self._pos = 0
+            self._pos = -1
             self._current_stepper = None
 
         def step(self):
             if self._current_stepper is None:
-                stepper = self._get_next_stepper()
-                # If we can't get a stepper then no conditions match, return
-                if stepper is None:
-                    return True, None
-                self._current_stepper = stepper
+                self._create_stepper()
+
+            # If we can't get a stepper then no conditions match, return
+            if self._current_stepper is None:
+                return True, None
 
             finished, retval = self._current_stepper.step()
             if finished:
                 self._current_stepper = None
-            else:
-                self._pos += 1
+                self._pos = -1
 
             return finished, retval
 
-        def save_instance_state(self, out_state):
-            super(Stepper, self).save_instance_state(out_state)
+        def _create_stepper(self):
+            if self._pos == -1:
+                self._current_stepper = None
+                # Check the conditions until we find one that is true
+                for idx, condition in enumerate(self._if_spec.conditionals):
+                    if condition.is_true(self._workflow):
+                        stepper = condition.body.create_stepper(self._workflow)
+                        self._pos = idx
+                        self._current_stepper = stepper
+                        return
+            else:
+                branch = self._if_spec.conditionals[self._pos]
+                self._current_stepper = branch.body.create_stepper(self._workflow)
 
+        def save_instance_state(self, out_state):
+            super(_If.Stepper, self).save_instance_state(out_state)
             out_state[self._POSITION] = self._pos
             if self._current_stepper is not None:
-                stepper_pos = utils.Parcel()
+                stepper_pos = {}
                 self._current_stepper.save_instance_state(stepper_pos)
                 out_state[self._STEPPER_POS] = stepper_pos
+            out_state[self._IF_SPEC] = self._if_spec
 
         def load_instance_state(self, saved_state):
-            super(Stepper, self).load_instance_state(saved_state)
-
+            super(_If.Stepper, self).load_instance_state(saved_state)
             self._pos = saved_state[self._POSITION]
             if self._STEPPER_POS in saved_state:
-                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
-
-        def _get_next_stepper(self):
-            # Check the conditions until we find that that is true
-            for conditional in self._if_spec.conditionals[self._pos:]:
-                if conditional.is_true(self._workflow):
-                    return conditional.body.create_stepper(self._workflow)
-            return None
+                self._create_stepper()
+                self._current_stepper.load_instance_state(saved_state[self._STEPPER_POS])
+            else:
+                self._current_stepper = None
+            self._if_spec = saved_state[self._IF_SPEC]
 
     def __init__(self, condition):
         super(_If, self).__init__()

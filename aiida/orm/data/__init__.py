@@ -91,8 +91,16 @@ class Data(Node):
         """
         self.source = source
 
+    @property
+    def created_by(self):
+        inputs = self.get_inputs(link_type=LinkType.CREATE)
+        if inputs:
+            return inputs[0]
+        else:
+            return None
+
     @override
-    def _set_attr(self, key, value):
+    def _set_attr(self, key, value, **kwargs):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
@@ -107,7 +115,7 @@ class Data(Node):
         if self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot change the attributes of a stored data node.")
-        super(Data, self)._set_attr(key, value)
+        super(Data, self)._set_attr(key, value, **kwargs)
 
     @override
     def _del_attr(self, key):

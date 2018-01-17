@@ -8,32 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import traceback
-import collections
 import uritools
 import os.path
-
-import plum.persistence.pickle_persistence
-from plum.process import Process
-from aiida.common.lang import override
-from aiida.work.globals import class_loader
-
-import glob
 import os
-import os.path as path
+import plum
 import portalocker
 import portalocker.utils
-from shutil import copyfile
-import tempfile
-import pickle
-from plum.persistence.bundle import Bundle
-from plum.process_listener import ProcessListener
-from plum.utils import override, protected
-from plum.persistence._base import LOGGER
+import yaml
 
-_RUNNING_DIRECTORY = path.join(tempfile.gettempdir(), "running")
-_FINISHED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "finished")
-_FAILED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "failed")
+from aiida import orm
+from . import class_loader
+
+Bundle = plum.Bundle
 
 
 # If portalocker accepts my pull request to have this incorporated into the
@@ -73,9 +59,12 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-Persistence = plum.persistence.pickle_persistence.PicklePersistence
-
+Persistence = plum.PicklePersister
 _GLOBAL_PERSISTENCE = None
+
+
+class PersistenceError(BaseException):
+    pass
 
 
 def get_global_persistence():
@@ -98,7 +87,64 @@ def _create_storage():
             os.path.join(parts.path, setup.WORKFLOWS_SUBDIR))
 
         _GLOBAL_PERSISTENCE = Persistence(
-            running_directory=os.path.join(WORKFLOWS_DIR, 'running'),
-            finished_directory=os.path.join(WORKFLOWS_DIR, 'finished'),
-            failed_directory=os.path.join(WORKFLOWS_DIR, 'failed')
+            pickle_directory=WORKFLOWS_DIR
         )
+
+
+class AiiDAPersister(plum.Persister):
+    """
+    This node is responsible to taking saved process instance states and
+    persisting them to the database.
+    """
+    CALC_NODE_CHECKPOINT_KEY = 'checkpoints'
+
+    def save_checkpoint(self, process, tag=None):
+        if tag is not None:
+            raise NotImplementedError("Checkpoint tags not supported yet")
+
+        bundle = Bundle(process, class_loader.CLASS_LOADER)
+        calc = process.calc
+        calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY, yaml.dump(bundle))
+
+    def load_checkpoint(self, pid, tag=None):
+        if tag is not None:
+            raise NotImplementedError("Checkpoint tags not supported yet")
+
+        calc_node = orm.load_node(pid)
+        try:
+            bundle = yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
+            bundle.set_class_loader(class_loader.CLASS_LOADER)
+            return bundle
+        except ValueError:
+            raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")
+
+    def get_checkpoints(self):
+        """
+        Return a list of all the current persisted process checkpoints
+        with each element containing the process id and optional checkpoint tag
+
+        :return: list of PersistedCheckpoint tuples
+        """
+        pass
+
+    def get_process_checkpoints(self, pid):
+        """
+        Return a list of all the current persisted process checkpoints for the
+        specified process with each element containing the process id and
+        optional checkpoint tag
+
+        :param pid: the process pid
+        :return: list of PersistedCheckpoint tuples
+        """
+        pass
+
+    def delete_checkpoint(self, pid, tag=None):
+        orm.load_node(pid)._del_attr(self.CALC_NODE_CHECKPOINT_KEY)
+
+    def delete_process_checkpoints(self, pid):
+        """
+        Delete all persisted checkpoints related to the given process id
+
+        :param pid: the process id of the :class:`plum.process.Process`
+        """
+        pass

@@ -9,6 +9,15 @@
 ###########################################################################
 
 
+def TcodExporterFactory(module):
+    """
+    Return a suitable BaseTcodtranslator subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+
+    return BaseFactory(module, BaseTcodtranslator, 'aiida.tools.dbexporters.tcod_plugins')
+
+
 class BaseTcodtranslator(object):
     """
     Base translator from calculation-specific input and output parameters

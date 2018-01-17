@@ -1,10 +1,24 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Unit tests for postgres database maintenance functionality"""
 import unittest
+import mock
 
 from pgtest.pgtest import PGTest
 
 from aiida.control.postgres import Postgres
+
+
+def _try_connect_always_fail(**kwargs):  # pylint: disable=unused-argument
+    """Always return False"""
+    return False
 
 
 class PostgresTest(unittest.TestCase):
@@ -25,8 +39,8 @@ class PostgresTest(unittest.TestCase):
 
     def test_determine_setup_fail(self):
         self.postgres.set_port('11111')
-        self.postgres.determine_setup()
-        self.assertFalse(self.postgres.pg_execute)
+        setup_success = self.postgres.determine_setup()
+        self.assertFalse(setup_success)
 
     def test_determine_setup_success(self):
         self._setup_postgres()
@@ -42,6 +56,14 @@ class PostgresTest(unittest.TestCase):
         self.postgres.set_setup_fail_callback(correct_setup)
         self.postgres.determine_setup()
         self.assertTrue(self.postgres.pg_execute)
+
+    @mock.patch(
+        'aiida.control.postgres._try_connect', new=_try_connect_always_fail)
+    @mock.patch('aiida.control.postgres._try_subcmd')
+    def test_fallback_on_subcmd(self, try_subcmd):
+        """Ensure that accessing postgres via subcommand is tried if psychopg does not work."""
+        self._setup_postgres()
+        self.assertTrue(try_subcmd.call_count >= 1)
 
     def test_create_drop_db_user(self):
         """Check creating and dropping a user works"""

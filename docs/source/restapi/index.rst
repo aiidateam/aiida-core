@@ -109,13 +109,29 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request the list of objects of a specific resource, namely, the AiiDA object type you are requesting, and those that inquire a specific object of a certain resource. In both cases the path has to start with the name of the resource. The complete list of resources is: ``users``, ``computers``, ``groups``, ``nodes``, ``codes``, ``calculations``, and ``data``, ``structures``, ``kpoints``, ``bands``. If no specific endpoint is appended to the name of the resource, the Api will return the full list of objects of that resource (the Api default limit applies nevertheless to the number of results).
-Appending the endpoint ``schema`` to a resource will give the list of fields that are normally returned by the Api for an object of a specific resource, whereas the endpoint ``statistics`` returns a list of statistical facts concerning a resource.
+There are two type of paths: those that request the list of objects of a
+specific resource, namely, the AiiDA object type you are requesting, and those
+that inquire a specific object of a certain resource. In both cases the path
+has to start with the name of the resource. The complete list of resources is:
+
+* ``nodes``
+* ``computers``
+* ``codes``
+* ``calculations``,
+* ``data``, ``structures``, ``kpoints``, ``bands``
+* ``users``, ``groups``, 
+
+If no specific endpoint is appended to the name of the resource, the Api will
+return the full list of objects of that resource (the Api default limit applies
+nevertheless to the number of results).  Appending the endpoint ``schema`` to a
+resource will give the list of fields that are normally returned by the Api for
+an object of a specific resource, whereas the endpoint ``statistics`` returns a
+list of statistical facts concerning a resource.
 Here are few examples of valid URIs::
 
+    http://localhost:5000/api/v2/nodes/statistics
     http://localhost:5000/api/v2/users/
     http://localhost:5000/api/v2/groups/schema
-    http://localhost:5000/api/v2/nodes/statistics
 
 
 If you request informations of a specific object, in general you have to append its entire *uuid* or the starting pattern of its *uuid* to the path.
@@ -227,7 +243,7 @@ The following table reports what is the value type and the supported resources a
 +----------------+----------+----------------------------------------------------------+
 |institution     |string    |users                                                     |
 +----------------+----------+----------------------------------------------------------+
-|email           |string    |users                                                     |
+|email *         |string    |users                                                     |
 +----------------+----------+----------------------------------------------------------+
 |label           |string    |nodes, calculations, codes, data                          |
 +----------------+----------+----------------------------------------------------------+
@@ -241,13 +257,13 @@ The following table reports what is the value type and the supported resources a
 +----------------+----------+----------------------------------------------------------+
 |enabled         |bool      |computers                                                 |
 +----------------+----------+----------------------------------------------------------+
-|is_active       |bool      |users                                                     |
+|is_active *     |bool      |users                                                     |
 +----------------+----------+----------------------------------------------------------+
 |ctime           |datetime  |nodes, calculations, codes, data                          |
 +----------------+----------+----------------------------------------------------------+
 |mtime           |datetime  |nodes, calculations, codes, data                          |
 +----------------+----------+----------------------------------------------------------+
-|last_login      |datetime  |users                                                     |
+|last_login *    |datetime  |users                                                     |
 +----------------+----------+----------------------------------------------------------+
 |date_joined     |datetime  |users                                                     |
 +----------------+----------+----------------------------------------------------------+
@@ -257,6 +273,8 @@ The following table reports what is the value type and the supported resources a
 +----------------+----------+----------------------------------------------------------+
 |hostname        |string    |computers                                                 |
 +----------------+----------+----------------------------------------------------------+
+
+\* Key not available via the ``/users/`` endpoint for reasons of privacy.
 
 The operators supported by a specific key are uniquely determined by the value type associated to that key. For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the relational operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``.  
 Please refer to the following table for a comprehensive list. 
@@ -924,22 +942,16 @@ Users
             "users": [
               {
                 "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
-                "email": "aiida@localhost", 
                 "first_name": "AiiDA", 
                 "id": 1, 
                 "institution": "", 
-                "is_active": true, 
-                "last_login": "Mon, 25 Jan 2016 14:31:17 GMT", 
                 "last_name": "Daemon"
               }, 
               {
                 "date_joined": "Thu, 11 Aug 2016 12:35:32 GMT",
-                "email": "gengis.khan@aiida.net",
                 "first_name": "Gengis",
                 "id": 2,
                 "institution": "",
-                "is_active": true,
-                "last_login": "Thu, 11 Aug 2016 12:35:32 GMT", 
                 "last_name": "Khan"
               }
             ]
@@ -970,12 +982,9 @@ Users
             "users": [
               {
                 "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
-                "email": "aiida@localhost", 
                 "first_name": "AiiDA", 
                 "id": 1, 
                 "institution": "", 
-                "is_active": true, 
-                "last_login": "Mon, 25 Jan 2016 14:31:17 GMT", 
                 "last_name": "Daemon"
               }
             ]

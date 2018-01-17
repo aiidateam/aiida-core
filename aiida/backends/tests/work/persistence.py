@@ -18,25 +18,46 @@ from aiida import work
 
 
 class TestProcess(AiidaTestCase):
+    """ Test the basic saving and loading of process states """
+
     def setUp(self):
         super(TestProcess, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-
-        self.persistence = Persistence(running_directory=tempfile.mkdtemp())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_save_load(self):
-        dp = DummyProcess()
+        process = DummyProcess()
+        saved_state = work.Bundle(process)
+        del process
 
-        # Create a bundle
-        b = self.persistence.create_bundle(dp)
-        # Save a bundle and reload it
-        self.persistence.save(dp)
-        b2 = self.persistence._load_checkpoint(dp.pid)
-        # Now check that they are equal
-        self.assertEqual(b, b2)
+        loaded_process = saved_state.unbundle()
+        result_from_loaded = work.run(loaded_process)
 
-        work.run(dp)
+        self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
+
+# class TestProcess(AiidaTestCase):
+#     def setUp(self):
+#         super(TestProcess, self).setUp()
+#         self.assertEquals(len(util.ProcessStack.stack()), 0)
+#
+#         self.persistence = Persistence(running_directory=tempfile.mkdtemp())
+#
+#     def tearDown(self):
+#         super(TestProcess, self).tearDown()
+#         self.assertEquals(len(util.ProcessStack.stack()), 0)
+#
+#     def test_save_load(self):
+#         dp = DummyProcess()
+#
+#         # Create a bundle
+#         b = self.persistence.create_bundle(dp)
+#         # Save a bundle and reload it
+#         self.persistence.save(dp)
+#         b2 = self.persistence._load_checkpoint(dp.pid)
+#         # Now check that they are equal
+#         self.assertEqual(b, b2)
+#
+#         work.run(dp)

@@ -10,97 +10,44 @@
 
 from collections import namedtuple
 
-from enum import Enum
+from . import runners
+from . import utils
 
-from aiida.work.default_loop import enqueue
-from . import runner
-from . import legacy
-
-__all__ = ['run', 'rrun', 'run_get_pid', 'rrun_get_pid', 'async', 'submit']
-
-
-class RunningType(Enum):
-    """
-    A type to indicate what type of object is running: a process,
-    a calculation or a workflow
-    """
-    PROCESS = 0
-    LEGACY_CALC = 1
-    LEGACY_WORKFLOW = 2
-
+__all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
 
-def legacy_workflow(pk):
-    return legacy.WaitOnWorkflow(pk)
-
-
-def legacy_calc(pk):
-    """
-    Create a :class:`.RunningInfo` object for a legacy calculation
-
-    :param pk: The calculation pk
-    :type pk: int
-    :return: The running info
-    :rtype: :class:`.RunningInfo`
-    """
-    return RunningInfo(RunningType.LEGACY_CALC, pk)
-
-
-def async(process_class, *args, **inputs):
-    """
-    Run a workfunction or workchain asynchronously.  The inputs get passed
-    on to the workchain/workchain.
-
-    :param process_class: The workchain or workfunction to run asynchronously
-    :param args:
-    :param kwargs: The keyword argument pairs
-    :return: A future that represents the execution of the task.
-    :rtype: :class:`plum.thread_executor.Future`
-    """
-    return enqueue(process_class, *args, **inputs)
-
-
 def submit(process_class, **inputs):
-    with runner.create_runner() as my_runner:
-        return my_runner.submit(process_class, **inputs)
+    assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
+    runner = runners.get_runner()
+    return runner.submit(process_class, **inputs)
 
 
-def run(process_or_workfunction, *args, **inputs):
+def run(process, *args, **inputs):
     """
     Run a workfunction or process and return the result.
 
-    :param process_or_workfunction: The process class, instance or workfunction
+    :param process: The process class, instance or workfunction
     :param args: Positional arguments for a workfunction
     :param inputs: The list of keyword inputs
     :return: The result of the process
     """
-    with runner.create_runner() as my_runner:
-        return rrun(my_runner, process_or_workfunction, *args, **inputs)
+    if utils.is_workfunction(process):
+        return process(*args, **inputs)
+    else:
+        runner = runners.get_runner()
+        return runner.run(process, *args, **inputs)
 
 
-def rrun(runner_, process_or_workfunction, *args, **inputs):
-    """
-    Run with the supplied runner.
-    
-    :param runner_: The runner to run with
-    :param process_or_workfunction: The process class, instance or workfunction
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of keyword inputs
-    :return: The result of the process
-    """
-    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
-    runner_.insert(proc)
-    return runner_.run_until_complete(proc)
+def run_get_node(process, *args, **inputs):
+    if utils.is_workfunction(process):
+        return process.run_get_node(*args, **inputs)
+    else:
+        runner = runners.get_runner()
+        return runner.run_get_node(process, *args, **inputs)
 
 
-def run_get_pid(process_or_workfunction, *args, **inputs):
-    with runner.create_runner() as my_runner:
-        return rrun_get_pid(my_runner, process_or_workfunction, *args, **inputs)
-
-
-def rrun_get_pid(runner_, process_or_workfunction, *args, **inputs):
-    proc = runner._get_process_instance(process_or_workfunction, *args, **inputs)
-    runner_.insert(proc)
-    return runner.ResultAndPid(runner_.run_until_complete(proc), proc.pid)
+def run_get_pid(process, *args, **inputs):
+    result, calc = run_get_node(process, *args, **inputs)
+    return runners.ResultAndPid(result, calc.pk)

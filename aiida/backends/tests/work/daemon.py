@@ -11,14 +11,13 @@ from aiida.backends.testbase import AiidaTestCase
 import tempfile
 from shutil import rmtree
 import unittest
-
-from plum.wait_ons import Checkpoint
+import plum
 
 from aiida.work.persistence import Persistence
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.base import get_true_node
 import aiida.work.daemon as daemon
-from aiida.work.process import Process
+from aiida.work.processes import Process
 from aiida.work.launch import submit
 from aiida.common.lang import override
 from aiida.orm import load_node
@@ -89,7 +88,7 @@ class ProcessEventsTester(Process):
 
     @override
     def _run(self):
-        return Checkpoint(), self.finish
+        return plum.Continue(self.finish)
 
     def finish(self, wait_on):
         pass
@@ -160,6 +159,7 @@ class TestDaemon(AiidaTestCase):
         self.assertFalse(registry.has_finished(fail_rinfo.pid))
 
 
+@unittest.skip("Moving to new daemon")
 class TestJobCalculationDaemon(AiidaTestCase):
     def test_launch_pending_submitted(self):
         num_at_start = len(work_daemon.get_all_pending_job_calculations())

@@ -10,9 +10,9 @@
 
 from aiida.backends.testbase import AiidaTestCase
 
+import aiida.orm
 from aiida.orm.data.base import Int, Str
 from aiida import work
-from aiida.work import default_loop
 from aiida.work.test_utils import DummyProcess
 
 
@@ -23,12 +23,11 @@ class TestRun(AiidaTestCase):
     def tearDown(self):
         super(TestRun, self).tearDown()
 
-    def test_run_process_class(self):
+    def test_run(self):
         inputs = {'a': Int(2), 'b': Str('test')}
+        result = work.run(DummyProcess, **inputs)
 
-        # Queue up the process
-        proc = default_loop.enqueue(DummyProcess, inputs)
-
-        result = work.run(DummyProcess)
-
-        # TODO: Use a process that actually outputs something and check
+    def test_run_get_node(self):
+        inputs = {'a': Int(2), 'b': Str('test')}
+        result, node = work.run_get_node(DummyProcess, **inputs)
+        self.assertIsInstance(node, aiida.orm.Calculation)

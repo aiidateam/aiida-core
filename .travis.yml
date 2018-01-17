@@ -11,6 +11,7 @@ python:
 cache: pip
 
 services:
+    - rabbitmq
     - postgresql
     - docker
 
@@ -18,15 +19,15 @@ addons:
     postgresql: "9.4"
 #  postgresql: "9.5" # Available in Trusty only
     apt:
-       packages:
-           - texlive-base
-           - texlive-generic-recommended
-           - texlive-fonts-recommended
-           - texlive-latex-base
-           - texlive-latex-recommended
-           - texlive-latex-extra
-           - dvipng
-           - dvidvi
+        packages:
+            - texlive-base
+            - texlive-generic-recommended
+            - texlive-fonts-recommended
+            - texlive-latex-base
+            - texlive-latex-recommended
+            - texlive-latex-extra
+            - dvipng
+            - dvidvi
 
 before_install:
     # This is needed for the SSH tests (being able to ssh to localhost)
@@ -43,6 +44,7 @@ install:
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - pip install .[REST,docs,atomic_tools,testing,dev_precommit]
+    - pip install -e git+https://github.com/muhrin/plumpy@develop#egg=plumpy-0.10.0
 
 env:
 ## Build matrix to test both backends, and the docs
@@ -57,6 +59,10 @@ env:
 
 before_script:
     - .travis-data/setup_profiles.sh
+    # make the time between tests shorter to speed-up tests
+    # This script might need to be adapted when changing the logic
+    # of the daemon loops or the schema of the config.json file
+    - if [ "$TEST_TYPE" == "tests" ] ; then .travis-data/set_daemon_times.py $TEST_AIIDA_BACKEND ; fi
     - .travis-data/before_script.sh
 
 script: .travis-data/test_script.sh

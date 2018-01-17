@@ -11,11 +11,11 @@ from aiida.orm.data.base import BaseType, Float, Str
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
-from aiida.work.launch import async, run
 from aiida.work.utils import ProcessStack
-from aiida.work.workfunction import workfunction
+from aiida.work.workfunctions import workfunction
 from aiida.work.workchain import WorkChain, ToContext, while_, Outputs
-from examples.work.common import run_scf, generate_scf_input_params
+from aiida import work
+from examples.work import common
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
@@ -63,15 +63,15 @@ class EquationOfState(WorkChain):
         spec.input("codename", valid_type=BaseType)
         spec.input("pseudo_family", valid_type=BaseType)
         spec.outline(
-            cls.init,
+            cls.begin,
             while_(cls.not_finished)(
                 cls.run_pw,
                 cls.print_result
             )
         )
 
-    def init(self):
-        self.ctx.scales = (0.96, 0.98, 1., 1.02, 1.04)
+    def begin(self):
+        self.ctx.scales = (0.94, 0.96, 0.98, 1., 1.02, 1.04, 1.06)
         self.ctx.i = 0
 
     def not_finished(self):
@@ -81,12 +81,12 @@ class EquationOfState(WorkChain):
         scale = self.ctx.scales[self.ctx.i]
         scaled = rescale(self.inputs.structure, Float(scale))
 
-        inputs = generate_scf_input_params(
+        inputs = common.generate_scf_input_params(
             scaled, self.inputs.codename, self.inputs.pseudo_family)
 
         # Launch the code
         process = PwCalculation.process()
-        future = async(process, **inputs)
+        future = self.submit(process, **inputs)
 
         return ToContext(result=Outputs(future))
 
@@ -96,11 +96,13 @@ class EquationOfState(WorkChain):
 
 
 structure = create_diamond_fcc(Str('C'), Float(3.57))
-codename = 'pwx@localhost'
-pseudo_family_name = 'sssp_eff'
+codename = 'pw.x@localhost'
+pseudo_family_name = 'SSSP_eff_PBE_0.7'
 
-run(EquationOfState,
-    structure=structure,
-    codename=Str(codename),
-    pseudo_family=Str(pseudo_family_name)
-    )
+result = work.run(EquationOfState,
+                     structure=structure,
+                     codename=Str(codename),
+                     pseudo_family=Str(pseudo_family_name)
+                     )
+
+print(result)

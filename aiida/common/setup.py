@@ -19,9 +19,11 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
-DEFAULT_AIIDA_USER = "aiida@localhost"
+DEFAULT_AIIDA_USER = 'aiida@localhost'
 
-AIIDA_PATH = [path for path in os.environ.get('AIIDA_PATH', '').split(':') if path] + [os.path.expanduser('~')]
+AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
+AIIDA_PATH.append(os.path.expanduser('~'))
+
 for path in AIIDA_PATH:
     try:
         AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
@@ -29,15 +31,21 @@ for path in AIIDA_PATH:
     except OSError:
         pass
 else:
-    AIIDA_CONFIG_FOLDER = "~/.aiida"
+    AIIDA_CONFIG_FOLDER = '~/.aiida'
+
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = "daemon"
-LOG_SUBDIR = "daemon/log"
-DAEMON_CONF_FILE = "aiida_daemon.conf"
+DAEMON_SUBDIR = 'daemon'
+LOG_SUBDIR = 'daemon/log'
+DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-WORKFLOWS_SUBDIR = "workflows"
+CELERY_LOG_FILE = 'celery.log'
+CELERY_PID_FILE = 'celery.pid'
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+
+WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
@@ -50,17 +58,17 @@ DEFAULT_PROCESS = 'verdi'
 DEFAULT_UMASK = 0o0077
 
 # Profile keys
-aiidadb_backend_key = "AIIDADB_BACKEND"
+aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
-aiidadb_backend_value_django = "django"
+aiidadb_backend_value_django = 'django'
 
 # Repository for tests
 TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
-TEST_KEYWORD = "test_"
+TEST_KEYWORD = 'test_'
 
 
 def get_aiida_dir():
@@ -134,73 +142,6 @@ def store_config(confs):
     try:
         with open(conf_file, "w") as json_file:
             json.dump(confs, json_file)
-    finally:
-        os.umask(old_umask)
-
-
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
-                         daemon_conf=None):
-    """
-    Install the files needed to run the daemon.
-    """
-    local_daemon_conf = """
-[unix_http_server]
-file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
-
-[supervisord]
-logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB
-logfile_backups=2
-loglevel=info
-pidfile={daemon_dir}/supervisord.pid
-nodaemon=false
-minfds=1024
-minprocs=200
-
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///{daemon_dir}/supervisord.sock
-
-;=======================================
-; Main AiiDA Daemon
-;=======================================
-[program:aiida-daemon]
-command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
-directory={aiida_code_home}/daemon/
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon.log
-stderr_logfile={log_dir}/aiida_daemon.log
-autostart=true
-autorestart=true
-startsecs=10
-
-; Need to wait for currently executing tasks to finish at shutdown.
-; Increase this if you have very long running tasks.
-stopwaitsecs = 600
-
-; When resorting to send SIGKILL to the program to terminate it
-; send SIGKILL to its whole process group instead,
-; taking care of its children as well.
-killasgroup=true
-
-; Set Celery priority higher than default (999)
-; so, if rabbitmq is supervised, it will start first.
-priority=1000
-"""
-    if daemon_conf is None:
-        daemon_conf = local_daemon_conf
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
-            f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
-                                       local_user=local_user,
-                                       aiida_code_home=os.path.split(
-                                           os.path.abspath(
-                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -322,9 +263,6 @@ def create_base_dirs(config_dir=None):
             os.makedirs(aiida_log_dir)
     finally:
         os.umask(old_umask)
-
-    # Install daemon files
-    install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
 
     # Create the secret key file, if needed
     try_create_secret_key()
@@ -922,7 +860,7 @@ _property_table = {
         "logging_alembic_log_level",
         "string",
         "Minimum level to log to the console",
-        "INFO",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.sqlalchemy_loglevel": (
         "logging_sqlalchemy_loglevel",
@@ -1023,7 +961,7 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import MissingConfigurationError
-    import aiida.utils.logger as logger
+    from aiida.common.log import LOG_LEVELS
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -1050,7 +988,7 @@ def get_property(name, default=_NoDefaultValue()):
     # will return the corresponding integer, even though a string is stored in
     # the config.
     if name.startswith('logging.') and name.endswith('loglevel'):
-        value = logger.LOG_LEVELS[value]
+        value = LOG_LEVELS[value]
 
     return value
 

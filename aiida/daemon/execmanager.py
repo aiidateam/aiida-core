@@ -27,11 +27,14 @@ from aiida.common.links import LinkType
 from aiida.orm import load_node
 from aiida.orm import DataFactory
 from aiida.orm.data.folder import FolderData
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 import os
 
 
-execlogger = aiidalogger.getChild('execmanager')
+# Until we fix the broken daemon logger https://github.com/aiidateam/aiida_core/issues/943
+# execlogger = aiidalogger.getChild('execmanager')
+import logging
+execlogger = logging.getLogger('execmanager')
 
 
 def update_running_calcs_status(authinfo):
@@ -39,7 +42,9 @@ def update_running_calcs_status(authinfo):
     Update the states of calculations in WITHSCHEDULER status belonging
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import Computer
+    from aiida.orm import JobCalculation, Computer
+    from aiida.scheduler.datastructures import JobInfo
+    from aiida.common.log import get_dblogger_extra
     from aiida.backends.utils import QueryFactory
 
     if not authinfo.enabled:
@@ -105,7 +110,6 @@ def update_running_calcs_status(authinfo):
 
     return computed
 
-
 def update_job(job, scheduler=None):
     """
 
@@ -118,7 +122,6 @@ def update_job(job, scheduler=None):
     * scheduler._transport is not None
 
     :param job: The job calculation to update
-    :type job: :class:`aiida.orm.calculation.job.JobCalculation`
     :return: True if the job has is 'computed', False otherwise
     :rtype: bool
     """
@@ -143,6 +146,7 @@ def update_job(job, scheduler=None):
         job_info = scheduler.getJobs(jobs=[job_id], as_dict=True).get(job_id, None)
         return _update_job_calc(job, scheduler, job_info)
 
+    return computed
 
 def update_job_calc_from_job_info(calc, job_info):
     """
@@ -150,7 +154,6 @@ def update_job_calc_from_job_info(calc, job_info):
     as obtained from the scheduler.
 
     :param calc: The job calculation
-    :type calc: :class:`aiida.orm.calculation.job.JobCalculation`
     :param job_info: the information returned by the scheduler for this job
     :return: True if the job state is DONE, False otherwise
     :rtype: bool
@@ -167,7 +170,6 @@ def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
     the scheduler
 
     :param calc: The job calculation
-    :type calc: :class:`aiida.orm.calculation.job.JobCalculation`
     :param detailed_job_info: the detailed information as returned by the
         scheduler for this job
     """
@@ -259,8 +261,9 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.utils.logger import get_dblogger_extra
-    from aiida.backends.utils import QueryFactory
+    from aiida.orm import JobCalculation, Computer, User
+    from aiida.common.log import get_dblogger_extra
+    from aiida.backends.utils import get_authinfo, QueryFactory
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
@@ -315,7 +318,6 @@ def submit_jobs():
                 aiidauser.email,
                 computer.name,
                 e.__class__.__name__, traceback.format_exc()))
-            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue
@@ -330,9 +332,11 @@ def submit_jobs_with_authinfo(authinfo):
     to user and machine as defined in the 'dbauthinfo' table.
     """
     from aiida.orm import JobCalculation
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
 
     from aiida.backends.utils import QueryFactory
+
+
 
     if not authinfo.enabled:
         return
@@ -344,9 +348,10 @@ def submit_jobs_with_authinfo(authinfo):
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
-        state=calc_states.TOSUBMIT,
+            state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
+
 
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -375,7 +380,7 @@ def submit_jobs_with_authinfo(authinfo):
         # because any other exception is caught and skipped above
         except Exception as e:
             import traceback
-            from aiida.utils.logger import get_dblogger_extra
+            from aiida.common.log import get_dblogger_extra
 
             for calc in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
@@ -413,7 +418,7 @@ def submit_calc(calc, authinfo, transport=None):
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import InputValidationError
     from aiida.orm.data.remote import RemoteData
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -646,7 +651,15 @@ def submit_calc(calc, authinfo, transport=None):
 
 
 def retrieve_computed_for_authinfo(authinfo):
+    from aiida.orm import JobCalculation
+    from aiida.common.folders import SandboxFolder
+    from aiida.orm.data.folder import FolderData
+    from aiida.common.log import get_dblogger_extra
+    from aiida.orm import DataFactory
+
     from aiida.backends.utils import QueryFactory
+
+    import os
 
     if not authinfo.enabled:
         return
@@ -657,6 +670,7 @@ def retrieve_computed_for_authinfo(authinfo):
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
+
 
     retrieved = []
 
@@ -672,7 +686,6 @@ def retrieve_computed_for_authinfo(authinfo):
 
     return retrieved
 
-
 def retrieve_and_parse(calc, transport=None):
     if transport is None:
         authinfo = get_authinfo(calc.get_computer(), calc.get_user())
@@ -682,7 +695,7 @@ def retrieve_and_parse(calc, transport=None):
     transport._set_logger_extra(logger_extra)
 
     try:
-        retrieve_all(calc, transport, logger_extra)
+        retrieved_temporary_folder = retrieve_all(calc, transport, logger_extra)
     except Exception:
         import traceback
 
@@ -698,7 +711,7 @@ def retrieve_and_parse(calc, transport=None):
         return False
 
     try:
-        parse_results(calc, logger_extra)
+        parse_results(calc, retrieved_temporary_folder, logger_extra)
     except Exception:
         import traceback
 
@@ -746,13 +759,44 @@ def retrieve_all(job, transport, logger_extra=None):
         transport.chdir(workdir)
 
         # First, retrieve the files of folderdata
-        _retrieve_folderdata(job, retrieved_files, transport, logger_extra)
+        retrieve_list = job._get_retrieve_list()
+        retrieve_temporary_list = job._get_retrieve_temporary_list()
+        retrieve_singlefile_list = job._get_retrieve_singlefile_list()
+
+        with SandboxFolder() as folder:
+            retrieve_files_from_list(job, transport, folder, retrieve_list)
+            # Here I retrieved everything; now I store them inside the calculation
+            retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
 
         # Second, retrieve the singlefiles
-        _retrieve_singlefiles(job, retrieved_files, transport, logger_extra)
+        _retrieve_singlefiles(job, transport, retrieve_singlefile_list, logger_extra)
+
+        # Retrieve the temporary files in a separate temporary folder if any files were
+        # specified in the 'retrieve_temporary_list' key
+        if retrieve_temporary_list:
+            retrieved_temporary_folder = FolderData()
+            with SandboxFolder() as folder:
+                retrieve_files_from_list(job, transport, folder, retrieve_temporary_list)
+                retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
+
+            # Log the files that were retrieved in the temporary folder
+            for entry in retrieved_temporary_folder.get_folder_list():
+                execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
+                job.pk, entry), extra=logger_extra)
+        else:
+            retrieved_temporary_folder = None
+
+        # Store everything
+        execlogger.debug(
+            "[retrieval of calc {}] "
+            "Storing retrieved_files={}".format(job.pk, retrieved_files.dbnode.pk),
+            extra=logger_extra)
+        retrieved_files.store()
+
+    return retrieved_temporary_folder
 
 
-def parse_results(job, logger_extra=None):
+def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
     job._set_state(calc_states.PARSING)
 
     Parser = job.get_parserclass()
@@ -761,7 +805,7 @@ def parse_results(job, logger_extra=None):
     successful = True
     if Parser is not None:
         parser = Parser(job)
-        successful, new_nodes_tuple = parser.parse_from_calc()
+        successful, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
 
         for label, n in new_nodes_tuple:
             n.add_link_from(job, label=label, link_type=LinkType.CREATE)
@@ -788,7 +832,7 @@ def parse_results(job, logger_extra=None):
 
 
 def _update_job_calc(calc, scheduler, job_info):
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
 
     logger_extra = get_dblogger_extra(calc)
     finished = False
@@ -854,97 +898,28 @@ def _update_job_calc(calc, scheduler, job_info):
 
     return finished
 
+def _retrieve_singlefiles(job, transport, retrieve_file_list, logger_extra=None):
+    singlefile_list = []
+    for (linkname, subclassname, filename) in retrieve_file_list:
+        execlogger.debug("[retrieval of calc {}] Trying "
+                         "to retrieve remote singlefile '{}'".format(
+            job.pk, filename), extra=logger_extra)
+        localfilename = os.path.join(retrieved_files.abspath, os.path.split(filename)[1])
+        transport.get(filename, localfilename, ignore_nonexisting=True)
+        singlefile_list.append((linkname, subclassname, localfilename))
 
-def _retrieve_folderdata(job, retrieved_files, transport, logger_extra=None):
-    # Retrieve the files of folderdata
-    retrieve_list = job._get_retrieve_list()
+    # ignore files that have not been retrieved
+    singlefile_list = [i for i in singlefile_list if
+                       os.path.exists(i[2])]
 
-    with SandboxFolder() as folder:
-        with transport:
-            for item in retrieve_list:
-                # I have two possibilities:
-                # * item is a string
-                # * or is a list
-                # then I have other two possibilities:
-                # * there are file patterns
-                # * or not
-                # First decide the name of the files
-                if isinstance(item, list):
-                    tmp_rname, tmp_lname, depth = item
-                    # if there are more than one file I do something differently
-                    if transport.has_magic(tmp_rname):
-                        remote_names = transport.glob(tmp_rname)
-                        local_names = []
-                        for rem in remote_names:
-                            to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
-                            local_names.append(os.path.sep.join([tmp_lname] + to_append))
-                    else:
-                        remote_names = [tmp_rname]
-                        to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
-                        local_names = [os.path.sep.join([tmp_lname] + to_append)]
-
-                    if depth > 1:  # create directories in the folder, if needed
-                        for this_local_file in local_names:
-                            new_folder = os.path.join(
-                                folder.abspath,
-                                os.path.split(this_local_file)[0])
-                            if not os.path.exists(new_folder):
-                                os.makedirs(new_folder)
-                else:  # it is a string
-                    if transport.has_magic(item):
-                        remote_names = transport.glob(item)
-                        local_names = [os.path.split(rem)[1] for rem in remote_names]
-                    else:
-                        remote_names = [item]
-                        local_names = [os.path.split(item)[1]]
-
-                for rem, loc in zip(remote_names, local_names):
-                    execlogger.debug(
-                        "[retrieval of calc {}] "
-                        "Trying to retrieve remote item '{}'".format(job.pk, rem),
-                        extra=logger_extra)
-                    transport.get(rem, os.path.join(folder.abspath, loc),
-                                  ignore_nonexisting=True)
-
-        # Here I retrieved everything;
-        # now I store them inside the calculation
-        retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
-
-
-def _retrieve_singlefiles(job, retrieved_files, transport, logger_extra=None):
-    retrieve_singlefile_list = job._get_retrieve_singlefile_list()
-    with SandboxFolder() as folder:
-        singlefile_list = []
-
-        with transport:
-            for (linkname, subclassname, filename) in retrieve_singlefile_list:
-                execlogger.debug(
-                    "[retrieval of calc {}] Trying "
-                    "to retrieve remote singlefile '{}'".format(job.pk, filename),
-                    extra=logger_extra
-                )
-                localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
-                transport.get(filename, localfilename, ignore_nonexisting=True)
-                singlefile_list.append((linkname, subclassname, localfilename))
-
-        # ignore files that have not been retrieved
-        singlefile_list = [i for i in singlefile_list if os.path.exists(i[2])]
-
-        # after retrieving from the cluster, I create the objects
-        singlefiles = []
-        for (linkname, subclassname, filename) in singlefile_list:
-            SinglefileSubclass = DataFactory(subclassname)
-            singlefile = SinglefileSubclass()
-            singlefile.set_file(filename)
-            singlefile.add_link_from(job, label=linkname, link_type=LinkType.CREATE)
-            singlefiles.append(singlefile)
-
-    # Store everything
-    execlogger.debug(
-        "[retrieval of calc {}] "
-        "Storing retrieved_files={}".format(job.pk, retrieved_files.dbnode.pk),
-        extra=logger_extra)
-    retrieved_files.store()
+    # after retrieving from the cluster, I create the objects
+    singlefiles = []
+    for (linkname, subclassname, filename) in singlefile_list:
+        SinglefileSubclass = DataFactory(subclassname)
+        singlefile = SinglefileSubclass()
+        singlefile.set_file(filename)
+        singlefile.add_link_from(job, label=linkname, link_type=LinkType.CREATE)
+        singlefiles.append(singlefile)
 
     for fil in singlefiles:
         execlogger.debug(
@@ -960,3 +935,62 @@ def _set_state_noraise(job, state):
         return True
     except ModificationNotAllowed:
         return False
+
+def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
+    """
+    Retrieve all the files in the retrieve_list from the remote into the
+    local folder instance through the transport. The entries in the retrieve_list
+    can be of two types:
+
+        * a string
+        * a list
+
+    If it is a string, it represents the remote absolute filepath of the file.
+    If the item is a list, the elements will correspond to the following:
+
+        * remotepath
+        * localpath
+        * depth
+
+    If the remotepath contains file patterns with wildcards, the localpath will be
+    treated as the work directory of the folder and the depth integer determines
+    upto what level of the original remotepath nesting the files will be copied.
+
+    :param transport: the Transport instance
+    :param folder: a local Folder instance for the transport to store files into
+    :param retrieve_list: the list of files to retrieve
+    """
+    import os
+
+    for item in retrieve_list:
+        if isinstance(item, list):
+            tmp_rname, tmp_lname, depth = item
+            # if there are more than one file I do something differently
+            if transport.has_magic(tmp_rname):
+                remote_names = transport.glob(tmp_rname)
+                local_names = []
+                for rem in remote_names:
+                    to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                    local_names.append(os.path.sep.join([tmp_lname] + to_append))
+            else:
+                remote_names = [tmp_rname]
+                to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
+                local_names = [os.path.sep.join([tmp_lname] + to_append)]
+            if depth > 1:  # create directories in the folder, if needed
+                for this_local_file in local_names:
+                    new_folder = os.path.join(
+                        folder.abspath,
+                        os.path.split(this_local_file)[0])
+                    if not os.path.exists(new_folder):
+                        os.makedirs(new_folder)
+        else:  # it is a string
+            if transport.has_magic(item):
+                remote_names = transport.glob(item)
+                local_names = [os.path.split(rem)[1] for rem in remote_names]
+            else:
+                remote_names = [item]
+                local_names = [os.path.split(item)[1]]
+
+        for rem, loc in zip(remote_names, local_names):
+            transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
+            transport.get(rem, os.path.join(folder.abspath, loc), ignore_nonexisting=True)

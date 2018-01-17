@@ -725,6 +725,13 @@ class StructureData(Data):
                               ("pymatgen", "pymatgen_structure"),
                               ("pymatgen_molecule", "pymatgen_structure")]
 
+    _dimensionality_label = {
+        0: "",
+        1: "length",
+        2: "surface",
+        3: "volume"
+    }
+
     @property
     def _set_defaults(self):
         parent_dict = super(StructureData, self)._set_defaults
@@ -735,6 +742,39 @@ class StructureData(Data):
         })
 
         return parent_dict
+
+    def get_dimensionality(self):
+        """
+        This function checks the dimensionality of the structure and
+        calculates its length/surface/volume
+        :return: returns the dimensionality and length/surface/volume
+        """
+
+        import numpy as np
+
+        retdict = {}
+
+        cell = np.array(self.cell)
+        pbc = np.array(self.pbc)
+        dim = len(pbc[pbc])
+
+        retdict['dim'] = dim
+        retdict['label'] = self._dimensionality_label[dim]
+
+        if dim == 0:
+            pass
+        elif dim == 1:
+            v = cell[pbc]
+            retdict['value'] = np.linalg.norm(v)
+        elif dim == 2:
+            vectors = cell[pbc]
+            retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
+        elif dim == 3:
+            retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
+        else:
+            raise ValueError("Dimensionality {} must be <= 3".format(dim))
+
+        return retdict
 
     def set_ase(self, aseatoms):
         """
@@ -1164,9 +1204,7 @@ class StructureData(Data):
                              "".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
-        # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('kinds',
-                       self.get_attr('kinds', []) + [new_kind.get_raw()])
+        self._append_to_attr('kinds', new_kind.get_raw())
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
@@ -1197,9 +1235,7 @@ class StructureData(Data):
                                          [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
-        # I join two lists. Do not use .append, which would work in-place
-        self._set_attr('sites',
-                       self.get_attr('sites', []) + [new_site.get_raw()])
+        self._append_to_attr('sites', new_site.get_raw())
 
     def append_atom(self, **kwargs):
         """

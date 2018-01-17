@@ -335,6 +335,9 @@ or, equivalently::
 A more sophisticated workflow
 +++++++++++++++++++++++++++++
 
+.. note:: This workflow uses the Quantum ESPRESSO plugins that are hosted
+  `in the aiida-quantumespresso plugin repository <https://github.com/aiidateam/aiida-quantumespresso>`_.
+
 In the previous chapter we've been able to see almost all the workflow features, and we're now ready to work on some more sophisticated examples, 
 where real calculations are performed and common real-life issues are solved. As a real case example we'll compute the equation of state 
 of a simple class of materials, XTiO3; the workflow will accept as an input the X material, it will build several structures with different 
@@ -770,10 +773,9 @@ Compatibility with new workflows
 
 As part of the deprecation process of the old workflows to ease the transition we
 support the ability to launch old workflows from :class:`~aiida.work.workchain.WorkChain` s.
-The :class:`~aiida.work.workchain.ToContext` object can be used in conjunction
-with :class:`~aiida.work.run.legacy_workflow` which takes a legacy workflow pk
-and builds an object that tells :class:`~aiida.work.workchain.ToContext` how to wait for it to be done and
-store it in the context on completion.  An example:
+The `ToContext` object can be used with the future returned by `self.submit`
+that tells `ToContext` how to wait for it to be done and store it in the context on completion.
+An example:
 
 .. code-block:: python
     :linenos:
@@ -789,8 +791,8 @@ store it in the context on completion.  An example:
 
         def step1(self):
             wf = OldEquationOfState()
-            wf.start()
-            return ToContext(eos=legacy_workflow(wf.pk))
+            future = self.submit(wf)
+            return ToContext(eos=wf)
 
         def step2(self):
             # Now self.ctx.eos contains the terminated workflow
@@ -800,4 +802,4 @@ store it in the context on completion.  An example:
 similarly if you just want the outputs of an old workflow rather than the
 workflow object itself replace line 12 with::
 
-    return ToContext(eos=Outputs(legacy_workflow(wf.pk)))
+    return ToContext(eos=Outputs(wf)))

@@ -10,7 +10,9 @@
 import sys
 import os
 import subprocess
-from datetime import timedelta
+import gzip
+import shutil
+from datetime import timedelta, datetime
 from aiida.common import aiidalogger
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
@@ -67,6 +69,7 @@ class Daemon(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
+        import aiida
         from aiida.common import setup
 
         self.valid_subcommands = {
@@ -78,35 +81,20 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
-        self.conffile_full_path = os.path.expanduser(os.path.join(
-                setup.AIIDA_CONFIG_FOLDER,
-                setup.DAEMON_SUBDIR,
-                setup.DAEMON_CONF_FILE
-            ))
+        self.logfile = setup.DAEMON_LOG_FILE
+        self.pidfile = setup.DAEMON_PID_FILE
+        self.workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
+        self.celerybeat_schedule = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule")
 
     def _get_pid_full_path(self):
         """
-        Return the full path of the supervisord.pid file.
+        Return the full path of the celery.pid file.
         """
-        from aiida.common import setup
-
-        return os.path.normpath(os.path.expanduser(
-            os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                         setup.DAEMON_SUBDIR, "supervisord.pid")))
-
-    def _get_sock_full_path(self):
-        """
-        Return the full path of the supervisord.sock file.
-        """
-        from aiida.common import setup
-
-        return os.path.normpath(os.path.expanduser(
-            os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                         setup.DAEMON_SUBDIR, "supervisord.sock")))
+        return os.path.normpath(os.path.expanduser(self.pidfile))
 
     def get_daemon_pid(self):
         """
-        Return the daemon pid, as read from the supervisord.pid file.
+        Return the daemon pid, as read from the celery.pid file.
         Return None if no pid is found (or the pid is not valid).
         """
         if (os.path.isfile(self._get_pid_full_path())):
@@ -159,15 +147,31 @@ class Daemon(VerdiCommandWithSubcommands):
 
         print "Clearing all locks ..."
         from aiida.orm.lock import LockManager
-
         LockManager().clear_all()
 
-        print "Starting AiiDA Daemon ..."
+        # rotate an existing log file out of the way
+        if os.path.isfile(self.logfile):
+            with open(self.logfile, 'rb') as curr_log_fh:
+                with gzip.open(self.logfile + '.-1.gz', 'wb') as old_log_fh:
+                    shutil.copyfileobj(curr_log_fh, old_log_fh)
+            os.remove(self.logfile)
+
+        print "Starting AiiDA Daemon (log file: {})...".format(self.logfile)
         currenv = _get_env_with_venv_bin()
-        process = subprocess.Popen(
-            "supervisord -c {}".format(self.conffile_full_path),
-            shell=True, stdout=subprocess.PIPE, env=currenv)
-        process.wait()
+        process = subprocess.Popen([
+                "celery",  "worker",
+                "--app", "tasks",
+                "--loglevel", "INFO",
+                "--beat",
+                "--schedule", self.celerybeat_schedule,
+                "--logfile", self.logfile,
+                "--pidfile", self._get_pid_full_path(),
+                ],
+            cwd=self.workdir,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=currenv)
 
         # The following lines are needed for the workflow_stepper
         # (re-initialize the timestamps used to lock the task, in case
@@ -188,8 +192,7 @@ class Daemon(VerdiCommandWithSubcommands):
             print "Re-initializing workflow stepper stop timestamp"
             set_daemon_timestamp(task_name='workflow', when='stop')
 
-        if (process.returncode == 0):
-            print "Daemon started"
+        print "Daemon started"
 
 
     def kill_daemon(self):
@@ -215,7 +218,7 @@ class Daemon(VerdiCommandWithSubcommands):
                 print ("The process {} was not found! "
                        "Assuming it was already stopped.".format(pid))
                 print "Cleaning the .pid and .sock files..."
-                self._clean_sock_files()
+                self._clean_pid_files()
             else:
                 raise
 
@@ -231,12 +234,6 @@ class Daemon(VerdiCommandWithSubcommands):
         :return: None if ``wait_for_death`` is False. True/False if the process was
             actually dead or after all the retries it was still alive.
         """
-        if not is_dbenv_loaded():
-            from aiida.backends.utils import load_dbenv
-            load_dbenv(process='daemon')
-
-        from aiida.daemon.timestamps import get_last_daemon_timestamp,set_daemon_timestamp
-
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -261,24 +258,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 if pid is None:
                     dead = True
                     print "AiiDA Daemon shut down correctly."
-                    # The following lines are needed for the workflow_stepper
-                    # (re-initialize the timestamps used to lock the task, in case
-                    # it crashed for some reason).
-                    # TODO: remove them when the old workflow system will be
-                    # taken away.
-                    try:
-                        if (get_last_daemon_timestamp('workflow',when='stop')
-                            -get_last_daemon_timestamp('workflow',when='start'))<timedelta(0):
-                            logger.info("Workflow stop timestamp was {}; re-initializing"
-                                        " it to current time".format(
-                                        get_last_daemon_timestamp('workflow',when='stop')))
-                            print "Re-initializing workflow stepper stop timestamp"
-                            set_daemon_timestamp(task_name='workflow', when='stop')
-                    except TypeError:
-                        # when some timestamps are None (i.e. not present), we make
-                        # sure that at least the stop timestamp is defined
-                        print "Re-initializing workflow stepper stop timestamp"
-                        set_daemon_timestamp(task_name='workflow', when='stop')
                     break
                 else:
                     print "Waiting for the AiiDA Daemon to shut down..."
@@ -307,10 +286,6 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        import supervisor
-        import supervisor.supervisorctl
-        import xmlrpclib
-
         from aiida.utils import timezone
 
         from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
@@ -332,38 +307,27 @@ class Daemon(VerdiCommandWithSubcommands):
             print "Daemon not running (cannot find the PID for it)"
             return
 
-        c = supervisor.supervisorctl.ClientOptions()
-        s = c.read_config(self.conffile_full_path)
-        proxy = xmlrpclib.ServerProxy('http://127.0.0.1',
-                                      transport=supervisor.xmlrpc.SupervisorTransport(
-                                          s.username, s.password, s.serverurl))
+        import psutil
+        def create_time(p):
+            return datetime.fromtimestamp(p.create_time())
+
         try:
-            running_processes = proxy.supervisor.getAllProcessInfo()
-        except xmlrpclib.Fault as e:
-            if e.faultString == "SHUTDOWN_STATE":
-                print "The daemon is shutting down..."
-                return
-            else:
-                raise
-        except Exception as e:
-            import socket
-            if isinstance(e, socket.error):
-                print "Could not reach the daemon, I got a socket.error: "
-                print "  -> [Errno {}] {}".format(e.errno, e.strerror)
-            else:
-                print "Could not reach the daemon, I got a {}: {}".format(
-                    e.__class__.__name__, e.message)
-            print "You can try to stop the daemon and start it again."
+            daemon_process = psutil.Process(self.get_daemon_pid())
+        except psutil.NoSuchProcess:
+            print "Daemon process can not be found"
             return
 
-        if running_processes:
-            print "## Found {} process{} running:".format(len(running_processes), '' if len(running_processes)==1 else 'es')
-            for process in running_processes:
-                print "   * {:<22} {:<10} {}".format(
-                    "{}[{}]".format(process['group'], process['name']),
-                    process['statename'], process['description'])
+        print "Daemon is running as pid {pid} since {time}, child processes:".format(
+                pid=daemon_process.pid,
+                time=create_time(daemon_process))
+        workers = daemon_process.children(recursive=True)
+
+        if workers:
+            for worker in workers:
+                print "   * {name}[{pid}] {status:>10}, started at {time:%Y-%m-%d %H:%M:%S}".format(
+                        name=worker.name(), pid=worker.pid, status=worker.status(), time=create_time(worker))
         else:
-            print "I was able to connect to the daemon, but I did not find any process..."
+            print "... but it does not have any child processes, which is wrong"
 
     def daemon_logshow(self, *args):
         """
@@ -386,10 +350,12 @@ class Daemon(VerdiCommandWithSubcommands):
 
         try:
             currenv = _get_env_with_venv_bin()
-            process = subprocess.Popen(
-                "supervisorctl -c {} tail -f aiida-daemon".format(
-                    self.conffile_full_path),
-                shell=True, env=currenv)  # , stdout=subprocess.PIPE)
+            process = subprocess.Popen([
+                    "tail",
+                    "-f",
+                    self.logfile,
+                    ],
+                env=currenv)  # , stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
             # exit on CTRL+C
@@ -514,20 +480,13 @@ class Daemon(VerdiCommandWithSubcommands):
         print "The new user that can run the daemon is now {} {}.".format(
             found_users[0].first_name, found_users[0].last_name)
 
-    def _clean_sock_files(self):
+    def _clean_pid_files(self):
         """
-        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon
+        Tries to remove the celery.pid files from the .aiida/daemon
         subfolder. This is typically needed when the computer is restarted with
         the daemon still on.
         """
         import errno
-
-        try:
-            os.remove(self._get_sock_full_path())
-        except OSError as e:
-            # Ignore if errno = errno.ENOENT (2): no file found
-            if e.errno != errno.ENOENT:  # No such file
-                raise
 
         try:
             os.remove(self._get_pid_full_path())

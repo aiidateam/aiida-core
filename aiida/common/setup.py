@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import uuid
 import aiida
 import logging
 import json
@@ -48,6 +49,7 @@ WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
+RMQ_PREFIX_KEY = 'RMQ_PREFIX'
 
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
@@ -406,7 +408,8 @@ key_explanation = {
     "AIIDADB_PORT": "Database port",
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
-    DEFAULT_USER_CONFIG_FIELD: "Default user email"
+    DEFAULT_USER_CONFIG_FIELD: "Default user email",
+    RMQ_PREFIX_KEY: "Prefix for the RabbitMQ queue",
 }
 
 
@@ -509,6 +512,9 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
         finally:
             os.umask(old_umask)
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
+
+    # set RMQ_PREFIX
+    new_profile[RMQ_PREFIX_KEY] = uuid.uuid4().hex
 
     # finalizing
     write = not dry_run
@@ -774,6 +780,9 @@ def create_configuration(profile='default'):
                 os.umask(old_umask)
 
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
+
+        # Add RabbitMQ prefix
+        this_new_confs[RMQ_PREFIX_KEY] = uuid.uuid4().hex
 
         confs['profiles'][profile] = this_new_confs
 

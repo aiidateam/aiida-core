@@ -114,7 +114,7 @@ class TestContext(AiidaTestCase):
         self.assertEqual(wc.ctx['new_attr'], 5)
 
         del wc.ctx['new_attr']
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(KeyError):
             wc.ctx['new_attr']
 
 

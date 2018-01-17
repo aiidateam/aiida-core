@@ -145,6 +145,6 @@ class AiiDAPersister(plum.Persister):
         """
         Delete all persisted checkpoints related to the given process id
 
-        :param pid: the process id of the :class:`plum.process.Process`
+        :param pid: the process id of the :class:`aiida.work.processes.Process`
         """
         pass

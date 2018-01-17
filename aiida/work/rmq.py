@@ -3,11 +3,19 @@ import plum
 import uuid
 
 from aiida.utils.serialize import serialize_data, deserialize_data
+
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
+from aiida.backends import settings
 from plum import rmq
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
 
+
+def _get_prefix():
+    """Get the queue prefix from the profile."""
+    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 def encode_response(response):
     serialized = serialize_data(response)
@@ -18,7 +26,7 @@ def decode_response(response):
     response = json.loads(response)
     return deserialize_data(response)
 
-
+  
 def get_launch_queue_name(prefix=None):
     if prefix is not None:
         return "{}.{}".format(prefix, _LAUNCH_QUEUE)

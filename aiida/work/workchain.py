@@ -12,9 +12,11 @@ import functools
 import inspect
 import plum
 
+from aiida.common.extendeddicts import AttributeDict
 from aiida.orm.utils import load_node, load_workflow
 from aiida.common.lang import override
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.utils.serialize import serialize_data, deserialize_data
 from . import processes
 from . import utils
 from .awaitable import *
@@ -50,17 +52,14 @@ class _WorkChainSpec(processes.ProcessSpec):
         return self._outline
 
 
-class WorkChain(
-    plum.ContextMixin,
-    processes.Process,
-    # utils.HeartbeatMixin
-):
+class WorkChain(processes.Process):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
     _INTERSTEPS = 'intersteps'
+    _CONTEXT = 'CONTEXT'
 
     @classmethod
     def define(cls, spec):
@@ -74,10 +73,18 @@ class WorkChain(
         super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
         self._stepper = None
         self._awaitables = []
+        self._context = AttributeDict()
+
+    @property
+    def ctx(self):
+        return self._context
 
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
+        # Save the context
+        out_state[self._CONTEXT] = serialize_data(self.ctx.__dict__)
+
         # Ask the stepper to save itself
         if self._stepper is not None:
             stepper_state = utils.Parcel()
@@ -87,6 +94,8 @@ class WorkChain(
     @override
     def load_instance_state(self, saved_state):
         super(WorkChain, self).load_instance_state(saved_state)
+        # Load the context
+        self._context = AttributeDict(**deserialize_data(saved_state[self._CONTEXT]))
 
         # Recreate the stepper
         if self._STEPPER_STATE in saved_state:

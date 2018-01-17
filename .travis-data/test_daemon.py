@@ -14,7 +14,7 @@ import time
 from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
-from aiida.work.run import run
+from aiida.work.launch import run_get_node
 from workchains import ParentWorkChain
 
 ParameterData = DataFactory('parameter')
@@ -145,8 +145,8 @@ def main():
     expected_results_workchains = {}
     for index in range(1, number_workchains + 1):
         inp = Int(index)
-        future = run(ParentWorkChain, inp=inp)
-        expected_results_workchains[future.pk] = index * 2
+        result, node = run_get_node(ParentWorkChain, inp=inp)
+        expected_results_workchains[node.pk] = index * 2
 
 
     calculation_pks = sorted(expected_results_calculations.keys())

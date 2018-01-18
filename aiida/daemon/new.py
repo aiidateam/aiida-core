@@ -1,6 +1,8 @@
 from functools import partial
 import logging
 
+import aiida.work.rmq
+
 
 def tick_legacy_workflows(runner):
     tasks.workflow_stepper()
@@ -37,7 +39,7 @@ if __name__ == "__main__":
     # TODO: Add the profile name to the RMQ prefix
     rmq_config = {
         'url': 'amqp://localhost',
-        'prefix': 'aiida',
+        'prefix': aiida.work.rmq._get_prefix(),
     }
     runner = work.DaemonRunner(rmq_config=rmq_config, rmq_submit=True)
     work.set_runner(runner)

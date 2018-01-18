@@ -8,6 +8,7 @@ from aiida.backends.testbase import AiidaTestCase
 import aiida.work.test_utils as test_utils
 from aiida.orm.data import base
 import aiida.work as work
+from aiida.work import rmq
 from aiida.orm.calculation.work import WorkCalculation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -16,13 +17,13 @@ __authors__ = "The AiiDA team."
 __version__ = "0.7.0"
 
 
-class TestProcess(AiidaTestCase):
+class TestProcessControl(AiidaTestCase):
     """
     Test AiiDA's RabbitMQ functionalities.
     """
 
     def setUp(self):
-        super(TestProcess, self).setUp()
+        super(TestProcessControl, self).setUp()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
 
         self.loop = plum.new_event_loop()
@@ -103,16 +104,6 @@ class TestProcess(AiidaTestCase):
         result = self.runner.run_until_complete(future)
         # TODO: Check kill message
         self.assertTrue(result)
-
-    # def test_launch_and_get_status(self):
-    #     a = base.Int(5)
-    #     b = base.Int(10)
-    #
-    #     calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
-    #     self._wait_for_calc(calc_node)
-    #     future = self.runner.rmq.request_status(calc_node.pk)
-    #     result = plum.run_until_complete(future, self.loop)
-    #     self.assertIsNotNone(result)
 
     def _wait_for_calc(self, calc_node, timeout=5.):
         def stop(*args):

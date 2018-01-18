@@ -334,18 +334,18 @@ def kill_old(pks):
 def kill(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.kill_process(pk)
-        future.add_done_callback(partial(_action_done, "kill", pk))
-        futures.append(future)
-
-    runner.run_until_complete(plum.gather(*futures))
+        try:
+            if control_panel.kill_process(pk):
+                click.echo("Killed '{}'".format(pk))
+            else:
+                click.echo("Problem killing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to kill '{}': {}".format(pk, e.message))
 
 
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
@@ -353,18 +353,18 @@ def kill(pks):
 def pause(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.pause_process(pk)
-        future.add_done_callback(partial(_action_done, "pause", pk))
-        futures.append(future)
-
-    runner.run_until_complete(plum.gather(*futures))
+        try:
+            if control_panel.pause_process(pk):
+                click.echo("Paused '{}'".format(pk))
+            else:
+                click.echo("Problem pausing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to pause '{}': {}".format(pk, e.message))
 
 
 @work.command('play', context_settings=CONTEXT_SETTINGS)
@@ -372,25 +372,18 @@ def pause(pks):
 def play(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.play_process(pk)
-        future.add_done_callback(partial(_action_done, "play", pk))
-        futures.append(future)
-
-    runner.run_until_complete(plum.gather(*futures))
-
-
-def _action_done(intent, pk, future):
-    if future.exception() is not None:
-        click.echo("Failed to {} process {}: {}".format(intent, pk, future.exception()))
-    else:
-        click.echo("{} {} OK".format(intent, pk))
+        try:
+            if control_panel.play_process(pk):
+                click.echo("Played '{}'".format(pk))
+            else:
+                click.echo("Problem playing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to play '{}': {}".format(pk, e.message))
 
 
 @work.command('status', context_settings=CONTEXT_SETTINGS)

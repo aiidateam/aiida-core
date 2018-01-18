@@ -10,9 +10,9 @@
 
 from collections import namedtuple
 
-from . import persistence
-from . import rmq
+import aiida.orm
 from . import runners
+from . import rmq
 from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
@@ -20,30 +20,14 @@ __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
 _persister = None
-_rmq_control_panel = None
-
-
-def get_rmq_control_panel():
-    global _rmq_control_panel
-    if _rmq_control_panel is None:
-        _rmq_control_panel = rmq.BlockingProcessControlPanel('aiida')
-    return _rmq_control_panel
-
-
-def _get_persister():
-    global _persister
-    if _persister is None:
-        _persister = persistence.AiiDAPersister()
-    return _persister
 
 
 def submit(process_class, **inputs):
     assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
 
-    process = runners._create_process(process_class, None, input_kwargs=inputs)
-    _get_persister().save_checkpoint(process)
-    get_rmq_control_panel().launch.continue_process(process.pid)
-    return process.calc
+    pid = rmq.new_blocking_control_panel().execute_process_start(
+        process_class, init_kwargs={'inputs': inputs})
+    return aiida.orm.load_node(pid)
 
 
 def run(process, *args, **inputs):

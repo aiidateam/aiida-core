@@ -22,6 +22,7 @@ ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
 
 _runner = None
 
+
 def get_runner():
     global _runner
     if _runner is None:
@@ -40,7 +41,7 @@ def new_runner(**kwargs):
     if 'rmq_config' not in kwargs:
         kwargs['rmq_config'] = {
             'url': 'amqp://localhost',
-            'prefix': 'aiida',
+            'prefix': rmq._get_prefix(),
         }
     return Runner(**kwargs)
 
@@ -49,10 +50,6 @@ def new_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
     """ Create a daemon runner """
     runner = Runner({}, rmq_submit=False, enable_persistence=True)
     return runner
-
-
-def create_connector(rmq_config):
-    return plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
 
 
 def convert_to_inputs(workfunction, *args, **kwargs):
@@ -206,7 +203,7 @@ class Runner(object):
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
-            self.rmq.launch.continue_process(process.pid)
+            self.rmq.continue_process(process.pid)
             return process.calc
         else:
             # Run in this runner

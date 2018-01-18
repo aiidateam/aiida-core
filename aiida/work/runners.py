@@ -37,12 +37,8 @@ def set_runner(runner):
 
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
-    # TODO: Create policy object to create new runners
     if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = {
-            'url': 'amqp://localhost',
-            'prefix': rmq._get_prefix(),
-        }
+        kwargs['rmq_config'] = rmq._get_rmq_config()
     return Runner(**kwargs)
 
 

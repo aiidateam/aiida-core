@@ -23,6 +23,14 @@ def _get_prefix():
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
+def _get_rmq_config():
+    rmq_config = {
+        'url': 'amqp://localhost',
+        'prefix': _get_prefix(),
+    }
+    return rmq_config
+
+
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
@@ -112,16 +120,10 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     A blocking adapter for the ProcessControlPanel.
     """
 
-    def __init__(self, prefix, rmq_config=None, testing_mode=False):
-        if rmq_config is None:
-            rmq_config = {
-                'url': 'amqp://localhost',
-                'prefix': prefix,
-            }
-
+    def __init__(self, prefix, testing_mode=False):
         self._loop = events.new_event_loop()
-        self._connector = plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
-        super(BlockingProcessControlPanel, self).__init__(prefix, self._connector, testing_mode)
+        connector = new_rmq_connector(self._loop)
+        super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
         self._connector.connect()
 
@@ -152,3 +154,7 @@ def new_blocking_control_panel():
     :rtype: :class:`BlockingProcessControlPanel`
     """
     return BlockingProcessControlPanel(_get_prefix())
+
+
+def new_rmq_connector(loop):
+    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)

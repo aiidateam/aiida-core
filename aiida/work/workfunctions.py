@@ -52,7 +52,7 @@ def workfunction(func):
         # Have to create a new runner for the workfunction instead of using
         # the global because otherwise a workfunction that calls another from
         # within its scope would be blocking the event loop
-        runner = runners.new_runner(rmq_config=None, enable_persistence=False)
+        runner = runners.Runner(rmq_config=None, rmq_submit=False, enable_persistence=False)
         return wf_class(inputs=inputs, runner=runner).execute()
 
     def run_get_node(*args, **kwargs):

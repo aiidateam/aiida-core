@@ -336,16 +336,15 @@ def kill(pks):
     try_load_dbenv()
     from aiida import work
 
-    control_panel = work.new_blocking_control_panel()
-
-    for pk in pks:
-        try:
-            if control_panel.kill_process(pk):
-                click.echo("Killed '{}'".format(pk))
-            else:
-                click.echo("Problem killing '{}'".format(pk))
-        except (work.RemoteException, work.DeliveryFailed) as e:
-            print("Failed to kill '{}': {}".format(pk, e.message))
+    with work.new_blocking_control_panel() as control_panel:
+        for pk in pks:
+            try:
+                if control_panel.kill_process(pk):
+                    click.echo("Killed '{}'".format(pk))
+                else:
+                    click.echo("Problem killing '{}'".format(pk))
+            except (work.RemoteException, work.DeliveryFailed) as e:
+                print("Failed to kill '{}': {}".format(pk, e.message))
 
 
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
@@ -355,16 +354,15 @@ def pause(pks):
     try_load_dbenv()
     from aiida import work
 
-    control_panel = work.new_blocking_control_panel()
-
-    for pk in pks:
-        try:
-            if control_panel.pause_process(pk):
-                click.echo("Paused '{}'".format(pk))
-            else:
-                click.echo("Problem pausing '{}'".format(pk))
-        except (work.RemoteException, work.DeliveryFailed) as e:
-            print("Failed to pause '{}': {}".format(pk, e.message))
+    with work.new_blocking_control_panel() as control_panel:
+        for pk in pks:
+            try:
+                if control_panel.pause_process(pk):
+                    click.echo("Paused '{}'".format(pk))
+                else:
+                    click.echo("Problem pausing '{}'".format(pk))
+            except (work.RemoteException, work.DeliveryFailed) as e:
+                print("Failed to pause '{}': {}".format(pk, e.message))
 
 
 @work.command('play', context_settings=CONTEXT_SETTINGS)
@@ -374,16 +372,15 @@ def play(pks):
     try_load_dbenv()
     from aiida import work
 
-    control_panel = work.new_blocking_control_panel()
-
-    for pk in pks:
-        try:
-            if control_panel.play_process(pk):
-                click.echo("Played '{}'".format(pk))
-            else:
-                click.echo("Problem playing '{}'".format(pk))
-        except (work.RemoteException, work.DeliveryFailed) as e:
-            print("Failed to play '{}': {}".format(pk, e.message))
+    with work.new_blocking_control_panel() as control_panel:
+        for pk in pks:
+            try:
+                if control_panel.play_process(pk):
+                    click.echo("Played '{}'".format(pk))
+                else:
+                    click.echo("Problem playing '{}'".format(pk))
+            except (work.RemoteException, work.DeliveryFailed) as e:
+                print("Failed to play '{}': {}".format(pk, e.message))
 
 
 @work.command('status', context_settings=CONTEXT_SETTINGS)

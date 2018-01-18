@@ -125,6 +125,12 @@ class BlockingProcessControlPanel(ProcessControlPanel):
 
         self._connector.connect()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = plum.rmq.ExecuteProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._launch)
@@ -133,6 +139,9 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     def execute_action(self, action):
         action.execute(self.communicator)
         return events.run_until_complete(action, self._loop)
+
+    def close(self):
+        self._connector.close()
 
 
 def new_blocking_control_panel():

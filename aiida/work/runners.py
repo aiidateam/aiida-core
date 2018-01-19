@@ -265,7 +265,7 @@ class DaemonRunner(Runner):
         super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
 
         # Listen for incoming launch requests
-        task_receiver = plum.ProcessLauncher(
+        task_receiver = rmq.ProcessLauncher(
             loop=self.loop,
             persister=self.persister,
             unbunble_kwargs={'runner': self}

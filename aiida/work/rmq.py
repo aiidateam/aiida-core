@@ -23,6 +23,14 @@ def _get_prefix():
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
+def _get_rmq_config():
+    rmq_config = {
+        'url': 'amqp://localhost',
+        'prefix': _get_prefix(),
+    }
+    return rmq_config
+
+
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
@@ -40,10 +48,6 @@ def get_launch_queue_name(prefix=None):
     return _LAUNCH_QUEUE
 
 
-def create_communicator():
-    pass
-
-
 def get_message_exchange_name(prefix):
     return "{}.{}".format(prefix, _MESSAGE_EXCHANGE)
 
@@ -58,22 +62,15 @@ class ProcessControlPanel(object):
         self._connector = rmq_connector
 
         message_exchange = get_message_exchange_name(prefix)
-        self.communicator = plum.rmq.RmqCommunicator(
+        task_queue = get_launch_queue_name(prefix)
+        self._communicator = plum.rmq.RmqCommunicator(
             rmq_connector,
-            exchange_name=message_exchange)
-
-        task_queue_name = "{}.{}".format(prefix, _LAUNCH_QUEUE)
-        self._launch = plum.rmq.ProcessLaunchPublisher(
-            self._connector,
-            exchange_name=get_message_exchange_name(prefix),
-            task_queue_name=task_queue_name,
-            testing_mode=testing_mode
+            exchange_name=message_exchange,
+            task_queue=task_queue
         )
 
     def ready_future(self):
-        return plum.gather(
-            self._launch.initialised_future(),
-            self.communicator.initialised_future())
+        return self._communicator.initialised_future()
 
     def pause_process(self, pid):
         return self.execute_action(plum.PauseAction(pid))
@@ -88,22 +85,22 @@ class ProcessControlPanel(object):
         return self.execute_action(plum.StatusAction(pid))
 
     def launch_process(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.rmq.LaunchProcessAction(process_class, init_args, init_kwargs)
-        action.execute(self._launch)
+        action = plum.LaunchProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
         return action
 
     def continue_process(self, pid):
-        action = plum.rmq.ContinueProcessAction(pid)
-        action.execute(self._launch)
+        action = plum.ContinueProcessAction(pid)
+        action.execute(self._communicator)
         return action
 
     def execute_process(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.rmq.ExecuteProcessAction(process_class, init_args, init_kwargs)
-        action.execute(self._launch)
+        action = plum.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
         return action
 
     def execute_action(self, action):
-        action.execute(self.communicator)
+        action.execute(self._communicator)
         return action
 
 
@@ -112,27 +109,30 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     A blocking adapter for the ProcessControlPanel.
     """
 
-    def __init__(self, prefix, rmq_config=None, testing_mode=False):
-        if rmq_config is None:
-            rmq_config = {
-                'url': 'amqp://localhost',
-                'prefix': prefix,
-            }
-
+    def __init__(self, prefix, testing_mode=False):
         self._loop = events.new_event_loop()
-        self._connector = plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
-        super(BlockingProcessControlPanel, self).__init__(prefix, self._connector, testing_mode)
+        connector = new_rmq_connector(self._loop)
+        super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
         self._connector.connect()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.rmq.ExecuteProcessAction(process_class, init_args, init_kwargs)
-        action.execute(self._launch)
+        action = plum.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
         return events.run_until_complete(action.get_launch_future(), self._loop)
 
     def execute_action(self, action):
-        action.execute(self.communicator)
+        action.execute(self._communicator)
         return events.run_until_complete(action, self._loop)
+
+    def close(self):
+        self._connector.close()
 
 
 def new_blocking_control_panel():
@@ -143,3 +143,7 @@ def new_blocking_control_panel():
     :rtype: :class:`BlockingProcessControlPanel`
     """
     return BlockingProcessControlPanel(_get_prefix())
+
+
+def new_rmq_connector(loop):
+    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)

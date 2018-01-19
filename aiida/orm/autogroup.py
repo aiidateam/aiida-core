@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import datetime
-
+from aiida.utils import timezone
 from aiida.common.exceptions import ValidationError, MissingPluginError
 
 
@@ -112,7 +110,7 @@ class Autogroup(object):
         try:
             return self.group_name
         except AttributeError:
-            now = datetime.datetime.now()
+            now = timezone.now()
             gname = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
             self.set_group_name(gname)
             return self.group_name

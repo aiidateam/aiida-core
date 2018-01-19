@@ -110,53 +110,8 @@ class _WithNonDb(object):
         return self._non_db
 
 
-class PortNamespace(collections.MutableMapping, _WithNonDb, plum.port.Port):
-    """
-    A container for Ports. Effectively it maintains a dictionary whose members are
-    either a Port or yet another PortNamespace. This allows for the nesting of ports
-    """
-
-    def __init__(self, namespace=None, help=None, required=True, validator=None, valid_type=None):
-        super(PortNamespace, self).__init__(
-            name=namespace, help=help, required=required, validator=validator, valid_type=valid_type
-        )
-        self._ports = {}
-
-    @property
-    def ports(self):
-        return self._ports
-
-    def __iter__(self):
-        return self._ports.__iter__()
-
-    def __len__(self):
-        return len(self._ports)
-
-    def __delitem__(self, key):
-        del self._ports[key]
-
-    def __getitem__(self, key):
-        return self._ports[key]
-
-    def __setitem__(self, key, value):
-        self._ports[key] = value
-
-    def validate(self, inputs):
-        """
-        Validate the namespace port itself and subsequently all the ports it contains
-
-        :param inputs: a arbitrarily nested dictionary of parsed inputs
-        """
-        if inputs is None and self.required:
-            return False, "required value was not provided for '{}'".format(self.name)
-
-        for name, port in self._ports.iteritems():
-            valid, message = port.validate(inputs.get(name, None))
-
-            if not valid:
-                return False, message
-
-        return True, None
+class PortNamespace(_WithNonDb, plum.port.PortNamespace):
+    pass
 
 
 class InputPort(_WithNonDb, plum.port.InputPort):
@@ -199,37 +154,6 @@ class ProcessSpec(plum.process.ProcessSpec):
                 template[name] = None
 
         return template
-
-    def expose_inputs(self, process_class, namespace=None, exclude=(), include=None):
-        """
-        This method allows one to automatically add the inputs from another
-        Process to this ProcessSpec. The optional namespace argument can be
-        used to group the exposed inputs in a separated PortNamespace
-
-        :param process_class: the Process class whose inputs to expose
-        :param namespace: a namespace in which to place the exposed inputs
-        :param exclude: list or tuple of input keys to exclude from being exposed
-        """
-        if exclude and include is not None:
-            raise ValueError('exclude and include are mutually exclusive')
-
-        if namespace:
-            self._inputs[namespace] = PortNamespace(namespace)
-            port_namespace = self._inputs[namespace]
-        else:
-            port_namespace = self._inputs
-
-        for name, port in process_class.spec().inputs.iteritems():
-
-            if port.non_db or name == 'dynamic':
-                continue
-
-            if include is not None:
-                if name in include:
-                    port_namespace[name] = port
-            else:
-                if name not in exclude:
-                    port_namespace[name] = port
 
 class Process(plum.process.Process):
     """
@@ -446,40 +370,6 @@ class Process(plum.process.Process):
         """
         message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
-
-    def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
-        """
-        Gather a dictionary of the inputs that were exposed for a given Process
-        class under an optional namespace.
-
-        :param process_class: Process class whose inputs to try and retrieve
-        :param namespace: PortNamespace in which to look for the inputs
-        """
-        exposed_inputs = {}
-        namespaces = [namespace]
-
-        # If inputs are to be agglomerated, we prepend the lower lying namespace
-        if agglomerate:
-            namespaces.insert(0, None)
-
-        for namespace in namespaces:
-
-            # The namespace None indicates the base level namespace
-            if namespace is None:
-                inputs = self.inputs
-                port_namespace = self.spec().inputs
-            else:
-                inputs = self.inputs[namespace]
-                try:
-                    port_namespace = self.spec().get_input(namespace)
-                except KeyError:
-                    raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
-
-            for name, port in port_namespace.ports.iteritems():
-                if name in inputs and name in process_class.spec().inputs:
-                    exposed_inputs[name] = inputs[name]
-
-        return exposed_inputs
 
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()

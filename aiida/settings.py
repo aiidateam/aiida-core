@@ -7,25 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import os
-
-
 from aiida.backends import settings
-
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 from aiida.common.setup import (get_config, get_secret_key, get_property,
                                 get_profile_config, get_default_profile,
                                 parse_repository_uri)
 
 
-
 USE_TZ = True
+TESTING_MODE = False
 
 try:
     confs = get_config()
-except ConfigurationError:
-    raise ConfigurationError("Please run the AiiDA Installation, no config found")
+except MissingConfigurationError:
+    raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
     raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django "

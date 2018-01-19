@@ -10,35 +10,55 @@
 
 import tempfile
 
-import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.persistence import Persistence
-import aiida.work.util as util
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
+from aiida import work
+from aiida.work.launch import run
 
 
 class TestProcess(AiidaTestCase):
+    """ Test the basic saving and loading of process states """
+
     def setUp(self):
         super(TestProcess, self).setUp()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
-
-        self.persistence = Persistence(running_directory=tempfile.mkdtemp())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_save_load(self):
-        dp = DummyProcess.new_instance()
+        process = DummyProcess()
+        saved_state = work.Bundle(process)
+        del process
 
-        # Create a bundle
-        b = self.persistence.create_bundle(dp)
-        # Save a bundle and reload it
-        self.persistence.save(dp)
-        b2 = self.persistence._load_checkpoint(dp.pid)
-        # Now check that they are equal
-        self.assertEqual(b, b2)
+        loaded_process = saved_state.unbundle()
+        result_from_loaded = run(loaded_process)
 
-        dp.run_until_complete()
+        self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
+
+# class TestProcess(AiidaTestCase):
+#     def setUp(self):
+#         super(TestProcess, self).setUp()
+#         self.assertEquals(len(util.ProcessStack.stack()), 0)
+#
+#         self.persistence = Persistence(running_directory=tempfile.mkdtemp())
+#
+#     def tearDown(self):
+#         super(TestProcess, self).tearDown()
+#         self.assertEquals(len(util.ProcessStack.stack()), 0)
+#
+#     def test_save_load(self):
+#         dp = DummyProcess()
+#
+#         # Create a bundle
+#         b = self.persistence.create_bundle(dp)
+#         # Save a bundle and reload it
+#         self.persistence.save(dp)
+#         b2 = self.persistence._load_checkpoint(dp.pid)
+#         # Now check that they are equal
+#         self.assertEqual(b, b2)
+#
+#         work.run(dp)

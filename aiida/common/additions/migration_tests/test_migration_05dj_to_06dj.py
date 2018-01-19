@@ -18,6 +18,7 @@ import aiida.common.setup as setup
 from aiida.common.additions.old_migrations.migration_05dj_to_06dj import (
     Migration)
 
+from ..config_migrations import check_and_migrate_config
 
 
 class MigrationTest(unittest.TestCase):
@@ -208,6 +209,9 @@ def json_files_equivalent(input_file1_filename, input_file2_filename):
         with open(input_file2_filename) as input_file2:
             json1 = json.load(input_file1)
             json2 = json.load(input_file2)
+            # ignore CONFIG_VERSION key
+            json1.pop('CONFIG_VERSION', None)
+            json2.pop('CONFIG_VERSION', None)
             if ordered(json1) == ordered(json2):
                 return True, ""
             else:

@@ -86,7 +86,9 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.transport',
         'aiida.common',
         'aiida.tests.work',
-        'aiida.utils'
+        'aiida.utils',
+        'aiida.control',
+        'aiida.cmdline.tests'
     ]
 
     _dbrawprefix = "db"
@@ -111,7 +113,8 @@ class Devel(VerdiCommandWithSubcommands):
             'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
-            'tickd': (self.tick_daemon, self.complete_none)
+            'tickd': (self.tick_daemon, self.complete_none),
+            'run_daemon': (self.run_daemon, self.complete_none)
         }
 
         # The content of the dict is:
@@ -369,8 +372,17 @@ class Devel(VerdiCommandWithSubcommands):
         Call all the functions that the daemon would call if running once and
         return.
         """
+        if not is_dbenv_loaded():
+            load_dbenv()
         from aiida.daemon.tasks import manual_tick_all
         manual_tick_all()
+
+    def run_daemon(self, *args):
+        """
+        Run a daemon instance in this in the current interpreter
+        """
+        from aiida.daemon.new import start_daemon
+        start_daemon()
 
     def run_listproperties(self, *args):
         """
@@ -491,6 +503,9 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends import settings
         from aiida.backends.testbase import run_aiida_db_tests
         from aiida.backends.testbase import check_if_tests_can_run
+        from aiida import settings
+
+        settings.TESTING_MODE = True
 
         # For final summary
         test_failures = []
@@ -580,7 +595,7 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  - {}".format(reason)
 
         print "* Tests run:     {}".format(tot_num_tests)
-        # This count is wrong, sometimes a test can both error and fail 
+        # This count is wrong, sometimes a test can both error and fail
         # apparently, and you can get negative numbers...
         #print "* Tests OK:      {}".format(tot_num_tests - len(test_errors) - len(test_failures))
         print "* Tests failed:  {}".format(len(test_failures))

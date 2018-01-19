@@ -9,11 +9,12 @@
 ###########################################################################
 
 from aiida.orm.implementation import User
-import aiida.orm.utils as utils
+from aiida.orm.utils import BackendDelegateWithDefault
+
+__all__ = ['User', 'Util']
 
 
-
-class Util(utils.BackendDelegateWithDefault):
+class Util(BackendDelegateWithDefault):
     @classmethod
     def create_default(cls):
         # Fall back to Django

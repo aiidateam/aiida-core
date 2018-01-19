@@ -39,6 +39,11 @@ class NodeTranslator(BaseTranslator):
     _nalist = None
     _elist = None
     _nelist = None
+    _downloadformat = None
+    _visformat = None
+    _filename = None
+    _rtype = None
+
 
     def __init__(self, Class=None, **kwargs):
         """
@@ -77,7 +82,8 @@ class NodeTranslator(BaseTranslator):
         self._subclasses = self._get_subclasses()
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
-                       nelist=None):
+                       nelist=None, downloadformat=None, visformat=None,
+                       filename=None, rtype=None):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
@@ -100,6 +106,18 @@ class NodeTranslator(BaseTranslator):
             self._nelist = nelist
         elif query_type == 'visualization':
             self._content_type = 'visualization'
+            self._visformat = visformat
+        elif query_type == 'download':
+            self._content_type = 'download'
+            self._downloadformat = downloadformat
+        elif query_type == "retrieved_inputs":
+            self._content_type = 'retrieved_inputs'
+            self._filename = filename
+            self._rtype = rtype
+        elif query_type == "retrieved_outputs":
+            self._content_type = 'retrieved_outputs'
+            self._filename = filename
+            self._rtype = rtype
         else:
             raise InputValidationError("invalid result/content value: {"
                                        "}".format(query_type))
@@ -115,7 +133,8 @@ class NodeTranslator(BaseTranslator):
 
     def set_query(self, filters=None, orders=None, projections=None,
                   query_type=None, id=None, alist=None, nalist=None,
-                  elist=None, nelist=None):
+                  elist=None, nelist=None, downloadformat=None, visformat=None,
+                  filename=None, rtype=None):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -136,7 +155,8 @@ class NodeTranslator(BaseTranslator):
 
         ## Set the type of query
         self.set_query_type(query_type, alist=alist, nalist=nalist,
-                            elist=elist, nelist=nelist)
+                            elist=elist, nelist=nelist, downloadformat=downloadformat,
+                            visformat=visformat, filename=filename, rtype=rtype)
 
         ## Define projections
         if self._content_type is not None:
@@ -235,7 +255,22 @@ class NodeTranslator(BaseTranslator):
         elif self._content_type == 'visualization':
             # In this we do not return a dictionary but just an object and
             # the dictionary format is set by get_visualization_data
-            data = {self._content_type: self.get_visualization_data(n)}
+            data = {self._content_type: self.get_visualization_data(n, self._visformat)}
+
+        elif self._content_type == 'download':
+            # In this we do not return a dictionary but download the file in
+            # specified format if available
+            data = {self._content_type: self.get_downloadable_data(n, self._downloadformat)}
+
+        elif self._content_type == 'retrieved_inputs':
+            # This type is only available for calc nodes. In case of job calc it
+            # returns calc inputs prepared to submit calc on the cluster else []
+            data = {self._content_type: self.get_retrieved_inputs(n, self._filename, self._rtype)}
+
+        elif self._content_type == 'retrieved_outputs':
+            # This type is only available for calc nodes. In case of job calc it
+            # returns calc outputs retrieved from the cluster else []
+            data = {self._content_type: self.get_retrieved_outputs(n, self._filename, self._rtype)}
 
         else:
             raise ValidationError("invalid content type")
@@ -296,7 +331,7 @@ class NodeTranslator(BaseTranslator):
                 full_path = full_path_base + '.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source(full_path, full_path)
+                app_module = imp.load_source("rst"+name, full_path)
 
             # Go through the content of the module
             if not is_pkg:
@@ -310,7 +345,7 @@ class NodeTranslator(BaseTranslator):
 
         return results
 
-    def get_visualization_data(self, node):
+    def get_visualization_data(self, node, format=None):
         """
         Generic function to get the data required to visualize the node with
         a specific plugin.
@@ -336,9 +371,94 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
-        visualization_data = lowtrans.get_visualization_data(node)
+        visualization_data = lowtrans.get_visualization_data(node, format=format)
 
         return visualization_data
+
+    def get_downloadable_data(self, node, format=None):
+        """
+        Generic function to download file in specified format.
+        Actual definition is in child classes as the content to be
+        returned and its format depends on the visualization plugin specific
+        to the resource
+
+        :param node: node object
+        :param format: file extension format
+        :returns: data in selected format to download
+        """
+
+        """
+        If this method is called by Node resource it will look for the type
+        of object and invoke the correct method in the lowest-compatibel
+        subclass
+        """
+
+        # Look for the translator associated to the class of which this node
+        # is instance
+        tclass = type(node)
+
+        for subclass in self._subclasses.values():
+            if subclass._aiida_type.split('.')[-1] == tclass.__name__:
+                lowtrans = subclass
+
+        downloadable_data = lowtrans.get_downloadable_data(node, format=format)
+
+        return downloadable_data
+
+    def get_retrieved_inputs(self, node, filename=None, rtype=None):
+        """
+        Generic function to return output of calc inputls verdi command.
+        Actual definition is in child classes as the content to be
+        returned and its format depends on the visualization plugin specific
+        to the resource
+
+        :param node: node object
+        :returns: list of calc inputls command
+        """
+
+        if node.dbnode.type.startswith("calculation"):
+            from aiida.restapi.translator.calculation import CalculationTranslator
+            return CalculationTranslator.get_retrieved_inputs(node, filename=filename, rtype=rtype)
+        return []
+
+    def get_retrieved_outputs(self, node, filename=None, rtype=None):
+        """
+        Generic function to return output of calc outputls verdi command.
+        Actual definition is in child classes as the content to be
+        returned and its format depends on the visualization plugin specific
+        to the resource
+
+        :param node: node object
+        :returns: list of calc outputls command
+        """
+
+        if node.dbnode.type.startswith("calculation"):
+            from aiida.restapi.translator.calculation import CalculationTranslator
+            return CalculationTranslator.get_retrieved_outputs(node, filename=filename, rtype=rtype)
+        return []
+
+    @staticmethod
+    def get_file_content(node, file_name):
+        """
+        It reads the file from directory and returns its content.
+
+        Instead of using "send_from_directory" from flask, this method is written
+        because in next aiida releases the file can be stored locally or in object storage.
+
+        :param node: aiida folderData node which contains file
+        :param file_name: name of the file to return its contents
+        :return:
+        """
+        import os
+        file_parts = file_name.split(os.sep)
+
+        if len(file_parts) > 1:
+            file_name = file_parts.pop()
+            for folder in file_parts:
+                node = node.get_subfolder(folder)
+
+        with node.open(file_name) as f:
+            return f.read()
 
     def get_results(self):
         """
@@ -352,77 +472,29 @@ class NodeTranslator(BaseTranslator):
         else:
             return super(NodeTranslator, self).get_results()
 
-    # TODO this works but has to be rewritten once group_by is available in
-    # querybuilder
-    def get_statistics(self, tclass, users=[]):
-        from aiida.orm.querybuilder import QueryBuilder as QB
-        from aiida.orm import User
-        from collections import Counter
+    def get_statistics(self, user_email=None):
+        "Return statistics for a given node"
+        from aiida.backends.utils import QueryFactory
+        qmanager = QueryFactory()()
+        return qmanager.get_creation_statistics(user_email=user_email)
 
-        def count_statistics(dataset):
-
-            def get_statistics_dict(dataset):
-                results = {}
-                for count, typestring in sorted(
-                        (v, k) for k, v in dataset.iteritems())[::-1]:
-                    results[typestring] = count
-                return results
-
-            count_dict = {}
-
-            types = Counter([r[3] for r in dataset])
-            count_dict["types"] = get_statistics_dict(types)
-
-            ctimelist = [r[1].strftime("%Y-%m") for r in dataset]
-            ctime = Counter(ctimelist)
-            count_dict["ctime_by_month"] = get_statistics_dict(ctime)
-
-            ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
-            ctime = Counter(ctimelist)
-            count_dict["ctime_by_day"] = get_statistics_dict(ctime)
-
-            mtimelist = [r[2].strftime("%Y-%m") for r in dataset]
-            mtime = Counter(ctimelist)
-            count_dict["mtime_by_month"] = get_statistics_dict(mtime)
-
-            mtimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
-            mtime = Counter(ctimelist)
-            count_dict["mtime_by_day"] = get_statistics_dict(mtime)
-
-            return count_dict
-
-        statistics = {}
-
-        q = QB()
-        q.append(tclass, project=['id', 'ctime', 'mtime', 'type'], tag='node')
-        q.append(User, creator_of='node', project='email')
-        qb_res = q.all()
-
-        # total count
-        statistics["total"] = len(qb_res)
-
-        node_users = Counter([r[4] for r in qb_res])
-        statistics["users"] = {}
-
-        if isinstance(users, basestring):
-            users = [users]
-        if len(users) == 0:
-            users = node_users
-
-        for user in users:
-            user_data = [r for r in qb_res if r[4] == user]
-            # statistics for user data
-            statistics["users"][user] = count_statistics(user_data)
-            statistics["users"][user]["total"] = node_users[user]
-
-        # statistics for node data
-        statistics.update(count_statistics(qb_res))
-
-        return statistics
 
     def get_io_tree(self, uuid_pattern):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
+
+        def get_node_shape(ntype):
+            type = ntype.split(".")[0]
+
+            # default and data node shape
+            shape = "dot"
+
+            if type == "calculation":
+                shape = "square"
+            elif type == "code":
+                shape = "triangle"
+
+            return shape
 
         # Check whether uuid_pattern identifies a unique node
         self._check_id_validity(uuid_pattern)
@@ -446,13 +518,14 @@ class NodeTranslator(BaseTranslator):
                 description = mainNode.dbnode.type.split('.')[-2]
 
             nodes.append({
-                "uuid_pattern": nodeCount,
+                "id": nodeCount,
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
                 "displaytype": display_type,
                 "group": "mainNode",
-                "description": description
+                "description": description,
+                "shape": get_node_shape(nodetype)
             })
         nodeCount += 1
 
@@ -476,7 +549,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,
@@ -484,6 +557,7 @@ class NodeTranslator(BaseTranslator):
                     "group": "inputs",
                     "description": description,
                     "linktype": linktype,
+                    "shape": get_node_shape(nodetype)
                 })
                 edges.append({
                     "from": nodeCount,
@@ -513,7 +587,7 @@ class NodeTranslator(BaseTranslator):
                     description = node.dbnode.type.split('.')[-2]
 
                 nodes.append({
-                    "uuid_pattern": nodeCount,
+                    "id": nodeCount,
                     "nodeid": pk,
                     "nodeuuid": uuid,
                     "nodetype": nodetype,
@@ -521,12 +595,13 @@ class NodeTranslator(BaseTranslator):
                     "group": "outputs",
                     "description": description,
                     "linktype": linktype,
+                    "shape": get_node_shape(nodetype)
                 })
                 edges.append({
                     "from": 0,
                     "to": nodeCount,
                     "arrows": "to",
-                    "color": {"inherit": 'from'},
+                    "color": {"inherit": 'to'},
                     "linktype": linktype
                 })
                 nodeCount += 1

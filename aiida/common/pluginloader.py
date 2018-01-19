@@ -21,13 +21,13 @@ try:
 except ImportError:
     import pkg_resources as epm
 
-from aiida.common.exceptions import MissingPluginError
+from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
 
 
 _category_mapping = {
     'calculations': 'aiida.orm.calculation.job',
     'data': 'aiida.orm.data',
-    'parsers': 'aiida.parsers.plugins',
+    'parsers': 'aiida.parsers',
     'schedulers': 'aiida.scheduler.plugins',
     'transports': 'aiida.transport.plugins',
     'workflows': 'aiida.workflows',
@@ -72,11 +72,9 @@ def plugin_list(category):
     Passing `example` for the category will list all plugins registered under the
     entry point `aiida.example`.
     """
-
     group = 'aiida.{}'.format(category)
 
-    return [ep.name
-            for ep in epm.iter_entry_points(group=group)]
+    return [ep.name for ep in epm.iter_entry_points(group=group)]
 
 
 def all_plugins(category):
@@ -93,7 +91,7 @@ def all_plugins(category):
     suffix = _category_suffix_map.get(category)
     plugins = existing_plugins(supercls, internal, suffix=suffix)
     plugins += [i for i in plugin_list(category) if i not in plugins]
-    return plugins
+    return [unicode(_) for _ in set(plugins)]
 
 
 def get_plugin(category, name):
@@ -101,14 +99,12 @@ def get_plugin(category, name):
     Return an instance of the class registered under the given name and
     for the specified plugin category.
 
-    :param category: the plugin category to load the plugin from, e.g.
-          'transport'.
+    :param category: the plugin category to load the plugin from, e.g. 'transports'.
     :param name: the name of the plugin
     """
     group = 'aiida.{}'.format(category)
 
-    eps = [ep for ep in epm.iter_entry_points(group=group)
-           if ep.name == name]
+    eps = [ep for ep in epm.iter_entry_points(group=group) if ep.name == name]
 
     if not eps:
         raise MissingPluginError(
@@ -122,8 +118,10 @@ def get_plugin(category, name):
 
     try:
         plugin = entrypoint.load()
-    except ImportError:
-        raise MissingPluginError("Loading the plugin '{}' failed".format(name))
+    except ImportError as exception:
+        import traceback
+        raise LoadingPluginFailed("Loading the plugin '{}' failed:\n{}"
+            .format(name, traceback.format_exc()))
 
     return plugin
 
@@ -180,40 +178,6 @@ def BaseFactory(module, base_class, base_modname, suffix=None):
         if not category:
             raise e
         return get_plugin(category, module)
-
-
-def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
-    """
-    Return a list of plugin names, old and new style
-
-    Refer to aiida.common.old_pluginloader.existing_plugins for more info
-    on behaviour for old style plugins.
-
-    If no old style plugins are found and the plugins_module_name is mappable to a
-    group of entry points, aiida.common.pluginloader.plugin_list is returned
-    """
-    from aiida.common.old_pluginloader import existing_plugins as old_existing
-
-    category = _inv_category_mapping.get(plugins_module_name)
-
-    plugins = []
-    old_plugins_found = True
-    new_plugins_found = True
-
-    if not category:
-        new_plugins_found = False
-    else:
-        plugins = plugin_list(category)
-
-    try:
-        plugins += old_existing(base_class, plugins_module_name, max_depth=max_depth, suffix=suffix)
-    except MissingPluginError as e:
-        old_plugins_found = False
-
-    if not old_plugins_found and not new_plugins_found:
-        raise MissingPluginError("neither new nor old plugins could be found for {}".format(plugins_module_name))
-
-    return plugins
 
 
 def get_class_to_entry_point_map(short_group_name=False):

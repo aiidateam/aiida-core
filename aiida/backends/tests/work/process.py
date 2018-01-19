@@ -7,37 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
-
-import uuid
-import shutil
-import tempfile
 import threading
-
-import plum.process_monitor
+import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.lang import override
 from aiida.orm import load_node
 from aiida.orm.data.base import Int, Str
 from aiida.work.persistence import Persistence
-from aiida.work.process import Process, FunctionProcess
+from aiida.work.processes import Process, FunctionProcess
 from aiida.work.run import run, submit
-from aiida.work.workfunction import workfunction
-import aiida.work.util as util
+from aiida.work.workfunctions import workfunction
 from aiida.work.test_utils import DummyProcess, BadOutput
-from aiida.common.lang import override
 from aiida.orm.data.frozendict import FrozenDict
+from aiida import work
+from aiida.work.launch import run, run_get_pid
+from . import utils
 
+# Create a test runner
+runner = utils.create_test_runner()
 
-class ProcessStackTest(Process):
+class ProcessStackTest(work.Process):
     @override
     def _run(self):
         pass
 
     @override
-    def on_create(self, pid, inputs, saved_instance_state):
-        super(ProcessStackTest, self).on_create(
-            pid, inputs, saved_instance_state)
+    def on_create(self):
+        super(ProcessStackTest, self).on_create()
         self._thread_id = threading.current_thread().ident
 
     @override
@@ -51,33 +47,27 @@ class ProcessStackTest(Process):
 class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
+
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
+
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_process_stack(self):
-        ProcessStackTest.run()
+        run(ProcessStackTest)
 
     def test_inputs(self):
-        with self.assertRaises(AssertionError):
-            BadOutput.run()
-
-    def test_pid_is_uuid(self):
-        p = DummyProcess.new_instance(inputs={'_store_provenance': False})
-        self.assertEqual(uuid.UUID(p._calc.uuid), p.pid)
-        p.stop()
-        p.run_until_complete()
+        with self.assertRaises(TypeError):
+            run(BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
         inputs = {l: Int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
-        p = DummyProcess.new_instance(inputs)
+        p = DummyProcess(inputs)
 
         for label, value in p._calc.get_inputs_dict().iteritems():
             self.assertTrue(label in inputs)
@@ -87,65 +77,55 @@ class TestProcess(AiidaTestCase):
         # Make sure there are no other inputs
         self.assertFalse(dummy_inputs)
 
-        p.stop()
-        p.run_until_complete()
-
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        DummyProcess.new_instance().run_until_complete()
-        # Check that if we explicitly pass None as the input it also runs fine
-        DummyProcess.new_instance(inputs=None).run_until_complete()
+        run(DummyProcess)
 
     def test_seal(self):
-        rinfo = run(DummyProcess, _return_pid=True)[1]
-        self.assertTrue(load_node(pk=rinfo).is_sealed)
-
-        storedir = tempfile.mkdtemp()
-        storage = Persistence.create_from_basedir(storedir)
-
-        rinfo = submit(DummyProcess, _jobs_store=storage)
-        n = load_node(pk=rinfo.pid)
-        self.assertFalse(n.is_sealed)
-
-        dp = DummyProcess.create_from(storage._load_checkpoint(rinfo.pid))
-        dp.run_until_complete()
-        self.assertTrue(n.is_sealed)
-        shutil.rmtree(storedir)
+        pid = run_get_pid(DummyProcess).pid
+        self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
-        dp = DummyProcess.new_instance(inputs={'_description': 'My description'})
-        self.assertEquals(dp.calc.description, 'My description')
-        dp.run_until_complete()
+        dp = DummyProcess(inputs={'_description': "Rockin' process"})
+        self.assertEquals(dp.calc.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            DummyProcess.new_instance(inputs={'_description': 5})
+            DummyProcess(inputs={'_description': 5})
 
     def test_label(self):
-        dp = DummyProcess.new_instance(inputs={'_label': 'My label'})
+        dp = DummyProcess(inputs={'_label': 'My label'})
         self.assertEquals(dp.calc.label, 'My label')
-        dp.run_until_complete()
 
         with self.assertRaises(ValueError):
-            DummyProcess.new_instance(inputs={'_label': 5})
+            DummyProcess(inputs={'_label': 5})
 
-    def test_inputs_template(self):
-        inputs = DummyProcess.get_inputs_template()
-        dp = DummyProcess.new_instance(inputs=inputs)
-        dp.run_until_complete()
+    def test_work_calc_finish(self):
+        p = DummyProcess()
+        self.assertFalse(p.calc.has_finished_ok())
+        run(p)
+        self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
-        @workfunction
+        @work.workfunction
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
-        outputs, pid = run(simple_wf, _return_pid=True)
+        outputs, pid = run_get_pid(simple_wf)
         calc = load_node(pid)
-        dp = DummyProcess.new_instance(inputs={'calc': calc})
-        dp.run_until_complete()
+
+        dp = DummyProcess(inputs={'calc': calc})
+        run(dp)
 
         input_calc = dp.calc.get_inputs_dict()['calc']
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
+
+    def test_save_instance_state(self):
+        proc = DummyProcess()
+        # Save the instance state
+        bundle = work.Bundle(proc)
+
+        proc2 = bundle.unbundle()
 
 
 class TestFunctionProcess(AiidaTestCase):
@@ -154,8 +134,8 @@ class TestFunctionProcess(AiidaTestCase):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        FP = FunctionProcess.build(wf)
-        self.assertEqual(FP.run(**inputs), inputs)
+        function_process_class = work.FunctionProcess.build(wf)
+        self.assertEqual(run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -170,16 +150,16 @@ class TestFunctionProcess(AiidaTestCase):
         a = Int(4)
         inputs = {'a': a}
 
-        FP = FunctionProcess.build(wf_with_kwargs)
-        outs = FP.run(**inputs)
+        function_process_class = work.FunctionProcess.build(wf_with_kwargs)
+        outs = run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
-        FP = FunctionProcess.build(wf_without_kwargs)
+        function_process_class = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            FP.run(**inputs)
+            run(function_process_class, **inputs)
 
-        FP = FunctionProcess.build(wf_fixed_args)
-        outs = FP.run(**inputs)
+        function_process_class = work.FunctionProcess.build(wf_fixed_args)
+        outs = run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
 
@@ -225,10 +205,10 @@ class TestExposeProcess(AiidaTestCase):
                 assert self.inputs['b'] == Int(2)
                 assert self.inputs.beta['a'] == Int(3)
                 assert self.inputs.beta['b'] == Int(4)
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess, namespace='beta'))
 
-        ExposeProcess.run(**{'a': Int(1), 'b': Int(2), 'beta': {'a': Int(3), 'b': Int(4)}})
+        run(ExposeProcess, **{'a': Int(1), 'b': Int(2), 'beta': {'a': Int(3), 'b': Int(4)}})
 
     def test_expose_duplicate_namespaced(self):
         """
@@ -254,10 +234,10 @@ class TestExposeProcess(AiidaTestCase):
                 assert self.inputs.alef['b'] == Int(2)
                 assert self.inputs.beta['a'] == Int(3)
                 assert self.inputs.beta['b'] == Int(4)
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess, namespace='alef'))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess, namespace='beta'))
 
-        ExposeProcess.run(**{'alef': {'a': Int(1), 'b': Int(2)}, 'beta': {'a': Int(3), 'b': Int(4)}})
+        run(ExposeProcess, **{'alef': {'a': Int(1), 'b': Int(2)}, 'beta': {'a': Int(3), 'b': Int(4)}})
 
     def test_expose_pass_same_dict(self):
         """
@@ -282,11 +262,11 @@ class TestExposeProcess(AiidaTestCase):
                 assert self.inputs.alef['b'] == Int(2)
                 assert self.inputs.beta['a'] == Int(1)
                 assert self.inputs.beta['b'] == Int(2)
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='alef'))
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess, namespace='beta'))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess, namespace='alef'))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess, namespace='beta'))
 
         sub_inputs = {'a': Int(1), 'b': Int(2)}
-        ExposeProcess.run(**{'alef': sub_inputs, 'beta': sub_inputs})
+        run(ExposeProcess, **{'alef': sub_inputs, 'beta': sub_inputs})
 
 class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
 
@@ -314,7 +294,7 @@ class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                BaseProcess.run(**self.exposed_inputs(BaseProcess))
+                self.submit(BaseProcess, **self.exposed_inputs(BaseProcess))
 
         class ParentProcess(Process):
             @classmethod
@@ -326,62 +306,44 @@ class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SubProcess.run(**self.exposed_inputs(SubProcess))
+                self.submit(SubProcess, **self.exposed_inputs(SubProcess))
 
         self.BaseProcess = BaseProcess
         self.SubProcess = SubProcess
         self.ParentProcess = ParentProcess
 
     def test_base_process_valid_input(self):
-        self.BaseProcess.run(
-            **{'a': Int(0), 'b': Int(1)}
-        )
+        run(self.BaseProcess, **{'a': Int(0), 'b': Int(1)})
 
     def test_sub_process_valid_input(self):
-        self.SubProcess.run(
-            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3)}
-        )
+        run(self.SubProcess, **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3)})
 
     def test_parent_process_valid_input(self):
-        self.ParentProcess.run(
-            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Int(5)}
-        )
+        run(self.ParentProcess, **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Int(5)})
 
     def test_base_process_missing_input(self):
-        self.assertRaises(
-            ValueError, self.BaseProcess.run,
-            **{'b': Int(1)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.BaseProcess, **{'b': Int(1)})
 
     def test_sub_process_missing_input(self):
-        self.assertRaises(
-            ValueError, self.SubProcess.run,
-            **{'b': Int(1)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.SubProcess, **{'b': Int(1)})
 
     def test_parent_process_missing_input(self):
-        self.assertRaises(
-            ValueError, self.ParentProcess.run,
-            **{'b': Int(1)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.ParentProcess, **{'b': Int(1)})
 
     def test_base_process_invalid_type_input(self):
-        self.assertRaises(
-            ValueError, self.BaseProcess.run,
-            **{'a': Int(0), 'b': Str(1)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.BaseProcess, **{'a': Int(0), 'b': Str(1)})
 
     def test_sub_process_invalid_type_input(self):
-        self.assertRaises(
-            ValueError, self.SubProcess.run,
-            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Str(3)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.SubProcess, **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Str(3)})
 
     def test_parent_process_invalid_type_input(self):
-        self.assertRaises(
-            ValueError, self.ParentProcess.run,
-            **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Str(5)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.ParentProcess, **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Str(5)})
 
 
 class TestNestedNamespacedExposedProcess(AiidaTestCase):
@@ -410,7 +372,7 @@ class TestNestedNamespacedExposedProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                BaseProcess.run(**self.exposed_inputs(BaseProcess, namespace='base'))
+                self.submit(BaseProcess, **self.exposed_inputs(BaseProcess, namespace='base'))
 
         class ParentProcess(Process):
             @classmethod
@@ -422,33 +384,25 @@ class TestNestedNamespacedExposedProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub'))
+                self.submit(SubProcess, **self.exposed_inputs(SubProcess, namespace='sub'))
 
         self.BaseProcess = BaseProcess
         self.SubProcess = SubProcess
         self.ParentProcess = ParentProcess
 
     def test_sub_process_valid_input(self):
-        self.SubProcess.run(
-            **{'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)}
-        )
+        run(self.SubProcess, **{'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)})
 
     def test_parent_process_valid_input(self):
-        self.ParentProcess.run(
-            **{'sub': {'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)}, 'e': Int(4)}
-        )
+        run(self.ParentProcess, **{'sub': {'base': {'a': Int(0), 'b': Int(1)}, 'c': Int(2)}, 'e': Int(4)})
 
     def test_sub_process_missing_input(self):
-        self.assertRaises(
-            ValueError, self.SubProcess.run,
-            **{'c': Int(2)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.SubProcess, **{'c': Int(2)})
 
     def test_parent_process_missing_input(self):
-        self.assertRaises(
-            ValueError, self.ParentProcess.run,
-            **{'e': Int(4)}
-        )
+        with self.assertRaises(ValueError):
+            run(self.ParentProcess, **{'e': Int(4)})
 
 class TestIncludeExposeProcess(AiidaTestCase):
 
@@ -480,7 +434,7 @@ class TestIncludeExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SimpleProcess.run(a=Int(1), b=Int(2), **self.exposed_inputs(SimpleProcess))
+                self.submit(SimpleProcess, a=Int(1), b=Int(2), **self.exposed_inputs(SimpleProcess))
 
     def test_include_one(self):
         SimpleProcess = self.SimpleProcess
@@ -494,9 +448,9 @@ class TestIncludeExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SimpleProcess.run(b=Int(2), **self.exposed_inputs(SimpleProcess))
+                self.submit(SimpleProcess, b=Int(2), **self.exposed_inputs(SimpleProcess))
 
-        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
+        run(ExposeProcess, **{'a': Int(1), 'c': Int(3)})
 
 class TestExcludeExposeProcess(AiidaTestCase):
 
@@ -528,9 +482,9 @@ class TestExcludeExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess))
 
-        ExposeProcess.run(**{'a': Int(1), 'c': Int(3)})
+        run(ExposeProcess, **{'a': Int(1), 'c': Int(3)})
 
     def test_exclude_invalid(self):
         SimpleProcess = self.SimpleProcess
@@ -543,9 +497,10 @@ class TestExcludeExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SimpleProcess.run(**self.exposed_inputs(SimpleProcess))
+                self.submit(SimpleProcess, **self.exposed_inputs(SimpleProcess))
 
-        self.assertRaises(ValueError, ExposeProcess.run, **{'b': Int(2), 'c': Int(3)})
+        with self.assertRaises(ValueError):
+            run(ExposeProcess, **{'b': Int(2), 'c': Int(3)})
 
 
 class TestUnionInputsExposeProcess(AiidaTestCase):
@@ -586,19 +541,20 @@ class TestUnionInputsExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SubOneProcess.run(**self.exposed_inputs(SubOneProcess))
-                SubTwoProcess.run(**self.exposed_inputs(SubTwoProcess))
+                self.submit(SubOneProcess, **self.exposed_inputs(SubOneProcess))
+                self.submit(SubTwoProcess, **self.exposed_inputs(SubTwoProcess))
 
         self.SubOneProcess = SubOneProcess
         self.SubTwoProcess = SubTwoProcess
         self.ExposeProcess = ExposeProcess
 
     def test_inputs_union_valid(self):
-        self.ExposeProcess.run(**{'common': Int(1), 'sub_one': Int(2), 'sub_two': Int(3)})
+        run(self.ExposeProcess, **{'common': Int(1), 'sub_one': Int(2), 'sub_two': Int(3)})
 
     def test_inputs_union_invalid(self):
         inputs = {'sub_one': Int(2), 'sub_two': Int(3)}
-        self.assertRaises(ValueError, self.ExposeProcess.run, **inputs)
+        with self.assertRaises(ValueError):
+            run(self.ExposeProcess, **inputs)
 
 
 class TestAgglomerateExposeProcess(AiidaTestCase):
@@ -640,8 +596,8 @@ class TestAgglomerateExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub_a'))
-                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub_b'))
+                self.submit(SubProcess, **self.exposed_inputs(SubProcess, namespace='sub_a'))
+                self.submit(SubProcess, **self.exposed_inputs(SubProcess, namespace='sub_b'))
 
         self.SubProcess = SubProcess
         self.ExposeProcess = ExposeProcess
@@ -658,7 +614,7 @@ class TestAgglomerateExposeProcess(AiidaTestCase):
                 'specific_b': Int(5)
             }
         }
-        self.ExposeProcess.run(**inputs)
+        run(self.ExposeProcess, **inputs)
 
     def test_inputs_union_invalid(self):
         inputs = {
@@ -671,7 +627,8 @@ class TestAgglomerateExposeProcess(AiidaTestCase):
                 'specific_b': Int(5)
             }
         }
-        self.assertRaises(ValueError, self.ExposeProcess.run, **inputs)
+        with self.assertRaises(ValueError):
+            run(self.ExposeProcess, **inputs)
 
 
 class TestNonAgglomerateExposeProcess(AiidaTestCase):
@@ -706,7 +663,7 @@ class TestNonAgglomerateExposeProcess(AiidaTestCase):
 
             @override
             def _run(self, **kwargs):
-                SubProcess.run(**self.exposed_inputs(SubProcess, namespace='sub', agglomerate=False))
+                self.submit(SubProcess, **self.exposed_inputs(SubProcess, namespace='sub', agglomerate=False))
 
         self.SubProcess = SubProcess
         self.ExposeProcess = ExposeProcess
@@ -719,4 +676,4 @@ class TestNonAgglomerateExposeProcess(AiidaTestCase):
                 'specific_b': Int(3)
             },
         }
-        self.ExposeProcess.run(**inputs)
+        run(self.ExposeProcess, **inputs)

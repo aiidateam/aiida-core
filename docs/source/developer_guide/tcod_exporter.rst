@@ -58,9 +58,9 @@ defined in column *Type*. Each step is described in more detail below:
 * Depostition to the TCOD
     Deposition of the final
     :py:class:`CifData <aiida.orm.data.cif.CifData>` to the TCOD is
-    performed using
-    :ref:`cif_cod_deposit script from cod-tools package <codtools_cifcoddeposit>`.
+    performed using cif_cod_deposit script from the `codtools plugin`_.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
 .. _spglib.refine_cell() function: https://atztogo.github.io/spglib/python-spglib.html#refine-cell
 .. _TCOD CIF dictionaries: http://www.crystallography.net/tcod/cif/dictionaries/
+.. _codtools plugin: https://github.com/aiidateam/aiida-codtools

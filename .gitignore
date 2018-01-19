@@ -13,3 +13,7 @@
 /.idea/
 *.egg-info
 .eggs
+
+# files created by coverage
+*\,cover
+coverage/

@@ -5,6 +5,7 @@ Modules (API documentation)
    :maxdepth: 3
 
    aiida.common <../common/dev>
+   aiida.control <../developer_guide/control/index>
    aiida.plugins <../registrytools/dev>
    ../transport/dev
    ../scheduler/dev
@@ -16,7 +17,7 @@ Modules (API documentation)
    ../parsers/dev
    ../querying/querybuilder/dev
    ../work/dev
-   ../dbimporters/dev
-   ../dbexporters/dev
-   ../tools/dev
+   ../import_export/dbimporters/dev
+   ../import_export/dbexporters/dev
    ../testing/dev
+   ../tools/dev

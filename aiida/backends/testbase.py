@@ -68,13 +68,14 @@ class AiidaTestCase(unittest.TestCase):
             else:
                 raise ConfigurationError("Unknown backend type")
 
-
             # Check that it is of the right class
             if not issubclass(cls.__impl_class, AiidaTestImplementation):
-                raise InternalError("The AiiDA test implementation is not of type "
+                raise InternalError(
+                    "The AiiDA test implementation is not of type "
                     "{}, that is not a subclass of AiidaTestImplementation".format(
-                    cls.__impl_class.__name__
-                ))
+                        cls.__impl_class.__name__
+                    )
+                )
 
         return cls.__impl_class
 
@@ -144,7 +145,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
     actually_run_tests = []
     num_tests_expected = 0
-    
+
     # To avoid adding more than once the same test
     # (e.g. if you type both db and db.xxx)
     found_modulenames = set()
@@ -161,7 +162,19 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
         for modulename in modulenames:
             if modulename not in found_modulenames:
-                test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                try:
+                    test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                except AttributeError as exception:
+                    try:
+                        import importlib
+                        import traceback
+                        importlib.import_module(modulename)
+                    except ImportError as exception:
+                        print >> sys.stderr, (
+                            "[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
+                            .format(modulename, traceback.format_exc(exception))
+                        )
+                        sys.exit(1)
                 found_modulenames.add(modulename)
 
         num_tests_expected = test_suite.countTestCases()

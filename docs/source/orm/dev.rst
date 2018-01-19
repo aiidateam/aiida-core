@@ -48,6 +48,9 @@ Code
 ORM documentation: Data
 =======================
 
+.. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
+  check the corresponding plugin repositories.
+
 .. automodule:: aiida.orm.data
    :members:
    :private-members: _exportstring
@@ -108,6 +111,7 @@ KpointsData
 ...........
 .. automodule:: aiida.orm.data.array.kpoints
    :members:
+   :private-members:
 
 BandsData
 .........
@@ -138,6 +142,9 @@ Base data types
 ORM documentation: Calculations
 ===============================
 
+.. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
+  check the corresponding plugin repositories.
+
 .. automodule:: aiida.orm.implementation.general.calculation
    :members:
    :special-members: __init__
@@ -157,8 +164,6 @@ ORM documentation: Calculations
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
-
-.. TODO: link to aiida-quantumespresso plugin docs
 
 TemplateReplacer
 ++++++++++++++++

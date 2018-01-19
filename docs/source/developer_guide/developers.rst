@@ -213,6 +213,41 @@ For a cheatsheet of git commands, see :doc:`here <git_cheatsheet>`.
   code. Remember to do it even if you believe your modification to be small -
   the tests run pretty fast!
 
+Pre-commit hooks
+----------------
+
+Pre-commit hooks can help you write clean code by running
+
+ * code formatting
+ * syntax checking
+ * static analysis
+ * checks for missing docstrings
+ * ...
+
+locally at every commit you make. We currently use `yapf`_ and `prospector`_, but more tools may follow.
+
+Set up the hooks as follows::
+
+   cd aiida_core
+   pip install [-e] .[dev_precommit]
+   pre-commit install
+   # from now on on every git commit the checks will be run on changed files
+
+.. note:: If you work in a ``conda`` environment, make sure to ``conda install
+   virtualenv`` to avoid problems with virtualenv inside conda.
+
+Then, you'll need to explicitly enable pre-commit checks for the python files
+you're working on by editing ``.pre-commit-config.yaml``.
+Now, every time you ``git commit``, your code will be checked.
+
+ * If you ever need to commit a 'work in progress' you may skip the checks via ``git commit --no-verify``. Yet, keep in mind that the pre-commit hooks will also run (and fail) at the continuous integration stage when you push them upstream.
+ * Use ``pre-commit run`` to run the checks without committing
+
+
+.. _yapf: https://github.com/google/yapf
+.. _prospector: https://prospector.landscape.io/en/master/
+
+
 Tests
 +++++
 
@@ -446,3 +481,23 @@ In case a method is renamed or removed, this is the procedure to follow:
    (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the
    correct string, and adapt the strings to the correct content if you are
    only removing a function, or just adding a new one).
+
+Changing the config.json structure
+++++++++++++++++++++++++++++++++++
+
+In general, changes to ``config.json`` should be avoided if possible. However, if there is a need to modify it, the following procedure should be used to create a migration:
+
+1. Determine whether the change will be backwards-compatible. This means that an older version of AiiDA will still be able to run with the new ``config.json`` structure. It goes without saying that it's preferable to change ``config.json`` in a backwards-compatible way.
+
+2. In ``aiida/common/additions/config_migration/_migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
+
+3. Write a function which transforms the old config dict into the new version. It is possible that you need user input for the migration, in which case this should also be handled in that function.
+
+4. Add an entry in ``_MIGRATION_LOOKUP`` where the key is the version **before** the migration, and the value is a ``ConfigMigration`` object. The ``ConfigMigration`` is constructed from your migration function, and the **hard-coded** values of ``CURRENT_CONFIG_VERSION`` and ``OLDEST_COMPATIBLE_CONFIG_VERSION``. If these values are not hard-coded, the migration will break as soon as the values are changed again.
+
+5. Add tests for the migration, in ``aiida/common/additions/config_migration/test_migrations.py``. You can add two types of tests:
+
+    * Tests that run the entire migration, using the ``check_and_migrate_config`` function. Make sure to run it with ``store=False``, otherwise it will overwrite your ``config.json`` file. For these tests, you will have to update the reference files.
+    * Tests that run a single step in the migration, using the ``ConfigMigration.apply`` method. This can be used if you need to test different edge cases of the migration.
+
+  There are examples for both types of tests.

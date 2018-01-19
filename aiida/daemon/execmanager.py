@@ -13,6 +13,7 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -21,12 +22,19 @@ from aiida.common.exceptions import (
     ModificationNotAllowed,
 )
 from aiida.common import aiidalogger
+from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import load_node
+from aiida.orm import DataFactory
+from aiida.orm.data.folder import FolderData
+from aiida.common.log import get_dblogger_extra
+import os
 
 
-
-execlogger = aiidalogger.getChild('execmanager')
+# Until we fix the broken daemon logger https://github.com/aiidateam/aiida_core/issues/943
+# execlogger = aiidalogger.getChild('execmanager')
+import logging
+execlogger = logging.getLogger('execmanager')
 
 
 def update_running_calcs_status(authinfo):
@@ -36,15 +44,20 @@ def update_running_calcs_status(authinfo):
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
     from aiida.backends.utils import QueryFactory
-    
+
     if not authinfo.enabled:
         return
 
-    execlogger.debug("Updating running calc status for user {} "
-                     "and machine {}".format(
-        authinfo.aiidauser.email, authinfo.dbcomputer.name))
+    execlogger.debug(
+        "Updating running calc status for user {} "
+        "and machine {}".format(
+            authinfo.aiidauser.email, authinfo.dbcomputer.name)
+    )
+
+    # This will be returned to the caller
+    computed = []
 
     qmanager = QueryFactory()()
     calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
@@ -52,161 +65,145 @@ def update_running_calcs_status(authinfo):
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser
     )
-
-    #~ calcs_to_inquire = list(JobCalculation._get_all_with_state(
-        #~ state=calc_states.WITHSCHEDULER,
-        #~ computer=authinfo.dbcomputer,
-        #~ user=authinfo.aiidauser)
-    #~ )
-
-    # NOTE: no further check is done that machine and
-    # aiidauser are correct for each calc in calcs
-    s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
-    t = authinfo.get_transport()
-
-    computed = []
-
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
-    if len(calcs_to_inquire):
-        jobids_to_inquire = [str(c.get_job_id()) for c in calcs_to_inquire]
+    if not len(calcs_to_inquire):
+        return computed
 
-        # Open connection
-        with t:
-            s.set_transport(t)
-            # TODO: Check if we are ok with filtering by job (to make this work,
-            # I had to remove the check on the retval for getJobs,
-            # because if the job has computed and is not in the output of
-            # qstat, it gives a nonzero retval)
+    # NOTE: no further check is done that machine and
+    # aiidauser are correct for each job in calcs
+    scheduler = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
+    transport = authinfo.get_transport()
 
-            # TODO: catch SchedulerError exception and do something
-            # sensible (at least, skip this computer but continue with
-            # following ones, and set a counter; set calculations to
-            # UNKNOWN after a while?
-            if s.get_feature('can_query_by_user'):
-                found_jobs = s.getJobs(user="$USER", as_dict=True)
-            else:
-                found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict=True)
+    # Open connection
+    with transport:
+        scheduler.set_transport(transport)
+        # TODO: Check if we are ok with filtering by job (to make this work,
+        # I had to remove the check on the retval for getJobs,
+        # because if the job has computed and is not in the output of
+        # qstat, it gives a nonzero retval)
 
-            # I update the status of jobs
+        # TODO: catch SchedulerError exception and do something
+        # sensible (at least, skip this computer but continue with
+        # following ones, and set a counter; set calculations to
+        # UNKNOWN after a while?
+        if scheduler.get_feature('can_query_by_user'):
+            found_jobs = scheduler.getJobs(user="$USER", as_dict=True)
+        else:
+            jobids_to_inquire = [str(job.get_job_id()) for job in calcs_to_inquire]
+            found_jobs = scheduler.getJobs(jobs=jobids_to_inquire, as_dict=True)
 
-            for c in calcs_to_inquire:
-                try:
-                    logger_extra = get_dblogger_extra(c)
-                    t._set_logger_extra(logger_extra)
+        # Update the status of jobs
+        for job in calcs_to_inquire:
+            logger_extra = get_dblogger_extra(job)
 
-                    jobid = c.get_job_id()
-                    if jobid is None:
-                        execlogger.error("JobCalculation {} is WITHSCHEDULER "
-                                         "but no job id was found!".format(
-                            c.pk), extra=logger_extra)
-                        continue
+            job_id = job.get_job_id()
+            if job_id is None:
+                execlogger.error(
+                    "JobCalculation {} is WITHSCHEDULER "
+                    "but no job id was found!".format(job.pk), extra=logger_extra)
+                continue
 
-                    # I check if the calculation to be checked (c)
-                    # is in the output of qstat
-                    if jobid in found_jobs:
-                        # jobinfo: the information returned by
-                        # qstat for this job
-                        jobinfo = found_jobs[jobid]
-                        execlogger.debug("Inquirying calculation {} (jobid "
-                                         "{}): it has job_state={}".format(
-                            c.pk, jobid, jobinfo.job_state), extra=logger_extra)
-                        # For the moment, FAILED is not defined
-                        if jobinfo.job_state in [job_states.DONE]:  # , job_states.FAILED]:
-                            computed.append(c)
-                            try:
-                                c._set_state(calc_states.COMPUTED)
-                            except ModificationNotAllowed:
-                                # Someone already set it, just skip
-                                pass
-
-                        ## Do not set the WITHSCHEDULER state multiple times,
-                        ## this would raise a ModificationNotAllowed
-                        # else:
-                        # c._set_state(calc_states.WITHSCHEDULER)
-
-                        c._set_scheduler_state(jobinfo.job_state)
-
-                        c._set_last_jobinfo(jobinfo)
-                    else:
-                        execlogger.debug("Inquirying calculation {} (jobid "
-                                         "{}): not found, assuming "
-                                         "job_state={}".format(
-                            c.pk, jobid, job_states.DONE), extra=logger_extra)
-
-                        # calculation c is not found in the output of qstat
-                        computed.append(c)
-                        c._set_scheduler_state(job_states.DONE)
-                except Exception as e:
-                    # TODO: implement a counter, after N retrials
-                    # set it to a status that
-                    # requires the user intervention
-                    execlogger.warning(
-                        "There was an exception for "
-                        "calculation {} ({}): {}".format(
-                            c.pk, e.__class__.__name__, e.message
-                        ), extra=logger_extra)
-                    continue
-
-            for c in computed:
-                try:
-                    logger_extra = get_dblogger_extra(c)
-                    try:
-                        detailed_jobinfo = s.get_detailed_jobinfo(
-                            jobid=c.get_job_id())
-                    except NotImplementedError:
-                        detailed_jobinfo = (
-                            u"AiiDA MESSAGE: This scheduler does not implement "
-                            u"the routine get_detailed_jobinfo to retrieve "
-                            u"the information on "
-                            u"a job after it has finished.")
-                    last_jobinfo = c._get_last_jobinfo()
-                    if last_jobinfo is None:
-                        last_jobinfo = JobInfo()
-                        last_jobinfo.job_id = c.get_job_id()
-                        last_jobinfo.job_state = job_states.DONE
-                    last_jobinfo.detailedJobinfo = detailed_jobinfo
-                    c._set_last_jobinfo(last_jobinfo)
-                except Exception as e:
-                    execlogger.warning("There was an exception while "
-                                       "retrieving the detailed jobinfo "
-                                       "for calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message),
-                                       extra=logger_extra)
-                    continue
-                finally:
-                    # Set the state to COMPUTED as the very last thing
-                    # of this routine; no further change should be done after
-                    # this, so that in general the retriever can just
-                    # poll for this state, if we want to.
-                    try:
-                        c._set_state(calc_states.COMPUTED)
-                    except ModificationNotAllowed:
-                        # Someone already set it, just skip
-                        pass
+            job_info = found_jobs.get(job_id, None)
+            if _update_job_calc(job, scheduler, job_info):
+                computed.append(job)
 
     return computed
 
+def update_job(job, scheduler=None):
+    """
 
+    :param scheduler: The (optional) scheduler associated with the job, if
+        it is not supplied an attempt to get it will be made but this is
+        somewhat expensive so ideally the client will pass it in.
+
+    preconditions if scheduler passed:
+    * scheduler == job.get_computer().get_scheduler()
+    * scheduler._transport is not None
+
+    :param job: The job calculation to update
+    :return: True if the job has is 'computed', False otherwise
+    :rtype: bool
+    """
+    job_id = job.get_job_id()
+    if job_id is None:
+        execlogger.error(
+            "JobCalculation {} is WITHSCHEDULER "
+            "but no job id was found!".format(job.pk), extra=get_dblogger_extra(job))
+        return False
+
+    if scheduler is None:
+        scheduler = job.get_computer().get_scheduler()
+        authinfo = get_authinfo(job.get_computer(), job.get_user())
+        transport = authinfo.get_transport()
+        scheduler.set_transport()
+    else:
+        # This will raise if the scheduler doesn't have a transport
+        transport = scheduler.transport
+
+    # Keep transport open for the duration
+    with transport:
+        job_info = scheduler.getJobs(jobs=[job_id], as_dict=True).get(job_id, None)
+        return _update_job_calc(job, scheduler, job_info)
+
+    return computed
+
+def update_job_calc_from_job_info(calc, job_info):
+    """
+    Updates the job info for a JobCalculation using job information
+    as obtained from the scheduler.
+
+    :param calc: The job calculation
+    :param job_info: the information returned by the scheduler for this job
+    :return: True if the job state is DONE, False otherwise
+    :rtype: bool
+    """
+    calc._set_scheduler_state(job_info.job_state)
+    calc._set_last_jobinfo(job_info)
+
+    return job_info.job_state in job_states.DONE
+
+
+def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
+    """
+    Updates the detailed job info for a JobCalculation as obtained from
+    the scheduler
+
+    :param calc: The job calculation
+    :param detailed_job_info: the detailed information as returned by the
+        scheduler for this job
+    """
+    from aiida.scheduler.datastructures import JobInfo
+
+    last_jobinfo = calc._get_last_jobinfo()
+    if last_jobinfo is None:
+        last_jobinfo = JobInfo()
+        last_jobinfo.job_id = calc.get_job_id()
+        last_jobinfo.job_state = job_states.DONE
+
+    last_jobinfo.detailedJobinfo = detailed_job_info
+    calc._set_last_jobinfo(last_jobinfo)
+
+
+# region Daemon tasks
 def retrieve_jobs():
-    from aiida.orm import JobCalculation, Computer
-    from aiida.backends.utils import get_authinfo, QueryFactory
+    from aiida.backends.utils import QueryFactory
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
-            state=calc_states.COMPUTED,
-            only_computer_user_pairs=True,
-            only_enabled=True
-        )
+        state=calc_states.COMPUTED,
+        only_computer_user_pairs=True,
+        only_enabled=True
+    )
 
     # I create a unique set of pairs (computer, aiidauser)
-    #~ computers_users_to_check = list(
-        #~ JobCalculation._get_all_with_state(
-            #~ state=calc_states.COMPUTED,
-            #~ only_computer_user_pairs=True,
-            #~ only_enabled=True)
-    #~ )
+    # ~ computers_users_to_check = list(
+    # ~ JobCalculation._get_all_with_state(
+    # ~ state=calc_states.COMPUTED,
+    # ~ only_computer_user_pairs=True,
+    # ~ only_enabled=True)
+    # ~ )
 
     for computer, aiidauser in computers_users_to_check:
         execlogger.debug("({},{}) pair to check".format(
@@ -226,26 +223,24 @@ def retrieve_jobs():
             continue
 
 
-# in daemon
 def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import JobCalculation, Computer, User
-    from aiida.backends.utils import get_authinfo, QueryFactory
+    from aiida.backends.utils import QueryFactory
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
-            state=calc_states.WITHSCHEDULER,
-            only_computer_user_pairs=True,
-            only_enabled=True
-        )
+        state=calc_states.WITHSCHEDULER,
+        only_computer_user_pairs=True,
+        only_enabled=True
+    )
 
     for computer, aiidauser in computers_users_to_check:
-
-        execlogger.debug("({},{}) pair to check".format(
-            aiidauser.email, computer.name))
+        execlogger.debug(
+            "({},{}) pair to check".format(aiidauser.email, computer.name)
+        )
 
         try:
             authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
@@ -267,21 +262,20 @@ def submit_jobs():
     Submit all jobs in the TOSUBMIT state.
     """
     from aiida.orm import JobCalculation, Computer, User
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
     from aiida.backends.utils import get_authinfo, QueryFactory
-
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = qmanager.query_jobcalculations_by_computer_user_state(
-            state=calc_states.TOSUBMIT,
-            only_computer_user_pairs=True,
-            only_enabled=True
-        )
+        state=calc_states.TOSUBMIT,
+        only_computer_user_pairs=True,
+        only_enabled=True
+    )
 
     for computer, aiidauser in computers_users_to_check:
 
-        execlogger.debug("({},{}) pair to submit".format(
+        execlogger.error("({},{}) pair to submit".format(
             aiidauser.email, computer.name))
 
         try:
@@ -292,12 +286,12 @@ def submit_jobs():
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
                 calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
-                        state=calc_states.TOSUBMIT,
-                        computer=computer, user=aiidauser
-                    )
-                #~ calcs_to_inquire = JobCalculation._get_all_with_state(
-                    #~ state=calc_states.TOSUBMIT,
-                    #~ computer=computer, user=aiidauser)
+                    state=calc_states.TOSUBMIT,
+                    computer=computer, user=aiidauser
+                )
+                # ~ calcs_to_inquire = JobCalculation._get_all_with_state(
+                # ~ state=calc_states.TOSUBMIT,
+                # ~ computer=computer, user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
@@ -310,7 +304,7 @@ def submit_jobs():
                                      "for aiidauser {}".format(
                         calc.pk, computer.pk, computer.get_name(),
                         aiidauser.email),
-                                     extra=logger_extra)
+                        extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
 
@@ -324,10 +318,12 @@ def submit_jobs():
                 aiidauser.email,
                 computer.name,
                 e.__class__.__name__, traceback.format_exc()))
-            print msg
             execlogger.error(msg)
             # Continue with next computer
             continue
+
+
+# endregion
 
 
 def submit_jobs_with_authinfo(authinfo):
@@ -336,7 +332,7 @@ def submit_jobs_with_authinfo(authinfo):
     to user and machine as defined in the 'dbauthinfo' table.
     """
     from aiida.orm import JobCalculation
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
 
     from aiida.backends.utils import QueryFactory
 
@@ -384,7 +380,7 @@ def submit_jobs_with_authinfo(authinfo):
         # because any other exception is caught and skipped above
         except Exception as e:
             import traceback
-            from aiida.utils.logger import get_dblogger_extra
+            from aiida.common.log import get_dblogger_extra
 
             for calc in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
@@ -420,10 +416,9 @@ def submit_calc(calc, authinfo, transport=None):
     """
     from aiida.orm import Code, Computer
     from aiida.common.folders import SandboxFolder
-    from aiida.common.exceptions import (
-        InputValidationError)
+    from aiida.common.exceptions import InputValidationError
     from aiida.orm.data.remote import RemoteData
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -476,14 +471,14 @@ def submit_calc(calc, authinfo, transport=None):
 
             codes_info = calcinfo.codes_info
             input_codes = [load_node(_.code_uuid, parent_class=Code)
-                           for _ in codes_info ]
+                           for _ in codes_info]
 
             for code in input_codes:
                 if not code.can_run_on(computer):
                     raise InputValidationError(
                         "The selected code {} for calculation "
                         "{} cannot run on computer {}".
-                        format(code.pk, calc.pk, computer.name))
+                            format(code.pk, calc.pk, computer.name))
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
@@ -509,7 +504,7 @@ def submit_calc(calc, authinfo, transport=None):
                 execlogger.debug(
                     "[submission of calc {}] "
                     "Unable to chdir in {}, trying to create it".
-                    format(calc.pk, remote_working_directory),
+                        format(calc.pk, remote_working_directory),
                     extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
@@ -519,8 +514,8 @@ def submit_calc(calc, authinfo, transport=None):
                         "[submission of calc {}] "
                         "Unable to create the remote directory {} on "
                         "computer '{}': {}".
-                        format(calc.pk, remote_working_directory, computer.name,
-                               e.message))
+                            format(calc.pk, remote_working_directory, computer.name,
+                                   e.message))
             # Store remotely with sharding (here is where we choose
             # the folder structure of remote jobs; then I store this
             # in the calculation properties using _set_remote_dir
@@ -568,7 +563,7 @@ def submit_calc(calc, authinfo, transport=None):
                     execlogger.debug("[submission of calc {}] "
                                      "copying local file/folder to {}".format(
                         calc.pk, dest_rel_path),
-                                     extra=logger_extra)
+                        extra=logger_extra)
                     t.put(src_abs_path, dest_rel_path)
 
             if remote_copy_list is not None:
@@ -616,8 +611,7 @@ def submit_calc(calc, authinfo, transport=None):
                                       "between two different machines for "
                                       "calculation {}".format(calc.pk))
 
-            remotedata = RemoteData(computer=computer,
-                                    remote_path=workdir)
+            remotedata = RemoteData(computer=computer, remote_path=workdir)
             remotedata.add_link_from(calc, label='remote_folder',
                                      link_type=LinkType.CREATE)
             remotedata.store()
@@ -633,7 +627,7 @@ def submit_calc(calc, authinfo, transport=None):
             ## and understands that the daemon is not running.
             # if job_tmpl.submit_as_hold:
             #    calc._set_scheduler_state(job_states.QUEUED_HELD)
-            #else:
+            # else:
             #    calc._set_scheduler_state(job_states.QUEUED)
 
             execlogger.debug("submitted calculation {} on {} with "
@@ -643,11 +637,7 @@ def submit_calc(calc, authinfo, transport=None):
     except Exception as e:
         import traceback
 
-        try:
-            calc._set_state(calc_states.SUBMISSIONFAILED)
-        except ModificationNotAllowed:
-            # Someone already set it, just skip
-            pass
+        _set_state_noraise(calc, calc_states.SUBMISSIONFAILED)
 
         execlogger.error("Submission of calc {} failed, check also the "
                          "log file! Traceback: {}".format(calc.pk,
@@ -664,7 +654,7 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import JobCalculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
-    from aiida.utils.logger import get_dblogger_extra
+    from aiida.common.log import get_dblogger_extra
     from aiida.orm import DataFactory
 
     from aiida.backends.utils import QueryFactory
@@ -677,7 +667,7 @@ def retrieve_computed_for_authinfo(authinfo):
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     calcs_to_retrieve = qmanager.query_jobcalculations_by_computer_user_state(
-            state=calc_states.COMPUTED,
+        state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
 
@@ -689,192 +679,318 @@ def retrieve_computed_for_authinfo(authinfo):
     if len(calcs_to_retrieve):
 
         # Open connection
-        with authinfo.get_transport() as t:
+        with authinfo.get_transport() as transport:
             for calc in calcs_to_retrieve:
-                logger_extra = get_dblogger_extra(calc)
-                t._set_logger_extra(logger_extra)
-
-                try:
-                    calc._set_state(calc_states.RETRIEVING)
-                except ModificationNotAllowed:
-                    # Someone else has already started to retrieve it,
-                    # just log and continue
-                    execlogger.debug("Attempting to retrieve more than once "
-                                     "calculation {}: skipping!".format(calc.pk),
-                                     extra=logger_extra)
-                    continue  # with the next calculation to retrieve
-                try:
-                    execlogger.debug("Retrieving calc {}".format(calc.pk),
-                                     extra=logger_extra)
-                    workdir = calc._get_remote_workdir()
-                    retrieve_list = calc._get_retrieve_list()
-                    retrieve_singlefile_list = calc._get_retrieve_singlefile_list()
-                    execlogger.debug("[retrieval of calc {}] "
-                                     "chdir {}".format(calc.pk, workdir),
-                                     extra=logger_extra)
-                    t.chdir(workdir)
-
-                    retrieved_files = FolderData()
-                    retrieved_files.add_link_from(
-                        calc, label=calc._get_linkname_retrieved(),
-                        link_type=LinkType.CREATE)
-
-                    # First, retrieve the files of folderdata
-                    with SandboxFolder() as folder:
-                        for item in retrieve_list:
-                            # I have two possibilities:
-                            # * item is a string
-                            # * or is a list
-                            # then I have other two possibilities:
-                            # * there are file patterns
-                            # * or not
-                            # First decide the name of the files
-                            if isinstance(item, list):
-                                tmp_rname, tmp_lname, depth = item
-                                # if there are more than one file I do something differently
-                                if t.has_magic(tmp_rname):
-                                    remote_names = t.glob(tmp_rname)
-                                    local_names = []
-                                    for rem in remote_names:
-                                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
-                                        local_names.append(os.path.sep.join([tmp_lname] + to_append))
-                                else:
-                                    remote_names = [tmp_rname]
-                                    to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
-                                    local_names = [os.path.sep.join([tmp_lname] + to_append)]
-                                if depth > 1:  # create directories in the folder, if needed
-                                    for this_local_file in local_names:
-                                        new_folder = os.path.join(
-                                            folder.abspath,
-                                            os.path.split(this_local_file)[0])
-                                        if not os.path.exists(new_folder):
-                                            os.makedirs(new_folder)
-                            else:  # it is a string
-                                if t.has_magic(item):
-                                    remote_names = t.glob(item)
-                                    local_names = [os.path.split(rem)[1] for rem in remote_names]
-                                else:
-                                    remote_names = [item]
-                                    local_names = [os.path.split(item)[1]]
-
-                            for rem, loc in zip(remote_names, local_names):
-                                execlogger.debug("[retrieval of calc {}] "
-                                                 "Trying to retrieve remote item '{}'".format(
-                                    calc.pk, rem),
-                                                 extra=logger_extra)
-                                t.get(rem,
-                                      os.path.join(folder.abspath, loc),
-                                      ignore_nonexisting=True)
-
-                        # Here I retrieved everything;
-                        # now I store them inside the calculation
-                        retrieved_files.replace_with_folder(folder.abspath,
-                                                            overwrite=True)
-
-                    # Second, retrieve the singlefiles
-                    with SandboxFolder() as folder:
-                        singlefile_list = []
-                        for (linkname, subclassname, filename) in retrieve_singlefile_list:
-                            execlogger.debug("[retrieval of calc {}] Trying "
-                                             "to retrieve remote singlefile '{}'".format(
-                                calc.pk, filename),
-                                             extra=logger_extra)
-                            localfilename = os.path.join(
-                                folder.abspath, os.path.split(filename)[1])
-                            t.get(filename, localfilename,
-                                  ignore_nonexisting=True)
-                            singlefile_list.append((linkname, subclassname,
-                                                    localfilename))
-
-                        # ignore files that have not been retrieved
-                        singlefile_list = [i for i in singlefile_list if
-                                           os.path.exists(i[2])]
-
-                        # after retrieving from the cluster, I create the objects
-                        singlefiles = []
-                        for (linkname, subclassname, filename) in singlefile_list:
-                            SinglefileSubclass = DataFactory(subclassname)
-                            singlefile = SinglefileSubclass()
-                            singlefile.set_file(filename)
-                            singlefile.add_link_from(calc, label=linkname,
-                                                     link_type=LinkType.CREATE)
-                            singlefiles.append(singlefile)
-
-                    # Finally, store
-                    execlogger.debug("[retrieval of calc {}] "
-                                     "Storing retrieved_files={}".format(
-                        calc.pk, retrieved_files.dbnode.pk),
-                                     extra=logger_extra)
-                    retrieved_files.store()
-                    for fil in singlefiles:
-                        execlogger.debug("[retrieval of calc {}] "
-                                         "Storing retrieved_singlefile={}".format(
-                            calc.pk, fil.dbnode.pk),
-                                         extra=logger_extra)
-                        fil.store()
-
-                    # If I was the one retrieving, I should also be the only
-                    # one parsing! I do not check
-                    calc._set_state(calc_states.PARSING)
-
-                    Parser = calc.get_parserclass()
-                    # If no parser is set, the calculation is successful
-                    successful = True
-                    if Parser is not None:
-                        # TODO: parse here
-                        parser = Parser(calc)
-                        successful, new_nodes_tuple = parser.parse_from_calc()
-
-                        for label, n in new_nodes_tuple:
-                            n.add_link_from(calc, label=label,
-                                            link_type=LinkType.CREATE)
-                            n.store()
-
-                    if successful:
-                        try:
-                            calc._set_state(calc_states.FINISHED)
-                        except ModificationNotAllowed:
-                            # I should have been the only one to set it, but
-                            # in order to avoid unuseful error messages, I
-                            # just ignore
-                            pass
-                    else:
-                        try:
-                            calc._set_state(calc_states.FAILED)
-                        except ModificationNotAllowed:
-                            # I should have been the only one to set it, but
-                            # in order to avoid unuseful error messages, I
-                            # just ignore
-                            pass
-                        execlogger.error("[parsing of calc {}] "
-                                         "The parser returned an error, but it should have "
-                                         "created an output node with some partial results "
-                                         "and warnings. Check there for more information on "
-                                         "the problem".format(calc.pk), extra=logger_extra)
+                if retrieve_and_parse(calc, transport):
                     retrieved.append(calc)
-                except Exception:
-                    import traceback
-
-                    tb = traceback.format_exc()
-                    newextradict = logger_extra.copy()
-                    newextradict['full_traceback'] = tb
-                    if calc.get_state() == calc_states.PARSING:
-                        execlogger.error("Error parsing calc {}. "
-                                         "Traceback: {}".format(calc.pk, tb),
-                                         extra=newextradict)
-                        # TODO: add a 'comment' to the calculation
-                        try:
-                            calc._set_state(calc_states.PARSINGFAILED)
-                        except ModificationNotAllowed:
-                            pass
-                    else:
-                        execlogger.error("Error retrieving calc {}. "
-                                         "Traceback: {}".format(calc.pk, tb),
-                                         extra=newextradict)
-                        try:
-                            calc._set_state(calc_states.RETRIEVALFAILED)
-                        except ModificationNotAllowed:
-                            pass
-                        raise
 
     return retrieved
+
+def retrieve_and_parse(calc, transport=None):
+    if transport is None:
+        authinfo = get_authinfo(calc.get_computer(), calc.get_user())
+        transport = authinfo.get_transport()
+
+    logger_extra = get_dblogger_extra(calc)
+    transport._set_logger_extra(logger_extra)
+
+    try:
+        retrieved_temporary_folder = retrieve_all(calc, transport, logger_extra)
+    except Exception:
+        import traceback
+
+        tb = traceback.format_exc()
+        newextradict = logger_extra.copy()
+        newextradict['full_traceback'] = tb
+
+        execlogger.error(
+            "Error retrieving calc {}. Traceback: {}".format(calc.pk, tb),
+            extra=newextradict
+        )
+        _set_state_noraise(calc, calc_states.RETRIEVALFAILED)
+        return False
+
+    try:
+        parse_results(calc, retrieved_temporary_folder, logger_extra)
+    except Exception:
+        import traceback
+
+        tb = traceback.format_exc()
+        newextradict = logger_extra.copy()
+        newextradict['full_traceback'] = tb
+        execlogger.error(
+            "Error parsing calc {}. Traceback: {}".format(calc.pk, tb),
+            extra=newextradict
+        )
+        # TODO: add a 'comment' to the calculation
+        _set_state_noraise(calc, calc_states.PARSINGFAILED)
+        return False
+
+    return True
+
+
+def retrieve_all(job, transport, logger_extra=None):
+    try:
+        job._set_state(calc_states.RETRIEVING)
+    except ModificationNotAllowed:
+        # Someone else has already started to retrieve it,
+        # just log and continue
+        execlogger.debug(
+            "Attempting to retrieve more than once "
+            "calculation {}: skipping!".format(job.pk),
+            extra=logger_extra
+        )
+        return
+
+    execlogger.debug("Retrieving calc {}".format(job.pk), extra=logger_extra)
+    workdir = job._get_remote_workdir()
+
+    execlogger.debug(
+        "[retrieval of calc {}] chdir {}".format(job.pk, workdir),
+        extra=logger_extra)
+
+    # Create the FolderData node to attach everything to
+    retrieved_files = FolderData()
+    retrieved_files.add_link_from(
+        job, label=job._get_linkname_retrieved(),
+        link_type=LinkType.CREATE)
+
+    with transport:
+        transport.chdir(workdir)
+
+        # First, retrieve the files of folderdata
+        retrieve_list = job._get_retrieve_list()
+        retrieve_temporary_list = job._get_retrieve_temporary_list()
+        retrieve_singlefile_list = job._get_retrieve_singlefile_list()
+
+        with SandboxFolder() as folder:
+            retrieve_files_from_list(job, transport, folder, retrieve_list)
+            # Here I retrieved everything; now I store them inside the calculation
+            retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
+
+        # Second, retrieve the singlefiles
+        _retrieve_singlefiles(job, transport, retrieve_singlefile_list, logger_extra)
+
+        # Retrieve the temporary files in a separate temporary folder if any files were
+        # specified in the 'retrieve_temporary_list' key
+        if retrieve_temporary_list:
+            retrieved_temporary_folder = FolderData()
+            with SandboxFolder() as folder:
+                retrieve_files_from_list(job, transport, folder, retrieve_temporary_list)
+                retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
+
+            # Log the files that were retrieved in the temporary folder
+            for entry in retrieved_temporary_folder.get_folder_list():
+                execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
+                job.pk, entry), extra=logger_extra)
+        else:
+            retrieved_temporary_folder = None
+
+        # Store everything
+        execlogger.debug(
+            "[retrieval of calc {}] "
+            "Storing retrieved_files={}".format(job.pk, retrieved_files.dbnode.pk),
+            extra=logger_extra)
+        retrieved_files.store()
+
+    return retrieved_temporary_folder
+
+
+def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
+    job._set_state(calc_states.PARSING)
+
+    Parser = job.get_parserclass()
+
+    # If no parser is set, the calculation is successful
+    successful = True
+    if Parser is not None:
+        parser = Parser(job)
+        successful, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
+
+        for label, n in new_nodes_tuple:
+            n.add_link_from(job, label=label, link_type=LinkType.CREATE)
+            n.store()
+
+    try:
+        if successful:
+            job._set_state(calc_states.FINISHED)
+        else:
+            job._set_state(calc_states.FAILED)
+    except ModificationNotAllowed:
+        # I should have been the only one to set it, but
+        # in order to avoid useless error messages, I just ignore
+        pass
+
+    if not successful:
+        execlogger.error("[parsing of calc {}] "
+                         "The parser returned an error, but it should have "
+                         "created an output node with some partial results "
+                         "and warnings. Check there for more information on "
+                         "the problem".format(job.pk), extra=logger_extra)
+
+    return successful
+
+
+def _update_job_calc(calc, scheduler, job_info):
+    from aiida.common.log import get_dblogger_extra
+
+    logger_extra = get_dblogger_extra(calc)
+    finished = False
+    job_id = calc.get_job_id()
+
+    try:
+        if job_info is not None:
+            execlogger.debug(
+                "Inquirying calculation {} (jobid "
+                "{}): it has job_state={}".format(
+                    calc.pk, job_id, job_info.job_state), extra=logger_extra)
+
+            finished = update_job_calc_from_job_info(calc, job_info)
+        else:
+            # Job calculation c is not found in the output of scheduler
+            execlogger.debug(
+                "Inquirying calculation {} (jobid "
+                "{}): not found, assuming "
+                "job_state={}".format(
+                    calc.pk, job_id, job_states.DONE), extra=logger_extra)
+
+            calc._set_scheduler_state(job_states.DONE)
+            finished = True
+    except Exception as e:
+        # TODO: implement a counter, after N retrials
+        # set it to a status that
+        # requires the user intervention
+        execlogger.warning(
+            "There was an exception for calculation {} ({}): {}".format(
+                calc.pk, e.__class__.__name__, e.message
+            ), extra=logger_extra)
+
+    if finished:
+        try:
+            try:
+                detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
+            except NotImplementedError:
+                detailed_job_info = (
+                    u"AiiDA MESSAGE: This scheduler does not implement "
+                    u"the routine get_detailed_jobinfo to retrieve "
+                    u"the information on "
+                    u"a job after it has finished.")
+
+            update_job_calc_from_detailed_job_info(calc, detailed_job_info)
+
+        except Exception as e:
+            execlogger.warning(
+                "There was an exception while "
+                "retrieving the detailed jobinfo "
+                "for calculation {} ({}): {}".format(
+                    calc.pk, e.__class__.__name__, e.message),
+                extra=logger_extra)
+
+        # Set the state to COMPUTED as the very last thing
+        # of this routine; no further change should be done after
+        # this, so that in general the retriever can just
+        # poll for this state, if we want to.
+        try:
+            calc._set_state(calc_states.COMPUTED)
+        except ModificationNotAllowed:
+            # Someone already set it, just skip
+            pass
+
+    return finished
+
+def _retrieve_singlefiles(job, transport, retrieve_file_list, logger_extra=None):
+    singlefile_list = []
+    for (linkname, subclassname, filename) in retrieve_file_list:
+        execlogger.debug("[retrieval of calc {}] Trying "
+                         "to retrieve remote singlefile '{}'".format(
+            job.pk, filename), extra=logger_extra)
+        localfilename = os.path.join(retrieved_files.abspath, os.path.split(filename)[1])
+        transport.get(filename, localfilename, ignore_nonexisting=True)
+        singlefile_list.append((linkname, subclassname, localfilename))
+
+    # ignore files that have not been retrieved
+    singlefile_list = [i for i in singlefile_list if
+                       os.path.exists(i[2])]
+
+    # after retrieving from the cluster, I create the objects
+    singlefiles = []
+    for (linkname, subclassname, filename) in singlefile_list:
+        SinglefileSubclass = DataFactory(subclassname)
+        singlefile = SinglefileSubclass()
+        singlefile.set_file(filename)
+        singlefile.add_link_from(job, label=linkname, link_type=LinkType.CREATE)
+        singlefiles.append(singlefile)
+
+    for fil in singlefiles:
+        execlogger.debug(
+            "[retrieval of calc {}] "
+            "Storing retrieved_singlefile={}".format(job.pk, fil.dbnode.pk),
+            extra=logger_extra)
+        fil.store()
+
+
+def _set_state_noraise(job, state):
+    try:
+        job._set_state(state)
+        return True
+    except ModificationNotAllowed:
+        return False
+
+def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
+    """
+    Retrieve all the files in the retrieve_list from the remote into the
+    local folder instance through the transport. The entries in the retrieve_list
+    can be of two types:
+
+        * a string
+        * a list
+
+    If it is a string, it represents the remote absolute filepath of the file.
+    If the item is a list, the elements will correspond to the following:
+
+        * remotepath
+        * localpath
+        * depth
+
+    If the remotepath contains file patterns with wildcards, the localpath will be
+    treated as the work directory of the folder and the depth integer determines
+    upto what level of the original remotepath nesting the files will be copied.
+
+    :param transport: the Transport instance
+    :param folder: a local Folder instance for the transport to store files into
+    :param retrieve_list: the list of files to retrieve
+    """
+    import os
+
+    for item in retrieve_list:
+        if isinstance(item, list):
+            tmp_rname, tmp_lname, depth = item
+            # if there are more than one file I do something differently
+            if transport.has_magic(tmp_rname):
+                remote_names = transport.glob(tmp_rname)
+                local_names = []
+                for rem in remote_names:
+                    to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                    local_names.append(os.path.sep.join([tmp_lname] + to_append))
+            else:
+                remote_names = [tmp_rname]
+                to_append = remote_names.split(os.path.sep)[-depth:] if depth > 0 else []
+                local_names = [os.path.sep.join([tmp_lname] + to_append)]
+            if depth > 1:  # create directories in the folder, if needed
+                for this_local_file in local_names:
+                    new_folder = os.path.join(
+                        folder.abspath,
+                        os.path.split(this_local_file)[0])
+                    if not os.path.exists(new_folder):
+                        os.makedirs(new_folder)
+        else:  # it is a string
+            if transport.has_magic(item):
+                remote_names = transport.glob(item)
+                local_names = [os.path.split(rem)[1] for rem in remote_names]
+            else:
+                remote_names = [item]
+                local_names = [os.path.split(item)[1]]
+
+        for rem, loc in zip(remote_names, local_names):
+            transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
+            transport.get(rem, os.path.join(folder.abspath, loc), ignore_nonexisting=True)

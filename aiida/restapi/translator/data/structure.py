@@ -1,5 +1,16 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestValidationError
+from aiida.common.exceptions import LicensingException
+import numpy as np
 
 def atom_kinds_to_html(atom_kind):
     """
@@ -42,7 +53,6 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
-
 class StructureDataTranslator(DataTranslator):
     """
     Translator relative to resource 'structures' and aiida class StructureData
@@ -70,87 +80,130 @@ class StructureDataTranslator(DataTranslator):
 
 
     @staticmethod
-    def get_visualization_data(node, supercell_factors=[1, 1, 1]):
+    def get_visualization_data(node, format=None, supercell_factors=[1, 1, 1]):
+        """
+        Returns: data in specified format. If format is not specified returns data
+        in a format required by chemdoodle to visualize a structure.
+        """
+        response = {}
+        response["str_viz_info"] = {}
+
+        if format in node.get_export_formats():
+            try:
+                response["str_viz_info"]["data"] = node._exportstring(format)[0]
+                response["str_viz_info"]["format"] = format
+            except LicensingException as e:
+                response = e.message
+
+        else:
+            import numpy as np
+            from itertools import product
+
+
+            # Validate supercell factors
+            if type(supercell_factors) is not list:
+                raise RestValidationError('supercell factors have to be a list of three integers')
+
+            for fac in supercell_factors:
+                if type(fac) is not int:
+                    raise RestValidationError('supercell factors have to be '
+                                              'integers')
+
+            # Get cell vectors and atomic position
+            lattice_vectors = np.array(node.get_attr('cell'))
+            base_sites = node.get_attr('sites')
+
+            start1 = -int(supercell_factors[0] / 2)
+            start2 = -int(supercell_factors[1] / 2)
+            start3 = -int(supercell_factors[2] / 2)
+
+            stop1 = start1 + supercell_factors[0]
+            stop2 = start2 + supercell_factors[1]
+            stop3 = start3 + supercell_factors[2]
+
+            grid1 = range(start1, stop1)
+            grid2 = range(start2, stop2)
+            grid3 = range(start3, stop3)
+
+            atoms_json = []
+
+            # Manual recenter of the structure
+            center = (lattice_vectors[0] + lattice_vectors[1] +
+                      lattice_vectors[2])/2.
+
+            for ix, iy, iz in product(grid1, grid2, grid3):
+                for base_site in base_sites:
+
+                    shift = (ix*lattice_vectors[0] + iy*lattice_vectors[1] + \
+                    iz*lattice_vectors[2] - center).tolist()
+
+                    kind_name = base_site['kind_name']
+                    kind_string = node.get_kind(kind_name).get_symbols_string()
+
+                    atoms_json.append(
+                        {'l': kind_name,
+                         'x': base_site['position'][0] + shift[0],
+                         'y': base_site['position'][1] + shift[1],
+                         'z': base_site['position'][2] + shift[2],
+                         # 'atomic_elments_html': kind_string
+                         'atomic_elments_html': atom_kinds_to_html(kind_string)
+                        })
+
+            cell_json = {
+                    "t": "UnitCell",
+                    "i": "s0",
+                    "o": (-center).tolist(),
+                    "x": (lattice_vectors[0]-center).tolist(),
+                    "y": (lattice_vectors[1]-center).tolist(),
+                    "z": (lattice_vectors[2]-center).tolist(),
+                    "xy": (lattice_vectors[0] + lattice_vectors[1]
+                           - center).tolist(),
+                    "xz": (lattice_vectors[0] + lattice_vectors[2]
+                           - center).tolist(),
+                    "yz": (lattice_vectors[1] + lattice_vectors[2]
+                           - center).tolist(),
+                    "xyz": (lattice_vectors[0] + lattice_vectors[1]
+                            + lattice_vectors[2] - center).tolist(),
+                }
+
+            # These will be passed to ChemDoodle
+            response["str_viz_info"]["data"] = {"s": [cell_json],
+                            "m": [{"a": atoms_json}],
+                            "units": '&Aring;'
+                            }
+            response["str_viz_info"]["format"] = "default (ChemDoodle)"
+
+        # Add extra information
+        response["dimensionality"] = node.get_dimensionality()
+        response["pbc"] = node.pbc
+        response["formula"] = node.get_formula()
+
+        return response
+
+
+    @staticmethod
+    def get_downloadable_data(node, format=None):
+        """
+        Generic function extented for structure data
+
+        :param node: node object that has to be visualized
+        :param format: file extension format
+        :returns: data in selected format to download
         """
 
-        Returns: data in a format required by chemdoodle to visualize a
-        structure.
+        response = {}
 
-        """
-        import numpy as np
-        from itertools import product
+        if format is None:
+            format = "cif"
 
+        if format in node.get_export_formats():
+            try:
+                response["data"] = node._exportstring(format)[0]
+                response["status"] = 200
+                response["filename"] = node.uuid + "_structure." + format
+            except LicensingException as e:
+                response["status"] = 500
+                response["data"] = e.message
 
-        # Validate supercell factors
-        if type(supercell_factors) is not list:
-            raise RestValidationError('supercell factors have to be a list of three integers')
-
-        for fac in supercell_factors:
-            if type(fac) is not int:
-                raise RestValidationError('supercell factors have to be '
-                                          'integers')
-
-        # Get cell vectors and atomic position
-        lattice_vectors = np.array(node.get_attr('cell'))
-        base_sites = node.get_attr('sites')
-
-        start1 = -int(supercell_factors[0] / 2)
-        start2 = -int(supercell_factors[1] / 2)
-        start3 = -int(supercell_factors[2] / 2)
-
-        stop1 = start1 + supercell_factors[0]
-        stop2 = start2 + supercell_factors[1]
-        stop3 = start3 + supercell_factors[2]
-
-        grid1 = range(start1, stop1)
-        grid2 = range(start2, stop2)
-        grid3 = range(start3, stop3)
-
-        atoms_json = []
-
-        # Manual recenter of the structure
-        center = (lattice_vectors[0] + lattice_vectors[1] +
-                  lattice_vectors[2])/2.
-
-        for ix, iy, iz in product(grid1, grid2, grid3):
-            for base_site in base_sites:
-
-                shift = (ix*lattice_vectors[0] + iy*lattice_vectors[1] + \
-                iz*lattice_vectors[2] - center).tolist()
-
-                kind_name = base_site['kind_name']
-                kind_string = node.get_kind(kind_name).get_symbols_string()
-
-                atoms_json.append(
-                    {'l': kind_name,
-                     'x': base_site['position'][0] + shift[0],
-                     'y': base_site['position'][1] + shift[1],
-                     'z': base_site['position'][2] + shift[2],
-                     # 'atomic_elments_html': kind_string
-                     'atomic_elments_html': atom_kinds_to_html(kind_string)
-                    })
-
-        cell_json = {
-                "t": "UnitCell",
-                "i": "s0",
-                "o": (-center).tolist(),
-                "x": (lattice_vectors[0]-center).tolist(),
-                "y": (lattice_vectors[1]-center).tolist(),
-                "z": (lattice_vectors[2]-center).tolist(),
-                "xy": (lattice_vectors[0] + lattice_vectors[1]
-                       - center).tolist(),
-                "xz": (lattice_vectors[0] + lattice_vectors[2]
-                       - center).tolist(),
-                "yz": (lattice_vectors[1] + lattice_vectors[2]
-                       - center).tolist(),
-                "xyz": (lattice_vectors[0] + lattice_vectors[1]
-                        + lattice_vectors[2] - center).tolist(),
-            }
-
-        # These will be passed to ChemDoodle
-        json_content = {"s": [cell_json],
-                        "m": [{"a": atoms_json}],
-                        "units": '&Aring;'
-                        }
-        return json_content
+        return response
 

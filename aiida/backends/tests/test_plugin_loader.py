@@ -8,68 +8,99 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import old_pluginloader as pl
-import unittest
+from aiida.common.pluginloader import all_plugins
+from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
+from aiida.orm import Workflow
+from aiida.parsers import Parser, ParserFactory
+from aiida.orm.data import Data
+from aiida.orm import JobCalculation
+from aiida.scheduler import Scheduler, SchedulerFactory
+from aiida.transport import Transport, TransportFactory
+from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
+from aiida.work import WorkChain
 
 
 class TestExistingPlugins(AiidaTestCase):
     """
-    Test pluginloader's existing_plugins function.
+    Test pluginloader's all_plugins function.
 
-    * will fail when any of the plugins distributede with aiida fail to load.
-    * will fail when pluginloader gets broken.
+    * will fail when any of the plugins distributed with aiida or installed
+      from external plugin repositories, fails to load
     * will fail if pluginloader returns something else than a list
     """
     def test_existing_calculations(self):
-        """Test listing all preinstalled calculations """
-        from aiida.orm.calculation.job import JobCalculation
-        calcs = pl.existing_plugins(JobCalculation, 'aiida.orm.calculation.job', suffix='Calculation')
-        self.assertIsInstance(calcs, list)
-        from aiida.orm import CalculationFactory
-        for i in calcs:
-            self.assertTrue(issubclass(CalculationFactory(i), JobCalculation))
-
-    def test_existing_parsers(self):
-        """Test listing all preinstalled parsers"""
-        from aiida.parsers import Parser
-        pars = pl.existing_plugins(Parser, 'aiida.parsers.plugins')
-        self.assertIsInstance(pars, list)
-        from aiida.parsers import ParserFactory
-        for i in pars:
-            self.assertTrue(issubclass(ParserFactory(i), Parser))
+        """
+        Test listing all preinstalled calculations
+        """
+        calculations = all_plugins('calculations')
+        self.assertIsInstance(calculations, list)
+        for i in calculations:
+            cls = CalculationFactory(i)
+            self.assertTrue(issubclass(cls, JobCalculation),
+                'Calculation plugin class {} is not subclass of {}'.format(cls, JobCalculation))
 
     def test_existing_data(self):
-        """Test listing all preinstalled data formats"""
-        from aiida.orm.data import Data
-        data = pl.existing_plugins(Data, 'aiida.orm.data')
+        """
+        Test listing all preinstalled data classes
+        """
+        data = all_plugins('data')
         self.assertIsInstance(data, list)
-        from aiida.orm import DataFactory
         for i in data:
-            self.assertTrue(issubclass(DataFactory(i), Data))
+            cls = DataFactory(i)
+            self.assertTrue(issubclass(cls, Data),
+                'Data plugin class {} is not subclass of {}'.format(cls, Data))
+
+    def test_existing_parsers(self):
+        """
+        Test listing all preinstalled parsers
+        """
+        parsers = all_plugins('parsers')
+        self.assertIsInstance(parsers, list)
+        for i in parsers:
+            cls = ParserFactory(i)
+            self.assertTrue(issubclass(cls, Parser),
+                'Parser plugin class {} is not subclass of {}'.format(cls, Parser))
 
     def test_existing_schedulers(self):
-        """Test listing all preinstalled schedulers"""
-        from aiida.scheduler import Scheduler
-        sche = pl.existing_plugins(Scheduler, 'aiida.scheduler.plugins')
-        self.assertIsInstance(sche, list)
+        """
+        Test listing all preinstalled schedulers
+        """
+        schedulers = all_plugins('schedulers')
+        self.assertIsInstance(schedulers, list)
+        for i in schedulers:
+            cls = SchedulerFactory(i)
+            self.assertTrue(issubclass(cls, Scheduler),
+                'Scheduler plugin class {} is not subclass of {}'.format(cls, Scheduler))
 
     def test_existing_transports(self):
-        """Test listing all preinstalled transports"""
-        from aiida.transport import Transport
-        tran = pl.existing_plugins(Transport, 'aiida.transport.plugins')
-        self.assertIsInstance(tran, list)
+        """
+        Test listing all preinstalled transports
+        """
+        transports = all_plugins('transports')
+        self.assertIsInstance(transports, list)
+        for i in transports:
+            cls = TransportFactory(i)
+            self.assertTrue(issubclass(cls, Transport),
+                'Transport plugin class {} is not subclass of {}'.format(cls, Transport))
 
     def test_existing_workflows(self):
-        """Test listing all preinstalled workflows"""
-        from aiida.orm import Workflow
-        work = pl.existing_plugins(Workflow, 'aiida.workflows')
-        self.assertIsInstance(work, list)
-        from aiida.orm import WorkflowFactory
-        for i in work:
-            self.assertTrue(issubclass(WorkflowFactory(i), Workflow))
+        """
+        Test listing all preinstalled workflows
+        """
+        workflows = all_plugins('workflows')
+        self.assertIsInstance(workflows, list)
+        for i in workflows:
+            cls = WorkflowFactory(i)
+            self.assertTrue(issubclass(cls, (Workflow, WorkChain)),
+                'Workflow plugin class {} is neither a subclass of {} nor {}'.format(cls, Workflow, WorkChain))
 
     def test_existing_tcod_plugins(self):
-        """Test listing all preinstalled tcod exporter plugins"""
-        from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-        tcpl = pl.existing_plugins(BaseTcodtranslator, 'aiida.tools.dbexporters.tcod_plugins')
-        self.assertIsInstance(tcpl, list)
+        """
+        Test listing all preinstalled tcod exporter plugins
+        """
+        tcod_plugins = all_plugins('tools.dbexporters.tcod_plugins')
+        self.assertIsInstance(tcod_plugins, list)
+        for i in tcod_plugins:
+            cls = TcodExporterFactory(i)
+            self.assertTrue(issubclass(cls, BaseTcodtranslator),
+                'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))

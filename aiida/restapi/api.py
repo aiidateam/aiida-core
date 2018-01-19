@@ -16,6 +16,7 @@ Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 
 from flask import Flask, jsonify
 from flask_restful import Api
+from werkzeug.exceptions import HTTPException
 
 class App(Flask):
     """
@@ -37,7 +38,7 @@ class App(Flask):
 
         # Error handler
         from aiida.restapi.common.exceptions import RestInputValidationError, \
-            RestValidationError
+            RestValidationError, RestFeatureNotAvailable
 
         if catch_internal_server:
 
@@ -51,6 +52,10 @@ class App(Flask):
                 elif isinstance(error, RestInputValidationError):
                     response = jsonify({'message': error.message})
                     response.status_code = 400
+
+                elif isinstance(error, RestFeatureNotAvailable):
+                    response = jsonify({'message': error.message})
+                    response.status_code = 501
 
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
@@ -69,7 +74,6 @@ class App(Flask):
         else:
             pass
 
-
 class AiidaApi(Api):
     """
     AiiDA customized version of the flask_restful Api class
@@ -86,10 +90,20 @@ class AiidaApi(Api):
             configuration and PREFIX
         """
 
-        from aiida.restapi.resources import Calculation, Computer, Code, Data, \
-            Group, Node, User, StructureData, KpointsData, BandsData
+        from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
+            Group, Node, StructureData, KpointsData, BandsData, UpfData, ServerInfo
 
-        super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'])
+        self.app = app
+
+        super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
+
+
+        self.add_resource(ServerInfo,
+                          "/server/",
+                          "/server/endpoints/",
+                          endpoint='server',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs)
 
         ## Add resources and endpoints to the api
         self.add_resource(Computer,
@@ -99,6 +113,7 @@ class AiidaApi(Api):
                           '/computers/page/<int:page>/',
                           '/computers/<id>/',
                           '/computers/schema/',
+                          endpoint='computers',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -119,16 +134,18 @@ class AiidaApi(Api):
                           '/nodes/<id>/content/attributes/',
                           '/nodes/<id>/content/extras/',
                           '/nodes/<id>/content/visualization/',
+                          endpoint='nodes',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
         self.add_resource(Calculation,
                           '/calculations/',
                           '/calculations/schema/',
-                          '/calculations/statistics/',
                           '/calculations/page/',
                           '/calculations/page/<int:page>/',
                           '/calculations/<id>/',
+                          '/calculations/<id>/io/retrieved_inputs/',
+                          '/calculations/<id>/io/retrieved_outputs/',
                           '/calculations/<id>/io/inputs/',
                           '/calculations/<id>/io/inputs/page/',
                           '/calculations/<id>/io/inputs/page/<int:page>/',
@@ -138,13 +155,13 @@ class AiidaApi(Api):
                           '/calculations/<id>/io/tree/',
                           '/calculations/<id>/content/attributes/',
                           '/calculations/<id>/content/extras/',
+                          endpoint='calculations',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
         self.add_resource(Data,
                           '/data/',
                           '/data/schema/',
-                          '/data/statistics/',
                           '/data/page/',
                           '/data/page/<int:page>',
                           '/data/<id>/',
@@ -158,13 +175,14 @@ class AiidaApi(Api):
                           '/data/<id>/content/attributes/',
                           '/data/<id>/content/extras/',
                           '/data/<id>/content/visualization/',
+                          '/data/<id>/content/download/',
+                          endpoint='data',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
         self.add_resource(Code,
                           '/codes/',
                           '/codes/schema/',
-                          '/codes/statistics/',
                           '/codes/page/',
                           '/codes/page/<int:page>/',
                           '/codes/<id>/',
@@ -178,13 +196,13 @@ class AiidaApi(Api):
                           '/codes/<id>/content/attributes/',
                           '/codes/<id>/content/extras/',
                           '/codes/<id>/content/visualization/',
+                          endpoint='codes',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
         self.add_resource(StructureData,
                           '/structures/',
                           '/structures/schema/',
-                          '/structures/statistics/',
                           '/structures/page/',
                           '/structures/page/<int:page>',
                           '/structures/<id>/',
@@ -198,6 +216,8 @@ class AiidaApi(Api):
                           '/structures/<id>/content/attributes/',
                           '/structures/<id>/content/extras/',
                           '/structures/<id>/content/visualization/',
+                          '/structures/<id>/content/download/',
+                          endpoint='structures',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
@@ -205,7 +225,6 @@ class AiidaApi(Api):
         self.add_resource(KpointsData,
                           '/kpoints/',
                           '/kpoints/schema/',
-                          '/kpoints/statistics/',
                           '/kpoints/page/',
                           '/kpoints/page/<int:page>',
                           '/kpoints/<id>/',
@@ -219,6 +238,7 @@ class AiidaApi(Api):
                           '/kpoints/<id>/content/attributes/',
                           '/kpoints/<id>/content/extras/',
                           '/kpoints/<id>/content/visualization/',
+                          endpoint='kpoints',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
@@ -226,7 +246,6 @@ class AiidaApi(Api):
         self.add_resource(BandsData,
                           '/bands/',
                           '/bands/schema/',
-                          '/bands/statistics/',
                           '/bands/page/',
                           '/bands/page/<int:page>',
                           '/bands/<id>/',
@@ -240,6 +259,29 @@ class AiidaApi(Api):
                           '/bands/<id>/content/attributes/',
                           '/bands/<id>/content/extras/',
                           '/bands/<id>/content/visualization/',
+                          endpoint='bands',
+                          strict_slashes=False,
+                          resource_class_kwargs=kwargs
+                          )
+
+        self.add_resource(UpfData,
+                          '/upfs/',
+                          '/upfs/schema/',
+                          '/upfs/page/',
+                          '/upfs/page/<int:page>',
+                          '/upfs/<id>/',
+                          '/upfs/<id>/io/inputs/',
+                          '/upfs/<id>/io/inputs/page/',
+                          '/upfs/<id>/io/inputs/page/<int:page>/',
+                          '/upfs/<id>/io/outputs/',
+                          '/upfs/<id>/io/outputs/page/',
+                          '/upfs/<id>/io/outputs/page/<int:page>/',
+                          '/upfs/<id>/io/tree/',
+                          '/upfs/<id>/content/attributes/',
+                          '/upfs/<id>/content/extras/',
+                          '/upfs/<id>/content/visualization/',
+                          '/upfs/<id>/content/download/',
+                          endpoint='upfs',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
@@ -247,7 +289,6 @@ class AiidaApi(Api):
         self.add_resource(User,
                           '/users/',
                           '/users/schema/',
-                          '/users/statistics/',
                           '/users/page/',
                           '/users/page/<int:page>/',
                           '/users/<id>/',
@@ -257,9 +298,40 @@ class AiidaApi(Api):
         self.add_resource(Group,
                           '/groups/',
                           '/groups/schema/',
-                          '/groups/statistics/',
                           '/groups/page/',
                           '/groups/page/<int:page>/',
                           '/groups/<id>/',
+                          endpoint='groups',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
+
+    def handle_error(self, e):
+        """
+        this method handles the 404 "URL not found" exception and return custom message
+        :param e: raised exception
+        :return: list of available endpoints
+        """
+
+        if isinstance(e, HTTPException):
+            if e.code == 404:
+
+                from aiida.restapi.common.config import PREFIX
+                import json
+
+                response = {}
+
+                response["status"] = "404 Not Found"
+                response["message"] = "The requested URL is not found on the server."
+                response["available_endpoints"] = []
+                tmp = []
+
+                for rule in sorted(self.app.url_map.iter_rules()):
+                    if rule.endpoint not in tmp and rule.endpoint != "static":
+                        tmp.append(rule.endpoint)
+                        response["available_endpoints"].append(PREFIX + "/" + rule.endpoint)
+
+                return jsonify(response)
+
+        else:
+            raise e
+

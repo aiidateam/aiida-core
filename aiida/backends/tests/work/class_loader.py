@@ -8,14 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-
-from plum.util import fullname
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from aiida.work.defaults import class_loader
-import aiida.work.util as util
-from aiida.work.legacy.job_process import JobProcess
+from plum.utils import class_name
+from aiida import work
 
+
+CLASS_LOADER = work.CLASS_LOADER
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
@@ -27,9 +27,12 @@ class TestJobProcess(AiidaTestCase):
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def test_class_loader(self):
-        TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
-        LoadedClass = class_loader.load_class(fullname(TemplatereplacerProcess))
+        templatereplacer_process = work.JobProcess.build(TemplatereplacerCalculation)
+        loaded_class = CLASS_LOADER.load_class(
+            class_name(templatereplacer_process, class_loader=CLASS_LOADER))
 
-        self.assertEqual(TemplatereplacerProcess.__name__, LoadedClass.__name__)
-        self.assertEqual(fullname(TemplatereplacerProcess), fullname(LoadedClass))
+        self.assertEqual(templatereplacer_process.__name__, loaded_class.__name__)
+        self.assertEqual(
+            class_name(templatereplacer_process, verify=False),
+            class_name(loaded_class, verify=False))
 

@@ -157,6 +157,10 @@ class Workflow(AbstractWorkflow):
     def label(self, label):
         self._update_db_label_field(label)
 
+    @property
+    def ctime(self):
+        return self.dbworkflowinstance.ctime
+
     def _update_db_label_field(self, field_value):
         """
         Safety method to store the label of the workflow
@@ -166,7 +170,7 @@ class Workflow(AbstractWorkflow):
         from django.db import transaction
 
         self.dbworkflowinstance.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
@@ -193,7 +197,7 @@ class Workflow(AbstractWorkflow):
         from django.db import transaction
 
         self.dbworkflowinstance.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbworkflowinstance.save()
                 self._increment_version_number_db()
@@ -250,7 +254,7 @@ class Workflow(AbstractWorkflow):
           the 'extra' embedded
         """
         import logging
-        from aiida.utils.logger import get_dblogger_extra
+        from aiida.common.log import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))
@@ -259,7 +263,7 @@ class Workflow(AbstractWorkflow):
         """
         Stores the DbWorkflow object data in the database
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             self._dbworkflowinstance.save()
 
             if hasattr(self, '_params'):
@@ -319,7 +323,7 @@ class Workflow(AbstractWorkflow):
                                           "which is not of type int, bool, float or str.")
             return the_params
 
-        if self._to_be_stored:
+        if not self.is_stored:
             self._params = params
         else:
             the_params = par_validate(params)
@@ -330,7 +334,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow paramenters
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params
         else:
             return self.dbworkflowinstance.get_parameters()
@@ -341,7 +345,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the parameters name to retrieve
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params(_name)
         else:
             return self.dbworkflowinstance.get_parameter(_name)
@@ -368,7 +372,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attributes(_params)
 
@@ -379,7 +383,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attribute(_name, _value)
 

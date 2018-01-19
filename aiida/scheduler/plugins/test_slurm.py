@@ -177,6 +177,7 @@ class TestSubmitScript(unittest.TestCase):
         s = SlurmScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600 
@@ -197,6 +198,31 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue( "'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                          " < 'aiida.in'" in submit_script_text )
 
+    def test_submit_script_bad_shebang(self):
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+
+        s = SlurmScheduler()
+        code_info = CodeInfo()
+        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.stdin_name = 'aiida.in'
+
+        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ("",""), ("NOSET", '#!/bin/bash')):
+            job_tmpl = JobTemplate()
+            if shebang == "NOSET":
+                pass
+            else:
+                job_tmpl.shebang = shebang
+            job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+            job_tmpl.codes_info = [code_info]
+            job_tmpl.codes_run_mode = code_run_modes.SERIAL
+
+            submit_script_text = s.get_submit_script(job_tmpl)
+
+            # This tests if the implementation correctly chooses the default:
+            self.assertEquals(submit_script_text.split('\n')[0], expected_first_line)
+
+
     def test_submit_script_with_num_cores_per_machine(self):
         """
         Test to verify if script works fine if we specify only
@@ -208,6 +234,7 @@ class TestSubmitScript(unittest.TestCase):
         s = SlurmScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=2,
@@ -244,6 +271,7 @@ class TestSubmitScript(unittest.TestCase):
         s = SlurmScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
@@ -284,6 +312,7 @@ class TestSubmitScript(unittest.TestCase):
         s = SlurmScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,

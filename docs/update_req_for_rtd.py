@@ -12,30 +12,51 @@
 Whenever the requirements in ../setup_requirements.py are updated,
 run also this script to update the requirements for Read the Docs.
 """
-import sys, os
+import sys
+import os
+import click
 
-sys.path.append(os.path.join(os.path.split(os.path.abspath(__file__))[0], os.pardir))
 
-import setup_requirements
+@click.command()
+@click.option('--pre-commit', is_flag=True)
+def update_req_for_rtd(pre_commit):
+    """Update the separate requirements file for Read the Docs"""
+    sys.path.append(
+        os.path.join(os.path.split(os.path.abspath(__file__))[0], os.pardir))
 
-required_packages = list(setup_requirements.install_requires)
+    import setup_requirements
 
-# Required version
-req_for_rtd_lines = ['Sphinx>=1.5']
+    required_packages = list(setup_requirements.install_requires)
 
-for package in required_packages:
-    # To avoid that it requires also the postgres libraries
-    if package.startswith('psycopg2'):
-        continue
+    # Required version
+    req_for_rtd_lines = ['Sphinx>=1.5']
 
-    req_for_rtd_lines.append(package)
+    for package in required_packages:
+        # To avoid that it requires also the postgres libraries
+        if package.startswith('psycopg2'):
+            continue
 
-req_for_rtd = "\n".join(sorted(req_for_rtd_lines))
+        req_for_rtd_lines.append(package)
 
-basename = 'requirements_for_rtd.txt'
+    req_for_rtd = "\n".join(sorted(req_for_rtd_lines))
 
-with open(os.path.join(os.path.split(os.path.abspath(__file__))[0],
-                       basename), 'w') as f:
-    f.write(req_for_rtd)
+    basename = 'requirements_for_rtd.txt'
 
-print "File '{}' written.".format(basename)
+    # pylint: disable=bad-continuation
+    with open(
+            os.path.join(os.path.split(os.path.abspath(__file__))[0], basename),
+            'w') as requirements_file:
+        requirements_file.write(req_for_rtd)
+
+    click.echo("File '{}' written.".format(basename))
+    if pre_commit:
+        msg = 'some requirements for Read the Docs have changed, {}'
+        local_help = 'please add the changes and commit again'
+        travis_help = 'please run aiida/docs/update_req_for_rtd.py locally and commit the changes it makes'
+        help_msg = msg.format(
+            travis_help if os.environ.get('TRAVIS') else local_help)
+        click.echo(help_msg, err=True)
+
+
+if __name__ == '__main__':
+    update_req_for_rtd()  # pylint: disable=no-value-for-parameter

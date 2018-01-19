@@ -13,6 +13,7 @@
 engine =  None
 scopedsessionclass = None
 
+
 def get_scoped_session():
     """
     Return a scoped session (according to SQLAlchemy docs, 

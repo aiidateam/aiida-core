@@ -11,8 +11,8 @@
 
 from collections import Mapping
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.process import Process, ProcessSpec
-import aiida.work.util as util
+from aiida.work.processes import Process, ProcessSpec
+import aiida.work.utils as util
 
 
 class TestProcessSpec(AiidaTestCase):

@@ -10,30 +10,29 @@
 
 
 import plum.class_loader
-import plum.util
+import plum.utils
 from aiida.common.lang import override
+
+__all__ = ['CLASS_LOADER']
 
 
 class ClassLoader(plum.class_loader.ClassLoader):
     @staticmethod
     def is_wrapped_job_calculation(name):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
 
         return name.find(JobProcess.__name__) != -1
 
     @override
     def find_class(self, name):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
 
         if self.is_wrapped_job_calculation(name):
             idx = name.find(JobProcess.__name__)
             wrapped_class = name[idx + len(JobProcess.__name__) + 1:]
             # Recreate the class
-            return JobProcess.build(plum.util.load_class(wrapped_class))
+            return JobProcess.build(plum.utils.load_object(wrapped_class))
 
 
 # The default class loader instance
-_CLASS_LOADER = plum.class_loader.ClassLoader(ClassLoader())
-
-def get_default():
-    pass
+CLASS_LOADER = plum.class_loader.ClassLoader(ClassLoader())

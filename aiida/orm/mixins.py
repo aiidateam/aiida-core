@@ -13,9 +13,7 @@ from aiida.common.lang import override
 from aiida.common.links import LinkType
 
 
-
 class Sealable(object):
-
     # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'
 
@@ -50,7 +48,7 @@ class SealableWithUpdatableAttributes(Sealable):
     _updatable_attributes = tuple()
 
     @override
-    def _set_attr(self, key, value):
+    def _set_attr(self, key, value, **kwargs):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
@@ -65,8 +63,9 @@ class SealableWithUpdatableAttributes(Sealable):
         """
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
-                "Cannot change the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._set_attr(key, value)
+                "Cannot change the attributes of a sealed calculation.\n"
+                "Attempted to set '{}'".format(key))
+        super(SealableWithUpdatableAttributes, self)._set_attr(key, value, **kwargs)
 
     @override
     def _del_attr(self, key):
@@ -79,15 +78,8 @@ class SealableWithUpdatableAttributes(Sealable):
         """
         if self.is_sealed and key not in self._updatable_attributes:
             raise ModificationNotAllowed(
-                "Cannot delete the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._del_attr(key)
-
-
-    @override
-    def _del_attr(self, key):
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot delete an attribute of a sealed calculation node")
+                "Cannot delete the attributes of a sealed calculation.\n"
+                "Attempted to delete '{}'".format(key))
         super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
     def iter_updatable_attrs(self):

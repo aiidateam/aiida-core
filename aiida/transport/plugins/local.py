@@ -15,16 +15,17 @@
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
-import os, shutil, subprocess
-import aiida.transport
-from aiida.transport import FileAttribute
+import os
+import shutil
+import subprocess
+from aiida.transport.transport import Transport, TransportInternalError
+from aiida.transport.util import FileAttribute
 import StringIO
 import glob
 from aiida.common import aiidalogger
 
 
-
-class LocalTransport(aiida.transport.Transport):
+class LocalTransport(Transport):
     """
     Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands.
     """
@@ -47,6 +48,9 @@ class LocalTransport(aiida.transport.Transport):
         if kwargs:
             raise ValueError("Input parameters to LocalTransport"
                              " are not recognized")
+
+    def get_safe_open_interval(self):
+        return 0.
 
     def open(self):
         """
@@ -92,7 +96,7 @@ class LocalTransport(aiida.transport.Transport):
         if self._is_open:
             return os.path.realpath(self._internal_dir)
         else:
-            raise aiida.transport.TransportInternalError(
+            raise TransportInternalError(
                 "Error, local method called for LocalTransport "
                 "without opening the channel first")
 
@@ -103,10 +107,12 @@ class LocalTransport(aiida.transport.Transport):
         :raise OSError: if the directory does not have read attributes.
         """
         new_path = os.path.join(self.curdir, path)
-        if os.access(new_path, os.R_OK):
-            self._internal_dir = os.path.normpath(new_path)
-        else:
-            raise IOError('Not having read permissions')
+        if not os.path.isdir(new_path):
+            raise IOError("'{}' is not a valid directory".format(new_path))
+        elif not os.access(new_path, os.R_OK):
+            raise IOError("Do not have read permission to '{}'".format(new_path))
+
+        self._internal_dir = os.path.normpath(new_path)
 
     def normalize(self, path):
         """
@@ -361,7 +367,7 @@ class LocalTransport(aiida.transport.Transport):
 
         the_destination = os.path.join(self.curdir, destination)
 
-        shutil.copytree(source, the_destination, symlinks=not(dereference))
+        shutil.copytree(source, the_destination, symlinks=not (dereference))
 
     def rmtree(self, path):
         """
@@ -513,7 +519,7 @@ class LocalTransport(aiida.transport.Transport):
             destination = os.path.join(destination, os.path.split(source)[1])
 
         the_source = os.path.join(self.curdir, source)
-        shutil.copytree(the_source, destination, symlinks=not(dereference))
+        shutil.copytree(the_source, destination, symlinks=not (dereference))
 
     def copy(self, source, destination, dereference=False):
         """
@@ -630,7 +636,7 @@ class LocalTransport(aiida.transport.Transport):
             the_destination = os.path.join(the_destination,
                                            os.path.split(source)[1])
 
-        shutil.copytree(the_source, the_destination, symlinks=not(dereference))
+        shutil.copytree(the_source, the_destination, symlinks=not (dereference))
 
     def get_attribute(self, path):
         """
@@ -667,12 +673,17 @@ class LocalTransport(aiida.transport.Transport):
         """
         :return: a list containing the names of the entries in the directory.
         :param path: default ='.'
-        :param filter: if set, returns the list of files matching pattern.
+        :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
         the_path = os.path.join(self.curdir, path).strip()
         if not pattern:
-            return os.listdir(the_path)
+            try:
+                return os.listdir(the_path)
+            except OSError as e:
+                exc = IOError(str(e))
+                exc.errno = e.errno
+                raise exc
         else:
             import re
 

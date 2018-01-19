@@ -9,11 +9,9 @@
 ###########################################################################
 
 import collections
-
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
-
 
 
 def _parse_single_arg(function_name, additional_parameter,
@@ -129,7 +127,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
           the 'extra' embedded
         """
         import logging
-        from aiida.utils.logger import get_dblogger_extra
+        from aiida.common.log import get_dblogger_extra
 
         return logging.LoggerAdapter(
             logger=self._logger, extra=get_dblogger_extra(self))
@@ -216,6 +214,18 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
 
+    @property
+    def called(self):
+        return self.get_outputs(link_type=LinkType.CALL)
+
+    @property
+    def called_by(self):
+        called_by = self.get_inputs(link_type=LinkType.CALL)
+        if called_by:
+            return called_by[0]
+        else:
+            return None
+
     def get_linkname(self, link, *args, **kwargs):
         """
         Return the linkname used for a given input link
@@ -299,6 +309,15 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return super(AbstractCalculation, self).add_link_from(
             src, label, link_type)
 
+    def get_code(self):
+        """
+        Return the code for this calculation, or None if the code
+        was not set.
+        """
+        from aiida.orm.code import Code
+        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
+            self._use_methods['code']['linkname'], None)
+
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
         Replace a link.
@@ -315,12 +334,3 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
 
         return super(AbstractCalculation, self)._replace_link_from(
             src, label, link_type)
-
-    def get_code(self):
-        """
-        Return the code for this calculation, or None if the code
-        was not set.
-        """
-        from aiida.orm.code import Code
-        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
-            self._use_methods['code']['linkname'], None)

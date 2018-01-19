@@ -46,7 +46,7 @@ class AiidaQuerySet(QuerySet):
 
 
 class AiidaObjectManager(m.Manager):
-    def get_query_set(self):
+    def get_queryset(self):
         return AiidaQuerySet(self.model, using=self._db)
 
 
@@ -129,12 +129,6 @@ class DbNode(m.Model):
 
     * A is 'input' of C.
     * C is 'output' of A.
-    * A is 'parent' of B,C
-    * C,B are 'children' of A.
-
-    :note: parents and children are stored in the DbPath table, the transitive
-      closure table, automatically updated via DB triggers whenever a link is
-      added to or removed from the DbLink table.
 
     Internal attributes, that define the node itself,
     are stored in the DbAttribute table; further user-defined attributes,
@@ -170,9 +164,6 @@ class DbNode(m.Model):
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
                                 related_name='inputs', through='DbLink')
-    # Transitive closure
-    children = m.ManyToManyField('self', symmetrical=False,
-                                 related_name='parents', through='DbPath')
 
     # Used only if dbnode is a calculation, or remotedata
     # Avoid that computers can be deleted if at least a node exists pointing
@@ -304,50 +295,6 @@ class DbLink(m.Model):
             self.output.get_simple_name(invalid_result="Unknown node"),
             self.output.pk, )
 
-
-@python_2_unicode_compatible
-class DbPath(m.Model):
-    """
-    Transitive closure table for all dbnode paths.
-    """
-    parent = m.ForeignKey('DbNode', related_name='child_paths', editable=False)
-    child = m.ForeignKey('DbNode', related_name='parent_paths', editable=False)
-    depth = m.IntegerField(editable=False)
-
-    # Used to delete or to expand the path
-    entry_edge_id = m.IntegerField(null=True, editable=False)
-    direct_edge_id = m.IntegerField(null=True, editable=False)
-    exit_edge_id = m.IntegerField(null=True, editable=False)
-
-    def __str__(self):
-        return "{} ({}) ==[{}]==>> {} ({})".format(
-            self.parent.get_simple_name(invalid_result="Unknown node"),
-            self.parent.pk,
-            self.depth,
-            self.child.get_simple_name(invalid_result="Unknown node"),
-            self.child.pk, )
-
-    def expand(self):
-        """
-        Method to expand a DbPath (recursive function), i.e., to get a list
-        of all dbnodes that are traversed in the given path.
-
-        :return: list of DbNode objects representing the expanded DbPath
-        """
-
-        if self.depth == 0:
-            return [self.parent, self.child]
-        else:
-            path_entry = []
-            path_direct = DbPath.objects.get(id=self.direct_edge_id).expand()
-            path_exit = []
-            # we prevent DbNode repetitions
-            if self.entry_edge_id != self.direct_edge_id:
-                path_entry = DbPath.objects.get(id=self.entry_edge_id).expand()[:-1]
-            if self.exit_edge_id != self.direct_edge_id:
-                path_exit = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
-
-            return path_entry + path_direct + path_exit
 
 
 attrdatatype_choice = (
@@ -1479,21 +1426,28 @@ class DbComputer(m.Model):
         from aiida.orm.computer import Computer
         return Computer(dbcomputer=self)
 
-    def get_workdir(self):
+
+    def _get_val_from_metadata(self, key):
         import json
 
         try:
             metadata = json.loads(self.metadata)
         except ValueError:
             raise DbContentError(
-                "Error while reading metadata for DbComputer {} ({})".format(
-                    self.name, self.hostname))
-
+                "Error while reading metadata for DbComputer {} ({})".format(self.name, self.hostname))
         try:
-            return metadata['workdir']
+            return metadata[key]
         except KeyError:
-            raise ConfigurationError('No workdir found for DbComputer {} '.format(
-                self.name))
+            raise ConfigurationError('No {} found for DbComputer {} '.format(key,self.name))
+
+    def get_workdir(self):
+        return self._get_val_from_metadata('workdir')
+
+    def get_shebang(self):
+        """
+        Return the shebang line
+        """
+        return self._get_val_from_metadata('shebang')
 
     def __str__(self):
         if self.enabled:

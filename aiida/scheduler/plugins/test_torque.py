@@ -879,6 +879,7 @@ class TestSubmitScript(unittest.TestCase):
         s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
@@ -908,6 +909,7 @@ class TestSubmitScript(unittest.TestCase):
         s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
@@ -945,6 +947,7 @@ class TestSubmitScript(unittest.TestCase):
         s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
@@ -984,6 +987,7 @@ class TestSubmitScript(unittest.TestCase):
         s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,

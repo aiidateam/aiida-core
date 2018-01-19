@@ -386,16 +386,18 @@ def _inline_to_standalone_script(calc):
     args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
+    code_string = calc.get_attr('source_file').encode('utf-8')
+    if calc.get_attr('namespace', '__main__').startswith('aiida.'):
+        code_string = "from {} import {}".format(calc.get_attr('namespace', '__main__'),
+                                                 calc.get_attr('function_name','f'))
     return """#!/usr/bin/env runaiida
 {}
 
 for key, value in {}(
     {}
-    )[1].iteritems():
+    ).iteritems():
     value.store()
-""".format(calc.get_attr('source_file').encode('utf-8'),
-           calc.get_attr('function_name','f'),
-           args_string)
+""".format(code_string, calc.get_attr('function_name','f'), args_string)
 
 
 def _collect_calculation_data(calc):
@@ -435,24 +437,26 @@ def _collect_calculation_data(calc):
         stderr_name = '{}.err'.format(aiida_executable_name)
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
-        files_out.append({
-            'name'    : stdout_name,
-            'contents': calc.get_scheduler_output(),
-            'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
-            'role'    : 'stdout',
-            'type'    : 'file',
-            })
-        files_out.append({
-            'name'    : stderr_name,
-            'contents': calc.get_scheduler_error(),
-            'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
-            'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
-            'role'    : 'stderr',
-            'type'    : 'file',
-            })
-        this_calc['stdout'] = stdout_name
-        this_calc['stderr'] = stderr_name
+        if calc.get_scheduler_output() is not None:
+            files_out.append({
+                'name'    : stdout_name,
+                'contents': calc.get_scheduler_output(),
+                'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+                'role'    : 'stdout',
+                'type'    : 'file',
+                })
+            this_calc['stdout'] = stdout_name
+        if calc.get_scheduler_error() is not None:
+            files_out.append({
+                'name'    : stderr_name,
+                'contents': calc.get_scheduler_error(),
+                'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
+                'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+                'role'    : 'stderr',
+                'type'    : 'file',
+                })
+            this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
         python_script = _inline_to_standalone_script(calc)
@@ -812,29 +816,25 @@ def _collect_tags(node, calc,parameters=None,
             tags['_dft_BZ_integration_grid_shift_Y'] = shift[1]
             tags['_dft_BZ_integration_grid_shift_Z'] = shift[2]
 
-    # Collecting code-specific data
+    from aiida.common.exceptions import MultipleObjectsError
+    from aiida.common.pluginloader import all_plugins, get_plugin
 
-    from aiida.common.pluginloader import BaseFactory, existing_plugins
-    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-
-    plugin_path = "aiida.tools.dbexporters.tcod_plugins"
+    category = 'tools.dbexporters.tcod_plugins'
     plugins = list()
 
     if calc is not None:
-        for plugin in existing_plugins(BaseTcodtranslator, plugin_path):
-            cls = BaseFactory(plugin, BaseTcodtranslator, plugin_path)
-            if calc._plugin_type_string.endswith(cls._plugin_type_string + '.'):
-                plugins.append(cls)
+        for entry_point in all_plugins(category):
+            plugin = get_plugin(category, entry_point)
+            if calc._plugin_type_string.endswith(plugin._plugin_type_string + '.'):
+                plugins.append(plugin)
 
-    from aiida.common.exceptions import MultipleObjectsError
     if len(plugins) > 1:
-        raise MultipleObjectsError("more than one plugin found for "
-                                   "{}".calc._plugin_type_string)
+        raise MultipleObjectsError('more than one plugin found for {}'
+                                   .format(calc._plugin_type_string))
 
     if len(plugins) == 1:
         plugin = plugins[0]
-        translated_tags = translate_calculation_specific_values(calc,
-                                                                plugin)
+        translated_tags = translate_calculation_specific_values(calc, plugin)
         tags.update(translated_tags)
 
     return tags

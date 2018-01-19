@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Initial schema
 
 Revision ID: e15ef2630a1b
@@ -8,7 +17,7 @@ Create Date: 2017-06-28 17:12:23.327195
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.schema import Sequence, CreateSequence
+from sqlalchemy.orm.session import Session
 from aiida.backends.sqlalchemy.utils import install_tc
 
 # revision identifiers, used by Alembic.
@@ -247,7 +256,11 @@ def upgrade():
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
     sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key')
     )
-    install_tc(op.get_bind())
+    # I get the session using the alembic connection
+    # (Keep in mind that alembic uses the AiiDA SQLA
+    # session)
+    session = Session(bind=op.get_bind())
+    install_tc(session)
 
 
 def downgrade():

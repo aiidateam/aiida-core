@@ -11,14 +11,18 @@ The CalculationResultManager
 Prerequisites
 -------------
 
-Before getting the calculation results, we need a correctly finished and parsed :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`. For example this can be a Quantum ESPRESSO ``pw.x`` calculation. You can load such a calculation -- we'll call it ``calc`` -- with the command
+Before getting the calculation results, we need a correctly finished and parsed
+:class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`.
+For example this can be a Quantum ESPRESSO ``pw.x`` calculation.
+You can load such a calculation -- we'll call it ``calc`` -- with the command
 
 .. code :: python
     
     from aiida.orm import load_node
     calc = load_node(YOURPK)
 
-either in ``verdi shell``, or in a python script (as described :doc:`here <../working_with_aiida/scripting>`). ``YOURPK`` should be substituted by a valid calculation PK in your database.
+either in ``verdi shell``, or in a python script (as described :doc:`here <../working_with_aiida/scripting>`).
+``YOURPK`` should be substituted by a valid calculation PK in your database.
 
 Using the CalculationResultManager instance
 -------------------------------------------

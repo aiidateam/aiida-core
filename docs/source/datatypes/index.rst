@@ -31,7 +31,7 @@ In the :py:mod:`aiida.orm.data.base` module you find a number of useful classes
 that wrap base python datatypes (like :py:class:`~aiida.orm.data.base.Int`,
 :py:class:`~aiida.orm.data.base.Float`, :py:class:`~aiida.orm.data.base.Str`, ...).
 These are particularly useful when you need to provide a single parameter to e.g. a
-:py:class:`~aiida.work.workfunction.workfunction`.
+:py:class:`~aiida.work.workfunctions.workfunction`.
 
 Each of these classes can most often be used transparently (e.g. you can sum two
 :py:class:`~aiida.orm.data.base.Int` objects, etc.). If you need to access the bare
@@ -58,7 +58,7 @@ StructureData
 
 * **Class**: :py:class:`~aiida.orm.data.upf.UpfData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``structure``
-* **Aim**: store a pseudopotential in the .UPF format (e.g. used by Quantum ESPRESSO)
+* **Aim**: store a crystal structure to be used by atomistic codes
 * **What is stored in the database**: all atomic positions, species, kinds,
 * **What is stored in the file repository**: ---
 * **Additional functionality**:
@@ -70,10 +70,13 @@ UpfData
 
 * **Class**: :py:class:`~aiida.orm.data.upf.UpfData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``upf``
-* **Aim**: store a pseudopotential in the .UPF format (e.g. used by Quantum ESPRESSO)
+* **Aim**: store a pseudopotential in the .UPF format (e.g. used by `Quantum ESPRESSO`_ - see also the `AiiDA Quantum ESPRESSO plugin`_)
 * **What is stored in the database**: the MD5 of the UPF; the element the pseudopotential
   is associated to
 * **What is stored in the file repository**: the pseudopotential file
+
+.. _Quantum ESPRESSO: http://www.quantum-espresso.org
+.. _AiiDA Quantum ESPRESSO plugin: http://aiida-quantumespresso.readthedocs.io/en/latest/
 
 ArrayData
 +++++++++
@@ -109,6 +112,9 @@ KpointsData
   band structures (and store them in ``BandsData`` objects).
 * **What is stored in the database**: like ``ArrayData``
 * **What is stored in the file repository**: the array data in numpy format
+* **Additional functionality**:
+
+  * :ref:`Automatically compute k-points path given a crystal structure<AutomaticKpoints>`
 
 BandsData
 +++++++++

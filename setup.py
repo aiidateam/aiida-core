@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import fastentrypoints
+import re
 from os import path
 from setuptools import setup, find_packages
 from setup_requirements import install_requires, extras_require
@@ -20,9 +21,8 @@ if __name__ == '__main__':
     aiida_folder = path.split(path.abspath(__file__))[0]
     fname = path.join(aiida_folder, 'aiida', '__init__.py')
     with open(fname) as aiida_init:
-        ns = {}
-        exec(aiida_init.read(), ns)
-        aiida_version = ns['__version__']
+        match_expr = "__version__[^'\"]+(['\"])([^'\"]+)"
+        aiida_version = re.search(match_expr, aiida_init.read()).group(2).strip()
 
     bin_folder = path.join(aiida_folder, 'bin')
     setup(
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         packages=find_packages(),
         # Don't forget to install it as well (by adding to the install_requires)
         setup_requires=[
-            'reentry >= 1.0.2'
+            'reentry >= 1.0.2',
         ],
         reentry_register=True,
         entry_points={
@@ -54,14 +54,6 @@ if __name__ == '__main__':
             # following are AiiDA plugin entry points:
             'aiida.calculations': [
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
-                'nwchem.basic = aiida.orm.calculation.job.nwchem.basic:BasicCalculation',
-                'nwchem.pymatgen = aiida.orm.calculation.job.nwchem.nwcpymatgen:NwcpymatgenCalculation',
-                'codtools.ciffilter = aiida.orm.calculation.job.codtools.ciffilter:CiffilterCalculation',
-                'codtools.cifcellcontents = aiida.orm.calculation.job.codtools.cifcellcontents:CifcellcontentsCalculation',
-                'codtools.cifcodcheck = aiida.orm.calculation.job.codtools.cifcodcheck:CifcodcheckCalculation',
-                'codtools.cifcoddeposit = aiida.orm.calculation.job.codtools.cifcoddeposit:CifcoddepositCalculation',
-                'codtools.cifcodnumbers = aiida.orm.calculation.job.codtools.cifcodnumbers:CifcodnumbersCalculation',
-                'codtools.cifsplitprimitive = aiida.orm.calculation.job.codtools.cifsplitprimitive:CifsplitprimitiveCalculation',
             ],
             'aiida.data':[
                 'array.bands = aiida.orm.data.array.bands:BandsData',
@@ -74,23 +66,14 @@ if __name__ == '__main__':
                 'folder = aiida.orm.data.folder:FolderData',
                 'parameter = aiida.orm.data.parameter:ParameterData',
                 'remote = aiida.orm.data.remote:RemoteData',
-                'simple = aiida.orm.data.simple:SimpleData',
                 'singlefile = aiida.orm.data.singlefile:SinglefileData',
                 'structure = aiida.orm.data.structure:StructureData',
                 'upf = aiida.orm.data.upf:UpfData'
             ],
-            'aiida.parsers': [
-                'codtools.cifcellcontents = aiida.parsers.plugins.codtools.cifcellcontents:CifcellcontentsParser',
-                'codtools.cifcodcheck = aiida.parsers.plugins.codtools.cifcodcheck:CifcodcheckParser',
-                'codtools.cifcoddeposit = aiida.parsers.plugins.codtools.cifcoddeposit:CifcoddepositParser',
-                'codtools.cifcodnumbers = aiida.parsers.plugins.codtools.cifcodnumbers:CifcodnumbersParser',
-                'codtools.ciffilter = aiida.parsers.plugins.codtools.ciffilter:CiffilterParser',
-                'codtools.cifsplitprimitive = aiida.parsers.plugins.codtools.cifsplitprimitive:CifsplitprimitiveParser',
-                'nwchem.basic = aiida.parsers.plugins.nwchem.basic:BasicParser',
-                'nwchem.basenwc = aiida.parsers.plugins.nwchem.__init__:BasenwcParser',
-                'nwchem.pymatgen = aiida.parsers.plugins.nwchem.nwcpymatgen:NwcpymatgenParser',
-            ],
             'aiida.cmdline': [],
+            'aiida.parsers': [
+                'simpleplugins.templatereplacer.test.doubler = aiida.parsers.simpleplugins.templatereplacer.test:TemplatereplacerDoublerParser',
+            ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',
                 'slurm = aiida.scheduler.plugins.slurm:SlurmScheduler',
@@ -102,12 +85,10 @@ if __name__ == '__main__':
                 'local = aiida.transport.plugins.local:LocalTransport',
             ],
             'aiida.workflows': [],
-            'aiida.tools.dbexporters.tcod_plugins': [
-                'nwchem.nwcpymatgen = aiida.tools.dbexporters.tcod_plugins.nwcpymatgen:NwcpymatgenTcodtranslator',
-            ],
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'
             ],
+            'aiida.tests': [],
             'aiida.tools.dbimporters': [
                 'cod = aiida.tools.dbimporters.cod',
                 'icsd = aiida.tools.dbimporters.icsd',

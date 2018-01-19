@@ -17,7 +17,8 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
 from aiida.backends.utils import get_automatic_user
 from aiida.common import aiidalogger
-from aiida.common.datastructures import wf_states, wf_exit_call
+from aiida.common.datastructures import (wf_states, wf_exit_call,
+                                         wf_default_call)
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
@@ -26,7 +27,7 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 
 
 logger = aiidalogger.getChild('Workflow')
@@ -155,6 +156,10 @@ class Workflow(AbstractWorkflow):
     def label(self, label):
         self._update_db_label_field(label)
 
+    @property
+    def ctime(self):
+        return self.dbworkflowinstance.ctime
+
     def _update_db_label_field(self, field_value):
         """
         Safety method to store the label of the workflow
@@ -162,7 +167,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
@@ -186,7 +191,7 @@ class Workflow(AbstractWorkflow):
         :return: a string
         """
         self.dbworkflowinstance.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
@@ -238,7 +243,7 @@ class Workflow(AbstractWorkflow):
         """
         Stores the DbWorkflow object data in the database
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             self._dbworkflowinstance.save()
 
             if hasattr(self, '_params'):
@@ -300,7 +305,7 @@ class Workflow(AbstractWorkflow):
                                           "which is not of type int, bool, float or str.")
             return the_params
 
-        if self._to_be_stored:
+        if not self.is_stored:
             self._params = params
         else:
             the_params = par_validate(params)
@@ -311,7 +316,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow paramenters
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params
         else:
             return self.dbworkflowinstance.get_parameters()
@@ -322,7 +327,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the parameters name to retrieve
         :return: a dictionary of storable objects
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self._params(_name)
         else:
             return self.dbworkflowinstance.get_parameter(_name)
@@ -349,7 +354,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attributes(_params)
 
@@ -360,7 +365,7 @@ class Workflow(AbstractWorkflow):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attribute(_name, _value)
 
@@ -402,7 +407,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return self.dbworkflowinstance.state
+        return unicode(self.dbworkflowinstance.state)
 
     def set_state(self, state):
         """
@@ -636,6 +641,7 @@ class Workflow(AbstractWorkflow):
                         wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
+                cls.set_state(wf_states.ERROR)
             return None
 
         out = wrapper

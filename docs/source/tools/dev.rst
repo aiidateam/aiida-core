@@ -1,11 +1,33 @@
-aiida.tools documentation
+AiiDA tools documentation
 =========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
+
+KpointsData tools
++++++++++++++++++
+.. automodule:: aiida.tools.data.array.kpoints
+   :members:
+
+Seekpath submodule
+------------------
+
+.. automodule:: aiida.tools.data.array.kpoints.seekpath
+   :members:
 
 
-Tools
------
+.. _KpointsLegacyModuleDocs:
 
-.. TODO: link to aiida-quantumespresso plugin docs
+Legacy submodule
+----------------
+
+.. automodule:: aiida.tools.data.array.kpoints.legacy
+   :members:
+
+StructureData tools
++++++++++++++++++++
+
+.. automodule:: aiida.tools.data.structure
+   :members:
+
+

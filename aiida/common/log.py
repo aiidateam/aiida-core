@@ -115,6 +115,11 @@ LOGGING = {
             'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
+        'plum': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.plum_loglevel'),
+            'propagate': False,
+        },
         'paramiko': {
             'handlers': ['console'],
             'level': setup.get_property('logging.paramiko_loglevel'),

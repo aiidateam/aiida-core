@@ -113,7 +113,8 @@ class ProcessControlPanel(object):
         self._communicator = plum.rmq.RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
-            task_queue=task_queue
+            task_queue=task_queue,
+            testing_mode=testing_mode
         )
 
     def ready_future(self):

@@ -6,6 +6,7 @@ import inspect
 import logging
 
 import aiida.orm
+from . import events
 from . import persistence
 from . import rmq
 from . import transports
@@ -40,7 +41,7 @@ def new_runner(**kwargs):
     if 'rmq_config' not in kwargs:
         kwargs['rmq_config'] = {
             'url': 'amqp://localhost',
-            'prefix': 'aiida',
+            'prefix': rmq._get_prefix(),
         }
     return Runner(**kwargs)
 
@@ -103,9 +104,9 @@ class Runner(object):
     _rmq_connector = None
     _communicator = None
 
-    def __init__(self, rmq_config=None, loop=None, poll_interval=5.,
+    def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else plum.new_event_loop()
+        self._loop = loop if loop is not None else events.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)
@@ -202,7 +203,7 @@ class Runner(object):
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
-            self.rmq.launch.continue_process(process.pid)
+            self.rmq.continue_process(process.pid)
             return process.calc
         else:
             # Run in this runner

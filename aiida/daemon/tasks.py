@@ -91,21 +91,10 @@ def retriever():
 
 @periodic_task(
     run_every=timedelta(
-        seconds=config.get("DAEMON_INTERVALS_TICK_WORKFLOWS", DAEMON_INTERVALS_TICK_WORKFLOWS)
-    )
-)
-def tick_work():
-    configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
-    from aiida.work.daemon import launch_pending_jobs
-    print "aiida.daemon.tasks.tick_workflows:  Ticking workflows"
-    launch_pending_jobs()
-
-@periodic_task(
-    run_every=timedelta(
         seconds=config.get("DAEMON_INTERVALS_WFSTEP", DAEMON_INTERVALS_WFSTEP)
     )
 )
-def workflow_stepper(): # daemon for legacy workflow
+def workflow_stepper():  # daemon for legacy workflow
     configure_logging(daemon=True, daemon_log_file=DAEMON_LOG_FILE)
     from aiida.daemon.workflowmanager import execute_steps
     print "aiida.daemon.tasks.workflowmanager:  Checking for workflows to manage"
@@ -131,13 +120,9 @@ def workflow_stepper(): # daemon for legacy workflow
 
 def manual_tick_all():
     from aiida.daemon.execmanager import submit_jobs, update_jobs, retrieve_jobs
-    from aiida.work.daemon import launch_pending_jobs, launch_all_pending_job_calculations
     from aiida.daemon.workflowmanager import execute_steps
-    if DAEMON_USE_NEW:
-        tick_work()
-        launch_all_pending_job_calculations()
-    else:
-        submit_jobs()
-        update_jobs()
-        retrieve_jobs()
+
+    submit_jobs()
+    update_jobs()
+    retrieve_jobs()
     execute_steps()  # legacy workflows

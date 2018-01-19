@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import click
-from functools import partial
 import logging
+from functools import partial
+
+import click
 from tabulate import tabulate
 
-from aiida.cmdline.commands import work, verdi
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import work, verdi
+from aiida.utils.ascii_vis import print_tree_descending
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LIST_CMDLINE_PROJECT_CHOICES = ['id', 'ctime', 'label', 'uuid', 'descr', 'mtime', 'state', 'sealed']
@@ -179,7 +181,6 @@ def report(pk, levelname, order_by, indent_size, max_depth):
 
     import itertools
     from aiida.orm.backend import construct
-    from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 
@@ -333,18 +334,18 @@ def kill_old(pks):
 def kill(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.kill_process(pk)
-        future.add_done_callback(partial(_action_done, "pause", pk))
-        futures.append(future)
-
-    runner.run_until_complete(plum.gather(*futures))
+        try:
+            if control_panel.kill_process(pk):
+                click.echo("Killed '{}'".format(pk))
+            else:
+                click.echo("Problem killing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to kill '{}': {}".format(pk, e.message))
 
 
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
@@ -352,18 +353,18 @@ def kill(pks):
 def pause(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.pause_process(pk)
-        future.add_done_callback(partial(_action_done, "pause", pk))
-        futures.append(future)
-
-    runner.run_until_complete(plum.gather(*futures))
+        try:
+            if control_panel.pause_process(pk):
+                click.echo("Paused '{}'".format(pk))
+            else:
+                click.echo("Problem pausing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to pause '{}': {}".format(pk, e.message))
 
 
 @work.command('play', context_settings=CONTEXT_SETTINGS)
@@ -371,31 +372,60 @@ def pause(pks):
 def play(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import plum
     from aiida import work
 
-    runner = work.get_runner()
+    control_panel = work.new_blocking_control_panel()
 
-    futures = []
     for pk in pks:
-        future = runner.rmq.play_process(pk)
-        future.add_done_callback(partial(_action_done, "play", pk))
-        futures.append(future)
+        try:
+            if control_panel.play_process(pk):
+                click.echo("Played '{}'".format(pk))
+            else:
+                click.echo("Problem playing '{}'".format(pk))
+        except (work.RemoteException, work.DeliveryFailed) as e:
+            print("Failed to play '{}': {}".format(pk, e.message))
 
-    runner.run_until_complete(plum.gather(*futures))
+
+@work.command('status', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def status(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import aiida.orm
+    from aiida.utils.ascii_vis import print_call_graph
+
+    for pk in pks:
+        calc_node = aiida.orm.load_node(pk)
+        print_call_graph(calc_node)
 
 
-def _action_done(intent, pk, future):
-    if future.exception() is not None:
-        click.echo("Failed to {} process {}: {}".format(intent, pk, future.exception()))
+def _create_status_info(calc_node):
+    status_line = _format_status_line(calc_node)
+    called = calc_node.called
+    if called:
+        return status_line, [_create_status_info(child) for child in called]
     else:
-        click.echo("{} {} OK".format(intent, pk))
+        return status_line
+
+
+def _format_status_line(calc_node):
+    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.calculation.job import JobCalculation
+
+    if isinstance(calc_node, WorkCalculation):
+        label = calc_node.get_attr('_process_label')
+        state = calc_node.get_attr('process_state')
+    elif isinstance(calc_node, JobCalculation):
+        label = type(calc_node).__name__
+        state = str(calc_node.get_state())
+    else:
+        raise TypeError("Unknown type")
+    return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
 
 
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     import datetime
     from aiida.utils import timezone
-    from aiida.orm.mixins import Sealable
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 

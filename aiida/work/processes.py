@@ -148,7 +148,7 @@ class Process(plum.process.Process):
     """
     __metaclass__ = abc.ABCMeta
 
-    SINGLE_RETURN_LINKNAME = '[result]'
+    SINGLE_RETURN_LINKNAME = '[return]'
     # This is used for saving node pks in the saved instance state
     NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
 

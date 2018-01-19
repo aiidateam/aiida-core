@@ -1,13 +1,18 @@
 import json
 import plum
-import uuid
+import plum.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
-
-from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
 from aiida.backends import settings
-from plum import rmq
+
+from . import events
+
+__all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
+           'RemoteException', 'DeliveryFailed']
+
+RemoteException = plum.RemoteException
+DeliveryFailed = plum.DeliveryFailed
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
@@ -16,6 +21,7 @@ _LAUNCH_QUEUE = 'process.queue'
 def _get_prefix():
     """Get the queue prefix from the profile."""
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
+
 
 def encode_response(response):
     serialized = serialize_data(response)
@@ -26,7 +32,7 @@ def decode_response(response):
     response = json.loads(response)
     return deserialize_data(response)
 
-  
+
 def get_launch_queue_name(prefix=None):
     if prefix is not None:
         return "{}.{}".format(prefix, _LAUNCH_QUEUE)
@@ -57,7 +63,7 @@ class ProcessControlPanel(object):
             exchange_name=message_exchange)
 
         task_queue_name = "{}.{}".format(prefix, _LAUNCH_QUEUE)
-        self._launch = rmq.launch.ProcessLaunchPublisher(
+        self._launch = plum.rmq.ProcessLaunchPublisher(
             self._connector,
             exchange_name=get_message_exchange_name(prefix),
             task_queue_name=task_queue_name,
@@ -70,17 +76,70 @@ class ProcessControlPanel(object):
             self.communicator.initialised_future())
 
     def pause_process(self, pid):
-        return self.communicator.rpc_send(pid, plum.PAUSE_MSG)
+        return self.execute_action(plum.PauseAction(pid))
 
     def play_process(self, pid):
-        return self.communicator.rpc_send(pid, plum.PLAY_MSG)
+        return self.execute_action(plum.PlayAction(pid))
 
     def kill_process(self, pid, msg=None):
-        return self.communicator.rpc_send(pid, plum.CANCEL_MSG)
+        return self.execute_action(plum.CancelAction(pid))
 
     def request_status(self, pid):
-        return self.communicator.rpc_send(pid, plum.STATUS_MSG)
+        return self.execute_action(plum.StatusAction(pid))
 
-    @property
-    def launch(self):
-        return self._launch
+    def launch_process(self, process_class, init_args=None, init_kwargs=None):
+        action = plum.rmq.LaunchProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._launch)
+        return action
+
+    def continue_process(self, pid):
+        action = plum.rmq.ContinueProcessAction(pid)
+        action.execute(self._launch)
+        return action
+
+    def execute_process(self, process_class, init_args=None, init_kwargs=None):
+        action = plum.rmq.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._launch)
+        return action
+
+    def execute_action(self, action):
+        action.execute(self.communicator)
+        return action
+
+
+class BlockingProcessControlPanel(ProcessControlPanel):
+    """
+    A blocking adapter for the ProcessControlPanel.
+    """
+
+    def __init__(self, prefix, rmq_config=None, testing_mode=False):
+        if rmq_config is None:
+            rmq_config = {
+                'url': 'amqp://localhost',
+                'prefix': prefix,
+            }
+
+        self._loop = events.new_event_loop()
+        self._connector = plum.rmq.RmqConnector(amqp_url=rmq_config['url'], loop=self._loop)
+        super(BlockingProcessControlPanel, self).__init__(prefix, self._connector, testing_mode)
+
+        self._connector.connect()
+
+    def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
+        action = plum.rmq.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._launch)
+        return events.run_until_complete(action.get_launch_future(), self._loop)
+
+    def execute_action(self, action):
+        action.execute(self.communicator)
+        return events.run_until_complete(action, self._loop)
+
+
+def new_blocking_control_panel():
+    """
+    Create a new blocking control panel based on the current profile configuration
+
+    :return: A new control panel instance
+    :rtype: :class:`BlockingProcessControlPanel`
+    """
+    return BlockingProcessControlPanel(_get_prefix())

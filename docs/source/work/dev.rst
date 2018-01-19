@@ -15,13 +15,7 @@ This section describes the different classes related to workflows, workfunctions
 .. automodule:: aiida.work.context
    :members:
 
-.. automodule:: aiida.work.daemon
-   :members:
-
 .. automodule:: aiida.work.db_types
-   :members:
-
-.. automodule:: aiida.work.globals
    :members:
 
 .. automodule:: aiida.work.launch

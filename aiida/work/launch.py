@@ -10,18 +10,24 @@
 
 from collections import namedtuple
 
+import aiida.orm
 from . import runners
+from . import rmq
 from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
+_persister = None
+
 
 def submit(process_class, **inputs):
     assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
-    runner = runners.get_runner()
-    return runner.submit(process_class, **inputs)
+
+    pid = rmq.new_blocking_control_panel().execute_process_start(
+        process_class, init_kwargs={'inputs': inputs})
+    return aiida.orm.load_node(pid)
 
 
 def run(process, *args, **inputs):

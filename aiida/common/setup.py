@@ -852,7 +852,7 @@ _property_table = {
     "logging.plum_loglevel": (
         "logging_plum_log_level",
         "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log ",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (

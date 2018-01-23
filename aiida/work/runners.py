@@ -230,6 +230,7 @@ class Runner(object):
             self._rmq_connector,
             exchange_name=rmq.get_message_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
+            blocking_mode=False,
             testing_mode=testing_mode
         )
 

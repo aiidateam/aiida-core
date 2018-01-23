@@ -67,6 +67,7 @@ class ProcessControlPanel(object):
             rmq_connector,
             exchange_name=message_exchange,
             task_queue=task_queue,
+            blocking_mode=False,
             testing_mode=testing_mode
         )
 

@@ -1480,6 +1480,7 @@ class TestStructureData(AiidaTestCase):
         Tests the conversion to CifData
         """
         from aiida.orm.data.structure import StructureData
+        import re
 
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
@@ -1492,20 +1493,13 @@ class TestStructureData(AiidaTestCase):
         # Exception thrown if ase can't be found
         except ImportError:
             return
-        self.assertEquals(simplify(c._prepare_cif()[0]),
-                          simplify("""#\#CIF1.1
-##########################################################################
-#               Crystallographic Information Format file
-#               Produced by PyCifRW module
-#
-#  This is a CIF file.  CIF has been adopted by the International
-#  Union of Crystallography as the standard for data archiving and
-#  transmission.
-#
-#  For information on this file format, follow the CIF links at
-#  http://www.iucr.org
-##########################################################################
-
+        lines = c._prepare_cif()[0].split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify("""
 data_0
 loop_
   _atom_site_label

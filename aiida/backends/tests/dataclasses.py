@@ -1066,6 +1066,7 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
     from aiida.orm.data.structure import has_ase, has_spglib
+    from aiida.orm.data.cif import has_pycifrw
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1475,6 +1476,8 @@ class TestStructureData(AiidaTestCase):
                                       mode="count_compact"),
                           'BaTiO3')
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_get_cif(self):
         """
         Tests the conversion to CifData
@@ -1488,11 +1491,7 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
-        try:
-            c = a._get_cif()
-        # Exception thrown if ase can't be found
-        except ImportError:
-            return
+        c = a._get_cif()
         lines = c._prepare_cif()[0].split('\n')
         non_comments = []
         for line in lines:

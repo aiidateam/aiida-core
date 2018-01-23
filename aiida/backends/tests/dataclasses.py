@@ -14,7 +14,7 @@ from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
 import unittest
-
+from aiida.common.utils import HiddenPrints
 
 
 def has_seekpath():
@@ -147,6 +147,7 @@ class TestCifData(AiidaTestCase):
     from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
     from distutils.version import StrictVersion
+    
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_reload_cifdata(self):
@@ -408,7 +409,8 @@ Te2 0.00000 0.00000 0.79030 0.01912
                 '_publ_section_title': 'Test CIF'
             }
         ]
-        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
@@ -432,7 +434,8 @@ _publ_section_title                     'Test CIF'
 '''))
 
         loops = {'_atom_site': ['_atom_site_label', '_atom_site_occupancy']}
-        lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
@@ -463,7 +466,8 @@ _publ_section_title                     'Test CIF'
                 '_tag': '[value]',
             }
         ]
-        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):

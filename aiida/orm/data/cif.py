@@ -9,6 +9,7 @@
 ###########################################################################
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
+from aiida.common.utils import HiddenPrints
 
 
 ase_loops = {
@@ -467,7 +468,8 @@ class CifData(SinglefileData):
         import tempfile
         cif = cif_from_ase(aseatoms)
         with tempfile.NamedTemporaryFile() as f:
-            f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            with HiddenPrints():
+                f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             f.flush()
             self.set_file(f.name)
 
@@ -498,7 +500,8 @@ class CifData(SinglefileData):
     def set_values(self, values):
         import tempfile
         with tempfile.NamedTemporaryFile() as f:
-            f.write(values.WriteOut())
+            with HiddenPrints():
+                f.write(values.WriteOut())
             f.flush()
             self.set_file(f.name)
 

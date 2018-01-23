@@ -271,4 +271,4 @@ class DaemonRunner(Runner):
             persister=self.persister,
             unbunble_kwargs={'runner': self}
         )
-        self.communicator.add_task_receiver(task_receiver)
+        self.communicator.add_task_subscriber(task_receiver)

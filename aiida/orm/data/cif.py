@@ -53,6 +53,7 @@ def has_pycifrw():
     """
     try:
         import CifFile
+        from CifFile import CifBlock
     except ImportError:
         return False
     return True
@@ -216,8 +217,15 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
     :return: CifFile
     """
     import CifFile
+    from CifFile import CifBlock
 
     cif = CifFile.CifFile()
+    try:
+        cif.set_grammar("1.1")
+    except AttributeError:
+        # if no grammar can be set, we assume it's 1.1 (widespread standard)
+        pass
+    
     if names and len(names) < len(datablocks):
         raise ValueError("Not enough names supplied for "
                          "datablocks: {} (names) < "
@@ -227,8 +235,8 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
         name = str(i)
         if names:
             name = names[i]
-        cif.NewBlock(name)
-        datablock = cif[name]
+        datablock = CifBlock()
+        cif[name] = datablock
         for loopname in loops.keys():
             loopdata = ([[]], [[]])
             row_size = None
@@ -250,6 +258,9 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
                 datablock.AddCifItem(loopdata)
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
+            # create automatically a loop for non-scalar values
+            if isinstance(values[tag],(tuple,list)) and tag not in loops.keys():
+                datablock.CreateLoop([tag])
     return cif
 
 
@@ -284,7 +295,7 @@ def refine_inline(node):
     refined_atoms, symmetry = ase_refine_cell(original_atoms)
 
     cif = CifData(ase=refined_atoms)
-    cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
+    cif.values.rename(str(0),name)
 
     # Remove all existing symmetry tags before overwriting:
     for tag in symmetry_tags:
@@ -474,9 +485,14 @@ class CifData(SinglefileData):
         if self._values is None:
             try:
                 import CifFile
+                from CifFile import CifBlock
             except ImportError as e:
                 raise ImportError(str(e) + '. You need to install the PyCifRW package.')
-            self._values = CifFile.ReadCif(self.get_file_abs_path())
+            c = CifFile.ReadCif(self.get_file_abs_path())
+            # change all StarBlocks into CifBlocks
+            for k,v in c.items():
+                c.dictionary[k] = CifBlock(v)
+            self._values = c
         return self._values
 
     def set_values(self, values):

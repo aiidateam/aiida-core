@@ -2588,6 +2588,7 @@ class TestTrajectoryData(AiidaTestCase):
         import os
         import tempfile
         from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.data.cif import has_pycifrw
 
         n = TrajectoryData()
 
@@ -2640,7 +2641,11 @@ class TestTrajectoryData(AiidaTestCase):
         os.close(handle)
         os.remove(filename)
 
-        for format in ['cif', 'xsf']:
+        if has_pycifrw():
+            formats_to_test = ['cif', 'xsf']
+        else:
+            formats_to_test = ['xsf']
+        for format in formats_to_test:
             files_created = [] # In case there is an exception
             try:
                 files_created = n.export(filename, fileformat=format)

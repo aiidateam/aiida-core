@@ -478,6 +478,24 @@ data_0
 _tag                                    '[value]'
 '''))
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_cif_with_long_line(self):
+        """
+        Tests CifData - check that long lines (longer than 2048 characters)
+        are supported.
+        Should not raise any error.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+data_0
+_tag   {}
+ '''.format('a'*5000))
+            f.flush()
+            _ = CifData(file=f.name)
+
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_roundtrip(self):

@@ -450,6 +450,30 @@ loop_
 _publ_section_title                     'Test CIF'
 '''))
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_pycifrw_syntax(self):
+        """
+        Tests CifData.pycifrw_from_cif() - check syntax pb in PyCifRW 3.6
+        """
+        from aiida.orm.data.cif import pycifrw_from_cif
+        import re
+
+        datablocks = [
+            {
+                '_tag': '[value]',
+            }
+        ]
+        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify('''
+data_0
+_tag                                    '[value]'
+'''))
+
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_roundtrip(self):

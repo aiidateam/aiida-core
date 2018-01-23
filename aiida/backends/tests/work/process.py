@@ -181,6 +181,24 @@ class TestExposeProcess(AiidaTestCase):
 
         self.SimpleProcess = SimpleProcess
 
+    def test_expose_namespace_get_inputs_template(self):
+        """
+        """
+        SimpleProcess = self.SimpleProcess
+
+        class ExposeProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super(ExposeProcess, cls).define(spec)
+                spec.expose_inputs(SimpleProcess)
+                spec.expose_inputs(SimpleProcess, namespace='beta')
+
+            @override
+            def _run(self, **kwargs):
+                pass
+
+        ExposeProcess.spec().get_inputs_template()
+
     def test_expose_duplicate_unnamespaced(self):
         """
         As long as separate namespaces are used, the same Process should be
@@ -345,6 +363,9 @@ class TestNestedUnnamespacedExposedProcess(AiidaTestCase):
         with self.assertRaises(ValueError):
             run(self.ParentProcess, **{'a': Int(0), 'b': Int(1), 'c': Int(2), 'd': Int(3), 'e': Int(4), 'f': Str(5)})
 
+    def test_inputs_template(self):
+        self.BaseProcess.spec().get_inputs_template()
+        self.ParentProcess.spec().get_inputs_template
 
 class TestNestedNamespacedExposedProcess(AiidaTestCase):
 

@@ -55,7 +55,7 @@ db_test_list = {
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],
-        'work.processSpec': ['aiida.backends.tests.work.processSpec'],
+        'work.process_spec': ['aiida.backends.tests.work.process_spec'],
         'work.rmq': ['aiida.backends.tests.work.test_rmq'],
         'work.run': ['aiida.backends.tests.work.run'],
         'work.runners': ['aiida.backends.tests.work.test_runners'],

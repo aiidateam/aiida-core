@@ -109,17 +109,12 @@ class InputPort(_WithNonDb, plum.port.InputPort):
     pass
 
 
-class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
-    pass
-
-
 class ProcessSpec(plum.process.ProcessSpec):
 
     def __init__(self):
         super(ProcessSpec, self).__init__()
         self._fastforwardable = False
         self.INPUT_PORT_TYPE = InputPort
-        self.INPUT_GROUP_PORT_TYPE = InputGroupPort
         self.PORT_NAMESPACE_TYPE = PortNamespace
 
 

@@ -82,15 +82,6 @@ class DictSchema(object):
         return template
 
 
-class ProcessSpec(plum.process.ProcessSpec):
-
-    def __init__(self):
-        super(ProcessSpec, self).__init__()
-        self._fastforwardable = False
-        self._inputs = PortNamespace()
-        self._outputs = PortNamespace()
-
-
 class _WithNonDb(object):
     """
     A mixin that adds support to a port to flag a that should not be stored
@@ -118,18 +109,19 @@ class InputPort(_WithNonDb, plum.port.InputPort):
     pass
 
 
-class DynamicInputPort(_WithNonDb, plum.port.DynamicInputPort):
-    pass
-
-
 class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
     pass
 
 
 class ProcessSpec(plum.process.ProcessSpec):
-    INPUT_PORT_TYPE = InputPort
-    DYNAMIC_INPUT_PORT_TYPE = DynamicInputPort
-    INPUT_GROUP_PORT_TYPE = InputGroupPort
+
+    def __init__(self):
+        super(ProcessSpec, self).__init__()
+        self._fastforwardable = False
+        self.INPUT_PORT_TYPE = InputPort
+        self.INPUT_GROUP_PORT_TYPE = InputGroupPort
+        self.PORT_NAMESPACE_TYPE = PortNamespace
+
 
     def get_inputs_template(self):
         """
@@ -176,11 +168,9 @@ class Process(plum.process.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-
         spec.input("_store_provenance", valid_type=bool, default=True, non_db=True)
         spec.input("_description", valid_type=basestring, required=False, non_db=True)
         spec.input("_label", valid_type=basestring, required=False, non_db=True)
-
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
@@ -201,8 +191,7 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, logger=None, runner=None,
-                 parent_pid=None, enable_persistence=True):
+    def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else runners.get_runner()
 
         super(Process, self).__init__(
@@ -436,7 +425,7 @@ class Process(plum.process.Process):
 
         parent_calc = self.get_parent_calc()
 
-        for name, input_value in self._flat_inputs().iteritems():
+        for name, input_value in self._flatten_inputs(self.inputs).iteritems():
 
             if isinstance(input_value, Calculation):
                 input_value = utils.get_or_create_output_group(input_value)
@@ -500,8 +489,8 @@ class Process(plum.process.Process):
                 items.extend(self._flatten_inputs(value, prefixed_key, separator=separator).iteritems())
             else:
                 try:
-                    port = self.spec().get_input(key)
-                except ValueError:
+                    port = self.spec().inputs[key]
+                except KeyError:
                     # It's not in the spec, so we better support dynamic inputs
                     assert self.spec().has_dynamic_input()
                     items.append((prefixed_key, value))
@@ -615,10 +604,10 @@ class FunctionProcess(Process):
         kwargs = {}
         for name, value in self.inputs.items():
             try:
-                if self.spec().get_input(name).non_db:
+                if self.spec().inputs[name].non_db:
                     # Don't consider non-database inputs
                     continue
-            except ValueError:
+            except KeyError:
                 pass  # No port found
 
             # Check if it is a positional arg, if not then keyword

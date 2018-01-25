@@ -11,14 +11,14 @@
 import inspect
 import plum
 import plum.test_utils
+import unittest
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.workchain import _WorkChainSpec
-from aiida.orm.data.base import Int, Str, Bool
 from aiida.common.links import LinkType
+from aiida.daemon.workflowmanager import execute_steps
+from aiida.orm.data.base import Int, Str, Bool
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
-from aiida.daemon.workflowmanager import execute_steps
 from aiida import work
 from aiida.work.workchain import *
 
@@ -97,6 +97,32 @@ class Wf(work.WorkChain):
     def _set_finished(self, function_name):
         self.finished_steps[function_name] = True
 
+
+class IfTest(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(IfTest, cls).define(spec)
+        spec.outline(
+            if_(cls.condition)(
+                cls.step1,
+                cls.step2
+            )
+        )
+
+    def on_create(self, *args, **kwargs):
+        super(IfTest, self).on_create(*args, **kwargs)
+        self.ctx.s1 = False
+        self.ctx.s2 = False
+
+    def condition(self):
+        return True
+
+    def step1(self):
+        self.ctx.s1 = True
+        self.pause()
+
+    def step2(self):
+        self.ctx.s2 = True
 
 class TestContext(AiidaTestCase):
     def test_attributes(self):
@@ -195,12 +221,12 @@ class TestWorkchain(AiidaTestCase):
 
         class ReturnA(work.Process):
             def _run(self):
-                self.out('_return', A)
+                self.out('res', A)
                 return self.outputs
 
         class ReturnB(work.Process):
             def _run(self):
-                self.out('_return', B)
+                self.out('res', B)
                 return self.outputs
 
         class Wf(WorkChain):
@@ -215,15 +241,15 @@ class TestWorkchain(AiidaTestCase):
                     r2=Outputs(self.submit(ReturnB)))
 
             def s2(self):
-                assert self.ctx.r1['_return'] == A
-                assert self.ctx.r2['_return'] == B
+                assert self.ctx.r1['res'] == A
+                assert self.ctx.r2['res'] == B
 
                 # Try overwriting r1
                 return ToContext(r1=Outputs(self.submit(ReturnB)))
 
             def s3(self):
-                assert self.ctx.r1['_return'] == B
-                assert self.ctx.r2['_return'] == B
+                assert self.ctx.r1['res'] == B
+                assert self.ctx.r2['res'] == B
 
         work.run(Wf)
 
@@ -348,6 +374,26 @@ class TestWorkchain(AiidaTestCase):
                 self.out("value", Int(5))
 
         work.run(MainWorkChain)
+
+    @unittest.skip('This is currently broken after merge')
+    def test_if_block_persistence(self):
+        """
+        This test was created to capture issue #902
+        """
+        wc = IfTest()
+        wc.execute(True)
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
+        # Now bundle the thing
+        b = plum.Bundle(wc)
+
+        # Load from saved tate
+        wc = b.unbundle()
+        wc.execute()
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
+
 
     def test_report_dbloghandler(self):
         """

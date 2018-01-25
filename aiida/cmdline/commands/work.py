@@ -44,10 +44,26 @@ class Work(VerdiCommandWithSubcommands):
             'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
             'kill': (self.cli, self.complete_none),
+            'plugins': (self.cli, self.complete_plugins),
         }
 
     def cli(self, *args):
         verdi()
+
+    def complete_plugins(self, subargs_idx, subargs):
+        """
+        Return the list of plugins registered under the 'workflows' category
+        """
+        from aiida import try_load_dbenv
+        try_load_dbenv()
+
+        from aiida.common.pluginloader import plugin_list
+
+        plugins = sorted(plugin_list('workflows'))
+        # Do not return plugins that are already on the command line
+        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
+        return_plugins = [_ for _ in plugins if _ not in other_subargs]
+        return "\n".join(return_plugins)
 
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)
@@ -419,6 +435,31 @@ def _format_status_line(calc_node):
         raise TypeError("Unknown type")
     return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
 
+@work.command('plugins', context_settings=CONTEXT_SETTINGS)
+@click.argument('entry_point', type=str, required=False)
+def plugins(entry_point):
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
+    from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
+    from aiida.common.pluginloader import plugin_list, get_plugin
+
+    if entry_point:
+        try:
+            plugin = get_plugin('workflows', entry_point)
+        except (LoadingPluginFailed, MissingPluginError) as exception:
+            click.echo("Error: {}".format(exception))
+        else:
+            click.echo(plugin.get_description())
+    else:
+        entry_points = sorted(plugin_list('workflows'))
+        if entry_points:
+            click.echo('Registered workflow entry points:')
+            for entry_point in entry_points:
+                click.echo("* {}".format(entry_point))
+            click.echo("\nPass the entry point of a workflow as an argument to display detailed information")
+        else:
+            click.echo("# No workflows found")
 
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     import datetime

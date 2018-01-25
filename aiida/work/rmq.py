@@ -9,7 +9,7 @@ from aiida.backends import settings
 from . import events
 
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
-           'RemoteException', 'DeliveryFailed']
+           'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
 RemoteException = plum.RemoteException
 DeliveryFailed = plum.DeliveryFailed
@@ -52,6 +52,53 @@ def get_message_exchange_name(prefix):
     return "{}.{}".format(prefix, _MESSAGE_EXCHANGE)
 
 
+def store_and_serialize_inputs(inputs):
+    """
+    Iterate over the values of the input dictionary, try to store them as if they were unstored
+    nodes and then return the serialized dictionary
+
+    :param inputs: dictionary where keys are potentially unstored node instances
+    :returns: a dictionary where nodes are serialized
+    """
+    for node in inputs.itervalues():
+        try:
+            node.store()
+        except AttributeError:
+            pass
+    return serialize_data(inputs)
+
+
+class LaunchProcessAction(plum.LaunchProcessAction):
+
+    def __init__(self, *args, **kwargs):
+        """
+        Calls through to the constructor of the plum LaunchProcessAction while making sure that
+        any unstored nodes in the inputs are first stored and the data is then serialized
+        """
+        kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
+        super(LaunchProcessAction, self).__init__(*args, **kwargs)
+
+
+class ExecuteProcessAction(plum.ExecuteProcessAction):
+
+    def __init__(self, process_class, init_args=None, init_kwargs=None):
+        """
+        Calls through to the constructor of the plum ExecuteProcessAction while making sure that
+        any unstored nodes in the inputs are first stored and the data is then serialized
+        """
+        init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs)
+
+
+class ProcessLauncher(plum.ProcessLauncher):
+
+    def _launch(self, task):
+        from plum.process_comms import KWARGS_KEY
+        kwargs = task.get(KWARGS_KEY, {})
+        kwargs['inputs'] = deserialize_data(kwargs['inputs'])
+        task[KWARGS_KEY] = kwargs
+        return super(ProcessLauncher, self)._launch(task)
+
 class ProcessControlPanel(object):
     """
     RMQ control panel for launching, controlling and getting status of
@@ -87,7 +134,7 @@ class ProcessControlPanel(object):
         return self.execute_action(plum.StatusAction(pid))
 
     def launch_process(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.LaunchProcessAction(process_class, init_args, init_kwargs)
+        action = LaunchProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._communicator)
         return action
 
@@ -97,7 +144,7 @@ class ProcessControlPanel(object):
         return action
 
     def execute_process(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._communicator)
         return action
 
@@ -125,9 +172,10 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
-        action = plum.ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._communicator)
-        return events.run_until_complete(action.get_launch_future(), self._loop)
+        events.run_until_complete(action, self._loop)
+        return action.get_launch_future().result()
 
     def execute_action(self, action):
         action.execute(self._communicator)

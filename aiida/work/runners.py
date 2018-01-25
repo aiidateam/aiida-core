@@ -230,6 +230,7 @@ class Runner(object):
             self._rmq_connector,
             exchange_name=rmq.get_message_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
+            blocking_mode=False,
             testing_mode=testing_mode
         )
 
@@ -271,4 +272,4 @@ class DaemonRunner(Runner):
             persister=self.persister,
             unbunble_kwargs={'runner': self}
         )
-        self.communicator.add_task_receiver(task_receiver)
+        self.communicator.add_task_subscriber(task_receiver)

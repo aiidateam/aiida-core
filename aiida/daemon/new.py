@@ -1,50 +1,45 @@
-from functools import partial
-import logging
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 
-import aiida.work.rmq
 
-
-def tick_legacy_workflows(runner):
-    tasks.workflow_stepper()
-    interval = config.get("DAEMON_INTERVALS_WFSTEP", settings.DAEMON_INTERVALS_WFSTEP)
+def tick_legacy_workflows(runner, interval=30):
+    from functools import partial
+    from aiida.daemon.tasks import workflow_stepper
+    workflow_stepper()
     runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))
 
-
-if __name__ == "__main__":
+def start_daemon():
+    """
+    """
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
     if not is_dbenv_loaded():
-        load_dbenv(process="daemon")
+        load_dbenv(process='daemon')
 
-    from aiida.backends import settings
-    from aiida.common.setup import get_profile_config
     from aiida import work
-    from aiida.daemon import tasks
-    from aiida.daemon import settings
-    from aiida import backends
+    from aiida.backends import settings as backend_settings
+    from aiida.common.log import configure_logging
+    from aiida.common.setup import get_profile_config
+    from aiida.daemon import settings as daemon_settings
 
-    # set up logging to console
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    # set a format which is simpler for console use
-    formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-    console.setFormatter(formatter)
-    # add the handler to the root logger
-    logging.getLogger('').addHandler(console)
+    configure_logging()
 
-    logger = logging.getLogger(__name__)
-
-    config = get_profile_config(backends.settings.AIIDADB_PROFILE)
-
-    # TODO: Add the profile name to the RMQ prefix
     rmq_config = {
         'url': 'amqp://localhost',
-        'prefix': aiida.work.rmq._get_prefix(),
+        'prefix': work.rmq._get_prefix(),
     }
-    runner = work.DaemonRunner(rmq_config=rmq_config, rmq_submit=True)
+    runner = work.DaemonRunner(rmq_config=rmq_config, rmq_submit=False)
     work.set_runner(runner)
 
-    tick_legacy_workflows(runner)
+    config = get_profile_config(backend_settings.AIIDADB_PROFILE)
+    interval = config.get('DAEMON_INTERVALS_WFSTEP', daemon_settings.DAEMON_INTERVALS_WFSTEP)
+    tick_legacy_workflows(runner, interval)
 
     try:
         runner.start()

@@ -113,7 +113,8 @@ class Devel(VerdiCommandWithSubcommands):
             'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
-            'tickd': (self.tick_daemon, self.complete_none)
+            'tickd': (self.tick_daemon, self.complete_none),
+            'run_daemon': (self.run_daemon, self.complete_none)
         }
 
         # The content of the dict is:
@@ -375,6 +376,13 @@ class Devel(VerdiCommandWithSubcommands):
             load_dbenv()
         from aiida.daemon.tasks import manual_tick_all
         manual_tick_all()
+
+    def run_daemon(self, *args):
+        """
+        Run a daemon instance in this in the current interpreter
+        """
+        from aiida.daemon.new import start_daemon
+        start_daemon()
 
     def run_listproperties(self, *args):
         """

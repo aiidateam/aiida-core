@@ -37,12 +37,8 @@ def set_runner(runner):
 
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
-    # TODO: Create policy object to create new runners
     if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = {
-            'url': 'amqp://localhost',
-            'prefix': rmq._get_prefix(),
-        }
+        kwargs['rmq_config'] = rmq._get_rmq_config()
     return Runner(**kwargs)
 
 
@@ -229,9 +225,19 @@ class Runner(object):
 
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
         self._rmq_connector = plum.rmq.RmqConnector(amqp_url=url, loop=self._loop)
+
+        self._rmq_communicator = plum.rmq.RmqCommunicator(
+            self._rmq_connector,
+            exchange_name=rmq.get_message_exchange_name(prefix),
+            task_queue=rmq.get_launch_queue_name(prefix),
+            testing_mode=testing_mode
+        )
+
         self._rmq = rmq.ProcessControlPanel(
-            prefix=prefix, rmq_connector=self._rmq_connector, testing_mode=testing_mode)
-        self._communicator = self._rmq.communicator
+            prefix=prefix,
+            rmq_connector=self._rmq_connector,
+            testing_mode=testing_mode)
+        self._communicator = self._rmq._communicator
 
         self._rmq_connector.connect()
         # Run the loop until the RMQ control panel is ready
@@ -260,10 +266,9 @@ class DaemonRunner(Runner):
         super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
 
         # Listen for incoming launch requests
-        self._launcher = plum.rmq.ProcessLaunchSubscriber(
-            self._rmq_connector,
-            exchange_name=rmq.get_message_exchange_name(prefix),
-            loop=self.loop, persister=self.persister,
-            task_queue_name=rmq.get_launch_queue_name(prefix),
-            testing_mode=testing_mode,
-            unbunble_kwargs={'runner': self})
+        task_receiver = rmq.ProcessLauncher(
+            loop=self.loop,
+            persister=self.persister,
+            unbunble_kwargs={'runner': self}
+        )
+        self.communicator.add_task_receiver(task_receiver)

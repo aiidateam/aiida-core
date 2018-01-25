@@ -25,9 +25,11 @@ _persister = None
 def submit(process_class, **inputs):
     assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
 
-    pid = rmq.new_blocking_control_panel().execute_process_start(
-        process_class, init_kwargs={'inputs': inputs})
-    return aiida.orm.load_node(pid)
+    # Use context manager to make sure connection is closed at end
+    with rmq.new_blocking_control_panel() as control_panel:
+        pid = control_panel.execute_process_start(
+            process_class, init_kwargs={'inputs': inputs})
+        return aiida.orm.load_node(pid)
 
 
 def run(process, *args, **inputs):

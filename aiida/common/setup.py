@@ -333,68 +333,29 @@ def get_profiles_list():
         return ConfigurationError("Please run the setup")
 
 
-def get_profile_config(profile, conf_dict=None, set_test_location=True):
+def get_profile_config(profile, conf_dict=None):
     """
     Return the profile specific configurations
 
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
-    :param set_test_location: if True, sets a new folder for storing repository
-        files during testing (to avoid to replace/overwrite the real repository)
-        Set to False for calls where the folder should not be changed (i.e., if
-        you only want to get the profile
     """
     import sys
     import tempfile
 
-    from aiida.common.exceptions import (
-        ConfigurationError, ProfileConfigurationError)
+    from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 
     if conf_dict is None:
         confs = get_config()
     else:
         confs = conf_dict
 
-    test_string = ""
-    # is_test = False
-    # test_prefix = "test_"
-    # if profile.startswith(test_prefix):
-    #     # Use the same profile
-    #     profile = profile[len(test_prefix):]
-    #     is_test = True
-    #     test_string = "(test) "
-
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
         raise ProfileConfigurationError(
-            "No {}profile configuration found for {}, "
-            "allowed values are: {}.".format(test_string, profile,
-                                             ", ".join(get_profiles_list())))
-
-    # if is_test and set_test_location:
-    #     # import traceback
-    #     # traceback.print_stack()
-    #     # Change the repository and print a message
-    #     ###################################################################
-    #     # IMPORTANT! Choose a different repository location, otherwise
-    #     # real data will be destroyed during tests!!
-    #     # The location is automatically created with the tempfile module
-    #     # Typically, under linux this is created under /tmp
-    #     # and is not deleted at the end of the run.
-    #     global TEMP_TEST_REPO
-    #     if TEMP_TEST_REPO is None:
-    #         TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
-    #         # We write the local repository on stderr, so that the user running
-    #         # the tests knows where the files are being stored
-    #         print >> sys.stderr, "############################################"
-    #         print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
-    #         print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
-    #         print >> sys.stderr, "############################################"
-    #     if 'AIIDADB_REPOSITORY_URI' not in profile_info:
-    #         raise ConfigurationError("Config file has not been found, run "
-    #                                  "verdi install first")
-    #     profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
+            "No profile configuration found for {}, allowed values are: {}.".format(
+                profile, ', '.join(get_profiles_list())))
 
     return profile_info
 
@@ -848,6 +809,12 @@ _property_table = {
         "also the logging.db_loglevel variable to further filter messages going "
         "to the database",
         "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.plum_loglevel": (
+        "logging_plum_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log ",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",

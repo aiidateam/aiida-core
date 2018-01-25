@@ -20,18 +20,19 @@ from plum import ProcessState
 import traceback
 
 import aiida.orm
-from aiida.orm.data import Data
-from aiida.orm import load_node
-from aiida.common.extendeddicts import FixedFieldsAttributeDict
 import aiida.common.exceptions as exceptions
+from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
-from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.links import LinkType
-from aiida.utils.calculation import add_source_info
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm import load_node
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.work import WorkCalculation
+from aiida.orm.data import Data
 from aiida.orm.data.parameter import ParameterData
+from aiida.utils.calculation import add_source_info
+from aiida.utils.serialize import serialize_data, deserialize_data
 from . import runners
 from . import utils
 
@@ -383,7 +384,7 @@ class Process(plum.process.Process):
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded inputs
         """
-        return {k: self._encode_input(v) for k, v in inputs.iteritems()}
+        return serialize_data(inputs)
 
     @override
     def decode_input_args(self, encoded):
@@ -393,7 +394,7 @@ class Process(plum.process.Process):
         :param encoded: 
         :return: The decoded input args
         """
-        return {k: self._decode_input(v) for k, v in encoded.iteritems()}
+        return deserialize_data(encoded)
 
     def update_node_state(self, state):
         self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, state.LABEL.value)
@@ -414,33 +415,6 @@ class Process(plum.process.Process):
 
             value.store()
             value.add_link_from(self.calc, label, LinkType.RETURN)
-
-    def _encode_input(self, inp):
-        if isinstance(inp, aiida.orm.data.Node):
-            return self.NODE_TYPE, inp.uuid
-        elif isinstance(inp, collections.Mapping):
-            return {k: self._encode_input(v) for k, v in inp.iteritems()}
-        elif not isinstance(inp, (str, unicode)) and \
-                isinstance(inp, collections.Sequence):
-            return tuple(self._encode_input(v) for v in inp)
-        else:
-            return inp
-
-    def _decode_input(self, encoded):
-        if self._is_encoded_node(encoded):
-            return load_node(uuid=encoded[1])
-        elif isinstance(encoded, collections.Mapping):
-            return {k: self._decode_input(v) for k, v in encoded.iteritems()}
-        elif not isinstance(encoded, (str, unicode)) and \
-                isinstance(input, collections.Sequence):
-            return tuple(self._decode_input(v) for v in encoded)
-        else:
-            return encoded
-
-    def _is_encoded_node(self, value):
-        return not isinstance(value, (str, unicode)) and \
-               isinstance(value, collections.Sequence) and \
-               value[0] == self.NODE_TYPE
 
     def _setup_db_record(self):
         assert self.inputs is not None

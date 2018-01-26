@@ -1264,3 +1264,22 @@ def get_mode_string(mode):
         else:
             perm.append("-")
     return "".join(perm)
+
+
+class HiddenPrints:
+    """
+    Class to prevent any print to the std output.
+    Usage:
+    
+    with HiddenPrints():
+        print("I won't print this")
+    """
+    
+    def __enter__(self):
+        from os import devnull
+        self._original_stdout = sys.stdout
+        sys.stdout = open(devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout = self._original_stdout
+

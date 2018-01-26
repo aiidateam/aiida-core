@@ -14,7 +14,7 @@ from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
 import unittest
-
+from aiida.common.utils import HiddenPrints
 
 
 def has_seekpath():
@@ -147,6 +147,7 @@ class TestCifData(AiidaTestCase):
     from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
     from distutils.version import StrictVersion
+    
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_reload_cifdata(self):
@@ -408,7 +409,8 @@ Te2 0.00000 0.00000 0.79030 0.01912
                 '_publ_section_title': 'Test CIF'
             }
         ]
-        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
@@ -432,7 +434,8 @@ _publ_section_title                     'Test CIF'
 '''))
 
         loops = {'_atom_site': ['_atom_site_label', '_atom_site_occupancy']}
-        lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
@@ -449,6 +452,49 @@ loop_
 
 _publ_section_title                     'Test CIF'
 '''))
+
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_pycifrw_syntax(self):
+        """
+        Tests CifData.pycifrw_from_cif() - check syntax pb in PyCifRW 3.6
+        """
+        from aiida.orm.data.cif import pycifrw_from_cif
+        import re
+
+        datablocks = [
+            {
+                '_tag': '[value]',
+            }
+        ]
+        with HiddenPrints():
+            lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify('''
+data_0
+_tag                                    '[value]'
+'''))
+
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_cif_with_long_line(self):
+        """
+        Tests CifData - check that long lines (longer than 2048 characters)
+        are supported.
+        Should not raise any error.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+data_0
+_tag   {}
+ '''.format('a'*5000))
+            f.flush()
+            _ = CifData(file=f.name)
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -1042,6 +1088,7 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
     from aiida.orm.data.structure import has_ase, has_spglib
+    from aiida.orm.data.cif import has_pycifrw
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1451,11 +1498,14 @@ class TestStructureData(AiidaTestCase):
                                       mode="count_compact"),
                           'BaTiO3')
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_get_cif(self):
         """
         Tests the conversion to CifData
         """
         from aiida.orm.data.structure import StructureData
+        import re
 
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
@@ -1463,25 +1513,14 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
-        try:
-            c = a._get_cif()
-        # Exception thrown if ase can't be found
-        except ImportError:
-            return
-        self.assertEquals(simplify(c._prepare_cif()[0]),
-                          simplify("""#\#CIF1.1
-##########################################################################
-#               Crystallographic Information Format file
-#               Produced by PyCifRW module
-#
-#  This is a CIF file.  CIF has been adopted by the International
-#  Union of Crystallography as the standard for data archiving and
-#  transmission.
-#
-#  For information on this file format, follow the CIF links at
-#  http://www.iucr.org
-##########################################################################
-
+        c = a._get_cif()
+        lines = c._prepare_cif()[0].split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals(simplify("\n".join(non_comments)),
+                          simplify("""
 data_0
 loop_
   _atom_site_label
@@ -2571,6 +2610,7 @@ class TestTrajectoryData(AiidaTestCase):
         import os
         import tempfile
         from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.data.cif import has_pycifrw
 
         n = TrajectoryData()
 
@@ -2623,7 +2663,11 @@ class TestTrajectoryData(AiidaTestCase):
         os.close(handle)
         os.remove(filename)
 
-        for format in ['cif', 'xsf']:
+        if has_pycifrw():
+            formats_to_test = ['cif', 'xsf']
+        else:
+            formats_to_test = ['xsf']
+        for format in formats_to_test:
             files_created = [] # In case there is an exception
             try:
                 files_created = n.export(filename, fileformat=format)
@@ -2639,6 +2683,53 @@ class TestKpointsData(AiidaTestCase):
     """
     Tests the TrajectoryData objects.
     """
+
+    def test_set_kpoints_path_legacy(self):
+        """
+        Regression test for the deprecated KpointsData.set_kpoints_path method.
+        For certain formats of a direct kpoint list, it is not necessary to have defined a cell.
+        """
+        import numpy
+        from aiida.orm.data.array.kpoints import KpointsData
+
+        # Create a node with two arrays
+        kpoints_01 = KpointsData()
+        kpoints_02 = KpointsData()
+        kpoints_03 = KpointsData()
+        kpoints_04 = KpointsData()
+
+        # The various allowed formats
+        format_01 = [('G', 'M')]
+        format_02 = [('G', 'M', 30)]
+        format_03 = [('G', (0, 0, 0), 'M', (1, 1, 1))]
+        format_04 = [('G', (0, 0, 0), 'M', (1, 1, 1), 30)]
+
+        # Without a cell defined, the first two should fail, the last two should work
+        with self.assertRaises(ValueError):
+            kpoints_01.set_kpoints_path(format_01)
+
+        with self.assertRaises(ValueError):
+            kpoints_02.set_kpoints_path(format_02)
+
+        kpoints_03.set_kpoints_path(format_03)
+        kpoints_04.set_kpoints_path(format_04)
+
+        # Define a cell and settings it enable the usage of formats 1 and 2
+        alat = 4.
+        cell = numpy.array([
+            [alat, 0., 0.],
+            [0., alat, 0.],
+            [0., 0., alat],
+        ])
+
+        kpoints_01.set_cell(cell)
+        kpoints_02.set_cell(cell)
+
+        kpoints_01.set_kpoints_path(format_01)
+        kpoints_02.set_kpoints_path(format_02)
+        kpoints_03.set_kpoints_path(format_03)
+        kpoints_04.set_kpoints_path(format_04)
+
 
     def test_mesh(self):
         """

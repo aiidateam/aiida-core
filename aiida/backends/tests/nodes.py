@@ -1959,3 +1959,154 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # more than one input to the same data object!
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2, link_type=LinkType.CREATE)
+
+
+class TestNodeDeletion(AiidaTestCase):
+    def _check_existence(self, uuids_check_existence, uuids_check_deleted):
+        """
+        I get 2 lists of uuids
+        :param list uuids_check_existence: The list of uuids that have to exist
+        :param list uuids_check_deleted:
+            The list of uuids that should not exist,
+            I check that NotExistent is raised.
+        """
+        from aiida.common.exceptions import NotExistent
+        for uuid in uuids_check_existence:
+            # This will raise if node is not existent:
+            load_node(uuid)
+        for uuid in uuids_check_deleted:
+            # I check that it raises
+            with self.assertRaises(NotExistent):
+                load_node(uuid)
+    def _create_calls_n_returns_graph(self):
+        """
+        Creates a complicated graph with a master with 1 inputs,
+        2 slaves of it also using that input and an additional 1,
+        producing output that is either returned or not returned by the master.
+        Master also creates one nodes. This allows to check whether the delete_nodes
+        command works as anticipated.
+        """
+        from aiida.common.links import LinkType
+
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = [Node().store() for i in range(9)]
+        wf.add_link_from(in1, link_type=LinkType.INPUT)
+        slave1.add_link_from(in1, link_type=LinkType.INPUT)
+        slave1.add_link_from(in2, link_type=LinkType.INPUT)
+        slave2.add_link_from(in2, link_type=LinkType.INPUT)
+        slave1.add_link_from(wf, link_type=LinkType.CALL)
+        slave2.add_link_from(wf, link_type=LinkType.CALL)
+        outp1.add_link_from(slave1, link_type=LinkType.CREATE)
+        outp2.add_link_from(slave2, link_type=LinkType.CREATE)
+        outp2.add_link_from(wf, link_type=LinkType.RETURN)
+        outp3.add_link_from(wf, link_type=LinkType.CREATE)
+        outp4.add_link_from(wf, link_type=LinkType.RETURN)
+        return in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4
+
+    def test_deletion_simple(self):
+        """
+        I'm setting up a sequence of nodes connected by data provenance links.
+        Testing whether I will delete the right ones.
+        """
+        from aiida.common.links import LinkType
+        from aiida.utils.delete_nodes import delete_nodes
+
+        nodes = [Node().store() for i in range(15)]
+        uuids_check_existence = [n.uuid for n in nodes[:3]]
+        uuids_check_deleted = [n.uuid for n in nodes[3:]]
+
+        # Now I am linking the nodes in a branched network
+        # Connecting nodes 1,2,3 to 0
+        for i in range(1,4):
+            nodes[i].add_link_from(nodes[0], link_type=LinkType.INPUT)
+        # Connecting nodes 4,5,6 to 3
+        for i in range(4, 7):
+            nodes[i].add_link_from(nodes[3], link_type=LinkType.CREATE)
+        # Connecting nodes 7,8 to 4
+        for i in range(7, 9):
+            nodes[i].add_link_from(nodes[4], link_type=LinkType.INPUT)
+        # Connecting nodes 9 to 5
+        for i in range(9, 10):
+            nodes[i].add_link_from(nodes[5], link_type=LinkType.INPUT)
+        for i in range(10, 14):
+            nodes[i+1].add_link_from(nodes[i], link_type=LinkType.INPUT)
+        delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=0)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+
+    def test_deletion_with_calls_with_returns(self):
+        """
+        Checking the case where I follow calls and return links for deletion
+        """
+        from aiida.utils.delete_nodes import delete_nodes
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # The inputs are not harmed.
+        uuids_check_existence = (in1.uuid, in2.uuid)
+        # the slaves and their outputs have to disappear since calls are followed!
+        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2, outp4)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=True, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_with_calls_no_returns(self):
+        """
+        Checking the case where I follow calls and not return links for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # The inputs are not harmed.
+        uuids_check_existence = (in1.uuid, in2.uuid, outp4.uuid)
+        # the slaves and their outputs have to disappear since calls are followed!
+        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=True, follow_returns=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_no_calls_no_returns(self):
+        """
+        Checking the case where I don't follow calls and also not return links for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # I don't follow calls, so the slaves and their output are unharmed, as well as input
+        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, slave2, outp4)]
+        # the wf and it's direct output
+        uuids_check_deleted = [n.uuid for n in (wf, outp3)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=False, follow_returns=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_no_calls_with_returns(self):
+        """
+        Checking the case where I follow returns and not calls for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # I don't follow calls, so the slaves and their output are unharmed, as well as input
+        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, slave2)]
+        # the wf and it's direct output and what it returned
+        uuids_check_deleted = [n.uuid for n in (wf, outp3, outp2, outp4)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=False, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_with_returns_n_loops(self):
+        """
+        Setting up a simple loop, to check that the following doesn't go bananas.
+        """
+        from aiida.common.links import LinkType
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf = [Node().store() for i in range(3)]
+        wf.add_link_from(in1, link_type=LinkType.INPUT)
+        wf.add_link_from(in2, link_type=LinkType.INPUT)
+        in2.add_link_from(wf, link_type=LinkType.RETURN)
+
+        uuids_check_existence = (in1.uuid, )
+        uuids_check_deleted = [n.uuid for n in (wf, in2)]
+
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)

@@ -7,15 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This file provides very simple workflows for testing purposes.
-Do not delete, otherwise 'verdi developertest' will stop to work.
-"""
-
 from aiida.work.process import FunctionProcess
 from aiida.work.defaults import serial_engine
 import functools
-
 
 
 def workfunction(func):
@@ -46,7 +40,6 @@ def workfunction(func):
         This wrapper function is the actual function that is called.
         """
         # Do this here so that it doesn't enter as an input to the process
-        run_async = kwargs.pop('__async', False)
         return_pid = kwargs.pop('_return_pid', False)
 
         # Build up the Process representing this function
@@ -60,49 +53,18 @@ def workfunction(func):
         future = serial_engine.submit(FuncProc, inputs)
         pid = future.pid
 
-        if run_async:
+        results = future.result()
+        # Check if there is just one value returned
+        if len(results) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in results:
             if return_pid:
-                return future, pid
+                return results[FuncProc.SINGLE_RETURN_LINKNAME], pid
             else:
-                return future
+                return results[FuncProc.SINGLE_RETURN_LINKNAME]
         else:
-            results = future.result()
-            # Check if there is just one value returned
-            if len(results) == 1 and FuncProc.SINGLE_RETURN_LINKNAME in results:
-                if return_pid:
-                    return results[FuncProc.SINGLE_RETURN_LINKNAME], pid
-                else:
-                    return results[FuncProc.SINGLE_RETURN_LINKNAME]
+            if return_pid:
+                return results, pid
             else:
-                if return_pid:
-                    return results, pid
-                else:
-                    return results
+                return results
 
     wrapped_function._is_workfunction = True
     return wrapped_function
-
-# def aiidise(func):
-#     import inspect
-#     import itertools
-#
-#     def wrapped_function(*args, **kwargs):
-#         in_dict = dict(
-#             itertools.chain(
-#                 itertools.izip(inspect.getargspec(func)[0], args), kwargs))
-#
-#         native_args = [util.to_native_type(arg) for arg in args]
-#         native_kwargs = {k: util.to_native_type(v) for k, v in kwargs.iteritems()}
-#
-#         # Create the calculation (unstored)
-#         calc = Calculation()
-#         util.save_calc(calc, func, in_dict)
-#
-#         # Run the wrapped function
-#         retval = util.to_db_type(func(*native_args, **native_kwargs))
-#
-#         retval.add_link_from(calc, 'result')
-#
-#         return retval
-#
-#     return wrapped_function

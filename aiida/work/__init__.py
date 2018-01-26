@@ -7,9 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from aiida.work.workfunction import workfunction
 from aiida.work.workchain import WorkChain
-from aiida.work.run import async, run, submit
-
-
+from aiida.work.run import run, submit

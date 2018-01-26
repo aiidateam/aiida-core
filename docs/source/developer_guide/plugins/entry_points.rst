@@ -186,6 +186,11 @@ Usage::
    from aiida.orm import WorkflowFactory
    wf = WorkflowFactory('mycode.mywf')
 
+.. note:: For old-style workflows the entry point mechanism of the plugin system is not supported. 
+   Therefore one cannot load these workflows with the ``WorkflowFactory``.
+   The only way to run these, is to store their source code in the ``aiida/workflows/user`` directory and use normal python imports to load the classes.
+
+
 ``aiida.cmdline``
 -----------------
 

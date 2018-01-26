@@ -476,6 +476,7 @@ class TrajectoryData(ArrayData):
         import CifFile
         from aiida.orm.data.cif \
             import ase_loops, cif_from_ase, pycifrw_from_cif
+        from aiida.common.utils import HiddenPrints
 
         cif = ""
         indices = range(self.numsteps)
@@ -485,7 +486,8 @@ class TrajectoryData(ArrayData):
             structure = self.get_step_structure(idx)
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
                                        ase_loops)
-            cif = cif + ciffile.WriteOut()
+            with HiddenPrints():
+                cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
     def _prepare_tcod(self, main_file_name="", **kwargs):

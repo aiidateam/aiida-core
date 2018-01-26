@@ -4,25 +4,26 @@ The ``verdi`` commands
 
 For some of the most common operations in AiiDA, you can work directly from the command line using the a set of ``verdi`` commands. You already used ``verdi install`` when installing the software. There are quite some more functionalities attached to this command; here's a list:
 
-* :ref:`calculation<calculation>`:				query and interact with calculations
-* :ref:`code<code>`:                			setup and manage codes to be used
-* :ref:`comment<comment>`:          			manage general properties of nodes in the database
-* :ref:`completioncommand<completioncommand>`:	return the bash completion function to put in ~/.bashrc
-* :ref:`computer<computer>`:            		setup and manage computers to be used
-* :ref:`daemon<daemon>`:              			manage the AiiDA daemon
-* :ref:`data<data>`:                			setup and manage data specific types
-* :ref:`devel<devel>`:               			AiiDA commands for developers
-* :ref:`export<export>`:              			export nodes and group of nodes
-* :ref:`graph<graph>`:                    create a graph from a given root node
-* :ref:`group<group>`:               			setup and manage groups
-* :ref:`import<import>`:              			export nodes and group of nodes
-* :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
-* :ref:`node<node>`:                			manage operations on AiiDA nodes
-* :ref:`profile<profile>`:                		list and manage AiiDA profiles
-* :ref:`run<run>`:                  			execute an AiiDA script
-* :ref:`shell<shell>`:               			run the interactive shell with the Django environment
-* :ref:`user<user>`:                			list and configure new AiiDA users.
-* :ref:`workflow<workflow>`:            		manage the AiiDA worflow manager
+* :ref:`calculation<calculation>`:              query and interact with calculations
+* :ref:`code<code>`:                            setup and manage codes to be used
+* :ref:`comment<comment>`:                      manage general properties of nodes in the database
+* :ref:`completioncommand<completioncommand>`:  return the bash completion function to put in ~/.bashrc
+* :ref:`computer<computer>`:                    setup and manage computers to be used
+* :ref:`daemon<daemon>`:                        manage the AiiDA daemon
+* :ref:`data<data>`:                            setup and manage data specific types
+* :ref:`devel<devel>`:                          AiiDA commands for developers
+* :ref:`export<export>`:                        export nodes and group of nodes
+* :ref:`graph<graph>`:                          create a graph from a given root node
+* :ref:`group<group>`:                          setup and manage groups
+* :ref:`import<import>`:                        export nodes and group of nodes
+* :ref:`install<install>`:                      install/setup aiida for the current user/create a new profile
+* :ref:`node<node>`:                            manage operations on AiiDA nodes
+* :ref:`profile<profile>`:                      list and manage AiiDA profiles
+* :ref:`run<run>`:                              execute an AiiDA script
+* :ref:`shell<shell>`:                          run the interactive shell with the Django environment
+* :ref:`user<user>`:                            list and configure new AiiDA users.
+* :ref:`work<work>`:                            manage the AiiDA worflow manager
+* :ref:`workflow<workflow>`:                    manage the AiiDA legacy worflow manager
 
 
 Each command above can be preceded by the ``-p <profile>`` or ``--profile=<profile>``
@@ -371,15 +372,27 @@ Manages the AiiDA users. Two valid subcommands.
   *  **list**: list existing users configured for your AiiDA installation.
   *  **configure**: configure a new AiiDA user.
 
+.. _work:
+
+``verdi work``
+++++++++++++++++++
+Manage workflows, valid subcommands:
+
+  * **checkpoint**: display the last recorded checkpoint of a workflow
+  * **kill**: kill a workflow
+  * **list**: list the workflows present in the database
+  * **plugins**: show the registered workflow plugins
+  * **report**: show the log messages for a workflow
+  * **tree**: shows an ASCII tree for a workflow
+
 
 .. _workflow:
 
 ``verdi workflow``
 ++++++++++++++++++
-Manages the workflow. Valid subcommands:
+Manage legacy workflows, valid subcommands:
 
-  * **report**: display the information on how the workflow is evolving.
-  * **kill**: kills a workflow.
-  * **list**: lists the workflows present in the database. By default, shows only the running ones. 
-  * **logshow**: shows the log messages for the workflow.
-
+  * **report**: display the information on how the workflow is evolving
+  * **kill**: kills a workflow
+  * **list**: lists the workflows present in the database. By default, shows only the running ones
+  * **logshow**: shows the log messages for the workflow

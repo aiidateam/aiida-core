@@ -126,8 +126,11 @@ class Node(VerdiCommandRouter):
         self.routed_subcommands = {
             'repo': _Repo,
             'show': _Show,
-            'tree': _Tree
+            'tree': _Tree,
+            'delete': _Delete,
         }
+
+
 
 
 # Note: this class should not be exposed directly in the main module,
@@ -301,6 +304,60 @@ class _Show(VerdiCommand):
                     gr_specs = "{} {}".format(gr['groups']['name'],
                                               gr['groups']['id'])
                     print gr_specs
+
+
+class _Delete(VerdiCommand):
+    def run(self, *args):
+        """
+        Deletes a node and it's inferred data provenance
+        :raise ValueError: if no valid pk or uuid is given.
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.utils.delete_nodes import delete_nodes
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='delete a node and everything that originated from that node')
+        parser.add_argument('pks', type=int, default=None, nargs="*", help="ID of the nodes to delete.")
+        parser.add_argument('-u', '--uuids', default=None, nargs='*', help='The uuid of the nodes to delete')
+        parser.add_argument('-c', '--follow-calls',
+            help='follow the call links downwards when deleting. If a node is a WorkCalculation, will delete everything it called',
+            action='store_true')
+        parser.add_argument('-r', '--follow-returns',
+            help='follow the return-links downwards when deleting. If a node is a WorkCalculation, will delete everything it returned',
+            action='store_true')
+        parser.add_argument('-n', '--dry-run', help='dry run, does not delete', 
+            action='store_true')
+        # Commenting this option for now
+        # parser.add_argument('-f', '--force', help='force deletion, disables final user confirmation', action='store_true')
+        parser.add_argument('-v', '--verbosity', help='verbosity level', action='count', default=1)
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        filters={'or':[]}
+        for key, req_vals in (('id', parsed_args.pks), ('uuid', parsed_args.uuids)):
+            if req_vals:
+                filters['or'].append({key:{'in':req_vals}})
+
+
+        node_pks_to_delete = set([_ for _, in QueryBuilder().append(Node, filters=filters, project='id').all()])
+        if not(node_pks_to_delete):
+            print "Nothing to delete"
+            return None
+        delete_nodes(node_pks_to_delete, 
+                follow_calls=parsed_args.follow_calls, follow_returns=parsed_args.follow_returns, 
+                dry_run=parsed_args.dry_run, verbosity=parsed_args.verbosity )
+
+
+
 
 
 class _Tree(VerdiCommand):

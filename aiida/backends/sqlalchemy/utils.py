@@ -533,3 +533,23 @@ def alembic_command(selected_command, *args, **kwargs):
             al_command(alembic_cfg, message=args[0][0])
         else:
             al_command(alembic_cfg, *args, **kwargs)
+
+
+def delete_nodes_and_connections_sqla(pks_to_delete):
+    """
+    Delete all nodes corresponding to pks in the input.
+    :param pks_to_delete: A list, tuple or set of pks that should be deleted.
+    """
+    from aiida.backends import sqlalchemy as sa
+    
+    from django.db import transaction
+    from django.db.models import Q
+    from aiida.backends.djsite.db import models
+    
+    session = sa.get_scoped_session()
+
+    with session.begin(subtransactions=True):
+        # First delete links, than the Nodes, since we are not cascading deletions
+        session(DbLink).filters(DbLink.input_id.in_(pks_to_delete)).delete()
+        session(DbLink).filters(DbLink.output_id.in_(pks_to_delete)).delete()
+        session(DbNode).filters(DbNode.id.in_(pks_to_delete)).delete()

@@ -541,15 +541,12 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
     :param pks_to_delete: A list, tuple or set of pks that should be deleted.
     """
     from aiida.backends import sqlalchemy as sa
-    
-    from django.db import transaction
-    from django.db.models import Q
-    from aiida.backends.djsite.db import models
+    from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
     
     session = sa.get_scoped_session()
 
     with session.begin(subtransactions=True):
         # First delete links, than the Nodes, since we are not cascading deletions
-        session(DbLink).filters(DbLink.input_id.in_(pks_to_delete)).delete()
-        session(DbLink).filters(DbLink.output_id.in_(pks_to_delete)).delete()
-        session(DbNode).filters(DbNode.id.in_(pks_to_delete)).delete()
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')

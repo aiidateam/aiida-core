@@ -26,7 +26,7 @@ from aiida.orm.implementation.calculation import JobCalculation
 from aiida.backends.utils import get_automatic_user
 
 from aiida.utils import timezone
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import abstractclassmethod
 
 logger = aiidalogger.getChild('Workflow')
@@ -134,6 +134,13 @@ class AbstractWorkflow(object):
         Set the label of the workflow.
 
         :param label: a string
+        """
+        pass
+
+    @abstractproperty
+    def ctime(self):
+        """
+        Get the creation time of the workflow
         """
         pass
 

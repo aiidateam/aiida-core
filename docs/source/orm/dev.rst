@@ -111,6 +111,7 @@ KpointsData
 ...........
 .. automodule:: aiida.orm.data.array.kpoints
    :members:
+   :private-members:
 
 BandsData
 .........

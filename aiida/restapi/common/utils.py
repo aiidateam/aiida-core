@@ -510,6 +510,8 @@ class Utils(object):
         nelist = None
         downloadformat = None
         visformat = None
+        filename = None
+        rtype = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -568,6 +570,14 @@ class Utils(object):
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
             raise RestInputValidationError(
                 "You cannot specify visformat more than "
+                "once")
+        if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify filename more than "
+                "once")
+        if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify rtype more than "
                 "once")
 
         ## Extract results
@@ -644,6 +654,7 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'format'")
+
             elif field[0] == 'visformat':
                 if field[1] == '=':
                     visformat = field[2]
@@ -651,6 +662,22 @@ class Utils(object):
                     raise RestInputValidationError(
                         "only assignment operator '=' "
                         "is permitted after 'visformat'")
+
+            elif field[0] == 'filename':
+                if field[1] == '=':
+                    filename = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'filename'")
+
+            elif field[0] == 'rtype':
+                if field[1] == '=':
+                    rtype = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' "
+                        "is permitted after 'rtype'")
 
             else:
 
@@ -684,7 +711,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat)
+                nelist, downloadformat, visformat, filename, rtype)
 
     def parse_query_string(self, query_string):
         """

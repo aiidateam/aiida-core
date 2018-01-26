@@ -7,22 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import apricotpy
 import abc
-from aiida.common.lang import override
-from apricotpy import persistable
+import functools
 import inspect
-from plum.wait_ons import Checkpoint
+import plum
 
-from .interstep import *
-from . import process
+from aiida.common.extendeddicts import AttributeDict
+from aiida.orm.utils import load_node, load_workflow
+from aiida.common.lang import override
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.utils.serialize import serialize_data, deserialize_data
+from . import processes
 from . import utils
+from .awaitable import *
+from .context import *
 
-__all__ = ['WorkChain']
+__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs', '_WorkChainSpec']
 
 
-class _WorkChainSpec(process.ProcessSpec):
+class _WorkChainSpec(processes.ProcessSpec):
     def __init__(self):
         super(_WorkChainSpec, self).__init__()
         self._outline = None
@@ -49,13 +52,14 @@ class _WorkChainSpec(process.ProcessSpec):
         return self._outline
 
 
-class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin):
+class WorkChain(processes.Process):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
     _INTERSTEPS = 'intersteps'
+    _CONTEXT = 'CONTEXT'
 
     @classmethod
     def define(cls, spec):
@@ -65,14 +69,22 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def __init__(self, inputs=None, pid=None, logger=None):
-        super(WorkChain, self).__init__(inputs, pid, logger)
+    def __init__(self, inputs=None, logger=None, runner=None):
+        super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
         self._stepper = None
         self._awaitables = []
+        self._context = AttributeDict()
+
+    @property
+    def ctx(self):
+        return self._context
 
     @override
     def save_instance_state(self, out_state):
         super(WorkChain, self).save_instance_state(out_state)
+        # Save the context
+        out_state[self._CONTEXT] = serialize_data(self.ctx.__dict__)
+
         # Ask the stepper to save itself
         if self._stepper is not None:
             stepper_state = utils.Parcel()
@@ -82,35 +94,38 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
     @override
     def load_instance_state(self, saved_state):
         super(WorkChain, self).load_instance_state(saved_state)
+        # Load the context
+        self._context = AttributeDict(**deserialize_data(saved_state[self._CONTEXT]))
 
         # Recreate the stepper
         if self._STEPPER_STATE in saved_state:
-            self._stepper = utils.Savable.load(saved_state[self._STEPPER_STATE])
+            self._stepper = self.spec().get_outline().create_stepper(self)
+            print self._stepper
+            self._stepper.load_instance_state(saved_state[self._STEPPER_STATE])
         else:
             self._stepper = None
 
         self.set_logger(self._calc.logger)
 
-    def insert_barrier(self, awaitable):
+    def insert_awaitable(self, awaitable):
         """
-        Insert a barrier that will cause the workchain to wait until the wait
+        Insert a awaitable that will cause the workchain to wait until the wait
         on is finished before continuing to the next step.
 
         :param awaitable: The thing to await
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :type awaitable: :class:`aiida.work.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
 
-    def remove_barrier(self, awaitable):
+    def remove_awaitable(self, awaitable):
         """
-        Remove a barrier.
+        Remove a awaitable.
 
-        Precondition: must be a barrier that was previously inserted
+        Precondition: must be a awaitable that was previously inserted
 
-        :param awaitable:  The awaitable to remove
-        :type awaitable: :class:`apricotpy.persistable.Awaitable`
+        :param awaitable: The awaitable to remove
         """
-        del self._awaitables[awaitable]
+        self._awaitables.remove(awaitable)
 
     def to_context(self, **kwargs):
         """
@@ -119,20 +134,12 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         to the corresponding key in the context of the workchain
         """
         for key, value in kwargs.iteritems():
-            if not isinstance(value, ContextAction):
-                value = assign_(value)
-
-            awaitable = value.awaitable
-
-            if not isinstance(awaitable, apricotpy.Awaitable):
-                raise TypeError("Could not find an awaitable to place in the context")
-
-            awaitable.add_done_callback(persistable.Function(value.fn, key, self))
-
-            self.insert_barrier(awaitable)
+            awaitable = construct_awaitable(value)
+            awaitable.key = key
+            self.insert_awaitable(awaitable)
 
     @override
-    def _run(self, **kwargs):
+    def _run(self):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
@@ -147,7 +154,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
     @_aborted.setter
     def _aborted(self, value):
         # One is not allowed to unabort an aborted WorkChain
-        if self._aborted == True and value == False:
+        if self._aborted and value == False:
             self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
             return
 
@@ -156,8 +163,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
     def _do_step(self, wait_on=None):
         self._awaitables = []
 
-        self._handle_do_abort()
-        if self._aborted:
+        if self._handle_do_abort():
             return
 
         try:
@@ -166,8 +172,7 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
             finished, retval = True, None
 
         # Could have aborted during the step
-        self._handle_do_abort()
-        if self._aborted:
+        if self._handle_do_abort():
             return
 
         if not finished:
@@ -178,9 +183,26 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                return persistable.gather(self._awaitables, self.loop()), self._do_step
+                return plum.Wait(self._do_step, 'Waiting before next step')
             else:
-                return self.loop().create(Checkpoint), self._do_step
+                return plum.Continue(self._do_step)
+        else:
+            return self.outputs
+
+    def on_wait(self, awaitables):
+        super(WorkChain, self).on_wait(awaitables)
+        if self._awaitables:
+            self.action_awaitables()
+        else:
+            self.call_soon(self.resume)
+
+    def abort(self, message=None):
+        """
+        Cancel is the new abort, just like orange is the new black
+        """
+        self.calc.kill()
+        self.report(message)
+        self.cancel(message)
 
     def _handle_do_abort(self):
         """
@@ -189,21 +211,100 @@ class WorkChain(persistable.ContextMixin, process.Process, utils.HeartbeatMixin)
         """
         do_abort = self._do_abort
         if do_abort:
-            self.abort(do_abort)
+            self.cancel(do_abort)
             self.calc._del_attr(self.calc.DO_ABORT_KEY)
+            return True
+        return False
 
-    def abort_nowait(self, msg=None):
+    def abort_nowait(self, message=None):
         """
         Abort the workchain at the next state transition without waiting
         which is achieved by passing a timeout value of zero
 
-        :param msg: The abort message
-        :type msg: str
+        :param message: The abort message
+        :type message: str
         """
-        return self.abort(msg=msg)
+        return self.abort(message=message)
 
+    def action_awaitables(self):
+        """
+        Handle the awaitables that are currently registered with the workchain
 
-ToContext = dict
+        Depending on the class type of the awaitable's target a different callback
+        function will be bound with the awaitable and the runner will be asked to
+        call it when the target is completed
+        """
+        for awaitable in self._awaitables:
+            if awaitable.target == AwaitableTarget.CALCULATION:
+                fn = functools.partial(self.on_calculation_finished, awaitable)
+                self.runner.call_on_calculation_finish(awaitable.pk, fn)
+            elif awaitable.target == AwaitableTarget.WORKFLOW:
+                fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
+                self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
+            else:
+                assert "invalid awaitable target '{}'".format(awaitable.target)
+
+    def on_calculation_finished(self, awaitable, pk):
+        """
+        Callback function called by the runner when the calculation instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
+        """
+        try:
+            node = load_node(pk)
+        except (MultipleObjectsError, NotExistent) as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
+
+        if awaitable.outputs:
+            value = node.get_outputs_dict()
+        else:
+            value = node
+
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+            self.resume()
+
+    def on_legacy_workflow_finished(self, awaitable, pk):
+        """
+        Callback function called by the runner when the legacy workflow instance identified by pk
+        is completed. The awaitable will be effectuated on the context of the workchain and
+        removed from the internal list. If all awaitables have been dealt with, the workchain
+        process is resumed
+
+        :param awaitable: an Awaitable instance
+        :param pk: the pk of the awaitable's target
+        """
+        try:
+            workflow = load_workflow(pk=pk)
+        except ValueError as exception:
+            raise ValueError('provided pk<{}> could not be resolved to a valid Workflow instance'.format(pk))
+
+        if awaitable.outputs:
+            value = workflow.get_results()
+        else:
+            value = workflow
+
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(value)
+        else:
+            assert "invalid awaitable action '{}'".format(awaitable.action)
+
+        self.remove_awaitable(awaitable)
+        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+            self.resume()
 
 
 class Stepper(utils.Savable):
@@ -251,70 +352,71 @@ class _Instruction(object):
     @staticmethod
     def check_command(command):
         if not isinstance(command, _Instruction):
-            assert issubclass(command.im_class, process.Process)
+            assert issubclass(command.im_class, processes.Process)
             args = inspect.getargspec(command)[0]
             assert len(args) == 1, "Instruction must take one argument only: self"
 
+
+class _BlockStepper(Stepper):
+    _POSITION = 'pos'
+    _STEPPER_POS = 'stepper_pos'
+
+    def __init__(self, workflow, commands):
+        super(_BlockStepper, self).__init__(workflow)
+
+        for c in commands:
+            _Instruction.check_command(c)
+        self._commands = commands
+        self._current_stepper = None
+        self._pos = 0
+
+    def step(self):
+        assert self._pos != len(self._commands), \
+            "Can't call step after the block is finished"
+
+        command = self._commands[self._pos]
+
+        if self._current_stepper is None and isinstance(command, _Instruction):
+            self._current_stepper = command.create_stepper(self._workflow)
+
+        # If there is a stepper being used then call that, otherwise just
+        # call the command (class function) directly
+        if self._current_stepper is not None:
+            finished, retval = self._current_stepper.step()
+        else:
+            finished, retval = True, command(self._workflow)
+
+        if finished:
+            self._pos += 1
+            self._current_stepper = None
+
+        return self._pos == len(self._commands), retval
+
+    def save_instance_state(self, out_state):
+        super(_BlockStepper, self).save_instance_state(out_state)
+
+        out_state[self._POSITION] = self._pos
+        # Save the position of the current step we're working (if it's not a
+        # direct function)
+        if self._current_stepper is not None:
+            stepper_pos = utils.Parcel()
+            self._current_stepper.save_instance_state(stepper_pos)
+            out_state[self._STEPPER_POS] = stepper_pos
+
+    def load_instance_state(self, saved_state):
+        super(_BlockStepper, self).load_instance_state(saved_state)
+
+        self._pos = saved_state[self._POSITION]
+
+        # Do we have a stepper position to load?
+        if self._STEPPER_POS in saved_state:
+            self._current_stepper = self._commands[self._pos].create_stepper(self._workflow)
+            self._current_stepper.load_instance_state(saved_state[self._STEPPER_POS])
 
 class _Block(_Instruction):
     """
     Represents a block of instructions i.e. a sequential list of instructions.
     """
-
-    class Stepper(Stepper):
-        _POSITION = 'pos'
-        _STEPPER_POS = 'stepper_pos'
-
-        def __init__(self, workflow, commands):
-            super(_Block.Stepper, self).__init__(workflow)
-
-            for c in commands:
-                _Instruction.check_command(c)
-            self._commands = commands
-            self._current_stepper = None
-            self._pos = 0
-
-        def step(self):
-            assert self._pos != len(self._commands), \
-                "Can't call step after the block is finished"
-
-            command = self._commands[self._pos]
-
-            if self._current_stepper is None and isinstance(command, _Instruction):
-                self._current_stepper = command.create_stepper(self._workflow)
-
-            # If there is a stepper being used then call that, otherwise just
-            # call the command (class function) directly
-            if self._current_stepper is not None:
-                finished, retval = self._current_stepper.step()
-            else:
-                finished, retval = True, command(self._workflow)
-
-            if finished:
-                self._pos += 1
-                self._current_stepper = None
-
-            return self._pos == len(self._commands), retval
-
-        def save_instance_state(self, out_state):
-            super(Stepper, self).save_instance_state(out_state)
-
-            out_state[self._POSITION] = self._pos
-            # Save the position of the current step we're working (if it's not a
-            # direct function)
-            if self._current_stepper is not None:
-                stepper_pos = utils.Parcel()
-                self._current_stepper.save_instance_state(stepper_pos)
-                out_state[self._STEPPER_POS] = stepper_pos
-
-        def load_instance_state(self, saved_state):
-            super(Stepper, self).load_instance_state(saved_state)
-
-            self._pos = saved_state[self._POSITION]
-
-            # Do we have a stepper position to load?
-            if self._STEPPER_POS in saved_state:
-                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
 
     def __init__(self, commands):
         for command in commands:
@@ -328,22 +430,22 @@ class _Block(_Instruction):
 
     @override
     def create_stepper(self, workflow):
-        return self.Stepper(workflow, self._commands)
+        return _BlockStepper(workflow, self._commands)
 
     @override
-    def get_description(self):
+    def get_description(self, indent_level=0, indent_increment=4):
+        indent = ' ' * (indent_level * indent_increment)
         desc = []
         for c in self._commands:
             if isinstance(c, _Instruction):
                 desc.append(c.get_description())
             else:
+                desc.append('{}* {}'.format(indent, c.__name__))
                 if c.__doc__:
-                    doc = "\n" + c.__doc__
-                    doc.replace('\n', '    \n')
-                    desc.append("::\n{}\n::".format(doc))
-                desc.append(c.__name__)
+                    doc = c.__doc__
+                    desc.append('{}{}'.format(indent,doc))
 
-        return "\n".join(desc)
+        return '\n'.join(desc)
 
 
 class _Conditional(object):
@@ -381,55 +483,67 @@ class _Conditional(object):
         return self._parent
 
 
-class _If(_Instruction):
-    class Stepper(Stepper):
-        _POSITION = 'pos'
-        _STEPPER_POS = 'stepper_pos'
+class _IfStepper(Stepper):
+    _IF_SPEC = 'if_spec'
+    _POSITION = 'pos'
+    _STEPPER_POS = 'stepper_pos'
 
-        def __init__(self, workflow, if_spec):
-            super(_If.Stepper, self).__init__(workflow)
-            self._if_spec = if_spec
-            self._pos = 0
+    def __init__(self, workflow, if_spec):
+        super(_IfStepper, self).__init__(workflow)
+        self._if_spec = if_spec
+        self._pos = -1
+        self._current_stepper = None
+
+    def step(self):
+        if self._current_stepper is None:
+            self._create_stepper()
+
+        # If we can't get a stepper then no conditions match, return
+        if self._current_stepper is None:
+            return True, None
+
+        finished, retval = self._current_stepper.step()
+        if finished:
+            self._current_stepper = None
+            self._pos = -1
+
+        return finished, retval
+
+    def _create_stepper(self):
+        if self._pos == -1:
+            self._current_stepper = None
+            # Check the conditions until we find one that is true
+            for idx, condition in enumerate(self._if_spec.conditionals):
+                if condition.is_true(self._workflow):
+                    stepper = condition.body.create_stepper(self._workflow)
+                    self._pos = idx
+                    self._current_stepper = stepper
+                    return
+        else:
+            branch = self._if_spec.conditionals[self._pos]
+            self._current_stepper = branch.body.create_stepper(self._workflow)
+
+    def save_instance_state(self, out_state):
+        super(_IfStepper, self).save_instance_state(out_state)
+        out_state[self._POSITION] = self._pos
+        if self._current_stepper is not None:
+            stepper_pos = {}
+            self._current_stepper.save_instance_state(stepper_pos)
+            out_state[self._STEPPER_POS] = stepper_pos
+        out_state[self._IF_SPEC] = self._if_spec
+
+    def load_instance_state(self, saved_state):
+        super(_IfStepper, self).load_instance_state(saved_state)
+        self._pos = saved_state[self._POSITION]
+        self._if_spec = saved_state[self._IF_SPEC]
+        if self._STEPPER_POS in saved_state:
+            self._create_stepper()
+            self._current_stepper.load_instance_state(saved_state[self._STEPPER_POS])
+        else:
             self._current_stepper = None
 
-        def step(self):
-            if self._current_stepper is None:
-                stepper = self._get_next_stepper()
-                # If we can't get a stepper then no conditions match, return
-                if stepper is None:
-                    return True, None
-                self._current_stepper = stepper
 
-            finished, retval = self._current_stepper.step()
-            if finished:
-                self._current_stepper = None
-            else:
-                self._pos += 1
-
-            return finished, retval
-
-        def save_instance_state(self, out_state):
-            super(Stepper, self).save_instance_state(out_state)
-
-            out_state[self._POSITION] = self._pos
-            if self._current_stepper is not None:
-                stepper_pos = utils.Parcel()
-                self._current_stepper.save_instance_state(stepper_pos)
-                out_state[self._STEPPER_POS] = stepper_pos
-
-        def load_instance_state(self, saved_state):
-            super(Stepper, self).load_instance_state(saved_state)
-
-            self._pos = saved_state[self._POSITION]
-            if self._STEPPER_POS in saved_state:
-                self._current_stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
-
-        def _get_next_stepper(self):
-            # Check the conditions until we find that that is true
-            for conditional in self._if_spec.conditionals[self._pos:]:
-                if conditional.is_true(self._workflow):
-                    return conditional.body.create_stepper(self._workflow)
-            return None
+class _If(_Instruction):
 
     def __init__(self, condition):
         super(_If, self).__init__()
@@ -460,7 +574,7 @@ class _If(_Instruction):
         return self
 
     def create_stepper(self, workflow):
-        return self.Stepper(workflow, self)
+        return _IfStepper(workflow, self)
 
     @property
     def conditionals(self):
@@ -468,86 +582,87 @@ class _If(_Instruction):
 
     @override
     def get_description(self):
-        description = [
-            "if {}:\n{}".format(
-                self._ifs[0].condition.__name__, self._ifs[0].body)]
+        description = ['if {}:\n{}'.format(self._ifs[0].condition.__name__, self._ifs[0].body.get_description(indent_level=1))]
         for conditional in self._ifs[1:]:
-            description.append("elif {}:\n{}".format(
-                conditional.condition.__name__, conditional.body))
-        return "\n".join(description)
+            description.append('elif {}:\n{}'.format(
+                conditional.condition.__name__, conditional.body.get_description(indent_level=1)))
+        return '\n'.join(description)
 
 
-class _While(_Conditional, _Instruction):
-    class Stepper(Stepper):
-        _STEPPER_POS = 'stepper_pos'
-        _CHECK_CONDITION = 'check_condition'
-        _FINISHED = 'finished'
+class _WhileStepper(Stepper):
+    _STEPPER_POS = 'stepper_pos'
+    _CHECK_CONDITION = 'check_condition'
+    _FINISHED = 'finished'
 
-        def __init__(self, workflow, while_spec):
-            super(_While.Stepper, self).__init__(workflow)
-            self._spec = while_spec
-            self._stepper = None
-            self._check_condition = True
-            self._finished = False
+    def __init__(self, workflow, while_spec):
+        super(_WhileStepper, self).__init__(workflow)
+        self._spec = while_spec
+        self._stepper = None
+        self._check_condition = True
+        self._finished = False
 
-        def step(self):
-            assert not self._finished, \
-                "Can't call step after the loop has finished"
+    def step(self):
+        assert not self._finished, \
+            "Can't call step after the loop has finished"
 
-            # Do we need to check the condition?
-            if self._check_condition is True:
-                self._check_condition = False
-                # Should we go into the loop body?
-                if self._spec.is_true(self._workflow):
-                    self._stepper = \
-                        self._spec.body.create_stepper(self._workflow)
-                else:  # Nope...
-                    self._finished = True
-                    return True, None
-
-            finished, retval = self._stepper.step()
-            if finished:
-                self._check_condition = True
-                self._stepper = None
-
-            # Are we finished looping?
-            return self._finished, retval
-
-        def save_instance_state(self, out_state):
-            super(Stepper, self).save_instance_state(out_state)
-
-            if self._stepper is not None:
-                stepper_pos = utils.Parcel()
-                self._stepper.save_instance_state(stepper_pos)
-                out_state[self._STEPPER_POS] = stepper_pos
-
-            out_state[self._CHECK_CONDITION] = self._check_condition
-            out_state[self._FINISHED] = self._finished
-
-        def load_instance_state(self, saved_state):
-            if self._STEPPER_POS in saved_state:
-                self._stepper = utils.Savable.load(saved_state[self._STEPPER_POS])
-
-            self._finished = saved_state[self._FINISHED]
-            self._check_condition = saved_state[self._CHECK_CONDITION]
-
-        @property
-        def _body_stepper(self):
-            if self._stepper is None:
+        # Do we need to check the condition?
+        if self._check_condition is True:
+            self._check_condition = False
+            # Should we go into the loop body?
+            if self._spec.is_true(self._workflow):
                 self._stepper = \
                     self._spec.body.create_stepper(self._workflow)
-            return self._stepper
+            else:  # Nope...
+                self._finished = True
+                return True, None
+
+        finished, retval = self._stepper.step()
+        if finished:
+            self._check_condition = True
+            self._stepper = None
+
+        # Are we finished looping?
+        return self._finished, retval
+
+    def save_instance_state(self, out_state):
+        super(_WhileStepper, self).save_instance_state(out_state)
+
+        if self._stepper is not None:
+            stepper_pos = utils.Parcel()
+            self._stepper.save_instance_state(stepper_pos)
+            out_state[self._STEPPER_POS] = stepper_pos
+
+        out_state[self._CHECK_CONDITION] = self._check_condition
+        out_state[self._FINISHED] = self._finished
+
+    def load_instance_state(self, saved_state):
+        super(_WhileStepper, self).load_instance_state(saved_state)
+        if self._STEPPER_POS in saved_state:
+            self._stepper = self._spec.body.create_stepper(self._workflow)
+            self._stepper.load_instance_state(saved_state[self._STEPPER_POS])
+
+        self._finished = saved_state[self._FINISHED]
+        self._check_condition = saved_state[self._CHECK_CONDITION]
+
+    @property
+    def _body_stepper(self):
+        if self._stepper is None:
+            self._stepper = \
+                self._spec.body.create_stepper(self._workflow)
+        return self._stepper
+
+class _While(_Conditional, _Instruction):
 
     def __init__(self, condition):
         super(_While, self).__init__(self, condition)
 
     @override
     def create_stepper(self, workflow):
-        return self.Stepper(workflow, self)
+        return _WhileStepper(workflow, self)
 
     @override
     def get_description(self):
-        return "while {}:\n{}".format(self.condition.__name__, self.body)
+        return "while {}:\n{}".format(self.condition.__name__, self.body.get_description(indent_level=1))
 
 
 class _PropagateReturn(BaseException):

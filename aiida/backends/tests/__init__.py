@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+try:
+    from reentry import manager as epm
+except ImportError:
+    import pkg_resources as epm
 
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
@@ -56,13 +59,13 @@ db_test_list = {
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],
         'work.processSpec': ['aiida.backends.tests.work.processSpec'],
-        'work.process_registry': ['aiida.backends.tests.work.process_registry'],
-        'work.rmq': ['aiida.backends.tests.work.rmq'],
+        'work.rmq': ['aiida.backends.tests.work.test_rmq'],
         'work.run': ['aiida.backends.tests.work.run'],
-        'work.util': ['aiida.backends.tests.work.util'],
-        'work.workChain': ['aiida.backends.tests.work.workChain'],
-        'work.workfunction': ['aiida.backends.tests.work.workfunction'],
-        'work.legacy.job_process': ['aiida.backends.tests.work.legacy.job_process'],
+        'work.runners': ['aiida.backends.tests.work.test_runners'],
+        'work.utils': ['aiida.backends.tests.work.test_utils'],
+        'work.work_chain': ['aiida.backends.tests.work.work_chain'],
+        'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
+        'work.job_processes': ['aiida.backends.tests.work.job_processes'],
         'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
         'daemon': ['aiida.backends.tests.daemon'],
         'verdi_commands': ['aiida.backends.tests.verdi_commands'],
@@ -75,6 +78,10 @@ def get_db_test_names():
         for name in db_test_list[backend]:
             retlist.append(name)
 
+    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
+    # have been made working and are released, we can replace this logic with them
+    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+        retlist.append(ep.name)
 
     # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
@@ -121,6 +128,11 @@ def get_db_test_list():
     for k, tests in be_tests.iteritems():
         for t in tests:
             retdict[k].append(t)
+
+    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
+    # have been made working and are released, we can replace this logic with them
+    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+        retdict[ep.name].append(ep.module_name)
 
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'

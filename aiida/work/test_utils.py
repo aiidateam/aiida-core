@@ -9,8 +9,8 @@
 ###########################################################################
 
 
-from plum.wait_ons import Barrier
-from aiida.work.process import Process
+import plum
+from aiida.work.processes import Process
 
 
 class DummyProcess(Process):
@@ -24,8 +24,19 @@ class DummyProcess(Process):
         spec.dynamic_input()
         spec.dynamic_output()
 
-    def _run(self, **kwargs):
+    def _run(self):
         pass
+
+
+class AddProcess(Process):
+    @classmethod
+    def define(cls, spec):
+        super(AddProcess, cls).define(spec)
+        spec.input("a", required=True)
+        spec.input("b", required=True)
+
+    def _run(self):
+        self.out(self.inputs.a + self.inputs.b)
 
 
 class BadOutput(Process):
@@ -48,17 +59,13 @@ class ExceptionProcess(Process):
         raise RuntimeError("CRASH")
 
 
-class WaitChain(Process):
+class WaitProcess(Process):
     """
     This waits until it is asked to continue
     """
 
     def _run(self):
-        return Barrier(), self.s2
+        return plum.Wait(self.s2)
 
     def s2(self):
         pass
-
-    def continue_(self):
-        # Open the barrier
-        self.get_waiting_on().open()

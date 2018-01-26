@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import click
 
 
 class VerdiCommand(object):
@@ -137,6 +137,25 @@ class VerdiCommandRouter(VerdiCommand):
         function_to_call(*args[1:])
 
     def complete(self, subargs_idx, subargs):
+        """
+        Relay tab-completion requests to subcommand complete functions.
+
+        Click-implemented commands (filtered by isinstance check) pose a special case.
+        Here we use aiida.cmdline.commands.click_subcmd_complete to create a completion function
+        on the fly, leveraging click functionality. Since VerdiCommands with click subcommands must actually rout to the root
+        (aiida.cmdline.commands.verdi) for each subcommand, we have only access to the root as a python object through routed_subcommands,
+        Not to the active subcommand.
+        This means we must follow the chain up through cli parameters. Since this function is only passed subargs, we need to use sys.argv.
+
+        sys.argv in this case follows the signature of ``verdi completion``::
+
+            verdi completion <num_subargs> verdi [<subgroup>, ...] <subcommand> ([<subcmd param>, ...] | '')
+
+        Therefore we can disregard the first four and the last element of argv and loop through sys.argv[4:len(sys.argv)-1], for each
+        determine wether it's a subcommand, if so, retrieve it's python object until we find the last subcommand, for which we then build
+        the completion function. We can safely disregard the last one, because it is never a (complete) subcommand and it will be passed
+        to the completion function we build in any case (as part of ``subargs``).
+        """
         if subargs_idx == 0:
             print "\n".join(self.routed_subcommands.keys())
         elif subargs_idx >= 1:
@@ -146,8 +165,16 @@ class VerdiCommandRouter(VerdiCommand):
                 first_subarg = ''
 
             try:
-                complete_function = self.routed_subcommands[
-                    first_subarg]().complete
+                cmd_or_class = self.routed_subcommands[first_subarg]
+                if isinstance(cmd_or_class, (click.Command, click.MultiCommand)):
+                    import sys
+                    from aiida.cmdline.commands import click_subcmd_complete
+
+                    for i in sys.argv[4:len(sys.argv)-1]:
+                        cmd_or_class = cmd_or_class.commands.get(i, cmd_or_class)
+                    complete_function = click_subcmd_complete(cmd_or_class)
+                else:
+                    complete_function = cmd_or_class().complete
             except KeyError:
                 print ""
                 return

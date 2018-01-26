@@ -2,7 +2,7 @@
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
 from aiida.orm.data.base import Float, Str
 from aiida.orm.utils import DataFactory
-from aiida.work.workfunction import workfunction as wf
+from aiida.work.workfunctions import workfunction as wf
 from aiida.work.launch import run, submit
 from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 

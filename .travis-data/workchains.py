@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.base import Int
-from aiida.work.run import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
 class ParentWorkChain(WorkChain):
@@ -18,17 +17,17 @@ class ParentWorkChain(WorkChain):
         super(ParentWorkChain, cls).define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
-            cls.run,
+            cls.run_step,
             cls.results
         )
         spec.output('output', valid_type=Int, required=True)
 
-    def run(self):
+    def run_step(self):
         inputs = {
             'inp': self.inputs.inp
         }
-        running = submit(SubWorkChain, **inputs)
-        self.report('launching SubWorkChain<{}>'.format(running.pid))
+        running = self.submit(SubWorkChain, **inputs)
+        self.report('launching SubWorkChain<{}>'.format(running.pk))
 
         return ToContext(workchains=append_(running))
 
@@ -43,9 +42,9 @@ class SubWorkChain(WorkChain):
         super(SubWorkChain, cls).define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
-            cls.run
+            cls.run_step
         )
         spec.output('output', valid_type=Int, required=True)
 
-    def run(self):
+    def run_step(self):
         self.out('output', Int(self.inputs.inp.value * 2))

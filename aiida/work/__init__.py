@@ -8,18 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from . import legacy
+from plum import Bundle
+from plum import ProcessState
+from .class_loader import *
+from .job_processes import *
 from .launch import *
-from .process import *
-from .runner import *
-from . import workfunction
-from .workchain import *
+from .processes import *
+from .rmq import *
+from .runners import *
 from .utils import *
+from .workfunctions import *
+from .workchain import *
 
-__all__ = (
-    process.__all__ +
-    runner.__all__ +
-    utils.__all__ +
-    workchain.__all__ +
-    launch.__all__ +
-    workfunction.__all__)
+__all__ = (processes.__all__ + runners.__all__ + utils.__all__ +
+           workchain.__all__ + launch.__all__ + workfunctions.__all__ +
+           ['ProcessState'] + class_loader.__all__ + job_processes.__all__ +
+           rmq.__all__)

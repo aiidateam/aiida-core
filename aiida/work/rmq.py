@@ -1,136 +1,199 @@
-import apricotpy
-import collections
-import pika
-import pickle
 import json
-import uuid
+import plum
+import plum.rmq
 
-from plum import rmq
-from plum.utils import override, load_class, fullname
-from aiida.orm import load_node, Node
-from aiida.work.class_loader import _CLASS_LOADER
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
+from aiida.backends import settings
 
-_CONTROL_EXCHANGE = 'process.control'
-_EVENT_EXCHANGE = 'process.event'
+from . import events
+
+__all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
+           'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
+
+RemoteException = plum.RemoteException
+DeliveryFailed = plum.DeliveryFailed
+
+_MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
-_STATUS_REQUEST_EXCHANGE = 'process.status_request'
-_LAUNCH_SUBSCRIBER_UUID = uuid.UUID('0b8ddfc3-f3cc-49f1-a44f-8418e2ac7e20')
 
-def _create_connection():
-    # Set up communications
-    try:
-        return pika.BlockingConnection()
-    except pika.exceptions.ConnectionClosed:
-        raise RuntimeError("Couldn't open connection.  Make sure rmq server is running")
+
+def _get_prefix():
+    """Get the queue prefix from the profile."""
+    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
+
+
+def _get_rmq_config():
+    rmq_config = {
+        'url': 'amqp://localhost',
+        'prefix': _get_prefix(),
+    }
+    return rmq_config
+
 
 def encode_response(response):
     serialized = serialize_data(response)
     return json.dumps(serialized)
 
+
 def decode_response(response):
     response = json.loads(response)
     return deserialize_data(response)
 
-def status_decode(msg):
-    decoded = rmq.status.status_decode(msg)
-    # Just need to fix up the special case of PIDs being PKs (i.e. ints)
-    procs = decoded[rmq.status.PROCS_KEY]
-    for pid in procs.keys():
+
+def get_launch_queue_name(prefix=None):
+    if prefix is not None:
+        return "{}.{}".format(prefix, _LAUNCH_QUEUE)
+
+    return _LAUNCH_QUEUE
+
+
+def get_message_exchange_name(prefix):
+    return "{}.{}".format(prefix, _MESSAGE_EXCHANGE)
+
+
+def store_and_serialize_inputs(inputs):
+    """
+    Iterate over the values of the input dictionary, try to store them as if they were unstored
+    nodes and then return the serialized dictionary
+
+    :param inputs: dictionary where keys are potentially unstored node instances
+    :returns: a dictionary where nodes are serialized
+    """
+    for node in inputs.itervalues():
         try:
-            if not isinstance(pid, uuid.UUID):
-                new_pid = int(pid)
-                procs[new_pid] = procs.pop(pid)
-        except ValueError:
+            node.store()
+        except AttributeError:
             pass
-    return decoded
+    return serialize_data(inputs)
 
 
-def insert_process_control_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.control.ProcessControlSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _CONTROL_EXCHANGE),
-    )
+class LaunchProcessAction(plum.LaunchProcessAction):
 
-def insert_process_status_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.status.ProcessStatusSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
-    )
+    def __init__(self, *args, **kwargs):
+        """
+        Calls through to the constructor of the plum LaunchProcessAction while making sure that
+        any unstored nodes in the inputs are first stored and the data is then serialized
+        """
+        kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
+        super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
-def insert_process_launch_subscriber(loop, prefix, get_connection=_create_connection):
-    return loop.create(
-        rmq.launch.ProcessLaunchSubscriber,
-        get_connection(),
-        "{}.{}".format(prefix, _LAUNCH_QUEUE),
-        response_encoder=encode_response
-    )
 
-def insert_all_subscribers(loop, prefix, get_connection=_create_connection):
-    # Give them all the same connection instance
-    connection = get_connection()
-    get_conn = lambda: connection
+class ExecuteProcessAction(plum.ExecuteProcessAction):
 
-    insert_process_control_subscriber(loop, prefix, get_conn)
-    insert_process_status_subscriber(loop, prefix, get_conn)
-    insert_process_launch_subscriber(loop, prefix, get_conn)
+    def __init__(self, process_class, init_args=None, init_kwargs=None):
+        """
+        Calls through to the constructor of the plum ExecuteProcessAction while making sure that
+        any unstored nodes in the inputs are first stored and the data is then serialized
+        """
+        init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs)
 
-class ProcessControlPanel(apricotpy.LoopObject):
+
+class ProcessLauncher(plum.ProcessLauncher):
+
+    def _launch(self, task):
+        from plum.process_comms import KWARGS_KEY
+        kwargs = task.get(KWARGS_KEY, {})
+        kwargs['inputs'] = deserialize_data(kwargs['inputs'])
+        task[KWARGS_KEY] = kwargs
+        return super(ProcessLauncher, self)._launch(task)
+
+class ProcessControlPanel(object):
     """
     RMQ control panel for launching, controlling and getting status of
     Processes over the RMQ protocol.
     """
 
-    def __init__(self, prefix, create_connection=_create_connection, loop=None):
-        super(ProcessControlPanel, self).__init__(loop=loop)
+    def __init__(self, prefix, rmq_connector, testing_mode=False):
+        self._connector = rmq_connector
 
-        self._connection = create_connection()
-
-        self._control = rmq.control.ProcessControlPublisher(
-            self._connection,
-            "{}.{}".format(prefix, _CONTROL_EXCHANGE)
+        message_exchange = get_message_exchange_name(prefix)
+        task_queue = get_launch_queue_name(prefix)
+        self._communicator = plum.rmq.RmqCommunicator(
+            rmq_connector,
+            exchange_name=message_exchange,
+            task_queue=task_queue,
+            blocking_mode=False,
+            testing_mode=testing_mode
         )
 
-        self._status = rmq.status.ProcessStatusRequester(
-            self._connection,
-            "{}.{}".format(prefix, _STATUS_REQUEST_EXCHANGE),
-            status_decode
-        )
+    def ready_future(self):
+        return self._communicator.initialised_future()
 
-        self._launch = rmq.launch.ProcessLaunchPublisher(
-            self._connection,
-            "{}.{}".format(prefix, _LAUNCH_QUEUE),
-            pickle.dumps,
-            decode_response
-        )
+    def pause_process(self, pid):
+        return self.execute_action(plum.PauseAction(pid))
 
-    def on_loop_inserted(self, loop):
-        super(ProcessControlPanel, self).on_loop_inserted(loop)
-        loop._insert(self._control)
-        loop._insert(self._status)
-        loop._insert(self._launch)
+    def play_process(self, pid):
+        return self.execute_action(plum.PlayAction(pid))
 
-    def on_loop_removed(self):
-        loop = self.loop()
-        loop._remove(self._control)
-        loop._remove(self._status)
-        loop._remove(self._launch)
-        super(ProcessControlPanel, self).on_loop_removed()
+    def kill_process(self, pid, msg=None):
+        return self.execute_action(plum.CancelAction(pid))
 
-    @property
-    def control(self):
-        return self._control
+    def request_status(self, pid):
+        return self.execute_action(plum.StatusAction(pid))
 
-    @property
-    def status(self):
-        return self._status
+    def launch_process(self, process_class, init_args=None, init_kwargs=None):
+        action = LaunchProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
+        return action
 
-    def launch(self, process_bundle):
-        return self._launch.launch(process_bundle)
+    def continue_process(self, pid):
+        action = plum.ContinueProcessAction(pid)
+        action.execute(self._communicator)
+        return action
+
+    def execute_process(self, process_class, init_args=None, init_kwargs=None):
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
+        return action
+
+    def execute_action(self, action):
+        action.execute(self._communicator)
+        return action
 
 
-def create_control_panel(prefix="aiida", create_connection=_create_connection, loop=None):
-    return ProcessControlPanel(prefix, create_connection, loop=loop)
+class BlockingProcessControlPanel(ProcessControlPanel):
+    """
+    A blocking adapter for the ProcessControlPanel.
+    """
+
+    def __init__(self, prefix, testing_mode=False):
+        self._loop = events.new_event_loop()
+        connector = new_rmq_connector(self._loop)
+        super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
+
+        self._connector.connect()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action.execute(self._communicator)
+        events.run_until_complete(action, self._loop)
+        return action.get_launch_future().result()
+
+    def execute_action(self, action):
+        action.execute(self._communicator)
+        return events.run_until_complete(action, self._loop)
+
+    def close(self):
+        self._connector.close()
+
+
+def new_blocking_control_panel():
+    """
+    Create a new blocking control panel based on the current profile configuration
+
+    :return: A new control panel instance
+    :rtype: :class:`BlockingProcessControlPanel`
+    """
+    return BlockingProcessControlPanel(_get_prefix())
+
+
+def new_rmq_connector(loop):
+    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)

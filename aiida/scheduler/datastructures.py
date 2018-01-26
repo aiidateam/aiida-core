@@ -298,6 +298,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
 
     Fields:
 
+      * ``shebang line``: The first line of the submission script
       * ``submit_as_hold``: if set, the job will be in a 'hold' status right
         after the submission
       * ``rerunnable``: if the job is rerunnable (boolean)
@@ -377,6 +378,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
     #        place then.
 
     _default_fields = (
+        'shebang',
         'submit_as_hold',
         'rerunnable',
         'job_environment',

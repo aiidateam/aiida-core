@@ -14,7 +14,7 @@ import time
 from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
-from aiida.work.run import submit
+from aiida.work.launch import run_get_node
 from workchains import ParentWorkChain
 
 ParameterData = DataFactory('parameter')
@@ -26,10 +26,10 @@ number_workchains = 30 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']
-    print "Output of 'cat {}/.aiida/daemon/log/aiida_daemon.log':".format(home)
+    print "Output of 'cat {}/.aiida/daemon/log/celery.log':".format(home)
     try:
         print subprocess.check_output(
-            ["cat", "{}/.aiida/daemon/log/aiida_daemon.log".format(home)], 
+            ["cat", "{}/.aiida/daemon/log/celery.log".format(home)],
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
@@ -41,30 +41,42 @@ def jobs_have_finished(pks):
     print "{}/{} finished".format(num_finished, len(finished_list))
     return not (False in finished_list)
 
+def print_logshow(pk):
+    print "Output of 'verdi calculation logshow {}':".format(pk)
+    try:
+        print subprocess.check_output(
+            ["verdi", "calculation", "logshow", "{}".format(pk)],
+            stderr=subprocess.STDOUT,
+            )
+    except subprocess.CalledProcessError as e2:
+        print "Note: the command failed, message: {}".format(e2.message)
+
 def validate_calculations(expected_results):
     valid = True
-    actual_value = None
-    for pk, expected_value in expected_results.iteritems():
+    actual_dict = {}
+    for pk, expected_dict in expected_results.iteritems():
         calc = load_node(pk)
+        if not calc.has_finished_ok():
+            print 'Calculation<{}> status was not FINISHED'.format(pk)
+            print_logshow(pk)
+            return False
+
         try:
-            actual_value = int(calc.out.retrieved.folder.open('path/output.txt').read())
-        except (AttributeError, IOError, ValueError) as e:
-            print "* UNABLE TO RETRIEVE VALUE for calc pk={}: I expected {}, I got {}: {}".format(
-                pk, expected_value, type(e), e)
+            actual_dict = calc.out.output_parameters.get_dict()
+        except (KeyError, AttributeError) as exception:
+            print 'Could not retrieve output_parameters node for Calculation<{}>'.format(pk)
+            print_logshow(pk)
+            return False
 
-            print "Output of 'verdi calculation logshow {}':".format(pk)
-            try:
-                print subprocess.check_output(
-                    ["verdi", "calculation", "logshow", "{}".format(pk)],
-                    stderr=subprocess.STDOUT,
-                    )
-            except subprocess.CalledProcessError as e2:
-                print "Note: the command failed, message: {}".format(e2.message)            
-                valid = False
+        try:
+            actual_dict['retrieved_temporary_files'] = dict(actual_dict['retrieved_temporary_files'])
+        except KeyError:
+            # If the retrieval fails we simply pass as the following check of the actual value will fail anyway
+            pass
 
-        if actual_value != expected_value:
+        if actual_dict != expected_dict:
             print "* UNEXPECTED VALUE {} for calc pk={}: I expected {}".format(
-                actual_value, pk, expected_value)
+                actual_dict, pk, expected_dict)
             valid = False
 
     return valid
@@ -106,18 +118,25 @@ def main():
                 'input_file_template': "{value}", # File just contains the value to double
                 'input_file_name': 'value_to_double.txt',
                 'output_file_name': 'output.txt',
+                'retrieve_temporary_files': ['triple_value.tmp']
                 })
         calc = code.new_calc()
         calc.set_max_wallclock_seconds(5 * 60)  # 5 min
         calc.set_resources({"num_machines": 1})
         calc.set_withmpi(False)
+        calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
         
         calc.use_parameters(parameters)
         calc.use_template(template)
         calc.store_all()
         print "[{}] created calculation {}, pk={}".format(
             counter, calc.uuid, calc.dbnode.pk)
-        expected_results_calculations[calc.pk] = inputval*2
+        expected_results_calculations[calc.pk] = {
+            'value': inputval * 2,
+            'retrieved_temporary_files': {
+                'triple_value.tmp': str(inputval * 3)
+            }
+        }
         calc.submit()
         print "[{}] calculation submitted.".format(counter)
 
@@ -126,8 +145,8 @@ def main():
     expected_results_workchains = {}
     for index in range(1, number_workchains + 1):
         inp = Int(index)
-        future = submit(ParentWorkChain, inp=inp)
-        expected_results_workchains[future.pid] = index * 2
+        result, node = run_get_node(ParentWorkChain, inp=inp)
+        expected_results_workchains[node.pk] = index * 2
 
 
     calculation_pks = sorted(expected_results_calculations.keys())

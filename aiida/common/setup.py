@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import uuid
 import aiida
 import logging
 import json
@@ -35,14 +36,20 @@ else:
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = "daemon"
-LOG_SUBDIR = "daemon/log"
-DAEMON_CONF_FILE = "aiida_daemon.conf"
+DAEMON_SUBDIR = 'daemon'
+LOG_SUBDIR = 'daemon/log'
+DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-WORKFLOWS_SUBDIR = "workflows"
+CELERY_LOG_FILE = 'celery.log'
+CELERY_PID_FILE = 'celery.pid'
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+
+WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
+RMQ_PREFIX_KEY = 'RMQ_PREFIX'
 
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
@@ -51,17 +58,17 @@ DEFAULT_PROCESS = 'verdi'
 DEFAULT_UMASK = 0o0077
 
 # Profile keys
-aiidadb_backend_key = "AIIDADB_BACKEND"
+aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
-aiidadb_backend_value_django = "django"
+aiidadb_backend_value_django = 'django'
 
 # Repository for tests
 TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
-TEST_KEYWORD = "test_"
+TEST_KEYWORD = 'test_'
 
 
 def get_aiida_dir():
@@ -135,73 +142,6 @@ def store_config(confs):
     try:
         with open(conf_file, "w") as json_file:
             json.dump(confs, json_file)
-    finally:
-        os.umask(old_umask)
-
-
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user,
-                         daemon_conf=None):
-    """
-    Install the files needed to run the daemon.
-    """
-    local_daemon_conf = """
-[unix_http_server]
-file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
-
-[supervisord]
-logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB
-logfile_backups=2
-loglevel=info
-pidfile={daemon_dir}/supervisord.pid
-nodaemon=false
-minfds=1024
-minprocs=200
-
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///{daemon_dir}/supervisord.sock
-
-;=======================================
-; Main AiiDA Daemon
-;=======================================
-[program:aiida-daemon]
-command=celery worker -A tasks --loglevel=INFO --beat --schedule={daemon_dir}/celerybeat-schedule
-directory={aiida_code_home}/daemon/
-user={local_user}
-numprocs=1
-stdout_logfile={log_dir}/aiida_daemon.log
-stderr_logfile={log_dir}/aiida_daemon.log
-autostart=true
-autorestart=true
-startsecs=10
-
-; Need to wait for currently executing tasks to finish at shutdown.
-; Increase this if you have very long running tasks.
-stopwaitsecs = 600
-
-; When resorting to send SIGKILL to the program to terminate it
-; send SIGKILL to its whole process group instead,
-; taking care of its children as well.
-killasgroup=true
-
-; Set Celery priority higher than default (999)
-; so, if rabbitmq is supervised, it will start first.
-priority=1000
-"""
-    if daemon_conf is None:
-        daemon_conf = local_daemon_conf
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
-            f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
-                                       local_user=local_user,
-                                       aiida_code_home=os.path.split(
-                                           os.path.abspath(
-                                               aiida.__file__))[0]))
     finally:
         os.umask(old_umask)
 
@@ -324,9 +264,6 @@ def create_base_dirs(config_dir=None):
     finally:
         os.umask(old_umask)
 
-    # Install daemon files
-    install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
-
     # Create the secret key file, if needed
     try_create_secret_key()
 
@@ -396,68 +333,29 @@ def get_profiles_list():
         return ConfigurationError("Please run the setup")
 
 
-def get_profile_config(profile, conf_dict=None, set_test_location=True):
+def get_profile_config(profile, conf_dict=None):
     """
     Return the profile specific configurations
 
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
-    :param set_test_location: if True, sets a new folder for storing repository
-        files during testing (to avoid to replace/overwrite the real repository)
-        Set to False for calls where the folder should not be changed (i.e., if
-        you only want to get the profile
     """
     import sys
     import tempfile
 
-    from aiida.common.exceptions import (
-        ConfigurationError, ProfileConfigurationError)
+    from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 
     if conf_dict is None:
         confs = get_config()
     else:
         confs = conf_dict
 
-    test_string = ""
-    # is_test = False
-    # test_prefix = "test_"
-    # if profile.startswith(test_prefix):
-    #     # Use the same profile
-    #     profile = profile[len(test_prefix):]
-    #     is_test = True
-    #     test_string = "(test) "
-
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
         raise ProfileConfigurationError(
-            "No {}profile configuration found for {}, "
-            "allowed values are: {}.".format(test_string, profile,
-                                             ", ".join(get_profiles_list())))
-
-    # if is_test and set_test_location:
-    #     # import traceback
-    #     # traceback.print_stack()
-    #     # Change the repository and print a message
-    #     ###################################################################
-    #     # IMPORTANT! Choose a different repository location, otherwise
-    #     # real data will be destroyed during tests!!
-    #     # The location is automatically created with the tempfile module
-    #     # Typically, under linux this is created under /tmp
-    #     # and is not deleted at the end of the run.
-    #     global TEMP_TEST_REPO
-    #     if TEMP_TEST_REPO is None:
-    #         TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
-    #         # We write the local repository on stderr, so that the user running
-    #         # the tests knows where the files are being stored
-    #         print >> sys.stderr, "############################################"
-    #         print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
-    #         print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
-    #         print >> sys.stderr, "############################################"
-    #     if 'AIIDADB_REPOSITORY_URI' not in profile_info:
-    #         raise ConfigurationError("Config file has not been found, run "
-    #                                  "verdi install first")
-    #     profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
+            "No profile configuration found for {}, allowed values are: {}.".format(
+                profile, ', '.join(get_profiles_list())))
 
     return profile_info
 
@@ -471,7 +369,8 @@ key_explanation = {
     "AIIDADB_PORT": "Database port",
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
-    DEFAULT_USER_CONFIG_FIELD: "Default user email"
+    DEFAULT_USER_CONFIG_FIELD: "Default user email",
+    RMQ_PREFIX_KEY: "Prefix for the RabbitMQ queue",
 }
 
 
@@ -574,6 +473,9 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
         finally:
             os.umask(old_umask)
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
+
+    # set RMQ_PREFIX
+    new_profile[RMQ_PREFIX_KEY] = uuid.uuid4().hex
 
     # finalizing
     write = not dry_run
@@ -840,6 +742,9 @@ def create_configuration(profile='default'):
 
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
+        # Add RabbitMQ prefix
+        this_new_confs[RMQ_PREFIX_KEY] = uuid.uuid4().hex
+
         confs['profiles'][profile] = this_new_confs
 
         backup_config()
@@ -905,6 +810,12 @@ _property_table = {
         "to the database",
         "REPORT",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.plum_loglevel": (
+        "logging_plum_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log ",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",
         "string",
@@ -916,7 +827,7 @@ _property_table = {
         "logging_alembic_log_level",
         "string",
         "Minimum level to log to the console",
-        "INFO",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.sqlalchemy_loglevel": (
         "logging_sqlalchemy_loglevel",
@@ -1017,7 +928,7 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import MissingConfigurationError
-    import aiida.utils.logger as logger
+    from aiida.common.log import LOG_LEVELS
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -1044,7 +955,7 @@ def get_property(name, default=_NoDefaultValue()):
     # will return the corresponding integer, even though a string is stored in
     # the config.
     if name.startswith('logging.') and name.endswith('loglevel'):
-        value = logger.LOG_LEVELS[value]
+        value = LOG_LEVELS[value]
 
     return value
 

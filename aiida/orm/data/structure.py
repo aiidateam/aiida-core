@@ -725,6 +725,13 @@ class StructureData(Data):
                               ("pymatgen", "pymatgen_structure"),
                               ("pymatgen_molecule", "pymatgen_structure")]
 
+    _dimensionality_label = {
+        0: "",
+        1: "length",
+        2: "surface",
+        3: "volume"
+    }
+
     @property
     def _set_defaults(self):
         parent_dict = super(StructureData, self)._set_defaults
@@ -735,6 +742,39 @@ class StructureData(Data):
         })
 
         return parent_dict
+
+    def get_dimensionality(self):
+        """
+        This function checks the dimensionality of the structure and
+        calculates its length/surface/volume
+        :return: returns the dimensionality and length/surface/volume
+        """
+
+        import numpy as np
+
+        retdict = {}
+
+        cell = np.array(self.cell)
+        pbc = np.array(self.pbc)
+        dim = len(pbc[pbc])
+
+        retdict['dim'] = dim
+        retdict['label'] = self._dimensionality_label[dim]
+
+        if dim == 0:
+            pass
+        elif dim == 1:
+            v = cell[pbc]
+            retdict['value'] = np.linalg.norm(v)
+        elif dim == 2:
+            vectors = cell[pbc]
+            retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
+        elif dim == 3:
+            retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
+        else:
+            raise ValueError("Dimensionality {} must be <= 3".format(dim))
+
+        return retdict
 
     def set_ase(self, aseatoms):
         """

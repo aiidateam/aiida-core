@@ -8,17 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from abc import abstractmethod
-import datetime
 import copy
+from abc import abstractmethod
 
-from aiida.utils import timezone
-from aiida.common.utils import str_timedelta
+import datetime
+
+from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.backends.utils import get_automatic_user
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.common.utils import str_timedelta
+from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -39,7 +40,7 @@ class AbstractJobCalculation(object):
 
     @classmethod
     def process(cls):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
 
     def _init_internal_params(self):
@@ -677,12 +678,10 @@ class AbstractJobCalculation(object):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() not in (calc_states.SUBMITTING,
-                                    calc_states.NEW):
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_list for a calculation "
-                "that is neither NEW nor SUBMITTING (current state is "
-                "{})".format(self.get_state()))
+                "Cannot set the retrieve_list for a calculation that is neither "
+                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
@@ -719,16 +718,54 @@ class AbstractJobCalculation(object):
         """
         return self.get_attr('retrieve_list', None)
 
+    def _set_retrieve_temporary_list(self, retrieve_temporary_list):
+        """
+        Set the list of paths that are to retrieved for parsing and be deleted as soon
+        as the parsing has been completed.
+        """
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
+            raise ModificationNotAllowed(
+                'Cannot set the retrieve_temporary_list for a calculation that is neither '
+                'NEW nor SUBMITTING (current state is {})'.format(self.get_state()))
+
+        if not (isinstance(retrieve_temporary_list, (tuple, list))):
+            raise ValueError('You should pass a list/tuple')
+
+        for item in retrieve_temporary_list:
+            if not isinstance(item, basestring):
+                if (not (isinstance(item, (tuple, list))) or len(item) != 3):
+                    raise ValueError(
+                        'You should pass a list containing either '
+                        'strings or lists/tuples'
+                    )
+
+                if (not (isinstance(item[0], basestring)) or 
+                    not (isinstance(item[1], basestring)) or
+                    not (isinstance(item[2], int))):
+                    raise ValueError(
+                        'You have to pass a list (or tuple) of lists, with remotepath(string), '
+                        'localpath(string) and depth (integer)'
+                    )
+
+        self._set_attr('retrieve_temporary_list', retrieve_temporary_list)
+
+    def _get_retrieve_temporary_list(self):
+        """
+        Get the list of files/directories to be retrieved on the cluster and will be kept temporarily during parsing.
+        Their path is relative to the remote workdirectory path.
+
+        :return: a list of strings for file/directory names
+        """
+        return self.get_attr('retrieve_temporary_list', None)
+
     def _set_retrieve_singlefile_list(self, retrieve_singlefile_list):
         """
         Set the list of information for the retrieval of singlefiles
         """
-        if self.get_state() not in (calc_states.SUBMITTING,
-                                    calc_states.NEW):
+        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_singlefile_list for a calculation "
-                "that is neither NEW nor SUBMITTING (current state is "
-                "{})".format(self.get_state()))
+                "Cannot set the retrieve_singlefile_list for a calculation that is neither "
+                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
 
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
             raise ValueError("You have to pass a list (or tuple) of lists of "
@@ -798,7 +835,6 @@ class AbstractJobCalculation(object):
         return self.get_attr('scheduler_lastchecktime', None)
 
     def _set_last_jobinfo(self, last_jobinfo):
-        import pickle
 
         self._set_attr('last_jobinfo', last_jobinfo.serialize())
 
@@ -809,7 +845,6 @@ class AbstractJobCalculation(object):
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
-        import pickle
         from aiida.scheduler.datastructures import JobInfo
 
         last_jobinfo_serialized = self.get_attr('last_jobinfo', None)
@@ -1116,7 +1151,6 @@ class AbstractJobCalculation(object):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
-        from aiida.orm.user import User
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1243,7 +1277,6 @@ class AbstractJobCalculation(object):
 
         :return: a string.
         """
-        from aiida.parsers import ParserFactory
 
         return self.get_attr('parser', None)
 
@@ -1419,6 +1452,7 @@ class AbstractJobCalculation(object):
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = computer.get_shebang()
         ## TODO: in the future, allow to customize the following variables
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False
@@ -1458,6 +1492,10 @@ class AbstractJobCalculation(object):
                                           "{} is not subclass of SinglefileData".format(
                     self.pk, FileSubclass.__name__))
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
+
+        # Handle the retrieve_temporary_list
+        retrieve_temporary_list = (calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
+        self._set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:

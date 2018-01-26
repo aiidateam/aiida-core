@@ -10,7 +10,6 @@
 
 
 import threading
-import uuid
 
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
@@ -19,18 +18,8 @@ from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.work.test_utils import DummyProcess, BadOutput
-from aiida.work.workfunction import workfunction
 from aiida import work
-
-
-def run(process_or_workfunction, *args, **inputs):
-    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
-        return work.rrun(runner, process_or_workfunction, *args, **inputs)
-
-
-def run_get_pid(process_or_workfunction, *args, **inputs):
-    with work.create_runner(submit_to_daemon=False, rmq_control_panel=None) as runner:
-        return work.rrun_get_pid(runner, process_or_workfunction, *args, **inputs)
+from aiida.work.launch import run, run_get_pid
 
 
 class ProcessStackTest(work.Process):
@@ -113,7 +102,7 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
-        @workfunction
+        @work.workfunction
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
@@ -127,6 +116,13 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 
+    def test_save_instance_state(self):
+        proc = DummyProcess()
+        # Save the instance state
+        bundle = work.Bundle(proc)
+
+        proc2 = bundle.unbundle()
+
 
 class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):
@@ -134,8 +130,8 @@ class TestFunctionProcess(AiidaTestCase):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        FP = work.FunctionProcess.build(wf)
-        self.assertEqual(run(FP, **inputs), inputs)
+        function_process_class = work.FunctionProcess.build(wf)
+        self.assertEqual(run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -150,14 +146,14 @@ class TestFunctionProcess(AiidaTestCase):
         a = Int(4)
         inputs = {'a': a}
 
-        FP = work.FunctionProcess.build(wf_with_kwargs)
-        outs = run(FP, **inputs)
+        function_process_class = work.FunctionProcess.build(wf_with_kwargs)
+        outs = run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
-        FP = work.FunctionProcess.build(wf_without_kwargs)
+        function_process_class = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            run(FP, **inputs)
+            run(function_process_class, **inputs)
 
-        FP = work.FunctionProcess.build(wf_fixed_args)
-        outs = run(FP, **inputs)
+        function_process_class = work.FunctionProcess.build(wf_fixed_args)
+        outs = run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)

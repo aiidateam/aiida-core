@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.work.process import Process
+from aiida.work.processes import Process
 
 
 

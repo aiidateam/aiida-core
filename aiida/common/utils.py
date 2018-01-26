@@ -77,8 +77,7 @@ def get_configured_user_email():
     from aiida.backends import settings
 
     try:
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE,
-                                          set_test_location=False)
+        profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
         email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because
     # it is already a ConfigurationError
@@ -221,7 +220,7 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
-def conv_to_fortran(val):
+def conv_to_fortran(val,quote_strings=True):
     """
     :param val: the value to be read and converted to a Fortran-friendly string.
     """
@@ -237,14 +236,17 @@ def conv_to_fortran(val):
     elif isinstance(val, numbers.Real):
         val_str = ("{:18.10e}".format(val)).replace('e', 'd')
     elif isinstance(val, basestring):
-        val_str = "'{!s}'".format(val)
+        if quote_strings:
+            val_str = "'{!s}'".format(val)
+        else:
+            val_str = "{!s}".format(val)
     else:
         raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
 
     return val_str
 
 
-def conv_to_fortran_withlists(val):
+def conv_to_fortran_withlists(val,quote_strings=True):
     """
     Same as conv_to_fortran but with extra logic to handle lists
     :param val: the value to be read and converted to a Fortran-friendly string.
@@ -254,7 +256,7 @@ def conv_to_fortran_withlists(val):
     if (isinstance(val, (list, tuple))):
         out_list = []
         for thing in val:
-            out_list.append(conv_to_fortran(thing))
+            out_list.append(conv_to_fortran(thing,quote_strings=quote_strings))
         val_str = ", ".join(out_list)
         return val_str
     if (isinstance(val, bool)):
@@ -267,7 +269,10 @@ def conv_to_fortran_withlists(val):
     elif (isinstance(val, float)):
         val_str = ("{:18.10e}".format(val)).replace('e', 'd')
     elif (isinstance(val, basestring)):
-        val_str = "'{!s}'".format(val)
+        if quote_strings:
+            val_str = "'{!s}'".format(val)
+        else:
+            val_str = "{!s}".format(val)
     else:
         raise ValueError("Invalid value passed, accepts only bools, ints, "
                          "floats and strings")
@@ -1259,3 +1264,22 @@ def get_mode_string(mode):
         else:
             perm.append("-")
     return "".join(perm)
+
+
+class HiddenPrints:
+    """
+    Class to prevent any print to the std output.
+    Usage:
+    
+    with HiddenPrints():
+        print("I won't print this")
+    """
+    
+    def __enter__(self):
+        from os import devnull
+        self._original_stdout = sys.stdout
+        sys.stdout = open(devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout = self._original_stdout
+

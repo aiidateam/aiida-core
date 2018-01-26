@@ -11,6 +11,8 @@ from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_node', 'load_workflow']
+
 
 def CalculationFactory(module, from_abstract=False):
     """
@@ -52,19 +54,19 @@ def WorkflowFactory(module):
 def create_node_id_qb(node_id=None, pk=None, uuid=None,
                    parent_class=None, query_with_dashes=True):
     """
-    Returns the QueryBuilder instance set to retrieve AiiDA objects given their 
-    (parent)class and PK (in which case the object should be unique) or UUID 
+    Returns the QueryBuilder instance set to retrieve AiiDA objects given their
+    (parent)class and PK (in which case the object should be unique) or UUID
     or UUID starting pattern.
-        
+
     :param node_id: PK (integer) or UUID (string) or a node
     :param pk: PK of a node
     :param uuid: UUID of a node, or the beginning of the uuid
     :param parent_class: if specified, looks only among objects that are instances of
     	a subclass of parent_class, otherwise among nodes
-    :param bool query_with_dashes: Specific if uuid is passed, allows to 
+    :param bool query_with_dashes: Specific if uuid is passed, allows to
         put the uuid in the correct form. Default=True
 
-    :return: a QueryBuilder instance    
+    :return: a QueryBuilder instance
     """
 
     from aiida.common.exceptions import InputValidationError
@@ -84,7 +86,7 @@ def create_node_id_qb(node_id=None, pk=None, uuid=None,
         raise InputValidationError("only one of parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
 
-    # In principle, I can use this function to fetch any kind of AiiDA object, 
+    # In principle, I can use this function to fetch any kind of AiiDA object,
     # but if I don't specify anything, I assume that I am looking for nodes
     class_ = parent_class or Node
 
@@ -147,9 +149,9 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_da
         subclass of parent_class
     :param bool query_with_dashes: Specific if uuid is passed, allows to put the uuid in the correct form.
         Default=True
-    :param bool return_node: lets the function return the AiiDA node referred by the input. 
+    :param bool return_node: lets the function return the AiiDA node referred by the input.
         Default=False
-    :return: the required AiiDA node if existing, unique, and (sub)instance 
+    :return: the required AiiDA node if existing, unique, and (sub)instance
         of parent_class
     :raise InputValidationError: if none or more than one of parameters is supplied
     :raise TypeError: I the wrong types are provided

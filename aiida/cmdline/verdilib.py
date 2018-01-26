@@ -483,6 +483,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
         except KeyError as e:
+            import traceback
+            click.echo(traceback.format_exc())
             click.echo("--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(e.message), err=True)
             sys.exit(1)
     else:
@@ -842,9 +844,9 @@ class Run(VerdiCommand):
         if parsed_args.group:
             automatic_group_name = parsed_args.groupname
             if automatic_group_name is None:
-                import datetime
+                from aiida.utils import timezone
 
-                now = datetime.datetime.now()
+                now = timezone.now()
                 automatic_group_name = "Verdi autogroup on " + now.strftime(
                     "%Y-%m-%d %H:%M:%S")
 

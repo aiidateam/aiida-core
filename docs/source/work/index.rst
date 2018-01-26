@@ -17,7 +17,7 @@ produce some outputs.  By now, this concept should be familiar and, in fact, eac
 generates a :class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` node along with the corresponding inputs and ouputs to keep
 the provenance of what happened.
 
-At the moment there are two ways that you can define a Process: :class:`~aiida.work.workfunction` s or
+At the moment there are two ways that you can define a Process: :class:`~aiida.work.workfunctions` s or
 :class:`~aiida.work.workchain.WorkChain` s.  Let's start with the former as it's the easier of the two.
 
 Workfunctions
@@ -27,7 +27,7 @@ A workfunction is simply a python function with a decorator and a couple of cons
 Let's dive in.
 
 >>> from aiida.orm.data.base import Int
->>> from aiida.work.workfunction import workfunction as wf
+>>> from aiida.work.workfunctions import workfunctions as wf
 >>>
 >>> @wf
 >>> def sum(a, b):
@@ -121,7 +121,7 @@ ESPRESSO plugin was written before the new plugin system hence we get a class co
 ``PwCalculation.process()`` call.
 
 On line 21-23 we first use a standard python function (not shown) to get a  set of
-Quantum ESPRESSO inputs parameters for our structure.  Then we use the :func:`~aiida.work.run.run` method to launch the
+Quantum ESPRESSO inputs parameters for our structure.  Then we use the :func:`~aiida.work.launch.run` method to launch the
 calculation.  This is a blocking call and will wait until the calculation has completed.
 
 Upon completion on lines 24-25 we get the outputs dictionary from the calculation and store it for returning when
@@ -301,7 +301,7 @@ waiting for something to complete.  In the meantime the workchain can be suspend
 
 Here, on line 19 we use a so called *interstep* command.  These are objects you return from a step that can perform
 actions at the end fo the step and just before the beginning of the next.  In this case we use
-:class:`~aiida.work.workchain.ToContext`, the constructor takes keyword arguments of `[name]=[pid]`, it will then take
+:data:`~aiida.work.context.ToContext`, the constructor takes keyword arguments of `[name]=[pid]`, it will then take
 insert barriers into the workchain to make sure it does not continue until all of the specified processes have finished.
 Then, before the next step, it will place the corresponding :class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` nodes in the
 specified `[name]` variables in the context.

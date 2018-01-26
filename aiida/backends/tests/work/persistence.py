@@ -15,6 +15,7 @@ from aiida.work.persistence import Persistence
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
 from aiida import work
+from aiida.work.launch import run
 
 
 class TestProcess(AiidaTestCase):
@@ -34,7 +35,7 @@ class TestProcess(AiidaTestCase):
         del process
 
         loaded_process = saved_state.unbundle()
-        result_from_loaded = work.run(loaded_process)
+        result_from_loaded = run(loaded_process)
 
         self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
 

@@ -14,6 +14,7 @@ import aiida.orm
 from aiida.orm.data.base import Int, Str
 from aiida import work
 from aiida.work.test_utils import DummyProcess
+from aiida.work.launch import run, run_get_node
 
 
 class TestRun(AiidaTestCase):
@@ -25,9 +26,9 @@ class TestRun(AiidaTestCase):
 
     def test_run(self):
         inputs = {'a': Int(2), 'b': Str('test')}
-        result = work.run(DummyProcess, **inputs)
+        result = run(DummyProcess, **inputs)
 
     def test_run_get_node(self):
         inputs = {'a': Int(2), 'b': Str('test')}
-        result, node = work.run_get_node(DummyProcess, **inputs)
+        result, node = run_get_node(DummyProcess, **inputs)
         self.assertIsInstance(node, aiida.orm.Calculation)

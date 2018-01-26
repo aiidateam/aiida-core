@@ -13,7 +13,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work import workfunction
 from aiida.orm.data.base import get_true_node
 from aiida.orm.data.base import Int
-from aiida.work import run
+from aiida.work.launch import run
 
 
 @workfunction

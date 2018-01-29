@@ -145,7 +145,7 @@ class TestDbExtrasSqla(AiidaTestCase):
 
         self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b']})
 
-        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
+        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}], "_aiida_hash": n1.get_hash()}
 
         n1.reset_extras(new_attrs)
         self.assertEquals(n1.get_extras(), new_attrs)
@@ -155,4 +155,4 @@ class TestDbExtrasSqla(AiidaTestCase):
         del new_attrs['newval2']
         self.assertEquals(n1.get_extras(), new_attrs)
         # Also check that other nodes were not damaged
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b']})
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})

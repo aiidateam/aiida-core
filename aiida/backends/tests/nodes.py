@@ -589,6 +589,7 @@ class TestNodeBasic(AiidaTestCase):
             'bool': 'some non-boolean value',
             'some_other_name': 987
         }
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
@@ -613,12 +614,12 @@ class TestNodeBasic(AiidaTestCase):
         b.store()
         # and I finally add a extras
         b.set_extra('meta', 'textofext')
-        b_expected_extras = {'meta': 'textofext'}
+        b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check for the attributes
         # First I check that nothing has changed
         self.assertEquals({k: v for k, v in a.iterattrs()}, attrs_to_set)
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         # I check then on the 'b' copy
         self.assertEquals({k: v
@@ -943,7 +944,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
 
-        self.assertEquals(a.get_extras(), {'bool': a_string})
+        self.assertEquals(a.get_extras(), {'bool': a_string, '_aiida_hash': AnyValue()})
 
     def test_get_extras_with_default(self):
         a = Node()
@@ -1021,14 +1022,16 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
+
         self.assertEquals(set(a.attrs()), set(attrs_to_set.keys()))
-        self.assertEquals(set(a.extras()), set(extras_to_set.keys()))
+        self.assertEquals(set(a.extras()), set(all_extras.keys()))
 
         returned_internal_attrs = {k: v for k, v in a.iterattrs()}
         self.assertEquals(returned_internal_attrs, attrs_to_set)
 
         returned_attrs = {k: v for k, v in a.iterextras()}
-        self.assertEquals(returned_attrs, extras_to_set)
+        self.assertEquals(returned_attrs, all_extras)
 
     def test_versioning_and_postsave_attributes(self):
         """
@@ -1096,10 +1099,12 @@ class TestNodeBasic(AiidaTestCase):
             'further': 267,
         }
 
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
+
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
@@ -1107,8 +1112,8 @@ class TestNodeBasic(AiidaTestCase):
             # I delete one by one the keys and check if the operation is
             # performed correctly
             a.del_extra(k)
-            del extras_to_set[k]
-            self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+            del all_extras[k]
+            self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
     def test_replace_extras_1(self):
         """
@@ -1132,6 +1137,7 @@ class TestNodeBasic(AiidaTestCase):
                 'h': 'j'
             }, [9, 8, 7]],
         }
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         # I redefine the keys with more complicated data, and
         # changing the data type too
@@ -1150,7 +1156,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         for k, v in new_extras.iteritems():
             # I delete one by one the keys and check if the operation is
@@ -1159,8 +1165,8 @@ class TestNodeBasic(AiidaTestCase):
 
         # I update extras_to_set with the new entries, and do the comparison
         # again
-        extras_to_set.update(new_extras)
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        all_extras.update(new_extras)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
     def test_basetype_as_attr(self):
         """
@@ -2068,3 +2074,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # more than one input to the same data object!
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2, link_type=LinkType.CREATE)
+
+class AnyValue(object):
+    """
+    Helper class that compares equal to everything.
+    """
+    def __eq__(self, other):
+        return True

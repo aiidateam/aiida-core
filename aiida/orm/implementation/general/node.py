@@ -1720,7 +1720,7 @@ class AbstractNode(object):
         hash_ = self.get_hash()
         if hash_:
             qb = QueryBuilder()
-            qb.append(self.__class__, filters={'extras.hash': hash_}, project='*', subclassing=False)
+            qb.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
             same_nodes = (n[0] for n in qb.iterall())
         return (n for n in same_nodes if n._is_valid_cache())
 

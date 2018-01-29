@@ -111,13 +111,16 @@ class JobProcess(processes.Process):
             spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options))
 
             # Inputs from use methods
-            for k, v in calc_class._use_methods.iteritems():
-                if v.get('additional_parameter'):
-                    spec.input_group(k, help=v.get('docstring', None),
-                                     valid_type=v['valid_types'], required=False)
+            for key, use_method in calc_class._use_methods.iteritems():
+
+                valid_type = use_method['valid_types']
+                docstring = use_method.get('docstring', None)
+                additional_parameter = use_method.get('additional_parameter')
+
+                if additional_parameter:
+                    spec.input_namespace(key, help=docstring, valid_type=valid_type, required=False, dynamic=True)
                 else:
-                    spec.input(k, help=v.get('docstring', None),
-                               valid_type=v['valid_types'], required=False)
+                    spec.input(key, help=docstring, valid_type=valid_type, required=False)
 
             # Outputs
             spec.dynamic_output(valid_type=Data)

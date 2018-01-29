@@ -167,9 +167,8 @@ class JobProcess(processes.Process):
                 continue
 
             # Call the 'use' methods to set up the data-calc links
-            if isinstance(self.spec().get_input(name), port.InputGroupPort):
-                additional = \
-                    self._CALC_CLASS._use_methods[name]['additional_parameter']
+            if isinstance(self.spec().inputs[name], port.PortNamespace):
+                additional = self._CALC_CLASS._use_methods[name]['additional_parameter']
 
                 for k, v in input.iteritems():
                     try:

@@ -100,22 +100,20 @@ class _WithNonDb(object):
         return self._non_db
 
 
+class PortNamespace(_WithNonDb, plum.port.PortNamespace):
+    pass
+
+
 class InputPort(_WithNonDb, plum.port.InputPort):
     pass
 
 
-class DynamicInputPort(_WithNonDb, plum.port.DynamicInputPort):
-    pass
-
-
-class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
-    pass
-
-
 class ProcessSpec(plum.process.ProcessSpec):
-    INPUT_PORT_TYPE = InputPort
-    DYNAMIC_INPUT_PORT_TYPE = DynamicInputPort
-    INPUT_GROUP_PORT_TYPE = InputGroupPort
+
+    def __init__(self):
+        super(ProcessSpec, self).__init__()
+        self.INPUT_PORT_TYPE = InputPort
+        self.PORT_NAMESPACE_TYPE = PortNamespace
 
     def get_inputs_template(self):
         """
@@ -163,14 +161,9 @@ class Process(plum.process.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-
-        spec.input("_store_provenance", valid_type=bool, default=True,
-                   non_db=True)
-        spec.input("_description", valid_type=basestring, required=False,
-                   non_db=True)
-        spec.input("_label", valid_type=basestring, required=False,
-                   non_db=True)
-
+        spec.input('_store_provenance', valid_type=bool, default=True, non_db=True)
+        spec.input('_description', valid_type=basestring, required=False, non_db=True)
+        spec.input('_label', valid_type=basestring, required=False, non_db=True)
         spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
         spec.dynamic_output(valid_type=aiida.orm.Data)
 
@@ -191,8 +184,7 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, logger=None, runner=None,
-                 parent_pid=None, enable_persistence=True):
+    def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else runners.get_runner()
 
         super(Process, self).__init__(
@@ -431,17 +423,17 @@ class Process(plum.process.Process):
         to_link = {}
         for name, input in self.inputs.iteritems():
             try:
-                port = self.spec().get_input(name)
-            except ValueError:
+                port = self.spec().inputs[name]
+            except KeyError:
                 # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
+                assert self.spec().inputs.is_dynamic
                 to_link[name] = input
             else:
                 # Ignore any inputs that should not be saved
                 if port.non_db:
                     continue
 
-                if isinstance(port, plum.port.InputGroupPort):
+                if isinstance(port, plum.port.PortNamespace):
                     to_link.update(
                         {"{}_{}".format(name, k): v for k, v in
                          input.iteritems()})
@@ -578,10 +570,10 @@ class FunctionProcess(Process):
         kwargs = {}
         for name, value in self.inputs.items():
             try:
-                if self.spec().get_input(name).non_db:
+                if self.spec().inputs[name].non_db:
                     # Don't consider non-database inputs
                     continue
-            except ValueError:
+            except KeyError:
                 pass  # No port found
 
             # Check if it is a positional arg, if not then keyword

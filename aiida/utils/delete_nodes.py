@@ -23,7 +23,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
 
     # The following code is just for the querying of downwards provenance.
     # Ideally, there should be a module to interface with, but this is the solution
-    # for now. 
+    # for now.
     # By only dealing with ids, and keeping track of what has been already
     # visited in the query, there's good performance
     link_types_to_follow = [LinkType.CREATE.value, LinkType.INPUT.value]

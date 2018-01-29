@@ -111,7 +111,7 @@ def get_automatic_user():
 
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.common.utils import get_configured_user_email
-    
+
     email = get_configured_user_email()
 
     _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
@@ -542,7 +542,7 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
     """
     from aiida.backends import sqlalchemy as sa
     from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
-    
+
     session = sa.get_scoped_session()
 
     with session.begin(subtransactions=True):

@@ -327,7 +327,7 @@ class _Delete(VerdiCommand):
         parser.add_argument('-r', '--follow-returns',
             help='follow the return-links downwards when deleting. If a node is a WorkCalculation, will delete everything it returned',
             action='store_true')
-        parser.add_argument('-n', '--dry-run', help='dry run, does not delete', 
+        parser.add_argument('-n', '--dry-run', help='dry run, does not delete',
             action='store_true')
         # Commenting this option for now
         # parser.add_argument('-f', '--force', help='force deletion, disables final user confirmation', action='store_true')
@@ -352,8 +352,8 @@ class _Delete(VerdiCommand):
         if not(node_pks_to_delete):
             print "Nothing to delete"
             return None
-        delete_nodes(node_pks_to_delete, 
-                follow_calls=parsed_args.follow_calls, follow_returns=parsed_args.follow_returns, 
+        delete_nodes(node_pks_to_delete,
+                follow_calls=parsed_args.follow_calls, follow_returns=parsed_args.follow_returns,
                 dry_run=parsed_args.dry_run, verbosity=parsed_args.verbosity )
 
 

@@ -1573,7 +1573,7 @@ class AbstractNode(object):
             if use_cache is None:
                 use_cache = get_use_cache(type(self))
             # Retrieve the cached node.
-            same_node = self.get_same_node() if use_cache else None
+            same_node = self._get_same_node() if use_cache else None
             if same_node is not None:
                 self._store_from_cache(same_node, with_transaction=with_transaction)
                 self._add_outputs_from_cache(same_node)
@@ -1690,9 +1690,27 @@ class AbstractNode(object):
     def rehash(self):
         self.set_extra('hash', self.get_hash())
 
-    def get_same_node(self):
+    def _get_same_node(self):
+        """
+        Returns a stored node from which the current Node can be cached, meaning that the returned Node is a valid cache, and its ``_aiida_hash`` attribute matches ``self.get_hash()``.
+
+        If there are multiple valid matches, the first one is returned. If no matches are found, ``None`` is returned.
+
+        Note that after ``self`` is stored, this function can return ``self``.
+        """
+        same_nodes = self.get_all_same_nodes()
+        if same_nodes:
+            return same_nodes[0]
+        return None
+
+    def get_all_same_nodes(self):
+        """
+        Return a list of stored nodes which match the type and hash of the current node. For the stored nodes, the ``_aiida_hash`` extra is checked to determine the hash, while ``self.get_hash()`` is executed on the current node.
+
+        Only nodes which are a valid cache are returned. If the current node is already stored, it can be included in the returned list if ``self.get_hash()`` matches its ``_aiida_hash``.
+        """
         if not self._cacheable:
-            return None
+            return []
 
         from aiida.orm.querybuilder import QueryBuilder
 
@@ -1700,10 +1718,8 @@ class AbstractNode(object):
         if hash_:
             qb = QueryBuilder()
             qb.append(self.__class__, filters={'extras.hash': hash_}, project='*', subclassing=False)
-            for same_node, in qb.iterall():
-                if same_node._is_valid_cache():
-                    return same_node
-        return None
+            same_nodes = [n[0] for n in qb.all()]
+        return [n for n in same_nodes if n._is_valid_cache()]
 
     def _is_valid_cache(self):
         """

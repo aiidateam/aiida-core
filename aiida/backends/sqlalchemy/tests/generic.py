@@ -141,15 +141,15 @@ class TestDbExtrasSqla(AiidaTestCase):
 
         n2.set_extra("pippo2", [3, 4, u'b'])
 
-        self.assertEqual(n1.get_extras(),{'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c']})
+        self.assertEqual(n1.get_extras(),{'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
 
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b']})
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
-        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}], "_aiida_hash": n1.get_hash()}
+        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
 
         n1.reset_extras(new_attrs)
         self.assertEquals(n1.get_extras(), new_attrs)
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b']})
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
         n1.del_extra('newval2')
         del new_attrs['newval2']

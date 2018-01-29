@@ -40,7 +40,7 @@ class TestInlineCalculation(AiidaTestCase):
             calc1, res1 = self.incr_inline(inp=Int(11))
             calc2, res2 = self.incr_inline(inp=Int(11))
             self.assertEquals(res1['res'].value, res2['res'].value, 12)
-            self.assertEquals(calc1.get_extra('cached_from', calc1.uuid), calc2.get_extra('cached_from'))
+            self.assertEquals(calc1.get_extra('_aiida_cached_from', calc1.uuid), calc2.get_extra('_aiida_cached_from'))
 
     def test_caching_change_code(self):
         with enable_caching(InlineCalculation):
@@ -52,4 +52,4 @@ class TestInlineCalculation(AiidaTestCase):
 
             calc2, res2 = incr_inline(inp=Int(11))
             self.assertNotEquals(res1['res'].value, res2['res'].value)
-            self.assertFalse('cached_from' in calc2.extras())
+            self.assertFalse('_aiida_cached_from' in calc2.extras())

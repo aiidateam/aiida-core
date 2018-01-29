@@ -1141,9 +1141,6 @@ class AbstractNode(object):
             return
             yield # Needed after return to convert it to a generator
         for extra in self._db_iterextras():
-            # Don't return if key == hash
-            if extra[0] == 'hash':
-                continue
             yield extra
 
     def iterattrs(self):
@@ -1614,7 +1611,7 @@ class AbstractNode(object):
             raise ValueError("Cannot use cache from nodes with RETURN links.")
 
         self.store(with_transaction=with_transaction, use_cache=False)
-        self.set_extra('cached_from', cache_node.uuid)
+        self.set_extra('_aiida_cached_from', cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node):
         # add CREATE links

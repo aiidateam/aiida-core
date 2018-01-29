@@ -619,6 +619,6 @@ class Node(AbstractNode):
 
         from aiida.backends.djsite.db.models import DbExtra
         # I store the hash without cleaning and without incrementing the nodeversion number
-        DbExtra.set_value_for_node(self.dbnode, 'hash', self.get_hash())
+        DbExtra.set_value_for_node(self.dbnode, '_aiida_hash', self.get_hash())
 
         return self

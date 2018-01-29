@@ -29,10 +29,10 @@ Caching is also implemented for Data nodes. This is not very useful in practice 
     In [7]: print('UUID of n1:', n1.uuid)
     UUID of n1: 956109e1-4382-4240-a711-2a4f3b522122
 
-    In [8]: print('n2 is cached from:', n2.get_extra('cached_from'))
+    In [8]: print('n2 is cached from:', n2.get_extra('_aiida_cached_from'))
     n2 is cached from: 956109e1-4382-4240-a711-2a4f3b522122
 
-As you can see, passing ``use_cache=True`` to the ``store`` method enables using the cache. The fact that ``n2`` was created from ``n1`` is stored in the ``cached_from`` extra of ``n2``.
+As you can see, passing ``use_cache=True`` to the ``store`` method enables using the cache. The fact that ``n2`` was created from ``n1`` is stored in the ``_aiida_cached_from`` extra of ``n2``.
 
 When running a ``JobCalculation`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag when the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
 
@@ -58,7 +58,7 @@ This means that caching is enabled for ``TemplatereplacerCalculation`` and ``Str
 How are cached nodes matched?
 -----------------------------
 
-To determine wheter a given node is identical to an existing one, a hash of the content of the node is created. If a node of the same class with the same hash already exists in the database, this is considered a cache match. You can manually check the hash of a given node with the :meth:`.get_hash() <.AbstractNode.get_hash>` method.
+To determine wheter a given node is identical to an existing one, a hash of the content of the node is created. If a node of the same class with the same hash already exists in the database, this is considered a cache match. You can manually check the hash of a given node with the :meth:`.get_hash() <.AbstractNode.get_hash>` method. Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this is used to find matching nodes.
 
 By default, this hash is created from:
 

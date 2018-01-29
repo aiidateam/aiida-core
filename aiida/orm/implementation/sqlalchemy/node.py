@@ -658,7 +658,7 @@ class Node(AbstractNode):
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
 
-        self.dbnode.set_extra('hash', self.get_hash())
+        self.dbnode.set_extra('_aiida_hash', self.get_hash())
         return self
 
 

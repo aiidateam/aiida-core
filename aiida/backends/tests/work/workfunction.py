@@ -62,4 +62,4 @@ class TestWf(AiidaTestCase):
 
     def _check_hash_consistent(self, pid):
         wc = load_node(pid)
-        self.assertEqual(wc.get_hash(), wc.get_extra('hash'))
+        self.assertEqual(wc.get_hash(), wc.get_extra('_aiida_hash'))

@@ -103,8 +103,8 @@ def validate_cached(cached_calcs):
     Check that the calculations with created with caching are indeed cached.
     """
     return all(
-        'cached_from' in calc.extras() and
-        calc.get_hash() == calc.get_extra('hash')
+        '_aiida_cached_from' in calc.extras() and
+        calc.get_hash() == calc.get_extra('_aiida_hash')
         for calc in cached_calcs
     )
 

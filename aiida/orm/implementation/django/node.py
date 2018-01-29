@@ -21,7 +21,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
@@ -619,6 +619,6 @@ class Node(AbstractNode):
 
         from aiida.backends.djsite.db.models import DbExtra
         # I store the hash without cleaning and without incrementing the nodeversion number
-        DbExtra.set_value_for_node(self.dbnode, '_aiida_hash', self.get_hash())
+        DbExtra.set_value_for_node(self.dbnode, _HASH_EXTRA_KEY, self.get_hash())
 
         return self

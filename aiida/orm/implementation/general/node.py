@@ -31,7 +31,7 @@ from aiida.common.old_pluginloader import get_query_type_string
 from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
-
+_HASH_EXTRA_KEY = '_aiida_hash'
 
 def clean_value(value):
     """
@@ -1685,7 +1685,7 @@ class AbstractNode(object):
         ]
 
     def rehash(self):
-        self.set_extra('hash', self.get_hash())
+        self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
     def _get_same_node(self):
         """

@@ -28,7 +28,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.links import LinkType
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
@@ -658,7 +658,7 @@ class Node(AbstractNode):
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
 
-        self.dbnode.set_extra('_aiida_hash', self.get_hash())
+        self.dbnode.set_extra(_HASH_EXTRA_KEY, self.get_hash())
         return self
 
 

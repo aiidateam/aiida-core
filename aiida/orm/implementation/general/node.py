@@ -1698,10 +1698,10 @@ class AbstractNode(object):
 
         Note that after ``self`` is stored, this function can return ``self``.
         """
-        same_nodes = self.get_all_same_nodes()
-        if same_nodes:
-            return same_nodes[0]
-        return None
+        try:
+            return next(self._iter_all_same_nodes())
+        except StopIteration:
+            return None
 
     def get_all_same_nodes(self):
         """
@@ -1709,8 +1709,14 @@ class AbstractNode(object):
 
         Only nodes which are a valid cache are returned. If the current node is already stored, it can be included in the returned list if ``self.get_hash()`` matches its ``_aiida_hash``.
         """
+        return list(self._iter_all_same_nodes())
+
+    def _iter_all_same_nodes(self):
+        """
+        Returns an iterator of all same nodes.
+        """
         if not self._cacheable:
-            return []
+            return iter(())
 
         from aiida.orm.querybuilder import QueryBuilder
 
@@ -1718,8 +1724,8 @@ class AbstractNode(object):
         if hash_:
             qb = QueryBuilder()
             qb.append(self.__class__, filters={'extras.hash': hash_}, project='*', subclassing=False)
-            same_nodes = [n[0] for n in qb.all()]
-        return [n for n in same_nodes if n._is_valid_cache()]
+            same_nodes = (n[0] for n in qb.iterall())
+        return (n for n in same_nodes if n._is_valid_cache())
 
     def _is_valid_cache(self):
         """

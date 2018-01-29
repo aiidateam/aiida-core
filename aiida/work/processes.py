@@ -410,55 +410,62 @@ class Process(plum.process.Process):
 
     def _setup_db_record(self):
         assert self.inputs is not None
-        assert not self.calc.is_sealed, \
-            "Calculation cannot be sealed when setting up the database record"
+        assert not self.calc.is_sealed, "Calculation cannot be sealed when setting up the database record"
 
-        # Save the name of this process
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
-        # First get a dictionary of all the inputs to link, this is needed to
-        # deal with things like input groups
-        to_link = {}
-        for name, input in self.inputs.iteritems():
-            try:
-                port = self.spec().inputs[name]
-            except KeyError:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().inputs.is_dynamic
-                to_link[name] = input
-            else:
-                # Ignore any inputs that should not be saved
-                if port.non_db:
-                    continue
+        for name, input_value in self._flatten_inputs(self.inputs).iteritems():
 
-                if isinstance(port, plum.port.PortNamespace):
-                    to_link.update(
-                        {"{}_{}".format(name, k): v for k, v in
-                         input.iteritems()})
-                else:
-                    to_link[name] = input
+            if isinstance(input_value, Calculation):
+                input_value = utils.get_or_create_output_group(input_value)
 
-        for name, input in to_link.iteritems():
-
-            if isinstance(input, Calculation):
-                input = utils.get_or_create_output_group(input)
-
-            if not input.is_stored:
-                # If the input isn't stored then assume our parent created it
+            # If the input isn't stored then assume our parent created it
+            if not input_value.is_stored:
                 if parent_calc:
-                    input.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
+                    input_value.add_link_from(parent_calc, 'CREATE', link_type=LinkType.CREATE)
                 if self.inputs._store_provenance:
-                    input.store()
+                    input_value.store()
 
-            self.calc.add_link_from(input, name)
+            self.calc.add_link_from(input_value, name)
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL",
-                                    link_type=LinkType.CALL)
+            self.calc.add_link_from(parent_calc, 'CALL', link_type=LinkType.CALL)
 
         self._add_description_and_label()
+
+    def _flatten_inputs(self, dictionary, parent_key='', separator='_'):
+        """
+        Function that will recursively flatten the inputs dictionary, omitting input ports that have
+        the non_db attribute set to True, as they are considered to be non storable
+
+        :param dictionary: nested dictionary of parsed inputs
+        :param parent_key: the parent key with which to prefix the keys
+        :param separator: character to use for the concatenation of keys
+        """
+        items = []
+        for key, value in dictionary.iteritems():
+
+            prefixed_key = parent_key + separator + key if parent_key else key
+
+            if isinstance(value, collections.MutableMapping):
+                items.extend(self._flatten_inputs(value, prefixed_key, separator=separator).iteritems())
+            else:
+                try:
+                    port = self.spec().inputs[key]
+                except KeyError:
+                    # It's not in the spec, so we better support dynamic inputs
+                    assert self.spec().has_dynamic_input()
+                    items.append((prefixed_key, value))
+                else:
+                    # Ignore any inputs that should not be saved
+                    if port.non_db:
+                        continue
+
+                items.append((prefixed_key, value))
+
+        return dict(items)
 
     def _add_description_and_label(self):
         if self.raw_inputs:
@@ -523,10 +530,15 @@ class FunctionProcess(Process):
             # We don't know what a function will return so keep it dynamic
             spec.dynamic_output(valid_type=Data)
 
-        return type(func.__name__, (FunctionProcess,),
-                    {'_func': staticmethod(func),
-                     Process.define.__name__: classmethod(_define),
-                     '_func_args': args})
+        return type(
+            func.__name__,
+            (FunctionProcess,),
+            {
+                '_func': staticmethod(func),                
+                Process.define.__name__: classmethod(_define),
+                '_func_args': args
+            }
+        )
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):

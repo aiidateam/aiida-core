@@ -7,16 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.workfunction import workfunction
 from aiida.orm.data.base import get_true_node, Int
 from aiida.orm import load_node
-from aiida.work.run import async, run
+from aiida.work.run import run
 import aiida.work.util as util
 from aiida.common import caching
-
 
 
 @workfunction
@@ -43,10 +41,6 @@ class TestWf(AiidaTestCase):
     def test_blocking(self):
         self.assertTrue(simple_wf()['result'])
         self.assertTrue(return_input(get_true_node())['result'])
-
-    def test_async(self):
-        self.assertTrue(async(simple_wf).result()['result'])
-        self.assertTrue(async(return_input, get_true_node()).result()['result'])
 
     def test_run(self):
         self.assertTrue(run(simple_wf)['result'])

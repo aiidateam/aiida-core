@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.restapi.translator.data import DataTranslator
-from flask import send_from_directory
-import os
+from aiida.restapi.translator.node import NodeTranslator
+from aiida.restapi.common.exceptions import RestInputValidationError
 
 class UpfDataTranslator(DataTranslator):
     """
@@ -60,16 +60,18 @@ class UpfDataTranslator(DataTranslator):
         response = {}
 
         if node.folder.exists():
-            filepath = os.path.join(node.get_abs_path(), "path")
+            folder_node = node._get_folder_pathsubfolder
             filename = node.filename
 
             try:
-                response["status"] = 200
-                response["data"] = send_from_directory(filepath, filename)
-                response["filename"] = filename
-            except Exception as e:
-                response["status"] = 500
-                response["data"] = e.message
+                content = NodeTranslator.get_file_content(folder_node, filename)
+            except IOError as e:
+                error = "Error in getting {} content".format(filename)
+                raise RestInputValidationError (error)
+
+            response["status"] = 200
+            response["data"] = content
+            response["filename"] = filename
 
         else:
             response["status"] = 200

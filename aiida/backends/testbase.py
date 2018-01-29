@@ -161,7 +161,19 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
         for modulename in modulenames:
             if modulename not in found_modulenames:
-                test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                try:
+                    test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                except AttributeError as exception:
+                    try:
+                        import importlib
+                        import traceback
+                        importlib.import_module(modulename)
+                    except ImportError as exception:
+                        print >> sys.stderr, (
+                            "[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
+                            .format(modulename, traceback.format_exc(exception))
+                        )
+                        sys.exit(1)
                 found_modulenames.add(modulename)
 
         num_tests_expected = test_suite.countTestCases()

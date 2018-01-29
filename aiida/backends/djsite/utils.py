@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import logging
 import os
 import django
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 
 
 def load_dbenv(process=None, profile=None):

@@ -157,6 +157,10 @@ class Workflow(AbstractWorkflow):
     def label(self, label):
         self._update_db_label_field(label)
 
+    @property
+    def ctime(self):
+        return self.dbworkflowinstance.ctime
+
     def _update_db_label_field(self, field_value):
         """
         Safety method to store the label of the workflow
@@ -250,7 +254,7 @@ class Workflow(AbstractWorkflow):
           the 'extra' embedded
         """
         import logging
-        from aiida.utils.logger import get_dblogger_extra
+        from aiida.common.log import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))

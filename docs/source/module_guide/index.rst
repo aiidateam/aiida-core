@@ -17,6 +17,7 @@ Modules (API documentation)
    ../parsers/dev
    ../querying/querybuilder/dev
    ../work/dev
-   ../dbimporters/dev
-   ../dbexporters/dev
+   ../import_export/dbimporters/dev
+   ../import_export/dbexporters/dev
    ../testing/dev
+   ../tools/dev

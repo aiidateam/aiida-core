@@ -27,7 +27,7 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
-from aiida.utils.logger import get_dblogger_extra
+from aiida.common.log import get_dblogger_extra
 
 
 logger = aiidalogger.getChild('Workflow')
@@ -155,6 +155,10 @@ class Workflow(AbstractWorkflow):
     @label.setter
     def label(self, label):
         self._update_db_label_field(label)
+
+    @property
+    def ctime(self):
+        return self.dbworkflowinstance.ctime
 
     def _update_db_label_field(self, field_value):
         """
@@ -403,7 +407,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return self.dbworkflowinstance.state
+        return unicode(self.dbworkflowinstance.state)
 
     def set_state(self, state):
         """

@@ -20,7 +20,7 @@ install_requires = [
     'tzlocal==1.3',
     'pytz==2014.10',
     'pyyaml',
-    'six==1.10.0',
+    'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
     # We need for the time being to stay with an old version
@@ -53,18 +53,20 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-plugins',
+    'click-spinner',
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==2.1.2',
+    'paramiko==2.4.0',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
-    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
+    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {
@@ -81,7 +83,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'Flask==0.10.1',
-        'Flask-RESTful==0.3.5',
+        'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
         'pyparsing==2.1.10',
         'Pattern==2.6',
@@ -102,7 +104,7 @@ extras_require = {
         'Jinja2==2.9.5',
         'MarkupSafe==0.23',
         # Required by readthedocs
-        'sphinx-rtd-theme==0.1.9',
+        'sphinx-rtd-theme==0.2.5b2',
     ],
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software
@@ -113,11 +115,9 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==3.6.2.1',
-        'seekpath==1.6.0',
+        'PyCifRW==4.2.1', # support for the AiiDA CifData class
+        'seekpath==1.8.0',
         'qe-tools==1.0',
-        # support for the AiiDA CifData class. Update to version 4 ddoes
-        # break tests
     ],
     # Requirements for jupyter notebook
     'notebook': [

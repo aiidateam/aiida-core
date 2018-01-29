@@ -112,6 +112,9 @@ KpointsData
   band structures (and store them in ``BandsData`` objects).
 * **What is stored in the database**: like ``ArrayData``
 * **What is stored in the file repository**: the array data in numpy format
+* **Additional functionality**:
+
+  * :ref:`Automatically compute k-points path given a crystal structure<AutomaticKpoints>`
 
 BandsData
 +++++++++

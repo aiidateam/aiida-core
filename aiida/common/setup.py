@@ -35,11 +35,16 @@ else:
 CONFIG_FNAME = 'config.json'
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = "daemon"
-LOG_SUBDIR = "daemon/log"
-DAEMON_CONF_FILE = "aiida_daemon.conf"
+DAEMON_SUBDIR = 'daemon'
+LOG_SUBDIR = 'daemon/log'
+DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-WORKFLOWS_SUBDIR = "workflows"
+CELERY_LOG_FILE = 'celery.log'
+CELERY_PID_FILE = 'celery.pid'
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+
+WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
@@ -51,17 +56,17 @@ DEFAULT_PROCESS = 'verdi'
 DEFAULT_UMASK = 0o0077
 
 # Profile keys
-aiidadb_backend_key = "AIIDADB_BACKEND"
+aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
-aiidadb_backend_value_django = "django"
+aiidadb_backend_value_django = 'django'
 
 # Repository for tests
 TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
-TEST_KEYWORD = "test_"
+TEST_KEYWORD = 'test_'
 
 
 def get_aiida_dir():
@@ -846,7 +851,7 @@ _property_table = {
         "logging_alembic_log_level",
         "string",
         "Minimum level to log to the console",
-        "INFO",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.sqlalchemy_loglevel": (
         "logging_sqlalchemy_loglevel",
@@ -947,7 +952,7 @@ def get_property(name, default=_NoDefaultValue()):
       no default value is given or provided in _property_table.
     """
     from aiida.common.exceptions import MissingConfigurationError
-    import aiida.utils.logger as logger
+    from aiida.common.log import LOG_LEVELS
 
     try:
         key, _, _, table_defval, _ = _property_table[name]
@@ -974,7 +979,7 @@ def get_property(name, default=_NoDefaultValue()):
     # will return the corresponding integer, even though a string is stored in
     # the config.
     if name.startswith('logging.') and name.endswith('loglevel'):
-        value = logger.LOG_LEVELS[value]
+        value = LOG_LEVELS[value]
 
     return value
 

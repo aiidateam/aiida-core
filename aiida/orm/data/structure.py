@@ -952,8 +952,8 @@ class StructureData(Data):
         return_list = ["{}".format(len(sites))]
         return_list.append('Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
             cell[0][0], cell[0][1], cell[0][2],
-            cell[0][0], cell[0][1], cell[0][2],
-            cell[0][0], cell[0][1], cell[0][2],
+            cell[1][0], cell[1][1], cell[1][2],
+            cell[2][0], cell[2][1], cell[2][2],
             self.pbc[0], self.pbc[1], self.pbc[2]
         ))
         for site in sites:

@@ -15,6 +15,11 @@ from StringIO import StringIO
 
 @contextmanager
 def captured_output():
+    """
+    Utility to capture stdout and sterr to two StringIOs that
+    are returned by the context manager, and replacing them
+    back once out of the context manager
+    """
     new_out, new_err = StringIO(), StringIO()
     old_out, old_err = sys.stdout, sys.stderr
     try:

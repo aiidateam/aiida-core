@@ -1398,6 +1398,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
+            sys.exit(1)
 
     def _import_pwi(self, filename, **kwargs):
         """
@@ -1407,7 +1408,6 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             from qe_tools.parsers.pwinputparser import PwInputFile
         except ImportError:
-            import sys
             print ("You have not installed the package qe-tools. \n"
                 "You can install it with: pip install qe-tools")
             sys.exit(1)
@@ -1434,6 +1434,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
+            sys.exit(1)
 
     def _import_ase(self, filename, **kwargs):
         """
@@ -1445,7 +1446,6 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             import ase.io
         except ImportError:
-            import sys
             print ("You have not installed the package ase. \n"
                 "You can install it with: pip install ase")
             sys.exit(1)
@@ -1472,6 +1472,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e           
+            sys.exit(1)
             
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """

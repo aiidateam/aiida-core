@@ -333,18 +333,13 @@ def get_or_create_output_group(calculation):
     return FrozenDict(dict=d)
 
 
-class Parcel(object):
-    def __init__(self, *args, **kwargs):
-        self._dict = dict(*args, **kwargs)
+class Parcel(dict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             raise TypeError("Keys can only be strings")
 
-        self._dict[key] = value
-
-    def __getitem__(self, item):
-        return self._dict[item]
+        super(Parcel, self).__setitem__(key, value)
 
 
 class Savable(object):
@@ -357,7 +352,7 @@ class Savable(object):
         try:
             class_name = saved_state[Savable.CLASS_NAME]
             cls = class_loader.CLASS_LOADER.load_class(class_name)
-            return cls.recreate_from(saved_state)
+            return cls.create_from(saved_state)
         except IndexError:
             raise ValueError("Not a valid saved state with type")
 
@@ -367,7 +362,6 @@ class Savable(object):
         obj.load_instance_state(saved_state)
         return obj
 
-    @abc.abstractmethod
     def save_instance_state(self, out_state):
         """
         Save the instance state in a parcel

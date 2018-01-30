@@ -72,4 +72,3 @@ class TestWf(AiidaTestCase):
             return mul(add(a, b), c)
 
         result = add_mul_wf(Int(3), Int(4), Int(5))
-        print(result)

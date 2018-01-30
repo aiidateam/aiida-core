@@ -769,7 +769,8 @@ def retrieve_all(job, transport, logger_extra=None):
             retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
 
         # Second, retrieve the singlefiles
-        _retrieve_singlefiles(job, transport, retrieve_singlefile_list, logger_extra)
+        with SandboxFolder() as folder:
+            _retrieve_singlefiles(job, transport, folder, retrieve_singlefile_list, logger_extra)
 
         # Retrieve the temporary files in a separate temporary folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -898,19 +899,18 @@ def _update_job_calc(calc, scheduler, job_info):
 
     return finished
 
-def _retrieve_singlefiles(job, transport, retrieve_file_list, logger_extra=None):
+def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_extra=None):
     singlefile_list = []
     for (linkname, subclassname, filename) in retrieve_file_list:
         execlogger.debug("[retrieval of calc {}] Trying "
                          "to retrieve remote singlefile '{}'".format(
             job.pk, filename), extra=logger_extra)
-        localfilename = os.path.join(retrieved_files.abspath, os.path.split(filename)[1])
+        localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
         transport.get(filename, localfilename, ignore_nonexisting=True)
         singlefile_list.append((linkname, subclassname, localfilename))
 
     # ignore files that have not been retrieved
-    singlefile_list = [i for i in singlefile_list if
-                       os.path.exists(i[2])]
+    singlefile_list = [i for i in singlefile_list if os.path.exists(i[2])]
 
     # after retrieving from the cluster, I create the objects
     singlefiles = []

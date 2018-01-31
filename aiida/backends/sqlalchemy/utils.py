@@ -542,11 +542,28 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
     """
     from aiida.backends import sqlalchemy as sa
     from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
+    from aiida.backends.sqlalchemy.models.group import table_groups_nodes
 
     session = sa.get_scoped_session()
-
-    with session.begin(subtransactions=True):
-        # First delete links, than the Nodes, since we are not cascading deletions
+    try:
+        # I am first making a statement to delete the membership of these nodes to groups.
+        # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
+        # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
+        # Can this be changed?
+        stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
+        session.execute(stmt)
+        # First delete links, than the Nodes, since we are not cascading deletions.
+        # Here I delete the links coming out of the nodes I delete.
         session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Here I delete the links pointing to the nodes I delete.
         session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Now I am deleting the nodes
         session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Here I commit this scoped session!
+        session.commit()
+    except Exception as e:
+        # If there was any exception, I roll back the session.
+        session.rollback()
+        raise e
+    finally:
+        session.close()

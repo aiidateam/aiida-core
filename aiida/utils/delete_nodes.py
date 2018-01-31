@@ -48,9 +48,9 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
 
     if verbosity > 0:
         if dry_run:
-            print "I would have deleted", " ".join(map(str, sorted(pks_set_to_delete)))
+            print "I would have deleted {} nodes".format(len(pks_set_to_delete))
         else:
-            print "I will delete {} nodes".format(len(pks_set_to_delete))
+            print "I AM ABOUT TO DELETE {} NODES\nTHIS CANNOT BE UNDONE".format(len(pks_set_to_delete))
         if verbosity > 1:
             qb = QueryBuilder().append(Node, filters={'id':{'in':pks_set_to_delete}}, project=('uuid', 'id', 'type', 'label'))
             for uuid, pk, type_string, label in qb.iterall():
@@ -66,14 +66,17 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
         return
 
     # Asking for user confirmation here
-    if not(force) and raw_input("Continue?").lower() != 'y':
-        return
+    if force:
+        pass
+    else:
+        if raw_input("Shall I continue? [Y/N] ").lower() != 'y':
+            print "Exiting without deleting"
+            return
 
     # Recover the list of folders to delete before actually deleting
     # the nodes.  I will delete the folders only later, so that if
     # there is a problem during the deletion of the nodes in
     # the DB, I don't delete the folders
-
     folders = [load_node(_).folder for _ in pks_set_to_delete]
 
     delete_nodes_and_connections(pks_set_to_delete)

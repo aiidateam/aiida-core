@@ -44,7 +44,6 @@ class AbstractJobCalculation(object):
         return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
             'queue_name',
             'max_wallclock_seconds',
-            'retrieve_temporary_list',
         ]
 
     def get_hash(

@@ -104,7 +104,6 @@ class TestProcessControl(AiidaTestCase):
         # TODO: Check kill message
         self.assertTrue(result)
 
-    def _wait_for_calc(self, calc_node, timeout=100.):
+    def _wait_for_calc(self, calc_node, timeout=2.):
         future = self.runner.get_calculation_future(calc_node.pk)
-        # self.loop.call_later(timeout, self.loop.stop)
-        work.events.run_until_complete(future, self.loop)
+        self.runner.run_until_complete(future)

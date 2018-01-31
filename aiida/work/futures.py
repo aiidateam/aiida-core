@@ -24,8 +24,10 @@ class CalculationFuture(Future):
 
             # Try setting up a filtered broadcast subscriber
             if self._communicator is not None:
-                self._filtered = kiwipy.BroadcastFilter(
-                    lambda **unused_msg: self.set_result(calc_node), sender=pk)
+                def calc_done(*args, **msg):
+                    self.set_result(calc_node)
+
+                self._filtered = kiwipy.BroadcastFilter(calc_done, sender=pk)
                 for state in [ProcessState.FINISHED,
                               ProcessState.CANCELLED,
                               ProcessState.FAILED]:
@@ -33,7 +35,7 @@ class CalculationFuture(Future):
                 self._communicator.add_broadcast_subscriber(self._filtered)
 
             # Start polling
-            # self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node)
+            self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node)
 
     def cleanup(self, unused_future):
         assert unused_future is self

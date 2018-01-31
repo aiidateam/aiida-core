@@ -1,12 +1,13 @@
-import plum
-import plum.rmq
 from collections import namedtuple
 from contextlib import contextmanager
 import inspect
 import logging
+import plum
+import plum.rmq
 
 import aiida.orm
 from . import events
+from . import futures
 from . import persistence
 from . import rmq
 from . import transports
@@ -214,6 +215,16 @@ class Runner(object):
     def call_on_calculation_finish(self, pk, callback):
         calc_node = aiida.orm.load_node(pk=pk)
         self._poll_calculation(calc_node, callback)
+
+    def get_calculation_future(self, pk):
+        """
+        Get a future for an orm Calculation.  The future will have the calculation node
+        as the result when finished.
+
+        :return: A future representing the completion of the calculation node
+        """
+        return futures.CalculationFuture(
+            pk, self._loop, self._poll_interval, self._communicator)
 
     @contextmanager
     def child_runner(self):

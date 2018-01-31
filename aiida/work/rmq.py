@@ -69,7 +69,6 @@ def store_and_serialize_inputs(inputs):
 
 
 class LaunchProcessAction(plum.LaunchProcessAction):
-
     def __init__(self, *args, **kwargs):
         """
         Calls through to the constructor of the plum LaunchProcessAction while making sure that
@@ -80,7 +79,6 @@ class LaunchProcessAction(plum.LaunchProcessAction):
 
 
 class ExecuteProcessAction(plum.ExecuteProcessAction):
-
     def __init__(self, process_class, init_args=None, init_kwargs=None):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
@@ -91,13 +89,13 @@ class ExecuteProcessAction(plum.ExecuteProcessAction):
 
 
 class ProcessLauncher(plum.ProcessLauncher):
-
     def _launch(self, task):
         from plum.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
         kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
+
 
 class ProcessControlPanel(object):
     """
@@ -159,7 +157,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
 
     def __init__(self, prefix, testing_mode=False):
         self._loop = events.new_event_loop()
-        connector = new_rmq_connector(self._loop)
+        connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
         self._connector.connect()
@@ -194,5 +192,23 @@ def new_blocking_control_panel():
     return BlockingProcessControlPanel(_get_prefix())
 
 
-def new_rmq_connector(loop):
+def create_rmq_connector(loop=None):
+    if loop is None:
+        loop = events.new_event_loop()
     return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)
+
+
+def create_communicator(loop=None, prefix=None, testing_mode=False):
+    if prefix is None:
+        prefix = _get_prefix()
+
+    message_exchange = get_message_exchange_name(prefix)
+    task_queue = get_launch_queue_name(prefix)
+
+    connector = create_rmq_connector(loop)
+    return plum.rmq.RmqCommunicator(
+        connector,
+        exchange_name=message_exchange,
+        task_queue=task_queue,
+        testing_mode=testing_mode
+    )

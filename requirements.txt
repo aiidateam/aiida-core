@@ -43,7 +43,7 @@ pbr==3.1.1
 pexpect==4.3.1
 pickleshare==0.7.4
 pika==0.11.2
--e git+https://github.com/muhrin/plumpy.git@ef2f0a225aaf3de28b4f0f064930e1dea9138edb#egg=plumpy
+-e git+https://github.com/muhrin/plumpy.git@de20256e681323012d270788f8c89e985a605f1c#egg=plumpy
 portalocker==1.1.0
 prompt-toolkit==1.0.15
 psutil==5.4.0

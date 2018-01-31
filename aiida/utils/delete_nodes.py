@@ -8,7 +8,9 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
 
     :param pks: a list of the PKs of the nodes to delete
     :param bool follow_calls: Follow calls
-    :param bool follow_returns: Follow returns
+    :param bool follow_returns:
+        Follow returns. This is a very dangerous option, since anything returned by a workflow might have
+        been used as input in many other calculations. Use with care, and never combine with force.
     :param bool dry_run: Do not delete, a dry run, with statistics printed according to verbosity levels.
     :param bool force: Do not ask for confirmation to delete nodes.
     :param int verbosity:

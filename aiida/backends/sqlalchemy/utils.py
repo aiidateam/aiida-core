@@ -552,10 +552,10 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
         # Can this be changed?
         stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
         session.execute(stmt)
-        # First delete links, than the Nodes, since we are not cascading deletions.
-        # Here I delete the links coming out of the nodes I delete.
+        # First delete links, then the Nodes, since we are not cascading deletions.
+        # Here I delete the links coming out of the nodes marked for deletion.
         session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-        # Here I delete the links pointing to the nodes I delete.
+        # Here I delete the links pointing to the nodes marked for deletion.
         session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Now I am deleting the nodes
         session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')

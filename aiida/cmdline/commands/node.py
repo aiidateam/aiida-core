@@ -324,14 +324,18 @@ class _Delete(VerdiCommand):
         parser.add_argument('-c', '--follow-calls',
             help='follow the call links downwards when deleting. If a node is a WorkCalculation, will delete everything it called',
             action='store_true')
-        parser.add_argument('-r', '--follow-returns',
-            help='follow the return-links downwards when deleting. If a node is a WorkCalculation, will delete everything it returned',
-            action='store_true')
         parser.add_argument('-n', '--dry-run', help='dry run, does not delete',
             action='store_true')
         # Commenting this option for now
         # parser.add_argument('-f', '--force', help='force deletion, disables final user confirmation', action='store_true')
-        parser.add_argument('-v', '--verbosity', help='verbosity level', action='count', default=1)
+        # Commenting also the option for follow returns. This is dangerous for the unexperienced user.
+        # parser.add_argument('-r', '--follow-returns',
+        #    help='follow the return-links downwards when deleting. If a node is a WorkCalculation, will delete everything it returned',
+        #    action='store_true')
+
+        parser.add_argument('-v', '--verbosity', help="Verbosity level: 0: No printout; 1: Print number of nodes marked for deletion; "
+            "2 and higher: Print individual nodes that are marked for deletion",
+            action='count', default=1)
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -353,8 +357,8 @@ class _Delete(VerdiCommand):
             print "Nothing to delete"
             return None
         delete_nodes(node_pks_to_delete,
-                follow_calls=parsed_args.follow_calls, follow_returns=parsed_args.follow_returns,
-                dry_run=parsed_args.dry_run, verbosity=parsed_args.verbosity )
+                follow_calls=parsed_args.follow_calls,
+                dry_run=parsed_args.dry_run, verbosity=parsed_args.verbosity)
 
 
 

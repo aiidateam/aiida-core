@@ -87,7 +87,7 @@ def get_use_cache(node_class=None):
         enabled = node_class in _CONFIG[config_keys.enabled]
         disabled = node_class in _CONFIG[config_keys.disabled]
         if enabled and disabled:
-            raise ValueError('Invalid configuration: Fast-forwarding for {} is both enabled and disabled.'.format(node_class))
+            raise ValueError('Invalid configuration: Caching for {} is both enabled and disabled.'.format(node_class))
         elif enabled:
             return True
         elif disabled:

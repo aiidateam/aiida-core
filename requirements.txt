@@ -29,7 +29,7 @@ idna==2.6
 ipaddress==1.0.19
 ipython==5.5.0
 ipython-genutils==0.2.0
-kiwipy==0.1.0
+kiwipy>=0.2.0.dev1
 kombu==3.0.37
 Mako==1.0.7
 MarkupSafe==1.0

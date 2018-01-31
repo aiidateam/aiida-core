@@ -1685,7 +1685,16 @@ class AbstractNode(object):
         ]
 
     def rehash(self):
+        """
+        Re-generates the stored hash of the Node.
+        """
         self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+
+    def clear_hash(self):
+        """
+        Sets the stored hash of the Node to None.
+        """
+        self.set_extra(_HASH_EXTRA_KEY, None)
 
     def _get_same_node(self):
         """

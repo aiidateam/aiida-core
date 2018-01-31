@@ -80,6 +80,28 @@ Additionally, there are two methods you can use to disable caching for particula
 
 There are two ways in which the hash match can go wrong: False negatives, where two nodes should have the same hash but do not, or false positives, where two different nodes have the same hash. It is important to understand that false negatives are **highly preferrable**, because they only increase the runtime of your calculations, as if caching was disabled. False positives however can break the logic of your calculations. Be mindful of this when modifying the caching behaviour of your calculation and data classes.
 
+.. _caching_error:
+
+What to do when caching is used when it shouldn't
+-------------------------------------------------
+
+In general, the caching mechanism should trigger only when the output of a calculation will be exactly the same as if it is run again. However, there might be some edge cases where this is not true.
+
+For example, if the parser is in a different python module than the calculation, the version number used in the hash will not change when the parser is updated. While the "correct" solution to this problem is to increase the version number of a calculation when the behavior of its parser changes, there might still be cases (e.g. during development) when you manually want to stop a particular node from being cached.
+
+In such cases, you can follow these steps to disable caching:
+
+1. If you suspect that a node has been cached in error, check that it has a ``_aiida_cached_from`` extra. If that's not the case, it is not a problem of caching.
+2. Get all nodes which match your node, and clear their hash:
+
+    .. code:: python
+
+        for n in node.get_all_same_nodes():
+            n.clear_hash()
+3. Run your calculation again. Now it should not use caching.
+
+If you instead think that there is a bug in the AiiDA implementation, please open an issue (with enough information to be able to reproduce the error, otherwise it is hard for us to help you) in the AiiDA GitHub repository: https://github.com/aiidateam/aiida_core/issues/new.
+
 .. _caching_provenance:
 
 Caching and the Provenance Graph

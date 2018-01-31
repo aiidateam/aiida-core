@@ -20,9 +20,19 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
     from aiida.orm.node import Node
+    from aiida.orm.calculation import Calculation
+    from aiida.orm.data import Data
     from aiida.orm import load_node
     from aiida.backends.utils import delete_nodes_and_connections
+    from aiida.backends.utils import get_automatic_user
+    user_email = get_automatic_user().email
 
+
+    if not pks:
+        # If I was passed an empty list, I don't to anything
+        if verbosity:
+            print "Nothing to delete"
+        return
     # The following code is just for the querying of downwards provenance.
     # Ideally, there should be a module to interface with, but this is the solution
     # for now.
@@ -62,10 +72,47 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
                     short_type_string = type_string
                 print "   {} {} {} {}".format(uuid, pk, short_type_string, label)
 
+
+    # Here I am checking whether I am deleting
+    ## A data instance without also deleting the creator, which brakes relationship between a calculation and its data
+    ## A calculation instance that was called, without also deleting the caller.
+
+    called_qb = QueryBuilder()
+    called_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+    called_qb.append(Calculation, project='type', edge_project='label',
+            filters={'id':{'in':pks_set_to_delete}},
+            edge_filters={'type':{'==': LinkType.CALL.value}})
+    caller_to_called2delete = called_qb.all()
+
+    if verbosity > 0 and caller_to_called2delete:
+        calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
+        print "{} calculations will lose at least one called instance".format(len(calculation_pks_losing_called))
+        if verbosity > 1:
+            print "These are the calculations that will lose a called instance:"
+            for calc_losing_called_pk in calculation_pks_losing_called:
+                print load_node(calc_losing_called_pk)
+
+    created_qb = QueryBuilder()
+    created_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+    created_qb.append(Data, project='type', edge_project='label',
+            filters={'id':{'in':pks_set_to_delete}},
+            edge_filters={'type':{'==':LinkType.CREATE.value}})
+
+    creator_to_created2delete = created_qb.all()
+    if verbosity > 0 and creator_to_created2delete:
+        calculation_pks_losing_created = set(zip(*creator_to_created2delete)[0])
+        print "{} calculations will lose at least one created data-instance".format(len(calculation_pks_losing_created))
+        if verbosity > 1:
+            print "These are the calculations that will lose a created data-instance:"
+            for calc_losing_created_pk in calculation_pks_losing_created:
+                print load_node(calc_losing_created_pk)
+
     if dry_run:
         if verbosity > 0:
             print "This was a dry run, exiting without deleting anything"
         return
+
+
 
     # Asking for user confirmation here
     if force:
@@ -81,7 +128,26 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False, dry_run=False, f
     # the DB, I don't delete the folders
     folders = [load_node(_).folder for _ in pks_set_to_delete]
 
+
     delete_nodes_and_connections(pks_set_to_delete)
+
+    # I pass now to the log the information for calculations losing created data or called instances
+    for calc_pk, calc_type_string, link_label in caller_to_called2delete:
+        calc = load_node(calc_pk)
+        calc.logger.warning("User {} deleted "
+            "an instance of type {} "
+            "called with the label {} "
+            "by this calculation".format(
+                user_email, calc_type_string, link_label))
+
+    for calc_pk, data_type_string, link_label  in creator_to_created2delete:
+        calc = load_node(calc_pk)
+        calc.logger.warning("User {} deleted "
+            "an instance of type {} "
+            "created with the label {} "
+            "by this calculation".format(
+                user_email, data_type_string, link_label))
+
     # If we are here, we managed to delete the entries from the DB.
     # I can now delete the folders
     for f in folders:

@@ -117,7 +117,7 @@ extras_require = {
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==4.2.1', # support for the AiiDA CifData class
         'seekpath==1.8.0',
-        'qe-tools==1.0',
+        'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
     'notebook': [

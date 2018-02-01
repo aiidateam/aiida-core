@@ -99,6 +99,7 @@ class ProcessLauncher(plum.ProcessLauncher):
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
 
+
 class ProcessControlPanel(object):
     """
     RMQ control panel for launching, controlling and getting status of
@@ -117,8 +118,8 @@ class ProcessControlPanel(object):
             testing_mode=testing_mode
         )
 
-    def ready_future(self):
-        return self._communicator.initialised_future()
+    def connect(self):
+        return self._communicator.init()
 
     def pause_process(self, pid):
         return self.execute_action(plum.PauseAction(pid))
@@ -162,7 +163,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         connector = new_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
-        self._connector.connect()
+        self.connect()
 
     def __enter__(self):
         return self
@@ -173,15 +174,15 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._communicator)
-        events.run_until_complete(action, self._loop)
+        self._communicator.await(action)
         return action.get_launch_future().result()
 
     def execute_action(self, action):
         action.execute(self._communicator)
-        return events.run_until_complete(action, self._loop)
+        return self._communicator.await(action)
 
     def close(self):
-        self._connector.close()
+        self._communicator.close()
 
 
 def new_blocking_control_panel():

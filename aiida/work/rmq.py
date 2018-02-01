@@ -23,7 +23,9 @@ def _get_prefix():
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
-def _get_rmq_config():
+def get_rmq_config(prefix=None):
+    if prefix is None:
+        prefix = _get_prefix()
     rmq_config = {
         'url': 'amqp://localhost',
         'prefix': _get_prefix(),
@@ -69,7 +71,6 @@ def store_and_serialize_inputs(inputs):
 
 
 class LaunchProcessAction(plum.LaunchProcessAction):
-
     def __init__(self, *args, **kwargs):
         """
         Calls through to the constructor of the plum LaunchProcessAction while making sure that
@@ -80,7 +81,6 @@ class LaunchProcessAction(plum.LaunchProcessAction):
 
 
 class ExecuteProcessAction(plum.ExecuteProcessAction):
-
     def __init__(self, process_class, init_args=None, init_kwargs=None):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
@@ -91,7 +91,6 @@ class ExecuteProcessAction(plum.ExecuteProcessAction):
 
 
 class ProcessLauncher(plum.ProcessLauncher):
-
     def _launch(self, task):
         from plum.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
@@ -160,7 +159,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
 
     def __init__(self, prefix, testing_mode=False):
         self._loop = events.new_event_loop()
-        connector = new_rmq_connector(self._loop)
+        connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
         self.connect()
@@ -195,5 +194,23 @@ def new_blocking_control_panel():
     return BlockingProcessControlPanel(_get_prefix())
 
 
-def new_rmq_connector(loop):
-    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)
+def create_rmq_connector(loop=None):
+    if loop is None:
+        loop = events.new_event_loop()
+    return plum.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
+
+
+def create_communicator(loop=None, prefix=None, testing_mode=False):
+    if prefix is None:
+        prefix = _get_prefix()
+
+    message_exchange = get_message_exchange_name(prefix)
+    task_queue = get_launch_queue_name(prefix)
+
+    connector = create_rmq_connector(loop)
+    return plum.rmq.RmqCommunicator(
+        connector,
+        exchange_name=message_exchange,
+        task_queue=task_queue,
+        testing_mode=testing_mode
+    )

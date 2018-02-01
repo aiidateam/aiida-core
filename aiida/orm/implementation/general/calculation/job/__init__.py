@@ -43,7 +43,9 @@ class AbstractJobCalculation(object):
         # _updatable_attributes are ignored automatically.
         return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
             'queue_name',
+            'priority',
             'max_wallclock_seconds',
+            'max_memory_kb',
         ]
 
     def get_hash(

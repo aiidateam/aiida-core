@@ -31,13 +31,12 @@ class _WorkChainSpec(processes.ProcessSpec):
         self._outline = None
 
     def get_description(self):
-        desc = [super(_WorkChainSpec, self).get_description()]
-        if self._outline:
-            desc.append("Outline")
-            desc.append("=======")
-            desc.append(self._outline.get_description())
+        description = super(_WorkChainSpec, self).get_description()
 
-        return "\n".join(desc)
+        if self._outline:
+            description['outline'] = self._outline.get_description()
+
+        return description
 
     def outline(self, *commands):
         """
@@ -66,8 +65,8 @@ class WorkChain(processes.Process):
         super(WorkChain, cls).define(spec)
         # For now workchains can accept any input and emit any output
         # If this changes in the future the spec should be updated here.
-        spec.dynamic_input()
-        spec.dynamic_output()
+        spec.inputs.dynamic = True
+        spec.outputs.dynamic = True
 
     def __init__(self, inputs=None, logger=None, runner=None):
         super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)

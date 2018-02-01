@@ -34,7 +34,7 @@ class Wf(work.WorkChain):
         super(Wf, cls).define(spec)
         spec.input("value", default=Str('A'))
         spec.input("n", default=Int(3))
-        spec.dynamic_output()
+        spec.outputs.dynamic = True
         spec.outline(
             cls.s1,
             if_(cls.isA)(
@@ -331,7 +331,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
@@ -356,7 +356,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
@@ -408,7 +408,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(TestWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 from aiida.orm.backend import construct

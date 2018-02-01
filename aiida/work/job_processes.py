@@ -123,7 +123,7 @@ class JobProcess(processes.Process):
                     spec.input(key, help=docstring, valid_type=valid_type, required=False)
 
             # Outputs
-            spec.dynamic_output(valid_type=Data)
+            spec.outputs.valid_type = Data
 
         class_name = "{}_{}".format(cls.__name__, utils.class_name(calc_class))
 

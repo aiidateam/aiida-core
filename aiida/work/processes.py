@@ -16,6 +16,7 @@ from enum import Enum
 import itertools
 import voluptuous
 import plum.port
+from plum.port import PortNamespace
 from plum import ProcessState
 import traceback
 
@@ -161,8 +162,8 @@ class Process(plum.process.Process):
         spec.input("_store_provenance", valid_type=bool, default=True, non_db=True)
         spec.input("_description", valid_type=basestring, required=False, non_db=True)
         spec.input("_label", valid_type=basestring, required=False, non_db=True)
-        spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
-        spec.dynamic_output(valid_type=aiida.orm.Data)
+        spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
+        spec.outputs.valid_type = (aiida.orm.Data)
 
     @classmethod
     def get_inputs_template(cls):
@@ -417,17 +418,17 @@ class Process(plum.process.Process):
 
         for name, input_value in self._flatten_inputs(self.inputs).iteritems():
 
-            if isinstance(input, Calculation):
-                input = utils.get_or_create_output_group(input)
+            if isinstance(input_value, Calculation):
+                input_value = utils.get_or_create_output_group(input_value)
 
-            if not input.is_stored:
+            if not input_value.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
-                    input.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
+                    input_value.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
                 if self.inputs._store_provenance:
-                    input.store()
+                    input_value.store()
 
-            self.calc.add_link_from(input, name)
+            self.calc.add_link_from(input_value, name)
 
         if parent_calc:
             self.calc.add_link_from(parent_calc, "CALL",
@@ -475,7 +476,7 @@ class Process(plum.process.Process):
                     port = self.spec().inputs[key]
                 except KeyError:
                     # It's not in the spec, so we better support dynamic inputs
-                    assert self.spec().has_dynamic_input()
+                    assert self.spec().inputs.dynamic
                     items.append((prefixed_key, value))
                 else:
                     # Ignore any inputs that should not be saved
@@ -532,12 +533,12 @@ class FunctionProcess(Process):
             # If the function support kwargs then allow dynamic inputs,
             # otherwise disallow
             if keywords is not None:
-                spec.dynamic_input()
+                spec.inputs.dynamic = True
             else:
-                spec.no_dynamic_input()
+                spec.inputs.dynamic = False
 
             # We don't know what a function will return so keep it dynamic
-            spec.dynamic_output(valid_type=Data)
+            spec.outputs.valid_type = Data
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),

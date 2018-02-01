@@ -361,56 +361,6 @@ class TestWorkchain(AiidaTestCase):
 
         return finished_steps
 
-class TestFastForwardingWorkChain(TestWorkchain):
-    def setUp(self):
-        super(TestFastForwardingWorkChain, self).setUp()
-        class ReturnInputsFastForward(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(ReturnInputsFastForward, cls).define(spec)
-                spec.input('a', valid_type=Int)
-                spec.input('b', valid_type=Int, default=Int(2), required=False)
-                spec.outline(cls.return_inputs)
-                spec.deterministic()
-
-            def return_inputs(self):
-                self.out('a', self.inputs.a)
-                self.out('b', self.inputs.b)
-        self.wf_class = ReturnInputsFastForward
-        self.reference_result, self.reference_pid = run(
-            self.wf_class, a=Int(1), b=Int(2), _return_pid=True
-        )
-        self.reference_wc = load_node(self.reference_pid)
-
-        class ReturnInputsFastForward(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(ReturnInputsFastForward, cls).define(spec)
-                spec.input('a', valid_type=Int)
-                spec.input('b', valid_type=Int, default=Int(2), required=False)
-                spec.outline(cls.return_inputs)
-                spec.deterministic()
-
-            def return_inputs(self):
-                raise ValueError
-
-        self.wf_class_broken = ReturnInputsFastForward
-
-    def tearDown(self):
-        super(TestFastForwardingWorkChain, self).tearDown()
-        super(TestFastForwardingWorkChain, self).tearDownClass()
-        super(TestFastForwardingWorkChain, self).setUpClass()
-
-    def test_hash(self):
-        res, pid = run(
-            self.wf_class,
-            a=Int(1), b=Int(2),
-            _use_cache=True, _return_pid=True
-        )
-        wc = load_node(pid)
-        self.assertEquals(wc.get_hash(), self.reference_wc.get_hash())
-        self.assertNotEquals(wc.get_hash(), None)
-
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
 

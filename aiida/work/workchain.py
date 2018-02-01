@@ -31,13 +31,12 @@ class _WorkChainSpec(processes.ProcessSpec):
         self._outline = None
 
     def get_description(self):
-        desc = [super(_WorkChainSpec, self).get_description()]
-        if self._outline:
-            desc.append("Outline")
-            desc.append("=======")
-            desc.append(self._outline.get_description())
+        description = [super(_WorkChainSpec, self).get_description()]
 
-        return "\n".join(desc)
+        if self._outline:
+            description.append(self._outline.get_description())
+
+        return description
 
     def outline(self, *commands):
         """

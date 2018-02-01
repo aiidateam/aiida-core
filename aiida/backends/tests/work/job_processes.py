@@ -10,14 +10,46 @@
 
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.utils import classproperty
+from aiida.orm.data.base import Int
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.class_loader import ClassLoader
 from aiida.work.job_processes import JobProcess
 
 from . import utils
 
-Job = TemplatereplacerCalculation.process()
+class AdditionalParameterCalculation(TemplatereplacerCalculation):
+    """
+    Subclass of TemplatereplacerCalculation that also defines a use method
+    with an additional parameter
+    """
 
+    @classproperty
+    def _use_methods(cls):
+        retdict = TemplatereplacerCalculation._use_methods
+        retdict.update({
+            'pseudo': {
+                'valid_types': Int,
+                'additional_parameter': "kind",
+                'linkname': cls._get_linkname_pseudo,
+                'docstring': (''),
+            },
+        })
+        return retdict
+
+    @classmethod
+    def _get_linkname_pseudo(cls, kind):
+        """
+        Create the linkname based on the additional parameter
+        """
+        if isinstance(kind, (tuple, list)):
+            suffix_string = '_'.join(kind)
+        elif isinstance(kind, basestring):
+            suffix_string = kind
+        else:
+            raise TypeError('invalid additional parameter type')
+
+        return '{}_{}'.format('pseudo', suffix_string)
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
@@ -54,7 +86,9 @@ class TestJobProcess(AiidaTestCase):
             '_label': label,
             '_description': description
         }
-        job = Job(inputs)
+
+        process = TemplatereplacerCalculation.process()
+        job = process(inputs)
 
         self.assertEquals(job.calc.label, label)
         self.assertEquals(job.calc.description, description)
@@ -76,4 +110,50 @@ class TestJobProcess(AiidaTestCase):
             '_description': None
         }
 
-        Job(inputs)
+        process = TemplatereplacerCalculation.process()
+        job = process(inputs)
+
+
+class TestAdditionalParameterJobProcess(AiidaTestCase):
+
+    def setUp(self):
+        super(TestAdditionalParameterJobProcess, self).setUp()
+        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestAdditionalParameterJobProcess, self).tearDown()
+        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.runner.close()
+        self.runner = None
+        work.set_runner(None)
+
+    def test_class_loader(self):
+        cl = ClassLoader()
+        AdditionalParameterProcess = JobProcess.build(AdditionalParameterCalculation)
+
+    def test_job_process_with_additional_parameter(self):
+        """
+        Verify that the additional parameter use_method 'pseudo' is supported
+        """
+        label = 'test_label'
+        description = 'test_description'
+        inputs = {
+            '_options': {
+                'computer': self.computer,
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'max_wallclock_seconds': 10,
+            },
+            'pseudo': {
+                'a': Int(1),
+                'b': Int(2),
+            },
+            '_label': label,
+            '_description': description
+        }
+
+        process = AdditionalParameterCalculation.process()
+        job = process(inputs)

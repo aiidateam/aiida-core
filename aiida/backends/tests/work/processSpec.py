@@ -44,11 +44,11 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        port = self.spec.get_dynamic_input()
-        self.assertFalse(port.validate("foo")[0])
-        self.assertFalse(port.validate(5)[0])
-        self.assertFalse(port.validate(n)[0])
-        self.assertTrue(port.validate(d)[0])
+        port = self.spec.inputs
+        self.assertFalse(port.validate({'key': "foo"})[0])
+        self.assertFalse(port.validate({'key': 5})[0])
+        self.assertFalse(port.validate({'key': n})[0])
+        self.assertTrue(port.validate({'key': d})[0])
 
     def test_dynamic_output(self):
         from aiida.orm import Node
@@ -56,11 +56,11 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        port = self.spec.get_dynamic_output()
-        self.assertFalse(port.validate("foo")[0])
-        self.assertFalse(port.validate(5)[0])
-        self.assertFalse(port.validate(n)[0])
-        self.assertTrue(port.validate(d)[0])
+        port = self.spec.outputs
+        self.assertFalse(port.validate({'key': "foo"})[0])
+        self.assertFalse(port.validate({'key': 5})[0])
+        self.assertFalse(port.validate({'key': n})[0])
+        self.assertTrue(port.validate({'key': d})[0])
 
     def _test_template(self, template):
         template.a = 2

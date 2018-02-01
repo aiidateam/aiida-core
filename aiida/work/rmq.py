@@ -23,7 +23,9 @@ def _get_prefix():
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
-def _get_rmq_config():
+def get_rmq_config(prefix=None):
+    if prefix is None:
+        prefix = _get_prefix()
     rmq_config = {
         'url': 'amqp://localhost',
         'prefix': _get_prefix(),
@@ -195,7 +197,7 @@ def new_blocking_control_panel():
 def create_rmq_connector(loop=None):
     if loop is None:
         loop = events.new_event_loop()
-    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)
+    return plum.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
 
 
 def create_communicator(loop=None, prefix=None, testing_mode=False):

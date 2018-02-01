@@ -39,7 +39,7 @@ def set_runner(runner):
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
     if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = rmq._get_rmq_config()
+        kwargs['rmq_config'] = rmq.get_rmq_config()
     return Runner(**kwargs)
 
 
@@ -162,7 +162,7 @@ class Runner(object):
 
     def run_until_complete(self, future):
         """ Run the loop until the future has finished and return the result """
-        return plum.run_until_complete(future, self._loop)
+        return self._loop.run_sync(lambda: future)
 
     def close(self):
         if self._rmq_connector is not None:

@@ -1,4 +1,3 @@
-aiida-core==0.11.0
 alabaster==0.7.10
 aldjemy==0.6.0
 alembic==0.9.6

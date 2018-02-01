@@ -53,7 +53,18 @@ Of course, using caching would be quite tedious if you had to set ``use_cache`` 
       disabled:
         - aiida.orm.data.base.Float
 
-This means that caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes. In this example, manually disabling ``aiida.orm.data.base.Float`` is actually not needed, since the default value for all classes is already ``False``. Note also that the fully qualified class import name (e.g., ``aiida.orm.data.base.Str``) must be given, not just the class name (``Str``). This is to avoid accidentally matching classes with the same name.
+This means that caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes. In this example, manually disabling ``aiida.orm.data.base.Float`` is actually not needed, since the default value for all classes is already ``False``. Note also that the fully qualified class import name (e.g., ``aiida.orm.data.base.Str``) must be given, not just the class name (``Str``). This is to avoid accidentally matching classes with the same name. You can get this name by combining the module name and class name, or (usually) from the string representation of the class:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: Str.__module__ + '.' + Str.__name__
+    Out[1]: 'aiida.orm.data.base.Str'
+
+    In [2]: str(Str)
+    Out[2]: "<class 'aiida.orm.data.base.Str'>"
+
+Note that this is not the same as the type string stored in the database.
 
 How are cached nodes matched?
 -----------------------------

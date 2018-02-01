@@ -6,8 +6,6 @@ from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
 from aiida.backends import settings
 
-from . import events
-
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
@@ -159,7 +157,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     """
 
     def __init__(self, prefix, testing_mode=False):
-        self._loop = events.new_event_loop()
+        self._loop = plum.new_event_loop()
         connector = new_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 

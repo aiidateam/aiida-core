@@ -6,7 +6,6 @@ import inspect
 import logging
 
 import aiida.orm
-from . import events
 from . import persistence
 from . import rmq
 from . import transports
@@ -102,7 +101,7 @@ class Runner(object):
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else events.new_event_loop()
+        self._loop = loop if loop is not None else plum.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)
@@ -161,7 +160,7 @@ class Runner(object):
 
     def run_until_complete(self, future):
         """ Run the loop until the future has finished and return the result """
-        return plum.run_until_complete(future, self._loop)
+        return self.loop.run_sync(lambda: future)
 
     def close(self):
         if self._rmq_connector is not None:

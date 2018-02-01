@@ -1398,6 +1398,7 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
+            sys.exit(1)
 
     def _import_pwi(self, filename, **kwargs):
         """
@@ -1407,10 +1408,9 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             from qe_tools.parsers.pwinputparser import PwInputFile
         except ImportError:
-            import sys
             print ("You have not installed the package qe-tools. \n"
                 "You can install it with: pip install qe-tools")
-            sys.exit(0)
+            sys.exit(1)
 
         dont_store = kwargs.pop('dont_store')
         view_in_ase = kwargs.pop('view')
@@ -1434,7 +1434,46 @@ class _Structure(VerdiCommandWithSubcommands,
 
         except ValueError as e:
             print e
+            sys.exit(1)
 
+    def _import_ase(self, filename, **kwargs):
+        """
+        Imports a structure in a number of formats using the ASE routines.
+        """
+        from os.path import abspath
+        from aiida.orm.data.structure import StructureData
+        
+        try:
+            import ase.io
+        except ImportError:
+            print ("You have not installed the package ase. \n"
+                "You can install it with: pip install ase")
+            sys.exit(1)
+
+        dont_store = kwargs.pop('dont_store')
+        view_in_ase = kwargs.pop('view')
+
+        print 'importing structure from: \n  {}'.format(abspath(filename))
+        filepath =  abspath(filename)
+
+        try:
+            asecell = ase.io.read(filepath)
+            new_structure = StructureData(ase=asecell)
+            
+            if not dont_store:
+                new_structure.store()
+            if view_in_ase:
+                from ase.visualize import view
+                view(new_structure.get_ase())
+            print  (
+                    '  Succesfully imported structure {}, '
+                    '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+                )
+
+        except ValueError as e:
+            print e           
+            sys.exit(1)
+            
     def _deposit_tcod(self, node, parameter_data=None, **kwargs):
         """
         Deposition plugin for TCOD.

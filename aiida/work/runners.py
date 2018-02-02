@@ -1,11 +1,12 @@
-import plum
-import plum.rmq
 from collections import namedtuple
 from contextlib import contextmanager
 import inspect
 import logging
+import plum
+import plum.rmq
 
 import aiida.orm
+from . import futures
 from . import persistence
 from . import rmq
 from . import transports
@@ -37,7 +38,7 @@ def set_runner(runner):
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
     if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = rmq._get_rmq_config()
+        kwargs['rmq_config'] = rmq.get_rmq_config()
     return Runner(**kwargs)
 
 
@@ -160,11 +161,11 @@ class Runner(object):
 
     def run_until_complete(self, future):
         """ Run the loop until the future has finished and return the result """
-        return self.loop.run_sync(lambda: future)
+        return self._loop.run_sync(lambda: future)
 
     def close(self):
         if self._rmq_connector is not None:
-            self._rmq_connector.close()
+            self._rmq_connector.disconnect()
 
     def run(self, process, *args, **inputs):
         """
@@ -213,6 +214,16 @@ class Runner(object):
     def call_on_calculation_finish(self, pk, callback):
         calc_node = aiida.orm.load_node(pk=pk)
         self._poll_calculation(calc_node, callback)
+
+    def get_calculation_future(self, pk):
+        """
+        Get a future for an orm Calculation.  The future will have the calculation node
+        as the result when finished.
+
+        :return: A future representing the completion of the calculation node
+        """
+        return futures.CalculationFuture(
+            pk, self._loop, self._poll_interval, self._communicator)
 
     @contextmanager
     def child_runner(self):

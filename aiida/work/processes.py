@@ -16,7 +16,6 @@ from enum import Enum
 import itertools
 import voluptuous
 import plum.port
-from plum.port import PortNamespace
 from plum import ProcessState
 import traceback
 
@@ -105,12 +104,17 @@ class InputPort(_WithNonDb, plum.port.InputPort):
     pass
 
 
+class PortNamespace(_WithNonDb, plum.port.PortNamespace):
+    pass
+
+
 class ProcessSpec(plum.process.ProcessSpec):
+
+    INPUT_PORT_TYPE = InputPort
+    PORT_NAMESPACE_TYPE = PortNamespace
 
     def __init__(self):
         super(ProcessSpec, self).__init__()
-        self.INPUT_PORT_TYPE = InputPort
-        self.PORT_NAMESPACE_TYPE = PortNamespace
 
 
     def get_inputs_template(self):
@@ -416,7 +420,7 @@ class Process(plum.process.Process):
 
         parent_calc = self.get_parent_calc()
 
-        for name, input_value in self._flatten_inputs(self.inputs).iteritems():
+        for name, input_value in self._flat_inputs().iteritems():
 
             if isinstance(input_value, Calculation):
                 input_value = utils.get_or_create_output_group(input_value)
@@ -452,40 +456,39 @@ class Process(plum.process.Process):
 
         :return: flat dictionary of parsed inputs
         """
-        return self._flatten_inputs(self.inputs)
+        return dict(self._flatten_inputs(self.spec().inputs, self.inputs))
 
-    def _flatten_inputs(self, dictionary, parent_key='', separator='_'):
+    def _flatten_inputs(self, port, port_value, parent_name='', separator='_'):
         """
-        Function that will recursively flatten the inputs dictionary, omitting
-        inputs whose key starts with an underscore as they are considered to be
-        non storable.
+        Function that will recursively flatten the inputs dictionary, omitting inputs for ports that
+        are marked as being non database storable
 
-        :param dictionary: nested dictionary of parsed inputs
-        :param parent_key: the parent key with which to prefix the keys
+        :param port: port against which to map the port value, can be InputPort or PortNamespace
+        :param port_value: value for the current port, can be a Mapping
+        :param parent_name: the parent key with which to prefix the keys
         :param separator: character to use for the concatenation of keys
         """
         items = []
-        for key, value in dictionary.iteritems():
 
-            prefixed_key = parent_key + separator + key if parent_key else key
+        if isinstance(port_value, collections.Mapping):
 
-            if isinstance(value, collections.MutableMapping):
-                items.extend(self._flatten_inputs(value, prefixed_key, separator=separator).iteritems())
-            else:
+            for name, value in port_value.iteritems():
+
+                prefixed_key = parent_name + separator + name if parent_name else name
+
                 try:
-                    port = self.spec().inputs[key]
+                    nested_port = port[name]
                 except KeyError:
-                    # It's not in the spec, so we better support dynamic inputs
-                    assert self.spec().inputs.dynamic
+                    # Port does not exist in the port namespace, add it regardless of type of value
                     items.append((prefixed_key, value))
                 else:
-                    # Ignore any inputs that should not be saved
-                    if port.non_db:
-                        continue
+                    sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
+                    items.extend(sub_items)
+        else:
+            if not port.non_db:
+                items.append((parent_name, port_value))
 
-                items.append((prefixed_key, value))
-
-        return dict(items)
+        return items
 
 class FunctionProcess(Process):
     _func_args = None

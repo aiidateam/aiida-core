@@ -7,19 +7,56 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
 import threading
 
-import aiida.work.utils as util
+from plum.utils import AttributesFrozendict
+from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.orm import load_node
 from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
-from aiida.work.test_utils import DummyProcess, BadOutput
-from aiida import work
-from aiida.work.launch import run, run_get_pid
+from aiida.work import utils
+from aiida.work import test_utils
+
+class TestProcessNamespace(AiidaTestCase):
+
+    def setUp(self):
+        super(TestProcessNamespace, self).setUp()
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestProcessNamespace, self).tearDown()
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+
+    def test_namespaced_process(self):
+        """
+        Test that inputs in nested namespaces are properly validated and the link labels
+        are properly formatted by connecting the namespaces with underscores
+        """
+        class NameSpacedProcess(work.Process):
+
+            @classmethod
+            def define(cls, spec):
+                super(NameSpacedProcess, cls).define(spec)
+                spec.input('some.name.space.a', valid_type=Int)
+
+        proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': Int(5)}}}})
+
+        # Test that the namespaced inputs are AttributesFrozenDicts
+        self.assertIsInstance(proc.inputs, AttributesFrozendict)
+        self.assertIsInstance(proc.inputs.some, AttributesFrozendict)
+        self.assertIsInstance(proc.inputs.some.name, AttributesFrozendict)
+        self.assertIsInstance(proc.inputs.some.name.space, AttributesFrozendict)
+
+        # Test that the input node is in the inputs of the process
+        input_node = proc.inputs.some.name.space.a
+        self.assertTrue(isinstance(input_node, Int))
+        self.assertEquals(input_node.value, 5)
+
+        # Check that the link of the WorkCalculation node has the correct link name
+        self.assertTrue('some_name_space_a' in proc.calc.get_inputs_dict())
+        self.assertEquals(proc.calc.get_inputs_dict()['some_name_space_a'], 5)
 
 
 class ProcessStackTest(work.Process):
@@ -44,26 +81,26 @@ class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
 
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
 
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
 
     def test_process_stack(self):
-        run(ProcessStackTest)
+        work.launch.run(ProcessStackTest)
 
     def test_inputs(self):
         with self.assertRaises(TypeError):
-            run(BadOutput)
+            work.launch.run(test_utils.BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
         inputs = {l: Int(l) for l in dummy_inputs}
         inputs['_store_provenance'] = True
-        p = DummyProcess(inputs)
+        p = test_utils.DummyProcess(inputs)
 
         for label, value in p._calc.get_inputs_dict().iteritems():
             self.assertTrue(label in inputs)
@@ -75,30 +112,30 @@ class TestProcess(AiidaTestCase):
 
     def test_none_input(self):
         # Check that if we pass no input the process runs fine
-        run(DummyProcess)
+        work.launch.run(test_utils.DummyProcess)
 
     def test_seal(self):
-        pid = run_get_pid(DummyProcess).pid
+        pid = work.launch.run_get_pid(test_utils.DummyProcess).pid
         self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
-        dp = DummyProcess(inputs={'_description': "Rockin' process"})
+        dp = test_utils.DummyProcess(inputs={'_description': "Rockin' process"})
         self.assertEquals(dp.calc.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            DummyProcess(inputs={'_description': 5})
+            test_utils.DummyProcess(inputs={'_description': 5})
 
     def test_label(self):
-        dp = DummyProcess(inputs={'_label': 'My label'})
+        dp = test_utils.DummyProcess(inputs={'_label': 'My label'})
         self.assertEquals(dp.calc.label, 'My label')
 
         with self.assertRaises(ValueError):
-            DummyProcess(inputs={'_label': 5})
+            test_utils.DummyProcess(inputs={'_label': 5})
 
     def test_work_calc_finish(self):
-        p = DummyProcess()
+        p = test_utils.DummyProcess()
         self.assertFalse(p.calc.has_finished_ok())
-        run(p)
+        work.launch.run(p)
         self.assertTrue(p.calc.has_finished_ok())
 
     def test_calculation_input(self):
@@ -106,23 +143,22 @@ class TestProcess(AiidaTestCase):
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
-        outputs, pid = run_get_pid(simple_wf)
+        outputs, pid = work.launch.run_get_pid(simple_wf)
         calc = load_node(pid)
 
-        dp = DummyProcess(inputs={'calc': calc})
-        run(dp)
+        dp = test_utils.DummyProcess(inputs={'calc': calc})
+        work.launch.run(dp)
 
         input_calc = dp.calc.get_inputs_dict()['calc']
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 
     def test_save_instance_state(self):
-        proc = DummyProcess()
+        proc = test_utils.DummyProcess()
         # Save the instance state
         bundle = work.Bundle(proc)
 
         proc2 = bundle.unbundle()
-
 
 class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):
@@ -131,7 +167,7 @@ class TestFunctionProcess(AiidaTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         function_process_class = work.FunctionProcess.build(wf)
-        self.assertEqual(run(function_process_class, **inputs), inputs)
+        self.assertEqual(work.launch.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
         def wf_with_kwargs(**kwargs):
@@ -147,13 +183,13 @@ class TestFunctionProcess(AiidaTestCase):
         inputs = {'a': a}
 
         function_process_class = work.FunctionProcess.build(wf_with_kwargs)
-        outs = run(function_process_class, **inputs)
+        outs = work.launch.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
         function_process_class = work.FunctionProcess.build(wf_without_kwargs)
         with self.assertRaises(ValueError):
-            run(function_process_class, **inputs)
+            work.launch.run(function_process_class, **inputs)
 
         function_process_class = work.FunctionProcess.build(wf_fixed_args)
-        outs = run(function_process_class, **inputs)
+        outs = work.launch.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)

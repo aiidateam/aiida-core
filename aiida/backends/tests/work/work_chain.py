@@ -703,3 +703,88 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), False)
         self.assertEquals(process.calc.has_aborted(), True)
+
+
+class TestImmutableInputWorkchain(AiidaTestCase):
+    """
+    Test that inputs cannot be modified
+    """
+    def setUp(self):
+        super(TestImmutableInputWorkchain, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestImmutableInputWorkchain, self).tearDown()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_immutable_input(self):
+        """
+        Check that from within the WorkChain self.inputs returns an AttributesFrozendict which should be immutable
+        """
+        test_class = self
+
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                spec.outline(
+                    cls.step_one,
+                    cls.step_two,
+                )
+
+            def step_one(self):
+                # Attempt to manipulate the inputs dictionary which since it is a AttributesFrozendict should raise
+                with test_class.assertRaises(TypeError):
+                    self.inputs['a'] = Int(3)
+                with test_class.assertRaises(AttributeError):
+                    self.inputs.pop('b')
+                with test_class.assertRaises(TypeError):
+                    self.inputs['c'] = Int(4)
+
+            def step_two(self):
+                # Verify that original inputs are still there with same value and no inputs were added
+                test_class.assertIn('a', self.inputs)
+                test_class.assertIn('b', self.inputs)
+                test_class.assertNotIn('c', self.inputs)
+                test_class.assertEquals(self.inputs['a'].value, 1)
+
+        work.launch.run(Wf, a=Int(1), b=Int(2))
+
+
+    def test_immutable_input_groups(self):
+        """
+        Check that namespaced inputs also return AttributeFrozendicts and are hence immutable
+        """
+        test_class = self
+
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input_namespace('subspace', dynamic=True)
+                spec.outline(
+                    cls.step_one,
+                    cls.step_two,
+                )
+
+            def step_one(self):
+                # Attempt to manipulate the namespaced inputs dictionary which should raise
+                with test_class.assertRaises(TypeError):
+                    self.inputs.subspace['one'] = Int(3)
+                with test_class.assertRaises(AttributeError):
+                    self.inputs.subspace.pop('two')
+                with test_class.assertRaises(TypeError):
+                    self.inputs.subspace['four'] = Int(4)
+
+            def step_two(self):
+                # Verify that original inputs are still there with same value and no inputs were added
+                test_class.assertIn('one', self.inputs.subspace)
+                test_class.assertIn('two', self.inputs.subspace)
+                test_class.assertNotIn('four', self.inputs.subspace)
+                test_class.assertEquals(self.inputs.subspace['one'].value, 1)
+
+        x = Int(1)
+        y = Int(2)
+        work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})

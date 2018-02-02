@@ -10,6 +10,7 @@
 from functools import partial
 import plum
 import plum.port as port
+import sys
 from voluptuous import Any
 
 from aiida.backends.utils import get_authinfo
@@ -28,6 +29,78 @@ __all__ = ['JobProcess']
 SUBMIT_COMMAND = 'submit'
 UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
+
+
+class TransportTask(plum.Future):
+    def __init__(self, calc_node, transport_queue):
+        super(TransportTask, self).__init__()
+        self._calc = calc_node
+        self._authinfo = get_authinfo(calc_node.get_computer(), calc_node.get_user())
+        transport_queue.call_me_with_transport(self._authinfo, self._execute)
+
+    def execute(self, transport):
+        pass
+
+    def _execute(self, transport):
+        if not self.cancelled():
+            try:
+                self.set_result(self.execute(transport))
+            except Exception:
+                self.set_exc_info(sys.exc_info())
+
+
+class SubmitJob(TransportTask):
+    def execute(self, transport):
+        return execmanager.submit_calc(self._calc, self._authinfo, transport)
+
+
+class UpdateSchedulerState(TransportTask):
+    def execute(self, transport):
+        scheduler = self._calc.get_computer().get_scheduler()
+        scheduler.set_transport(transport)
+
+        job_id = self._calc.get_job_id()
+
+        kwargs = {'jobs': [job_id], 'as_dict': True}
+        if scheduler.get_feature('can_query_by_user'):
+            kwargs['user'] = "$USER"
+        found_jobs = scheduler.getJobs(**kwargs)
+
+        info = found_jobs.get(job_id, None)
+        if info is None:
+            # If the job is computed or not found assume it's done
+            job_done = True
+            self._calc._set_scheduler_state(job_states.DONE)
+        else:
+            # Has the state changed?
+            last_jobinfo = self._calc._get_last_jobinfo()
+
+            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
+                execmanager.update_job_calc_from_job_info(self._calc, info)
+
+            job_done = info.job_state == job_states.DONE
+
+        if job_done:
+            # If the job is done, also get detailed job info
+            try:
+                detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
+            except NotImplementedError:
+                detailed_job_info = (
+                    u"AiiDA MESSAGE: This scheduler does not implement "
+                    u"the routine get_detailed_jobinfo to retrieve "
+                    u"the information on "
+                    u"a job after it has finished.")
+
+            execmanager.update_job_calc_from_detailed_job_info(self._calc, detailed_job_info)
+
+            self._calc._set_state(calc_states.COMPUTED)
+
+        return job_done
+
+
+class RetrieveJob(TransportTask):
+    def execute(self, transport):
+        return execmanager.retrieve_all(self._calc_node, transport)
 
 
 class Waiting(plum.Waiting):
@@ -59,9 +132,9 @@ class Waiting(plum.Waiting):
         :return: A future corresponding to the operation
         """
         fn = partial(self._do_transport_operation, operation)
-        self._callback_handle = \
-            self.process.runner.transport.call_me_with_transport(
-                self.process._get_authinfo(), fn)
+        transport = self.process.runner.transport
+        self._callback_handle = transport.call_me_with_transport(
+            self.process._get_authinfo(), fn)
 
     def _do_transport_operation(self, operation, authinfo, transport):
         # Guard in case we left the state already

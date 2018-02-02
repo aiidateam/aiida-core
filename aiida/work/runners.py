@@ -166,7 +166,7 @@ class Runner(object):
 
     def close(self):
         if self._rmq_connector is not None:
-            self._rmq_connector.close()
+            self._rmq_connector.disconnect()
 
     def run(self, process, *args, **inputs):
         """

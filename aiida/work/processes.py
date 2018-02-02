@@ -163,9 +163,9 @@ class Process(plum.process.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-        spec.input("_store_provenance", valid_type=bool, default=True, non_db=True)
-        spec.input("_description", valid_type=basestring, required=False, non_db=True)
-        spec.input("_label", valid_type=basestring, required=False, non_db=True)
+        spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
+        spec.input('description', valid_type=basestring, required=False, non_db=True)
+        spec.input('label', valid_type=basestring, required=False, non_db=True)
         spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
         spec.outputs.valid_type = (aiida.orm.Data)
 
@@ -233,7 +233,7 @@ class Process(plum.process.Process):
     def save_instance_state(self, out_state):
         super(Process, self).save_instance_state(out_state)
 
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             assert self.calc.is_stored
 
         out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
@@ -358,7 +358,7 @@ class Process(plum.process.Process):
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()
         self._setup_db_record()
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             try:
                 self.calc.store_all()
             except ModificationNotAllowed as exception:
@@ -429,7 +429,7 @@ class Process(plum.process.Process):
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
                     input_value.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
-                if self.inputs._store_provenance:
+                if self.inputs.store_provenance:
                     input_value.store()
 
             self.calc.add_link_from(input_value, name)
@@ -442,10 +442,10 @@ class Process(plum.process.Process):
 
     def _add_description_and_label(self):
         if self.raw_inputs:
-            description = self.raw_inputs.get('_description', None)
+            description = self.raw_inputs.get('description', None)
             if description is not None:
                 self._calc.description = description
-            label = self.raw_inputs.get('_label', None)
+            label = self.raw_inputs.get('label', None)
             if label is not None:
                 self._calc.label = label
 

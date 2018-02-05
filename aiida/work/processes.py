@@ -33,7 +33,7 @@ from aiida.orm.data import Data
 from aiida.orm.data.parameter import ParameterData
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
-from . import runners
+from .runners import get_runner
 from . import utils
 
 __all__ = ['Process', 'ProcessState', 'FunctionProcess']
@@ -193,7 +193,7 @@ class Process(plum.process.Process):
 
     def __init__(self, inputs=None, logger=None, runner=None,
                  parent_pid=None, enable_persistence=True):
-        self._runner = runner if runner is not None else runners.get_runner()
+        self._runner = runner if runner is not None else get_runner()
 
         super(Process, self).__init__(
             inputs=inputs,

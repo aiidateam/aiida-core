@@ -32,13 +32,7 @@ def add_source_info(node, func):
         node._set_attr("first_line_source_code", first_line)
     except (IOError, OSError):
         pass
-    try:
-        with open(inspect.getsourcefile(func)) as f:
-            source = f.read()
-        # MU: Do we really want to store the whole file?
-        node._set_attr("source_file", source)
-    except (IOError, OSError):
-        pass
+
     try:
         node._set_attr("namespace", func.func_globals["__name__"])
     except Exception:

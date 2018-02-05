@@ -10,6 +10,7 @@
 import abc
 import functools
 import inspect
+import re
 import plum
 
 from aiida.common.extendeddicts import AttributeDict
@@ -31,13 +32,12 @@ class _WorkChainSpec(processes.ProcessSpec):
         self._outline = None
 
     def get_description(self):
-        desc = [super(_WorkChainSpec, self).get_description()]
-        if self._outline:
-            desc.append("Outline")
-            desc.append("=======")
-            desc.append(self._outline.get_description())
+        description = super(_WorkChainSpec, self).get_description()
 
-        return "\n".join(desc)
+        if self._outline:
+            description['outline'] = self._outline.get_description()
+
+        return description
 
     def outline(self, *commands):
         """
@@ -66,8 +66,8 @@ class WorkChain(processes.Process):
         super(WorkChain, cls).define(spec)
         # For now workchains can accept any input and emit any output
         # If this changes in the future the spec should be updated here.
-        spec.dynamic_input()
-        spec.dynamic_output()
+        spec.inputs.dynamic = True
+        spec.outputs.dynamic = True
 
     def __init__(self, inputs=None, logger=None, runner=None):
         super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
@@ -433,19 +433,18 @@ class _Block(_Instruction):
         return _BlockStepper(workflow, self._commands)
 
     @override
-    def get_description(self, indent_level=0, indent_increment=4):
-        indent = ' ' * (indent_level * indent_increment)
-        desc = []
+    def get_description(self):
+        description = {}
+
         for c in self._commands:
             if isinstance(c, _Instruction):
-                desc.append(c.get_description())
+                description[type(c).__name__] = c.get_description()
             else:
-                desc.append('{}* {}'.format(indent, c.__name__))
                 if c.__doc__:
-                    doc = c.__doc__
-                    desc.append('{}{}'.format(indent,doc))
+                    doc = re.sub(r'\n\s*', ' ', c.__doc__)
+                    description[c.__name__] = doc.strip()
 
-        return '\n'.join(desc)
+        return description
 
 
 class _Conditional(object):
@@ -582,11 +581,21 @@ class _If(_Instruction):
 
     @override
     def get_description(self):
-        description = ['if {}:\n{}'.format(self._ifs[0].condition.__name__, self._ifs[0].body.get_description(indent_level=1))]
+        description = {}
+
+        description['if'] = {
+            'condition': self._ifs[0].condition.__name__,
+            'body': self._ifs[0].body.get_description()
+        }
+
         for conditional in self._ifs[1:]:
-            description.append('elif {}:\n{}'.format(
-                conditional.condition.__name__, conditional.body.get_description(indent_level=1)))
-        return '\n'.join(description)
+            description.setdefault('elif', [])
+            description['elif'].append({
+                'condition': conditional.condition.__name__,
+                'body': conditional.body.get_description()
+            })
+
+        return description
 
 
 class _WhileStepper(Stepper):
@@ -662,7 +671,10 @@ class _While(_Conditional, _Instruction):
 
     @override
     def get_description(self):
-        return "while {}:\n{}".format(self.condition.__name__, self.body.get_description(indent_level=1))
+        return {
+            'condition': self.condition.__name__,
+            'body': self.body.get_description(),
+        }
 
 
 class _PropagateReturn(BaseException):
@@ -702,7 +714,7 @@ class _Return(_Instruction):
         :return: The description
         :rtype: str
         """
-        return "Return from the outline immediately"
+        return 'Return from the outline immediately'
 
 
 def if_(condition):

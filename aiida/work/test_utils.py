@@ -21,8 +21,8 @@ class DummyProcess(Process):
     @classmethod
     def define(cls, spec):
         super(DummyProcess, cls).define(spec)
-        spec.dynamic_input()
-        spec.dynamic_output()
+        spec.inputs.dynamic = True
+        spec.outputs.dynamic = True
 
     def _run(self):
         pass
@@ -48,7 +48,7 @@ class BadOutput(Process):
     @classmethod
     def define(cls, spec):
         super(BadOutput, cls).define(spec)
-        spec.dynamic_output()
+        spec.outputs.dynamic = True
 
     def _run(self):
         self.out("bad_output", 5)

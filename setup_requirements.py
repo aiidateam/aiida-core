@@ -113,11 +113,9 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==3.6.2.1',
+        'PyCifRW==4.2.1', # support for the AiiDA CifData class
         'seekpath==1.8.0',
-        'qe-tools==1.0',
-        # support for the AiiDA CifData class. Update to version 4 does
-        # break tests
+        'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
     'notebook': [

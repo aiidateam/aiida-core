@@ -124,6 +124,7 @@ class IfTest(work.WorkChain):
     def step2(self):
         self.ctx.s2 = True
 
+
 class TestContext(AiidaTestCase):
     def test_attributes(self):
         wc = work.WorkChain()
@@ -394,7 +395,6 @@ class TestWorkchain(AiidaTestCase):
         self.assertTrue(wc.ctx.s1)
         self.assertFalse(wc.ctx.s2)
 
-
     def test_report_dbloghandler(self):
         """
         Test whether the WorkChain, through its Process, has a logger
@@ -453,7 +453,6 @@ class TestWorkchain(AiidaTestCase):
         runner = work.new_runner(persister=persister)
         workchain = Wf(runner=runner)
         workchain.execute()
-
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         proc = wf_class(inputs=inputs)
@@ -709,6 +708,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     """
     Test that inputs cannot be modified
     """
+
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
@@ -752,7 +752,6 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
         work.launch.run(Wf, a=Int(1), b=Int(2))
 
-
     def test_immutable_input_groups(self):
         """
         Check that namespaced inputs also return AttributeFrozendicts and are hence immutable
@@ -788,3 +787,9 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+#
+#
+# class TestIfSpec(AiidaTestCase):
+#     def test_basic(self):
+#         spec = if_()

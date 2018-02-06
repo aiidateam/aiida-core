@@ -7,7 +7,6 @@ from aiida.backends.testbase import AiidaTestCase
 import aiida.work.test_utils as test_utils
 from aiida.orm.data import base
 import aiida.work as work
-import aiida.work.events
 from aiida.orm.calculation.work import WorkCalculation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."

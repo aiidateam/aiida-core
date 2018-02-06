@@ -58,7 +58,6 @@ class WorkChain(processes.Process):
     """
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
-    _INTERSTEPS = 'intersteps'
     _CONTEXT = 'CONTEXT'
 
     @classmethod
@@ -87,9 +86,7 @@ class WorkChain(processes.Process):
 
         # Ask the stepper to save itself
         if self._stepper is not None:
-            stepper_state = utils.Parcel()
-            self._stepper.save_instance_state(stepper_state)
-            out_state[self._STEPPER_STATE] = stepper_state
+            out_state[self._STEPPER_STATE] = self._stepper.save()
 
     @override
     def load_instance_state(self, saved_state):
@@ -100,7 +97,6 @@ class WorkChain(processes.Process):
         # Recreate the stepper
         if self._STEPPER_STATE in saved_state:
             self._stepper = self.spec().get_outline().create_stepper(self)
-            print self._stepper
             self._stepper.load_instance_state(saved_state[self._STEPPER_STATE])
         else:
             self._stepper = None
@@ -307,7 +303,7 @@ class WorkChain(processes.Process):
             self.resume()
 
 
-class Stepper(utils.Savable):
+class Stepper(plum.Savable):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, workflow):
@@ -337,6 +333,10 @@ class _Instruction(object):
     def create_stepper(self, workflow):
         pass
 
+    @abc.abstractmethod
+    def recreate_stepper(self, saved_state, workflow):
+        pass
+
     def __str__(self):
         return self.get_description()
 
@@ -357,13 +357,12 @@ class _Instruction(object):
             assert len(args) == 1, "Instruction must take one argument only: self"
 
 
+@plum.auto_persist('_pos')
 class _BlockStepper(Stepper):
-    _POSITION = 'pos'
     _STEPPER_POS = 'stepper_pos'
 
     def __init__(self, workflow, commands):
         super(_BlockStepper, self).__init__(workflow)
-
         for c in commands:
             _Instruction.check_command(c)
         self._commands = commands
@@ -395,23 +394,24 @@ class _BlockStepper(Stepper):
     def save_instance_state(self, out_state):
         super(_BlockStepper, self).save_instance_state(out_state)
 
-        out_state[self._POSITION] = self._pos
-        # Save the position of the current step we're working (if it's not a
-        # direct function)
+        # Save the position of the current step we're working (if it's not a plain function)
         if self._current_stepper is not None:
-            stepper_pos = utils.Parcel()
-            self._current_stepper.save_instance_state(stepper_pos)
-            out_state[self._STEPPER_POS] = stepper_pos
+            out_state[self._STEPPER_POS] = self._current_stepper.save()
 
-    def load_instance_state(self, saved_state):
-        super(_BlockStepper, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, workflow, commands):
+        super(_BlockStepper, self).load_instance_state(saved_state, workflow)
 
-        self._pos = saved_state[self._POSITION]
+        for c in commands:
+            _Instruction.check_command(c)
+        self._commands = commands
 
         # Do we have a stepper position to load?
         if self._STEPPER_POS in saved_state:
             self._current_stepper = self._commands[self._pos].create_stepper(self._workflow)
             self._current_stepper.load_instance_state(saved_state[self._STEPPER_POS])
+        else:
+            self._current_stepper = None
+
 
 class _Block(_Instruction):
     """
@@ -431,6 +431,10 @@ class _Block(_Instruction):
     @override
     def create_stepper(self, workflow):
         return _BlockStepper(workflow, self._commands)
+
+    @override
+    def recreate_stepper(self, saved_state, workflow):
+        return _BlockStepper.recreate_from(saved_state, workflow, self._commands)
 
     @override
     def get_description(self):
@@ -482,9 +486,9 @@ class _Conditional(object):
         return self._parent
 
 
+@plum.auto_persist('_pos')
 class _IfStepper(Stepper):
     _IF_SPEC = 'if_spec'
-    _POSITION = 'pos'
     _STEPPER_POS = 'stepper_pos'
 
     def __init__(self, workflow, if_spec):
@@ -522,18 +526,19 @@ class _IfStepper(Stepper):
             branch = self._if_spec.conditionals[self._pos]
             self._current_stepper = branch.body.create_stepper(self._workflow)
 
+    def _recreate_stepper(self, saved_state):
+        stepper = self._create_stepper()
+        stepper.load_instance_state(saved_state)
+        return stepper
+
     def save_instance_state(self, out_state):
         super(_IfStepper, self).save_instance_state(out_state)
-        out_state[self._POSITION] = self._pos
         if self._current_stepper is not None:
-            stepper_pos = {}
-            self._current_stepper.save_instance_state(stepper_pos)
-            out_state[self._STEPPER_POS] = stepper_pos
+            out_state[self._STEPPER_POS] = self._current_stepper.save()
         out_state[self._IF_SPEC] = self._if_spec
 
     def load_instance_state(self, saved_state):
         super(_IfStepper, self).load_instance_state(saved_state)
-        self._pos = saved_state[self._POSITION]
         self._if_spec = saved_state[self._IF_SPEC]
         if self._STEPPER_POS in saved_state:
             self._create_stepper()
@@ -575,6 +580,9 @@ class _If(_Instruction):
     def create_stepper(self, workflow):
         return _IfStepper(workflow, self)
 
+    def recreate_stepper(self, saved_state, workflow):
+        return _IfStepper.recreate_from(saved_state, workflow, self)
+
     @property
     def conditionals(self):
         return self._ifs
@@ -598,10 +606,9 @@ class _If(_Instruction):
         return description
 
 
+@plum.auto_persist('_finished', '_check_condition')
 class _WhileStepper(Stepper):
     _STEPPER_POS = 'stepper_pos'
-    _CHECK_CONDITION = 'check_condition'
-    _FINISHED = 'finished'
 
     def __init__(self, workflow, while_spec):
         super(_WhileStepper, self).__init__(workflow)
@@ -637,21 +644,17 @@ class _WhileStepper(Stepper):
         super(_WhileStepper, self).save_instance_state(out_state)
 
         if self._stepper is not None:
-            stepper_pos = utils.Parcel()
-            self._stepper.save_instance_state(stepper_pos)
-            out_state[self._STEPPER_POS] = stepper_pos
+            out_state[self._STEPPER_POS] = self._stepper.save()
 
-        out_state[self._CHECK_CONDITION] = self._check_condition
-        out_state[self._FINISHED] = self._finished
+    def load_instance_state(self, saved_state, workflow, while_spec):
+        super(_WhileStepper, self).load_instance_state(saved_state, workflow)
+        self._spec = while_spec
 
-    def load_instance_state(self, saved_state):
-        super(_WhileStepper, self).load_instance_state(saved_state)
         if self._STEPPER_POS in saved_state:
             self._stepper = self._spec.body.create_stepper(self._workflow)
             self._stepper.load_instance_state(saved_state[self._STEPPER_POS])
-
-        self._finished = saved_state[self._FINISHED]
-        self._check_condition = saved_state[self._CHECK_CONDITION]
+        else:
+            self._stepper = None
 
     @property
     def _body_stepper(self):
@@ -659,6 +662,7 @@ class _WhileStepper(Stepper):
             self._stepper = \
                 self._spec.body.create_stepper(self._workflow)
         return self._stepper
+
 
 class _While(_Conditional, _Instruction):
 
@@ -668,6 +672,10 @@ class _While(_Conditional, _Instruction):
     @override
     def create_stepper(self, workflow):
         return _WhileStepper(workflow, self)
+
+    @override
+    def recreate_stepper(self, saved_state, workflow):
+        return _IfStepper.recreate_from(saved_state, workflow, self)
 
     @override
     def get_description(self):
@@ -692,12 +700,6 @@ class _ReturnStepper(Stepper):
         """
         raise _PropagateReturn()
 
-    def save_instance_state(self, out_state):
-        super(_ReturnStepper, self).save_instance_state(out_state)
-
-    def load_instance_state(self, saved_state):
-        super(_ReturnStepper, self).load_instance_state(saved_state)
-
 
 class _Return(_Instruction):
     """
@@ -707,6 +709,9 @@ class _Return(_Instruction):
 
     def create_stepper(self, workflow):
         return _ReturnStepper(workflow)
+
+    def recreate_stepper(self, saved_state, workflow):
+        return _ReturnStepper(saved_state, workflow)
 
     def get_description(self):
         """

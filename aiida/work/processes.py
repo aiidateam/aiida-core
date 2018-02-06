@@ -140,6 +140,7 @@ class ProcessSpec(plum.process.ProcessSpec):
         return template
 
 
+@plum.auto_persist('_parent_pid', '_enable_persistence')
 class Process(plum.process.Process):
     """
     This class represents an AiiDA process which can be executed and will
@@ -156,7 +157,6 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
@@ -234,9 +234,7 @@ class Process(plum.process.Process):
         if self.inputs._store_provenance:
             assert self.calc.is_stored
 
-        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state['_enable_persistence'] = self._enable_persistence
 
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
@@ -259,11 +257,6 @@ class Process(plum.process.Process):
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
-
-        if self.SaveKeys.PARENT_PID.value in saved_state:
-            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
-
-        self._enable_persistence = saved_state['_enable_persistence']
 
     @override
     def out(self, output_port, value=None):

@@ -84,7 +84,7 @@ class AbstractJobCalculation(object):
             'state', 'job_id', 'scheduler_state',
             'scheduler_lastchecktime',
             'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list'
+            'retrieve_singlefile_list', 'retrieve_temporary_list'
         )
 
         # Files in which the scheduler output and error will be stored.

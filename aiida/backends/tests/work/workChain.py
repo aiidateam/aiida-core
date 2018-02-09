@@ -12,6 +12,7 @@ import inspect
 import unittest
 import aiida.backends.settings as settings
 
+from aiida.orm import load_node
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
 from plum.persistence.bundle import Bundle

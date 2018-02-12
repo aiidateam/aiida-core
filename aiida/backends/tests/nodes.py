@@ -10,9 +10,6 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
-"""
-Tests for nodes, attributes and links
-"""
 import unittest
 from sqlalchemy.exc import StatementError
 
@@ -22,55 +19,6 @@ from aiida.common.links import LinkType
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
-
-class TestDataNode(AiidaTestCase):
-    """
-    These tests check the features of Data nodes that differ from the base Node
-    """
-    boolval = True
-    intval = 123
-    floatval = 4.56
-    stringval = "aaaa"
-    # A recursive dictionary
-    dictval = {
-        'num': 3,
-        'something': 'else',
-        'emptydict': {},
-        'recursive': {
-            'a': 1,
-            'b': True,
-            'c': 1.2,
-            'd': [1, 2, None],
-            'e': {
-                'z': 'z',
-                'x': None,
-                'xx': {},
-                'yy': []
-            }
-        }
-    }
-    listval = [1, "s", True, None]
-    emptydict = {}
-    emptylist = []
-
-    def test_attr_after_storing(self):
-        a = Data()
-        a._set_attr('bool', self.boolval)
-        a._set_attr('integer', self.intval)
-        a.store()
-
-        # And now I try to edit/delete the keys; I should not be able to do it
-        # after saving. I try only for a couple of attributes
-        with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('bool')
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('integer', 13)
-
-    def test_modify_attr_after_store(self):
-        a = Data()
-        a.store()
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('i', 12)
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -234,6 +182,32 @@ class TestNodeBasic(AiidaTestCase):
     listval = [1, "s", True, None]
     emptydict = {}
     emptylist = []
+
+    def test_attribute_mutability(self):
+        """
+        Attributes of a node should be immutable after storing, unless the stored_check is
+        disabled in the call
+        """
+        a = Node()
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a.store()
+
+        # After storing attributes should now be immutable
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('bool')
+
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', self.intval)
+
+        # Passing stored_check=False should disable the mutability check
+        a._del_attr('bool', stored_check=False)
+        a._set_attr('integer', self.intval, stored_check=False)
+
+        self.assertEquals(a.get_attr('integer'), self.intval)
+
+        with self.assertRaises(AttributeError):
+            a.get_attr('bool')
 
     def test_attr_before_storing(self):
         a = Node()

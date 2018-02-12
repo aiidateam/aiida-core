@@ -7,17 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-
 
 
 class Sealable(object):
 
     # The name of the attribute to indicate if the node is sealed or not.
     SEALED_KEY = '_sealed'
+
+    _updatable_attributes = (SEALED_KEY,)
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -31,11 +31,9 @@ class Sealable(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        assert not self.is_sealed, \
-            "Cannot add incoming links to a sealed calculation node"
+        assert not self.is_sealed, 'Cannot add incoming links to a sealed calculation node'
 
-        super(Sealable, self).add_link_from(src, label=label,
-                                            link_type=link_type)
+        super(Sealable, self).add_link_from(src, label=label, link_type=link_type)
 
     @property
     def is_sealed(self):
@@ -45,50 +43,41 @@ class Sealable(object):
         if not self.is_sealed:
             self._set_attr(self.SEALED_KEY, True)
 
-
-class SealableWithUpdatableAttributes(Sealable):
-    _updatable_attributes = tuple()
-
     @override
     def _set_attr(self, key, value, **kwargs):
         """
-        Set a new attribute to the Node (in the DbAttribute table).
+        Set a new attribute
 
-        :param str key: key name
-        :param value: its value
-        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored, and the attribute is not listed
-            as updatable).
-
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
+        :param key: attribute name
+        :param value: attribute value
+        :raise ModificationNotAllowed: if the node is already sealed or if the node is already stored
+            and the attribute is not updatable
         """
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot change the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._set_attr(key, value, **kwargs)
+        if self.is_sealed:
+            raise ModificationNotAllowed('Cannot change the attributes of a sealed node')
+
+        if self.is_stored and key not in self._updatable_attributes:
+            raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
+
+        super(Sealable, self)._set_attr(key, value, stored_check=False, **kwargs)
 
     @override
     def _del_attr(self, key):
         """
-        Delete an attribute.
+        Delete an attribute
 
-        :param key: attribute to delete.
-        :raise AttributeError: if key does not exist.
-        :raise ModificationNotAllowed: if the Node was already stored.
+        :param key: attribute name
+        :raise AttributeError: if key does not exist
+        :raise ModificationNotAllowed: if the node is already sealed or if the node is already stored
+            and the attribute is not updatable
         """
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot delete the attributes of a sealed calculation.")
-        super(SealableWithUpdatableAttributes, self)._del_attr(key)
+        if self.is_sealed:
+            raise ModificationNotAllowed('Cannot change the attributes of a sealed node')
 
+        if self.is_stored and key not in self._updatable_attributes:
+            raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
 
-    @override
-    def _del_attr(self, key):
-        if self.is_sealed and key not in self._updatable_attributes:
-            raise ModificationNotAllowed(
-                "Cannot delete an attribute of a sealed calculation node")
-        super(SealableWithUpdatableAttributes, self)._del_attr(key)
+        super(Sealable, self)._del_attr(key, stored_check=False)
 
     def iter_updatable_attrs(self):
         for k in list(self._updatable_attributes):
@@ -99,7 +88,7 @@ class SealableWithUpdatableAttributes(Sealable):
 
     @override
     def copy(self):
-        newobj = super(SealableWithUpdatableAttributes, self).copy()
+        newobj = super(Sealable, self).copy()
 
         # Remove the updatable attributes
         for k, v in self.iter_updatable_attrs():

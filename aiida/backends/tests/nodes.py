@@ -895,14 +895,11 @@ class TestNodeBasic(AiidaTestCase):
         returned_attrs = {k: v for k, v in a.iterextras()}
         self.assertEquals(returned_attrs, extras_to_set)
 
-    def test_versioning_and_postsave_attributes(self):
+    def test_versioning(self):
         """
-        Checks the versioning.
+        Test the versioning of the node when setting attributes and extras
         """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
+        a = Node()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -910,19 +907,17 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': 267,
         }
 
-        for k, v in attrs_to_set.iteritems():
-            a._set_attr(k, v)
-
-        # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            a._set_attr(key, value)
+            self.assertEquals(a.get_attr(key), value)
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            self.assertEquals(a.get_attr(key), value)
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
@@ -931,18 +926,12 @@ class TestNodeBasic(AiidaTestCase):
         a.set_extra('a', 'b')
         self.assertEquals(a.dbnode.nodeversion, 2)
 
-        # I check that I can set this attribute
-        a._set_attr('state', 999)
-
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, 3)
-
         # In both cases, the node version must increase
         a.label = 'test'
-        self.assertEquals(a.dbnode.nodeversion, 4)
+        self.assertEquals(a.dbnode.nodeversion, 3)
 
         a.description = 'test description'
-        self.assertEquals(a.dbnode.nodeversion, 5)
+        self.assertEquals(a.dbnode.nodeversion, 4)
 
     def test_delete_extras(self):
         """
@@ -1108,9 +1097,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        from aiida.orm.test import myNodeWithFields
-
-        a = myNodeWithFields()
+        a = Node()
         a.store()
 
         # Even if I stored many attributes, this should stay at 1

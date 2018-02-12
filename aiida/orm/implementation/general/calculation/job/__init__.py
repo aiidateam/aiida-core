@@ -57,13 +57,6 @@ class AbstractJobCalculation(object):
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
-        self._updatable_attributes = (
-            'state', 'job_id', 'scheduler_state',
-            'scheduler_lastchecktime',
-            'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list'
-        )
-
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.
         self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'

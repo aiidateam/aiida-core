@@ -12,12 +12,12 @@ from abc import abstractmethod
 from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
-from aiida.orm.mixins import SealableWithUpdatableAttributes
+from aiida.orm.mixins import Sealable
 from aiida.common.utils import abstractclassmethod
 
 
 
-class AbstractCode(SealableWithUpdatableAttributes, Node):
+class AbstractCode(Sealable, Node):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -38,8 +38,8 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         """
         This function is called by the init method
         """
-        self._updatable_attributes = \
-            ('input_plugin', 'append_text', 'prepend_text', 'hidden')
+        self._updatable_attributes = Sealable._updatable_attributes + (
+            'input_plugin', 'append_text', 'prepend_text', 'hidden')
 
         self._set_incompatibilities = [
             ('remote_computer_exec', 'local_executable')]

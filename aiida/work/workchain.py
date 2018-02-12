@@ -308,9 +308,6 @@ class Stepper(plum.Savable):
     def __init__(self, workchain):
         self._workchain = workchain
 
-    def save_instance_state(self, out_state):
-        super(Stepper, self).save_instance_state(out_state)
-
     def load_instance_state(self, saved_state, workchain):
         super(Stepper, self).load_instance_state(saved_state)
         self._workchain = workchain

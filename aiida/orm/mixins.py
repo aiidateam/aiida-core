@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -14,32 +15,39 @@ from aiida.common.links import LinkType
 
 class Sealable(object):
 
-    # The name of the attribute to indicate if the node is sealed or not.
+    # The name of the attribute to indicate if the node is sealed or not
     SEALED_KEY = '_sealed'
 
     _updatable_attributes = (SEALED_KEY,)
 
-    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
+    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
-        Add a link with a code as destination.
+        Add a link from a node
 
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
 
-        :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link. Default=None
-        :param link_type: The type of link, must be one of the enum values form
+        :param src: the node to add a link from
+        :param str label: name of the link
+        :param link_type: type of the link, must be one of the enum values from
           :class:`~aiida.common.links.LinkType`
         """
-        assert not self.is_sealed, 'Cannot add incoming links to a sealed calculation node'
+        if self.is_sealed:
+            raise ModificationNotAllowed('Cannot add a link from a sealed node')
 
         super(Sealable, self).add_link_from(src, label=label, link_type=link_type)
 
     @property
     def is_sealed(self):
+        """
+        Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True
+        """
         return self.get_attr(self.SEALED_KEY, False)
 
     def seal(self):
+        """
+        Seal the node by setting the sealed attribute to True
+        """
         if not self.is_sealed:
             self._set_attr(self.SEALED_KEY, True)
 
@@ -79,19 +87,25 @@ class Sealable(object):
 
         super(Sealable, self)._del_attr(key, stored_check=False)
 
-    def iter_updatable_attrs(self):
-        for k in list(self._updatable_attributes):
-            try:
-                yield (k, self.get_attr(k))
-            except AttributeError:
-                pass
-
     @override
     def copy(self):
-        newobj = super(Sealable, self).copy()
+        """
+        Create a copy of the node minus the updatable attributes
+        """
+        clone = super(Sealable, self).copy()
 
         # Remove the updatable attributes
-        for k, v in self.iter_updatable_attrs():
-            newobj._del_attr(k)
+        for key, value in self._iter_updatable_attributes():
+            clone._del_attr(key)
 
-        return newobj
+        return clone
+
+    def _iter_updatable_attributes(self):
+        """
+        Iterate over the updatable attributes and yield key value pairs
+        """
+        for key in list(self._updatable_attributes):
+            try:
+                yield (key, self.get_attr(key))
+            except AttributeError:
+                pass

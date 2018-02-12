@@ -29,7 +29,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.links import LinkType
 from aiida.common.lang import override
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
@@ -490,7 +490,7 @@ class Node(AbstractNode):
             raise
 
 
-    def copy(self):
+    def copy(self, **kwargs):
         newobject = self.__class__()
         newobject.dbnode.type = self.dbnode.type  # Inherit type
         newobject.dbnode.label = self.dbnode.label  # Inherit label
@@ -519,7 +519,7 @@ class Node(AbstractNode):
     def dbnode(self):
         return self._dbnode
 
-    def _db_store_all(self, with_transaction=True):
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -529,7 +529,7 @@ class Node(AbstractNode):
           a transaction open!
         """
         self._store_input_nodes()
-        self.store(with_transaction=False)
+        self.store(with_transaction=False, use_cache=use_cache)
         self._store_cached_input_links(with_transaction=False)
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -611,6 +611,8 @@ class Node(AbstractNode):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param bool use_cache: Whether I attempt to find an equal node in the DB.
         """
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -666,6 +668,7 @@ class Node(AbstractNode):
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
 
+        self.dbnode.set_extra(_HASH_EXTRA_KEY, self.get_hash())
         return self
 
 

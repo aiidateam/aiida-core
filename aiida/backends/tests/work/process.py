@@ -99,7 +99,7 @@ class TestProcess(AiidaTestCase):
         dummy_inputs = ["1", "2", "3", "4"]
 
         inputs = {l: Int(l) for l in dummy_inputs}
-        inputs['_store_provenance'] = True
+        inputs['store_provenance'] = True
         p = test_utils.DummyProcess(inputs)
 
         for label, value in p._calc.get_inputs_dict().iteritems():
@@ -119,18 +119,18 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
-        dp = test_utils.DummyProcess(inputs={'_description': "Rockin' process"})
+        dp = test_utils.DummyProcess(inputs={'description': "Rockin' process"})
         self.assertEquals(dp.calc.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            test_utils.DummyProcess(inputs={'_description': 5})
+            test_utils.DummyProcess(inputs={'description': 5})
 
     def test_label(self):
-        dp = test_utils.DummyProcess(inputs={'_label': 'My label'})
+        dp = test_utils.DummyProcess(inputs={'label': 'My label'})
         self.assertEquals(dp.calc.label, 'My label')
 
         with self.assertRaises(ValueError):
-            test_utils.DummyProcess(inputs={'_label': 5})
+            test_utils.DummyProcess(inputs={'label': 5})
 
     def test_work_calc_finish(self):
         p = test_utils.DummyProcess()

@@ -34,6 +34,7 @@ from aiida.orm.data import Data
 from aiida.orm.data.parameter import ParameterData
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
 from . import utils
 
@@ -167,6 +168,10 @@ class Process(plumpy.Process):
         spec.input('label', valid_type=basestring, required=False, non_db=True)
         spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
         spec.outputs.valid_type = (aiida.orm.Data)
+
+    @classmethod
+    def get_builder(cls):
+        return ProcessBuilder(cls)
 
     @classmethod
     def get_inputs_template(cls):

@@ -66,6 +66,10 @@ class AbstractJobCalculation(object):
         from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
 
+    @classmethod
+    def get_builder(cls):
+        return cls.process().get_builder()
+
     def _init_internal_params(self):
         """
         Define here internal parameters that should be defined

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import plumpy
 import voluptuous
 
-from plum import process
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.orm.data.parameter import ParameterData
 from aiida.work.ports import InputPort, PortNamespace
@@ -49,7 +49,7 @@ class DictSchema(object):
         return template
 
 
-class ProcessSpec(process.ProcessSpec):
+class ProcessSpec(plumpy.ProcessSpec):
 
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace

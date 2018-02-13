@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from plum import port
+from plumpy import ports
 
 
 class WithNonDb(object):
@@ -21,9 +21,9 @@ class WithNonDb(object):
         return self._non_db
 
 
-class InputPort(WithNonDb, port.InputPort):
+class InputPort(WithNonDb, ports.InputPort):
     pass
 
 
-class PortNamespace(WithNonDb, port.PortNamespace):
+class PortNamespace(WithNonDb, ports.PortNamespace):
     pass

@@ -17,10 +17,10 @@ __all__ = ['CLASS_LOADER']
 
 
 class ClassLoader(plumpy.class_loader.ClassLoader):
+
     @staticmethod
     def is_wrapped_job_calculation(name):
         from aiida.work.job_processes import JobProcess
-
         return name.find(JobProcess.__name__) != -1
 
     @override

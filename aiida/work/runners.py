@@ -6,6 +6,7 @@ import plumpy
 import plumpy.rmq
 
 import aiida.orm
+from . import class_loader
 from . import futures
 from . import persistence
 from . import rmq
@@ -278,6 +279,7 @@ class DaemonRunner(Runner):
         task_receiver = rmq.ProcessLauncher(
             loop=self.loop,
             persister=self.persister,
-            unbunble_kwargs={'runner': self}
+            unbunble_kwargs={'runner': self},
+            class_loader=class_loader.CLASS_LOADER
         )
         self.communicator.add_task_subscriber(task_receiver)

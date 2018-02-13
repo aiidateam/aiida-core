@@ -196,7 +196,7 @@ class TestWorkchain(AiidaTestCase):
                 # Try defining an invalid outline
                 spec.outline(5)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             Wf.spec()
 
     def test_same_input_node(self):
@@ -263,11 +263,12 @@ class TestWorkchain(AiidaTestCase):
         """
         spec = _WorkChainSpec()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             spec.outline(5)
 
-        with self.assertRaises(ValueError):
-            spec.outline(type)
+        # Test a function with wrong number of args
+        with self.assertRaises(TypeError):
+            spec.outline(lambda x, y: None)
 
     def test_checkpointing(self):
         A = Str('A')
@@ -376,7 +377,7 @@ class TestWorkchain(AiidaTestCase):
 
         work.run(MainWorkChain)
 
-    @unittest.skip('This is currently broken after merge')
+    # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
         """
         This test was created to capture issue #902
@@ -387,13 +388,15 @@ class TestWorkchain(AiidaTestCase):
         self.assertFalse(wc.ctx.s2)
 
         # Now bundle the thing
-        b = plumpy.Bundle(wc)
+        bundle = plumpy.Bundle(wc)
 
         # Load from saved tate
-        wc = b.unbundle()
-        wc.execute()
-        self.assertTrue(wc.ctx.s1)
-        self.assertFalse(wc.ctx.s2)
+        wc2 = bundle.unbundle()
+        self.assertTrue(wc2.ctx.s1)
+        self.assertFalse(wc2.ctx.s2)
+        wc2.execute()
+        self.assertTrue(wc2.ctx.s1)
+        self.assertTrue(wc2.ctx.s2)
 
     def test_report_dbloghandler(self):
         """

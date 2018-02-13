@@ -11,10 +11,10 @@ from functools import partial
 import plumpy
 from voluptuous import Any
 from plumpy.ports import PortNamespace
-from plumpy.lang import override
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.common import exceptions
+from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states

@@ -11,9 +11,9 @@ except ImportError:
     from chainmap import ChainMap
 
 import yaml
-from plum.utils import load_object as load_class
+from plumpy.utils import load_object as load_class
 from future.utils import raise_from
-from plum.exceptions import ClassNotFoundException
+from plumpy.exceptions import ClassNotFoundException
 
 import aiida
 from aiida.common.exceptions import ConfigurationError

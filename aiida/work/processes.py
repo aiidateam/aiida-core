@@ -418,6 +418,7 @@ class Process(plumpy.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, None)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
@@ -437,8 +438,7 @@ class Process(plumpy.Process):
             self.calc.add_link_from(input_value, name)
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL",
-                                    link_type=LinkType.CALL)
+            self.calc.add_link_from(parent_calc, "CALL", link_type=LinkType.CALL)
 
         self._add_description_and_label()
 

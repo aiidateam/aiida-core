@@ -21,6 +21,7 @@ import traceback
 
 import aiida.orm
 import aiida.common.exceptions as exceptions
+from aiida.common import caching
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
@@ -161,9 +162,9 @@ class Process(plumpy.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-        spec.input("_store_provenance", valid_type=bool, default=True, non_db=True)
-        spec.input("_description", valid_type=basestring, required=False, non_db=True)
-        spec.input("_label", valid_type=basestring, required=False, non_db=True)
+        spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
+        spec.input('description', valid_type=basestring, required=False, non_db=True)
+        spec.input('label', valid_type=basestring, required=False, non_db=True)
         spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
         spec.outputs.valid_type = (aiida.orm.Data)
 
@@ -231,7 +232,7 @@ class Process(plumpy.Process):
     def save_instance_state(self, out_state):
         super(Process, self).save_instance_state(out_state)
 
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             assert self.calc.is_stored
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
@@ -349,9 +350,19 @@ class Process(plumpy.Process):
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()
         self._setup_db_record()
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             try:
-                self.calc.store_all()
+                self.calc.store_all(use_cache=self._use_cache_enabled())
+                if self.calc.has_finished_ok():
+                    self._state = plumpy.ProcessState.FINISHED
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
+                        if name.endswith('_{pk}'.format(pk=value.pk)):
+                            continue
+                        self.out(name, value)
+                    # This is needed for JobProcess. In that case, the outputs are
+                    # returned regardless of whether they end in '_pk'
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
+                        self.out(name, value)
             except ModificationNotAllowed as exception:
                 # The calculation was already stored
                 pass
@@ -420,7 +431,7 @@ class Process(plumpy.Process):
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
                     input_value.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
-                if self.inputs._store_provenance:
+                if self.inputs.store_provenance:
                     input_value.store()
 
             self.calc.add_link_from(input_value, name)
@@ -433,10 +444,10 @@ class Process(plumpy.Process):
 
     def _add_description_and_label(self):
         if self.raw_inputs:
-            description = self.raw_inputs.get('_description', None)
+            description = self.raw_inputs.get('description', None)
             if description is not None:
                 self._calc.description = description
-            label = self.raw_inputs.get('_label', None)
+            label = self.raw_inputs.get('label', None)
             if label is not None:
                 self._calc.label = label
 
@@ -480,6 +491,17 @@ class Process(plumpy.Process):
                 items.append((parent_name, port_value))
 
         return items
+
+    def _use_cache_enabled(self):
+        # First priority: inputs
+        try:
+            return self._parsed_inputs['_use_cache']
+        # Second priority: config
+        except KeyError:
+            return (
+                    caching.get_use_cache(type(self)) or
+                    caching.get_use_cache(type(self._calc))
+            )
 
 
 class FunctionProcess(Process):

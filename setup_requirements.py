@@ -19,10 +19,10 @@ install_requires = [
     'django-extensions==1.5.0',
     'tzlocal==1.3',
     'pytz==2014.10',
+    'pyyaml',
     'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
-    'singledispatch==3.4.0.3',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
@@ -72,6 +72,7 @@ install_requires = [
 
 extras_require = {
     ':python_version < "3.3"': ['mock'],
+    ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
@@ -117,7 +118,7 @@ extras_require = {
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==4.2.1', # support for the AiiDA CifData class
         'seekpath==1.8.0',
-        'qe-tools==1.0',
+        'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
     'notebook': [

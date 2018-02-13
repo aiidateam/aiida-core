@@ -31,10 +31,10 @@ pycrypto==2.6.1
 python-dateutil==2.6.0
 python-mimeparse==0.1.4
 pytz==2014.10
+pyyaml
 reentry>=1.0.3
 scipy<1.0.0
 setuptools==36.6.0
-singledispatch==3.4.0.3
 six==1.11.0
 tabulate==0.7.5
 tzlocal==1.3

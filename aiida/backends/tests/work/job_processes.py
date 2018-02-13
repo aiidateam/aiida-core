@@ -76,7 +76,7 @@ class TestJobProcess(AiidaTestCase):
         label = 'test_label'
         description = 'test_description'
         inputs = {
-            '_options': {
+            'options': {
                 'computer': self.computer,
                 'resources': {
                     'num_machines': 1,
@@ -84,8 +84,8 @@ class TestJobProcess(AiidaTestCase):
                 },
                 'max_wallclock_seconds': 10,
             },
-            '_label': label,
-            '_description': description
+            'label': label,
+            'description': description
         }
         process = TemplatereplacerCalculation.process()
         job = process(inputs)
@@ -98,7 +98,7 @@ class TestJobProcess(AiidaTestCase):
         Verify that calculation label and description can be set to ``None``.
         """
         inputs = {
-            '_options': {
+            'options': {
                 'computer': self.computer,
                 'resources': {
                     'num_machines': 1,
@@ -106,8 +106,8 @@ class TestJobProcess(AiidaTestCase):
                 },
                 'max_wallclock_seconds': 10,
             },
-            '_label': None,
-            '_description': None
+            'label': None,
+            'description': None
         }
 
         process = TemplatereplacerCalculation.process()
@@ -138,7 +138,7 @@ class TestAdditionalParameterJobProcess(AiidaTestCase):
         label = 'test_label'
         description = 'test_description'
         inputs = {
-            '_options': {
+            'options': {
                 'computer': self.computer,
                 'resources': {
                     'num_machines': 1,
@@ -150,8 +150,8 @@ class TestAdditionalParameterJobProcess(AiidaTestCase):
                 'a': Int(1),
                 'b': Int(2),
             },
-            '_label': label,
-            '_description': description
+            'label': label,
+            'description': description
         }
         process = AdditionalParameterCalculation.process()
         job = process(inputs)

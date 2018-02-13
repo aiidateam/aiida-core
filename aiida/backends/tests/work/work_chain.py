@@ -165,7 +165,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        work.run(Wf, value=A, n=three)
+        work.launch.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -173,7 +173,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = work.run(Wf, value=B, n=three)
+        finished_steps = work.launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -181,7 +181,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = work.run(Wf, value=C, n=three)
+        finished_steps = work.launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -214,7 +214,7 @@ class TestWorkchain(AiidaTestCase):
                 assert 'b' in self.inputs
 
         x = Int(1)
-        work.run(Wf, a=x, b=x)
+        work.launch.run(Wf, a=x, b=x)
 
     def test_context(self):
         A = Str("a")
@@ -252,7 +252,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['res'] == B
                 assert self.ctx.r2['res'] == B
 
-        work.run(Wf)
+        work.launch.run(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -325,7 +325,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        work.run(WcWithReturn)
+        work.launch.run(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
@@ -350,7 +350,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        work.run(MainWorkChain)
+        work.launch.run(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
@@ -375,7 +375,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        work.run(MainWorkChain)
+        work.launch.run(MainWorkChain)
 
     # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
@@ -424,7 +424,7 @@ class TestWorkchain(AiidaTestCase):
                 logs = self._backend.log.find()
                 assert len(logs) == 1
 
-        work.run(TestWorkChain)
+        work.launch.run(TestWorkChain)
 
     def test_to_context(self):
         val = Int(5)
@@ -449,7 +449,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.result_b['_return'] == val
                 return
 
-        work.run(Workchain)
+        work.launch.run(Workchain)
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
@@ -459,7 +459,7 @@ class TestWorkchain(AiidaTestCase):
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         proc = wf_class(inputs=inputs)
-        work.run(proc)
+        work.launch.run(proc)
         return wf_class.finished_steps
 
 
@@ -494,7 +494,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert self.ctx.wf is not None
 
-        work.run(_TestWf)
+        work.launch.run(_TestWf)
 
     def test_old_wf_results(self):
         wf = WorkflowDemo()
@@ -514,7 +514,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
-        work.run(_TestWf)
+        work.launch.run(_TestWf)
 
 
 class TestWorkChainAbort(AiidaTestCase):

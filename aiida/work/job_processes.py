@@ -9,12 +9,11 @@
 ###########################################################################
 from functools import partial
 import plumpy
-import plumpy.ports as port
 from voluptuous import Any
-
+from plumpy.ports import PortNamespace
+from plumpy.lang import override
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
-from aiida.common.lang import override
 from aiida.common import exceptions
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
@@ -77,7 +76,7 @@ class Waiting(plumpy.Waiting):
 class JobProcess(processes.Process):
     TRANSPORT_OPERATION = 'TRANSPORT_OPERATION'
     CALC_NODE_LABEL = 'calc_node'
-    OPTIONS_INPUT_LABEL = '_options'
+    OPTIONS_INPUT_LABEL = 'options'
     _CALC_CLASS = None
 
     # Class defaults
@@ -94,21 +93,21 @@ class JobProcess(processes.Process):
 
             # Calculation options
             options = {
-                "max_wallclock_seconds": int,
-                "resources": dict,
-                "custom_scheduler_commands": unicode,
-                "queue_name": basestring,
-                "computer": Computer,
-                "withmpi": bool,
-                "mpirun_extra_params": Any(list, tuple),
-                "import_sys_environment": bool,
-                "environment_variables": dict,
-                "priority": unicode,
-                "max_memory_kb": int,
-                "prepend_text": unicode,
-                "append_text": unicode,
+                'max_wallclock_seconds': int,
+                'resources': dict,
+                'custom_scheduler_commands': unicode,
+                'queue_name': basestring,
+                'computer': Computer,
+                'withmpi': bool,
+                'mpirun_extra_params': Any(list, tuple),
+                'import_sys_environment': bool,
+                'environment_variables': dict,
+                'priority': unicode,
+                'max_memory_kb': int,
+                'prepend_text': unicode,
+                'append_text': unicode,
             }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options))
+            spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options), non_db=True)
 
             # Inputs from use methods
             for key, use_method in calc_class._use_methods.iteritems():
@@ -128,11 +127,13 @@ class JobProcess(processes.Process):
         class_name = "{}_{}".format(cls.__name__, utils.class_name(calc_class))
 
         # Dynamically create the type for this Process
-        return type(class_name, (cls,),
-                    {
-                        plumpy.processes.Process.define.__name__: classmethod(define),
-                        '_CALC_CLASS': calc_class
-                    })
+        return type(
+            class_name, (cls,),
+            {
+                plumpy.Process.define.__name__: classmethod(define),
+                '_CALC_CLASS': calc_class
+            }
+        )
 
     @classmethod
     def get_state_classes(cls):
@@ -162,18 +163,21 @@ class JobProcess(processes.Process):
         # Set all the attributes using the setter methods
         for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
             if value is not None:
-                getattr(self._calc, "set_{}".format(name))(value)
+                getattr(self._calc, 'set_{}'.format(name))(value)
 
         # Use the use_[x] methods to join up the links in this case
-        for name, input in self.get_provenance_inputs_iterator():
-            if input is None or name is self.OPTIONS_INPUT_LABEL:
+        for name, input_value in self.get_provenance_inputs_iterator():
+
+            port = self.spec().inputs[name]
+
+            if input_value is None or port.non_db:
                 continue
 
             # Call the 'use' methods to set up the data-calc links
-            if isinstance(self.spec().inputs[name], port.PortNamespace):
+            if isinstance(port, PortNamespace):
                 additional = self._CALC_CLASS._use_methods[name]['additional_parameter']
 
-                for k, v in input.iteritems():
+                for k, v in input_value.iteritems():
                     try:
                         getattr(self._calc, 'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError:
@@ -182,7 +186,7 @@ class JobProcess(processes.Process):
                             "the JobCalculation has no such use_{} method".format(name, name))
 
             else:
-                getattr(self._calc, 'use_{}'.format(name))(input)
+                getattr(self._calc, 'use_{}'.format(name))(input_value)
 
         # Get the computer from the code if necessary
         if self._calc.get_computer() is None and 'code' in self.inputs:
@@ -192,7 +196,7 @@ class JobProcess(processes.Process):
 
         parent_calc = self.get_parent_calc()
         if parent_calc:
-            self._calc.add_link_from(parent_calc, "CALL", LinkType.CALL)
+            self._calc.add_link_from(parent_calc, 'CALL', LinkType.CALL)
 
         self._add_description_and_label()
 
@@ -330,6 +334,5 @@ class ContinueJobCalculation(JobProcess):
 
             # Otherwise nothing to do...
 
-    @override
     def get_or_create_db_record(self):
         return self.inputs._calc

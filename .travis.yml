@@ -46,9 +46,10 @@ install:
     # Install AiiDA with some optional dependencies
     - pip install .[REST,docs,atomic_tools,testing,dev_precommit]
 
+
 env:
 ## Build matrix to test both backends, and the docs
-## I still let it create the test backend for django 
+## I still let it create the test backend for django
 ## also when building the docs
 ## because otherwise the code would complain. Also, I need latex.
 - TEST_TYPE="pre-commit"

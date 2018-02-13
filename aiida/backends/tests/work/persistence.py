@@ -34,7 +34,7 @@ class TestProcess(AiidaTestCase):
         del process
 
         loaded_process = saved_state.unbundle()
-        result_from_loaded = work.run(loaded_process)
+        result_from_loaded = work.launch.run(loaded_process)
 
         self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
 

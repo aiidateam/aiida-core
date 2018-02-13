@@ -21,6 +21,7 @@ import traceback
 
 import aiida.orm
 import aiida.common.exceptions as exceptions
+from aiida.common import caching
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
@@ -361,6 +362,17 @@ class Process(plum.process.Process):
         if self.inputs.store_provenance:
             try:
                 self.calc.store_all()
+                self.calc.store_all(use_cache=self._use_cache_enabled())
+                if self.calc.has_finished_ok():
+                    self._state = plum.process.ProcessState.FINISHED
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
+                        if name.endswith('_{pk}'.format(pk=value.pk)):
+                            continue
+                        self.out(name, value)
+                    # This is needed for JobProcess. In that case, the outputs are
+                    # returned regardless of whether they end in '_pk'
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
+                        self.out(name, value)
             except ModificationNotAllowed as exception:
                 # The calculation was already stored
                 pass
@@ -489,6 +501,17 @@ class Process(plum.process.Process):
                 items.append((parent_name, port_value))
 
         return items
+
+    def _use_cache_enabled(self):
+        # First priority: inputs
+        try:
+            return self._parsed_inputs['_use_cache']
+        # Second priority: config
+        except KeyError:
+            return (
+                caching.get_use_cache(type(self)) or
+                caching.get_use_cache(type(self._calc))
+            )
 
 class FunctionProcess(Process):
     _func_args = None

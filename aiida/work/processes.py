@@ -15,12 +15,13 @@ import uuid
 from enum import Enum
 import itertools
 import voluptuous
-import plum.port
-from plum import ProcessState
+import plumpy.ports
+from plumpy import ProcessState
 import traceback
 
 import aiida.orm
 import aiida.common.exceptions as exceptions
+from aiida.common import caching
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
@@ -33,7 +34,7 @@ from aiida.orm.data import Data
 from aiida.orm.data.parameter import ParameterData
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
-from . import runners
+from .runners import get_runner
 from . import utils
 
 __all__ = ['Process', 'ProcessState', 'FunctionProcess']
@@ -100,22 +101,20 @@ class _WithNonDb(object):
         return self._non_db
 
 
-class InputPort(_WithNonDb, plum.port.InputPort):
+class InputPort(_WithNonDb, plumpy.ports.InputPort):
     pass
 
 
-class DynamicInputPort(_WithNonDb, plum.port.DynamicInputPort):
+class PortNamespace(_WithNonDb, plumpy.ports.PortNamespace):
     pass
 
 
-class InputGroupPort(_WithNonDb, plum.port.InputGroupPort):
-    pass
-
-
-class ProcessSpec(plum.process.ProcessSpec):
+class ProcessSpec(plumpy.ProcessSpec):
     INPUT_PORT_TYPE = InputPort
-    DYNAMIC_INPUT_PORT_TYPE = DynamicInputPort
-    INPUT_GROUP_PORT_TYPE = InputGroupPort
+    PORT_NAMESPACE_TYPE = PortNamespace
+
+    def __init__(self):
+        super(ProcessSpec, self).__init__()
 
     def get_inputs_template(self):
         """
@@ -142,7 +141,8 @@ class ProcessSpec(plum.process.ProcessSpec):
         return template
 
 
-class Process(plum.process.Process):
+@plumpy.auto_persist('_parent_pid', '_enable_persistence')
+class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
@@ -158,21 +158,15 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-
-        spec.input("_store_provenance", valid_type=bool, default=True,
-                   non_db=True)
-        spec.input("_description", valid_type=basestring, required=False,
-                   non_db=True)
-        spec.input("_label", valid_type=basestring, required=False,
-                   non_db=True)
-
-        spec.dynamic_input(valid_type=(aiida.orm.Data, aiida.orm.Calculation))
-        spec.dynamic_output(valid_type=aiida.orm.Data)
+        spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
+        spec.input('description', valid_type=basestring, required=False, non_db=True)
+        spec.input('label', valid_type=basestring, required=False, non_db=True)
+        spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
+        spec.outputs.valid_type = (aiida.orm.Data)
 
     @classmethod
     def get_inputs_template(cls):
@@ -191,9 +185,8 @@ class Process(plum.process.Process):
 
     _spec_type = ProcessSpec
 
-    def __init__(self, inputs=None, logger=None, runner=None,
-                 parent_pid=None, enable_persistence=True):
-        self._runner = runner if runner is not None else runners.get_runner()
+    def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
+        self._runner = runner if runner is not None else get_runner()
 
         super(Process, self).__init__(
             inputs=inputs,
@@ -212,8 +205,8 @@ class Process(plum.process.Process):
     def on_create(self):
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
-        if self._parent_pid is None and not plum.stack.is_empty():
-            self._parent_pid = plum.stack.top().pid
+        if self._parent_pid is None and not plumpy.stack.is_empty():
+            self._parent_pid = plumpy.stack.top().pid
         self._pid = self._create_and_setup_db_record()
 
     def init(self):
@@ -239,20 +232,18 @@ class Process(plum.process.Process):
     def save_instance_state(self, out_state):
         super(Process, self).save_instance_state(out_state)
 
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             assert self.calc.is_stored
 
-        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state['_enable_persistence'] = self._enable_persistence
 
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, load_context):
+        super(Process, self).load_instance_state(saved_state, load_context)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -267,11 +258,6 @@ class Process(plum.process.Process):
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
-
-        if self.SaveKeys.PARENT_PID.value in saved_state:
-            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
-
-        self._enable_persistence = saved_state['_enable_persistence']
 
     @override
     def out(self, output_port, value=None):
@@ -364,9 +350,19 @@ class Process(plum.process.Process):
     def _create_and_setup_db_record(self):
         self._calc = self.get_or_create_db_record()
         self._setup_db_record()
-        if self.inputs._store_provenance:
+        if self.inputs.store_provenance:
             try:
-                self.calc.store_all()
+                self.calc.store_all(use_cache=self._use_cache_enabled())
+                if self.calc.has_finished_ok():
+                    self._state = plumpy.ProcessState.FINISHED
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
+                        if name.endswith('_{pk}'.format(pk=value.pk)):
+                            continue
+                        self.out(name, value)
+                    # This is needed for JobProcess. In that case, the outputs are
+                    # returned regardless of whether they end in '_pk'
+                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
+                        self.out(name, value)
             except ModificationNotAllowed as exception:
                 # The calculation was already stored
                 pass
@@ -422,60 +418,90 @@ class Process(plum.process.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, None)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
-        # First get a dictionary of all the inputs to link, this is needed to
-        # deal with things like input groups
-        to_link = {}
-        for name, input in self.inputs.iteritems():
-            try:
-                port = self.spec().get_input(name)
-            except ValueError:
-                # It's not in the spec, so we better support dynamic inputs
-                assert self.spec().has_dynamic_input()
-                to_link[name] = input
-            else:
-                # Ignore any inputs that should not be saved
-                if port.non_db:
-                    continue
+        for name, input_value in self._flat_inputs().iteritems():
 
-                if isinstance(port, plum.port.InputGroupPort):
-                    to_link.update(
-                        {"{}_{}".format(name, k): v for k, v in
-                         input.iteritems()})
-                else:
-                    to_link[name] = input
+            if isinstance(input_value, Calculation):
+                input_value = utils.get_or_create_output_group(input_value)
 
-        for name, input in to_link.iteritems():
-
-            if isinstance(input, Calculation):
-                input = utils.get_or_create_output_group(input)
-
-            if not input.is_stored:
+            if not input_value.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
-                    input.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
-                if self.inputs._store_provenance:
-                    input.store()
+                    input_value.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
+                if self.inputs.store_provenance:
+                    input_value.store()
 
-            self.calc.add_link_from(input, name)
+            self.calc.add_link_from(input_value, name)
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL",
-                                    link_type=LinkType.CALL)
+            self.calc.add_link_from(parent_calc, "CALL", link_type=LinkType.CALL)
 
         self._add_description_and_label()
 
     def _add_description_and_label(self):
         if self.raw_inputs:
-            description = self.raw_inputs.get('_description', None)
+            description = self.raw_inputs.get('description', None)
             if description is not None:
                 self._calc.description = description
-            label = self.raw_inputs.get('_label', None)
+            label = self.raw_inputs.get('label', None)
             if label is not None:
                 self._calc.label = label
+
+    def _flat_inputs(self):
+        """
+        Return a flattened version of the parsed inputs dictionary. The eventual
+        keys will be a concatenation of the nested keys
+
+        :return: flat dictionary of parsed inputs
+        """
+        return dict(self._flatten_inputs(self.spec().inputs, self.inputs))
+
+    def _flatten_inputs(self, port, port_value, parent_name='', separator='_'):
+        """
+        Function that will recursively flatten the inputs dictionary, omitting inputs for ports that
+        are marked as being non database storable
+
+        :param port: port against which to map the port value, can be InputPort or PortNamespace
+        :param port_value: value for the current port, can be a Mapping
+        :param parent_name: the parent key with which to prefix the keys
+        :param separator: character to use for the concatenation of keys
+        """
+        items = []
+
+        if isinstance(port_value, collections.Mapping):
+
+            for name, value in port_value.iteritems():
+
+                prefixed_key = parent_name + separator + name if parent_name else name
+
+                try:
+                    nested_port = port[name]
+                except KeyError:
+                    # Port does not exist in the port namespace, add it regardless of type of value
+                    items.append((prefixed_key, value))
+                else:
+                    sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
+                    items.extend(sub_items)
+        else:
+            if not port.non_db:
+                items.append((parent_name, port_value))
+
+        return items
+
+    def _use_cache_enabled(self):
+        # First priority: inputs
+        try:
+            return self._parsed_inputs['_use_cache']
+        # Second priority: config
+        except KeyError:
+            return (
+                    caching.get_use_cache(type(self)) or
+                    caching.get_use_cache(type(self._calc))
+            )
 
 
 class FunctionProcess(Process):
@@ -524,12 +550,12 @@ class FunctionProcess(Process):
             # If the function support kwargs then allow dynamic inputs,
             # otherwise disallow
             if keywords is not None:
-                spec.dynamic_input()
+                spec.inputs.dynamic = True
             else:
-                spec.no_dynamic_input()
+                spec.inputs.dynamic = False
 
-            # We don't know what a function will return so keep it dynamic
-            spec.dynamic_output(valid_type=Data)
+            # Workfunctions return data types
+            spec.outputs.valid_type = Data
 
         return type(func.__name__, (FunctionProcess,),
                     {'_func': staticmethod(func),
@@ -560,6 +586,15 @@ class FunctionProcess(Process):
         super(FunctionProcess, self).__init__(
             enable_persistence=False, *args, **kwargs)
 
+    def execute(self, return_on_idle=False):
+        result = super(FunctionProcess, self).execute(return_on_idle)
+        # Create a special case for Process functions: They can return
+        # a single value in which case you get this a not a dict
+        if len(result) == 1 and self.SINGLE_RETURN_LINKNAME in result:
+            return result[self.SINGLE_RETURN_LINKNAME]
+        else:
+            return result
+
     @override
     def _setup_db_record(self):
         super(FunctionProcess, self)._setup_db_record()
@@ -578,10 +613,10 @@ class FunctionProcess(Process):
         kwargs = {}
         for name, value in self.inputs.items():
             try:
-                if self.spec().get_input(name).non_db:
+                if self.spec().inputs[name].non_db:
                     # Don't consider non-database inputs
                     continue
-            except ValueError:
+            except KeyError:
                 pass  # No port found
 
             # Check if it is a positional arg, if not then keyword

@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import plum
+import plumpy
 import uuid
-import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 import aiida.work.test_utils as test_utils
 from aiida.orm.data import base
 import aiida.work as work
-from aiida.work import rmq
 from aiida.orm.calculation.work import WorkCalculation
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. All rights reserved."
@@ -26,7 +24,7 @@ class TestProcessControl(AiidaTestCase):
         super(TestProcessControl, self).setUp()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
 
-        self.loop = plum.new_event_loop()
+        self.loop = plumpy.new_event_loop()
 
         rmq_config = {
             'url': 'amqp://localhost',
@@ -100,15 +98,11 @@ class TestProcessControl(AiidaTestCase):
     def test_kill(self):
         """ Test sending a kill message """
         calc_node = self.runner.submit(test_utils.WaitProcess)
-        future = self.runner.rmq.kill_process(calc_node.pk, "You've been a bad boy")
+        future = self.runner.rmq.kill_process(calc_node.pk, "Sorry, you have to go mate")
         result = self.runner.run_until_complete(future)
         # TODO: Check kill message
         self.assertTrue(result)
 
-    def _wait_for_calc(self, calc_node, timeout=5.):
-        def stop(*args):
-            self.loop.stop()
-
-        self.runner.call_on_calculation_finish(calc_node.pk, stop)
-        self.loop.call_later(timeout, stop)
-        self.loop.start()
+    def _wait_for_calc(self, calc_node, timeout=2.):
+        future = self.runner.get_calculation_future(calc_node.pk)
+        self.runner.run_until_complete(future)

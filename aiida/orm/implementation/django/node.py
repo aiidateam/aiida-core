@@ -22,7 +22,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
@@ -434,7 +434,7 @@ class Node(AbstractNode):
         # otherwise I only get the Django Field F object as a result!
         self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
 
-    def copy(self):
+    def copy(self, **kwargs):
         newobject = self.__class__()
         newobject.dbnode.type = self.dbnode.type  # Inherit type
         newobject.dbnode.label = self.dbnode.label  # Inherit label
@@ -467,7 +467,7 @@ class Node(AbstractNode):
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
-    def _db_store_all(self, with_transaction=True):
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -488,7 +488,7 @@ class Node(AbstractNode):
             # Always without transaction: either it is the context_man here,
             # or it is managed outside
             self._store_input_nodes()
-            self.store(with_transaction=False)
+            self.store(with_transaction=False, use_cache=use_cache)
             self._store_cached_input_links(with_transaction=False)
 
         return self
@@ -558,6 +558,8 @@ class Node(AbstractNode):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param bool use_cache: Whether I attempt to find an equal node in the DB.
         """
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
@@ -613,5 +615,8 @@ class Node(AbstractNode):
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
 
-        return self
+        from aiida.backends.djsite.db.models import DbExtra
+        # I store the hash without cleaning and without incrementing the nodeversion number
+        DbExtra.set_value_for_node(self.dbnode, _HASH_EXTRA_KEY, self.get_hash())
 
+        return self

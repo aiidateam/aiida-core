@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import plum.lang
+import plumpy.lang
 
 
 
 
-override = plum.lang.override(check=False)
-protected = plum.lang.protected(check=False)
+override = plumpy.lang.override(check=False)
+protected = plumpy.lang.protected(check=False)

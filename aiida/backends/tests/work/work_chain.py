@@ -9,8 +9,8 @@
 ###########################################################################
 
 import inspect
-import plum
-import plum.test_utils
+import plumpy
+import plumpy.test_utils
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
@@ -34,7 +34,7 @@ class Wf(work.WorkChain):
         super(Wf, cls).define(spec)
         spec.input("value", default=Str('A'))
         spec.input("n", default=Int(3))
-        spec.dynamic_output()
+        spec.outputs.dynamic = True
         spec.outline(
             cls.s1,
             if_(cls.isA)(
@@ -124,6 +124,7 @@ class IfTest(work.WorkChain):
     def step2(self):
         self.ctx.s2 = True
 
+
 class TestContext(AiidaTestCase):
     def test_attributes(self):
         wc = work.WorkChain()
@@ -164,7 +165,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        work.run(Wf, value=A, n=three)
+        work.launch.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -172,7 +173,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = work.run(Wf, value=B, n=three)
+        finished_steps = work.launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -180,7 +181,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = work.run(Wf, value=C, n=three)
+        finished_steps = work.launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -195,7 +196,7 @@ class TestWorkchain(AiidaTestCase):
                 # Try defining an invalid outline
                 spec.outline(5)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             Wf.spec()
 
     def test_same_input_node(self):
@@ -213,7 +214,7 @@ class TestWorkchain(AiidaTestCase):
                 assert 'b' in self.inputs
 
         x = Int(1)
-        work.run(Wf, a=x, b=x)
+        work.launch.run(Wf, a=x, b=x)
 
     def test_context(self):
         A = Str("a")
@@ -251,7 +252,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['res'] == B
                 assert self.ctx.r2['res'] == B
 
-        work.run(Wf)
+        work.launch.run(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -262,11 +263,12 @@ class TestWorkchain(AiidaTestCase):
         """
         spec = _WorkChainSpec()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             spec.outline(5)
 
-        with self.assertRaises(ValueError):
-            spec.outline(type)
+        # Test a function with wrong number of args
+        with self.assertRaises(TypeError):
+            spec.outline(lambda x, y: None)
 
     def test_checkpointing(self):
         A = Str('A')
@@ -323,7 +325,7 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        work.run(WcWithReturn)
+        work.launch.run(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
@@ -331,7 +333,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
@@ -348,7 +350,7 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        work.run(MainWorkChain)
+        work.launch.run(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
@@ -356,7 +358,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
@@ -373,9 +375,9 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 self.out("value", Int(5))
 
-        work.run(MainWorkChain)
+        work.launch.run(MainWorkChain)
 
-    @unittest.skip('This is currently broken after merge')
+    # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
         """
         This test was created to capture issue #902
@@ -386,14 +388,15 @@ class TestWorkchain(AiidaTestCase):
         self.assertFalse(wc.ctx.s2)
 
         # Now bundle the thing
-        b = plum.Bundle(wc)
+        bundle = plumpy.Bundle(wc)
 
         # Load from saved tate
-        wc = b.unbundle()
-        wc.execute()
-        self.assertTrue(wc.ctx.s1)
-        self.assertFalse(wc.ctx.s2)
-
+        wc2 = bundle.unbundle()
+        self.assertTrue(wc2.ctx.s1)
+        self.assertFalse(wc2.ctx.s2)
+        wc2.execute()
+        self.assertTrue(wc2.ctx.s1)
+        self.assertTrue(wc2.ctx.s2)
 
     def test_report_dbloghandler(self):
         """
@@ -408,7 +411,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(TestWorkChain, cls).define(spec)
                 spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+                spec.outputs.dynamic = True
 
             def run(self):
                 from aiida.orm.backend import construct
@@ -421,7 +424,7 @@ class TestWorkchain(AiidaTestCase):
                 logs = self._backend.log.find()
                 assert len(logs) == 1
 
-        work.run(TestWorkChain)
+        work.launch.run(TestWorkChain)
 
     def test_to_context(self):
         val = Int(5)
@@ -435,9 +438,9 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(Workchain, cls).define(spec)
-                spec.outline(cls.start, cls.result)
+                spec.outline(cls.begin, cls.result)
 
-            def start(self):
+            def begin(self):
                 self.to_context(result_a=Outputs(self.submit(SimpleWc)))
                 return ToContext(result_b=Outputs(self.submit(SimpleWc)))
 
@@ -446,18 +449,17 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.result_b['_return'] == val
                 return
 
-        work.run(Workchain)
+        work.launch.run(Workchain)
 
     def test_persisting(self):
-        persister = plum.test_utils.TestPersister()
+        persister = plumpy.test_utils.TestPersister()
         runner = work.new_runner(persister=persister)
         workchain = Wf(runner=runner)
         workchain.execute()
 
-
     def _run_with_checkpoints(self, wf_class, inputs=None):
         proc = wf_class(inputs=inputs)
-        work.run(proc)
+        work.launch.run(proc)
         return wf_class.finished_steps
 
 
@@ -484,15 +486,15 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(_TestWf, cls).define(spec)
-                spec.outline(cls.start, cls.check)
+                spec.outline(cls.begin, cls.check)
 
-            def start(self):
+            def begin(self):
                 return ToContext(wf=wf)
 
             def check(self):
                 assert self.ctx.wf is not None
 
-        work.run(_TestWf)
+        work.launch.run(_TestWf)
 
     def test_old_wf_results(self):
         wf = WorkflowDemo()
@@ -504,15 +506,15 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(_TestWf, cls).define(spec)
-                spec.outline(cls.start, cls.check)
+                spec.outline(cls.begin, cls.check)
 
-            def start(self):
+            def begin(self):
                 return ToContext(res=Outputs(wf))
 
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
-        work.run(_TestWf)
+        work.launch.run(_TestWf)
 
 
 class TestWorkChainAbort(AiidaTestCase):
@@ -537,11 +539,11 @@ class TestWorkChainAbort(AiidaTestCase):
         def define(cls, spec):
             super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             self.pause()
 
         def check(self):
@@ -570,7 +572,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute(True)
             process.calc.kill()
             process.execute()
@@ -587,7 +589,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute(True)
             process.abort()
             process.execute()
@@ -620,11 +622,11 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         def define(cls, spec):
             super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             pass
 
         def check(self):
@@ -636,13 +638,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
-            self.ctx.child.play()
+            self.ctx.child.start()
             if self.inputs.kill:
                 self.abort()
 
@@ -689,10 +691,10 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
@@ -703,3 +705,88 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.has_finished_ok(), False)
         self.assertEquals(process.calc.has_failed(), False)
         self.assertEquals(process.calc.has_aborted(), True)
+
+
+class TestImmutableInputWorkchain(AiidaTestCase):
+    """
+    Test that inputs cannot be modified
+    """
+
+    def setUp(self):
+        super(TestImmutableInputWorkchain, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestImmutableInputWorkchain, self).tearDown()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_immutable_input(self):
+        """
+        Check that from within the WorkChain self.inputs returns an AttributesFrozendict which should be immutable
+        """
+        test_class = self
+
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input('a', valid_type=Int)
+                spec.input('b', valid_type=Int)
+                spec.outline(
+                    cls.step_one,
+                    cls.step_two,
+                )
+
+            def step_one(self):
+                # Attempt to manipulate the inputs dictionary which since it is a AttributesFrozendict should raise
+                with test_class.assertRaises(TypeError):
+                    self.inputs['a'] = Int(3)
+                with test_class.assertRaises(AttributeError):
+                    self.inputs.pop('b')
+                with test_class.assertRaises(TypeError):
+                    self.inputs['c'] = Int(4)
+
+            def step_two(self):
+                # Verify that original inputs are still there with same value and no inputs were added
+                test_class.assertIn('a', self.inputs)
+                test_class.assertIn('b', self.inputs)
+                test_class.assertNotIn('c', self.inputs)
+                test_class.assertEquals(self.inputs['a'].value, 1)
+
+        work.launch.run(Wf, a=Int(1), b=Int(2))
+
+    def test_immutable_input_groups(self):
+        """
+        Check that namespaced inputs also return AttributeFrozendicts and are hence immutable
+        """
+        test_class = self
+
+        class Wf(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Wf, cls).define(spec)
+                spec.input_namespace('subspace', dynamic=True)
+                spec.outline(
+                    cls.step_one,
+                    cls.step_two,
+                )
+
+            def step_one(self):
+                # Attempt to manipulate the namespaced inputs dictionary which should raise
+                with test_class.assertRaises(TypeError):
+                    self.inputs.subspace['one'] = Int(3)
+                with test_class.assertRaises(AttributeError):
+                    self.inputs.subspace.pop('two')
+                with test_class.assertRaises(TypeError):
+                    self.inputs.subspace['four'] = Int(4)
+
+            def step_two(self):
+                # Verify that original inputs are still there with same value and no inputs were added
+                test_class.assertIn('one', self.inputs.subspace)
+                test_class.assertIn('two', self.inputs.subspace)
+                test_class.assertNotIn('four', self.inputs.subspace)
+                test_class.assertEquals(self.inputs.subspace['one'].value, 1)
+
+        x = Int(1)
+        y = Int(2)
+        work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})

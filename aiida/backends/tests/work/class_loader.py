@@ -11,7 +11,7 @@
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from plum.utils import class_name
+from plumpy.utils import class_name
 from aiida import work
 
 

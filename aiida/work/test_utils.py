@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-import plum
+import plumpy
 from aiida.work.processes import Process
 
 
@@ -21,8 +21,8 @@ class DummyProcess(Process):
     @classmethod
     def define(cls, spec):
         super(DummyProcess, cls).define(spec)
-        spec.dynamic_input()
-        spec.dynamic_output()
+        spec.inputs.dynamic = True
+        spec.outputs.dynamic = True
 
     def _run(self):
         pass
@@ -48,7 +48,7 @@ class BadOutput(Process):
     @classmethod
     def define(cls, spec):
         super(BadOutput, cls).define(spec)
-        spec.dynamic_output()
+        spec.outputs.dynamic = True
 
     def _run(self):
         self.out("bad_output", 5)
@@ -65,7 +65,7 @@ class WaitProcess(Process):
     """
 
     def _run(self):
-        return plum.Wait(self.s2)
+        return plumpy.Wait(self.s2)
 
     def s2(self):
         pass

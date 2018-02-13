@@ -45,6 +45,7 @@ class Work(VerdiCommandWithSubcommands):
             'checkpoint': (self.cli, self.complete_none),
             'kill': (self.cli, self.complete_none),
             'plugins': (self.cli, self.complete_plugins),
+            'watch': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):
@@ -435,6 +436,7 @@ def _format_status_line(calc_node):
         raise TypeError("Unknown type")
     return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
 
+
 @work.command('plugins', context_settings=CONTEXT_SETTINGS)
 @click.argument('entry_point', type=str, required=False)
 def plugins(entry_point):
@@ -460,6 +462,30 @@ def plugins(entry_point):
             click.echo("\nPass the entry point of a workflow as an argument to display detailed information")
         else:
             click.echo("# No workflows found")
+
+
+@work.command('watch', context_settings=CONTEXT_SETTINGS)
+@click.argument('pks', nargs=-1, type=int)
+def watch(pks):
+    from aiida import try_load_dbenv
+    try_load_dbenv()
+    import kiwipy
+    import aiida.work.rmq
+
+    communicator = aiida.work.rmq.create_communicator()
+
+    for pk in pks:
+        communicator.add_broadcast_subscriber(kiwipy.BroadcastFilter(_print, sender=pk))
+
+    try:
+        communicator.await()
+    except (SystemExit, KeyboardInterrupt):
+        communicator.close()
+
+
+def _print(body, sender, subject, correlation_id):
+    print("pk={}, subject={}, body={}".format(sender, subject, body))
+
 
 def _build_query(projections=None, order_by=None, limit=None, past_days=None):
     import datetime

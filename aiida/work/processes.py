@@ -15,8 +15,8 @@ import uuid
 from enum import Enum
 import itertools
 import voluptuous
-import plum.port
-from plum import ProcessState
+import plumpy.ports
+from plumpy import ProcessState
 import traceback
 
 import aiida.orm
@@ -100,15 +100,15 @@ class _WithNonDb(object):
         return self._non_db
 
 
-class InputPort(_WithNonDb, plum.port.InputPort):
+class InputPort(_WithNonDb, plumpy.ports.InputPort):
     pass
 
 
-class PortNamespace(_WithNonDb, plum.port.PortNamespace):
+class PortNamespace(_WithNonDb, plumpy.ports.PortNamespace):
     pass
 
 
-class ProcessSpec(plum.process.ProcessSpec):
+class ProcessSpec(plumpy.ProcessSpec):
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace
 
@@ -140,8 +140,8 @@ class ProcessSpec(plum.process.ProcessSpec):
         return template
 
 
-@plum.auto_persist('_parent_pid', '_enable_persistence')
-class Process(plum.process.Process):
+@plumpy.auto_persist('_parent_pid', '_enable_persistence')
+class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
@@ -204,8 +204,8 @@ class Process(plum.process.Process):
     def on_create(self):
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
-        if self._parent_pid is None and not plum.stack.is_empty():
-            self._parent_pid = plum.stack.top().pid
+        if self._parent_pid is None and not plumpy.stack.is_empty():
+            self._parent_pid = plumpy.stack.top().pid
         self._pid = self._create_and_setup_db_record()
 
     def init(self):
@@ -241,8 +241,8 @@ class Process(plum.process.Process):
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, load_context):
+        super(Process, self).load_instance_state(saved_state, load_context)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -532,7 +532,7 @@ class FunctionProcess(Process):
             else:
                 spec.inputs.dynamic = False
 
-            # We don't know what a function will return so keep it dynamic
+            # Workfunctions return data types
             spec.outputs.valid_type = Data
 
         return type(func.__name__, (FunctionProcess,),
@@ -563,6 +563,15 @@ class FunctionProcess(Process):
     def __init__(self, *args, **kwargs):
         super(FunctionProcess, self).__init__(
             enable_persistence=False, *args, **kwargs)
+
+    def execute(self, return_on_idle=False):
+        result = super(FunctionProcess, self).execute(return_on_idle)
+        # Create a special case for Process functions: They can return
+        # a single value in which case you get this a not a dict
+        if len(result) == 1 and self.SINGLE_RETURN_LINKNAME in result:
+            return result[self.SINGLE_RETURN_LINKNAME]
+        else:
+            return result
 
     @override
     def _setup_db_record(self):

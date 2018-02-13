@@ -1,6 +1,6 @@
 import json
-import plum
-import plum.rmq
+import plumpy
+import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
@@ -9,8 +9,8 @@ from aiida.backends import settings
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
-RemoteException = plum.RemoteException
-DeliveryFailed = plum.DeliveryFailed
+RemoteException = plumpy.RemoteException
+DeliveryFailed = plumpy.DeliveryFailed
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
@@ -68,7 +68,7 @@ def store_and_serialize_inputs(inputs):
     return serialize_data(inputs)
 
 
-class LaunchProcessAction(plum.LaunchProcessAction):
+class LaunchProcessAction(plumpy.LaunchProcessAction):
     def __init__(self, *args, **kwargs):
         """
         Calls through to the constructor of the plum LaunchProcessAction while making sure that
@@ -78,7 +78,7 @@ class LaunchProcessAction(plum.LaunchProcessAction):
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
-class ExecuteProcessAction(plum.ExecuteProcessAction):
+class ExecuteProcessAction(plumpy.ExecuteProcessAction):
     def __init__(self, process_class, init_args=None, init_kwargs=None):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
@@ -88,9 +88,9 @@ class ExecuteProcessAction(plum.ExecuteProcessAction):
         super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs)
 
 
-class ProcessLauncher(plum.ProcessLauncher):
+class ProcessLauncher(plumpy.ProcessLauncher):
     def _launch(self, task):
-        from plum.process_comms import KWARGS_KEY
+        from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
         kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
@@ -108,7 +108,7 @@ class ProcessControlPanel(object):
 
         message_exchange = get_message_exchange_name(prefix)
         task_queue = get_launch_queue_name(prefix)
-        self._communicator = plum.rmq.RmqCommunicator(
+        self._communicator = plumpy.rmq.RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
             task_queue=task_queue,
@@ -119,16 +119,16 @@ class ProcessControlPanel(object):
         return self._communicator.init()
 
     def pause_process(self, pid):
-        return self.execute_action(plum.PauseAction(pid))
+        return self.execute_action(plumpy.PauseAction(pid))
 
     def play_process(self, pid):
-        return self.execute_action(plum.PlayAction(pid))
+        return self.execute_action(plumpy.PlayAction(pid))
 
     def kill_process(self, pid, msg=None):
-        return self.execute_action(plum.CancelAction(pid))
+        return self.execute_action(plumpy.CancelAction(pid))
 
     def request_status(self, pid):
-        return self.execute_action(plum.StatusAction(pid))
+        return self.execute_action(plumpy.StatusAction(pid))
 
     def launch_process(self, process_class, init_args=None, init_kwargs=None):
         action = LaunchProcessAction(process_class, init_args, init_kwargs)
@@ -136,7 +136,7 @@ class ProcessControlPanel(object):
         return action
 
     def continue_process(self, pid):
-        action = plum.ContinueProcessAction(pid)
+        action = plumpy.ContinueProcessAction(pid)
         action.execute(self._communicator)
         return action
 
@@ -156,7 +156,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     """
 
     def __init__(self, prefix, testing_mode=False):
-        self._loop = plum.new_event_loop()
+        self._loop = plumpy.new_event_loop()
         connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
@@ -195,7 +195,7 @@ def new_blocking_control_panel():
 def create_rmq_connector(loop=None):
     if loop is None:
         loop = events.new_event_loop()
-    return plum.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
+    return plumpy.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
 
 
 def create_communicator(loop=None, prefix=None, testing_mode=False):
@@ -206,7 +206,7 @@ def create_communicator(loop=None, prefix=None, testing_mode=False):
     task_queue = get_launch_queue_name(prefix)
 
     connector = create_rmq_connector(loop)
-    return plum.rmq.RmqCommunicator(
+    return plumpy.rmq.RmqCommunicator(
         connector,
         exchange_name=message_exchange,
         task_queue=task_queue,

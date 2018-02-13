@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import plum
+import plumpy
 import uuid
 
 from aiida.backends.testbase import AiidaTestCase
@@ -24,7 +24,7 @@ class TestProcessControl(AiidaTestCase):
         super(TestProcessControl, self).setUp()
         prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
 
-        self.loop = plum.new_event_loop()
+        self.loop = plumpy.new_event_loop()
 
         rmq_config = {
             'url': 'amqp://localhost',

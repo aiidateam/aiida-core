@@ -12,7 +12,8 @@ import collections
 import functools
 import inspect
 import re
-import plum
+import plumpy
+import plumpy.workchains
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm.utils import load_node, load_workflow
@@ -89,8 +90,8 @@ class WorkChain(processes.Process):
             out_state[self._STEPPER_STATE] = self._stepper.save()
 
     @override
-    def load_instance_state(self, saved_state):
-        super(WorkChain, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, load_context):
+        super(WorkChain, self).load_instance_state(saved_state, load_context)
         # Load the context
         self._context = AttributeDict(**deserialize_data(saved_state[self._CONTEXT]))
 
@@ -178,9 +179,9 @@ class WorkChain(processes.Process):
                     raise TypeError("Invalid value returned from step '{}'".format(retval))
 
             if self._awaitables:
-                return plum.Wait(self._do_step, 'Waiting before next step')
+                return plumpy.Wait(self._do_step, 'Waiting before next step')
             else:
-                return plum.Continue(self._do_step)
+                return plumpy.Continue(self._do_step)
         else:
             return self.outputs
 
@@ -302,7 +303,7 @@ class WorkChain(processes.Process):
             self.resume()
 
 
-class Stepper(plum.Savable):
+class Stepper(plumpy.Savable):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, workchain):
@@ -398,7 +399,7 @@ class _FunctionCall(_Instruction):
 STEPPER_STATE = 'stepper_state'
 
 
-@plum.auto_persist('_pos')
+@plumpy.auto_persist('_pos')
 class _BlockStepper(Stepper):
     def __init__(self, block, workchain):
         super(_BlockStepper, self).__init__(workchain)
@@ -476,7 +477,6 @@ class _Block(_Instruction, collections.Sequence):
     def get_description(self):
         return [instruction.get_description() for instruction in self._instruction]
 
-
 class _Conditional(object):
     """
     Object that represents some condition with the corresponding body to be
@@ -512,7 +512,7 @@ class _Conditional(object):
         return self._parent
 
 
-@plum.auto_persist('_pos')
+@plumpy.auto_persist('_pos')
 class _IfStepper(Stepper):
     def __init__(self, if_instruction, workchain):
         super(_IfStepper, self).__init__(workchain)

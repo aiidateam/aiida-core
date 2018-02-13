@@ -9,14 +9,14 @@
 ###########################################################################
 
 
-import plum.class_loader
-import plum.utils
+import plumpy.class_loader
+import plumpy.utils
 from aiida.common.lang import override
 
 __all__ = ['CLASS_LOADER']
 
 
-class ClassLoader(plum.class_loader.ClassLoader):
+class ClassLoader(plumpy.class_loader.ClassLoader):
     @staticmethod
     def is_wrapped_job_calculation(name):
         from aiida.work.job_processes import JobProcess
@@ -31,8 +31,8 @@ class ClassLoader(plum.class_loader.ClassLoader):
             idx = name.find(JobProcess.__name__)
             wrapped_class = name[idx + len(JobProcess.__name__) + 1:]
             # Recreate the class
-            return JobProcess.build(plum.utils.load_object(wrapped_class))
+            return JobProcess.build(plumpy.utils.load_object(wrapped_class))
 
 
 # The default class loader instance
-CLASS_LOADER = plum.class_loader.ClassLoader(ClassLoader())
+CLASS_LOADER = plumpy.class_loader.ClassLoader(ClassLoader())

@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from functools import partial
-import plum
-import plum.port as port
+import plumpy
+import plumpy.ports as port
 from voluptuous import Any
 
 from aiida.backends.utils import get_authinfo
@@ -30,13 +30,13 @@ UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
 
 
-class Waiting(plum.Waiting):
+class Waiting(plumpy.Waiting):
     def enter(self):
         super(Waiting, self).enter()
         self._action_command()
 
-    def load_instance_state(self, process, saved_state):
-        super(Waiting, self).load_instance_state(process, saved_state)
+    def load_instance_state(self, saved_state, process):
+        super(Waiting, self).load_instance_state(saved_state, process)
         self._action_command()
 
     def _action_command(self):
@@ -130,7 +130,7 @@ class JobProcess(processes.Process):
         # Dynamically create the type for this Process
         return type(class_name, (cls,),
                     {
-                        plum.process.Process.define.__name__: classmethod(define),
+                        plumpy.processes.Process.define.__name__: classmethod(define),
                         '_CALC_CLASS': calc_class
                     })
 
@@ -201,7 +201,7 @@ class JobProcess(processes.Process):
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation
-        return plum.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
+        return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
     # endregion
 

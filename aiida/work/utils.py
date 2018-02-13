@@ -9,7 +9,7 @@
 ###########################################################################
 
 import abc
-import plum
+import plumpy
 from threading import local
 import time
 import random
@@ -26,12 +26,12 @@ __all__ = ['ProcessStack']
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
 
-load_object = plum.utils.load_object
+load_object = plumpy.utils.load_object
 load_class = load_object
 
 
 def class_name(identifier, verify=True):
-    return plum.utils.class_name(identifier, class_loader.CLASS_LOADER, verify)
+    return plumpy.utils.class_name(identifier, class_loader.CLASS_LOADER, verify)
 
 
 class ProcessStack(object):

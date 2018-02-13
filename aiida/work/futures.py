@@ -1,12 +1,12 @@
 import aiida.orm
 import kiwipy
-import plum
+import plumpy
 import tornado.gen
 
 
 __all__ = ['Future', 'CalculationFuture']
 
-Future = plum.Future
+Future = plumpy.Future
 
 
 class CalculationFuture(Future):

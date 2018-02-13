@@ -9,8 +9,8 @@
 ###########################################################################
 
 import inspect
-import plum
-import plum.test_utils
+import plumpy
+import plumpy.test_utils
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
@@ -387,7 +387,7 @@ class TestWorkchain(AiidaTestCase):
         self.assertFalse(wc.ctx.s2)
 
         # Now bundle the thing
-        b = plum.Bundle(wc)
+        b = plumpy.Bundle(wc)
 
         # Load from saved tate
         wc = b.unbundle()
@@ -435,9 +435,9 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(Workchain, cls).define(spec)
-                spec.outline(cls.start, cls.result)
+                spec.outline(cls.begin, cls.result)
 
-            def start(self):
+            def begin(self):
                 self.to_context(result_a=Outputs(self.submit(SimpleWc)))
                 return ToContext(result_b=Outputs(self.submit(SimpleWc)))
 
@@ -449,7 +449,7 @@ class TestWorkchain(AiidaTestCase):
         work.run(Workchain)
 
     def test_persisting(self):
-        persister = plum.test_utils.TestPersister()
+        persister = plumpy.test_utils.TestPersister()
         runner = work.new_runner(persister=persister)
         workchain = Wf(runner=runner)
         workchain.execute()
@@ -483,9 +483,9 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(_TestWf, cls).define(spec)
-                spec.outline(cls.start, cls.check)
+                spec.outline(cls.begin, cls.check)
 
-            def start(self):
+            def begin(self):
                 return ToContext(wf=wf)
 
             def check(self):
@@ -503,9 +503,9 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(_TestWf, cls).define(spec)
-                spec.outline(cls.start, cls.check)
+                spec.outline(cls.begin, cls.check)
 
-            def start(self):
+            def begin(self):
                 return ToContext(res=Outputs(wf))
 
             def check(self):
@@ -536,11 +536,11 @@ class TestWorkChainAbort(AiidaTestCase):
         def define(cls, spec):
             super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             self.pause()
 
         def check(self):
@@ -569,7 +569,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute(True)
             process.calc.kill()
             process.execute()
@@ -586,7 +586,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute(True)
             process.abort()
             process.execute()
@@ -619,11 +619,11 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         def define(cls, spec):
             super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             pass
 
         def check(self):
@@ -635,13 +635,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(
-                cls.start,
+                cls.begin,
                 cls.check
             )
 
-        def start(self):
+        def begin(self):
             self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
-            self.ctx.child.play()
+            self.ctx.child.start()
             if self.inputs.kill:
                 self.abort()
 
@@ -688,10 +688,10 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.execute()
 
-        with self.assertRaises(plum.CancelledError):
+        with self.assertRaises(plumpy.CancelledError):
             process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
@@ -787,9 +787,3 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
-
-#
-#
-# class TestIfSpec(AiidaTestCase):
-#     def test_basic(self):
-#         spec = if_()

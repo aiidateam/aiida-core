@@ -10,10 +10,10 @@
 import aiida.orm
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work import workfunction
 from aiida.orm.data.base import get_true_node
 from aiida.orm.data.base import Int
 from aiida.work import run
+from aiida.work import workfunction
 
 
 @workfunction

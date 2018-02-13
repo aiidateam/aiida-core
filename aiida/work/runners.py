@@ -2,8 +2,8 @@ from collections import namedtuple
 from contextlib import contextmanager
 import inspect
 import logging
-import plum
-import plum.rmq
+import plumpy
+import plumpy.rmq
 
 import aiida.orm
 from . import futures
@@ -102,7 +102,7 @@ class Runner(object):
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else plum.new_event_loop()
+        self._loop = loop if loop is not None else plumpy.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)
@@ -204,7 +204,7 @@ class Runner(object):
         else:
             # Run in this runner
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
-            process.play()
+            process.start()
             return process.calc
 
     def call_on_legacy_workflow_finish(self, pk, callback):
@@ -234,9 +234,9 @@ class Runner(object):
             runner.close()
 
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
-        self._rmq_connector = plum.rmq.RmqConnector(amqp_url=url, loop=self._loop)
+        self._rmq_connector = plumpy.rmq.RmqConnector(amqp_url=url, loop=self._loop)
 
-        self._rmq_communicator = plum.rmq.RmqCommunicator(
+        self._rmq_communicator = plumpy.rmq.RmqCommunicator(
             self._rmq_connector,
             exchange_name=rmq.get_message_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import plum
+import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida import work
@@ -38,7 +38,7 @@ class TestWorkchain(AiidaTestCase):
     def test_call_on_calculation_finish(self):
         loop = self.runner.loop
         proc = Proc(runner=self.runner)
-        future = plum.Future()
+        future = plumpy.Future()
 
         def calc_done(pk):
             self.assertEqual(pk, proc.calc.pk)
@@ -48,14 +48,14 @@ class TestWorkchain(AiidaTestCase):
         self.runner.call_on_calculation_finish(proc.calc.pk, calc_done)
 
         # Run the calculation
-        proc.play()
+        proc.start()
         self._run_loop_for(5.)
 
         self.assertTrue(future.result())
 
     def test_call_on_wf_finish(self):
         loop = self.runner.loop
-        future = plum.Future()
+        future = plumpy.Future()
 
         # Need to start() so it's stored
         wf = WorkflowDemo()

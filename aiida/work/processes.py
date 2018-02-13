@@ -9,21 +9,17 @@
 ###########################################################################
 
 import abc
-import inspect
 import collections
-import uuid
-from enum import Enum
+import enum
+import inspect
 import itertools
-import voluptuous
-import plumpy.ports
-from plumpy import ProcessState
+import plumpy
+import uuid
 import traceback
 
-import aiida.orm
-import aiida.common.exceptions as exceptions
+from plumpy import ProcessState
+from aiida.common import exceptions
 from aiida.common import caching
-from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
@@ -31,115 +27,14 @@ from aiida.orm import load_node
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
-from aiida.orm.data.parameter import ParameterData
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
 from . import utils
 
 __all__ = ['Process', 'ProcessState', 'FunctionProcess']
-
-
-class DictSchema(object):
-    def __init__(self, schema):
-        self._schema = voluptuous.Schema(schema)
-
-    def __call__(self, value):
-        """
-        Call this to validate the value against the schema.
-
-        :param value: a regular dictionary or a ParameterData instance 
-        :return: tuple (success, msg).  success is True if the value is valid
-            and False otherwise, in which case msg will contain information about
-            the validation failure.
-        :rtype: tuple
-        """
-        try:
-            if isinstance(value, ParameterData):
-                value = value.get_dict()
-            self._schema(value)
-            return True, None
-        except voluptuous.Invalid as e:
-            return False, str(e)
-
-    def get_template(self):
-        return self._get_template(self._schema.schema)
-
-    def _get_template(self, dict):
-        template = type(
-            "{}Inputs".format(self.__class__.__name__),
-            (FixedFieldsAttributeDict,),
-            {'_valid_fields': dict.keys()})()
-
-        for key, value in dict.iteritems():
-            if isinstance(key, (voluptuous.Optional, voluptuous.Required)):
-                if key.default is not voluptuous.UNDEFINED:
-                    template[key.schema] = key.default
-                else:
-                    template[key.schema] = None
-            if isinstance(value, collections.Mapping):
-                template[key] = self._get_template(value)
-        return template
-
-
-class _WithNonDb(object):
-    """
-    A mixin that adds support to a port to flag a that should not be stored
-    in the database using the non_db=True flag.
-
-    The mixins have to go before the main port class in the superclass order
-    to make sure the mixin has the chance to strip out the non_db keyword.
-    """
-
-    def __init__(self, *args, **kwargs):
-        non_db = kwargs.pop('non_db', False)
-        super(_WithNonDb, self).__init__(*args, **kwargs)
-        self._non_db = non_db
-
-    @property
-    def non_db(self):
-        return self._non_db
-
-
-class InputPort(_WithNonDb, plumpy.ports.InputPort):
-    pass
-
-
-class PortNamespace(_WithNonDb, plumpy.ports.PortNamespace):
-    pass
-
-
-class ProcessSpec(plumpy.ProcessSpec):
-    INPUT_PORT_TYPE = InputPort
-    PORT_NAMESPACE_TYPE = PortNamespace
-
-    def __init__(self):
-        super(ProcessSpec, self).__init__()
-
-    def get_inputs_template(self):
-        """
-        Get an object that represents a template of the known inputs and their
-        defaults for the :class:`Process`.
-
-        :return: An object with attributes that represent the known inputs for
-            this process.  Default values will be filled in.
-        """
-        template = type(
-            "{}Inputs".format(self.__class__.__name__),
-            (FixedFieldsAttributeDict,),
-            {'_valid_fields': self.inputs.keys()})()
-
-        # Now fill in any default values
-        for name, value_spec in self.inputs.iteritems():
-            if isinstance(value_spec.validator, DictSchema):
-                template[name] = value_spec.validator.get_template()
-            elif value_spec.has_default():
-                template[name] = value_spec.default
-            else:
-                template[name] = None
-
-        return template
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
@@ -150,11 +45,13 @@ class Process(plumpy.Process):
     """
     __metaclass__ = abc.ABCMeta
 
+    _spec_type = ProcessSpec
+
     SINGLE_RETURN_LINKNAME = '[return]'
     # This is used for saving node pks in the saved instance state
     NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
 
-    class SaveKeys(Enum):
+    class SaveKeys(enum.Enum):
         """
         Keys used to identify things in the saved instance state bundle.
         """
@@ -166,8 +63,8 @@ class Process(plumpy.Process):
         spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
         spec.input('description', valid_type=basestring, required=False, non_db=True)
         spec.input('label', valid_type=basestring, required=False, non_db=True)
-        spec.inputs.valid_type = (aiida.orm.Data, aiida.orm.Calculation)
-        spec.outputs.valid_type = (aiida.orm.Data)
+        spec.inputs.valid_type = (Data, Calculation)
+        spec.outputs.valid_type = (Data)
 
     @classmethod
     def get_builder(cls):
@@ -184,11 +81,7 @@ class Process(plumpy.Process):
         this process.
         :return: A calculation
         """
-        from aiida.orm.calculation.work import WorkCalculation
-        calc = WorkCalculation()
-        return calc
-
-    _spec_type = ProcessSpec
+        return WorkCalculation()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else get_runner()
@@ -301,7 +194,6 @@ class Process(plumpy.Process):
 
     @override
     def on_fail(self, exc_info):
-        import traceback
         super(Process, self).on_fail(exc_info)
 
         exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
@@ -359,7 +251,7 @@ class Process(plumpy.Process):
             try:
                 self.calc.store_all(use_cache=self._use_cache_enabled())
                 if self.calc.has_finished_ok():
-                    self._state = plumpy.ProcessState.FINISHED
+                    self._state = ProcessState.FINISHED
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
                         if name.endswith('_{pk}'.format(pk=value.pk)):
                             continue
@@ -368,7 +260,7 @@ class Process(plumpy.Process):
                     # returned regardless of whether they end in '_pk'
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
                         self.out(name, value)
-            except ModificationNotAllowed as exception:
+            except exceptions.ModificationNotAllowed as exception:
                 # The calculation was already stored
                 pass
 
@@ -533,9 +425,6 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
-        import inspect
-        from aiida.orm.data import Data
-
         args, varargs, keywords, defaults = inspect.getargspec(func)
 
         def _define(cls, spec):
@@ -609,8 +498,6 @@ class FunctionProcess(Process):
 
     @override
     def _run(self):
-        from aiida.orm.data import Data
-
         args = []
 
         # Split the inputs into positional and keyword arguments

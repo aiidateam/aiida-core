@@ -9,7 +9,7 @@
 ###########################################################################
 import threading
 
-from plum.utils import AttributesFrozendict
+from plumpy.utils import AttributesFrozendict
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
@@ -18,6 +18,7 @@ from aiida.orm.data.base import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.work import utils
 from aiida.work import test_utils
+
 
 class TestProcessNamespace(AiidaTestCase):
 
@@ -34,6 +35,7 @@ class TestProcessNamespace(AiidaTestCase):
         Test that inputs in nested namespaces are properly validated and the link labels
         are properly formatted by connecting the namespaces with underscores
         """
+
         class NameSpacedProcess(work.Process):
 
             @classmethod
@@ -157,8 +159,8 @@ class TestProcess(AiidaTestCase):
         proc = test_utils.DummyProcess()
         # Save the instance state
         bundle = work.Bundle(proc)
-
         proc2 = bundle.unbundle()
+
 
 class TestFunctionProcess(AiidaTestCase):
     def test_fixed_inputs(self):

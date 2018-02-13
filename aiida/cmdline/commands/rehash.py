@@ -2,8 +2,8 @@ import sys
 
 import click
 
-from plum.utils import load_object as load_class
-from plum.exceptions import ClassNotFoundException
+from plumpy.utils import load_object as load_class
+from plumpy.exceptions import ClassNotFoundException
 
 from aiida import try_load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand

@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from plum import Bundle
-from plum import ProcessState
+from plumpy import Bundle
+from plumpy import ProcessState
 from .class_loader import *
 from .futures import *
 from .job_processes import *

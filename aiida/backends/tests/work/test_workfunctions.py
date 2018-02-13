@@ -10,7 +10,6 @@
 import aiida.orm
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import caching
 from aiida.orm.data.base import get_true_node, Int
 from aiida.orm import load_node
 from aiida.work.launch import run, run_get_node

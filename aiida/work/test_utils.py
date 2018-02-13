@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-import plum
+import plumpy
 from aiida.work.processes import Process
 
 
@@ -65,7 +65,7 @@ class WaitProcess(Process):
     """
 
     def _run(self):
-        return plum.Wait(self.s2)
+        return plumpy.Wait(self.s2)
 
     def s2(self):
         pass

@@ -11,6 +11,7 @@ from aiida.common.exceptions import ValidationError
 import collections
 from aiida.common.lang import override
 
+
 ## TODO: see if we want to have a function to rebuild a nested dictionary as
 ## a nested AttributeDict object when deserializing with json.
 ## (now it deserialized to a standard dictionary; comparison of
@@ -20,7 +21,6 @@ from aiida.common.lang import override
 ## Note that for instance putting this code in __getattr__ doesn't work:
 ## everytime I try to write on a.b.c I am actually writing on a copy
 ##    return AttributeDict(item) if type(item) == dict else item
-
 
 
 class Enumerate(frozenset):
@@ -50,15 +50,6 @@ class AttributeDict(dict):
     used.
     """
 
-    def __init__(self, init=None):
-        """
-        Possibly set the initial values of the dictionary from an external dictionary
-        init. Note that the attribute-calling syntax will work only 1 level deep.
-        """
-        if init is None:
-            init = {}
-        super(AttributeDict, self).__init__(init)
-
     def __repr__(self):
         """
         Representation of the object.
@@ -86,7 +77,7 @@ class AttributeDict(dict):
         except KeyError:
             raise AttributeError(
                 "AttributeError: '{}' is not a valid attribute of the object "
-                "'{}'".format(attr,  self.__class__.__name__))
+                "'{}'".format(attr, self.__class__.__name__))
 
     def __delattr__(self, attr):
         """
@@ -324,8 +315,8 @@ class FixedDict(collections.MutableMapping, object):
 
     @override
     def __delitem__(self, key):
-        assert key in self._m.values,\
-               "Cannot delete an item that has not been set."
+        assert key in self._m.values, \
+            "Cannot delete an item that has not been set."
         return self._m.values.__delitem__(key)
 
     @override
@@ -335,6 +326,7 @@ class FixedDict(collections.MutableMapping, object):
     @override
     def __len__(self):
         return self._m.values.__len__()
+
     ########################################################
 
     def __getattr__(self, item):

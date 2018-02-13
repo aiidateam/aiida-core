@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from functools import partial
-import plum
+import plumpy
 from voluptuous import Any
-from plum.port import PortNamespace
+from plumpy.ports import PortNamespace
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
-from aiida.common.lang import override
 from aiida.common import exceptions
+from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
@@ -29,13 +29,13 @@ UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
 
 
-class Waiting(plum.Waiting):
+class Waiting(plumpy.Waiting):
     def enter(self):
         super(Waiting, self).enter()
         self._action_command()
 
-    def load_instance_state(self, process, saved_state):
-        super(Waiting, self).load_instance_state(process, saved_state)
+    def load_instance_state(self, saved_state, process):
+        super(Waiting, self).load_instance_state(saved_state, process)
         self._action_command()
 
     def _action_command(self):
@@ -130,7 +130,7 @@ class JobProcess(processes.Process):
         return type(
             class_name, (cls,),
             {
-                plum.process.Process.define.__name__: classmethod(define),
+                plumpy.Process.define.__name__: classmethod(define),
                 '_CALC_CLASS': calc_class
             }
         )
@@ -205,7 +205,7 @@ class JobProcess(processes.Process):
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation
-        return plum.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
+        return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
     # endregion
 
@@ -334,6 +334,5 @@ class ContinueJobCalculation(JobProcess):
 
             # Otherwise nothing to do...
 
-    @override
     def get_or_create_db_record(self):
         return self.inputs._calc

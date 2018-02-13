@@ -15,8 +15,8 @@ import uuid
 from enum import Enum
 import itertools
 import voluptuous
-import plum.port
-from plum import ProcessState
+import plumpy.ports
+from plumpy import ProcessState
 import traceback
 
 import aiida.orm
@@ -34,7 +34,7 @@ from aiida.orm.data import Data
 from aiida.orm.data.parameter import ParameterData
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
-from . import runners
+from .runners import get_runner
 from . import utils
 
 __all__ = ['Process', 'ProcessState', 'FunctionProcess']
@@ -101,22 +101,20 @@ class _WithNonDb(object):
         return self._non_db
 
 
-class InputPort(_WithNonDb, plum.port.InputPort):
+class InputPort(_WithNonDb, plumpy.ports.InputPort):
     pass
 
 
-class PortNamespace(_WithNonDb, plum.port.PortNamespace):
+class PortNamespace(_WithNonDb, plumpy.ports.PortNamespace):
     pass
 
 
-class ProcessSpec(plum.process.ProcessSpec):
-
+class ProcessSpec(plumpy.ProcessSpec):
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace
 
     def __init__(self):
         super(ProcessSpec, self).__init__()
-
 
     def get_inputs_template(self):
         """
@@ -143,7 +141,8 @@ class ProcessSpec(plum.process.ProcessSpec):
         return template
 
 
-class Process(plum.process.Process):
+@plumpy.auto_persist('_parent_pid', '_enable_persistence')
+class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
@@ -159,7 +158,6 @@ class Process(plum.process.Process):
         Keys used to identify things in the saved instance state bundle.
         """
         CALC_ID = 'calc_id'
-        PARENT_PID = 'parent_calc_pid'
 
     @classmethod
     def define(cls, spec):
@@ -188,7 +186,7 @@ class Process(plum.process.Process):
     _spec_type = ProcessSpec
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
-        self._runner = runner if runner is not None else runners.get_runner()
+        self._runner = runner if runner is not None else get_runner()
 
         super(Process, self).__init__(
             inputs=inputs,
@@ -207,8 +205,8 @@ class Process(plum.process.Process):
     def on_create(self):
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
-        if self._parent_pid is None and not plum.stack.is_empty():
-            self._parent_pid = plum.stack.top().pid
+        if self._parent_pid is None and not plumpy.stack.is_empty():
+            self._parent_pid = plumpy.stack.top().pid
         self._pid = self._create_and_setup_db_record()
 
     def init(self):
@@ -237,17 +235,15 @@ class Process(plum.process.Process):
         if self.inputs.store_provenance:
             assert self.calc.is_stored
 
-        out_state[self.SaveKeys.PARENT_PID.value] = self._parent_pid
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state['_enable_persistence'] = self._enable_persistence
 
     def get_provenance_inputs_iterator(self):
         return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
                                  self.inputs.iteritems())
 
     @override
-    def load_instance_state(self, saved_state):
-        super(Process, self).load_instance_state(saved_state)
+    def load_instance_state(self, saved_state, load_context):
+        super(Process, self).load_instance_state(saved_state, load_context)
 
         is_copy = saved_state.get('COPY', False)
 
@@ -262,11 +258,6 @@ class Process(plum.process.Process):
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
-
-        if self.SaveKeys.PARENT_PID.value in saved_state:
-            self._parent_pid = saved_state[self.SaveKeys.PARENT_PID.value]
-
-        self._enable_persistence = saved_state['_enable_persistence']
 
     @override
     def out(self, output_port, value=None):
@@ -361,10 +352,9 @@ class Process(plum.process.Process):
         self._setup_db_record()
         if self.inputs.store_provenance:
             try:
-                self.calc.store_all()
                 self.calc.store_all(use_cache=self._use_cache_enabled())
                 if self.calc.has_finished_ok():
-                    self._state = plum.process.ProcessState.FINISHED
+                    self._state = plumpy.ProcessState.FINISHED
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
                         if name.endswith('_{pk}'.format(pk=value.pk)):
                             continue
@@ -428,6 +418,7 @@ class Process(plum.process.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
+        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, None)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
@@ -447,8 +438,7 @@ class Process(plum.process.Process):
             self.calc.add_link_from(input_value, name)
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL",
-                                    link_type=LinkType.CALL)
+            self.calc.add_link_from(parent_calc, "CALL", link_type=LinkType.CALL)
 
         self._add_description_and_label()
 
@@ -509,9 +499,10 @@ class Process(plum.process.Process):
         # Second priority: config
         except KeyError:
             return (
-                caching.get_use_cache(type(self)) or
-                caching.get_use_cache(type(self._calc))
+                    caching.get_use_cache(type(self)) or
+                    caching.get_use_cache(type(self._calc))
             )
+
 
 class FunctionProcess(Process):
     _func_args = None
@@ -563,7 +554,7 @@ class FunctionProcess(Process):
             else:
                 spec.inputs.dynamic = False
 
-            # We don't know what a function will return so keep it dynamic
+            # Workfunctions return data types
             spec.outputs.valid_type = Data
 
         return type(func.__name__, (FunctionProcess,),
@@ -594,6 +585,15 @@ class FunctionProcess(Process):
     def __init__(self, *args, **kwargs):
         super(FunctionProcess, self).__init__(
             enable_persistence=False, *args, **kwargs)
+
+    def execute(self, return_on_idle=False):
+        result = super(FunctionProcess, self).execute(return_on_idle)
+        # Create a special case for Process functions: They can return
+        # a single value in which case you get this a not a dict
+        if len(result) == 1 and self.SINGLE_RETURN_LINKNAME in result:
+            return result[self.SINGLE_RETURN_LINKNAME]
+        else:
+            return result
 
     @override
     def _setup_db_record(self):

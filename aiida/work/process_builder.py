@@ -4,6 +4,9 @@ from aiida.work.launch import run, submit
 from aiida.work.runners import _object_factory
 
 
+__all__ = ['ProcessBuilder', 'JobProcessBuilder']
+
+
 class ProcessBuilderInput(object):
 
     def __init__(self, port, value):

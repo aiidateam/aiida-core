@@ -7,10 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import abc
 import copy
-from abc import abstractmethod
-
 import datetime
 
 from aiida.backends.utils import get_automatic_user
@@ -27,6 +25,9 @@ from aiida.utils import timezone
 # 'email_on_terminated',
 # 'rerunnable',
 # 'resourceLimits',
+
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
+
 
 _input_subfolder = 'raw_input'
 
@@ -584,7 +585,7 @@ class AbstractJobCalculation(object):
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _set_state(self, state):
         """
         Set the state of the calculation.
@@ -603,7 +604,7 @@ class AbstractJobCalculation(object):
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
@@ -1295,6 +1296,12 @@ class AbstractJobCalculation(object):
 
         Actual submission is performed by the daemon.
         """
+        import warnings
+        warnings.warn(
+            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+        )
+
         from aiida.common.exceptions import InvalidOperation
 
         current_state = self.get_state()

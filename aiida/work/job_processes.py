@@ -11,6 +11,7 @@ from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
+import sys
 from voluptuous import Any
 
 from aiida.backends.utils import get_authinfo

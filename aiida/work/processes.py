@@ -243,6 +243,12 @@ class Process(plumpy.Process):
 
     @override
     def load_instance_state(self, saved_state, load_context):
+        if 'runner' in load_context:
+            self._runner = load_context.runner
+        else:
+            self._runner = get_runner()
+
+        load_context = load_context.copyextend(loop=self._runner.loop)
         super(Process, self).load_instance_state(saved_state, load_context)
 
         is_copy = saved_state.get('COPY', False)

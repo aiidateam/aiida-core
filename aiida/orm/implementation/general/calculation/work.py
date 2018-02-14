@@ -12,7 +12,6 @@ from aiida.orm.implementation.calculation import Calculation
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-# TODO: Replace with local process state (i.e. in AiiDA)
 from plumpy import ProcessState
 
 

@@ -113,7 +113,6 @@ class AiiDAPersister(plumpy.Persister):
         calc_node = orm.load_node(pid)
         try:
             bundle = yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
-            bundle.set_class_loader(class_loader.CLASS_LOADER)
             return bundle
         except ValueError:
             raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")

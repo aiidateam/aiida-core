@@ -5,14 +5,14 @@ from aiida.orm.utils import CalculationFactory
 def generate_scf_input_params(structure, codename, pseudo_family):
     # The inputs
     pw_calculation_class = CalculationFactory("quantumespresso.pw")
-    inputs = pw_calculation_class.process().get_inputs_template()
+    inputs = pw_calculation_class.process().get_builder()
 
     # The structure
     inputs.structure = structure
 
     inputs.code = orm.Code.get_from_string(codename.value)
-    inputs._options.resources = {"num_machines": 1}
-    inputs._options.max_wallclock_seconds = 30 * 60
+    inputs.options.resources = {"num_machines": 1}
+    inputs.options.max_wallclock_seconds = 30 * 60
 
     # Kpoints
     KpointsData = orm.DataFactory("array.kpoints")

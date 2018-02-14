@@ -5,6 +5,7 @@ import plumpy.rmq
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
 from aiida.backends import settings
+from aiida.work.class_loader import CLASS_LOADER
 
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
@@ -75,6 +76,7 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
+        kwargs['class_loader'] = CLASS_LOADER
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
@@ -85,7 +87,7 @@ class ExecuteProcessAction(plumpy.ExecuteProcessAction):
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs)
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER)
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
@@ -179,7 +181,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         return self._communicator.await(action)
 
     def close(self):
-        self._communicator.close()
+        self._communicator.disconnect()
 
 
 def new_blocking_control_panel():

@@ -21,6 +21,8 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
+from aiida.work.process_builder import JobProcessBuilder
+from aiida.work.process_spec import DictSchema
 
 from . import processes
 from . import utils
@@ -182,7 +184,7 @@ class JobProcess(processes.Process):
                 'prepend_text': unicode,
                 'append_text': unicode,
             }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options), non_db=True)
+            spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
 
             # Inputs from use methods
             for key, use_method in calc_class._use_methods.iteritems():
@@ -209,6 +211,10 @@ class JobProcess(processes.Process):
                 '_CALC_CLASS': calc_class
             }
         )
+
+    @classmethod
+    def get_builder(cls):
+        return JobProcessBuilder(cls)
 
     @classmethod
     def get_state_classes(cls):
@@ -349,6 +355,9 @@ class JobProcess(processes.Process):
             self.wait(self._link_outputs, msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
         else:
             self.wait(msg='Waiting for scheduler update', data=UPDATE_SCHEDULER_COMMAND)
+
+    def wait(self, done_callback=None, **kwargs):
+        return self.transition_to(processes.ProcessState.WAITING, done_callback, **kwargs)
 
     def _retrieve_with_transport(self, authinfo, transport):
         retrieved_temporary_folder = execmanager.retrieve_all(self.calc, transport)

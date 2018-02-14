@@ -115,7 +115,7 @@ LOGGING = {
             'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
-        'plum': {
+        'plumpy': {
             'handlers': ['console'],
             'level': setup.get_property('logging.plum_loglevel'),
             'propagate': False,

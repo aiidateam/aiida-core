@@ -275,6 +275,9 @@ class JobProcess(processes.Process):
         else:
             self.wait(msg='Waiting for scheduler update', data=UPDATE_SCHEDULER_COMMAND)
 
+    def wait(self, done_callback=None, **kwargs):
+        return self.transition_to(processes.ProcessState.WAITING, done_callback, **kwargs)
+
     def _retrieve_with_transport(self, authinfo, transport):
         retrieved_temporary_folder = execmanager.retrieve_all(self.calc, transport)
         self._retrieved(retrieved_temporary_folder)

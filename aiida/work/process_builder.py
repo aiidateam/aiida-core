@@ -3,16 +3,23 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.work.launch import run, submit
 
 
-class DefaultValue(object):
+class ProcessBuilderInput(object):
 
-    def __init__(self, value):
+    def __init__(self, port, value):
         self._value = value
+        self.__doc__ = str(port)
 
     def __str__(self):
-        return 'default: {}'.format(self._value.__str__())
+        return '{}'.format(self._value.__str__())
 
     def __repr__(self):
         return self.__str__()
+
+
+class ProcessBuilderInputDefault(ProcessBuilderInput):
+
+    def __str__(self):
+        return '{} [default]'.format(self._value.__str__())
 
 
 class ProcessBuilder(FixedFieldsAttributeDict):
@@ -23,12 +30,11 @@ class ProcessBuilder(FixedFieldsAttributeDict):
         self._valid_fields = self._process_spec.inputs.keys()
         super(ProcessBuilder, self).__init__()
 
-        # Populate the input attributes with defaults if defined in the process spec
         for name, port in self._process_spec.inputs.iteritems():
             if port.has_default():
-                self[name] = DefaultValue(port.default)
+                self[name] = ProcessBuilderInputDefault(port, port.default)
             else:
-                self[name] = DefaultValue(None)
+                self[name] = ProcessBuilderInput(port, None)
 
     def __setattr__(self, attr, value):
         """
@@ -63,7 +69,7 @@ class ProcessBuilder(FixedFieldsAttributeDict):
         inputs = {}
 
         for key, value in dict(self).iteritems():
-            if not isinstance(value, DefaultValue):
+            if not isinstance(value, ProcessBuilderInput):
                 inputs[key] = value
 
         if daemon is True:

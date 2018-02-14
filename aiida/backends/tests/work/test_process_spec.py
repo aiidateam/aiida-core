@@ -8,35 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-
-from collections import Mapping
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.processes import Process, ProcessSpec
-import aiida.work.utils as util
+from aiida.work.processes import Process
+from aiida.work import utils
 
 
 class TestProcessSpec(AiidaTestCase):
+
     def setUp(self):
         super(TestProcessSpec, self).setUp()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
         self.spec = Process.spec()
 
     def tearDown(self):
         super(TestProcessSpec, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
-
-    def test_get_inputs_template(self):
-        s = ProcessSpec()
-        s.input('a')
-        s.input('b', default=5)
-
-        template = s.get_inputs_template()
-        self.assertIsInstance(template, Mapping)
-        self._test_template(template)
-        for attr in ['b']:
-            self.assertTrue(
-                attr in template,
-                "Attribute '{}' not found in template".format(attr))
+        self.assertEquals(len(utils.ProcessStack.stack()), 0)
 
     def test_dynamic_input(self):
         from aiida.orm import Node
@@ -59,15 +45,3 @@ class TestProcessSpec(AiidaTestCase):
         self.assertFalse(self.spec.validate_inputs({'key': 5})[0])
         self.assertFalse(self.spec.validate_inputs({'key': n})[0])
         self.assertTrue(self.spec.validate_inputs({'key': d})[0])
-
-    def _test_template(self, template):
-        template.a = 2
-        self.assertEqual(template.a, 2)
-        # Check the default is what we expect
-        self.assertEqual(template.b, 5)
-        with self.assertRaises(AttributeError):
-            template.c = 6
-
-        # Check that we can unpack
-        self.assertEqual(dict(**template)['a'], 2)
-

@@ -71,10 +71,6 @@ class Process(plumpy.Process):
         return ProcessBuilder(cls)
 
     @classmethod
-    def get_inputs_template(cls):
-        return cls.spec().get_inputs_template()
-
-    @classmethod
     def get_or_create_db_record(cls):
         """
         Create a database calculation node that represents what happened in

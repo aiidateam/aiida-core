@@ -56,27 +56,3 @@ class ProcessSpec(plumpy.ProcessSpec):
 
     def __init__(self):
         super(ProcessSpec, self).__init__()
-
-    def get_inputs_template(self):
-        """
-        Get an object that represents a template of the known inputs and their
-        defaults for the :class:`Process`.
-
-        :return: An object with attributes that represent the known inputs for
-            this process.  Default values will be filled in.
-        """
-        template = type(
-            "{}Inputs".format(self.__class__.__name__),
-            (FixedFieldsAttributeDict,),
-            {'_valid_fields': self.inputs.keys()})()
-
-        # Now fill in any default values
-        for name, value_spec in self.inputs.iteritems():
-            if isinstance(value_spec.validator, DictSchema):
-                template[name] = value_spec.validator.get_template()
-            elif value_spec.has_default():
-                template[name] = value_spec.default
-            else:
-                template[name] = None
-
-        return template

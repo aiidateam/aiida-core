@@ -18,6 +18,8 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
+from aiida.work.process_builder import JobProcessBuilder
+from aiida.work.process_spec import DictSchema
 
 from . import processes
 from . import utils
@@ -107,7 +109,7 @@ class JobProcess(processes.Process):
                 'prepend_text': unicode,
                 'append_text': unicode,
             }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=processes.DictSchema(options), non_db=True)
+            spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
 
             # Inputs from use methods
             for key, use_method in calc_class._use_methods.iteritems():
@@ -134,6 +136,10 @@ class JobProcess(processes.Process):
                 '_CALC_CLASS': calc_class
             }
         )
+
+    @classmethod
+    def get_builder(cls):
+        return JobProcessBuilder(cls)
 
     @classmethod
     def get_state_classes(cls):

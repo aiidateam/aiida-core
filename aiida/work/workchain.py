@@ -174,7 +174,7 @@ class WorkChain(processes.Process):
         """
         self.calc.kill()
         self.report(message)
-        self.cancel(message)
+        self.kill(message)
 
     def _handle_do_abort(self):
         """
@@ -183,7 +183,7 @@ class WorkChain(processes.Process):
         """
         do_abort = self._do_abort
         if do_abort:
-            self.cancel(do_abort)
+            self.kill(do_abort)
             self.calc._del_attr(self.calc.DO_ABORT_KEY)
             return True
         return False

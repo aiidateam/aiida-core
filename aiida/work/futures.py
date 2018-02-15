@@ -45,8 +45,8 @@ class CalculationFuture(Future):
                 self._filtered = kiwipy.BroadcastFilter(
                     lambda *args, **kwargs: self.set_result(calc_node), sender=pk)
                 for state in [ProcessState.FINISHED,
-                              ProcessState.CANCELLED,
-                              ProcessState.FAILED]:
+                              ProcessState.KILLED,
+                              ProcessState.EXCEPTED]:
                     self._filtered.add_subject_filter("state_changed.*.{}".format(state.value))
                 self._communicator.add_broadcast_subscriber(self._filtered)
 

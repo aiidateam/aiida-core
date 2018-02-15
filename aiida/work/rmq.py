@@ -127,7 +127,7 @@ class ProcessControlPanel(object):
         return self.execute_action(plumpy.PlayAction(pid))
 
     def kill_process(self, pid, msg=None):
-        return self.execute_action(plumpy.CancelAction(pid))
+        return self.execute_action(plumpy.KillAction(pid))
 
     def request_status(self, pid):
         return self.execute_action(plumpy.StatusAction(pid))

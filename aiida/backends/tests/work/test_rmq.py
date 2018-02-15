@@ -74,7 +74,7 @@ class TestProcessControl(AiidaTestCase):
         self.assertFalse(calc_node.has_finished_ok())
         self.assertEqual(
             calc_node.get_attr(WorkCalculation.PROCESS_STATE_KEY),
-            work.ProcessState.FAILED.value
+            work.ProcessState.EXCEPTED.value
         )
 
     def test_pause(self):

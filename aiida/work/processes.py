@@ -405,6 +405,7 @@ class Process(plumpy.Process):
 
 class FunctionProcess(Process):
     _func_args = None
+    _calc_node_class = WorkCalculation
 
     @staticmethod
     def _func(*args, **kwargs):
@@ -415,7 +416,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, **kwargs):
+    def build(func, calc_node_class=WorkCalculation, **kwargs):
         """
         Build a Process from the given function.  All function arguments will
         be assigned as process inputs.  If keyword arguments are specified then
@@ -454,9 +455,12 @@ class FunctionProcess(Process):
             spec.outputs.valid_type = Data
 
         return type(func.__name__, (FunctionProcess,),
-                    {'_func': staticmethod(func),
-                     Process.define.__name__: classmethod(_define),
-                     '_func_args': args})
+                    {
+                        '_func': staticmethod(func),
+                        Process.define.__name__: classmethod(_define),
+                        '_func_args': args,
+                        '_calc_node_class': calc_node_class
+                    })
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):
@@ -477,6 +481,10 @@ class FunctionProcess(Process):
         """
         assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
+
+    @classmethod
+    def get_or_create_db_record(cls):
+        return cls._calc_node_class()
 
     def __init__(self, *args, **kwargs):
         super(FunctionProcess, self).__init__(

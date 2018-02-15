@@ -95,7 +95,7 @@ class TestJobProcess(AiidaTestCase):
 
     def test_job_process_set_none(self):
         """
-        Verify that calculation label and description can be set to ``None``.
+        Verify that calculation label and description can be not set.
         """
         inputs = {
             'options': {
@@ -105,9 +105,7 @@ class TestJobProcess(AiidaTestCase):
                     'num_mpiprocs_per_machine': 1
                 },
                 'max_wallclock_seconds': 10,
-            },
-            'label': None,
-            'description': None
+            }
         }
 
         process = TemplatereplacerCalculation.process()

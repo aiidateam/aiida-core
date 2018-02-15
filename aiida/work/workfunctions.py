@@ -19,7 +19,7 @@ from . import runners
 __all__ = ['workfunction']
 
 
-def workfunction(func):
+def workfunction(func, calc_node_class=None):
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -47,7 +47,7 @@ def workfunction(func):
         This wrapper function is the actual function that is called.
         """
         # Build up the Process representing this function
-        wf_class = processes.FunctionProcess.build(func, **kwargs)
+        wf_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         # Have to create a new runner for the workfunction instead of using
         # the global because otherwise a workfunction that calls another from
@@ -57,7 +57,7 @@ def workfunction(func):
 
     def run_get_node(*args, **kwargs):
         # Build up the Process representing this function
-        wf_class = processes.FunctionProcess.build(func, **kwargs)
+        wf_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
         proc = wf_class(inputs=inputs)
         return proc.execute(), proc.calc

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.orm.implementation.calculation import Calculation, JobCalculation, InlineCalculation, make_inline
+from aiida.orm.implementation.calculation import Calculation, JobCalculation
+from .inline import *
 
-__all__ = ['Calculation', 'JobCalculation', 'InlineCalculation', 'make_inline']
+__all__ = ('Calculation', 'JobCalculation') + inline.__all__

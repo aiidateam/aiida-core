@@ -20,6 +20,6 @@ from aiida.orm.workflow import Workflow
 from aiida.orm.user import User
 from aiida.orm.group import Group
 
-__all__ = ['JobCalculation', 'WorkCalculation', 'Code', 'Computer',
+__all__ = ('JobCalculation', 'WorkCalculation', 'Code', 'Computer',
            'CalculationFactory', 'DataFactory', 'WorkflowFactory',
-           'QueryBuilder', 'Workflow', 'User', 'Group', 'delete_computer'] + calculation.__all__, utils.__all__
+           'QueryBuilder', 'Workflow', 'User', 'Group', 'delete_computer') + calculation.__all__, utils.__all__

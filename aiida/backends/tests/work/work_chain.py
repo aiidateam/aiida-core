@@ -572,7 +572,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plumpy.CancelledError):
+        with self.assertRaises(plumpy.KilledError):
             process.execute(True)
             process.calc.kill()
             process.execute()
@@ -589,7 +589,7 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plumpy.CancelledError):
+        with self.assertRaises(plumpy.KilledError):
             process.execute(True)
             process.abort()
             process.execute()
@@ -691,10 +691,10 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
-        with self.assertRaises(plumpy.CancelledError):
+        with self.assertRaises(plumpy.KilledError):
             process.execute()
 
-        with self.assertRaises(plumpy.CancelledError):
+        with self.assertRaises(plumpy.KilledError):
             process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]

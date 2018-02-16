@@ -51,7 +51,7 @@ class WorkCalculation(Calculation):
         :return: True if the calculation has failed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.FAILED.value
+        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.EXCEPTED.value
 
     def has_aborted(self):
         """
@@ -60,7 +60,7 @@ class WorkCalculation(Calculation):
         :return: True if the calculation was killed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.CANCELLED.value
+        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.KILLED.value
 
     def kill(self):
         """

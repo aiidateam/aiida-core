@@ -1,6 +1,5 @@
 .. _plugins:
 
-==================
 Installing plugins
 ==================
 

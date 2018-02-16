@@ -1,6 +1,9 @@
-==============
-Updating AiiDA
-==============
+.. _updating_installation:
+
+*********************
+Updating installation
+*********************
+
 Before you update your AiiDA installation, first make sure that you do the following:
 
 * Stop your daemon by executing ``verdi daemon stop``
@@ -22,10 +25,11 @@ When all necessary migrations are completed, finalize the update by executing::
 This updates your daemon profile and related files.
 It should not be done when another version of aiida is wished to be used productively on the same machine/user.
 
+
 .. _update_developers:
 
 Updating AiiDA for developers
-+++++++++++++++++++++++++++++
+=============================
 After you have performed all the steps in the checklist described in the previous section, go to your local clone of the ``aiida_core`` repository and checkout the desired branch or tag.
 If you installed ``aiida_core`` in a virtual environment make sure that you have loaded it.
 
@@ -62,10 +66,11 @@ This updates your daemon profile and related files.
   of Alembic, you may experience problems during your first migration. If it is
   the case, please have a look at the following section :ref:`first_alembic_migration`
 
+
 .. _update_migrations:
 
 Version migration instructions
-++++++++++++++++++++++++++++++
+==============================
 
 Updating from 0.9.* to 0.10.0
 -----------------------------
@@ -79,7 +84,7 @@ There have been changes to the:
 For each of these three points, you will find instructions on how to perform the necessary migration below.
 
 Database migration
-""""""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 The exact migration procedure will differ slightly depending on which backend the profile uses, but for both Django and SqlAlchemy the procedure starts as follows.
 
@@ -91,7 +96,7 @@ For example you can execute ``verdi calculation list`` and you should be prompte
 Depending on your backend, follow the instructions below.
 
 Django
-~~~~~~
+""""""
 
 When the profile that you want to migrate uses Django for the backend you will get an exception and instructions to run a command that looks like the following::
 
@@ -131,7 +136,7 @@ Have faith in your AiiDA team and type ``yes``!
         );
 
 SqlAlchemy
-~~~~~~~~~~
+""""""""""
 
 When the profile that you want to migrate uses SqlAlchemy for the backend you will get a message that looks like the following::
 
@@ -203,7 +208,7 @@ The only thing that will have changed is that you can no longer use any of the o
 
 
 Updating from older versions
-++++++++++++++++++++++++++++
+============================
 To find the update instructions for older versions of AiiDA follow the following links to the documentation of the corresponding version:
 
 * `0.8.* Django`_

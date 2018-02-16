@@ -1,7 +1,7 @@
 .. _DevelopDataPluginTutorialFloat:
 
-Tutorial: Data plugin - Float summation
-=======================================
+Data plugin - Float summation
+=============================
 
 .. toctree::
    :maxdepth: 2

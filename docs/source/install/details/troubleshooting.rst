@@ -1,6 +1,5 @@
 .. _troubleshooting:
 
-===============
 Troubleshooting
 ===============
 

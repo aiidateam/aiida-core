@@ -27,6 +27,19 @@ class TestInlineCalculation(AiidaTestCase):
 
         self.incr_inline = incr_inline
 
+    def test_inline_calculation_process_state(self):
+        """
+        Test the process state for an inline calculation
+        """
+        calculation, result = self.incr_inline(inp=Int(11))
+
+        self.assertEquals(calculation.terminated, True)
+        self.assertEquals(calculation.excepted, False)
+        self.assertEquals(calculation.killed, False)
+        self.assertEquals(calculation.finished, True)
+        self.assertEquals(calculation.finished_ok, True)
+        self.assertEquals(calculation.failed, False)
+
     def test_incr(self):
         """
         Simple test for the inline increment function.

@@ -53,8 +53,8 @@ def execute_steps():
 
         s_calcs_new = [c.pk for c in s.get_calculations() if c._is_new()]
         s_calcs_finished = [c.pk for c in s.get_calculations()
-                            if c.has_finished_ok()]
-        s_calcs_failed = [c.pk for c in s.get_calculations() if c.has_failed()]
+                            if c.finished_ok]
+        s_calcs_failed = [c.pk for c in s.get_calculations() if c.terminated]
         s_calcs_num = len(s.get_calculations())
 
         s_sub_wf_finished = [sw.pk for sw in s.get_sub_workflows()

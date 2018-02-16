@@ -662,32 +662,25 @@ class AbstractJobCalculation(object):
             calc_states.PARSING
         ]
 
-    def has_finished(self):
+    @property
+    def finished_ok(self):
         """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
+        Returns whether the Calculation has finished successfully, which means that it
+        terminated nominally and had a zero exit code indicating a successful execution
 
-        This is equivalent to calling return has_finished_ok() or has_failed()
-
-        :return: True if the calculation has finished running, False otherwise.
+        :return: True if the calculation has finished successfully, False otherwise
         :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
-    def has_finished_ok(self):
-        """
-        Get whether the calculation is in the FINISHED status.
-
-        :return: a boolean
         """
         return self.get_state() in [calc_states.FINISHED]
 
-    def has_failed(self):
+    @property
+    def failed(self):
         """
-        Get whether the calculation is in a failed status,
-        i.e. SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
+        Returns whether the Calculation has failed, which means that it terminated nominally
+        but it had a non-zero exit status
 
-        :return: a boolean
+        :return: True if the calculation has failed, False otherwise
+        :rtype: bool
         """
         return self.get_state() in [calc_states.SUBMISSIONFAILED,
                                     calc_states.RETRIEVALFAILED,

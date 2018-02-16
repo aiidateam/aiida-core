@@ -327,7 +327,7 @@ def kill_old(pks):
 
     nodes = [load_node(pk) for pk in pks]
     workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
-    running_workchain_nodes = [n for n in nodes if not n.has_finished()]
+    running_workchain_nodes = [n for n in nodes if not n.terminated]
 
     num_workchains = len(running_workchain_nodes)
     if num_workchains > 0:

@@ -552,7 +552,7 @@ class TestWorkChainAbort(AiidaTestCase):
     def test_simple_run(self):
         """
         Run the workchain which should hit the exception and therefore end
-        up in the FAILED state
+        up in the EXCEPTED state
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
@@ -560,43 +560,26 @@ class TestWorkChainAbort(AiidaTestCase):
             process.execute(True)
             process.execute()
 
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), True)
-        self.assertEquals(process.calc.has_aborted(), False)
-
-    def test_simple_kill_through_node(self):
-        """
-        Run the workchain for one step and then kill it by calling kill
-        on the underlying WorkCalculation node. This should have the
-        workchain end up in the ABORTED state.
-        """
-        process = TestWorkChainAbort.AbortableWorkChain()
-
-        with self.assertRaises(plumpy.KilledError):
-            process.execute(True)
-            process.calc.kill()
-            process.execute()
-
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), False)
-        self.assertEquals(process.calc.has_aborted(), True)
+        self.assertEquals(process.calc.finished_ok, False)
+        self.assertEquals(process.calc.excepted, True)
+        self.assertEquals(process.calc.killed, False)
 
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it by calling kill
         on the workchain itself. This should have the workchain end up
-        in the ABORTED state.
+        in the KILLED state.
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
         with self.assertRaises(plumpy.KilledError):
             process.execute(True)
-            process.abort()
+            process.kill()
             process.execute()
 
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), False)
-        self.assertEquals(process.calc.has_aborted(), True)
+        self.assertEquals(process.calc.finished_ok, False)
+        self.assertEquals(process.calc.excepted, False)
+        self.assertEquals(process.calc.killed, True)
 
 
 class TestWorkChainAbortChildren(AiidaTestCase):
@@ -646,16 +629,15 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
             self.ctx.child.start()
             if self.inputs.kill:
-                self.abort()
+                self.kill()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-        def on_cancel(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_cancel(msg)
+        def on_kill(self, msg):
+            super(TestWorkChainAbortChildren.MainWorkChain, self).on_kill(msg)
             if self.inputs.kill:
-                assert self.ctx.child.calc.get_attr(self.calc.DO_ABORT_KEY, False), \
-                    "Abort key not set on child"
+                assert self.ctx.child.calc.killed == True, 'Child was not killed'
 
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
@@ -672,22 +654,22 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def test_simple_run(self):
         """
         Run the workchain which should hit the exception and therefore end
-        up in the FAILED state
+        up in the EXCEPTED state
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
 
         with self.assertRaises(RuntimeError):
             process.execute()
 
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), True)
-        self.assertEquals(process.calc.has_aborted(), False)
+        self.assertEquals(process.calc.finished_ok, False)
+        self.assertEquals(process.calc.excepted, True)
+        self.assertEquals(process.calc.killed, False)
 
-    def test_simple_kill_through_node(self):
+    @unittest.skip('This requires children kill support over RMQ #1060')
+    def test_simple_kill_through_process(self):
         """
-        Run the workchain for one step and then kill it by calling kill
-        on the underlying WorkCalculation node. This should have the
-        workchain end up in the CANCELLED state.
+        Run the workchain for one step and then kill it. This should have the
+        workchain and its children end up in the KILLED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
@@ -698,13 +680,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
-        self.assertEquals(child.has_finished_ok(), False)
-        self.assertEquals(child.has_failed(), False)
-        self.assertEquals(child.has_aborted(), True)
+        self.assertEquals(child.finished_ok, False)
+        self.assertEquals(child.excepted, False)
+        self.assertEquals(child.killed, True)
 
-        self.assertEquals(process.calc.has_finished_ok(), False)
-        self.assertEquals(process.calc.has_failed(), False)
-        self.assertEquals(process.calc.has_aborted(), True)
+        self.assertEquals(process.calc.finished_ok, False)
+        self.assertEquals(process.calc.excepted, False)
+        self.assertEquals(process.calc.killed, True)
 
 
 class TestImmutableInputWorkchain(AiidaTestCase):

@@ -115,37 +115,13 @@ class WorkChain(processes.Process):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
-    @property
-    def _do_abort(self):
-        return self.calc.get_attr(self.calc.DO_ABORT_KEY, False)
-
-    @property
-    def _aborted(self):
-        return self.calc.get_attr(self.calc.ABORTED_KEY, False)
-
-    @_aborted.setter
-    def _aborted(self, value):
-        # One is not allowed to unabort an aborted WorkChain
-        if self._aborted and value == False:
-            self.logger.warning('trying to unset the abort flag on an already aborted workchain which is not allowed')
-            return
-
-        self.calc._set_attr(self.calc.ABORTED_KEY, value)
-
     def _do_step(self, wait_on=None):
         self._awaitables = []
-
-        if self._handle_do_abort():
-            return
 
         try:
             finished, retval = self._stepper.step()
         except _PropagateReturn:
             finished, retval = True, None
-
-        # Could have aborted during the step
-        if self._handle_do_abort():
-            return
 
         if not finished:
             if retval is not None:
@@ -167,36 +143,6 @@ class WorkChain(processes.Process):
             self.action_awaitables()
         else:
             self.call_soon(self.resume)
-
-    def abort(self, message=None):
-        """
-        Cancel is the new abort, just like orange is the new black
-        """
-        self.calc.kill()
-        self.report(message)
-        self.kill(message)
-
-    def _handle_do_abort(self):
-        """
-        Check whether a request to abort has been registered, by checking whether the DO_ABORT_KEY
-        attribute has been set, and if so call self.abort and remove the DO_ABORT_KEY attribute 
-        """
-        do_abort = self._do_abort
-        if do_abort:
-            self.kill(do_abort)
-            self.calc._del_attr(self.calc.DO_ABORT_KEY)
-            return True
-        return False
-
-    def abort_nowait(self, message=None):
-        """
-        Abort the workchain at the next state transition without waiting
-        which is achieved by passing a timeout value of zero
-
-        :param message: The abort message
-        :type message: str
-        """
-        return self.abort(message=message)
 
     def action_awaitables(self):
         """

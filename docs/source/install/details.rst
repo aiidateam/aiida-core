@@ -9,5 +9,6 @@ Details
 
     details/troubleshooting
     details/database
+    details/rabbitmq
     details/virtual_environment
     details/os

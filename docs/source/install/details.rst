@@ -10,3 +10,4 @@ Details
     details/troubleshooting
     details/database
     details/virtual_environment
+    details/os

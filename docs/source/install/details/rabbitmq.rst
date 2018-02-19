@@ -17,9 +17,9 @@ You can check whether it is running by checking the status through the command:
 
 .. code-block:: bash
 
-	sudo rabbitmqctl status
+    sudo rabbitmqctl status
 
-If you are having problems installing RabbitMQ, please refer to the detailed instructions  provided on the `website of RabbitMQ itselffor Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
+If you are having problems installing RabbitMQ, please refer to the detailed instructions  provided on the `website of RabbitMQ itself for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
 
 Mac OS X
@@ -30,50 +30,31 @@ You can check whether it is running by checking the status through the command:
 
 .. code-block:: bash
 
-	/usr/local/sbin/rabbitmqctl status
+    /usr/local/sbin/rabbitmqctl status
 
 If you are having problems installing RabbitMQ, please refer to the detailed instructions provided on the `website of RabbitMQ itself for Homebrew <https://www.rabbitmq.com/install-homebrew.html>`_.
 If you do not have or want to install the Homebrew package manager, but want to use ports instead, use the following commands:
 
 .. code-block bash::
 
-	sudo port install rabbitmq-server
-	sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
+    sudo port install rabbitmq-server
+    sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
 
 
 Gentoo
 ------
 
-
-To install RabbitMQ on a Gentoo distribution through the ``portage`` package manager run the following command:
-
-.. code-block:: bash
-
-	emerge -av rabbitmq-server
-
-To make sure that RabbitMQ is started at system boot, execute:
-
-.. code-block:: bash
-
-	rc-update add rabbitmq
-
-If you want to manually start the RabbitMQ server you can use:
-
-.. code-block:: bash
-
-	/etc/init.d/rabbitmq start
-
 To make sure that the installation and startup was successful, you can check the status of the RabbitMQ server with:
 
 .. code-block:: bash
 
-	rabbitmqctl status
+    rabbitmqctl status
 
 If you have encounter the following error
 
 .. code-block:: bash
 
-	Argument '-smp enable' not supported."
+    Argument '-smp enable' not supported."
 
 Remove the mentioned option from the file ``/usr/libexec/rabbitmq/rabbitmq-env`` and restart the server.
 If you still have trouble getting RabbitMQ to run, please refer to the detailed instructions provided on the `website of RabbitMQ itself for generic Unix systems <https://www.rabbitmq.com/install-generic-unix.html>`_.

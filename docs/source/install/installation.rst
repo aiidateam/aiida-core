@@ -7,7 +7,7 @@ Installation
 This section of the manual will guide you through the process of installing AiiDA on your system.
 AiiDA has been tested to run on the following platforms:
 
-* Ubuntu 14.04
+* Ubuntu 14.04, 16.04
 * Mac OS X
 
 We expect that AiiDA should also run on these other platforms:

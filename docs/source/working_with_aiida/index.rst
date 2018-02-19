@@ -94,20 +94,6 @@ or the `human-readable version <https://aiidateam.github.io/aiida-registry/>`_),
 and list plugins.
 
 
-==================================
-Running calculations and workflows
-==================================
-
-Anything that runs in AiiDA is an instance of :py:class:`~aiida.work.processes.Process`.
-That is to say that if you want to run a ``Calculation`` or ``Workflow``, it has to be *wrapped* in a ``Process``.
-To make this as simple as possible, we have implemented the ``ProcessBuilder``.
-
-.. toctree::
-    :maxdepth: 4
-
-    ../process/index
-
-
 ============
 Calculations
 ============

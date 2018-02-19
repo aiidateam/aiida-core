@@ -1,11 +1,10 @@
 .. _virtual_environment:
 
-===================
 Virtual environment
 ===================
 
 Why a virtual environment?
-++++++++++++++++++++++++++
+--------------------------
 
 AiiDA depends on third party python packages and very often on specific versions of those packages.
 If AiiDA were to be installed system wide, it may up- or downgrade third party packages used by other parts of the system and leave them potentially broken.
@@ -17,8 +16,10 @@ Since your scientific data is important to you and to us, we *strongly* recommen
 For a single purpose machine, only meant to run AiiDA and nothing else, you may at your own risk opt to omit working in a virtual environment.
 In this case, you may want to install AiiDA and its dependencies in user space by using a ``--user`` flag, to avoid the need for administrative rights to install them system wide.
 
+
 What is a virtual environment?
-++++++++++++++++++++++++++++++
+------------------------------
+
 A python virtual environment is essentially a folder, that contains everything that is needed to run python programs, including
 
 * python executable
@@ -32,8 +33,10 @@ This allows to have an isolated environment for programs that rely on running wi
 
 A virtual environment as well as the packages that will be installed within it, will often be installed in the home space of the user such that administrative rights are not required, therefore also making this technique very useful on machines where one has restricted access.
 
+
 Creating a virtual environment
-++++++++++++++++++++++++++++++
+------------------------------
+
 There are different programs that can create and work with virtual environments.
 An example for python virtual environments is called ``virtualenv`` and can be installed with for example ``pip`` by running::
 
@@ -65,8 +68,9 @@ To leave or deactivate the environment and set all the settings back to default,
 
 .. _aiida_path_in_virtualenv:
 
-Creating a ``.aiida`` folder in your virtualenvironment
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Creating an ``.aiida`` folder in your virtualenvironment
+--------------------------------------------------------
 
 When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` folder for each virtualenv. To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
 
@@ -89,6 +93,3 @@ When you run AiiDA in multiple virtual environments, it can be convenient to use
     >>> Note: if no configuration file was found, it means that you have not run
     >>> 'verdi setup' yet to configure at least one AiiDA profile.
 6. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
-
-
-

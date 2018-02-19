@@ -15,7 +15,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
 from aiida.work.launch import run_get_node
-from workchains import ParentWorkChain, NestedWorkChain
+from workchains import NestedWorkChain
 
 ParameterData = DataFactory('parameter')
 
@@ -171,14 +171,8 @@ def main():
         expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
-    print "Submitting {} workchains to the daemon".format(number_workchains)
     expected_results_workchains = {}
-    for index in range(1, number_workchains + 1):
-        inp = Int(index)
-        result, node = run_get_node(ParentWorkChain, inp=inp)
-        expected_results_workchains[node.pk] = index * 2
-
-    print "Submitting {} nested workchains to the daemon".format(number_workchains)
+    print "Submitting {} workchains to the daemon".format(number_workchains)
     for index in range(number_workchains):
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)

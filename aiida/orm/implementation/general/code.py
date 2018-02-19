@@ -16,6 +16,8 @@ from aiida.orm.mixins import SealableWithUpdatableAttributes
 from aiida.common.utils import abstractclassmethod
 
 
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
+
 
 class AbstractCode(SealableWithUpdatableAttributes, Node):
     """
@@ -424,6 +426,12 @@ class AbstractCode(SealableWithUpdatableAttributes, Node):
         :raise MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no plugin was specified.
         """
+        import warnings
+        warnings.warn(
+            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+        )
+
         from aiida.orm.utils import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:

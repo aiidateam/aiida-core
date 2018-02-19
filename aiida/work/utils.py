@@ -9,7 +9,7 @@
 ###########################################################################
 
 import abc
-import plum
+import plumpy
 from threading import local
 import time
 import random
@@ -26,12 +26,12 @@ __all__ = ['ProcessStack']
 # The name of the attribute to store the label of a process in a node with.
 PROCESS_LABEL_ATTR = '_process_label'
 
-load_object = plum.utils.load_object
+load_object = plumpy.utils.load_object
 load_class = load_object
 
 
 def class_name(identifier, verify=True):
-    return plum.utils.class_name(identifier, class_loader.CLASS_LOADER, verify)
+    return plumpy.utils.class_name(identifier, class_loader.CLASS_LOADER, verify)
 
 
 class ProcessStack(object):
@@ -331,52 +331,3 @@ def get_or_create_output_group(calculation):
     d.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
 
     return FrozenDict(dict=d)
-
-
-class Parcel(dict):
-
-    def __setitem__(self, key, value):
-        if not isinstance(key, str):
-            raise TypeError("Keys can only be strings")
-
-        super(Parcel, self).__setitem__(key, value)
-
-
-class Savable(object):
-    __metaclass__ = abc.ABCMeta
-
-    CLASS_NAME = 'CLASS_NAME'
-
-    @staticmethod
-    def load(saved_state):
-        try:
-            class_name = saved_state[Savable.CLASS_NAME]
-            cls = class_loader.CLASS_LOADER.load_class(class_name)
-            return cls.create_from(saved_state)
-        except IndexError:
-            raise ValueError("Not a valid saved state with type")
-
-    @classmethod
-    def create_from(cls, saved_state):
-        obj = cls.__new__(cls)
-        obj.load_instance_state(saved_state)
-        return obj
-
-    def save_instance_state(self, out_state):
-        """
-        Save the instance state in a parcel
-
-        :param out_state: The state parcel
-        :type out_state: :class:`Parcel`
-        """
-        out_state[self.CLASS_NAME] = class_name(self)
-
-    @abc.abstractmethod
-    def load_instance_state(self, saved_state):
-        """
-        Load the instance state from a pacel
-
-        :param saved_state: The saved state parcel
-        :type saved_state: :class:`Parcel`
-        """
-        pass

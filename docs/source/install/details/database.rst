@@ -1,6 +1,5 @@
 .. _database:
 
-========
 Database
 ========
 AiiDA needs a database backend to store the nodes, node attributes and other
@@ -9,7 +8,8 @@ Currently, only `postgresql`_ is allowed as a database backend.
 
 
 Setup instructions
-++++++++++++++++++
+------------------
+
 In order for AiiDA to be able to use postgres it needs to be installed first.
 On Ubuntu and other Debian derivative distributions this can be accomplished with::
 

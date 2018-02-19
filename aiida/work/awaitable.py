@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from enum import Enum
-from plum.utils import AttributesDict
+from plumpy.utils import AttributesDict
 from aiida.orm.calculation import Calculation
 from aiida.orm.workflow import Workflow
 

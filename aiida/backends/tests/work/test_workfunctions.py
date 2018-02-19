@@ -10,10 +10,10 @@
 import aiida.orm
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work import workfunction
-from aiida.orm.data.base import get_true_node
-from aiida.orm.data.base import Int
-from aiida.work import run
+from aiida.orm.data.base import get_true_node, Int
+from aiida.orm import load_node
+from aiida.work.launch import run, run_get_node
+from aiida.work.workfunctions import workfunction
 
 
 @workfunction
@@ -72,3 +72,17 @@ class TestWf(AiidaTestCase):
             return mul(add(a, b), c)
 
         result = add_mul_wf(Int(3), Int(4), Int(5))
+
+    def test_hashes(self):
+        result, w1 = run_get_node(return_input, inp=Int(2))
+        result, w2 = run_get_node(return_input, inp=Int(2))
+        self.assertEqual(w1.get_hash(), w2.get_hash())
+
+    def test_hashes_different(self):
+        result, w1 = run_get_node(return_input, inp=Int(2))
+        result, w2 = run_get_node(return_input, inp=Int(3))
+        self.assertNotEqual(w1.get_hash(), w2.get_hash())
+
+    def _check_hash_consistent(self, pid):
+        wc = load_node(pid)
+        self.assertEqual(wc.get_hash(), wc.get_extra('_aiida_hash'))

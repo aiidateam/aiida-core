@@ -12,8 +12,8 @@ from aiida.orm.implementation.calculation import Calculation
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-# TODO: Replace with local process state (i.e. in AiiDA)
-from plum import ProcessState
+from plumpy import ProcessState
+
 
 
 class WorkCalculation(Calculation):
@@ -51,7 +51,7 @@ class WorkCalculation(Calculation):
         :return: True if the calculation has failed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.FAILED.value
+        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.EXCEPTED.value
 
     def has_aborted(self):
         """
@@ -60,7 +60,7 @@ class WorkCalculation(Calculation):
         :return: True if the calculation was killed, False otherwise.
         :rtype: bool
         """
-        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.CANCELLED.value
+        return self.get_attr(self.PROCESS_STATE_KEY) == ProcessState.KILLED.value
 
     def kill(self):
         """

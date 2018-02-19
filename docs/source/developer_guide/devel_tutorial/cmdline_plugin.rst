@@ -2,8 +2,8 @@
 
 .. _DeveloperCmdlinePluginTutorial:
 
-Tutorial: Commandline plugin - Data subcommand
-==============================================
+Commandline plugin - Data subcommand
+====================================
 
 .. toctree::
    :maxdepth: 2

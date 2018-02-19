@@ -7,10 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import abc
 import copy
-from abc import abstractmethod
-
 import datetime
 
 from aiida.backends.utils import get_automatic_user
@@ -18,7 +16,7 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
-from aiida.common.utils import str_timedelta
+from aiida.common.utils import str_timedelta, classproperty
 from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
@@ -27,6 +25,8 @@ from aiida.utils import timezone
 # 'email_on_terminated',
 # 'rerunnable',
 # 'resourceLimits',
+
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 
 _input_subfolder = 'raw_input'
@@ -38,10 +38,38 @@ class AbstractJobCalculation(object):
     remotely on a job scheduler.
     """
 
+    _cacheable = True
+
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        # _updatable_attributes are ignored automatically.
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+            'queue_name',
+            'priority',
+            'max_wallclock_seconds',
+            'max_memory_kb',
+        ]
+
+    def get_hash(
+        self,
+        ignore_errors=True,
+        ignored_folder_content=('raw_input',),
+        **kwargs
+    ):
+        return super(AbstractJobCalculation, self).get_hash(
+            ignore_errors=ignore_errors,
+            ignored_folder_content=ignored_folder_content,
+            **kwargs
+        )
+
     @classmethod
     def process(cls):
         from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
+
+    @classmethod
+    def get_builder(cls):
+        return cls.process().get_builder()
 
     def _init_internal_params(self):
         """
@@ -62,7 +90,7 @@ class AbstractJobCalculation(object):
             'state', 'job_id', 'scheduler_state',
             'scheduler_lastchecktime',
             'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list'
+            'retrieve_singlefile_list', 'retrieve_temporary_list'
         )
 
         # Files in which the scheduler output and error will be stored.
@@ -103,11 +131,20 @@ class AbstractJobCalculation(object):
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
         # I get here if the calculation was successfully stored.
-        self._set_state(calc_states.NEW)
+        # Set to new only if it is not already FINISHED (due to caching)
+        if not self.get_state() == calc_states.FINISHED:
+            self._set_state(calc_states.NEW)
 
         # Important to return self to allow the one-liner
         # c = Calculation().store()
         return self
+
+    def _add_outputs_from_cache(self, cache_node):
+        self._set_state(calc_states.PARSING)
+        super(AbstractJobCalculation, self)._add_outputs_from_cache(
+            cache_node=cache_node
+        )
+        self._set_state(cache_node.get_state())
 
     def _validate(self):
         """
@@ -548,7 +585,7 @@ class AbstractJobCalculation(object):
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _set_state(self, state):
         """
         Set the state of the calculation.
@@ -567,7 +604,7 @@ class AbstractJobCalculation(object):
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
@@ -739,7 +776,7 @@ class AbstractJobCalculation(object):
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or 
+                if (not (isinstance(item[0], basestring)) or
                     not (isinstance(item[1], basestring)) or
                     not (isinstance(item[2], int))):
                     raise ValueError(
@@ -1090,9 +1127,19 @@ class AbstractJobCalculation(object):
         d = copy.deepcopy(res)
 
         try:
-            d['calculation']['type'] = from_type_to_pluginclassname(
-                d['calculation']['type']
-            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+            prefix = 'calculation.job.'
+            calculation_type = d['calculation']['type']
+            calculation_class = from_type_to_pluginclassname(calculation_type)
+            module, class_name = calculation_class.rsplit('.', 1)
+
+            # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
+            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
+            # to strip the prefix to get the proper sub module
+            if module == prefix.rstrip('.'):
+                d['calculation']['type'] = module[len(prefix):]
+            else:
+                assert module.startswith(prefix), "module '{}' does not start with '{}'".format(module, prefix)
+                d['calculation']['type'] = module[len(prefix):]
         except KeyError:
             pass
         for proj in ('ctime', 'mtime'):
@@ -1249,6 +1296,12 @@ class AbstractJobCalculation(object):
 
         Actual submission is performed by the daemon.
         """
+        import warnings
+        warnings.warn(
+            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+        )
+
         from aiida.common.exceptions import InvalidOperation
 
         current_state = self.get_state()

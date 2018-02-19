@@ -11,7 +11,7 @@
 import uritools
 import os.path
 import os
-import plum
+import plumpy
 import portalocker
 import portalocker.utils
 import yaml
@@ -19,7 +19,7 @@ import yaml
 from aiida import orm
 from . import class_loader
 
-Bundle = plum.Bundle
+Bundle = plumpy.Bundle
 
 
 # If portalocker accepts my pull request to have this incorporated into the
@@ -59,7 +59,7 @@ class RLock(portalocker.Lock):
         self._acquire_count -= 1
 
 
-Persistence = plum.PicklePersister
+Persistence = plumpy.PicklePersister
 _GLOBAL_PERSISTENCE = None
 
 
@@ -91,7 +91,7 @@ def _create_storage():
         )
 
 
-class AiiDAPersister(plum.Persister):
+class AiiDAPersister(plumpy.Persister):
     """
     This node is responsible to taking saved process instance states and
     persisting them to the database.
@@ -113,7 +113,6 @@ class AiiDAPersister(plum.Persister):
         calc_node = orm.load_node(pid)
         try:
             bundle = yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
-            bundle.set_class_loader(class_loader.CLASS_LOADER)
             return bundle
         except ValueError:
             raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")

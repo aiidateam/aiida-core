@@ -7,20 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.common.exceptions import ValidationError
 import collections
+from aiida.common.exceptions import ValidationError
 from aiida.common.lang import override
-
-## TODO: see if we want to have a function to rebuild a nested dictionary as
-## a nested AttributeDict object when deserializing with json.
-## (now it deserialized to a standard dictionary; comparison of
-## AttributeDict == dict works fine, though.
-## Note also that when pickling, instead, the structure is well preserved)
-
-## Note that for instance putting this code in __getattr__ doesn't work:
-## everytime I try to write on a.b.c I am actually writing on a copy
-##    return AttributeDict(item) if type(item) == dict else item
-
 
 
 class Enumerate(frozenset):
@@ -50,15 +39,6 @@ class AttributeDict(dict):
     used.
     """
 
-    def __init__(self, init=None):
-        """
-        Possibly set the initial values of the dictionary from an external dictionary
-        init. Note that the attribute-calling syntax will work only 1 level deep.
-        """
-        if init is None:
-            init = {}
-        super(AttributeDict, self).__init__(init)
-
     def __repr__(self):
         """
         Representation of the object.
@@ -86,7 +66,7 @@ class AttributeDict(dict):
         except KeyError:
             raise AttributeError(
                 "AttributeError: '{}' is not a valid attribute of the object "
-                "'{}'".format(attr,  self.__class__.__name__))
+                "'{}'".format(attr, self.__class__.__name__))
 
     def __delattr__(self, attr):
         """
@@ -296,139 +276,3 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Return the extra keys defined in the instance.
         """
         return [_ for _ in self.keys() if _ not in self._default_fields]
-
-
-class FixedDict(collections.MutableMapping, object):
-    def __init__(self, valid_keys):
-        class M(object):
-            pass
-
-        self._m = M()
-        self._m.values = {}
-        self._m.valid_keys = valid_keys
-
-    # Methods from MutableMapping ##########################
-    @override
-    def __dir__(self):
-        return self._m.valid_keys
-
-    @override
-    def __getitem__(self, key):
-        return self._m.values.__getitem__(key)
-
-    @override
-    def __setitem__(self, key, value):
-        if key not in self._m.valid_keys:
-            raise AttributeError("Invalid attribute: {}".format(key))
-        return self._m.values.__setitem__(key, value)
-
-    @override
-    def __delitem__(self, key):
-        assert key in self._m.values,\
-               "Cannot delete an item that has not been set."
-        return self._m.values.__delitem__(key)
-
-    @override
-    def __iter__(self):
-        return self._m.values.__iter__()
-
-    @override
-    def __len__(self):
-        return self._m.values.__len__()
-    ########################################################
-
-    def __getattr__(self, item):
-        if item == '_m':
-            return super(FixedDict, self).__getattr__(item)
-        try:
-            return self.__getitem__(item)
-        except KeyError:
-            raise AttributeError("AttributeError: '{}'".format(item))
-
-    def __setattr__(self, key, value):
-        if key == '_m':
-            return super(FixedDict, self).__setattr__(key, value)
-        return self.__setitem__(key, value)
-
-    def __delattr__(self, item):
-        return self.__delitem__(item)
-
-
-class _WithDefaults(object):
-    def __init__(self, defaults):
-        self._m._defaults = {}
-        if defaults:
-            self._m._defaults.update(defaults)
-
-    def get_default(self, key):
-        return self._m._defaults[key]
-
-    @property
-    def defaults(self):
-        return self._m._defaults
-
-
-class DefaultsDict(collections.MutableMapping):
-    def __init__(self, valid_keys, defaults=None):
-        self._set_internal('_valid_keys', valid_keys)
-        self._set_internal('_user_supplied', {})
-
-        if defaults is None:
-            defaults = {}
-        for key in defaults:
-            assert key in valid_keys
-        self._set_internal('_defaults', defaults)
-
-    def __dir__(self):
-        return self._get_internal('_valid_keys')
-
-    def __getitem__(self, item):
-        return self._get_internal('_user_supplied')[item]
-
-    def __setitem__(self, key, value):
-        if key not in self._get_internal('_valid_keys'):
-            raise KeyError("KeyError: '{}'".format(key))
-        self._get_internal('_user_supplied')[key] = value
-
-    def __iter__(self):
-        self._get_internal('_user_supplied').__iter__()
-
-    def __len__(self):
-        return len(self._get_internal('_user_supplied'))
-
-    def __delitem__(self, key):
-        del self._get_internal('_user_supplied')[key]
-
-    def __getattr__(self, item):
-        try:
-            return self._user_supplied[item]
-        except KeyError:
-            try:
-                self._defaults[item]
-            except KeyError:
-                raise AttributeError("AttributeError: '{}'".format(item))
-
-    def __setattr__(self, key, value):
-        try:
-            self.__setitem__(key, value)
-        except KeyError:
-            raise AttributeError("AttributeError: '{}'".format(key))
-
-    def __delattr__(self, key):
-        try:
-            self.__delitem__(key)
-        except KeyError:
-            raise AttributeError("AttributeError: '{}'".format(key))
-
-    def _get_internal(self, item):
-        return super(DefaultsDict, self).__getattribute__(item)
-
-    def _set_internal(self, key, value):
-        return super(DefaultsDict, self).__setattr__(key, value)
-
-    def _set_value(self, key, value):
-        self._get_internal('_user_supplied')[key] = value
-
-    @property
-    def defaults(self):
-        return self._get_internal('_defaults')

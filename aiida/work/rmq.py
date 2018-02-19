@@ -1,18 +1,17 @@
 import json
-import plum
-import plum.rmq
+import plumpy
+import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
 from aiida.backends import settings
-
-from . import events
+from aiida.work.class_loader import CLASS_LOADER
 
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
-RemoteException = plum.RemoteException
-DeliveryFailed = plum.DeliveryFailed
+RemoteException = plumpy.RemoteException
+DeliveryFailed = plumpy.DeliveryFailed
 
 _MESSAGE_EXCHANGE = 'messages'
 _LAUNCH_QUEUE = 'process.queue'
@@ -23,7 +22,9 @@ def _get_prefix():
     return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
 
 
-def _get_rmq_config():
+def get_rmq_config(prefix=None):
+    if prefix is None:
+        prefix = _get_prefix()
     rmq_config = {
         'url': 'amqp://localhost',
         'prefix': _get_prefix(),
@@ -68,36 +69,35 @@ def store_and_serialize_inputs(inputs):
     return serialize_data(inputs)
 
 
-class LaunchProcessAction(plum.LaunchProcessAction):
-
+class LaunchProcessAction(plumpy.LaunchProcessAction):
     def __init__(self, *args, **kwargs):
         """
         Calls through to the constructor of the plum LaunchProcessAction while making sure that
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
+        kwargs['class_loader'] = CLASS_LOADER
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
-class ExecuteProcessAction(plum.ExecuteProcessAction):
-
+class ExecuteProcessAction(plumpy.ExecuteProcessAction):
     def __init__(self, process_class, init_args=None, init_kwargs=None):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs)
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER)
 
 
-class ProcessLauncher(plum.ProcessLauncher):
-
+class ProcessLauncher(plumpy.ProcessLauncher):
     def _launch(self, task):
-        from plum.process_comms import KWARGS_KEY
+        from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
         kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
+
 
 class ProcessControlPanel(object):
     """
@@ -110,28 +110,27 @@ class ProcessControlPanel(object):
 
         message_exchange = get_message_exchange_name(prefix)
         task_queue = get_launch_queue_name(prefix)
-        self._communicator = plum.rmq.RmqCommunicator(
+        self._communicator = plumpy.rmq.RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
             task_queue=task_queue,
-            blocking_mode=False,
             testing_mode=testing_mode
         )
 
-    def ready_future(self):
-        return self._communicator.initialised_future()
+    def connect(self):
+        return self._communicator.init()
 
     def pause_process(self, pid):
-        return self.execute_action(plum.PauseAction(pid))
+        return self.execute_action(plumpy.PauseAction(pid))
 
     def play_process(self, pid):
-        return self.execute_action(plum.PlayAction(pid))
+        return self.execute_action(plumpy.PlayAction(pid))
 
     def kill_process(self, pid, msg=None):
-        return self.execute_action(plum.CancelAction(pid))
+        return self.execute_action(plumpy.KillAction(pid))
 
     def request_status(self, pid):
-        return self.execute_action(plum.StatusAction(pid))
+        return self.execute_action(plumpy.StatusAction(pid))
 
     def launch_process(self, process_class, init_args=None, init_kwargs=None):
         action = LaunchProcessAction(process_class, init_args, init_kwargs)
@@ -139,7 +138,7 @@ class ProcessControlPanel(object):
         return action
 
     def continue_process(self, pid):
-        action = plum.ContinueProcessAction(pid)
+        action = plumpy.ContinueProcessAction(pid)
         action.execute(self._communicator)
         return action
 
@@ -159,11 +158,11 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     """
 
     def __init__(self, prefix, testing_mode=False):
-        self._loop = events.new_event_loop()
-        connector = new_rmq_connector(self._loop)
+        self._loop = plumpy.new_event_loop()
+        connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
-        self._connector.connect()
+        self.connect()
 
     def __enter__(self):
         return self
@@ -174,15 +173,15 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs)
         action.execute(self._communicator)
-        events.run_until_complete(action, self._loop)
+        self._communicator.await(action)
         return action.get_launch_future().result()
 
     def execute_action(self, action):
         action.execute(self._communicator)
-        return events.run_until_complete(action, self._loop)
+        return self._communicator.await(action)
 
     def close(self):
-        self._connector.close()
+        self._communicator.disconnect()
 
 
 def new_blocking_control_panel():
@@ -195,5 +194,23 @@ def new_blocking_control_panel():
     return BlockingProcessControlPanel(_get_prefix())
 
 
-def new_rmq_connector(loop):
-    return plum.rmq.RmqConnector(amqp_url=_get_rmq_config()['url'], loop=loop)
+def create_rmq_connector(loop=None):
+    if loop is None:
+        loop = events.new_event_loop()
+    return plumpy.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
+
+
+def create_communicator(loop=None, prefix=None, testing_mode=False):
+    if prefix is None:
+        prefix = _get_prefix()
+
+    message_exchange = get_message_exchange_name(prefix)
+    task_queue = get_launch_queue_name(prefix)
+
+    connector = create_rmq_connector(loop)
+    return plumpy.rmq.RmqCommunicator(
+        connector,
+        exchange_name=message_exchange,
+        task_queue=task_queue,
+        testing_mode=testing_mode
+    )

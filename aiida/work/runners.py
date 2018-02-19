@@ -1,12 +1,13 @@
-import plum
-import plum.rmq
 from collections import namedtuple
 from contextlib import contextmanager
 import inspect
 import logging
+import plumpy
+import plumpy.rmq
 
 import aiida.orm
-from . import events
+from . import class_loader
+from . import futures
 from . import persistence
 from . import rmq
 from . import transports
@@ -38,7 +39,7 @@ def set_runner(runner):
 def new_runner(**kwargs):
     """ Create a default runner optionally passing keyword arguments """
     if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = rmq._get_rmq_config()
+        kwargs['rmq_config'] = rmq.get_rmq_config()
     return Runner(**kwargs)
 
 
@@ -102,7 +103,7 @@ class Runner(object):
 
     def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else events.new_event_loop()
+        self._loop = loop if loop is not None else plumpy.new_event_loop()
         self._poll_interval = poll_interval
 
         self._transport = transports.TransportQueue(self._loop)
@@ -161,11 +162,11 @@ class Runner(object):
 
     def run_until_complete(self, future):
         """ Run the loop until the future has finished and return the result """
-        return plum.run_until_complete(future, self._loop)
+        return self._loop.run_sync(lambda: future)
 
     def close(self):
         if self._rmq_connector is not None:
-            self._rmq_connector.close()
+            self._rmq_connector.disconnect()
 
     def run(self, process, *args, **inputs):
         """
@@ -204,7 +205,7 @@ class Runner(object):
         else:
             # Run in this runner
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
-            process.play()
+            process.start()
             return process.calc
 
     def call_on_legacy_workflow_finish(self, pk, callback):
@@ -215,6 +216,16 @@ class Runner(object):
         calc_node = aiida.orm.load_node(pk=pk)
         self._poll_calculation(calc_node, callback)
 
+    def get_calculation_future(self, pk):
+        """
+        Get a future for an orm Calculation.  The future will have the calculation node
+        as the result when finished.
+
+        :return: A future representing the completion of the calculation node
+        """
+        return futures.CalculationFuture(
+            pk, self._loop, self._poll_interval, self._communicator)
+
     @contextmanager
     def child_runner(self):
         runner = self._create_child_runner()
@@ -224,13 +235,12 @@ class Runner(object):
             runner.close()
 
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
-        self._rmq_connector = plum.rmq.RmqConnector(amqp_url=url, loop=self._loop)
+        self._rmq_connector = plumpy.rmq.RmqConnector(amqp_url=url, loop=self._loop)
 
-        self._rmq_communicator = plum.rmq.RmqCommunicator(
+        self._rmq_communicator = plumpy.rmq.RmqCommunicator(
             self._rmq_connector,
             exchange_name=rmq.get_message_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
-            blocking_mode=False,
             testing_mode=testing_mode
         )
 
@@ -240,9 +250,8 @@ class Runner(object):
             testing_mode=testing_mode)
         self._communicator = self._rmq._communicator
 
-        self._rmq_connector.connect()
-        # Run the loop until the RMQ control panel is ready
-        self.run_until_complete(self._rmq.ready_future())
+        # Establish RMQ connection
+        self._communicator.init()
 
     def _create_child_runner(self):
         return Runner(**self._kwargs)
@@ -266,10 +275,14 @@ class DaemonRunner(Runner):
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
         super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
 
+        # Create a context for loading new processes
+        load_context = plumpy.LoadContext(runner=self)
+
         # Listen for incoming launch requests
         task_receiver = rmq.ProcessLauncher(
             loop=self.loop,
             persister=self.persister,
-            unbunble_kwargs={'runner': self}
+            load_context=load_context,
+            class_loader=class_loader.CLASS_LOADER
         )
         self.communicator.add_task_subscriber(task_receiver)

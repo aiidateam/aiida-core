@@ -68,7 +68,7 @@ class NestedWorkChain(WorkChain):
         if self.should_submit():
             self.report('Submitting nested workchain.')
             return ToContext(
-                sub_wf=submit(
+                sub_wf=self.submit(
                     NestedWorkChain,
                     inp=self.inputs.inp - 1
                 )
@@ -79,6 +79,8 @@ class NestedWorkChain(WorkChain):
 
     def finalize(self):
         if self.should_submit():
-            self.out('output', self.ctx.sub_wf.outputs.output + 1)
+            self.report('Getting sub-workchain output.')
+            self.out('output', self.ctx.sub_wf.out.output + 1)
         else:
+            self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))

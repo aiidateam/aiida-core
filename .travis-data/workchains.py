@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.base import Int
+from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
 class ParentWorkChain(WorkChain):
@@ -48,3 +49,36 @@ class SubWorkChain(WorkChain):
 
     def run_step(self):
         self.out('output', Int(self.inputs.inp.value * 2))
+
+class NestedWorkChain(WorkChain):
+    """
+    Nested workchain which creates a workflow where the nesting level is equal to its input.
+    """
+    @classmethod
+    def define(cls, spec):
+        super(NestedWorkChain, cls).define(spec)
+        spec.input('inp', valid_type=Int)
+        spec.outline(
+            cls.do_submit,
+            cls.finalize
+        )
+        spec.output('output', valid_type=Int, required=True)
+
+    def do_submit(self):
+        if self.should_submit():
+            self.report('Submitting nested workchain.')
+            return ToContext(
+                sub_wf=submit(
+                    NestedWorkChain,
+                    inp=self.inputs.inp - 1
+                )
+            )
+
+    def should_submit(self):
+        return int(self.inputs.inp) > 0
+
+    def finalize(self):
+        if self.should_submit():
+            self.out('output', self.ctx.sub_wf.outputs.output + 1)
+        else:
+            self.out('output', Int(0))

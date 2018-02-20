@@ -33,9 +33,9 @@ class AiidaWorkchainDirective(Directive):
     Directive to auto-document AiiDA workchains.
     """
     required_arguments = 1
-    HIDDEN_PORTS_FLAG = 'hidden-ports'
+    HIDE_UNSTORED_INPUTS_FLAG = 'hide-unstored-inputs'
     optional_arguments = 2
-    option_spec = {'module': directives.unchanged, HIDDEN_PORTS_FLAG: directives.flag}
+    option_spec = {'module': directives.unchanged, HIDE_UNSTORED_INPUTS_FLAG: directives.flag}
     has_content = True
 
     def run(self):
@@ -80,21 +80,27 @@ class AiidaWorkchainDirective(Directive):
         content += nodes.paragraph(text=self.workchain.__doc__)
 
         content += self.build_doctree(
-            title='Inputs:', port_namespace=self.workchain_spec.inputs
+            title='Inputs:', port_namespace=self.workchain_spec.inputs,
+            filter_fct=lambda port: not _is_non_db(port)
         )
+        if self.HIDE_UNSTORED_INPUTS_FLAG not in self.options:
+            content += self.build_doctree(
+                title='Inputs not stored in the database:', port_namespace=self.workchain_spec.inputs,
+                filter_fct=_is_non_db
+            )
         content += self.build_doctree(
             title='Outputs:', port_namespace=self.workchain_spec.outputs
         )
 
         return content
 
-    def build_doctree(self, title, port_namespace):
+    def build_doctree(self, title, port_namespace, filter_fct=lambda x: True):
         """
         Returns a doctree for a given port namespace, including a title.
         """
         paragraph = nodes.paragraph()
         paragraph += nodes.strong(text=title)
-        namespace_doctree = self.build_portnamespace_doctree(port_namespace)
+        namespace_doctree = self.build_portnamespace_doctree(port_namespace, filter_fct=filter_fct)
         if len(namespace_doctree) > 0:
             paragraph += namespace_doctree
         else:
@@ -102,21 +108,17 @@ class AiidaWorkchainDirective(Directive):
 
         return paragraph
 
-    def build_portnamespace_doctree(self, portnamespace):
+    def build_portnamespace_doctree(self, port_namespace, filter_fct):
         """
         Builds the doctree for a port namespace.
         """
         from aiida.work.ports import InputPort, PortNamespace
 
         result = nodes.bullet_list(bullet='*')
-        for name, port in sorted(portnamespace.items()):
-            if name.startswith(
-                '_'
-            ) and self.HIDDEN_PORTS_FLAG not in self.options:
-                continue
-            if name == 'dynamic':
-                continue
+        for name, port in sorted(port_namespace.items()):
             item = nodes.list_item()
+            if not filter_fct(port):
+                continue
             if isinstance(port, (InputPort, OutputPort)):
                 item += self.build_port_paragraph(name, port)
             elif isinstance(port, PortNamespace):
@@ -126,7 +128,7 @@ class AiidaWorkchainDirective(Directive):
                 item += addnodes.literal_strong(text=name)
                 item += nodes.Text(', ')
                 item += nodes.emphasis(text='Namespace')
-                item += self.build_portnamespace_doctree(port)
+                item += self.build_portnamespace_doctree(port, filter_fct=filter_fct)
             else:
                 raise NotImplementedError
             result += item
@@ -160,3 +162,6 @@ class AiidaWorkchainDirective(Directive):
                 return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
             except (AttributeError, TypeError):
                 return str(valid_type)
+
+def _is_non_db(port):
+    return getattr(port, 'non_db', False)

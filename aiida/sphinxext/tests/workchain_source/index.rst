@@ -11,11 +11,11 @@ This is a demo documentation to show off the features of the ``sphinx-aiida`` ex
     :module: demo_workchain
 
 
-You can add the ``:hidden-ports:`` option to also show inputs / outputs starting with ``_``:
+You can use the ``:hide-unstored-inputs:`` option to not show the inputs which are not stored in the DB:
 
 .. aiida-workchain:: DemoWorkChain
     :module: demo_workchain
-    :hidden-ports:
+    :hide-unstored-inputs:
 
 The command is also hooked into ``sphinx.ext.autodoc``, so you can also use that.
 

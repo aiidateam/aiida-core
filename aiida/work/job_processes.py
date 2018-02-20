@@ -11,11 +11,11 @@ from functools import partial
 import plumpy
 from voluptuous import Any
 from plumpy.ports import PortNamespace
-from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
+from aiida.orm.authinfo import AuthInfo
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_builder import JobProcessBuilder
@@ -216,10 +216,15 @@ class JobProcess(processes.Process):
     # endregion
 
     def _get_authinfo(self):
+        """
+        Return the AuthInfo object, using some caching to call it only once
+
+        :return: the AuthInfo object
+        """
         if self._authinfo is None:
             self._authinfo = \
-                get_authinfo(self.calc.get_computer(),
-                             self.calc.get_user())
+                AuthInfo.get(computer=self.calc.get_computer(),
+                             user=self.calc.get_user())
 
         return self._authinfo
 

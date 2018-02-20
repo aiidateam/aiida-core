@@ -1487,60 +1487,72 @@ class DbAuthInfo(m.Model):
         unique_together = (("aiidauser", "dbcomputer"),)
 
     def get_auth_params(self):
+        """
+        Get the auth_params dictionary from the DB
+
+        :return: a dictionary
+        """
         import json
 
         try:
             return json.loads(self.auth_params)
         except ValueError:
             raise DbContentError(
-                "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
+                "Error while reading auth_params for dbauthinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
 
     def set_auth_params(self, auth_params):
+        """
+        Replace the auth_params dictionary in the DB with the provided dictionary
+        """
         import json
 
         # Raises ValueError if data is not JSON-serializable
         self.auth_params = json.dumps(auth_params)
 
-    def get_workdir(self):
+    def get_metadata(self):
+        """
+        Get the metadata dictionary from the DB
+
+        :return: a dictionary
+        """
         import json
 
         try:
-            metadata = json.loads(self.metadata)
+            return json.loads(self.metadata)
         except ValueError:
             raise DbContentError(
-                "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
+                "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
+
+    def set_metadata(self, metadata):
+        """
+        Replace the metadata dictionary in the DB with the provided dictionary
+        """
+        import json
+
+        # Raises ValueError if data is not JSON-serializable
+        self.metadata = json.dumps(metadata)
+
+    def get_workdir(self):
+        """
+        Get the working directory, fallback to the computer workdir if not specified
+
+        :return: a string
+        """
+        import json
+        metadata = self.get_metadata()
 
         try:
             return metadata['workdir']
         except KeyError:
             return self.dbcomputer.get_workdir()
 
-    # a method of DbAuthInfo
-    def get_transport(self):
-        """
-        Given a computer and an aiida user (as entries of the DB) return a configured
-        transport to connect to the computer.
-        """
-        from aiida.transport import TransportFactory
-        from aiida.orm.computer import Computer
-
-        try:
-            ThisTransport = TransportFactory(self.dbcomputer.transport_type)
-        except MissingPluginError as e:
-            raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.dbcomputer.hostname, self.dbcomputer.transport_type, e.message))
-
-        params = dict(Computer(dbcomputer=self.dbcomputer).get_transport_params().items() +
-                      self.get_auth_params().items())
-        return ThisTransport(machine=self.dbcomputer.hostname, **params)
-
     def __str__(self):
         if self.enabled:
-            return "Authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
+            return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
-            return "Authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
+            return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
 
 
 @python_2_unicode_compatible

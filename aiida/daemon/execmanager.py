@@ -13,11 +13,10 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
-    AuthenticationError,
+    NotExistent,
     ConfigurationError,
     ModificationNotAllowed,
 )
@@ -40,7 +39,9 @@ execlogger = logging.getLogger('execmanager')
 def update_running_calcs_status(authinfo):
     """
     Update the states of calculations in WITHSCHEDULER status belonging
-    to user and machine as defined in the 'dbauthinfo' table.
+    to user and machine as defined by the AuthInfo object
+
+    :param authinfo: a AuthInfo instance
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
@@ -53,7 +54,7 @@ def update_running_calcs_status(authinfo):
     execlogger.debug(
         "Updating running calc status for user {} "
         "and machine {}".format(
-            authinfo.aiidauser.email, authinfo.dbcomputer.name)
+            authinfo.user.email, authinfo.computer.name)
     )
 
     # This will be returned to the caller
@@ -62,8 +63,8 @@ def update_running_calcs_status(authinfo):
     qmanager = QueryFactory()()
     calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
         state=calc_states.WITHSCHEDULER,
-        computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser
+        computer=authinfo.computer.dbcomputer,
+        user=authinfo.user.dbuser
     )
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
@@ -72,7 +73,7 @@ def update_running_calcs_status(authinfo):
 
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each job in calcs
-    scheduler = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
+    scheduler = authinfo.computer.get_scheduler()
     transport = authinfo.get_transport()
 
     # Open connection
@@ -125,6 +126,7 @@ def update_job(job, scheduler=None):
     :return: True if the job has is 'computed', False otherwise
     :rtype: bool
     """
+    from aiida.orm.authinfo import AuthInfo
     job_id = job.get_job_id()
     if job_id is None:
         execlogger.error(
@@ -134,7 +136,7 @@ def update_job(job, scheduler=None):
 
     if scheduler is None:
         scheduler = job.get_computer().get_scheduler()
-        authinfo = get_authinfo(job.get_computer(), job.get_user())
+        authinfo = AuthInfo.get(computer=job.get_computer(), user=job.get_user())
         transport = authinfo.get_transport()
         scheduler.set_transport()
     else:
@@ -187,6 +189,7 @@ def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
 
 # region Daemon tasks
 def retrieve_jobs():
+    from aiida.orm.authinfo import AuthInfo
     from aiida.backends.utils import QueryFactory
 
     qmanager = QueryFactory()()
@@ -209,7 +212,7 @@ def retrieve_jobs():
         execlogger.debug("({},{}) pair to check".format(
             aiidauser.email, computer.name))
         try:
-            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
+            authinfo = AuthInfo.get(computer=computer, user=aiidauser)
             retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for "
@@ -227,6 +230,7 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
+    from aiida.orm.authinfo import AuthInfo
     from aiida.backends.utils import QueryFactory
 
     qmanager = QueryFactory()()
@@ -243,7 +247,7 @@ def update_jobs():
         )
 
         try:
-            authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
+            authinfo = AuthInfo.get(computer=computer, user=aiidauser)
             computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status "
@@ -261,9 +265,10 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
+    from aiida.orm.authinfo import AuthInfo
     from aiida.orm import JobCalculation, Computer, User
     from aiida.common.log import get_dblogger_extra
-    from aiida.backends.utils import get_authinfo, QueryFactory
+    from aiida.backends.utils import QueryFactory
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
@@ -280,8 +285,8 @@ def submit_jobs():
 
         try:
             try:
-                authinfo = get_authinfo(computer.dbcomputer, aiidauser._dbuser)
-            except AuthenticationError:
+                authinfo = AuthInfo.get(computer=computer, user=aiidauser)
+            except NotExistent:
                 # TODO!!
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
@@ -329,7 +334,9 @@ def submit_jobs():
 def submit_jobs_with_authinfo(authinfo):
     """
     Submit jobs in TOSUBMIT status belonging
-    to user and machine as defined in the 'dbauthinfo' table.
+    to user and machine as defined by the AuthInfo object.
+
+    :param authinfo: a AuthInfo object
     """
     from aiida.orm import JobCalculation
     from aiida.common.log import get_dblogger_extra
@@ -343,14 +350,14 @@ def submit_jobs_with_authinfo(authinfo):
 
     execlogger.debug("Submitting jobs for user {} "
                      "and machine {}".format(
-        authinfo.aiidauser.email, authinfo.dbcomputer.name))
+        authinfo.user.email, authinfo.computer.name))
 
     qmanager = QueryFactory()()
     # I create a unique set of pairs (computer, aiidauser)
     calcs_to_inquire = qmanager.query_jobcalculations_by_computer_user_state(
             state=calc_states.TOSUBMIT,
-        computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        computer=authinfo.computer.dbcomputer,
+        user=authinfo.user.dbuser)
 
 
     # I avoid to open an ssh connection if there are
@@ -409,10 +416,10 @@ def submit_calc(calc, authinfo, transport=None):
 
     :param calc: the calculation to submit
         (an instance of the aiida.orm.JobCalculation class)
-    :param authinfo: the authinfo for this calculation.
+    :param authinfo: the AuthInfo object for this calculation.
     :param transport: if passed, must be an already opened transport. No checks
         are done on the consistency of the given transport with the transport
-        of the computer defined in the authinfo.
+        of the computer defined in the AuthInfo.
     """
     from aiida.orm import Code, Computer
     from aiida.common.folders import SandboxFolder
@@ -460,7 +467,7 @@ def submit_calc(calc, authinfo, transport=None):
         if must_open_t:
             t.open()
 
-        s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
+        s = authinfo.computer.get_scheduler()
         s.set_transport(t)
 
         computer = calc.get_computer()
@@ -668,8 +675,8 @@ def retrieve_computed_for_authinfo(authinfo):
     # I create a unique set of pairs (computer, aiidauser)
     calcs_to_retrieve = qmanager.query_jobcalculations_by_computer_user_state(
         state=calc_states.COMPUTED,
-        computer=authinfo.dbcomputer,
-        user=authinfo.aiidauser)
+        computer=authinfo.computer.dbcomputer,
+        user=authinfo.user.dbuser)
 
 
     retrieved = []
@@ -687,8 +694,10 @@ def retrieve_computed_for_authinfo(authinfo):
     return retrieved
 
 def retrieve_and_parse(calc, transport=None):
+    from aiida.orm.authinfo import AuthInfo
+
     if transport is None:
-        authinfo = get_authinfo(calc.get_computer(), calc.get_user())
+        authinfo = AuthInfo.get(computer=calc.get_computer(), user=calc.get_user())
         transport = authinfo.get_transport()
 
     logger_extra = get_dblogger_extra(calc)

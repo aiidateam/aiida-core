@@ -479,11 +479,11 @@ class Computer(VerdiCommandWithSubcommands):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.common.exceptions import (
-            NotExistent, ValidationError)
+            NotExistent, ValidationError, MultipleObjectsError)
         from aiida.backends.utils import get_automatic_user
         from aiida.common.utils import get_configured_user_email
-        from aiida.backends.settings import BACKEND
-        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+        from aiida.orm.authinfo import AuthInfo
+        from aiida.orm.user import User
 
         import argparse
 
@@ -511,50 +511,18 @@ class Computer(VerdiCommandWithSubcommands):
         if user_email is None:
             user = get_automatic_user()
         else:
-            from aiida.orm.querybuilder import QueryBuilder
-            qb = QueryBuilder()
-            qb.append(type="user", filters={'email': user_email})
-            user = qb.first()
-            if user is None:
-                print >> sys.stderr, ("No user with email '{}' in the "
-                                      "database.".format(user_email))
+            try:
+                user = User.get(email=user_email)
+            except (NotExistent, MultipleObjectsError) as e:
+                print >> sys.stderr, ("{}".format(e))
                 sys.exit(1)
 
-        if BACKEND == BACKEND_DJANGO:
-            from aiida.backends.djsite.db.models import DbAuthInfo
+        try:
+            authinfo = AuthInfo.get(computer=computer, user=user)
+        except NotExistent:
+            authinfo = AuthInfo(computer=computer, user=user)
+        old_authparams = authinfo.get_auth_params()
 
-            try:
-                authinfo = DbAuthInfo.objects.get(
-                    dbcomputer=computer.dbcomputer,
-                    aiidauser=user)
-
-                old_authparams = authinfo.get_auth_params()
-            except ObjectDoesNotExist:
-                authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
-                old_authparams = {}
-
-        elif BACKEND == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-
-            authinfo = session.query(DbAuthInfo).filter(
-                DbAuthInfo.dbcomputer == computer.dbcomputer
-            ).filter(
-                DbAuthInfo.aiidauser == user
-            ).first()
-            if authinfo is None:
-                authinfo = DbAuthInfo(
-                    dbcomputer=computer.dbcomputer,
-                    aiidauser=user
-                )
-                old_authparams = {}
-            else:
-                old_authparams = authinfo.get_auth_params()
-        else:
-            raise Exception(
-                "Unknown backend {}".format(BACKEND)
-            )
         Transport = computer.get_transport_class()
 
         print ("Configuring computer '{}' for the AiiDA user '{}'".format(
@@ -586,17 +554,10 @@ class Computer(VerdiCommandWithSubcommands):
             print "but have not been recognized and have been deleted:"
             print ", ".join(old_authparams.keys())
 
-        if not valid_keys:
-            print "There are no special keys to be configured. Configuration completed."
-            authinfo.set_auth_params({})
-            authinfo.save()
-            return
-
         print ""
         print "Note: to leave a field unconfigured, leave it empty and press [Enter]"
 
         # I strip out the old auth_params that are not among the valid keys
-
         new_authparams = {}
 
         for k in valid_keys:
@@ -635,8 +596,11 @@ class Computer(VerdiCommandWithSubcommands):
                 except ValidationError as e:
                     print "Error in the inserted value: {}".format(e.message)
 
+        if not valid_keys:
+            print "There are no special keys to be configured. Configuration completed."
+
         authinfo.set_auth_params(new_authparams)
-        authinfo.save()
+        authinfo.store()
         print "Configuration stored for your user on computer '{}'.".format(
             computername)
 
@@ -740,7 +704,7 @@ class Computer(VerdiCommandWithSubcommands):
         print "Testing computer '{}' for user {}...".format(computername,
                                                             user.email)
         try:
-            dbauthinfo = computer.get_dbauthinfo(user._dbuser)
+            authinfo = computer.get_authinfo(user)
         except NotExistent:
             print >> sys.stderr, ("User with email '{}' is not yet configured "
                                   "for computer '{}' yet.".format(
@@ -748,7 +712,7 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         warning_string = None
-        if not dbauthinfo.enabled:
+        if not authinfo.enabled:
             warning_string = ("** NOTE! Computer is disabled for the "
                               "specified user!\n   Do you really want to test it? [y/N] ")
         if not computer.is_enabled():
@@ -759,8 +723,8 @@ class Computer(VerdiCommandWithSubcommands):
             if not (answer == 'y' or answer == 'Y'):
                 sys.exit(0)
 
-        s = OrmComputer(dbcomputer=dbauthinfo.dbcomputer).get_scheduler()
-        t = dbauthinfo.get_transport()
+        s = authinfo.computer.get_scheduler()
+        t = authinfo.get_transport()
 
         ## STARTING TESTS HERE
         num_failures = 0
@@ -776,7 +740,7 @@ class Computer(VerdiCommandWithSubcommands):
                     num_tests += 1
                     try:
                         succeeded = test(transport=t, scheduler=s,
-                                         dbauthinfo=dbauthinfo)
+                                         authinfo=authinfo)
                     except Exception as e:
                         print "* The test raised an exception!"
                         if print_traceback:
@@ -814,7 +778,7 @@ class Computer(VerdiCommandWithSubcommands):
                        "full traceback)")
             succeeded = False
 
-    def _computer_test_get_jobs(self, transport, scheduler, dbauthinfo):
+    def _computer_test_get_jobs(self, transport, scheduler, authinfo):
         """
         Internal test to check if it is possible to check the queue state.
 
@@ -822,7 +786,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
-        :param dbauthinfo: the dbauthinfo object (from which one can get
+        :param authinfo: the authinfo object (from which one can get
           computer and aiidauser)
         :return: True if the test succeeds, False if it fails.
         """
@@ -834,7 +798,7 @@ class Computer(VerdiCommandWithSubcommands):
         print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
         return True
 
-    def _computer_create_temp_file(self, transport, scheduler, dbauthinfo):
+    def _computer_create_temp_file(self, transport, scheduler, authinfo):
         """
         Internal test to check if it is possible to create a temporary file
         and then delete it in the work directory
@@ -843,7 +807,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         :param transport: an open transport
         :param scheduler: the corresponding scheduler class
-        :param dbauthinfo: the dbauthinfo object (from which one can get
+        :param authinfo: the AuthInfo object (from which one can get
           computer and aiidauser)
         :return: True if the test succeeds, False if it fails.
         """
@@ -857,7 +821,7 @@ class Computer(VerdiCommandWithSubcommands):
         print "  `-> Getting the remote user name..."
         remote_user = transport.whoami()
         print "      [remote username: {}]".format(remote_user)
-        workdir = dbauthinfo.get_workdir().format(
+        workdir = authinfo.get_workdir().format(
             username=remote_user)
         print "      [Checking/creating work directory: {}]".format(workdir)
 
@@ -916,7 +880,6 @@ class Computer(VerdiCommandWithSubcommands):
 
         import argparse
 
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
         from aiida.orm.implementation import User
 
@@ -960,10 +923,10 @@ class Computer(VerdiCommandWithSubcommands):
                 sys.exit(1)
             user = user_list[0]
             try:
-                dbauthinfo = computer.get_dbauthinfo(user._dbuser)
-                if not dbauthinfo.enabled:
-                    dbauthinfo.enabled = True
-                    dbauthinfo.save()
+                authinfo = computer.get_authinfo(user)
+                if not authinfo.enabled:
+                    authinfo.enabled = True
+                    authinfo.store()
                     print "Computer '{}' enabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
@@ -1030,10 +993,10 @@ class Computer(VerdiCommandWithSubcommands):
                 sys.exit(1)
             user = user_list[0]
             try:
-                dbauthinfo = computer.get_dbauthinfo(user)
-                if dbauthinfo.enabled:
-                    dbauthinfo.enabled = False
-                    dbauthinfo.save()
+                authinfo = computer.get_authinfo(user)
+                if authinfo.enabled:
+                    authinfo.enabled = False
+                    authinfo.store()
                     print "Computer '{}' disabled for user {}.".format(
                         computername, user.get_full_name())
                 else:

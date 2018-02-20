@@ -151,6 +151,15 @@ class AbstractUser(object):
     def get_all_users(cls):
         return cls.search_for_users()
 
+    def dbuser(self):
+        """
+        The underlying DbUser object.
+
+        :return: An instanc of a DbUser from the proper
+            implementation (Django, SQLAlchemy, ...)
+        """
+        return self._dbuser
+
     @abstractclassmethod
     def search_for_users(cls, **kwargs):
         """
@@ -161,6 +170,26 @@ class AbstractUser(object):
         """
         pass
 
+    @classmethod
+    def get(cls, email):
+        """
+        Get the User with the given email
+
+        :param email: a string
+        :return: the User object
+        :raise NotExistent: if the User does not Exist
+        :raise MultipleObjectsError: if there are multiple User objects
+            with the same email (should not happen)
+        """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        res = cls.search_for_users(email=email)
+        if res:
+            if len(res) > 1:
+                raise MultipleObjectsError("Multiple users with email {}".format(email))
+            else:
+                return res[0]
+        else:
+            raise NotExistent("No user with email {}".format(email))
 
 class Util(object):
     __metaclass__ = ABCMeta

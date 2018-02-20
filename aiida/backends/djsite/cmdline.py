@@ -93,15 +93,15 @@ def get_computers_work_dir(calculations, user):
     """
 
     from aiida.orm.computer import Computer
-    from aiida.backends.utils import get_authinfo
+    from aiida.orm.authinfo import AuthInfo
 
     computers = [Computer.get(c.dbcomputer) for c in calculations]
 
     remotes = {}
     for computer in computers:
         remotes[computer.name] = {
-            'transport': get_authinfo(computer=computer,
-                                      aiidauser=user).get_transport(),
+            'transport': AuthInfo.get(computer=computer,
+                                      user=user).get_transport(),
             'computer': computer,
         }
 

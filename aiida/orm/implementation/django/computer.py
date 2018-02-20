@@ -271,32 +271,6 @@ class Computer(AbstractComputer):
     def is_enabled(self):
         return self.dbcomputer.enabled
 
-    def get_dbauthinfo(self, user):
-        from aiida.backends.djsite.db.models import DbAuthInfo
-        try:
-            return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer,
-                                          aiidauser=user)
-        except ObjectDoesNotExist:
-            raise NotExistent("The user '{}' is not configured for "
-                              "computer '{}'".format(
-                user.email, self.name))
-
-    def is_user_configured(self, user):
-        try:
-            self.get_dbauthinfo(user)
-            return True
-        except NotExistent:
-            return False
-
-    def is_user_enabled(self, user):
-        try:
-            dbauthinfo = self.get_dbauthinfo(user)
-            return dbauthinfo.enabled
-        except NotExistent:
-            # Return False if the user is not configured (in a sense,
-            # it is disabled for that user)
-            return False
-
     def set_enabled_state(self, enabled):
         self.dbcomputer.enabled = enabled
         if not self.to_be_stored:

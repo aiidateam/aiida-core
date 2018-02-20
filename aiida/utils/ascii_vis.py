@@ -166,14 +166,23 @@ def calc_info(calc_node):
     from aiida.orm.calculation.job import JobCalculation
 
     if isinstance(calc_node, WorkCalculation):
-        label = calc_node.get_attr('_process_label')
-        state = calc_node.get_attr('process_state')
+        plabel = calc_node.get_attr('_process_label')
+        pstate = calc_node.get_attr('process_state')
+        winfo = calc_node.get_attr('stepper_state_info', None)
+
+        if winfo is None:
+            s = u"{} <pk={}> [{}]".format(plabel, calc_node.pk, pstate)
+        else:
+            s = u"{} <pk={}> [{}] [{}]".format(plabel, calc_node.pk, pstate, winfo)
+
     elif isinstance(calc_node, JobCalculation):
-        label = type(calc_node).__name__
-        state = str(calc_node.get_state())
+        clabel = type(calc_node).__name__
+        cstate = str(calc_node.get_state())
+        s = u"{} <pk={}> [{}]".format(clabel, calc_node.pk, cstate)
     else:
         raise TypeError("Unknown type")
-    return u"{} <pk={}> [{}]".format(label, calc_node.pk, state)
+
+    return s
 
 
 def print_call_graph(calc_node, info_fn=calc_info):

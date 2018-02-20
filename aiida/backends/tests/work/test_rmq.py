@@ -32,9 +32,15 @@ class TestProcessControl(AiidaTestCase):
             'testing_mode': True
         }
         self.runner = work.Runner(
-            rmq_config=rmq_config, rmq_submit=True, loop=self.loop, poll_interval=0.)
+            rmq_config=rmq_config,
+            rmq_submit=True,
+            loop=self.loop,
+            poll_interval=0.)
         self.daemon_runner = work.DaemonRunner(
-            rmq_config=rmq_config, rmq_submit=True, loop=self.loop, poll_interval=0.)
+            rmq_config=rmq_config,
+            rmq_submit=True,
+            loop=self.loop,
+            poll_interval=0.)
 
     def tearDown(self):
         self.daemon_runner.close()

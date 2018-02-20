@@ -48,7 +48,7 @@ class AuthInfo(AbstractAuthInfo):
             # Takes care of always getting a Computer instance from a DbComputer, Computer or string
             dbcomputer = Computer.get(computer).dbcomputer
             # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
-            dbuser = User.get(email=user.email)
+            dbuser = User.get(email=user.email).dbuser
 
             self._dbauthinfo = DbAuthInfo(computer=dbcomputer, aiidauser=dbuser)
 

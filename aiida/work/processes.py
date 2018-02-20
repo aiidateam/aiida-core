@@ -474,30 +474,6 @@ class Process(plumpy.Process):
                 ])
             return namespace_list
 
-    # def _flatten_output_dict(self, output_dict):
-    #     res = {}
-    #     for key, value in output_dict.items():
-    #         if not isinstance(value, Data):
-    #             for sub_key, sub_value in self._flatten_output_dict(value).items():
-    #                 res[key + '.' + sub_key] = sub_value
-    #         else:
-    #             res[key] = value
-    #     return res
-
-    # def _wrap_outputs_dict(self, flat_outputs_dict):
-    #     sub_dicts = defaultdict(dict)
-    #     res = {}
-    #     for key, value in flat_outputs_dict.items():
-    #         if '.' in key:
-    #             namespace, sub_key = key.split('.', 1)
-    #             sub_dicts[namespace][sub_key] = value
-    #         else:
-    #             res[key] = value
-    #     for namespace, sub_dict in sub_dicts.items():
-    #         res[namespace] = self._wrap_outputs_dict(sub_dict)
-    #     return res
-
-
 class FunctionProcess(Process):
     _func_args = None
     _calc_node_class = WorkCalculation

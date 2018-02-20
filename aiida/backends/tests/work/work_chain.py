@@ -813,6 +813,23 @@ class ParentExposeWorkChain(work.WorkChain):
             namespace='sub_2.sub_3',
         )
 
+        spec.expose_outputs(ChildExposeWorkChain, include=['a'])
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            exclude=['a'],
+            namespace='sub_1'
+        )
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            include=['b'],
+            namespace='sub_2'
+        )
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            include=['c'],
+            namespace='sub_2.sub_3'
+        )
+
         spec.outline(
             cls.start_children,
             cls.finalize
@@ -834,7 +851,19 @@ class ParentExposeWorkChain(work.WorkChain):
         return ToContext(child_1=child_1, child_2=child_2)
 
     def finalize(self):
-        pass
+        exposed_1 = self.exposed_outputs(
+            self.ctx.child_1,
+            ChildExposeWorkChain,
+            namespace='sub_1',
+            agglomerate=False
+        )
+        self.out_many(exposed_1)
+        exposed_2 = self.exposed_outputs(
+            self.ctx.child_2,
+            ChildExposeWorkChain,
+            namespace='sub_2.sub_3'
+        )
+        self.out_many(exposed_2)
 
 class ChildExposeWorkChain(work.WorkChain):
     @classmethod
@@ -845,12 +874,16 @@ class ChildExposeWorkChain(work.WorkChain):
         spec.input('b', valid_type=Float)
         spec.input('c', valid_type=Bool)
 
+        spec.output('a', valid_type=Float)
+        spec.output('b', valid_type=Float)
+        spec.output('c', valid_type=Bool)
+
         spec.outline(cls.do_run)
 
-        spec.output('o', valid_type=Float)
-
     def do_run(self):
-        self.out('o', self.inputs.b)
+        self.out('a', self.inputs.a + self.inputs.b)
+        self.out('b', self.inputs.b)
+        self.out('c', self.inputs.c)
 
 class TestWorkChainExpose(AiidaTestCase):
     """
@@ -876,4 +909,11 @@ class TestWorkChainExpose(AiidaTestCase):
             sub_1={'b': Float(2.3), 'c': Bool(True)},
             sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
         )
-        # self.assertEquals(res['o'], 2.3)
+        self.assertEquals(
+            res,
+            {
+                'a': Float(2.2),
+                'sub_1.b': Float(2.3), 'sub_1.c': Bool(True),
+                'sub_2.b': Float(1.2), 'sub_2.sub_3.c': Bool(False)
+            }
+        )

@@ -59,6 +59,7 @@ class ProcessSpec(plumpy.ProcessSpec):
     def __init__(self):
         super(ProcessSpec, self).__init__()
         self._exposed_inputs = defaultdict(lambda: defaultdict(list))
+        self._exposed_outputs = defaultdict(lambda: defaultdict(list))
 
     def expose_inputs(self, process_class, namespace=None, exclude=(), include=None):
         """

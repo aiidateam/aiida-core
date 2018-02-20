@@ -16,6 +16,7 @@ import itertools
 import plumpy
 import uuid
 import traceback
+from collections import defaultdict
 
 from plumpy import ProcessState
 from aiida.common import exceptions
@@ -167,6 +168,10 @@ class Process(plumpy.Process):
             return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
         else:
             return super(Process, self).out(output_port, value)
+
+    def out_many(self, out_dict):
+        for key, value in out_dict.items():
+            self.out(key, value)
 
     # region Process messages
     @override
@@ -437,6 +442,24 @@ class Process(plumpy.Process):
 
         return exposed_inputs
 
+    def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
+        output_key_map = {}
+        process_outputs_dict = process_instance.get_outputs_dict()
+        for ns in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
+            for key in process_outputs_dict:
+                if key in self.spec()._exposed_outputs[ns][process_class]:
+                    output_key_map[key] = ns
+
+        result = {}
+        namespace_separator = self.spec().namespace_separator
+        for key, ns in output_key_map.items():
+            if ns is None:
+                result[key] = process_outputs_dict[key]
+            else:
+                result[ns + namespace_separator + key] = process_outputs_dict[key]
+        return result
+
+
     @staticmethod
     def _get_namespace_list(namespace=None, agglomerate=True):
         if not agglomerate:
@@ -450,6 +473,29 @@ class Process(plumpy.Process):
                     for i in range(1, len(split_ns) + 1)
                 ])
             return namespace_list
+
+    # def _flatten_output_dict(self, output_dict):
+    #     res = {}
+    #     for key, value in output_dict.items():
+    #         if not isinstance(value, Data):
+    #             for sub_key, sub_value in self._flatten_output_dict(value).items():
+    #                 res[key + '.' + sub_key] = sub_value
+    #         else:
+    #             res[key] = value
+    #     return res
+
+    # def _wrap_outputs_dict(self, flat_outputs_dict):
+    #     sub_dicts = defaultdict(dict)
+    #     res = {}
+    #     for key, value in flat_outputs_dict.items():
+    #         if '.' in key:
+    #             namespace, sub_key = key.split('.', 1)
+    #             sub_dicts[namespace][sub_key] = value
+    #         else:
+    #             res[key] = value
+    #     for namespace, sub_dict in sub_dicts.items():
+    #         res[namespace] = self._wrap_outputs_dict(sub_dict)
+    #     return res
 
 
 class FunctionProcess(Process):

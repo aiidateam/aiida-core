@@ -9,8 +9,7 @@ from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 
 import aiida
-from plum.util import load_class
-from plum.port import InputPort, OutputPort
+from plumpy.ports import OutputPort
 
 
 def setup_aiida_workchain(app):
@@ -47,10 +46,13 @@ class AiidaWorkchainDirective(Directive):
     def load_workchain(self):
         """Loads the workchain and sets up additional attributes."""
         # pylint: disable=attribute-defined-outside-init
+        aiida.try_load_dbenv()
+        from aiida.work import CLASS_LOADER
+
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
         self.workchain_name = self.module_name + '.' + self.class_name
-        self.workchain = load_class(self.workchain_name)
+        self.workchain = CLASS_LOADER.load_class(self.workchain_name)
         self.workchain_spec = self.workchain.spec()
 
     def build_node_tree(self):
@@ -104,7 +106,7 @@ class AiidaWorkchainDirective(Directive):
         """
         Builds the doctree for a port namespace.
         """
-        from aiida.work.process import PortNamespace
+        from aiida.work.ports import InputPort, PortNamespace
 
         result = nodes.bullet_list(bullet='*')
         for name, port in sorted(portnamespace.items()):

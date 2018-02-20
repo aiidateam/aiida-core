@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.abspath('.'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.mathjax', 'sphinx_aiida']
+extensions = ['sphinx.ext.mathjax', 'aiida.sphinxext']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -45,8 +45,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'sphinx-aiida-demo'
-copyright = u'2017, Dominik Gresch'
-author = u'Dominik Gresch'
+copyright = u'2018, The AiiDA team'
+author = u'The AiiDA team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

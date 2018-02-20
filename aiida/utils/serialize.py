@@ -6,6 +6,7 @@ from aiida.orm import Node, load_node
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
 
+
 def encode_key(key):
     """
     Helper function for the serialize_data function which may need to serialize a
@@ -20,6 +21,7 @@ def encode_key(key):
     else:
         return key
 
+
 def decode_key(key):
     """
     Helper function for the deserialize_data function which can undo the key encoding
@@ -32,6 +34,7 @@ def decode_key(key):
         return literal_eval(key[len(_PREFIX_KEY_TUPLE):])
     else:
         return key
+
 
 def serialize_data(data):
     """
@@ -52,6 +55,7 @@ def serialize_data(data):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
     else:
         return data
+
 
 def deserialize_data(data):
     """

@@ -50,7 +50,7 @@ class AuthInfo(AbstractAuthInfo):
             # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
             dbuser = User.get(email=user.email).dbuser
 
-            self._dbauthinfo = DbAuthInfo(computer=dbcomputer, aiidauser=dbuser)
+            self._dbauthinfo = DbAuthInfo(dbcomputer=dbcomputer, aiidauser=dbuser)
 
     @property
     def to_be_stored(self):

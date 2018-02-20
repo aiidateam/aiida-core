@@ -100,13 +100,13 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
 
 
 class ExecuteProcessAction(plumpy.ExecuteProcessAction):
-    def __init__(self, process_class, init_args=None, init_kwargs=None):
+    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER)
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER, nowait=nowait)
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
@@ -192,7 +192,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
-        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
         action.execute(self._communicator)
         self._communicator.await(action)
         return action.get_launch_future().result()

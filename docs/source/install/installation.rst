@@ -7,8 +7,8 @@ Installation
 This section of the manual will guide you through the process of installing AiiDA on your system.
 AiiDA has been tested to run on the following platforms:
 
+* Ubuntu 14.04, 16.04
 * Mac OS X
-* Ubuntu 14.04 & 16.04
 
 We expect that AiiDA should also run on these other platforms:
 
@@ -36,27 +36,19 @@ The following software is required to continue with the installation:
 * `python-pip`_ (Python package manager)
 * `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
 * `postgresql`_ (Database software version 9.4 or higher)
+* `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
 
 .. _git: https://git-scm.com/downloads
 .. _python-2.7.x: https://www.python.org/downloads
 .. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
 .. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
 .. _postgresql: https://www.postgresql.org/downloads
+.. _RabbitMQ: https://www.rabbitmq.com/
 
 
-Installation instructions will depend on your system.
-For Ubuntu and any other Debian derived distributions you can use::
-
-    $ sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
-
-For MacOS X using `Homebrew`_ as the package manager::
-
-    $ brew install git python postgresql
-    $ pg_ctl -D /usr/local/var/postgres start
-
-.. _Homebrew: http://brew.sh/index_de.html
-
-For a more detailed description of database requirements and usage see section :ref:`database <database>`.
+The installation instructions for these prerequisites will depend on the operating system of your machine.
+We provide basic instructions for :ref:`several operating systems<installation_os>`.
+Make sure you have successfully installed these prerequisites before continuing with the installation guide.
 
 
 .. _install_aiida:

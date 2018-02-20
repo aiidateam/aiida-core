@@ -30,7 +30,7 @@ class Import(VerdiCommand):
         import urllib2
 
         from aiida.common.folders import SandboxFolder
-        from aiida.orm.importexport import get_valid_import_links, import_data_dj, import_data_sqla
+        from aiida.orm.importexport import get_valid_import_links, import_data
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -82,12 +82,7 @@ class Import(VerdiCommand):
         for filename in files:
             try:
                 print "**** Importing file {}".format(filename)
-                from aiida.backends.settings import BACKEND
-                from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-                if BACKEND == BACKEND_SQLA:
-                    import_data_sqla(filename)
-                elif BACKEND == BACKEND_DJANGO:
-                    import_data_dj(filename)
+                import_data(filename)
             except Exception:
                 traceback.print_exc()
 

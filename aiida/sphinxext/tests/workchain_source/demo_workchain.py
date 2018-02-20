@@ -14,7 +14,8 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         super(DemoWorkChain, cls).define(spec)
 
         spec.input('x', valid_type=Float, help='First input argument.')
-        spec.output('x', valid_type=Float, help='Output of the demoworkchain.')
+        spec.input('y.z', valid_type=Int, help='Input in a separate namespace.')
+        spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
 
 class NormalClass(object):
     """This is here to check that we didn't break the regular 'autoclass."""

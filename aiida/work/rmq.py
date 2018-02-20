@@ -113,7 +113,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
     def _launch(self, task):
         from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
-        # kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
 

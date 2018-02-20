@@ -8,9 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from functools import partial
+
 import plumpy
-from voluptuous import Any
 from plumpy.ports import PortNamespace
+import sys
+import tornado.gen
+from voluptuous import Any
+
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.common import exceptions
@@ -31,48 +35,178 @@ UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
 
 
+class TransportTask(plumpy.Future):
+    """ A general task that requires transport """
+    def __init__(self, calc_node, transport_queue):
+        super(TransportTask, self).__init__()
+        self._calc = calc_node
+        self._authinfo = get_authinfo(calc_node.get_computer(), calc_node.get_user())
+        transport_queue.call_me_with_transport(self._authinfo, self._execute)
+
+    def execute(self, transport):
+        pass
+
+    def _execute(self, authinfo, transport):
+        if not self.cancelled():
+            try:
+                self.set_result(self.execute(transport))
+            except Exception:
+                self.set_exc_info(sys.exc_info())
+
+
+class SubmitJob(TransportTask):
+    """ A task to submit a job calculation """
+    def execute(self, transport):
+        return execmanager.submit_calc(self._calc, self._authinfo, transport)
+
+
+class UpdateSchedulerState(TransportTask):
+    """ A task to update the scheduler state of a job calculation """
+    def execute(self, transport):
+        scheduler = self._calc.get_computer().get_scheduler()
+        scheduler.set_transport(transport)
+
+        job_id = self._calc.get_job_id()
+
+        kwargs = {'jobs': [job_id], 'as_dict': True}
+        if scheduler.get_feature('can_query_by_user'):
+            kwargs['user'] = "$USER"
+        found_jobs = scheduler.getJobs(**kwargs)
+
+        info = found_jobs.get(job_id, None)
+        if info is None:
+            # If the job is computed or not found assume it's done
+            job_done = True
+            self._calc._set_scheduler_state(job_states.DONE)
+        else:
+            # Has the state changed?
+            last_jobinfo = self._calc._get_last_jobinfo()
+
+            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
+                execmanager.update_job_calc_from_job_info(self._calc, info)
+
+            job_done = info.job_state == job_states.DONE
+
+        if job_done:
+            # If the job is done, also get detailed job info
+            try:
+                detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
+            except NotImplementedError:
+                detailed_job_info = (
+                    u"AiiDA MESSAGE: This scheduler does not implement "
+                    u"the routine get_detailed_jobinfo to retrieve "
+                    u"the information on "
+                    u"a job after it has finished.")
+
+            execmanager.update_job_calc_from_detailed_job_info(self._calc, detailed_job_info)
+            self._calc._set_state(calc_states.COMPUTED)
+
+        return job_done
+
+
+class RetrieveJob(TransportTask):
+    """ A task to retrieve a completed calculation """
+    def execute(self, transport):
+        """ This returns the retrieved temporary folder """
+        return execmanager.retrieve_all(self._calc, transport)
+
+
 class Waiting(plumpy.Waiting):
+    """
+    The waiting state for the JobCalculation.
+    """
+    def __init__(self, process, done_callback, msg=None, data=None):
+        super(Waiting, self).__init__(process, done_callback, msg, data)
+        self._task = None       # The currently running task
+        self._cancelling_future = None
+
     def enter(self):
         super(Waiting, self).enter()
-        self._action_command()
+        self.process.call_soon(self.action_command)
 
-    def load_instance_state(self, saved_state, process):
-        super(Waiting, self).load_instance_state(saved_state, process)
-        self._action_command()
+    def load_instance_state(self, saved_state, load_context):
+        super(Waiting, self).load_instance_state(saved_state, load_context)
+        self._task = None
+        self._cancelling_future = None
+        self.process.call_soon(self.action_command)
 
-    def _action_command(self):
-        if self.data == SUBMIT_COMMAND:
-            op = self.process._submit_with_transport
-        elif self.data == UPDATE_SCHEDULER_COMMAND:
-            op = self.process._update_scheduler_state_with_transport
-        elif self.data == RETRIEVE_COMMAND:
-            op = self.process._retrieve_with_transport
+    def exit(self):
+        super(Waiting, self).exit()
+        if self._cancelling_future and not self._cancelling_future.done():
+            self._cancelling_future.set_result(False)
+
+    @tornado.gen.coroutine
+    def action_command(self):
+        calc = self.process.calc
+        transport_queue = self.process.runner.transport
+
+        try:
+            if self.data == SUBMIT_COMMAND:
+                self._task = SubmitJob(calc, transport_queue)
+                yield self._task
+                # Now get scheduler updates
+                self.scheduler_update()
+
+            elif self.data == UPDATE_SCHEDULER_COMMAND:
+                self._task = UpdateSchedulerState(calc, transport_queue)
+                job_done = yield self._task
+
+                if job_done:
+                    # Done, go on to retrieve
+                    self.retrieve()
+                else:
+                    # Not done yet, keep getting updates
+                    self.scheduler_update()
+
+            elif self.data == RETRIEVE_COMMAND:
+                self._task = RetrieveJob(calc, transport_queue)
+                retrieved_temporary_folder = yield self._task
+                self.retrieved(retrieved_temporary_folder)
+
+            else:
+                raise RuntimeError("Unknown waiting command")
+
+        except plumpy.CancelledError:
+            self.transition_to(processes.ProcessState.CANCELLED)
+            if self._cancelling_future is not None:
+                self._cancelling_future.set_result(True)
+                self._cancelling_future = None
+        except BaseException:
+            exc_info = sys.exc_info()
+            self.transition_to(processes.ProcessState.FAILED, exc_info[1], exc_info[2])
+        finally:
+            self._task = None
+
+    def scheduler_update(self):
+        self.transition_to(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting for scheduler update',
+            data=UPDATE_SCHEDULER_COMMAND)
+
+    def retrieve(self):
+        self.transition_to(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting to retrieve',
+            data=RETRIEVE_COMMAND)
+
+    def retrieved(self, retrieved_temporary_folder):
+        self.transition_to(
+            processes.ProcessState.RUNNING,
+            self.process.retrieved,
+            retrieved_temporary_folder)
+
+    def cancel(self, msg=None):
+        if self._cancelling_future is not None:
+            return self._cancelling_future
+        # Are we currently busy with a task?
+        if self._task is not None:
+            self._cancelling_future = plumpy.Future()
+            self._task.cancel()
+            return self._cancelling_future
         else:
-            raise RuntimeError("Unknown waiting command")
-
-        self._launch_transport_operation(op)
-
-    def _launch_transport_operation(self, operation):
-        """
-        Schedule a callback to a function that requires transport
-
-        :param operation:
-        :return: A future corresponding to the operation
-        """
-        fn = partial(self._do_transport_operation, operation)
-        self._callback_handle = \
-            self.process.runner.transport.call_me_with_transport(
-                self.process._get_authinfo(), fn)
-
-    def _do_transport_operation(self, operation, authinfo, transport):
-        # Guard in case we left the state already
-        if self.in_state:
-            try:
-                operation(authinfo, transport)
-            except BaseException:
-                import sys
-                exc_info = sys.exc_info()
-                self.process.fail(exc_info[1], exc_info[2])
+            return super(Waiting, self).cancel(msg)
 
 
 class JobProcess(processes.Process):
@@ -80,10 +214,6 @@ class JobProcess(processes.Process):
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = 'options'
     _CALC_CLASS = None
-
-    # Class defaults
-    _transport_operation = None
-    _authinfo = None
 
     @classmethod
     def build(cls, calc_class):
@@ -206,96 +336,26 @@ class JobProcess(processes.Process):
 
         self._add_description_and_label()
 
+    # endregion
+
     @override
-    def _run(self):
+    def run(self):
+        """
+        Run the calculation, we put it in the TOSUBMIT state and then wait for it
+        to be copied over, submitted, retrieved, etc.
+        """
         # Put the calculation in the TOSUBMIT state
         self.calc.submit()
         # Launch the submit operation
         return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
-    # endregion
-
-    def _get_authinfo(self):
-        if self._authinfo is None:
-            self._authinfo = \
-                get_authinfo(self.calc.get_computer(),
-                             self.calc.get_user())
-
-        return self._authinfo
-
-    # region Functions that require transport
-
-    def _submit_with_transport(self, authinfo, transport):
-        execmanager.submit_calc(self.calc, authinfo, transport)
-        self.wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
-
-    def _update_scheduler_state_with_transport(self, authinfo, trans):
+    def retrieved(self, retrieved_temporary_folder=None):
         """
-        Given a transport this method updates the calculation scheduler state.
-        
-        :param authinfo: The authentication info
-        :param trans: The (opened) transport
-        :return: True if the job is done, False otherwise 
-        """
-        scheduler = self.calc.get_computer().get_scheduler()
-        scheduler.set_transport(trans)
-
-        job_id = self.calc.get_job_id()
-
-        kwargs = {'jobs': [job_id], 'as_dict': True}
-        if scheduler.get_feature('can_query_by_user'):
-            kwargs['user'] = "$USER"
-        found_jobs = scheduler.getJobs(**kwargs)
-
-        info = found_jobs.get(job_id, None)
-        if info is None:
-            # If the job is computed or not found assume it's done
-            job_done = True
-            self.calc._set_scheduler_state(job_states.DONE)
-        else:
-            # Has the state changed?
-            last_jobinfo = self.calc._get_last_jobinfo()
-
-            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
-                execmanager.update_job_calc_from_job_info(self.calc, info)
-
-            job_done = info.job_state == job_states.DONE
-
-        if job_done:
-            # If the job is done, also get detailed job info
-            try:
-                detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-            except NotImplementedError:
-                detailed_job_info = (
-                    u"AiiDA MESSAGE: This scheduler does not implement "
-                    u"the routine get_detailed_jobinfo to retrieve "
-                    u"the information on "
-                    u"a job after it has finished.")
-
-            execmanager.update_job_calc_from_detailed_job_info(self.calc, detailed_job_info)
-
-            self.calc._set_state(calc_states.COMPUTED)
-
-        if job_done:
-            self.wait(self._link_outputs, msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
-        else:
-            self.wait(msg='Waiting for scheduler update', data=UPDATE_SCHEDULER_COMMAND)
-
-    def wait(self, done_callback=None, **kwargs):
-        return self.transition_to(processes.ProcessState.WAITING, done_callback, **kwargs)
-
-    def _retrieve_with_transport(self, authinfo, transport):
-        retrieved_temporary_folder = execmanager.retrieve_all(self.calc, transport)
-        self._retrieved(retrieved_temporary_folder)
-        self.resume()
-
-    # endregion
-
-    def _retrieved(self, retrieved_temporary_folder=None):
-        """
-        Parse a retrieved job calculation.
+        Parse a retrieved job calculation.  This is called once it's finished waiting
+        for the calculation to be finished and the data has been retrieved.
         """
         try:
+            print(retrieved_temporary_folder.folder.abspath)
             execmanager.parse_results(self.calc, retrieved_temporary_folder)
         except BaseException:
             try:
@@ -304,7 +364,6 @@ class JobProcess(processes.Process):
                 pass
             raise
 
-    def _link_outputs(self):
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
@@ -323,11 +382,11 @@ class ContinueJobCalculation(JobProcess):
         super(ContinueJobCalculation, cls).define(spec)
         spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
 
-    def _run(self):
+    def run(self):
         state = self.calc.get_state()
 
         if state == calc_states.NEW:
-            return super(ContinueJobCalculation, self)._run()
+            return super(ContinueJobCalculation, self).run()
 
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
             return self._submit()
@@ -339,7 +398,7 @@ class ContinueJobCalculation(JobProcess):
             return self._update_scheduler_state(job_done=True)
 
         elif state == calc_states.PARSING:
-            return self._retrieved(True)
+            return self.retrieved(True)
 
             # Otherwise nothing to do...
 

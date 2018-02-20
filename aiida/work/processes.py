@@ -427,9 +427,11 @@ class Process(plumpy.Process):
                 inputs = self.inputs
                 port_namespace = self.spec().inputs
             else:
-                inputs = self.inputs[namespace]
+                inputs = self.inputs
+                for ns in namespace.split('.'):
+                    inputs = inputs[ns]
                 try:
-                    port_namespace = self.spec().get_input(namespace)
+                    port_namespace = self.spec().inputs.get_port(namespace)
                 except KeyError:
                     raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
 

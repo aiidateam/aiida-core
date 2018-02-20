@@ -16,7 +16,7 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.orm.data.base import Int, Str, Bool
+from aiida.orm.data.base import Int, Str, Bool, Float
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
@@ -790,3 +790,86 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+class ParentExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ParentExposeWorkChain, cls).define(spec)
+
+        spec.expose_inputs(ChildExposeWorkChain, include=['a'])
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            exclude=['a'],
+            namespace='sub_1',
+        )
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            exclude=['a'],
+            namespace='sub_2.sub_3',
+        )
+
+        spec.outline(
+            cls.start_children,
+            cls.finalize
+        )
+
+    def start_children(self):
+        child_1 = self.submit(
+            ChildExposeWorkChain,
+            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1')
+        )
+        child_2 = self.submit(
+            ChildExposeWorkChain,
+            a=self.exposed_inputs(ChildExposeWorkChain)['a'],
+            **self.exposed_inputs(
+                ChildExposeWorkChain,
+                namespace='sub_2.sub_3',
+                agglomerate=False
+            )
+        )
+        return ToContext(child_1=child_1, child_2=child_2)
+
+    def finalize(self):
+        pass
+
+class ChildExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ChildExposeWorkChain, cls).define(spec)
+
+        spec.input('a', valid_type=Int)
+        spec.input('b', valid_type=Float)
+        spec.input('c', valid_type=Bool)
+
+        spec.outline(cls.do_run)
+
+        spec.output('o', valid_type=Float)
+
+    def do_run(self):
+        self.out('o', self.inputs.b)
+
+class TestWorkChainExpose(AiidaTestCase):
+    """
+    Test the expose inputs / outputs functionality
+    """
+
+    def setUp(self):
+        super(TestWorkChainExpose, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestWorkChainExpose, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_expose(self):
+        res = work.launch.run(
+            ParentExposeWorkChain,
+            a=Int(1),
+            sub_1={'b': Float(2.3), 'c': Bool(True)},
+            sub_2={'sub_3': {'b': Float(1.2), 'c': Bool(False)}},
+        )
+        # self.assertEquals(res['o'], 2.3)

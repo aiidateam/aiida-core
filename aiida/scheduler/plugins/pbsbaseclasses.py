@@ -13,8 +13,8 @@ Base classes for PBSPro and PBS/Torque plugins.
 from __future__ import division
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (
-    JobInfo, job_states, MachineInfo, NodeNumberJobResource)
+from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo,
+                                            NodeNumberJobResource)
 
 # This maps PbsPro status letters to our own status list
 
@@ -43,8 +43,6 @@ from aiida.scheduler.datastructures import (
 #     (-a option) to be reached. [similar to above]
 #S -  (Unicos only) job is suspend. [as above]
 
-
-
 _map_status_pbs_common = {
     'B': job_states.RUNNING,
     'E': job_states.RUNNING,  # If exiting, for our purposes it is still running
@@ -54,8 +52,8 @@ _map_status_pbs_common = {
     'Q': job_states.QUEUED,
     'R': job_states.RUNNING,
     'S': job_states.SUSPENDED,
-    'T': job_states.QUEUED, # We assume that from the AiiDA point of view
-                            # it is still queued
+    'T': job_states.QUEUED,  # We assume that from the AiiDA point of view
+    # it is still queued
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
     'X': job_states.DONE,
@@ -64,6 +62,7 @@ _map_status_pbs_common = {
 
 
 class PbsJobResource(NodeNumberJobResource):
+
     def __init__(self, *args, **kwargs):
         """
         It extends the base class init method and calculates the 
@@ -78,31 +77,31 @@ class PbsJobResource(NodeNumberJobResource):
         2. If only num_cores_per_mpiproc is passed, calculate 
         num_cores_per_machine
         3. If only num_cores_per_machine is passed, use it
-        """  
-	super(PbsJobResource, self).__init__(*args, **kwargs)
+        """
+        super(PbsJobResource, self).__init__(*args, **kwargs)
 
-	value_error = ("num_cores_per_machine must be equal to "
-                      "num_cores_per_mpiproc * num_mpiprocs_per_machine, "
-                      "and in perticular it should be a multiple of "
-                      "num_cores_per_mpiproc and/or num_mpiprocs_per_machine")
+        value_error = ("num_cores_per_machine must be equal to "
+                       "num_cores_per_mpiproc * num_mpiprocs_per_machine, "
+                       "and in perticular it should be a multiple of "
+                       "num_cores_per_mpiproc and/or num_mpiprocs_per_machine")
 
-        if (self.num_cores_per_machine is not None and 
+        if (self.num_cores_per_machine is not None and
                 self.num_cores_per_mpiproc is not None):
-            if self.num_cores_per_machine != (self.num_cores_per_mpiproc 
-                			* self.num_mpiprocs_per_machine):
-                # If user specify both values, check if specified 
+            if self.num_cores_per_machine != (
+                    self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine):
+                # If user specify both values, check if specified
                 # values are correct
                 raise ValueError(value_error)
         elif self.num_cores_per_mpiproc is not None:
             if self.num_cores_per_mpiproc <= 0:
                 raise ValueError("num_cores_per_mpiproc must be >=1")
             # calculate num_cores_per_machine
-            # In this plugin we never used num_cores_per_mpiproc so if it 
+            # In this plugin we never used num_cores_per_mpiproc so if it
             # is not defined it is OK.
-            self.num_cores_per_machine = (self.num_cores_per_mpiproc 
-                                 * self.num_mpiprocs_per_machine)
-        
-                
+            self.num_cores_per_machine = (
+                self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine)
+
+
 class PbsBaseClass(object):
     """
     Base class with support for the PBSPro scheduler
@@ -125,7 +124,8 @@ class PbsBaseClass(object):
     _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_machine, max_memory_kb, max_wallclock_seconds):
+                            num_cores_per_machine, max_memory_kb,
+                            max_wallclock_seconds):
         """
         Return a set a list of lines (possibly empty) with the header
         lines relative to:
@@ -164,10 +164,12 @@ class PbsBaseClass(object):
                 command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:
-                    command.append('{}'.format(' '.join(escape_for_bash(j) for j in jobs)))
+                    command.append('{}'.format(
+                        ' '.join(escape_for_bash(j) for j in jobs)))
                 except TypeError:
                     raise TypeError(
-                        "If provided, the 'jobs' variable must be a string or an iterable of strings")
+                        "If provided, the 'jobs' variable must be a string or an iterable of strings"
+                    )
 
         comm = ' '.join(command)
         self.logger.debug("qstat command: {}".format(comm))
@@ -242,7 +244,7 @@ class PbsBaseClass(object):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
             if not job_title or (
-                        job_title[0] not in string.letters + string.digits):
+                    job_title[0] not in string.letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 15 characters
@@ -290,7 +292,8 @@ class PbsBaseClass(object):
 
         resource_lines = self._get_resource_lines(
             num_machines=job_tmpl.job_resource.num_machines,
-            num_mpiprocs_per_machine=job_tmpl.job_resource.num_mpiprocs_per_machine,
+            num_mpiprocs_per_machine=job_tmpl.job_resource.
+            num_mpiprocs_per_machine,
             num_cores_per_machine=job_tmpl.job_resource.num_cores_per_machine,
             max_memory_kb=job_tmpl.max_memory_kb,
             max_wallclock_seconds=job_tmpl.max_wallclock_seconds)
@@ -313,9 +316,8 @@ class PbsBaseClass(object):
                 raise ValueError("If you provide job_environment, it must be "
                                  "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(
-                    k.strip(),
-                    escape_for_bash(v)))
+                lines.append("export {}={}".format(k.strip(),
+                                                   escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -371,13 +373,16 @@ class PbsBaseClass(object):
         # those schedulers configured to leave the job in the output
         # of qstat for some time after job completion.
         filtered_stderr = '\n'.join(
-            l for l in stderr.split('\n') if "Unknown Job Id" not in l and "Job has finished" not in l)
+            l for l in stderr.split('\n')
+            if "Unknown Job Id" not in l and "Job has finished" not in l)
         if filtered_stderr.strip():
-            self.logger.warning("Warning in _parse_joblist_output, non-empty "
-                                "(filtered) stderr='{}'".format(filtered_stderr))
+            self.logger.warning(
+                "Warning in _parse_joblist_output, non-empty "
+                "(filtered) stderr='{}'".format(filtered_stderr))
             if retval != 0:
                 raise SchedulerError(
-                    "Error during qstat parsing (_parse_joblist_output function)")
+                    "Error during qstat parsing (_parse_joblist_output function)"
+                )
 
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
@@ -385,9 +390,11 @@ class PbsBaseClass(object):
             # Each new job stanza starts with the string 'Job Id:': I
             # create a new item in the jobdata_raw list
             if l.startswith('Job Id:'):
-                jobdata_raw.append(
-                    {'id': l.split(':', 1)[1].strip(),
-                     'lines': [], 'warning_lines_idx': []})
+                jobdata_raw.append({
+                    'id': l.split(':', 1)[1].strip(),
+                    'lines': [],
+                    'warning_lines_idx': []
+                })
                 # warning_lines_idx: lines that do not start either with
                 # tab or space
             else:
@@ -399,7 +406,8 @@ class PbsBaseClass(object):
                         # non-empty line, before finding the first 'Job Id:'
                         # string: it is an error. However this may happen
                         # only before the first job.
-                        raise SchedulerParsingError("I did not find the header for the first job")
+                        raise SchedulerParsingError(
+                            "I did not find the header for the first job")
                         #self.logger.warning("I found some text before the "
                         #"first job: {}".format(l))
                     else:
@@ -413,7 +421,8 @@ class PbsBaseClass(object):
                             if not jobdata_raw[-1]['lines']:
                                 raise SchedulerParsingError(
                                     "Line {} is the first line of the job, but it "
-                                    "starts with a TAB! ({})".format(line_num, l))
+                                    "starts with a TAB! ({})".format(
+                                        line_num, l))
                             jobdata_raw[-1]['lines'][-1] += l[1:]
                         else:
                             #raise SchedulerParsingError(
@@ -433,8 +442,9 @@ class PbsBaseClass(object):
             this_job = JobInfo()
             this_job.job_id = job['id']
 
-            lines_without_equals_sign = [i for i in job['lines']
-                                         if '=' not in i]
+            lines_without_equals_sign = [
+                i for i in job['lines'] if '=' not in i
+            ]
 
             # There are lines without equals sign: this is bad
             if lines_without_equals_sign:
@@ -444,9 +454,10 @@ class PbsBaseClass(object):
                 raise (SchedulerParsingError("There are lines without equals "
                                              "sign."))
 
-            raw_data = {i.split('=', 1)[0].strip().lower():
-                            i.split('=', 1)[1].lstrip()
-                        for i in job['lines'] if '=' in i}
+            raw_data = {
+                i.split('=', 1)[0].strip().lower(): i.split('=', 1)[1].lstrip()
+                for i in job['lines'] if '=' in i
+            }
 
             ## I ignore the errors for the time being - this seems to be
             ## a problem if there are \n in the content of some variables?
@@ -542,7 +553,7 @@ class PbsBaseClass(object):
                     self.logger.debug("Problem parsing the node names, I "
                                       "got Exception {} with message {}; "
                                       "exec_hosts was {}".format(
-                        str(type(e)), e.message, exec_hosts))
+                                          str(type(e)), e.message, exec_hosts))
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -561,21 +572,22 @@ class PbsBaseClass(object):
             except ValueError:
                 self.logger.warning("'resource_list.ncpus' is not an integer "
                                     "({}) for job id {}!".format(
-                    raw_data['resource_list.ncpus'],
-                    this_job.job_id))
+                                        raw_data['resource_list.ncpus'],
+                                        this_job.job_id))
 
             try:
                 this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
-                self.logger.debug("No 'resource_list.mpiprocs' field for job id "
-                                  "{}".format(this_job.job_id))
+                self.logger.debug(
+                    "No 'resource_list.mpiprocs' field for job id "
+                    "{}".format(this_job.job_id))
             except ValueError:
-                self.logger.warning("'resource_list.mpiprocs' is not an integer "
-                                    "({}) for job id {}!".format(
-                    raw_data['resource_list.mpiprocs'],
-                    this_job.job_id))
+                self.logger.warning(
+                    "'resource_list.mpiprocs' is not an integer "
+                    "({}) for job id {}!".format(
+                        raw_data['resource_list.mpiprocs'], this_job.job_id))
 
             try:
                 this_job.num_machines = int(raw_data['resource_list.nodect'])
@@ -585,17 +597,18 @@ class PbsBaseClass(object):
             except ValueError:
                 self.logger.warning("'resource_list.nodect' is not an integer "
                                     "({}) for job id {}!".format(
-                    raw_data['resource_list.nodect'],
-                    this_job.job_id))
+                                        raw_data['resource_list.nodect'],
+                                        this_job.job_id))
 
             # Double check of redundant info
             if (this_job.allocated_machines is not None and
-                        this_job.num_machines is not None):
+                    this_job.num_machines is not None):
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocated_machines), this_job.num_machines))
+                                          len(this_job.allocated_machines),
+                                          this_job.num_machines))
 
             try:
                 this_job.queue_name = raw_data['queue']
@@ -742,15 +755,16 @@ class PbsBaseClass(object):
         """
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                              "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(
+                                  retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
-                retval, stdout, stderr))
+                                     retval, stdout, stderr))
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "
                                 "there was some text in stderr: {}".format(
-                str(self.transport), stderr))
+                                    str(self.transport), stderr))
 
         return stdout.strip()
 
@@ -774,17 +788,18 @@ class PbsBaseClass(object):
         """
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                              "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(
+                                  retval, stdout, stderr))
             return False
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output for {}: "
                                 "there was some text in stderr: {}".format(
-                str(self.transport), stderr))
+                                    str(self.transport), stderr))
 
         if stdout.strip():
             self.logger.warning("in _parse_kill_output for {}: "
                                 "there was some text in stdout: {}".format(
-                str(self.transport), stdout))
+                                    str(self.transport), stdout))
 
         return True

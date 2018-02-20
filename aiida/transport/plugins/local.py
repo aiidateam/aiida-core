@@ -32,6 +32,11 @@ class LocalTransport(Transport):
     # There are no valid parameters for the local transport
     _valid_auth_params = []
 
+    # There is no real limit on how fast you can connect to localhost
+    # you should not be banned (as instead it is the case in SSH).
+    # So I set the (default) limit to zero.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 0.
+
     def __init__(self, **kwargs):
         super(LocalTransport, self).__init__()
 
@@ -48,9 +53,6 @@ class LocalTransport(Transport):
         if kwargs:
             raise ValueError("Input parameters to LocalTransport"
                              " are not recognized")
-
-    def get_safe_open_interval(self):
-        return 0.
 
     def open(self):
         """
@@ -110,7 +112,8 @@ class LocalTransport(Transport):
         if not os.path.isdir(new_path):
             raise IOError("'{}' is not a valid directory".format(new_path))
         elif not os.access(new_path, os.R_OK):
-            raise IOError("Do not have read permission to '{}'".format(new_path))
+            raise IOError(
+                "Do not have read permission to '{}'".format(new_path))
 
         self._internal_dir = os.path.normpath(new_path)
 
@@ -165,9 +168,11 @@ class LocalTransport(Transport):
         this_dir = ''
         for count, element in enumerate(to_create):
             this_dir = os.path.join(this_dir, element)
-            if count + 1 == len(to_create) and self.isdir(this_dir) and ignore_existing:
+            if count + 1 == len(to_create) and self.isdir(
+                    this_dir) and ignore_existing:
                 return
-            if count + 1 == len(to_create) and self.isdir(this_dir) and not ignore_existing:
+            if count + 1 == len(to_create) and self.isdir(
+                    this_dir) and not ignore_existing:
                 os.mkdir(this_dir)
             if not os.path.exists(this_dir):
                 os.mkdir(this_dir)
@@ -220,7 +225,11 @@ class LocalTransport(Transport):
         else:
             os.chmod(real_path, mode)
 
-    def put(self, source, destination, dereference=True, overwrite=True,
+    def put(self,
+            source,
+            destination,
+            dereference=True,
+            overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
@@ -259,7 +268,8 @@ class LocalTransport(Transport):
                 if self.isfile(destination):
                     raise OSError("Remote destination is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not self.path_exists(destination):  # questo dovrebbe valere solo per file
+                elif not self.path_exists(
+                        destination):  # questo dovrebbe valere solo per file
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_remote = True
@@ -384,7 +394,11 @@ class LocalTransport(Transport):
             else:
                 raise e
 
-    def get(self, source, destination, dereference=True, overwrite=True,
+    def get(self,
+            source,
+            destination,
+            dereference=True,
+            overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a folder or a file recursively from 'remote' source to
@@ -423,7 +437,8 @@ class LocalTransport(Transport):
                 if os.path.isfile(destination):
                     raise IOError("Remote destination is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not os.path.exists(destination):  # this should hold only for files
+                elif not os.path.exists(
+                        destination):  # this should hold only for files
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_local = True
@@ -560,7 +575,8 @@ class LocalTransport(Transport):
             to_copy_list = self.glob(source)
 
             if len(to_copy_list) > 1:
-                if not self.path_exists(destination) or self.isfile(destination):
+                if not self.path_exists(destination) or self.isfile(
+                        destination):
                     raise OSError("Can't copy more than one file in the same "
                                   "destination file")
 
@@ -659,7 +675,8 @@ class LocalTransport(Transport):
         else:
             import re
 
-            if path.startswith('/'):  # always this is the case in the local plugin
+            if path.startswith(
+                    '/'):  # always this is the case in the local plugin
                 base_dir = path
             else:
                 base_dir = os.path.join(os.getcwd(), path)
@@ -725,9 +742,13 @@ class LocalTransport(Transport):
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
-        proc = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                cwd=self.getcwd())
+        proc = subprocess.Popen(
+            command,
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.getcwd())
         return proc.stdin, proc.stdout, proc.stderr, proc
 
     def exec_command_wait(self, command, stdin=None):
@@ -825,14 +846,17 @@ class LocalTransport(Transport):
                 # create the name of the link: take the last part of the path
                 this_remote_dest = os.path.split(this_file)[-1]
 
-                os.symlink(os.path.join(this_file),
-                           os.path.join(self.curdir, remotedestination, this_remote_dest))
+                os.symlink(
+                    os.path.join(this_file),
+                    os.path.join(self.curdir, remotedestination,
+                                 this_remote_dest))
         else:
             try:
                 os.symlink(remotesource,
                            os.path.join(self.curdir, remotedestination))
             except OSError:
-                raise OSError("!!: {}, {}, {}".format(remotesource, self.curdir, remotedestination))
+                raise OSError("!!: {}, {}, {}".format(remotesource, self.curdir,
+                                                      remotedestination))
 
     def path_exists(self, path):
         """

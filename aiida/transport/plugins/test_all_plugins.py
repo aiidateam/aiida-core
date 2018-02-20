@@ -22,7 +22,6 @@ Plugin specific tests will be written in the plugin itself.
 import unittest
 
 
-
 def get_all_custom_transports():
     """
     Autodiscover all custom transports defined in the variable
@@ -41,9 +40,10 @@ def get_all_custom_transports():
     this_full_fname = __file__
     thisdir, thisfname = os.path.split(this_full_fname)
 
-    test_modules = [os.path.split(f)[1][:-3]
-                    for f in os.listdir(thisdir)
-                    if f.endswith('.py') and f.startswith('test_')]
+    test_modules = [
+        os.path.split(f)[1][:-3] for f in os.listdir(thisdir)
+        if f.endswith('.py') and f.startswith('test_')
+    ]
 
     # Remove this module: note that I should be careful because __file__, from
     # the second time on, is the pyc file rather than the py file
@@ -58,8 +58,8 @@ def get_all_custom_transports():
         module = importlib.import_module(".".join([modulename, m]))
         custom_transport = module.__dict__.get('plugin_transport', None)
         if custom_transport is None:
-            print ("Define the plugin_transport variable inside the {} module!"
-                   "".format(m))
+            print("Define the plugin_transport variable inside the {} module!"
+                  "".format(m))
         else:
             all_custom_transports[m] = custom_transport
 
@@ -97,17 +97,21 @@ def run_for_all_plugins(actual_test_method):
             else:
                 exception_to_raise = CollectiveException
 
-            messages = ["*** At least one test for a subplugin failed. "
-                        "See below ***", ""]
+            messages = [
+                "*** At least one test for a subplugin failed. "
+                "See below ***", ""
+            ]
             for exc in exceptions:
                 if hasattr(exc[0], "message"):
                     messages.append("*** [For plugin {}]: Exception '{}': {}"
-                                    "".format(exc[2], type(exc[0]).__name__,
+                                    "".format(exc[2],
+                                              type(exc[0]).__name__,
                                               exc[0].message))
                     messages.append(exc[1])
                 else:
-                    messages.append("*** [For plugin {}]: Exception '{}'".format(
-                        exc[2], type(exc[0]).__name__))
+                    messages.append(
+                        "*** [For plugin {}]: Exception '{}'".format(
+                            exc[2], type(exc[0]).__name__))
                     messages.append(exc[1])
 
             raise exception_to_raise("\n".join(messages))
@@ -147,8 +151,8 @@ class TestDirectoryManipulation(unittest.TestCase):
             self.assertEquals(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
             t.chdir(directory)
 
@@ -191,8 +195,8 @@ class TestDirectoryManipulation(unittest.TestCase):
             self.assertEquals(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
             t.chdir(directory)
 
@@ -239,8 +243,8 @@ class TestDirectoryManipulation(unittest.TestCase):
             self.assertEquals(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
             t.chdir(directory)
             list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
@@ -254,11 +258,14 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             list_found = t.listdir('.')
 
-            self.assertTrue(sorted(list_found) == sorted(list_of_dir + list_of_files))
+            self.assertTrue(
+                sorted(list_found) == sorted(list_of_dir + list_of_files))
 
-            self.assertTrue(sorted(t.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f']))
+            self.assertTrue(
+                sorted(t.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f']))
             self.assertTrue(sorted(t.listdir('.', 'a?')), sorted(['as', 'a2']))
-            self.assertTrue(sorted(t.listdir('.', 'a[2-4]*')), sorted(['a2', 'a4f']))
+            self.assertTrue(
+                sorted(t.listdir('.', 'a[2-4]*')), sorted(['a2', 'a4f']))
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)
@@ -299,8 +306,8 @@ class TestDirectoryManipulation(unittest.TestCase):
             self.assertEquals(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
             t.chdir(directory)
             list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
@@ -315,15 +322,27 @@ class TestDirectoryManipulation(unittest.TestCase):
             comparison_list = {k: True for k in list_of_dir}
             for k in list_of_files:
                 comparison_list[k] = False
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.')),
-                            comparison_list)
+            self.assertTrue(
+                simplify_attributes(t.listdir_withattributes('.')),
+                comparison_list)
 
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a*')),
-                            {'as': True, 'a2': True, 'a4f': True, 'a': False})
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a?')),
-                            {'as': True, 'a2': True})
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a[2-4]*')),
-                            {'a2': True, 'a4f': True})
+            self.assertTrue(
+                simplify_attributes(t.listdir_withattributes('.', 'a*')), {
+                    'as': True,
+                    'a2': True,
+                    'a4f': True,
+                    'a': False
+                })
+            self.assertTrue(
+                simplify_attributes(t.listdir_withattributes('.', 'a?')), {
+                    'as': True,
+                    'a2': True
+                })
+            self.assertTrue(
+                simplify_attributes(t.listdir_withattributes('.', 'a[2-4]*')), {
+                    'a2': True,
+                    'a4f': True
+                })
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)
@@ -349,8 +368,8 @@ class TestDirectoryManipulation(unittest.TestCase):
             self.assertEquals(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
 
             with self.assertRaises(OSError):
@@ -379,8 +398,8 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
             t.mkdir(directory)
 
             dest_directory = directory + '_copy'
@@ -413,8 +432,8 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             # create directory with non default permissions
             t.mkdir(directory)
@@ -434,7 +453,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             # TODO : bug in paramiko. When changing the directory to very low \
             # I cannot set it back to higher permissions
 
-            ## TODO: probably here we should then check for 
+            ## TODO: probably here we should then check for
             ## the new directory modes. To see if we want a higher
             ## level function to ask for the mode, or we just
             ## use get_attribute
@@ -471,8 +490,8 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             # create directory with non default permissions
             t.mkdir(directory)
@@ -566,15 +585,16 @@ class TestPutGetFile(unittest.TestCase):
             t.chdir(remote_dir)
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
 
             local_file_name = os.path.join(local_dir, directory, 'file.txt')
             remote_file_name = 'file_remote.txt'
-            retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
+            retrieved_file_name = os.path.join(local_dir, directory,
+                                               'file_retrieved.txt')
 
             text = 'Viva Verdi\n'
             with open(local_file_name, 'w') as f:
@@ -617,8 +637,8 @@ class TestPutGetFile(unittest.TestCase):
             t.chdir(remote_dir)
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
@@ -626,7 +646,8 @@ class TestPutGetFile(unittest.TestCase):
             partial_file_name = 'file.txt'
             local_file_name = os.path.join(local_dir, directory, 'file.txt')
             remote_file_name = 'file_remote.txt'
-            retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
+            retrieved_file_name = os.path.join(local_dir, directory,
+                                               'file_retrieved.txt')
 
             f = open(local_file_name, 'w')
             f.close()
@@ -682,18 +703,20 @@ class TestPutGetFile(unittest.TestCase):
             t.chdir(remote_dir)
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
 
-            local_file_name = os.path.join(local_dir, directory, 'file_local.txt')
+            local_file_name = os.path.join(local_dir, directory,
+                                           'file_local.txt')
             remote_file_name = 'file_remote.txt'
-            retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
+            retrieved_file_name = os.path.join(local_dir, directory,
+                                               'file_retrieved.txt')
 
             text = 'Viva Verdi\n'
-            with  open(local_file_name, 'w') as f:
+            with open(local_file_name, 'w') as f:
                 f.write(text)
 
             # localpath is an empty string
@@ -767,8 +790,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             local_subfolder = os.path.join(local_dir, directory, 'tmp1')
             remote_subfolder = 'tmp2'
@@ -833,8 +856,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             local_subfolder = os.path.join(local_dir, directory, 'tmp1')
             remote_subfolder = 'tmp2'
@@ -865,7 +888,8 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.puttree(local_subfolder, remote_subfolder, overwrite=False)
             with self.assertRaises(OSError):
-                t.gettree(remote_subfolder, retrieved_subfolder, overwrite=False)
+                t.gettree(
+                    remote_subfolder, retrieved_subfolder, overwrite=False)
 
             shutil.rmtree(local_subfolder)
             shutil.rmtree(retrieved_subfolder)
@@ -874,7 +898,6 @@ class TestPutGetTree(unittest.TestCase):
             # here I am mixing inevitably the local and the remote folder
             t.chdir('..')
             t.rmtree(directory)
-
 
     @run_for_all_plugins
     def test_copy(self, custom_transport):
@@ -891,8 +914,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
@@ -911,21 +934,19 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test the copy. Copy of two files matching patterns, into a folder
             t.copy(os.path.join('local', '*.txt'), '.')
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']),
-                              set(t.listdir('.')))
+            self.assertEquals(
+                set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
             t.remove('a.txt')
             t.remove('c.txt')
             # second test copy. Copy of two folders
             t.copy('local', 'prova')
-            self.assertEquals(set(['prova', 'local']),
-                              set(t.listdir('.')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(t.listdir('prova')))
+            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
             t.rmtree('prova')
             # third test copy. Can copy one file into a new file
             t.copy(os.path.join('local', '*.tmp'), 'prova')
-            self.assertEquals(set(['prova', 'local']),
-                              set(t.listdir('.')))
+            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
             t.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
@@ -934,8 +955,7 @@ class TestPutGetTree(unittest.TestCase):
             # fifth test, copying one file into a folder
             t.mkdir('prova')
             t.copy(os.path.join('local', 'a.txt'), 'prova')
-            self.assertEquals(set(t.listdir('prova')),
-                              set(['a.txt']))
+            self.assertEquals(set(t.listdir('prova')), set(['a.txt']))
             t.rmtree('prova')
             # sixth test, copying one file into a file
             t.copy(os.path.join('local', 'a.txt'), 'prova')
@@ -946,15 +966,14 @@ class TestPutGetTree(unittest.TestCase):
             #tests performed locally on a Mac may result in a failure.
             t.mkdir('prova')
             t.copy('local', 'prova')
-            self.assertEquals(set(['local']),
-                              set(t.listdir('prova')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(t.listdir(os.path.join('prova', 'local'))))
+            self.assertEquals(set(['local']), set(t.listdir('prova')))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']),
+                set(t.listdir(os.path.join('prova', 'local'))))
             t.rmtree('prova')
             # exit
             t.chdir('..')
             t.rmtree(directory)
-
 
     @run_for_all_plugins
     def test_put(self, custom_transport):
@@ -973,8 +992,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
@@ -993,38 +1012,36 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test put. Copy of two files matching patterns, into a folder
             t.put(os.path.join(local_base_dir, '*.txt'), '.')
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']),
-                              set(t.listdir('.')))
+            self.assertEquals(
+                set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
             t.remove('a.txt')
             t.remove('c.txt')
             # second. Copy of folder into a non existing folder
             t.put(local_base_dir, 'prova')
-            self.assertEquals(set(['prova', 'local']),
-                              set(t.listdir('.')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(t.listdir('prova')))
+            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
             t.rmtree('prova')
             # third. copy of folder into an existing folder
             t.mkdir('prova')
             t.put(local_base_dir, 'prova')
-            self.assertEquals(set(['prova', 'local']),
-                              set(t.listdir('.')))
-            self.assertEquals(set(['local']),
-                              set(t.listdir('prova')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(t.listdir(os.path.join('prova', 'local'))))
+            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEquals(set(['local']), set(t.listdir('prova')))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']),
+                set(t.listdir(os.path.join('prova', 'local'))))
             t.rmtree('prova')
             # third test copy. Can copy one file into a new file
             t.put(os.path.join(local_base_dir, '*.tmp'), 'prova')
-            self.assertEquals(set(['prova', 'local']),
-                              set(t.listdir('.')))
+            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
             t.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir, '*.txt'), 'prova')
             # copy of folder into file
-            with open(os.path.join(local_dir, directory, 'existing.txt'), 'w') as f:
+            with open(os.path.join(local_dir, directory, 'existing.txt'),
+                      'w') as f:
                 f.write(text)
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir), 'existing.txt')
@@ -1032,8 +1049,7 @@ class TestPutGetTree(unittest.TestCase):
             # fifth test, copying one file into a folder
             t.mkdir('prova')
             t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
-            self.assertEquals(set(t.listdir('prova')),
-                              set(['a.txt']))
+            self.assertEquals(set(t.listdir('prova')), set(['a.txt']))
             t.rmtree('prova')
             # sixth test, copying one file into a file
             t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
@@ -1043,7 +1059,6 @@ class TestPutGetTree(unittest.TestCase):
             # exit
             t.chdir('..')
             t.rmtree(directory)
-
 
     @run_for_all_plugins
     def test_get(self, custom_transport):
@@ -1062,8 +1077,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             t.mkdir(directory)
             t.chdir(directory)
@@ -1083,51 +1098,68 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test put. Copy of two files matching patterns, into a folder
             t.get(os.path.join('local', '*.txt'), local_destination)
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']),
-                              set(os.listdir(local_destination)))
+            self.assertEquals(
+                set(['a.txt', 'c.txt', 'local']),
+                set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'a.txt'))
             os.remove(os.path.join(local_destination, 'c.txt'))
             # second. Copy of folder into a non existing folder
             t.get('local', os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']),
-                              set(os.listdir(local_destination)))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(os.listdir(os.path.join(local_destination, 'prova'))))
+            self.assertEquals(
+                set(['prova', 'local']), set(os.listdir(local_destination)))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']),
+                set(os.listdir(os.path.join(local_destination, 'prova'))))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third. copy of folder into an existing folder
             os.mkdir(os.path.join(local_destination, 'prova'))
             t.get('local', os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']),
-                              set(os.listdir(local_destination)))
-            self.assertEquals(set(['local']),
-                              set(os.listdir(os.path.join(local_destination, 'prova'))))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']),
-                              set(os.listdir(os.path.join(local_destination, 'prova', 'local'))))
+            self.assertEquals(
+                set(['prova', 'local']), set(os.listdir(local_destination)))
+            self.assertEquals(
+                set(['local']),
+                set(os.listdir(os.path.join(local_destination, 'prova'))))
+            self.assertEquals(
+                set(['a.txt', 'b.tmp', 'c.txt']),
+                set(
+                    os.listdir(
+                        os.path.join(local_destination, 'prova', 'local'))))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third test copy. Can copy one file into a new file
-            t.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']),
-                              set(os.listdir(local_destination)))
+            t.get(
+                os.path.join('local', '*.tmp'),
+                os.path.join(local_destination, 'prova'))
+            self.assertEquals(
+                set(['prova', 'local']), set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'prova'))
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
             with self.assertRaises(OSError):
-                t.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
+                t.get(
+                    os.path.join('local', '*.txt'),
+                    os.path.join(local_destination, 'prova'))
             # copy of folder into file
-            with open(os.path.join(local_destination, 'existing.txt'), 'w') as f:
+            with open(os.path.join(local_destination, 'existing.txt'),
+                      'w') as f:
                 f.write(text)
             with self.assertRaises(OSError):
                 t.get('local', os.path.join(local_destination, 'existing.txt'))
             os.remove(os.path.join(local_destination, 'existing.txt'))
             # fifth test, copying one file into a folder
             os.mkdir(os.path.join(local_destination, 'prova'))
-            t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(os.listdir(os.path.join(local_destination, 'prova'))),
-                              set(['a.txt']))
+            t.get(
+                os.path.join('local', 'a.txt'),
+                os.path.join(local_destination, 'prova'))
+            self.assertEquals(
+                set(os.listdir(os.path.join(local_destination, 'prova'))),
+                set(['a.txt']))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # sixth test, copying one file into a file
-            t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
-            self.assertTrue(os.path.isfile(os.path.join(local_destination, 'prova')))
+            t.get(
+                os.path.join('local', 'a.txt'),
+                os.path.join(local_destination, 'prova'))
+            self.assertTrue(
+                os.path.isfile(os.path.join(local_destination, 'prova')))
             os.remove(os.path.join(local_destination, 'prova'))
 
             # exit
@@ -1152,8 +1184,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             local_subfolder = os.path.join(local_dir, directory, 'tmp1')
             remote_subfolder = 'tmp2'
@@ -1228,8 +1260,8 @@ class TestPutGetTree(unittest.TestCase):
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
-                directory += random.choice(
-                    string.ascii_uppercase + string.digits)
+                directory += random.choice(string.ascii_uppercase +
+                                           string.digits)
 
             local_subfolder = os.path.join(local_dir, directory, 'tmp1')
             remote_subfolder = 'tmp2'
@@ -1242,7 +1274,7 @@ class TestPutGetTree(unittest.TestCase):
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             text = 'Viva Verdi\n'
-            with  open(local_file_name, 'w') as f:
+            with open(local_file_name, 'w') as f:
                 f.write(text)
 
             # localpath is an empty string
@@ -1359,8 +1391,7 @@ class TestExecuteCommandWait(unittest.TestCase):
         test_string = "some_test String"
         stdin = StringIO.StringIO(test_string)
         with custom_transport as t:
-            retcode, stdout, stderr = t.exec_command_wait(
-                'cat', stdin=stdin)
+            retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
             self.assertEquals(retcode, 0)
             self.assertEquals(stdout, test_string)
             self.assertEquals(stderr, "")
@@ -1370,8 +1401,4 @@ class TestExecuteCommandWait(unittest.TestCase):
         # I pass a number
         with custom_transport as t:
             with self.assertRaises(ValueError):
-                _ = t.exec_command_wait(
-                    'cat', stdin=1)
-
-
-
+                _ = t.exec_command_wait('cat', stdin=1)

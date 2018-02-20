@@ -135,8 +135,13 @@ extras_require = {
         'yapf==0.19.0',
         'prospector==0.12.7',
         'pylint==1.7.4'
+    ],
+    'dev_sphinxext': [
+        'pytest'
     ]
 }
+
+extras_require['dev_sphinxext'] += extras_require['docs']
 
 # There are a number of optional dependencies that are not
 # listed even as optional dependencies as they are quite

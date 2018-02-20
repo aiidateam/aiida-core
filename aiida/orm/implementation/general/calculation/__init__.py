@@ -250,17 +250,17 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self._set_attr(self.PROCESS_STATE_KEY, state)
 
     @property
-    def terminated(self):
+    def is_terminated(self):
         """
         Returns whether the Calculation has terminated, meaning that it reached any terminal state
 
         :return: True if the calculation has terminated, False otherwise
         :rtype: bool
         """
-        return self.excepted or self.finished or self.killed
+        return self.is_excepted or self.is_finished or self.is_killed
 
     @property
-    def excepted(self):
+    def is_excepted(self):
         """
         Returns whether the Calculation has excepted, meaning that during execution an exception
         was raised that was not properly dealt with
@@ -271,7 +271,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self.process_state == ProcessState.EXCEPTED
 
     @property
-    def killed(self):
+    def is_killed(self):
         """
         Returns whether the Calculation was killed
 
@@ -281,7 +281,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self.process_state == ProcessState.KILLED
 
     @property
-    def finished(self):
+    def is_finished(self):
         """
         Returns whether the Calculation has finished. Note that this does not necessarily
         mean successfully, but a terminal state was reached nominally
@@ -292,7 +292,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self.process_state == ProcessState.FINISHED
 
     @property
-    def finished_ok(self):
+    def is_finished_ok(self):
         """
         Returns whether the Calculation has finished successfully, which means that it
         terminated nominally and had a zero exit code indicating a successful execution
@@ -304,7 +304,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return self.process_state == ProcessState.FINISHED
 
     @property
-    def failed(self):
+    def is_failed(self):
         """
         Returns whether the Calculation has failed, which means that it terminated nominally
         but it had a non-zero exit status
@@ -437,7 +437,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
             src, label, link_type)
 
     def _is_valid_cache(self):
-        return super(AbstractCalculation, self)._is_valid_cache() and self.finished_ok
+        return super(AbstractCalculation, self)._is_valid_cache() and self.is_finished_ok
 
     def _get_objects_to_hash(self):
         """

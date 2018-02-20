@@ -560,9 +560,9 @@ class TestWorkChainAbort(AiidaTestCase):
             process.execute(True)
             process.execute()
 
-        self.assertEquals(process.calc.finished_ok, False)
-        self.assertEquals(process.calc.excepted, True)
-        self.assertEquals(process.calc.killed, False)
+        self.assertEquals(process.calc.is_finished_ok, False)
+        self.assertEquals(process.calc.is_excepted, True)
+        self.assertEquals(process.calc.is_killed, False)
 
     def test_simple_kill_through_process(self):
         """
@@ -577,9 +577,9 @@ class TestWorkChainAbort(AiidaTestCase):
             process.kill()
             process.execute()
 
-        self.assertEquals(process.calc.finished_ok, False)
-        self.assertEquals(process.calc.excepted, False)
-        self.assertEquals(process.calc.killed, True)
+        self.assertEquals(process.calc.is_finished_ok, False)
+        self.assertEquals(process.calc.is_excepted, False)
+        self.assertEquals(process.calc.is_killed, True)
 
 
 class TestWorkChainAbortChildren(AiidaTestCase):
@@ -637,7 +637,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         def on_kill(self, msg):
             super(TestWorkChainAbortChildren.MainWorkChain, self).on_kill(msg)
             if self.inputs.kill:
-                assert self.ctx.child.calc.killed == True, 'Child was not killed'
+                assert self.ctx.child.calc.is_killed == True, 'Child was not killed'
 
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
@@ -661,9 +661,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         with self.assertRaises(RuntimeError):
             process.execute()
 
-        self.assertEquals(process.calc.finished_ok, False)
-        self.assertEquals(process.calc.excepted, True)
-        self.assertEquals(process.calc.killed, False)
+        self.assertEquals(process.calc.is_finished_ok, False)
+        self.assertEquals(process.calc.is_excepted, True)
+        self.assertEquals(process.calc.is_killed, False)
 
     @unittest.skip('This requires children kill support over RMQ #1060')
     def test_simple_kill_through_process(self):
@@ -680,13 +680,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
-        self.assertEquals(child.finished_ok, False)
-        self.assertEquals(child.excepted, False)
-        self.assertEquals(child.killed, True)
+        self.assertEquals(child.is_finished_ok, False)
+        self.assertEquals(child.is_excepted, False)
+        self.assertEquals(child.is_killed, True)
 
-        self.assertEquals(process.calc.finished_ok, False)
-        self.assertEquals(process.calc.excepted, False)
-        self.assertEquals(process.calc.killed, True)
+        self.assertEquals(process.calc.is_finished_ok, False)
+        self.assertEquals(process.calc.is_excepted, False)
+        self.assertEquals(process.calc.is_killed, True)
 
 
 class TestImmutableInputWorkchain(AiidaTestCase):

@@ -39,12 +39,12 @@ class TestCalcNode(AiidaTestCase):
         """
         calculation = Calculation()
 
-        self.assertEquals(calculation.terminated, False)
-        self.assertEquals(calculation.excepted, False)
-        self.assertEquals(calculation.killed, False)
-        self.assertEquals(calculation.finished, False)
-        self.assertEquals(calculation.finished_ok, False)
-        self.assertEquals(calculation.failed, False)
+        self.assertEquals(calculation.is_terminated, False)
+        self.assertEquals(calculation.is_excepted, False)
+        self.assertEquals(calculation.is_killed, False)
+        self.assertEquals(calculation.is_finished, False)
+        self.assertEquals(calculation.is_finished_ok, False)
+        self.assertEquals(calculation.is_failed, False)
 
     def test_updatable_not_copied(self):
         """

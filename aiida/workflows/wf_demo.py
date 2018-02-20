@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import plumpy
 import aiida.common
 from aiida.common import aiidalogger
 from aiida.orm.workflow import Workflow
@@ -33,6 +34,7 @@ class WorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
+        calc.process_state = plumpy.ProcessState.FINISHED
 
         return calc
 
@@ -90,6 +92,7 @@ class SubWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
+        calc.process_state = plumpy.ProcessState.FINISHED
 
         return calc
 
@@ -142,6 +145,7 @@ class BranchWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
+        calc.process_state = plumpy.ProcessState.FINISHED
 
         return calc
 
@@ -228,6 +232,7 @@ class LoopBranchWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
+        calc.process_state = plumpy.ProcessState.FINISHED
 
         return calc
 

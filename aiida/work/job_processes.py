@@ -166,14 +166,14 @@ class Waiting(plumpy.Waiting):
             else:
                 raise RuntimeError("Unknown waiting command")
 
-        except plumpy.CancelledError:
-            self.transition_to(processes.ProcessState.CANCELLED)
+        except plumpy.KilledError:
+            self.transition_to(processes.ProcessState.KILLED)
             if self._cancelling_future is not None:
                 self._cancelling_future.set_result(True)
                 self._cancelling_future = None
         except BaseException:
             exc_info = sys.exc_info()
-            self.transition_to(processes.ProcessState.FAILED, exc_info[1], exc_info[2])
+            self.transition_to(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
         finally:
             self._task = None
 
@@ -227,17 +227,18 @@ class JobProcess(processes.Process):
             options = {
                 'max_wallclock_seconds': int,
                 'resources': dict,
-                'custom_scheduler_commands': unicode,
+                'custom_scheduler_commands': basestring,
                 'queue_name': basestring,
                 'computer': Computer,
                 'withmpi': bool,
                 'mpirun_extra_params': Any(list, tuple),
                 'import_sys_environment': bool,
                 'environment_variables': dict,
-                'priority': unicode,
+                'priority': basestring,
                 'max_memory_kb': int,
-                'prepend_text': unicode,
-                'append_text': unicode,
+                'prepend_text': basestring,
+                'append_text': basestring,
+                'parser_name': basestring,
             }
             spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
 
@@ -344,8 +345,16 @@ class JobProcess(processes.Process):
         Run the calculation, we put it in the TOSUBMIT state and then wait for it
         to be copied over, submitted, retrieved, etc.
         """
-        # Put the calculation in the TOSUBMIT state
-        self.calc.submit()
+        calc_state = self.calc.get_state()
+
+        if calc_state != calc_states.NEW:
+            raise exceptions.InvalidOperation(
+                'Cannot submit a calculation not in {} state (the current state is {})'.format(
+                    calc_states.NEW, calc_state
+                ))
+
+        self.calc._set_state(calc_states.TOSUBMIT)
+
         # Launch the submit operation
         return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
@@ -355,7 +364,6 @@ class JobProcess(processes.Process):
         for the calculation to be finished and the data has been retrieved.
         """
         try:
-            print(retrieved_temporary_folder.folder.abspath)
             execmanager.parse_results(self.calc, retrieved_temporary_folder)
         except BaseException:
             try:
@@ -373,14 +381,11 @@ class JobProcess(processes.Process):
 
 
 class ContinueJobCalculation(JobProcess):
-    ACTIVE_CALC_STATES = [calc_states.TOSUBMIT, calc_states.SUBMITTING,
-                          calc_states.WITHSCHEDULER, calc_states.COMPUTED,
-                          calc_states.RETRIEVING, calc_states.PARSING]
 
     @classmethod
     def define(cls, spec):
         super(ContinueJobCalculation, cls).define(spec)
-        spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
+        spec.input('_calc', valid_type=JobCalculation, required=True, non_db=False)
 
     def run(self):
         state = self.calc.get_state()
@@ -389,13 +394,13 @@ class ContinueJobCalculation(JobProcess):
             return super(ContinueJobCalculation, self).run()
 
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
-            return self._submit()
+            return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
         elif state in calc_states.WITHSCHEDULER:
-            return self._update_scheduler_state(job_done=False)
+            return plumpy.Wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
 
         elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
-            return self._update_scheduler_state(job_done=True)
+            return plumpy.Wait(msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
 
         elif state == calc_states.PARSING:
             return self.retrieved(True)

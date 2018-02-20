@@ -52,15 +52,12 @@ def execute_steps():
         logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
 
         s_calcs_new = [c.pk for c in s.get_calculations() if c._is_new()]
-        s_calcs_finished = [c.pk for c in s.get_calculations()
-                            if c.has_finished_ok()]
-        s_calcs_failed = [c.pk for c in s.get_calculations() if c.has_failed()]
+        s_calcs_finished = [c.pk for c in s.get_calculations() if c.is_finished_ok]
+        s_calcs_failed = [c.pk for c in s.get_calculations() if c.is_failed]
         s_calcs_num = len(s.get_calculations())
 
-        s_sub_wf_finished = [sw.pk for sw in s.get_sub_workflows()
-                             if sw.has_finished_ok()]
-        s_sub_wf_failed = [sw.pk for sw in s.get_sub_workflows()
-                           if sw.has_failed()]
+        s_sub_wf_finished = [sw.pk for sw in s.get_sub_workflows() if sw.has_finished_ok()]
+        s_sub_wf_failed = [sw.pk for sw in s.get_sub_workflows() if sw.has_failed()]
         s_sub_wf_num = len(s.get_sub_workflows())
 
         if (s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and

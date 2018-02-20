@@ -804,7 +804,12 @@ class ParentExposeWorkChain(work.WorkChain):
         )
         spec.expose_inputs(
             ChildExposeWorkChain,
-            exclude=['a'],
+            include=['b'],
+            namespace='sub_2',
+        )
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            include=['c'],
             namespace='sub_2.sub_3',
         )
 
@@ -816,15 +821,14 @@ class ParentExposeWorkChain(work.WorkChain):
     def start_children(self):
         child_1 = self.submit(
             ChildExposeWorkChain,
-            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1')
+            a=self.exposed_inputs(ChildExposeWorkChain)['a'],
+            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
         )
         child_2 = self.submit(
             ChildExposeWorkChain,
-            a=self.exposed_inputs(ChildExposeWorkChain)['a'],
             **self.exposed_inputs(
                 ChildExposeWorkChain,
                 namespace='sub_2.sub_3',
-                agglomerate=False
             )
         )
         return ToContext(child_1=child_1, child_2=child_2)
@@ -870,6 +874,6 @@ class TestWorkChainExpose(AiidaTestCase):
             ParentExposeWorkChain,
             a=Int(1),
             sub_1={'b': Float(2.3), 'c': Bool(True)},
-            sub_2={'sub_3': {'b': Float(1.2), 'c': Bool(False)}},
+            sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
         )
         # self.assertEquals(res['o'], 2.3)

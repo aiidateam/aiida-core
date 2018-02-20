@@ -414,13 +414,9 @@ class Process(plumpy.Process):
         :param namespace: PortNamespace in which to look for the inputs
         """
         exposed_inputs = {}
-        namespaces = [namespace]
 
-        # If inputs are to be agglomerated, we prepend the lower lying namespace
-        if agglomerate:
-            namespaces.insert(0, None)
-
-        for namespace in namespaces:
+        namespace_list = self._get_namespace_list(namespace=namespace, agglomerate=agglomerate)
+        for namespace in namespace_list:
             exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
             # The namespace None indicates the base level namespace
             if namespace is None:
@@ -440,6 +436,20 @@ class Process(plumpy.Process):
                     exposed_inputs[name] = inputs[name]
 
         return exposed_inputs
+
+    @staticmethod
+    def _get_namespace_list(namespace=None, agglomerate=True):
+        if not agglomerate:
+            return [namespace]
+        else:
+            namespace_list = [None]
+            if namespace is not None:
+                split_ns = namespace.split('.')
+                namespace_list.extend([
+                    '.'.join(split_ns[:i])
+                    for i in range(1, len(split_ns) + 1)
+                ])
+            return namespace_list
 
 
 class FunctionProcess(Process):

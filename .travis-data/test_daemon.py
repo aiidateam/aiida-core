@@ -22,7 +22,7 @@ ParameterData = DataFactory('parameter')
 codename = 'doubler@torquessh'
 timeout_secs = 4 * 60 # 4 minutes
 number_calculations = 30 # Number of calculations to submit
-number_workchains = 30 # Number of workchains to submit
+number_workchains = 8 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']

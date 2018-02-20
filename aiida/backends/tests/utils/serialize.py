@@ -3,6 +3,7 @@ from aiida.orm import Node
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.backends.testbase import AiidaTestCase
 
+
 class TestSerialize(AiidaTestCase):
 
     def test_serialize_round_trip(self):

@@ -98,10 +98,21 @@ class AbstractAuthInfo(object):
         """
         return self.dbauthinfo.enabled
 
+    @enabled.setter
+    def enabled(self, value):
+        """
+        Set the enabled state for the computer
+
+        :return: Boolean
+        """
+        self.dbauthinfo.enabled = value
+        if not self.to_be_stored:
+            self.store()
+
     @property
     def computer(self):
         from aiida.orm.computer import Computer
-        return Computer.get(self.dbauthinfo.computer)
+        return Computer.get(self.dbauthinfo.dbcomputer)
 
     @property
     def user(self):

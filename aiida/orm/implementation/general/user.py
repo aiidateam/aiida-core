@@ -151,6 +151,7 @@ class AbstractUser(object):
     def get_all_users(cls):
         return cls.search_for_users()
 
+    @property
     def dbuser(self):
         """
         The underlying DbUser object.
@@ -159,6 +160,22 @@ class AbstractUser(object):
             implementation (Django, SQLAlchemy, ...)
         """
         return self._dbuser
+
+    def get_full_name(self):
+        """
+        Return the user full name
+
+        :return: the user full name
+        """
+        return self._dbuser.get_full_name()
+
+    def get_short_name(self):
+        """
+        Return the user short name (typically, this returns the email)
+
+        :return: The short name
+        """
+        return self._dbuser.get_short_name()
 
     @abstractclassmethod
     def search_for_users(cls, **kwargs):

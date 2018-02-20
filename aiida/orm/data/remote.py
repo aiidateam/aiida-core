@@ -67,7 +67,7 @@ class RemoteData(Data):
         """
         from aiida.orm.authinfo import AuthInfo
 
-        authinfo = AuthInfo(computer=self.get_computer(),
+        authinfo = AuthInfo.get(computer=self.get_computer(),
                             user=self.get_user())
         t = authinfo.get_transport()
 
@@ -95,7 +95,7 @@ class RemoteData(Data):
         """
         from aiida.orm.authinfo import AuthInfo
 
-        authinfo = AuthInfo(computer=self.get_computer(),
+        authinfo = AuthInfo.get(computer=self.get_computer(),
                             user=self.get_user())
         t = authinfo.get_transport()
 
@@ -135,7 +135,7 @@ class RemoteData(Data):
         """
         from aiida.orm.authinfo import AuthInfo
 
-        authinfo = AuthInfo(computer=self.get_computer(),
+        authinfo = AuthInfo.get(computer=self.get_computer(),
                             user=self.get_user())
         t = authinfo.get_transport()
 
@@ -173,7 +173,7 @@ class RemoteData(Data):
         from aiida.orm.authinfo import AuthInfo
         import os
 
-        authinfo = AuthInfo(computer=self.get_computer(),
+        authinfo = AuthInfo.get(computer=self.get_computer(),
                             user=self.get_user())
         t = authinfo.get_transport()
 

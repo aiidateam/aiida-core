@@ -48,9 +48,9 @@ class AuthInfo(AbstractAuthInfo):
             # Takes care of always getting a Computer instance from a DbComputer, Computer or string
             dbcomputer = Computer.get(computer).dbcomputer
             # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
-            dbuser = User.get(email=user.email)
+            dbuser = User.get(email=user.email).dbuser
 
-            self._dbauthinfo = DbAuthInfo(computer=dbcomputer, aiidauser=dbuser)
+            self._dbauthinfo = DbAuthInfo(dbcomputer=dbcomputer, aiidauser=dbuser)
 
     @property
     def to_be_stored(self):
@@ -63,21 +63,21 @@ class AuthInfo(AbstractAuthInfo):
 
     def store(self):
         """
-        Store the DbAuthInfo
+        Store the AuthInfo (possibly updating values if changed)
+
+        :return: the AuthInfo instance
         """
         from django.db import IntegrityError, transaction
 
-        if self.to_be_stored:
-
-            try:
-                # transactions are needed here for Postgresql:
-                # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-                sid = transaction.savepoint()
-                self.dbcomputer.save()
-                transaction.savepoint_commit(sid)
-            except IntegrityError:
-                transaction.savepoint_rollback(sid)
-                raise ValueError(
-                    "Integrity error while storing the DbAuthInfo")
+        try:
+            # transactions are needed here for Postgresql:
+            # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+            sid = transaction.savepoint()
+            self._dbauthinfo.save()
+            transaction.savepoint_commit(sid)
+        except IntegrityError:
+            transaction.savepoint_rollback(sid)
+            raise ValueError(
+                "Integrity error while storing the DbAuthInfo")
 
         return self

@@ -13,8 +13,6 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
 
-
-
 def prompt_for_computer_configuration(computer):
     import inspect, readline
     from aiida.orm.computer import Computer as Computer
@@ -391,7 +389,6 @@ class Computer(VerdiCommandWithSubcommands):
         print "---------------------------------------"
 
         # get the new computer name
-        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
         input_txt = raw_input("=> Computer name: ")
         if input_txt.strip() == '?':
             print "HELP:", "The computer name"
@@ -653,11 +650,9 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
         from aiida.orm.user import User
         from aiida.backends.utils import get_automatic_user
-        from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -881,7 +876,7 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.implementation import User
+        from aiida.orm import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -926,7 +921,6 @@ class Computer(VerdiCommandWithSubcommands):
                 authinfo = computer.get_authinfo(user)
                 if not authinfo.enabled:
                     authinfo.enabled = True
-                    authinfo.store()
                     print "Computer '{}' enabled for user {}.".format(
                         computername, user.get_full_name())
                 else:
@@ -952,6 +946,7 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
+        from aiida.orm import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -996,7 +991,6 @@ class Computer(VerdiCommandWithSubcommands):
                 authinfo = computer.get_authinfo(user)
                 if authinfo.enabled:
                     authinfo.enabled = False
-                    authinfo.store()
                     print "Computer '{}' disabled for user {}.".format(
                         computername, user.get_full_name())
                 else:

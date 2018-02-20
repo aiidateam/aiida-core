@@ -64,14 +64,14 @@ class AuthInfo(AbstractAuthInfo):
     def store(self):
         """
         Store the authinfo
-        :return:
+
+        :return: the AuthInfo instance
         """
         from sqlalchemy.exc import SQLAlchemyError
 
-        if self.to_be_stored:
-            try:
-                self._dbauthinfo.save(commit=True)
-            except SQLAlchemyError:
-                raise ValueError("Integrity error while storing the DbAuthInfo")
+        try:
+            self._dbauthinfo.save(commit=True)
+        except SQLAlchemyError:
+            raise ValueError("Integrity error while storing the DbAuthInfo")
 
         return self

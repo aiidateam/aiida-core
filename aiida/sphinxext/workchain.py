@@ -33,7 +33,7 @@ class AiidaWorkchainDirective(Directive):
     Directive to auto-document AiiDA workchains.
     """
     required_arguments = 1
-    HIDE_UNSTORED_INPUTS_FLAG = 'hide-unstored-inputs'
+    HIDE_UNSTORED_INPUTS_FLAG = 'hide-nondb-inputs'
     optional_arguments = 2
     option_spec = {'module': directives.unchanged, HIDE_UNSTORED_INPUTS_FLAG: directives.flag}
     has_content = True

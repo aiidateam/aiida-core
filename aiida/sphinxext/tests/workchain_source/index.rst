@@ -15,7 +15,7 @@ You can use the ``:hide-unstored-inputs:`` option to not show the inputs which a
 
 .. aiida-workchain:: DemoWorkChain
     :module: demo_workchain
-    :hide-unstored-inputs:
+    :hide-nondb-inputs:
 
 The command is also hooked into ``sphinx.ext.autodoc``, so you can also use that.
 

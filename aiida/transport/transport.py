@@ -1,4 +1,3 @@
-
 from abc import ABCMeta, abstractmethod
 import os
 import re
@@ -6,11 +5,7 @@ import fnmatch
 import sys
 import aiida.common
 from aiida.common.exceptions import InternalError
-
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/. and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
-__license__ = "MIT license, and Python license, see LICENSE.txt file"
-__version__ = "0.7.1"
-__authors__ = "The AiiDA team."
+from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
 
 
 class Transport(object):
@@ -24,6 +19,15 @@ class Transport(object):
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
+
+    # Time in seconds between consecutive checks
+    # Set to a non-zero value to be safe e.g. in the case of transports with a connection limit,
+    # to avoid overloading the server (and being banned). Should be overriden
+    # in plugins. This is anyway just a default, as the value can be changed
+    # by the user in the Computer properties, for instance.
+    # Currently both the local and the ssh transport override this value, so this is not used,
+    # but it will be the default for possible new plugins.
+    _DEFAULT_SAFE_OPEN_INTERVAL = DEFAULT_TRANSPORT_INTERVAL
 
     def __init__(self, *args, **kwargs):
         """
@@ -148,14 +152,13 @@ class Transport(object):
             from aiida.common.log import get_dblogger_extra
 
             if self._logger_extra is not None:
-                return logging.LoggerAdapter(logger=self._logger,
-                                             extra=self._logger_extra)
+                return logging.LoggerAdapter(
+                    logger=self._logger, extra=self._logger_extra)
             else:
                 return self._logger
         except AttributeError:
             raise InternalError("No self._logger configured for {}!")
 
-    @abstractmethod
     def get_safe_open_interval(self):
         """
         Get an interval (in seconds) that suggests how long the user should wait
@@ -163,13 +166,16 @@ class Transport(object):
         a way to get the user to not swamp a limited number of connections, etc.
         However it is just advisory.
 
-        If returns 0. it is taken that there are no reasons to limit the
+        If returns 0, it is taken that there are no reasons to limit the
         frequency of open calls.
 
-        :return: The safe interval between calling open
+        In the main class, it returns a default value (>0 for safety), set in
+        the _DEFAULT_SAFE_OPEN_INTERVAL attribute of the class. Plugins should override it.
+
+        :return: The safe interval between calling open, in seconds
         :rtype: float
         """
-        pass
+        return self._DEFAULT_SAFE_OPEN_INTERVAL
 
     def chdir(self, path):
         """
@@ -246,8 +252,8 @@ class Transport(object):
         """
         raise NotImplementedError
 
-    def copy_from_remote_to_remote(self, transportdestination,
-                                   remotesource, remotedestination, **kwargs):
+    def copy_from_remote_to_remote(self, transportdestination, remotesource,
+                                   remotedestination, **kwargs):
         """
         Copy files or folders from a remote computer to another remote computer.
 
@@ -271,21 +277,24 @@ class Transport(object):
         """
         from aiida.common.folders import SandboxFolder
 
-        kwargs_get = {'callback': None,
-                      'dereference': kwargs.pop('dereference', True),
-                      'overwrite': True,
-                      'ignore_nonexisting': False,
-                      }
+        kwargs_get = {
+            'callback': None,
+            'dereference': kwargs.pop('dereference', True),
+            'overwrite': True,
+            'ignore_nonexisting': False,
+        }
         # TODO: dereference should be set to False in the following, as soon as
         # dereference=False is supported by all transport plugins
-        kwargs_put = {'callback': kwargs.pop('callback', None),
-                      'dereference': True,
-                      'overwrite': kwargs.pop('overwrite', True),
-                      'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
-                      }
+        kwargs_put = {
+            'callback': kwargs.pop('callback', None),
+            'dereference': True,
+            'overwrite': kwargs.pop('overwrite', True),
+            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
+        }
 
         if kwargs:
-            self.logger.error("Unknown parameters passed to copy_from_remote_to_remote")
+            self.logger.error(
+                "Unknown parameters passed to copy_from_remote_to_remote")
 
         with SandboxFolder() as sandbox:
             self.get(remotesource, sandbox.abspath, **kwargs_get)
@@ -295,8 +304,9 @@ class Transport(object):
             # from sandbox.get_abs_path('*') would not work for files
             # beginning with a dot ('.').
             for filename in sandbox.get_content_list():
-                transportdestination.put(os.path.join(sandbox.abspath, filename),
-                                         remotedestination, **kwargs_put)
+                transportdestination.put(
+                    os.path.join(sandbox.abspath, filename), remotedestination,
+                    **kwargs_put)
 
     def _exec_command_internal(self, command, **kwargs):
         """
@@ -617,9 +627,11 @@ class Transport(object):
                                     "command: {}".format(stderr))
             return username.strip()
         else:
-            self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
-                              "stderr: '{}'".format(retval, username, stderr))
-            raise IOError("Error while executing whoami. Exit code: {}".format(retval))
+            self.logger.error(
+                "Problem executing whoami. Exit code: {}, stdout: '{}', "
+                "stderr: '{}'".format(retval, username, stderr))
+            raise IOError(
+                "Error while executing whoami. Exit code: {}".format(retval))
 
     def path_exists(self, path):
         """
@@ -675,7 +687,8 @@ class Transport(object):
             # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
         if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
-            dirname = unicode(dirname, sys.getfilesystemencoding() or
+            dirname = unicode(dirname,
+                              sys.getfilesystemencoding() or
                               sys.getdefaultencoding())
         try:
             # names = os.listdir(dirname)

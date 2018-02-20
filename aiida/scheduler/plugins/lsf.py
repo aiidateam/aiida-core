@@ -15,9 +15,7 @@ from __future__ import division
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (
-    JobInfo, job_states, JobResource)
-
+from aiida.scheduler.datastructures import (JobInfo, job_states, JobResource)
 """
 This maps LSF status codes to our own state list
 
@@ -72,25 +70,25 @@ ZOMBI   A job becomes ZOMBI if:
 
 """
 
-
 _map_status_lsf = {
-    'PEND'  : job_states.QUEUED,
-    'PROV'  : job_states.QUEUED,
-    'PSUSP' : job_states.QUEUED_HELD,
-    'USUSP' : job_states.SUSPENDED,
-    'SSUSP' : job_states.SUSPENDED,
-    'RUN'   : job_states.RUNNING,
-    'DONE'  : job_states.DONE,
-    'EXIT'  : job_states.DONE,
-    'UNKWN' : job_states.UNDETERMINED,
-    'WAIT'  : job_states.QUEUED,
-    'ZOMBI' : job_states.UNDETERMINED,
-    }
+    'PEND': job_states.QUEUED,
+    'PROV': job_states.QUEUED,
+    'PSUSP': job_states.QUEUED_HELD,
+    'USUSP': job_states.SUSPENDED,
+    'SSUSP': job_states.SUSPENDED,
+    'RUN': job_states.RUNNING,
+    'DONE': job_states.DONE,
+    'EXIT': job_states.DONE,
+    'UNKWN': job_states.UNDETERMINED,
+    'WAIT': job_states.QUEUED,
+    'ZOMBI': job_states.UNDETERMINED,
+}
 
 bsub_output_example = 'Job <764254593> is submitted to queue <test>.'
 bkill_output_example = 'Job <764254593> is being terminated'
 # Separator between fields in the output of bjobs
 _field_separator = "|"
+
 
 class LsfJobResource(JobResource):
     """
@@ -124,24 +122,27 @@ class LsfJobResource(JobResource):
         from aiida.common.exceptions import ConfigurationError
 
         try:
-            self.parallel_env = str(kwargs.pop('parallel_env',''))
+            self.parallel_env = str(kwargs.pop('parallel_env', ''))
         except (TypeError, ValueError):
             raise TypeError("When specified, 'parallel_env' must be a string")
 
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError):
-            raise TypeError("tot_num_mpiprocs must be specified and must be an integer")
+            raise TypeError(
+                "tot_num_mpiprocs must be specified and must be an integer")
 
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+        default_mpiprocs_per_machine = kwargs.pop(
+            'default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError("default_mpiprocs_per_machine cannot be set "
-                                     "for LSF scheduler")
+            raise ConfigurationError(
+                "default_mpiprocs_per_machine cannot be set "
+                "for LSF scheduler")
 
         num_machines = kwargs.pop('num_machines', None)
         if num_machines is not None:
             raise ConfigurationError("num_machines cannot be set "
-                                     "for LSF scheduler")        
+                                     "for LSF scheduler")
 
         if self.tot_num_mpiprocs <= 0:
             raise ValueError("tot_num_mpiprocs must be >= 1")
@@ -167,87 +168,87 @@ class LsfScheduler(aiida.scheduler.Scheduler):
     'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('lsf')
-    
+
     # Query only by list of jobs and not by user
     _features = {
         'can_query_by_user': False,
-        }
-    
+    }
+
     # The class to be used for the job resource.
     _job_resource_class = LsfJobResource
-    
 
-            # Unavailable field: substate
-        # Note! If you change the fields or fields length, update accordingly
-        # also the parsing function!
-#     _joblist_fields= ["id", # job id
-#                       "stat", # job state
-#                       "exit_code", # exit code
-#                       "exit_reason", # reason for the job being in an exit state
-#                       "exec_host", # list of executing hosts (separated by ':')
-#                       "user", # user name
-#                       "slots", # number of nodes allocated
-#                       "queue", # queue of the job
-#                       "finish_time", # time at which the job has or should have 
-#                                      # finished (date followed by hours:minutes)
-#                                      # It may also give one of the following symbols:
-#                                      # - E: The job has an estimated run time that 
-#                                      #      has not been exceeded.
-#                                      # - L: The job has a hard run time limit 
-#                                      #      specified but either has no estimated 
-#                                      #      run time or the estimated run time is 
-#                                      #      more than the hard run time limit.
-#                                      # - X: The job has exceeded its estimated run 
-#                                      #      time and the time displayed is the time 
-#                                      #      remaining until the job reaches its hard
-#                                      #      run time limit.
-#                                      # Also, a dash alone indicates that the job has no 
-#                                      #   estimated run time and no run limit, or 
-#                                      # that it has exceeded its run time but does 
-#                                      # not have a hard limit and therefore runs until completion.
-#                       "time_left", # time left before completion, i.e. to reach
-#                                    # finish_time (hours:minutes)
-#                                    # See also 'finish_time' (symbols, and dash).
-#                       "run_time", # total time used by the job (in seconds)
-#                       "cpu_used", # CPU time in seconds (all CPUs cumulated, idle 
-#                                   # time subtracted)
-#                       "submit_time", # submission time (date followed by hours:minutes)
-#                       "estart_time", # estimated start time (date followed by hours:minutes)
-#                       "start_time", # actual start time (date followed by hours:minutes)
-#                       "name", # job name
-#                       ]
-    _joblist_fields= ["id", # job id
-                      "stat", # job state
-                      #"exit_code", # exit code
-                      "exit_reason", # reason for the job being in an exit state
-                      "exec_host", # list of executing hosts (separated by ':')
-                      "user", # user name
-                      "slots", # number of nodes allocated
-                      "max_req_proc", # max number of CPU requested
-                      "exec_host", # names of the hosting nodes
-                      "queue", # queue of the job
-                      "finish_time", # time at which the job has or should have 
-                                     # finished (date followed by hours:minutes)
-                                     # It may also give one of the following symbols:
-                                     # - E: The job has an estimated run time that 
-                                     #      has not been exceeded.
-                                     # - L: The job has a hard run time limit 
-                                     #      specified but either has no estimated 
-                                     #      run time or the estimated run time is 
-                                     #      more than the hard run time limit.
-                                     # - X: The job has exceeded its estimated run 
-                                     #      time and the time displayed is the time 
-                                     #      remaining until the job reaches its hard
-                                     #      run time limit.
-                                     # Also, a dash alone indicates that the job has no 
-                                     #   estimated run time and no run limit, or 
-                                     # that it has exceeded its run time but does 
-                                     # not have a hard limit and therefore runs until completion.
-                      "start_time",
-                      "%complete",
-                      "submit_time", # submission time (date followed by hours:minutes)
-                      "name", # job name
-                      ]
+    # Unavailable field: substate
+    # Note! If you change the fields or fields length, update accordingly
+    # also the parsing function!
+    #     _joblist_fields= ["id", # job id
+    #                       "stat", # job state
+    #                       "exit_code", # exit code
+    #                       "exit_reason", # reason for the job being in an exit state
+    #                       "exec_host", # list of executing hosts (separated by ':')
+    #                       "user", # user name
+    #                       "slots", # number of nodes allocated
+    #                       "queue", # queue of the job
+    #                       "finish_time", # time at which the job has or should have
+    #                                      # finished (date followed by hours:minutes)
+    #                                      # It may also give one of the following symbols:
+    #                                      # - E: The job has an estimated run time that
+    #                                      #      has not been exceeded.
+    #                                      # - L: The job has a hard run time limit
+    #                                      #      specified but either has no estimated
+    #                                      #      run time or the estimated run time is
+    #                                      #      more than the hard run time limit.
+    #                                      # - X: The job has exceeded its estimated run
+    #                                      #      time and the time displayed is the time
+    #                                      #      remaining until the job reaches its hard
+    #                                      #      run time limit.
+    #                                      # Also, a dash alone indicates that the job has no
+    #                                      #   estimated run time and no run limit, or
+    #                                      # that it has exceeded its run time but does
+    #                                      # not have a hard limit and therefore runs until completion.
+    #                       "time_left", # time left before completion, i.e. to reach
+    #                                    # finish_time (hours:minutes)
+    #                                    # See also 'finish_time' (symbols, and dash).
+    #                       "run_time", # total time used by the job (in seconds)
+    #                       "cpu_used", # CPU time in seconds (all CPUs cumulated, idle
+    #                                   # time subtracted)
+    #                       "submit_time", # submission time (date followed by hours:minutes)
+    #                       "estart_time", # estimated start time (date followed by hours:minutes)
+    #                       "start_time", # actual start time (date followed by hours:minutes)
+    #                       "name", # job name
+    #                       ]
+    _joblist_fields = [
+        "id",  # job id
+        "stat",  # job state
+        #"exit_code", # exit code
+        "exit_reason",  # reason for the job being in an exit state
+        "exec_host",  # list of executing hosts (separated by ':')
+        "user",  # user name
+        "slots",  # number of nodes allocated
+        "max_req_proc",  # max number of CPU requested
+        "exec_host",  # names of the hosting nodes
+        "queue",  # queue of the job
+        "finish_time",  # time at which the job has or should have 
+        # finished (date followed by hours:minutes)
+        # It may also give one of the following symbols:
+        # - E: The job has an estimated run time that
+        #      has not been exceeded.
+        # - L: The job has a hard run time limit
+        #      specified but either has no estimated
+        #      run time or the estimated run time is
+        #      more than the hard run time limit.
+        # - X: The job has exceeded its estimated run
+        #      time and the time displayed is the time
+        #      remaining until the job reaches its hard
+        #      run time limit.
+        # Also, a dash alone indicates that the job has no
+        #   estimated run time and no run limit, or
+        # that it has exceeded its run time but does
+        # not have a hard limit and therefore runs until completion.
+        "start_time",
+        "%complete",
+        "submit_time",  # submission time (date followed by hours:minutes)
+        "name",  # job name
+    ]
 
     def _get_joblist_command(self, jobs=None, user=None):
         """
@@ -258,12 +259,13 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                user, numnodes, numcores, title
         """
         from aiida.common.exceptions import FeatureNotAvailable
-        
+
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
-        command = ["bjobs", "-noheader",
-                   "-o '{} delimiter=\"{}\"'".format(' '.join(self._joblist_fields),
-                                                     _field_separator)]
+        command = [
+            "bjobs", "-noheader", "-o '{} delimiter=\"{}\"'".format(
+                ' '.join(self._joblist_fields), _field_separator)
+        ]
 
         if user and jobs:
             raise FeatureNotAvailable("Cannot query by user and job(s) in LSF")
@@ -286,8 +288,8 @@ class LsfScheduler(aiida.scheduler.Scheduler):
         comm = ' '.join(command)
         self.logger.debug("bjobs command: {}".format(comm))
         return comm
-    
-    def _get_detailed_jobinfo_command(self,jobid):
+
+    def _get_detailed_jobinfo_command(self, jobid):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
@@ -306,10 +308,10 @@ class LsfScheduler(aiida.scheduler.Scheduler):
         
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        import string,re
+        import string, re
 
         empty_line = ""
-        
+
         lines = []
         if job_tmpl.submit_as_hold:
             lines.append("#BSUB -H")
@@ -323,12 +325,12 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             # If not specified, but email events are set, SLURM
             # sends the mail to the job owner by default
             lines.append('#BSUB -u {}'.format(job_tmpl.email))
-            
-        if job_tmpl.email_on_started:            
+
+        if job_tmpl.email_on_started:
             lines.append("#BSUB -B")
         if job_tmpl.email_on_terminated:
             lines.append("#BSUB -N")
-        
+
         if job_tmpl.job_name:
             # The man page specifies only a limitation
             # on the job name to 4094 characters.
@@ -342,55 +344,57 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid character
             if not job_title or (
-                job_title[0] not in string.letters + string.digits):
+                    job_title[0] not in string.letters + string.digits):
                 job_title = 'j' + job_title
-            
-            # Truncate to the first 128 characters 
+
+            # Truncate to the first 128 characters
             # Nothing is done if the string is shorter.
             job_title = job_title[:128]
             lines.append('#BSUB -J "{}"'.format(job_title))
-        
+
         if not job_tmpl.import_sys_environment:
             self.logger.warning("LSF scheduler cannot ignore "
                                 "the user environment")
-            
+
         if job_tmpl.sched_output_path:
             lines.append("#BSUB -o {}".format(job_tmpl.sched_output_path))
-        
-        sched_error_path = getattr(job_tmpl,'sched_error_path',None)
+
+        sched_error_path = getattr(job_tmpl, 'sched_error_path', None)
         if job_tmpl.sched_join_files:
             sched_error_path = "{}_".format(job_tmpl.sched_output_path)
             self.logger.warning("LSF scheduler does not support joining "
                                 "the standard output and standard error "
                                 "files; std error file assigned instead "
                                 "to the file {}".format(sched_error_path))
-            
+
         if sched_error_path:
             lines.append("#BSUB -e {}".format(job_tmpl.sched_error_path))
 
         if job_tmpl.queue_name:
             lines.append("#BSUB -q {}".format(job_tmpl.queue_name))
-            
+
         if job_tmpl.priority:
-            # Specifies user-assigned job priority that orders all jobs 
-            # (from all users) in a queue. Valid values for priority 
+            # Specifies user-assigned job priority that orders all jobs
+            # (from all users) in a queue. Valid values for priority
             # are any integers between 1 and MAX_USER_PRIORITY
             # (configured in lsb.params, displayed by "bparams -l").
-            # Jobs are scheduled based first on their queue priority first, then 
+            # Jobs are scheduled based first on their queue priority first, then
             # job priority, and lastly in first-come first-served order.
             lines.append("#BSUB -sp {}".format(job_tmpl.priority))
-      
+
         if not job_tmpl.job_resource:
             raise ValueError("Job resources (as the tot_num_mpiprocs) are "
                              "required for the LSF scheduler plugin")
-        
-        lines.append("#BSUB -n {}".format(job_tmpl.job_resource.get_tot_num_mpiprocs()))
+
+        lines.append("#BSUB -n {}".format(
+            job_tmpl.job_resource.get_tot_num_mpiprocs()))
         # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
         # defined in lsb.params (you can check with the output of bparams -l).
         # Note: the -n option of bsub can also contain a maximum number of
         # procs to be used
         if job_tmpl.job_resource.parallel_env:
-            lines.append('#BSUB -m "{}"'.format(job_tmpl.job_resource.parallel_env))
+            lines.append('#BSUB -m "{}"'.format(
+                job_tmpl.job_resource.parallel_env))
 
         if job_tmpl.max_wallclock_seconds is not None:
             # ABS_RUNLIMIT=Y should be set, in lsb.params (check with bparams -l)
@@ -406,9 +410,8 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
             # of the division
-            minutes =  -(-(tot_secs % 3600) // 60)
-            lines.append("#BSUB -W {:02d}:{:02d}".format(
-                    hours, minutes))
+            minutes = -(-(tot_secs % 3600) // 60)
+            lines.append("#BSUB -W {:02d}:{:02d}".format(hours, minutes))
 
         # TODO: check if this is the memory per node
         if job_tmpl.max_memory_kb:
@@ -421,14 +424,14 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                     "max_memory_kb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
-            # The -M option sets a per-process (soft) memory limit for all the 
+            # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
             lines.append("#BSUB -M {}".format(virtualMemoryKb))
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line. 
+        # Job environment variables are to be set on one single line.
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.
         # Therefore, I assume that this is bash and export variables by
@@ -440,14 +443,13 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                 raise ValueError("If you provide job_environment, it must be "
                                  "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(
-                        k.strip(),
-                        escape_for_bash(v)))
+                lines.append("export {}={}".format(k.strip(),
+                                                   escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES END  ###")
             lines.append(empty_line)
 
         lines.append(empty_line)
-                
+
         # The following seems to be the only way to copy the input files
         # to the node where the computation are actually launched (the
         # -f option of bsub that does not always work...)
@@ -464,7 +466,7 @@ fi
 """)
 
         return "\n".join(lines)
-    
+
     def _get_submit_script_footer(self, job_tmpl):
         """
         Return the submit script final part, using the parameters from the
@@ -519,11 +521,12 @@ fi
 
         if retval != 0:
             self.logger.warning("Error in _parse_joblist_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                                "stdout={}; stderr={}".format(
+                                    retval, stdout, stderr))
             raise SchedulerError("Error during parsing joblist output, "
                                  "retval={}\n"
                                  "stdout={}\nstderr={}".format(
-                retval, stdout, stderr))            
+                                     retval, stdout, stderr))
 
         # will contain raw data parsed from output: only lines with the
         # separator, and already split in fields
@@ -532,9 +535,10 @@ fi
         # the last field), I don't split the title.
         # This assumes that _field_separator never
         # appears in any previous field.
-        jobdata_raw = [l.split(_field_separator, num_fields)
-                       for l in stdout.splitlines()
-                       if _field_separator in l]
+        jobdata_raw = [
+            l.split(_field_separator, num_fields) for l in stdout.splitlines()
+            if _field_separator in l
+        ]
 
         # Create dictionary and parse specific fields
         job_list = []
@@ -547,12 +551,12 @@ fi
                 self.logger.error("Wrong line length in squeue output! '{}'"
                                   "".format(job))
                 continue
-            
+
             this_job = JobInfo()
             this_job.job_id = job[0]
             this_job.annotation = job[2]
             job_state_raw = job[1]
-            
+
             try:
                 job_state_string = _map_status_lsf[job_state_raw]
             except KeyError:
@@ -560,7 +564,7 @@ fi
                                     "id {}".format(job_state_raw,
                                                    this_job.job_id))
                 job_state_string = job_states.UNDETERMINED
-            
+
             this_job.job_state = job_state_string
 
             # I get the remaining fields
@@ -568,12 +572,12 @@ fi
             # I know that the length is exactly num_fields because
             # I used split(_field_separator, num_fields) before
             # when creting 'job'
-#            (_, _, _, executing_host, username, number_nodes,
-#             number_cpus, allocated_machines, partition, 
-#             time_limit, time_used, dispatch_time, job_name) = job
-            (_, _, _, executing_host, username, number_nodes,
-             number_cpus, allocated_machines, partition, 
-             finish_time, start_time, percent_complete, submission_time, job_name) = job
+            #            (_, _, _, executing_host, username, number_nodes,
+            #             number_cpus, allocated_machines, partition,
+            #             time_limit, time_used, dispatch_time, job_name) = job
+            (_, _, _, executing_host, username, number_nodes, number_cpus,
+             allocated_machines, partition, finish_time, start_time,
+             percent_complete, submission_time, job_name) = job
 
             this_job.job_owner = username
             try:
@@ -581,16 +585,14 @@ fi
             except ValueError:
                 self.logger.warning("The number of allocated nodes is not "
                                     "an integer ({}) for job id {}!".format(
-                        number_nodes,
-                        this_job.job_id))
+                                        number_nodes, this_job.job_id))
 
             try:
                 this_job.num_mpiprocs = int(number_cpus)
             except ValueError:
                 self.logger.warning("The number of allocated cores is not "
                                     "an integer ({}) for job id {}!".format(
-                        number_cpus,
-                        this_job.job_id))
+                                        number_cpus, this_job.job_id))
 
             # ALLOCATED NODES HERE
             # string may be in the format
@@ -603,10 +605,13 @@ fi
 
             this_job.queue_name = partition
 
-            psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
-            psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
-            psd_submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M')
-            
+            psd_finish_time = self._parse_time_string(
+                finish_time, fmt='%b %d %H:%M')
+            psd_start_time = self._parse_time_string(
+                start_time, fmt='%b %d %H:%M')
+            psd_submission_time = self._parse_time_string(
+                submission_time, fmt='%b %d %H:%M')
+
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
@@ -616,7 +621,7 @@ fi
                     # fix of a weird bug. Since the year is not parsed, it is assumed
                     # to always be 1900. Therefore, job submitted
                     # in december and finishing in january would produce negative time differences
-                    if requested_walltime.total_seconds()<0:
+                    if requested_walltime.total_seconds() < 0:
                         import datetime
                         old_month = psd_finish_time.month
                         old_day = psd_finish_time.day
@@ -624,21 +629,25 @@ fi
                         old_minute = psd_finish_time.minute
                         new_year = psd_start_time.year + 1
                         # note: we assume that no job will last more than 1 year...
-                        psd_finish_time = datetime.datetime(year=new_year, 
-                                                           month=old_month,
-                                                           day = old_day, 
-                                                           hour=old_hour,
-                                                           minute=old_minute)
+                        psd_finish_time = datetime.datetime(
+                            year=new_year,
+                            month=old_month,
+                            day=old_day,
+                            hour=old_hour,
+                            minute=old_minute)
                         requested_walltime = psd_finish_time - psd_start_time
-                    
-                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
+
+                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds(
+                    )
                 except (TypeError, ValueError):
                     self.logger.warning("Error parsing the time limit "
-                        "for job id {}".format(this_job.job_id))
-    
+                                        "for job id {}".format(this_job.job_id))
+
                 try:
-                    psd_percent_complete = float(percent_complete.strip(' L').strip("%"))
-                    this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete/100.
+                    psd_percent_complete = float(
+                        percent_complete.strip(' L').strip("%"))
+                    this_job.wallclock_time_seconds = requested_walltime.total_seconds(
+                    ) * psd_percent_complete / 100.
                 except ValueError:
                     self.logger.warning("Error parsing the time used "
                                         "for job id {}".format(this_job.job_id))
@@ -657,14 +666,14 @@ fi
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if (this_job.allocated_machines is not None and 
-                this_job.num_machines is not None):
+            if (this_job.allocated_machines is not None and
+                    this_job.num_machines is not None):
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocated_machines), this_job.num_machines))
-
+                                          len(this_job.allocated_machines),
+                                          this_job.num_machines))
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -682,21 +691,22 @@ fi
         """
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(
+                                  retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
-                retval, stdout, stderr))
+                                     retval, stdout, stderr))
 
         try:
             transport_string = " for {}".format(self.transport)
         except SchedulerError:
             transport_string = ""
-        
+
         if stderr.strip():
             self.logger.warning("in _parse_submit_output{}: "
-                "there was some text in stderr: {}".format(
-                    transport_string,stderr))
-        
+                                "there was some text in stderr: {}".format(
+                                    transport_string, stderr))
+
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError:
@@ -713,18 +723,18 @@ fi
         if string == '-':
             return None
 
-        # The year is not specified. I have to add it, and I set it to the 
-        # current year. This is actually not correct, if we are close 
+        # The year is not specified. I have to add it, and I set it to the
+        # current year. This is actually not correct, if we are close
         # new year... we should ask the scheduler also the year.
         actual_string = '{} {}'.format(datetime.datetime.now().year, string)
         actual_fmt = '%Y {}'.format(fmt)
 
         try:
             try:
-                thetime = datetime.datetime.strptime(actual_string,actual_fmt)
+                thetime = datetime.datetime.strptime(actual_string, actual_fmt)
             except ValueError:
-                thetime = datetime.datetime.strptime(
-                    actual_string,"{} L".format(actual_fmt))
+                thetime = datetime.datetime.strptime(actual_string,
+                                                     "{} L".format(actual_fmt))
         except Exception as e:
             self.logger.debug("Unable to parse time string {}, the message "
                               "was {}".format(string, e.message))
@@ -747,13 +757,15 @@ fi
         :return: True if everything seems ok, False otherwise.
         """
         if retval == 255:
-            self.logger.error("Error in _parse_kill_output: retval={} (Job already finished); "
+            self.logger.error(
+                "Error in _parse_kill_output: retval={} (Job already finished); "
                 "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(
+                                  retval, stdout, stderr))
             return False
 
         try:
@@ -763,13 +775,12 @@ fi
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output{}: "
-                "there was some text in stderr: {}".format(
-                    transport_string,stderr))
+                                "there was some text in stderr: {}".format(
+                                    transport_string, stderr))
 
         if stdout.strip():
             self.logger.warning("in _parse_kill_output{}: "
-                "there was some text in stdout: {}".format(
-                    transport_string,stdout))
+                                "there was some text in stdout: {}".format(
+                                    transport_string, stdout))
 
         return True
-    

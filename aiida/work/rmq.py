@@ -33,11 +33,30 @@ def get_rmq_config(prefix=None):
 
 
 def encode_response(response):
+    """
+    Used by kiwipy to encode a message for sending.  Because we can have nodes
+    we have to convert these to PIDs before sending (we can't just send the live
+    instance)
+
+    :param response: The message to encode
+    :return: The encoded message
+    :rtype: str
+    """
     serialized = serialize_data(response)
     return json.dumps(serialized)
 
 
 def decode_response(response):
+    """
+    Used by kiwipy to decode a message that has been received.  We check for
+    any node PKs and convert these back into the corresponding node instance
+    using `load_node`.  Any other entries are left untouched.
+
+    .. see: `encode_response`
+
+    :param response: The response string to decode
+    :return: A data structure containing deserialized node instances
+    """
     response = json.loads(response)
     return deserialize_data(response)
 
@@ -94,7 +113,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
     def _launch(self, task):
         from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
-        kwargs['inputs'] = deserialize_data(kwargs['inputs'])
+        # kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
 
@@ -114,6 +133,8 @@ class ProcessControlPanel(object):
             rmq_connector,
             exchange_name=message_exchange,
             task_queue=task_queue,
+            encoder=encode_response,
+            decoder=decode_response,
             testing_mode=testing_mode
         )
 

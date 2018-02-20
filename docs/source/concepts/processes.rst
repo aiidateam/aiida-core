@@ -1,5 +1,19 @@
+.. _processes:
+
+*********
+Processes
+*********
+
+Anything that runs in AiiDA is an instance of :py:class:`~aiida.work.processes.Process`.
+
+ISSUE#1131
+
+
+
+.. _process_builder:
+
 The Process Builder
-+++++++++++++++++++
+===================
 The process builder is essentially a tool that helps you build the object that you want to run.
 To get a *builder* for a ``Calculation`` or a ``Workflow`` all you need is the ``Calculation`` or ``Workflow`` class itself, which can be loaded through the ``CalculationFactory`` and ``WorkflowFactory``, respectively.
 Let's take the :py:class:`~aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation` as an example::

@@ -1,7 +1,8 @@
 .. _caching:
 
+*******
 Caching
-=======
+*******
 
 When working with AiiDA, you might sometimes re-run calculations which were already successfully executed. Because this can waste a lot of computational resources, you can enable AiiDA to **cache** calculations, which means that it will re-use existing calculations if a calculation with the same inputs is submitted again.
 

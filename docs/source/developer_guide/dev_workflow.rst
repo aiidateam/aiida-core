@@ -1,8 +1,3 @@
-############################
-Tutorial: Developer Workflow
-############################
-
-
 
 Creating new workflows
 ++++++++++++++++++++++

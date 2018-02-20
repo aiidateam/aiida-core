@@ -8,43 +8,41 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.base import Int
+from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
-class ParentWorkChain(WorkChain):
-
+class NestedWorkChain(WorkChain):
+    """
+    Nested workchain which creates a workflow where the nesting level is equal to its input.
+    """
     @classmethod
     def define(cls, spec):
-        super(ParentWorkChain, cls).define(spec)
+        super(NestedWorkChain, cls).define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
-            cls.run_step,
-            cls.results
+            cls.do_submit,
+            cls.finalize
         )
         spec.output('output', valid_type=Int, required=True)
 
-    def run_step(self):
-        inputs = {
-            'inp': self.inputs.inp
-        }
-        running = self.submit(SubWorkChain, **inputs)
-        self.report('launching SubWorkChain<{}>'.format(running.pk))
+    def do_submit(self):
+        if self.should_submit():
+            self.report('Submitting nested workchain.')
+            return ToContext(
+                workchain=append_(self.submit(
+                    NestedWorkChain,
+                    inp=self.inputs.inp - 1
+                ))
+            )
 
-        return ToContext(workchains=append_(running))
+    def should_submit(self):
+        return int(self.inputs.inp) > 0
 
-    def results(self):
-        subworkchain = self.ctx.workchains[0]
-        self.out('output', subworkchain.out.output)
-
-class SubWorkChain(WorkChain):
-
-    @classmethod
-    def define(cls, spec):
-        super(SubWorkChain, cls).define(spec)
-        spec.input('inp', valid_type=Int)
-        spec.outline(
-            cls.run_step
-        )
-        spec.output('output', valid_type=Int, required=True)
-
-    def run_step(self):
-        self.out('output', Int(self.inputs.inp.value * 2))
+    def finalize(self):
+        if self.should_submit():
+            self.report('Getting sub-workchain output.')
+            sub_workchain = self.ctx.workchain[0]
+            self.out('output', sub_workchain.out.output + 1)
+        else:
+            self.report('Bottom-level workchain reached.')
+            self.out('output', Int(0))

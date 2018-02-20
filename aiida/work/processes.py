@@ -309,7 +309,9 @@ class Process(plumpy.Process):
                 pass
 
             value.store()
-            value.add_link_from(self.calc, label, LinkType.RETURN)
+
+            if isinstance(self.calc, WorkCalculation):
+                value.add_link_from(self.calc, label, LinkType.RETURN)
 
     def _setup_db_record(self):
         assert self.inputs is not None
@@ -416,27 +418,36 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, calc_node_class=WorkCalculation, **kwargs):
+    def build(func, calc_node_class=None, **kwargs):
         """
         Build a Process from the given function.  All function arguments will
         be assigned as process inputs.  If keyword arguments are specified then
         these will also become inputs.
 
         :param func: The function to build a process from
+        :param calc_node_class: Provide a custom calculation class to be used,
+            has to be constructable with no arguments
+        :type calc_node_class: :class:`aiida.orm.calculation.Calculation`
         :param kwargs: Optional keyword arguments that will become additional
             inputs to the process
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
         args, varargs, keywords, defaults = inspect.getargspec(func)
+        nargs = len(args)
+        ndefaults = len(defaults) if defaults else 0
+        first_default_pos = nargs - ndefaults
+
+        if calc_node_class is None:
+            calc_node_class = WorkCalculation
 
         def _define(cls, spec):
             super(FunctionProcess, cls).define(spec)
 
             for i in range(len(args)):
-                default = None
-                if defaults and len(defaults) - len(args) + i >= 0:
-                    default = defaults[i]
+                default = ()
+                if i >= first_default_pos:
+                    default = defaults[i - first_default_pos]
                 spec.input(args[i], valid_type=Data, default=default)
                 # Make sure to get rid of the argument from the keywords dict
                 kwargs.pop(args[i], None)
@@ -479,7 +490,6 @@ class FunctionProcess(Process):
         :param args: The values to use
         :return: A label: value dictionary
         """
-        assert (len(args) == len(cls._func_args))
         return dict(zip(cls._func_args, args))
 
     @classmethod

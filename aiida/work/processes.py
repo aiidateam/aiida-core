@@ -273,7 +273,7 @@ class Process(plumpy.Process):
 
     @override
     def encode_input_args(self, inputs):
-        """ 
+        """
         Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -286,7 +286,7 @@ class Process(plumpy.Process):
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
-        :param encoded: 
+        :param encoded:
         :return: The decoded input args
         """
         return deserialize_data(encoded)
@@ -403,6 +403,41 @@ class Process(plumpy.Process):
                     caching.get_use_cache(type(self)) or
                     caching.get_use_cache(type(self._calc))
             )
+
+
+    def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
+        """
+        Gather a dictionary of the inputs that were exposed for a given Process
+        class under an optional namespace.
+
+        :param process_class: Process class whose inputs to try and retrieve
+        :param namespace: PortNamespace in which to look for the inputs
+        """
+        exposed_inputs = {}
+        namespaces = [namespace]
+
+        # If inputs are to be agglomerated, we prepend the lower lying namespace
+        if agglomerate:
+            namespaces.insert(0, None)
+
+        for namespace in namespaces:
+            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
+            # The namespace None indicates the base level namespace
+            if namespace is None:
+                inputs = self.inputs
+                port_namespace = self.spec().inputs
+            else:
+                inputs = self.inputs[namespace]
+                try:
+                    port_namespace = self.spec().get_input(namespace)
+                except KeyError:
+                    raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
+
+            for name, port in port_namespace.ports.iteritems():
+                if name in inputs and name in exposed_inputs_list:
+                    exposed_inputs[name] = inputs[name]
+
+        return exposed_inputs
 
 
 class FunctionProcess(Process):

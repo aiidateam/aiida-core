@@ -170,6 +170,9 @@ class Process(plumpy.Process):
             return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
+        """
+        Add all values given in ``out_dict`` to the outputs. The keys of the dictionary will be used as output names.
+        """
         for key, value in out_dict.items():
             self.out(key, value)
 

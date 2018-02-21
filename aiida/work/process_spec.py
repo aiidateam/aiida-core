@@ -52,6 +52,9 @@ class DictSchema(object):
 
 
 class ProcessSpec(plumpy.ProcessSpec):
+    """
+    Contains the inputs, outputs and outline of a process.
+    """
 
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace

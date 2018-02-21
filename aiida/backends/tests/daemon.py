@@ -19,16 +19,6 @@ from aiida.workflows.test import WFTestSimpleWithSubWF
 
 class TestDaemonBasic(AiidaTestCase):
 
-    def setUp(self):
-        super(TestDaemonBasic, self).setUp()
-        import logging
-        logging.disable(logging.CRITICAL)
-
-    def tearDown(self):
-        super(TestDaemonBasic, self).tearDown()
-        import logging
-        logging.disable(logging.NOTSET)
-
     def test_workflow_fast_kill(self):
         from aiida.cmdline.commands.workflow import Workflow as WfCmd
 
@@ -51,7 +41,7 @@ class TestDaemonBasic(AiidaTestCase):
 
         # Killing the head workflow
         wf_cmd = WfCmd()
-        wf_cmd.workflow_kill(*[str(head_wf.pk), "-f"])
+        wf_cmd.workflow_kill(*[str(head_wf.pk), '-f', '-q'])
 
         # At this point no running workflow should be found
         running_no = 0

@@ -19,10 +19,10 @@ install_requires = [
     'django-extensions==1.5.0',
     'tzlocal==1.3',
     'pytz==2014.10',
-    'six==1.10.0',
+    'pyyaml',
+    'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
-    'singledispatch==3.4.0.3',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
@@ -38,10 +38,10 @@ install_requires = [
     'billiard==3.3.0.23',
     'amqp==1.4.9',
     'anyjson==0.3.3',
-    'supervisor==3.1.3',
+    'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.10',
+    'plumpy==0.7.11',
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.31.2',
@@ -53,21 +53,25 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-plugins',
+    'click-spinner',
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
     'psycopg2==2.7.1',
     # Requirements for ssh transport
-    'paramiko==2.1.2',
+    'paramiko==2.4.0',
     'ecdsa==0.13',
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
     'ipython<6.0',
-    'scipy<1.0.0' # At this moment the install of 1.0.0 release is broken
+    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
 ]
 
 extras_require = {
+    # Requirements for Python 2 only
+    ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
@@ -79,7 +83,7 @@ extras_require = {
     # Requirements for RESTful API
     'REST': [
         'Flask==0.10.1',
-        'Flask-RESTful==0.3.5',
+        'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
         'pyparsing==2.1.10',
         'Pattern==2.6',
@@ -100,7 +104,7 @@ extras_require = {
         'Jinja2==2.9.5',
         'MarkupSafe==0.23',
         # Required by readthedocs
-        'sphinx-rtd-theme==0.1.9',
+        'sphinx-rtd-theme==0.2.5b2',
     ],
     # Requirements for non-core funciontalities that rely on external atomic
     # manipulation/processing software
@@ -111,10 +115,9 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==3.6.2.1',
-        'seekpath==1.6.0',
-        # support for the AiiDA CifData class. Update to version 4 ddoes
-        # break tests
+        'PyCifRW==4.2.1', # support for the AiiDA CifData class
+        'seekpath==1.8.0',
+        'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
     'notebook': [

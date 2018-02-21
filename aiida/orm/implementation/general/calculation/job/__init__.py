@@ -13,7 +13,7 @@ import datetime
 import copy
 
 from aiida.utils import timezone
-from aiida.common.utils import str_timedelta
+from aiida.common.utils import str_timedelta, classproperty
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
@@ -27,7 +27,6 @@ from aiida.common.old_pluginloader import from_type_to_pluginclassname
 # 'rerunnable',
 # 'resourceLimits',
 
-
 _input_subfolder = 'raw_input'
 
 
@@ -36,6 +35,30 @@ class AbstractJobCalculation(object):
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    _cacheable = True
+
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        # _updatable_attributes are ignored automatically.
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+            'queue_name',
+            'priority',
+            'max_wallclock_seconds',
+            'max_memory_kb',
+        ]
+
+    def get_hash(
+        self,
+        ignore_errors=True,
+        ignored_folder_content=('raw_input',),
+        **kwargs
+    ):
+        return super(AbstractJobCalculation, self).get_hash(
+            ignore_errors=ignore_errors,
+            ignored_folder_content=ignored_folder_content,
+            **kwargs
+        )
 
     @classmethod
     def process(cls):
@@ -61,7 +84,7 @@ class AbstractJobCalculation(object):
             'state', 'job_id', 'scheduler_state',
             'scheduler_lastchecktime',
             'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list'
+            'retrieve_singlefile_list', 'retrieve_temporary_list'
         )
 
         # Files in which the scheduler output and error will be stored.
@@ -102,11 +125,20 @@ class AbstractJobCalculation(object):
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
         # I get here if the calculation was successfully stored.
-        self._set_state(calc_states.NEW)
+        # Set to new only if it is not already FINISHED (due to caching)
+        if not self.get_state() == calc_states.FINISHED:
+            self._set_state(calc_states.NEW)
 
         # Important to return self to allow the one-liner
         # c = Calculation().store()
         return self
+
+    def _add_outputs_from_cache(self, cache_node):
+        self._set_state(calc_states.PARSING)
+        super(AbstractJobCalculation, self)._add_outputs_from_cache(
+            cache_node=cache_node
+        )
+        self._set_state(cache_node.get_state())
 
     def _validate(self):
         """
@@ -627,16 +659,6 @@ class AbstractJobCalculation(object):
             calc_states.PARSING
         ]
 
-    def has_finished(self):
-        """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
-
-        :return: True if the job has finished running, False otherwise.
-        :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
     def has_finished_ok(self):
         """
         Get whether the calculation is in the FINISHED status.
@@ -736,7 +758,7 @@ class AbstractJobCalculation(object):
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or 
+                if (not (isinstance(item[0], basestring)) or
                     not (isinstance(item[1], basestring)) or
                     not (isinstance(item[2], int))):
                     raise ValueError(
@@ -1089,9 +1111,19 @@ class AbstractJobCalculation(object):
         d = copy.deepcopy(res)
 
         try:
-            d['calculation']['type'] = from_type_to_pluginclassname(
-                d['calculation']['type']
-            ).rsplit(".", 1)[0].lstrip('calculation.job.')
+            prefix = 'calculation.job.'
+            calculation_type = d['calculation']['type']
+            calculation_class = from_type_to_pluginclassname(calculation_type)
+            module, class_name = calculation_class.rsplit('.', 1)
+
+            # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
+            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
+            # to strip the prefix to get the proper sub module
+            if module == prefix.rstrip('.'):
+                d['calculation']['type'] = module[len(prefix):]
+            else:
+                assert module.startswith(prefix), "module '{}' does not start with '{}'".format(module, prefix)
+                d['calculation']['type'] = module[len(prefix):]
         except KeyError:
             pass
         for proj in ('ctime', 'mtime'):
@@ -1453,6 +1485,7 @@ class AbstractJobCalculation(object):
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = computer.get_shebang()
         ## TODO: in the future, allow to customize the following variables
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False

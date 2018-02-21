@@ -112,6 +112,7 @@ Data types
     :maxdepth: 4
 
     ../datatypes/index
+    ../datatypes/kpoints
     ../datatypes/functionality
 
 ==========

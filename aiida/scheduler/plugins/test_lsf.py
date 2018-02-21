@@ -142,6 +142,7 @@ class TestSubmitScript(unittest.TestCase):
         s = LsfScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.job_resource = s.create_job_resource(tot_num_mpiprocs=2,
                                                       parallel_env='b681e480bd.cern.ch')
@@ -153,6 +154,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.codes_run_mode = code_run_modes.SERIAL
 
         submit_script_text = s.get_submit_script(job_tmpl)
+
 
         self.assertTrue( submit_script_text.startswith('#!/bin/bash') )
 

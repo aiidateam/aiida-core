@@ -23,7 +23,7 @@ import os
 import os.path as path
 import portalocker
 import portalocker.utils
-from shutil import copyfile
+import shutil
 import tempfile
 import pickle
 from plum.persistence.bundle import Bundle
@@ -140,6 +140,10 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
         )
         self._filelocks = {}
 
+        self._ensure_directory(running_directory)
+        self._ensure_directory(finished_directory)
+        self._ensure_directory(failed_directory)
+
     @property
     def store_directory(self):
         return self._running_directory
@@ -169,13 +173,25 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
             except (portalocker.LockException, IOError):
                 continue
             except BaseException:
-                LOGGER.warning("Failed to load checkpoint '{}' (deleting)\n{}"
-                               .format(f, traceback.format_exc()))
+                LOGGER.warning("Failed to load checkpoint '{}'\n{}".format(f, traceback.format_exc()))
 
+                # Try to load the node corresponding to the corrupt pickle, set it to FAILED and seal it
+                # At the end we will also move the pickle to the failed directory so it can be inspected for debugging
                 try:
-                    os.remove(f)
-                except OSError:
-                    pass
+                    from aiida.orm import load_node
+                    pk, extension = os.path.splitext(os.path.basename(f))
+                    node = load_node(int(pk))
+                    node._set_attr(node.FAILED_KEY, True)
+                    node.seal()
+                except BaseException as exception:
+                    LOGGER.warning('failed to clean up the node of the corrupt pickle {}'.format(traceback.format_exc()))
+                finally:
+                    LOGGER.warning("moving '{}' to failed directory".format(f))
+                    try:
+                        filename = os.path.basename(f)
+                        shutil.move(f, os.path.join(self.failed_directory, filename))
+                    except OSError:
+                        pass
 
             else:
                 processes.append(process)
@@ -346,7 +362,7 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
                 if save_dir is not None:
                     self._ensure_directory(save_dir)
                     to = path.join(save_dir, self.pickle_filename(pid))
-                    copyfile(pickle_path, to)
+                    shutil.copyfile(pickle_path, to)
                 os.remove(pickle_path)
             else:
                 raise ValueError(

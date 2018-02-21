@@ -33,12 +33,12 @@ class TestInlineCalculation(AiidaTestCase):
         """
         calculation, result = self.incr_inline(inp=Int(11))
 
-        self.assertEquals(calculation.terminated, True)
-        self.assertEquals(calculation.excepted, False)
-        self.assertEquals(calculation.killed, False)
-        self.assertEquals(calculation.finished, True)
-        self.assertEquals(calculation.finished_ok, True)
-        self.assertEquals(calculation.failed, False)
+        self.assertEquals(calculation.is_terminated, True)
+        self.assertEquals(calculation.is_excepted, False)
+        self.assertEquals(calculation.is_killed, False)
+        self.assertEquals(calculation.is_finished, True)
+        self.assertEquals(calculation.is_finished_ok, True)
+        self.assertEquals(calculation.is_failed, False)
 
     def test_incr(self):
         """

@@ -258,7 +258,7 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance:
             try:
                 self.calc.store_all(use_cache=self._use_cache_enabled())
-                if self.calc.finished_ok:
+                if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
                         if name.endswith('_{pk}'.format(pk=value.pk)):

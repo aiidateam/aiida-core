@@ -45,7 +45,7 @@ class TestProcessControl(AiidaTestCase):
         calc_node = self.runner.submit(test_utils.DummyProcess)
         self._wait_for_calc(calc_node)
 
-        self.assertTrue(calc_node.finished_ok)
+        self.assertTrue(calc_node.is_finished_ok)
         self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
     def test_launch_with_inputs(self):
@@ -54,7 +54,7 @@ class TestProcessControl(AiidaTestCase):
 
         calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
         self._wait_for_calc(calc_node)
-        self.assertTrue(calc_node.finished_ok)
+        self.assertTrue(calc_node.is_finished_ok)
         self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
     def test_submit_bad_input(self):
@@ -65,7 +65,7 @@ class TestProcessControl(AiidaTestCase):
         calc_node = self.runner.submit(test_utils.ExceptionProcess)
         self._wait_for_calc(calc_node)
 
-        self.assertFalse(calc_node.finished_ok)
+        self.assertFalse(calc_node.is_finished_ok)
         self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
 
     def test_pause(self):

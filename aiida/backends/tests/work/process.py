@@ -136,9 +136,9 @@ class TestProcess(AiidaTestCase):
 
     def test_work_calc_finish(self):
         p = test_utils.DummyProcess()
-        self.assertFalse(p.calc.finished_ok)
+        self.assertFalse(p.calc.is_finished_ok)
         work.launch.run(p)
-        self.assertTrue(p.calc.finished_ok)
+        self.assertTrue(p.calc.is_finished_ok)
 
     def test_calculation_input(self):
         @work.workfunction

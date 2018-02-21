@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import shutil
+import sys
+import tempfile
+import tornado.gen
+from voluptuous import Any
 from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
-import sys
-import tornado.gen
-from voluptuous import Any
 
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
@@ -106,9 +108,14 @@ class UpdateSchedulerState(TransportTask):
 
 class RetrieveJob(TransportTask):
     """ A task to retrieve a completed calculation """
+
+    def __init__(self, calc_node, transport_queue, retrieved_temporary_folder):
+        self._retrieved_temporary_folder = retrieved_temporary_folder
+        super(RetrieveJob, self).__init__(calc_node, transport_queue)
+
     def execute(self, transport):
         """ This returns the retrieved temporary folder """
-        return execmanager.retrieve_all(self._calc, transport)
+        return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
 
 
 class Waiting(plumpy.Waiting):
@@ -159,21 +166,23 @@ class Waiting(plumpy.Waiting):
                     self.scheduler_update()
 
             elif self.data == RETRIEVE_COMMAND:
-                self._task = RetrieveJob(calc, transport_queue)
-                retrieved_temporary_folder = yield self._task
+                # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
+                retrieved_temporary_folder = tempfile.mkdtemp()
+                self._task = RetrieveJob(calc, transport_queue, retrieved_temporary_folder)
+                yield self._task
                 self.retrieved(retrieved_temporary_folder)
 
             else:
                 raise RuntimeError("Unknown waiting command")
 
-        except plumpy.CancelledError:
-            self.transition_to(processes.ProcessState.CANCELLED)
+        except plumpy.KilledError:
+            self.transition_to(processes.ProcessState.KILLED)
             if self._cancelling_future is not None:
                 self._cancelling_future.set_result(True)
                 self._cancelling_future = None
         except BaseException:
             exc_info = sys.exc_info()
-            self.transition_to(processes.ProcessState.FAILED, exc_info[1], exc_info[2])
+            self.transition_to(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
         finally:
             self._task = None
 
@@ -344,8 +353,16 @@ class JobProcess(processes.Process):
         Run the calculation, we put it in the TOSUBMIT state and then wait for it
         to be copied over, submitted, retrieved, etc.
         """
-        # Put the calculation in the TOSUBMIT state
-        self.calc.submit()
+        calc_state = self.calc.get_state()
+
+        if calc_state != calc_states.NEW:
+            raise exceptions.InvalidOperation(
+                'Cannot submit a calculation not in {} state (the current state is {})'.format(
+                    calc_states.NEW, calc_state
+                ))
+
+        self.calc._set_state(calc_states.TOSUBMIT)
+
         # Launch the submit operation
         return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
@@ -355,7 +372,6 @@ class JobProcess(processes.Process):
         for the calculation to be finished and the data has been retrieved.
         """
         try:
-            print(retrieved_temporary_folder.folder.abspath)
             execmanager.parse_results(self.calc, retrieved_temporary_folder)
         except BaseException:
             try:
@@ -363,6 +379,9 @@ class JobProcess(processes.Process):
             except exceptions.ModificationNotAllowed:
                 pass
             raise
+        finally:
+            # Delete the temporary folder
+            shutil.rmtree(retrieved_temporary_folder)
 
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():
@@ -373,14 +392,11 @@ class JobProcess(processes.Process):
 
 
 class ContinueJobCalculation(JobProcess):
-    ACTIVE_CALC_STATES = [calc_states.TOSUBMIT, calc_states.SUBMITTING,
-                          calc_states.WITHSCHEDULER, calc_states.COMPUTED,
-                          calc_states.RETRIEVING, calc_states.PARSING]
 
     @classmethod
     def define(cls, spec):
         super(ContinueJobCalculation, cls).define(spec)
-        spec.input("_calc", valid_type=JobCalculation, required=True, non_db=False)
+        spec.input('_calc', valid_type=JobCalculation, required=True, non_db=False)
 
     def run(self):
         state = self.calc.get_state()
@@ -389,13 +405,13 @@ class ContinueJobCalculation(JobProcess):
             return super(ContinueJobCalculation, self).run()
 
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
-            return self._submit()
+            return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
         elif state in calc_states.WITHSCHEDULER:
-            return self._update_scheduler_state(job_done=False)
+            return plumpy.Wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
 
         elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
-            return self._update_scheduler_state(job_done=True)
+            return plumpy.Wait(msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
 
         elif state == calc_states.PARSING:
             return self.retrieved(True)

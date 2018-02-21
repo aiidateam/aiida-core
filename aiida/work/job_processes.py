@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import shutil
+import sys
+import tempfile
+import tornado.gen
+from voluptuous import Any
 from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
-import sys
-import tornado.gen
-from voluptuous import Any
 
 from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
@@ -106,9 +108,14 @@ class UpdateSchedulerState(TransportTask):
 
 class RetrieveJob(TransportTask):
     """ A task to retrieve a completed calculation """
+
+    def __init__(self, calc_node, transport_queue, retrieved_temporary_folder):
+        self._retrieved_temporary_folder = retrieved_temporary_folder
+        super(RetrieveJob, self).__init__(calc_node, transport_queue)
+
     def execute(self, transport):
         """ This returns the retrieved temporary folder """
-        return execmanager.retrieve_all(self._calc, transport)
+        return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
 
 
 class Waiting(plumpy.Waiting):
@@ -159,8 +166,10 @@ class Waiting(plumpy.Waiting):
                     self.scheduler_update()
 
             elif self.data == RETRIEVE_COMMAND:
-                self._task = RetrieveJob(calc, transport_queue)
-                retrieved_temporary_folder = yield self._task
+                # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
+                retrieved_temporary_folder = tempfile.mkdtemp()
+                self._task = RetrieveJob(calc, transport_queue, retrieved_temporary_folder)
+                yield self._task
                 self.retrieved(retrieved_temporary_folder)
 
             else:
@@ -370,6 +379,9 @@ class JobProcess(processes.Process):
             except exceptions.ModificationNotAllowed:
                 pass
             raise
+
+        # Delete the temporary folder
+        shutil.rmtree(retrieved_temporary_folder)
 
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():

@@ -458,20 +458,34 @@ class Process(plumpy.Process):
         :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for outputs. Outputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
         """
+        namespace_separator = self.spec().namespace_separator
+
         output_key_map = {}
-        process_outputs_dict = process_instance.get_outputs_dict()
+        # maps the exposed name to all outputs that belong to it
+        top_namespace_map = collections.defaultdict(list)
+        process_outputs_dict = {
+            k: v for k, v in process_instance.get_outputs(also_labels=True, link_type=LinkType.RETURN)
+        }
+
+        for port_name in process_outputs_dict:
+            top_namespace = port_name.split(namespace_separator)[0]
+            top_namespace_map[top_namespace].append(port_name)
+
         for ns in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
-            for key in process_outputs_dict:
-                if key in self.spec()._exposed_outputs[ns][process_class]:
-                    output_key_map[key] = ns
+            # only the top-level key is stored in _exposed_outputs
+            for top_name in top_namespace_map:
+                if top_name in self.spec()._exposed_outputs[ns][process_class]:
+                    output_key_map[top_name] = ns
 
         result = {}
-        namespace_separator = self.spec().namespace_separator
-        for key, ns in output_key_map.items():
-            if ns is None:
-                result[key] = process_outputs_dict[key]
-            else:
-                result[ns + namespace_separator + key] = process_outputs_dict[key]
+
+        for top_name, ns in output_key_map.items():
+            # collect all outputs belonging to the given top_name
+            for port_name in top_namespace_map[top_name]:
+                if ns is None:
+                    result[port_name] = process_outputs_dict[port_name]
+                else:
+                    result[ns + namespace_separator + port_name] = process_outputs_dict[port_name]
         return result
 
 

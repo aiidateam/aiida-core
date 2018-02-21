@@ -408,9 +408,12 @@ def status(pks):
     import aiida.orm
     from aiida.utils.ascii_vis import print_call_graph
 
-    for pk in pks:
-        calc_node = aiida.orm.load_node(pk)
-        print_call_graph(calc_node)
+    if not pks:
+        click.echo("No pks specified")
+    else:
+        for pk in pks:
+            calc_node = aiida.orm.load_node(pk)
+            print_call_graph(calc_node)
 
 
 def _create_status_info(calc_node):

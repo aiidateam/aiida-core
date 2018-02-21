@@ -22,7 +22,7 @@ ParameterData = DataFactory('parameter')
 codename = 'doubler@torquessh'
 timeout_secs = 4 * 60 # 4 minutes
 number_calculations = 30 # Number of calculations to submit
-number_workchains = 30 # Number of workchains to submit
+number_workchains = 8 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']
@@ -127,7 +127,7 @@ def create_calculation(code, counter, inputval, use_cache=False):
     calc.set_max_wallclock_seconds(5 * 60)  # 5 min
     calc.set_resources({"num_machines": 1})
     calc.set_withmpi(False)
-    calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
+    calc.set_parser_name('simpleplugins.templatereplacer.doubler')
 
     calc.use_parameters(parameters)
     calc.use_template(template)

@@ -17,3 +17,4 @@
 # files created by coverage
 *\,cover
 coverage/
+.cache

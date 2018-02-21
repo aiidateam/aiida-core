@@ -36,6 +36,8 @@ class TemplatereplacerDoublerParser(Parser):
 
         :param retrieved: a dictionary of retrieved nodes
         """
+        import os
+
         output_nodes = []
 
         try:
@@ -65,18 +67,25 @@ class TemplatereplacerDoublerParser(Parser):
         # FolderData node in the 'retrieved' arguments
         if retrieve_temporary_files is not None:
             try:
-                temporary_folder = retrieved[self.retrieved_temporary_folder_key]
+                retrieved_temporary_folder = retrieved[self.retrieved_temporary_folder_key]
             except KeyError:
                 self.logger.error('the {} was not passed as an argument'.format(self.retrieved_temporary_folder_key))
                 return False, ()
 
             for retrieved_file in retrieve_temporary_files:
-                if retrieved_file not in temporary_folder.get_folder_list():
-                    self.logger.error('the file {} was not found in the temporary retrieved folder'.format(retrieved_file))
+
+                file_path = os.path.join(retrieved_temporary_folder, retrieved_file)
+
+                if not os.path.isfile(file_path):
+                    self.logger.error('the file {} was not found in the temporary retrieved folder {}'
+                        .format(retrieved_file, retrieved_temporary_folder))
                     return False, ()
 
+                with open(file_path, 'r') as handle:
+                    parsed_value = handle.read().strip()
+
                 # We always strip the content of the file from whitespace to simplify testing for expected output
-                output_dict['retrieved_temporary_files'].append((retrieved_file, temporary_folder.get_file_content(retrieved_file).strip()))
+                output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
         output_parameters = ParameterData(dict=output_dict)
         output_nodes.append((self.get_linkname_outparams(), output_parameters))

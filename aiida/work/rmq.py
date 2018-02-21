@@ -25,19 +25,45 @@ def _get_prefix():
 def get_rmq_config(prefix=None):
     if prefix is None:
         prefix = _get_prefix()
+
+    # GP: Using here 127.0.0.1 instead of localhost because on some computers
+    # localhost resolves first to IPv6 with address ::1 and if RMQ is not
+    # running on IPv6 one gets an annoying warning. When moving this to
+    # a user-configurable variable, make sure users are aware of this and
+    # know how to avoid warnings. For more info see
+    # https://github.com/aiidateam/aiida_core/issues/1142
     rmq_config = {
-        'url': 'amqp://localhost',
+        'url': 'amqp://127.0.0.1',
         'prefix': _get_prefix(),
     }
     return rmq_config
 
 
 def encode_response(response):
+    """
+    Used by kiwipy to encode a message for sending.  Because we can have nodes
+    we have to convert these to PIDs before sending (we can't just send the live
+    instance)
+
+    :param response: The message to encode
+    :return: The encoded message
+    :rtype: str
+    """
     serialized = serialize_data(response)
     return json.dumps(serialized)
 
 
 def decode_response(response):
+    """
+    Used by kiwipy to decode a message that has been received.  We check for
+    any node PKs and convert these back into the corresponding node instance
+    using `load_node`.  Any other entries are left untouched.
+
+    .. see: `encode_response`
+
+    :param response: The response string to decode
+    :return: A data structure containing deserialized node instances
+    """
     response = json.loads(response)
     return deserialize_data(response)
 
@@ -81,20 +107,19 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
 
 
 class ExecuteProcessAction(plumpy.ExecuteProcessAction):
-    def __init__(self, process_class, init_args=None, init_kwargs=None):
+    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False):
         """
         Calls through to the constructor of the plum ExecuteProcessAction while making sure that
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER)
+        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER, nowait=nowait)
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
     def _launch(self, task):
         from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
-        kwargs['inputs'] = deserialize_data(kwargs['inputs'])
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
 
@@ -114,6 +139,8 @@ class ProcessControlPanel(object):
             rmq_connector,
             exchange_name=message_exchange,
             task_queue=task_queue,
+            encoder=encode_response,
+            decoder=decode_response,
             testing_mode=testing_mode
         )
 
@@ -171,7 +198,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
-        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
+        action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
         action.execute(self._communicator)
         self._communicator.await(action)
         return action.get_launch_future().result()

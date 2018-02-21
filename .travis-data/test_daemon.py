@@ -15,14 +15,14 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
 from aiida.work.launch import run_get_node
-from workchains import ParentWorkChain
+from workchains import NestedWorkChain
 
 ParameterData = DataFactory('parameter')
 
 codename = 'doubler@torquessh'
 timeout_secs = 4 * 60 # 4 minutes
 number_calculations = 30 # Number of calculations to submit
-number_workchains = 30 # Number of workchains to submit
+number_workchains = 8 # Number of workchains to submit
 
 def print_daemon_log():
     home = os.environ['HOME']
@@ -127,7 +127,7 @@ def create_calculation(code, counter, inputval, use_cache=False):
     calc.set_max_wallclock_seconds(5 * 60)  # 5 min
     calc.set_resources({"num_machines": 1})
     calc.set_withmpi(False)
-    calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
+    calc.set_parser_name('simpleplugins.templatereplacer.doubler')
 
     calc.use_parameters(parameters)
     calc.use_template(template)
@@ -171,13 +171,12 @@ def main():
         expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
-    print "Submitting {} workchains to the daemon".format(number_workchains)
     expected_results_workchains = {}
-    for index in range(1, number_workchains + 1):
+    print "Submitting {} workchains to the daemon".format(number_workchains)
+    for index in range(number_workchains):
         inp = Int(index)
-        result, node = run_get_node(ParentWorkChain, inp=inp)
-        expected_results_workchains[node.pk] = index * 2
-
+        result, node = run_get_node(NestedWorkChain, inp=inp)
+        expected_results_workchains[node.pk] = index
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

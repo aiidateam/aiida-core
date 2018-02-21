@@ -13,6 +13,9 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+import os
+from backports import tempfile
+
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -27,13 +30,9 @@ from aiida.orm import load_node
 from aiida.orm import DataFactory
 from aiida.orm.data.folder import FolderData
 from aiida.common.log import get_dblogger_extra
-import os
 
 
-# Until we fix the broken daemon logger https://github.com/aiidateam/aiida_core/issues/943
-# execlogger = aiidalogger.getChild('execmanager')
-import logging
-execlogger = logging.getLogger('execmanager')
+execlogger = aiidalogger.getChild('execmanager')
 
 
 def update_running_calcs_status(authinfo):
@@ -703,42 +702,44 @@ def retrieve_and_parse(calc, transport=None):
     logger_extra = get_dblogger_extra(calc)
     transport._set_logger_extra(logger_extra)
 
-    try:
-        retrieved_temporary_folder = retrieve_all(calc, transport, logger_extra)
-    except Exception:
-        import traceback
+    with tempfile.TemporaryDirectory() as retrieved_temporary_folder:
 
-        tb = traceback.format_exc()
-        newextradict = logger_extra.copy()
-        newextradict['full_traceback'] = tb
+        try:
+            retrieve_all(calc, transport, retrieved_temporary_folder, logger_extra)
+        except Exception:
+            import traceback
 
-        execlogger.error(
-            "Error retrieving calc {}. Traceback: {}".format(calc.pk, tb),
-            extra=newextradict
-        )
-        _set_state_noraise(calc, calc_states.RETRIEVALFAILED)
-        return False
+            tb = traceback.format_exc()
+            newextradict = logger_extra.copy()
+            newextradict['full_traceback'] = tb
 
-    try:
-        parse_results(calc, retrieved_temporary_folder, logger_extra)
-    except Exception:
-        import traceback
+            execlogger.error(
+                "Error retrieving calc {}. Traceback: {}".format(calc.pk, tb),
+                extra=newextradict
+            )
+            _set_state_noraise(calc, calc_states.RETRIEVALFAILED)
+            return False
 
-        tb = traceback.format_exc()
-        newextradict = logger_extra.copy()
-        newextradict['full_traceback'] = tb
-        execlogger.error(
-            "Error parsing calc {}. Traceback: {}".format(calc.pk, tb),
-            extra=newextradict
-        )
-        # TODO: add a 'comment' to the calculation
-        _set_state_noraise(calc, calc_states.PARSINGFAILED)
-        return False
+        try:
+            parse_results(calc, retrieved_temporary_folder, logger_extra)
+        except Exception:
+            import traceback
+
+            tb = traceback.format_exc()
+            newextradict = logger_extra.copy()
+            newextradict['full_traceback'] = tb
+            execlogger.error(
+                "Error parsing calc {}. Traceback: {}".format(calc.pk, tb),
+                extra=newextradict
+            )
+            # TODO: add a 'comment' to the calculation
+            _set_state_noraise(calc, calc_states.PARSINGFAILED)
+            return False
 
     return True
 
 
-def retrieve_all(job, transport, logger_extra=None):
+def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
     try:
         job._set_state(calc_states.RETRIEVING)
     except ModificationNotAllowed:
@@ -773,7 +774,7 @@ def retrieve_all(job, transport, logger_extra=None):
         retrieve_singlefile_list = job._get_retrieve_singlefile_list()
 
         with SandboxFolder() as folder:
-            retrieve_files_from_list(job, transport, folder, retrieve_list)
+            retrieve_files_from_list(job, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
 
@@ -781,20 +782,15 @@ def retrieve_all(job, transport, logger_extra=None):
         with SandboxFolder() as folder:
             _retrieve_singlefiles(job, transport, folder, retrieve_singlefile_list, logger_extra)
 
-        # Retrieve the temporary files in a separate temporary folder if any files were
+        # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieved_temporary_folder = FolderData()
-            with SandboxFolder() as folder:
-                retrieve_files_from_list(job, transport, folder, retrieve_temporary_list)
-                retrieved_temporary_folder.replace_with_folder(folder.abspath, overwrite=True)
+            retrieve_files_from_list(job, transport, retrieved_temporary_folder, retrieve_temporary_list)
 
             # Log the files that were retrieved in the temporary folder
-            for entry in retrieved_temporary_folder.get_folder_list():
+            for filename in os.listdir(retrieved_temporary_folder):
                 execlogger.debug("[retrieval of calc {}] Retrieved temporary file or folder '{}'".format(
-                job.pk, entry), extra=logger_extra)
-        else:
-            retrieved_temporary_folder = None
+                job.pk, filename), extra=logger_extra)
 
         # Store everything
         execlogger.debug(
@@ -802,8 +798,6 @@ def retrieve_all(job, transport, logger_extra=None):
             "Storing retrieved_files={}".format(job.pk, retrieved_files.dbnode.pk),
             extra=logger_extra)
         retrieved_files.store()
-
-    return retrieved_temporary_folder
 
 
 def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
@@ -966,11 +960,9 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
     upto what level of the original remotepath nesting the files will be copied.
 
     :param transport: the Transport instance
-    :param folder: a local Folder instance for the transport to store files into
+    :param folder: an absolute path to a folder to copy files in
     :param retrieve_list: the list of files to retrieve
     """
-    import os
-
     for item in retrieve_list:
         if isinstance(item, list):
             tmp_rname, tmp_lname, depth = item
@@ -988,7 +980,7 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
             if depth > 1:  # create directories in the folder, if needed
                 for this_local_file in local_names:
                     new_folder = os.path.join(
-                        folder.abspath,
+                        folder,
                         os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):
                         os.makedirs(new_folder)
@@ -1002,4 +994,4 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
 
         for rem, loc in zip(remote_names, local_names):
             transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
-            transport.get(rem, os.path.join(folder.abspath, loc), ignore_nonexisting=True)
+            transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)

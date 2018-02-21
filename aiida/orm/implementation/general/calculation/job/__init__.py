@@ -19,6 +19,7 @@ from aiida.common.old_pluginloader import from_type_to_pluginclassname
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.utils import timezone
 
+
 # TODO: set the following as properties of the Calculation
 # 'email',
 # 'email_on_started',
@@ -130,13 +131,9 @@ class AbstractJobCalculation(object):
         """
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
-        # I get here if the calculation was successfully stored.
-        # Set to new only if it is not already FINISHED (due to caching)
-        if not self.get_state() == calc_states.FINISHED:
+        if self.get_state() is None:
             self._set_state(calc_states.NEW)
 
-        # Important to return self to allow the one-liner
-        # c = Calculation().store()
         return self
 
     def _add_outputs_from_cache(self, cache_node):
@@ -1292,25 +1289,21 @@ class AbstractJobCalculation(object):
 
     def submit(self):
         """
-        Puts the calculation in the TOSUBMIT status.
-
-        Actual submission is performed by the daemon.
+        Creates a ContinueJobCalculation and submits it with the current calculation node as the database
+        record. This will ensure that even when this legacy entry point is called, that the calculation is
+        taken through the Process layer. Preferably this legacy method should not be used at all but rather
+        a JobProcess should be used.
         """
         import warnings
+        from aiida.work.job_processes import ContinueJobCalculation
+        from aiida.work.launch import submit
         warnings.warn(
             'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
             'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
         )
 
-        from aiida.common.exceptions import InvalidOperation
+        submit(ContinueJobCalculation, _calc=self)
 
-        current_state = self.get_state()
-        if current_state != calc_states.NEW:
-            raise InvalidOperation("Cannot submit a calculation not in {} "
-                                   "state (the current state is {})"
-                                   .format(calc_states.NEW, current_state))
-
-        self._set_state(calc_states.TOSUBMIT)
 
     def set_parser_name(self, parser):
         """

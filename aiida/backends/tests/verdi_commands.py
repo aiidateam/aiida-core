@@ -750,3 +750,104 @@ class TestVerdiDataCommands(AiidaTestCase):
                             sub_cmd,
                             str(self.cmd_to_nodeid_map_for_groups[sub_cmd]) +
                             "The output was {}".format(out_str)))
+
+
+class TestVerdiDataRemoteCommands(AiidaTestCase):
+    """
+    Test the commands under 'verdi data remote'
+
+    Implicitly also tests creating and configuring a computer with a local transport
+    """
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create a configured computer to
+        """
+        from aiida.orm import Computer
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        super(TestVerdiDataRemoteCommands, cls).setUpClass()
+
+        cls.computer_name = 'test_remote_ls'
+        cls.new_comp = Computer(
+            name=cls.computer_name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        cls.new_comp.store()
+
+        # I need to configure the computer here; being 'local',
+        # there should not be any options asked here
+        with Capturing():
+            ComputerCmd().run('configure', cls.computer_name)
+
+        assert cls.new_comp.is_user_configured(get_automatic_user(
+        )), "There was a problem configuring the test computer"
+
+    def test_remote_ls(self):
+        """
+        Test if the 'verdi remote ls' command works
+        """
+        from aiida.cmdline.commands.data import _Remote
+        import os
+        from aiida.orm.data.remote import RemoteData
+        from aiida.common.folders import SandboxFolder
+
+        with SandboxFolder() as folder:
+
+            files = {'test1.txt': 'the_content_1', 'test2.txt': 'the_content_2'}
+            for fname, content in files.items():
+                with open(os.path.join(folder.abspath, fname), 'w') as f:
+                    f.write(content)
+
+            r = RemoteData(computer=self.new_comp, remote_path=folder.abspath)
+            r.store()
+
+            with Capturing() as output:
+                _Remote().run('ls', str(r.pk))
+
+            # output is a Capturing objects, looping on it returns the lines
+            found_files = set(output)
+            self.assertEquals(set(files.keys()), found_files)
+
+            # Testing also ls -l, that calls a different implementation
+            with Capturing() as output:
+                _Remote().run('ls', '-l', str(r.pk))
+
+            # The filename is the last part of each line
+            found_files = set(_.split()[-1] for _ in output)
+            self.assertEquals(set(files.keys()), found_files)
+
+    def test_remote_cat(self):
+        """
+        Test if the 'verdi remote ls' command works
+        """
+        from aiida.cmdline.commands.data import _Remote
+        import os
+        from aiida.orm.data.remote import RemoteData
+        from aiida.common.folders import SandboxFolder
+
+        with SandboxFolder() as folder:
+
+            files = {
+                'test1.txt': 'the_content_1\nsecond line',
+                'test2.txt': 'the_content_2'
+            }
+            for fname, content in files.items():
+                with open(os.path.join(folder.abspath, fname), 'w') as f:
+                    f.write(content)
+
+            r = RemoteData(computer=self.new_comp, remote_path=folder.abspath)
+            r.store()
+
+            for fname, content in files.items():
+                with Capturing() as output:
+                    _Remote().run('cat', str(r.pk), fname)
+
+                self.assertEquals(
+                    "\n".join(output), content,
+                    "The file content for file {} differs: {} vs. {}".format(
+                        fname, "\n".join(output), content))

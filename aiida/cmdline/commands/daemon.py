@@ -158,15 +158,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         print "Starting AiiDA Daemon (log file: {})...".format(self.logfile)
         currenv = _get_env_with_venv_bin()
-        process = subprocess.Popen([
-                "celery",  "worker",
-                "--app", "tasks",
-                "--loglevel", "INFO",
-                "--beat",
-                "--schedule", self.celerybeat_schedule,
-                "--logfile", self.logfile,
-                "--pidfile", self._get_pid_full_path(),
-                ],
+        process = subprocess.Popen(['verdi', 'devel', 'run_daemon'],
             cwd=self.workdir,
             close_fds=True,
             stdout=subprocess.PIPE,

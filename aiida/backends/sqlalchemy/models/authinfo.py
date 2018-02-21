@@ -46,8 +46,8 @@ class DbAuthInfo(Base):
     )
 
     def __init__(self, *args, **kwargs):
-        self._metadata = {}
-        self.enabled = True
+        self._metadata = dict()
+        self.auth_params = dict()
         super(DbAuthInfo, self).__init__(*args, **kwargs)
 
     def get_auth_params(self):

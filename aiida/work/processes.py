@@ -16,7 +16,6 @@ import itertools
 import plumpy
 import uuid
 import traceback
-from collections import defaultdict
 
 from plumpy import ProcessState
 from aiida.common import exceptions

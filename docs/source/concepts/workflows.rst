@@ -41,8 +41,8 @@ ISSUE#1130
 
 .. _expose_inputs_outputs:
 
-Modular workflows: exposing inputs and outputs
-----------------------------------------------
+Exposing inputs and outputs
+---------------------------
 
 When creating complex workflows, it is a good idea to split them up into smaller, modular parts. At the lowest level, each workflow should perform exactly one task. These workflows can then be wrapped together by a "parent" workflow to create a larger logical unit.
 
@@ -69,10 +69,20 @@ This workchain can now be run in exactly the same way as the child itself:
 .. include:: expose_examples/run_simple.py
     :code: python
 
+Next, we will see how a more complex parent workchain can be created by using the additional features of the expose functionality. The following workchain launches two children. These children share the input ``a``, but have different ``b`` and ``c``. The output ``e`` will be taken only from the first child, whereas ``d`` and ``f`` are taken from both children. In order to avoid name conflicts, we need to create a *namespace* for each of the two children, where the inputs and outputs which are not shared are stored. Our goal is that the workflow can be called as follows:
 
+.. include:: expose_examples/run_complex.py
+    :code: python
+
+This is achieved by the following workflow. In the next section, we will explain each of the steps.
 
 .. include:: expose_examples/complex_parent.py
     :code: python
 
-.. include:: expose_examples/run_complex.py
-    :code: python
+First of all, we want to expose the ``a`` input and the ``e`` output at the top-level. For this, we again use :meth:`.expose_inputs` and :meth:`.expose_outputs`, but with the optional keyword ``include``. This specifies a list of keys, and only inputs or outputs which are in that list will be exposed. So by passing ``include=['a']`` to :meth:`.expose_inputs`, only the input ``a`` is exposed.
+
+Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children. For this purpose, we pass the ``namespace`` parameter to the expose functions. However, since we now shouldn't expose ``a`` (``e``) again, we use the ``exclude`` keyword, which specifies a list of keys that will not be exposed.
+
+When calling the children, we again use the :meth:`.Process.exposed_inputs` method to forward the exposed inputs. Since the inputs ``b`` and ``c`` are now in a specific namespace, we need to pass this namespace as an additional parameter. By default, :meth:`.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``. If the same input key exists in multiple namespaces, the input in the lowest namespace takes precedence. It's also possible to disable this behavior, and instead search only in the explicit namespace that was passed. This is done by setting ``agglomerate=False``, as shown in the call to ``child_2``. Of course, we then need to explicitly pass the input ``a``.
+
+Finally, we use :meth:`.exposed_outputs` and :meth:`.out_many` to forward the outputs of the children to the outputs of the parent. Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`.exposed_outputs` method.

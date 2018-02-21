@@ -8,9 +8,8 @@ from aiida.work import run
 from simple_parent import SimpleParentWorkChain
 
 if __name__ == '__main__':
-    print('simple parent:',
-        run(
-            SimpleParentWorkChain,
-            a=Int(1), b=Float(1.2), c=Bool(True)
-        )
-    )
+    print(run(
+        SimpleParentWorkChain,
+        a=Int(1), b=Float(1.2), c=Bool(True)
+    ))
+    # Result: {u'e': 1.2, u'd': 1, u'f': True}

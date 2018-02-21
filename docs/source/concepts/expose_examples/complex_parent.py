@@ -19,16 +19,16 @@ class ComplexParentWorkChain(WorkChain):
             exclude=['a']
         )
 
-        spec.expose_outputs(ChildWorkChain, include=['d'])
+        spec.expose_outputs(ChildWorkChain, include=['e'])
         spec.expose_outputs(
             ChildWorkChain,
             namespace='child_1',
-            exclude=['d'],
+            exclude=['e'],
         )
         spec.expose_outputs(
             ChildWorkChain,
             namespace='child_2',
-            exclude=['d'],
+            exclude=['e'],
         )
 
         spec.outline(cls.run_children, cls.finalize)

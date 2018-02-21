@@ -194,6 +194,9 @@ class Process(plumpy.Process):
             pass
 
     def on_except(self, exc_info):
+        """
+        Log the exception by calling the report method with formatted stack trace from exception info object
+        """
         super(Process, self).on_except(exc_info)
         self.report(traceback.format_exc())
 

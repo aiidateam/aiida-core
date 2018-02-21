@@ -289,11 +289,14 @@ class DaemonRunner(Runner):
         )
         self.communicator.add_task_subscriber(task_receiver)
 
-def _expand_builder(process_class_or_builder, kwargs):
-    from aiida.work.process_builder import ProcessBuilder
+def _expand_builder(process_class_or_builder, inputs):
+    from aiida.work.process_builder import ProcessBuilder, ProcessBuilderInput
     if not isinstance(process_class_or_builder, ProcessBuilder):
-        return process_class_or_builder, kwargs
+        return process_class_or_builder, inputs
     else:
-        process_class = process_class_or_builder._process_class
-        kwargs.update(process_class_or_builder)
-        return process_class, kwargs
+        builder = process_class_or_builder
+        process_class = builder._process_class
+        for key, value in dict(builder).iteritems():
+            if not isinstance(value, ProcessBuilderInput):
+                inputs[key] = value
+        return process_class, inputs

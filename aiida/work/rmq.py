@@ -25,8 +25,15 @@ def _get_prefix():
 def get_rmq_config(prefix=None):
     if prefix is None:
         prefix = _get_prefix()
+
+    # GP: Using here 127.0.0.1 instead of localhost because on some computers
+    # localhost resolves first to IPv6 with address ::1 and if RMQ is not
+    # running on IPv6 one gets an annoying warning. When moving this to
+    # a user-configurable variable, make sure users are aware of this and
+    # know how to avoid warnings. For more info see
+    # https://github.com/aiidateam/aiida_core/issues/1142
     rmq_config = {
-        'url': 'amqp://localhost',
+        'url': 'amqp://127.0.0.1',
         'prefix': _get_prefix(),
     }
     return rmq_config

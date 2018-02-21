@@ -298,7 +298,7 @@ class Process(plumpy.Process):
         return deserialize_data(encoded)
 
     def update_node_state(self, state):
-        self.calc.process_state = state.LABEL
+        self.calc._set_process_state(state.LABEL)
         self.update_outputs()
 
     def update_outputs(self):
@@ -325,7 +325,7 @@ class Process(plumpy.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
-        self.calc.process_state = None
+        self.calc._set_process_state(None)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()

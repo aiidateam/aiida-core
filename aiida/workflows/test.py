@@ -126,6 +126,6 @@ def generate_calc():
         {"num_machines": 1, "num_mpiprocs_per_machine": 1})
     calc.store()
     calc._set_state(calc_states.FINISHED)
-    calc.process_state = plumpy.ProcessState.FINISHED
+    calc._set_process_state(plumpy.ProcessState.FINISHED)
 
     return calc

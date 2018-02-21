@@ -33,7 +33,7 @@ class WorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
-        calc.process_state = plumpy.ProcessState.FINISHED
+        calc._set_process_state(plumpy.ProcessState.FINISHED)
 
         return calc
 
@@ -91,7 +91,7 @@ class SubWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
-        calc.process_state = plumpy.ProcessState.FINISHED
+        calc._set_process_state(plumpy.ProcessState.FINISHED)
 
         return calc
 
@@ -144,7 +144,7 @@ class BranchWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
-        calc.process_state = plumpy.ProcessState.FINISHED
+        calc._set_process_state(plumpy.ProcessState.FINISHED)
 
         return calc
 
@@ -231,7 +231,7 @@ class LoopBranchWorkflowDemo(Workflow):
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
-        calc.process_state = plumpy.ProcessState.FINISHED
+        calc._set_process_state(plumpy.ProcessState.FINISHED)
 
         return calc
 

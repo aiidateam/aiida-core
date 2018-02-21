@@ -238,8 +238,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         else:
             return ProcessState(state)
 
-    @process_state.setter
-    def process_state(self, state):
+    def _set_process_state(self, state):
         """
         Set the process state of the Calculation
 

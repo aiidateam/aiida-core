@@ -855,14 +855,14 @@ class Code(VerdiCommandWithSubcommands):
 
         code = set_params.create_code()
 
-        # Enforcing the code to be not hidden.
-        code._reveal()
-
         try:
             code.store()
         except ValidationError as e:
             print "Unable to store the computer: {}. Exiting...".format(e.message)
             sys.exit(1)
+
+        # Enforcing the code to be not hidden.
+        code._reveal()
 
         print "Code '{}' successfully stored in DB.".format(code.label)
         print "pk: {}, uuid: {}".format(code.pk, code.uuid)

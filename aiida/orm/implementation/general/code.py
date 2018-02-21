@@ -12,12 +12,10 @@ from abc import abstractmethod
 from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 from aiida.common.links import LinkType
-from aiida.orm.mixins import Sealable
 from aiida.common.utils import abstractclassmethod
 
 
-
-class AbstractCode(Sealable, Node):
+class AbstractCode(Node):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -38,30 +36,26 @@ class AbstractCode(Sealable, Node):
         """
         This function is called by the init method
         """
-        self._updatable_attributes = Sealable._updatable_attributes + (
-            'input_plugin', 'append_text', 'prepend_text', 'hidden')
-
-        self._set_incompatibilities = [
-            ('remote_computer_exec', 'local_executable')]
+        self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
 
     def _hide(self):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        self._set_attr("hidden", True)
+        self.set_extra('hidden', True)
 
     def _reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        self._set_attr("hidden", False)
+        self.set_extra('hidden', False)
 
     def _is_hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.get_attr('hidden', False)
+        return self.get_extra('hidden', False)
 
     def set_files(self, files):
         """

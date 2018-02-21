@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import abc
 import collections
+
+from plumpy import ProcessState
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.mixins import SealableWithUpdatableAttributes
@@ -81,6 +82,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     calculations run via a scheduler.
     """
 
+    PROCESS_STATE_KEY = 'process_state'
     _cacheable = False
 
     @classproperty
@@ -213,8 +215,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
                 self.node._replace_link_from(parent_node, actual_linkname)
 
         prefix = 'use_'
-        valid_use_methods = list(['{}{}'.format(prefix, k)
-                                  for k in self._use_methods.iterkeys()])
+        valid_use_methods = list(['{}{}'.format(prefix, k) for k in self._use_methods.iterkeys()])
 
         if name in valid_use_methods:
             actual_name = name[len(prefix):]
@@ -223,6 +224,95 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
+
+    @property
+    def process_state(self):
+        """
+        Return the process state of the Calculation
+
+        :returns: the process state instance of ProcessState enum
+        """
+        state = self.get_attr(self.PROCESS_STATE_KEY, None)
+        if state is None:
+            return state
+        else:
+            return ProcessState(state)
+
+    def _set_process_state(self, state):
+        """
+        Set the process state of the Calculation
+
+        :param state: value or instance of ProcessState enum
+        """
+        if isinstance(state, ProcessState):
+            state = state.value
+        return self._set_attr(self.PROCESS_STATE_KEY, state)
+
+    @property
+    def is_terminated(self):
+        """
+        Returns whether the Calculation has terminated, meaning that it reached any terminal state
+
+        :return: True if the calculation has terminated, False otherwise
+        :rtype: bool
+        """
+        return self.is_excepted or self.is_finished or self.is_killed
+
+    @property
+    def is_excepted(self):
+        """
+        Returns whether the Calculation has excepted, meaning that during execution an exception
+        was raised that was not properly dealt with
+
+        :return: True if during execution of the calculation an exception occurred, False otherwise
+        :rtype: bool
+        """
+        return self.process_state == ProcessState.EXCEPTED
+
+    @property
+    def is_killed(self):
+        """
+        Returns whether the Calculation was killed
+
+        :return: True if the calculation was killed by the user, False otherwise
+        :rtype: bool
+        """
+        return self.process_state == ProcessState.KILLED
+
+    @property
+    def is_finished(self):
+        """
+        Returns whether the Calculation has finished. Note that this does not necessarily
+        mean successfully, but a terminal state was reached nominally
+
+        :return: True if the calculation has finished, False otherwise
+        :rtype: bool
+        """
+        return self.process_state == ProcessState.FINISHED
+
+    @property
+    def is_finished_ok(self):
+        """
+        Returns whether the Calculation has finished successfully, which means that it
+        terminated nominally and had a zero exit code indicating a successful execution
+        # TODO when finish_status is implemented add that in return value determination
+
+        :return: True if the calculation has finished successfully, False otherwise
+        :rtype: bool
+        """
+        return self.process_state == ProcessState.FINISHED
+
+    @property
+    def is_failed(self):
+        """
+        Returns whether the Calculation has failed, which means that it terminated nominally
+        but it had a non-zero exit status
+        # TODO when finish_status is implemented add that in return value determination
+
+        :return: True if the calculation has failed, False otherwise
+        :rtype: bool
+        """
+        return self.process_state == ProcessState.FINISHED and False
 
     @property
     def called(self):
@@ -345,32 +435,8 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         return super(AbstractCalculation, self)._replace_link_from(
             src, label, link_type)
 
-    @abc.abstractmethod
-    def has_finished_ok(self):
-        """
-        Returns whether the Calculation has finished successfully.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def has_failed(self):
-        """
-        Returns whether the Calculation has failed.
-        """
-        raise NotImplementedError
-
-    def has_finished(self):
-        """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
-
-        :return: True if the job has finished running, False otherwise.
-        :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
     def _is_valid_cache(self):
-        return super(AbstractCalculation, self)._is_valid_cache() and self.has_finished_ok()
+        return super(AbstractCalculation, self)._is_valid_cache() and self.is_finished_ok
 
     def _get_objects_to_hash(self):
         """

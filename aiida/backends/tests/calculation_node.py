@@ -11,8 +11,9 @@
 Tests for calculation nodes, attributes and links
 """
 
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import ModificationNotAllowed
+from aiida.orm.calculation import Calculation
 
 
 class TestCalcNode(AiidaTestCase):
@@ -31,6 +32,19 @@ class TestCalcNode(AiidaTestCase):
     listval = [1, "s", True, None]
     emptydict = {}
     emptylist = []
+
+    def test_process_state(self):
+        """
+        Check the properties of a newly created bare Calculation
+        """
+        calculation = Calculation()
+
+        self.assertEquals(calculation.is_terminated, False)
+        self.assertEquals(calculation.is_excepted, False)
+        self.assertEquals(calculation.is_killed, False)
+        self.assertEquals(calculation.is_finished, False)
+        self.assertEquals(calculation.is_finished_ok, False)
+        self.assertEquals(calculation.is_failed, False)
 
     def test_updatable_not_copied(self):
         """

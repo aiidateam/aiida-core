@@ -11,6 +11,7 @@
 This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
+import plumpy
 from aiida.orm.workflow import Workflow
 
 
@@ -125,5 +126,6 @@ def generate_calc():
         {"num_machines": 1, "num_mpiprocs_per_machine": 1})
     calc.store()
     calc._set_state(calc_states.FINISHED)
+    calc._set_process_state(plumpy.ProcessState.FINISHED)
 
     return calc

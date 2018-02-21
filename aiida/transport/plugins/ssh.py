@@ -435,7 +435,7 @@ class SshTransport(aiida.transport.Transport):
                 ",".join(str(k) for k in kwargs)))
 
     def get_safe_open_interval(self):
-        return 30.
+        return 5.
 
     def open(self):
         """

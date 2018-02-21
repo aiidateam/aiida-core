@@ -236,17 +236,18 @@ class JobProcess(processes.Process):
             options = {
                 'max_wallclock_seconds': int,
                 'resources': dict,
-                'custom_scheduler_commands': unicode,
+                'custom_scheduler_commands': basestring,
                 'queue_name': basestring,
                 'computer': Computer,
                 'withmpi': bool,
                 'mpirun_extra_params': Any(list, tuple),
                 'import_sys_environment': bool,
                 'environment_variables': dict,
-                'priority': unicode,
+                'priority': basestring,
                 'max_memory_kb': int,
-                'prepend_text': unicode,
-                'append_text': unicode,
+                'prepend_text': basestring,
+                'append_text': basestring,
+                'parser_name': basestring,
             }
             spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
 

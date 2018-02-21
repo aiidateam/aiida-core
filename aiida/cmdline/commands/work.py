@@ -95,10 +95,10 @@ def do_list(past_days, all_states, limit, project):
     from aiida.common.utils import str_timedelta
     from aiida.utils import timezone
     from aiida.orm.mixins import Sealable
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.calculation import Calculation
 
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    _PROCESS_STATE_KEY = 'attributes.{}'.format(WorkCalculation.PROCESS_STATE_KEY)
+    _PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
 
     if not project:
         project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections
@@ -327,7 +327,7 @@ def kill_old(pks):
 
     nodes = [load_node(pk) for pk in pks]
     workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
-    running_workchain_nodes = [n for n in nodes if not n.has_finished()]
+    running_workchain_nodes = [n for n in nodes if not n.is_terminated]
 
     num_workchains = len(running_workchain_nodes)
     if num_workchains > 0:

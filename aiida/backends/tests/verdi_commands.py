@@ -15,6 +15,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.datastructures import calc_states
 from aiida.utils.capturing import Capturing
+from aiida.work import WorkChain
 
 # Common computer information
 computer_common_info = [
@@ -225,6 +226,22 @@ class TestVerdiCodeCommands(AiidaTestCase):
                          "this list")
 
 
+# pylint: disable=abstract-method
+class Wf(WorkChain):
+    """
+    Utility workchain used for testing
+    """
+    TEST_STRING = 'Test report.'
+
+    @classmethod
+    def define(cls, spec):
+        super(Wf, cls).define(spec)
+        spec.outline(cls.create_logs)
+
+    def create_logs(self):
+        self.report(self.TEST_STRING)
+
+
 class TestVerdiWorkCommands(AiidaTestCase):
 
     @classmethod
@@ -234,20 +251,8 @@ class TestVerdiWorkCommands(AiidaTestCase):
         """
         super(TestVerdiWorkCommands, cls).setUpClass()
         from aiida.work.launch import run_get_pid
-        from aiida.work.workchain import WorkChain
-        TEST_STRING = 'Test report.'
-        cls.test_string = TEST_STRING
 
-        # pylint: disable=abstract-method
-        class Wf(WorkChain):
-
-            @classmethod
-            def define(cls, spec):
-                super(Wf, cls).define(spec)
-                spec.outline(cls.create_logs)
-
-            def create_logs(self):
-                self.report(TEST_STRING)
+        cls.test_string = Wf.TEST_STRING
 
         _, cls.workchain_pid = run_get_pid(Wf)
 

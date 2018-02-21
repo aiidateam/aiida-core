@@ -379,9 +379,9 @@ class JobProcess(processes.Process):
             except exceptions.ModificationNotAllowed:
                 pass
             raise
-
-        # Delete the temporary folder
-        shutil.rmtree(retrieved_temporary_folder)
+        finally:
+            # Delete the temporary folder
+            shutil.rmtree(retrieved_temporary_folder)
 
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():

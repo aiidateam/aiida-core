@@ -29,12 +29,25 @@ class Sealable(object):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        assert not self.is_sealed, \
-            "Cannot add incoming links to a sealed calculation node"
+        if self.is_sealed:
+            raise ValueError("Cannot add incoming links to a sealed "
+                              "calculation node")
 
         super(Sealable, self).add_link_from(src, label=label,
                                             link_type=link_type)
 
+    def _linking_as_output (self, dest, link_type):
+        """
+        Raise a ValueError if a link from Calculation object to dest is not allowed.
+        
+        :param dest: the destination output Node
+        :return: a boolean (True)
+        """
+        if self.is_sealed:
+            raise ValueError("Cannot add outcoming links from a sealed "
+                              "calculation node")
+        return super(Sealable, self)._linking_as_output(dest=dest, link_type=link_type)
+        
     @property
     def is_sealed(self):
         return self.get_attr(self.SEALED_KEY, False)
@@ -54,18 +67,25 @@ class SealableWithUpdatableAttributes(Sealable):
 
         :param str key: key name
         :param value: its value
-        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored, and the attribute is not listed
-            as updatable).
+        :raise ModificationNotAllowed: if such attribute cannot be added
+            (e.g. because the node was already stored, and the attribute
+            is not listed as updatable).
 
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
+        :raise ValidationError: if the key is not valid (e.g. it contains
+            the separator symbol).
         """
-        if self.is_sealed and key not in self._updatable_attributes:
+        if self.is_sealed:
             raise ModificationNotAllowed(
                 "Cannot change the attributes of a sealed calculation.\n"
                 "Attempted to set '{}'".format(key))
-        super(SealableWithUpdatableAttributes, self)._set_attr(key, value, **kwargs)
+        elif self.is_stored and key not in self._updatable_attributes \
+                and key is not self.SEALED_KEY:
+            raise ModificationNotAllowed(
+                "Cannot change the immutable attributes of a stored "
+                "calculation.\nAttempted to set '{}'".format(key))
+
+        super(SealableWithUpdatableAttributes, self)._set_attr(
+                key, value, **kwargs)
 
     @override
     def _del_attr(self, key):
@@ -76,10 +96,16 @@ class SealableWithUpdatableAttributes(Sealable):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
-        if self.is_sealed and key not in self._updatable_attributes:
+        if self.is_sealed:
             raise ModificationNotAllowed(
                 "Cannot delete the attributes of a sealed calculation.\n"
                 "Attempted to delete '{}'".format(key))
+
+        elif self.is_stored and key not in self._updatable_attributes:
+            raise ModificationNotAllowed(
+                "Cannot delete the immutable attributes of a sealed "
+                "calculation.\nAttempted to delete '{}'".format(key))
+
         super(SealableWithUpdatableAttributes, self)._del_attr(key)
 
     def iter_updatable_attrs(self):

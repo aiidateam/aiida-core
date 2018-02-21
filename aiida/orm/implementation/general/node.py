@@ -473,6 +473,13 @@ class AbstractNode(object):
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
                                   "in the internal cache".format(label))
+        
+        # Check if the node is already stored. If so, it should not allow 
+        # any input links of type CREATE
+        if self.is_stored and link_type is LinkType.CREATE:
+            raise Exception("Node {} is stored already. Therefore, no input"
+                            "links of type {} are "
+                            "allowed".format(self,LinkType.CREATE))
 
         # Check if the source allows output links from this node
         # (will raise ValueError if this is not the case)

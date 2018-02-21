@@ -95,10 +95,10 @@ def do_list(past_days, all_states, limit, project):
     from aiida.common.utils import str_timedelta
     from aiida.utils import timezone
     from aiida.orm.mixins import Sealable
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.calculation import Calculation
 
     _SEALED_ATTRIBUTE_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    _PROCESS_STATE_KEY = 'attributes.{}'.format(WorkCalculation.PROCESS_STATE_KEY)
+    _PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
 
     if not project:
         project = ('id', 'ctime', 'label', 'state', 'sealed')  # default projections

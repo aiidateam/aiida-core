@@ -46,10 +46,7 @@ class TestProcessControl(AiidaTestCase):
         self._wait_for_calc(calc_node)
 
         self.assertTrue(calc_node.finished_ok)
-        self.assertEqual(
-            calc_node.get_attr(Calculation.PROCESS_STATE_KEY),
-            plumpy.ProcessState.FINISHED.value
-        )
+        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
     def test_launch_with_inputs(self):
         a = base.Int(5)
@@ -58,10 +55,7 @@ class TestProcessControl(AiidaTestCase):
         calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
         self._wait_for_calc(calc_node)
         self.assertTrue(calc_node.finished_ok)
-        self.assertEqual(
-            calc_node.get_attr(Calculation.PROCESS_STATE_KEY),
-            plumpy.ProcessState.FINISHED.value
-        )
+        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
     def test_submit_bad_input(self):
         with self.assertRaises(ValueError):
@@ -72,10 +66,7 @@ class TestProcessControl(AiidaTestCase):
         self._wait_for_calc(calc_node)
 
         self.assertFalse(calc_node.finished_ok)
-        self.assertEqual(
-            calc_node.get_attr(Calculation.PROCESS_STATE_KEY),
-            plumpy.ProcessState.EXCEPTED.value
-        )
+        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
 
     def test_pause(self):
         """ Testing sending a pause message to the process """

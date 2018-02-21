@@ -83,9 +83,9 @@ class ProcessSpec(plumpy.ProcessSpec):
 
     def expose_outputs(self, process_class, namespace=None, exclude=(), include=None):
         """
-        This method allows one to automatically add the otuputs from another
+        This method allows one to automatically add the ouputs from another
         Process to this ProcessSpec. The optional namespace argument can be
-        used to group the exposed outputs in a separated PortNamespace
+        used to group the exposed outputs in a separated PortNamespace.
 
         :param process_class: the Process class whose inputs to expose
         :param namespace: a namespace in which to place the exposed inputs

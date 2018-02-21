@@ -412,11 +412,15 @@ class Process(plumpy.Process):
 
     def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
         """
-        Gather a dictionary of the inputs that were exposed for a given Process
-        class under an optional namespace.
+        Gather a dictionary of the inputs that were exposed for a given Process class under an optional namespace.
 
         :param process_class: Process class whose inputs to try and retrieve
+
         :param namespace: PortNamespace in which to look for the inputs
+        :type namespace: str
+
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for inputs. Inputs in lower-lying namespaces take precedence.
+        :type agglomerate: bool
         """
         exposed_inputs = {}
 
@@ -443,6 +447,15 @@ class Process(plumpy.Process):
         return exposed_inputs
 
     def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
+        """
+        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific ``process_instance`` in a dictionary.
+
+        :param namespace: Namespace in which to search for exposed outputs.
+        :type namespace: str
+
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for outputs. Outputs in lower-lying namespaces take precedence.
+        :type agglomerate: bool
+        """
         output_key_map = {}
         process_outputs_dict = process_instance.get_outputs_dict()
         for ns in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):

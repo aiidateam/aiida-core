@@ -4,7 +4,7 @@ from aiida.work.launch import run, submit
 from aiida.work.runners import _object_factory
 
 
-__all__ = ['ProcessBuilder', 'JobProcessBuilder']
+__all__ = ['ProcessBuilder']
 
 
 class ProcessBuilderInput(object):
@@ -58,59 +58,3 @@ class ProcessBuilder(FixedFieldsAttributeDict):
 
     def __repr__(self):
         return dict(self).__repr__()
-
-    def __dir__(self):
-        return super(ProcessBuilder, self).__dir__() + ['launch']
-
-    def launch(self, daemon=True):
-        """
-        Launch the process taking the internal attributes dictionary as the inputs dictionary, omitting
-        those keys that have not been explicitly set by the user. Setting the argument daemon to False
-        will run the Process blocking in the local interpreter
-
-        :param daemon: boolean, when True submits the Process to the daemon
-        """
-        inputs = {}
-
-        for key, value in dict(self).iteritems():
-            if not isinstance(value, ProcessBuilderInput):
-                inputs[key] = value
-
-        if daemon is True:
-            node = submit(self._process_class, **inputs)
-            return node
-        else:
-            result = run(self._process_class, **inputs)
-            return result
-
-
-class JobProcessBuilder(ProcessBuilder):
-
-    def launch(self, daemon=True, test=False):
-        """
-        Launch the process taking the internal attributes dictionary as the inputs dictionary, omitting
-        those keys that have not been explicitly set by the user. Setting the argument daemon to False
-        will run the Process blocking in the local interpreter
-
-        :param daemon: boolean, when True submits the Process to the daemon
-        :param test: boolean, when True will not actually submit the JobProcess but will create a temporary
-            folder in the current folder with the calculation files that would be created in an actual launch
-        """
-        inputs = AttributeDict()
-
-        for key, value in dict(self).iteritems():
-            if not isinstance(value, ProcessBuilderInput):
-                inputs[key] = value
-
-        if test is True:
-            inputs.store_provenance = False
-            process = _object_factory(self._process_class, inputs=inputs)
-            process.calc.submit_test()
-            return process.calc
-
-        if daemon is True:
-            node = submit(self._process_class, **inputs)
-            return node
-        else:
-            result = run(self._process_class, **inputs)
-            return result

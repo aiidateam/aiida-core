@@ -177,6 +177,7 @@ class Runner(object):
         :param inputs: Workfunction positional arguments
         :return: The process outputs
         """
+        process, inputs = _expand_builder(process, inputs)
         if utils.is_workfunction(process):
             return process(*args, **inputs)
         else:
@@ -196,6 +197,7 @@ class Runner(object):
         return ResultAndPid(result, node.pid)
 
     def submit(self, process_class, *args, **inputs):
+        process_class, inputs = _expand_builder(process_class, inputs)
         assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
@@ -286,3 +288,12 @@ class DaemonRunner(Runner):
             class_loader=class_loader.CLASS_LOADER
         )
         self.communicator.add_task_subscriber(task_receiver)
+
+def _expand_builder(process_class_or_builder, kwargs):
+    from aiida.work.process_builder import ProcessBuilder
+    if not isinstance(process_class_or_builder, ProcessBuilder):
+        return process_class_or_builder, kwargs
+    else:
+        process_class = process_class_or_builder._process_class
+        kwargs.update(process_class_or_builder)
+        return process_class, kwargs

@@ -1,0 +1,16 @@
+#!/usr/bin/env runaiida
+
+from __future__ import print_function
+
+from aiida.orm.data.base import Int, Float, Bool
+from aiida.work import run
+
+from simple_parent import SimpleParentWorkChain
+
+if __name__ == '__main__':
+    print('simple parent:',
+        run(
+            SimpleParentWorkChain,
+            a=Int(1), b=Float(1.2), c=Bool(True)
+        )
+    )

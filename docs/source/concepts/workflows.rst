@@ -38,3 +38,21 @@ Workflow development
 ====================
 
 ISSUE#1130
+
+Exposing inputs and outputs
+---------------------------
+
+.. include:: expose_examples/child.py
+    :code: python
+
+.. include:: expose_examples/simple_parent.py
+    :code: python
+
+.. include:: expose_examples/run_simple.py
+    :code: python
+
+.. include:: expose_examples/complex_parent.py
+    :code: python
+
+.. include:: expose_examples/run_complex.py
+    :code: python

@@ -791,6 +791,32 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         y = Int(2)
         work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
 
+class GrandParentExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(GrandParentExposeWorkChain, cls).define(spec)
+
+        spec.expose_inputs(ParentExposeWorkChain, namespace='sub')
+        spec.expose_outputs(ParentExposeWorkChain, namespace='sub')
+
+        spec.outline(cls.do_run, cls.finalize)
+
+    def do_run(self):
+        # raise ValueError(self.exposed_inputs(ParentExposeWorkChain, namespace='sub'))
+        return ToContext(child=self.submit(
+            ParentExposeWorkChain,
+            **self.exposed_inputs(ParentExposeWorkChain, namespace='sub')
+        ))
+
+    def finalize(self):
+        self.out_many(
+            self.exposed_outputs(
+                self.ctx.child,
+                ParentExposeWorkChain,
+                namespace='sub'
+            )
+        )
+
 class ParentExposeWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -915,5 +941,23 @@ class TestWorkChainExpose(AiidaTestCase):
                 'a': Float(2.2),
                 'sub_1.b': Float(2.3), 'sub_1.c': Bool(True),
                 'sub_2.b': Float(1.2), 'sub_2.sub_3.c': Bool(False)
+            }
+        )
+
+    def test_nested_expose(self):
+        res = work.launch.run(
+            GrandParentExposeWorkChain,
+            sub=dict(
+                a=Int(1),
+                sub_1={'b': Float(2.3), 'c': Bool(True)},
+                sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+            )
+        )
+        self.assertEquals(
+            res,
+            {
+                'sub.a': Float(2.2),
+                'sub.sub_1.b': Float(2.3), 'sub.sub_1.c': Bool(True),
+                'sub.sub_2.b': Float(1.2), 'sub.sub_2.sub_3.c': Bool(False)
             }
         )

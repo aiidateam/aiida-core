@@ -30,6 +30,7 @@ from aiida.orm.data import Data
 from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.process_spec import ProcessSpec
+from aiida.work.ports import PortNamespace
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
 from . import utils
@@ -82,6 +83,7 @@ class Process(plumpy.Process):
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else get_runner()
 
+        self._serialize_inputs_inplace(self.spec().inputs, inputs)
         super(Process, self).__init__(
             inputs=inputs,
             logger=logger,
@@ -94,6 +96,16 @@ class Process(plumpy.Process):
         if self._enable_persistence and self.runner.persister is None:
             self.logger.warning('Disabling persistence, runner does not have a persister')
             self._enable_persistence = False
+
+    @classmethod
+    def _serialize_inputs_inplace(cls, portnamespace, inputs):
+        for name, port in portnamespace.items():
+            if name not in inputs:
+                continue
+            if isinstance(port, PortNamespace):
+                cls._serialize_inputs(port, inputs[name])
+            else:
+                inputs[name] = port.serialize(inputs[name])
 
     def on_create(self):
         super(Process, self).on_create()
@@ -276,7 +288,7 @@ class Process(plumpy.Process):
 
     @override
     def encode_input_args(self, inputs):
-        """ 
+        """
         Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -289,7 +301,7 @@ class Process(plumpy.Process):
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
-        :param encoded: 
+        :param encoded:
         :return: The decoded input args
         """
         return deserialize_data(encoded)

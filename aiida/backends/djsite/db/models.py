@@ -139,11 +139,7 @@ class DbNode(m.Model):
     :note: Attributes in the DbAttribute table have to be thought as belonging
        to the DbNode, (this is the reason for which there is no 'user' field
        in the DbAttribute field). Moreover, Attributes define uniquely the
-       Node so should be immutable (except for the few ones defined in the
-       _updatable_attributes attribute of the Node() class, that are updatable:
-       these are Attributes that are set by AiiDA, so the user should not
-       modify them, but can be changed (e.g., the append_text of a code, that
-       can be redefined if the code has to be recompiled).
+       Node so should be immutable
     """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, db_index=True)
     # in the form data.upffile., data.structure., calculation., ...

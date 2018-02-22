@@ -13,8 +13,7 @@ import collections
 from plumpy import ProcessState
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
-from aiida.orm.mixins import SealableWithUpdatableAttributes
-
+from aiida.orm.mixins import Sealable
 
 def _parse_single_arg(function_name, additional_parameter,
                       args, kwargs):
@@ -73,7 +72,7 @@ def _parse_single_arg(function_name, additional_parameter,
         return None
 
 
-class AbstractCalculation(SealableWithUpdatableAttributes):
+class AbstractCalculation(Sealable):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.
@@ -82,8 +81,15 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     calculations run via a scheduler.
     """
 
+    CHECKPOINT_KEY = 'checkpoints'
     PROCESS_STATE_KEY = 'process_state'
+
     _cacheable = False
+
+    _updatable_attributes = Sealable._updatable_attributes + ('state', PROCESS_STATE_KEY, CHECKPOINT_KEY)
+
+    # The link_type might not be correct while the object is being created.
+    _hash_ignored_inputs = ['CALL']
 
     @classproperty
     def _hash_ignored_attributes(cls):
@@ -91,9 +97,6 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
             '_sealed',
             '_finished',
         ]
-
-    # The link_type might not be correct while the object is being created.
-    _hash_ignored_inputs = ['CALL']
 
     # Nodes that can be added as input using the use_* methods
     @classproperty
@@ -121,11 +124,11 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         """
         from aiida.orm.code import Code
         return {
-            "code": {
+            'code': {
                 'valid_types': Code,
                 'additional_parameter': None,
                 'linkname': 'code',
-                'docstring': "Choose the code to use",
+                'docstring': 'Choose the code to use',
             },
         }
 
@@ -313,6 +316,29 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         :rtype: bool
         """
         return self.process_state == ProcessState.FINISHED and False
+
+    @property
+    def checkpoint(self):
+        """
+        Return the checkpoint bundle set for the Calculation
+
+        :returns: checkpoint bundle
+        """
+        return self.get_attr(self.CHECKPOINT_KEY, None)
+
+    def _set_checkpoint(self, checkpoint):
+        """
+        Set the checkpoint bundle set for the Calculation
+
+        :param state: string representation of the stepper state info
+        """
+        return self._set_attr(self.CHECKPOINT_KEY, checkpoint)
+
+    def _del_checkpoint(self, checkpoint):
+        """
+        Delete the checkpoint bundle set for the Calculation
+        """
+        return self._det_attr(self.CHECKPOINT_KEY)
 
     @property
     def called(self):

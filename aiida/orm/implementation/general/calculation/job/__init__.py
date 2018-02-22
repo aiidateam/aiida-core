@@ -17,8 +17,8 @@ from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
 from aiida.common.utils import str_timedelta, classproperty
+from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.utils import timezone
-
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -33,11 +33,15 @@ DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index
 _input_subfolder = 'raw_input'
 
 
-class AbstractJobCalculation(object):
+class AbstractJobCalculation(AbstractCalculation):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    _updatable_attributes = AbstractCalculation._updatable_attributes + (
+        'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+        'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
 
     _cacheable = True
 
@@ -86,13 +90,6 @@ class AbstractJobCalculation(object):
         self._default_parser = None
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
-
-        self._updatable_attributes = (
-            'state', 'job_id', 'scheduler_state',
-            'scheduler_lastchecktime',
-            'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list', 'retrieve_temporary_list'
-        )
 
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.

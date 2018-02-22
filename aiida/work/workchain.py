@@ -35,7 +35,6 @@ class WorkChain(processes.Process):
     """
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
-    _STEPPER_STATE_INFO = 'stepper_state_info'
     _CONTEXT = 'CONTEXT'
 
     @classmethod
@@ -82,7 +81,7 @@ class WorkChain(processes.Process):
 
     def on_run(self):
         super(WorkChain, self).on_run()
-        self.calc._set_attr(self._STEPPER_STATE_INFO, str(self._stepper))
+        self.calc._set_stepper_state_info(str(self._stepper))
 
     def insert_awaitable(self, awaitable):
         """

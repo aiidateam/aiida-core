@@ -11,8 +11,18 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import CalculationFactory
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.base import Int, Float, Bool
 from aiida.work.process_builder import ProcessBuilder
+from aiida.work.workchain import WorkChain
 from aiida.work import utils
+
+class TestWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(TestWorkChain, cls).define(spec)
+        spec.input('a', valid_type=Int)
+        spec.input('b', valid_type=Float)
+        spec.input('c.d', valid_type=Bool)
 
 
 class TestProcessBuilder(AiidaTestCase):
@@ -47,3 +57,14 @@ class TestProcessBuilder(AiidaTestCase):
 
         self.assertEquals(self.builder.label, label)
         self.assertEquals(self.builder.description, description)
+
+    def test_test_workchain(self):
+        """
+        Verify that the attributes of the TestWorkChain can be set.
+        """
+        builder = TestWorkChain.get_builder()
+        builder.a = Int(2)
+        builder.b = Float(2.3)
+        builder.c.d = Bool(True)
+        # raise ValueError(dict(builder))
+        self.assertEquals(builder._todict(), {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}})

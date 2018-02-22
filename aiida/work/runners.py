@@ -296,7 +296,5 @@ def _expand_builder(process_class_or_builder, inputs):
     else:
         builder = process_class_or_builder
         process_class = builder._process_class
-        for key, value in dict(builder).iteritems():
-            if not isinstance(value, ProcessBuilderInput):
-                inputs[key] = value
+        inputs.update(builder._todict())
         return process_class, inputs

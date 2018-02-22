@@ -122,9 +122,10 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        c = Code()
+        from aiida.orm.calculation import Calculation
+        c = Calculation()
         hash1 = c.get_hash()
-        c._hide()
+        c._set_process_state('finished')
         hash2 = c.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)

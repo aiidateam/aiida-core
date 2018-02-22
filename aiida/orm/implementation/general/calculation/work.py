@@ -16,3 +16,24 @@ class WorkCalculation(Calculation):
     Calculation node to record the results of a :class:`aiida.work.processes.Process`
     from the workflow system in the database
     """
+
+    STEPPER_STATE_INFO_KEY = 'stepper_state_info'
+
+    _updatable_attributes = Calculation._updatable_attributes + (STEPPER_STATE_INFO_KEY,)
+
+    @property
+    def stepper_state_info(self):
+        """
+        Return the stepper state info of the Calculation
+
+        :returns: string representation of the stepper state info
+        """
+        return self.get_attr(self.STEPPER_STATE_INFO_KEY, None)
+
+    def _set_stepper_state_info(self, stepper_state_info):
+        """
+        Set the stepper state info of the Calculation
+
+        :param state: string representation of the stepper state info
+        """
+        return self._set_attr(self.STEPPER_STATE_INFO_KEY, stepper_state_info)

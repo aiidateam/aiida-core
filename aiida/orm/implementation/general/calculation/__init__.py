@@ -81,10 +81,12 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
+    CHECKPOINT_KEY = 'checkpoints'
     PROCESS_STATE_KEY = 'process_state'
+
     _cacheable = False
 
-    _updatable_attributes = Sealable._updatable_attributes + ('state', PROCESS_STATE_KEY)
+    _updatable_attributes = Sealable._updatable_attributes + ('state', PROCESS_STATE_KEY, CHECKPOINT_KEY)
 
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL']
@@ -314,6 +316,29 @@ class AbstractCalculation(Sealable):
         :rtype: bool
         """
         return self.process_state == ProcessState.FINISHED and False
+
+    @property
+    def checkpoint(self):
+        """
+        Return the checkpoint bundle set for the Calculation
+
+        :returns: checkpoint bundle
+        """
+        return self.get_attr(self.CHECKPOINT_KEY, None)
+
+    def _set_checkpoint(self, checkpoint):
+        """
+        Set the checkpoint bundle set for the Calculation
+
+        :param state: string representation of the stepper state info
+        """
+        return self._set_attr(self.CHECKPOINT_KEY, checkpoint)
+
+    def _del_checkpoint(self, checkpoint):
+        """
+        Delete the checkpoint bundle set for the Calculation
+        """
+        return self._det_attr(self.CHECKPOINT_KEY)
 
     @property
     def called(self):

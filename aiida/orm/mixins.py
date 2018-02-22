@@ -88,15 +88,16 @@ class Sealable(object):
         super(Sealable, self)._del_attr(key, stored_check=False)
 
     @override
-    def copy(self):
+    def copy(self, include_updatable_attrs=False):
         """
         Create a copy of the node minus the updatable attributes
         """
         clone = super(Sealable, self).copy()
 
-        # Remove the updatable attributes
-        for key, value in self._iter_updatable_attributes():
-            clone._del_attr(key)
+        if include_updatable_attrs is False:
+            # Remove the updatable attributes
+            for key, value in self._iter_updatable_attributes():
+                clone._del_attr(key)
 
         return clone
 

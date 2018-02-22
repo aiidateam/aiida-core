@@ -1,7 +1,5 @@
-# Next two to activate the beta Ubuntu Trusty machine without sudo
-# But apparently, SSH does not work, to check
-#dist: trusty
-#sudo: false
+dist: trusty
+sudo: required
 
 language: python
 
@@ -15,8 +13,8 @@ services:
     - docker
 
 addons:
-    postgresql: "9.4"
-#  postgresql: "9.5" # Available in Trusty only
+    postgresql: "9.5"
+
     apt:
        packages:
            - texlive-base

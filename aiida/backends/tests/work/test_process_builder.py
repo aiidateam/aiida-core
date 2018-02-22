@@ -66,5 +66,12 @@ class TestProcessBuilder(AiidaTestCase):
         builder.a = Int(2)
         builder.b = Float(2.3)
         builder.c.d = Bool(True)
-        # raise ValueError(dict(builder))
         self.assertEquals(builder._todict(), {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}})
+
+    def test_invalid_setattr_raises(self):
+        """
+        Verify that __setattr__ cannot be called on a ProcessBuilderInput.
+        """
+        builder = TestWorkChain.get_builder()
+        with self.assertRaises(AttributeError):
+            builder.a.b = 3

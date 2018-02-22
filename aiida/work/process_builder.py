@@ -9,6 +9,7 @@ __all__ = ['ProcessBuilder']
 
 
 class ProcessBuilderInput(object):
+    __slots__ = ['_value', '__doc__']
 
     def __init__(self, port, value):
         self._value = value

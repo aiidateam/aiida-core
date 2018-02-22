@@ -81,9 +81,7 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
-    _updatable_attributes = Sealable._updatable_attributes + (
-        'state', 'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo',
-        'remote_workdir', 'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
+    _updatable_attributes = Sealable._updatable_attributes + ('state',)
 
     # Nodes that can be added as input using the use_* methods
     @classproperty

@@ -28,7 +28,6 @@ from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQu
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common import aiidalogger
-from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
@@ -154,6 +153,7 @@ class DbNode(Base):
         """
         from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
+        from aiida.common.pluginloader import load_plugin_safe
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)
@@ -162,7 +162,7 @@ class DbNode(Base):
                                  "not valid: '{}'".format(self.pk, self.type))
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
+            PluginClass = load_plugin_safe(Node, 'aiida.orm', pluginclassname)
         except MissingPluginError:
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
                               "will use base Node class".format(self.type, self.pk))

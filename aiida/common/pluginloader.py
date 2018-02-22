@@ -125,6 +125,48 @@ def get_plugin(category, name):
 
     return plugin
 
+def load_plugin_safe(base_class, plugins_module, plugin_type):
+    """
+    It is a copy of load_plugin function to return closely related node class
+    if plugin is not available. We are duplicating load_plugin function to not break
+    its default behaviour.
+
+    params: Look at the docstring of aiida.common.old_pluginloader.load_plugin for more Info
+    :return: The plugin class
+    """
+
+    try:
+        PluginClass = load_plugin(base_class, plugins_module, plugin_type)
+    except MissingPluginError:
+        nodeParts = plugin_type.partition(".")
+        baseNodeType = nodeParts[0]
+
+        ## data node: temporarily returning base data node.
+        # In future its better to check the closest available plugin and return it.
+        # For example if type is "aiida.orm.data.array.kpoints_tmp.KpointsData"
+        # it should return array data node and not base data node
+        if baseNodeType == "data":
+            PluginClass = load_plugin(base_class, plugins_module, 'data.Data')
+
+        ## code node
+        elif baseNodeType == "code":
+            PluginClass = load_plugin(base_class, plugins_module, 'code.Code')
+
+        ## calculation node: for calculation currently we are hardcoding cases
+        elif baseNodeType == "calculation":
+            subNodeParts = nodeParts[2].partition(".")
+            subNodeType = subNodeParts[0]
+            if subNodeType == "job":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.job.JobCalculation')
+            elif subNodeType == "inline":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.inline.InlineCalculation')
+            elif subNodeType == "work":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.work.WorkCalculation')
+            else:
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.Calculation')
+
+    return PluginClass
+
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """

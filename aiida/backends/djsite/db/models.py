@@ -189,7 +189,7 @@ class DbNode(m.Model):
         """
         from aiida.orm.node import Node
         from aiida.common.old_pluginloader import from_type_to_pluginclassname
-        from aiida.common.pluginloader import load_plugin
+        from aiida.common.pluginloader import load_plugin_safe
         from aiida.common import aiidalogger
 
         try:
@@ -199,8 +199,9 @@ class DbNode(m.Model):
                                  "not valid: '{}'".format(self.pk, self.type))
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
+            PluginClass = load_plugin_safe(Node, 'aiida.orm', pluginclassname)
         except MissingPluginError:
+
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
                               "will use base Node class".format(self.type, self.pk))
             PluginClass = Node

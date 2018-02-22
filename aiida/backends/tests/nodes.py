@@ -1449,6 +1449,49 @@ class TestNodeBasic(AiidaTestCase):
             with self.assertRaises(NotExistent):
                 load_node(spec, parent_class=ArrayData)
 
+    def test_load_plugin_safe(self):
+        from aiida.orm import (JobCalculation, CalculationFactory, DataFactory)
+
+        ###### for calculation
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+        }
+
+        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        testcalc = TemplateReplacerCalc(**calc_params).store()
+        jobcalc = JobCalculation(**calc_params).store()
+
+        # compare if plugin exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(testcalc), type(obj))
+
+        # change node type and save in database again
+        testcalc.dbnode.type = "calculation.job.simpleplugins_tmp.templatereplacer.TemplatereplacerCalculation."
+        testcalc.dbnode.save()
+
+        # changed node should return job calc as its plugin is not exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(jobcalc), type(obj))
+
+        ####### for data
+        KpointsData = DataFactory('array.kpoints')
+        kpoint = KpointsData().store()
+        Data = DataFactory("Data")
+        data = Data().store()
+
+        # compare if plugin exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(kpoint), type(obj))
+
+        # change node type and save in database again
+        kpoint.dbnode.type = "data.array.kpoints_tmp.KpointsData."
+        kpoint.dbnode.save()
+
+        # changed node should return data node as its plugin is not exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(data), type(obj))
+
 
 class TestSubNodesAndLinks(AiidaTestCase):
 

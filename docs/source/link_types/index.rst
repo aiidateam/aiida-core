@@ -1,5 +1,5 @@
 Node classes
------------
+------------
 There are two *Node* sub-classes, *Data* and *Calculation*. The *Code* nodes
 can be considered as sub-classes of *Data* nodes. *JobCalculations*,
 *InlineCalulations* and the *WorkCalculations* are subclasses of the

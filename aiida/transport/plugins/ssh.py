@@ -82,8 +82,9 @@ class SshTransport(aiida.transport.Transport):
         'key_policy',
     ]
 
-    # I set the (default) value here to 30 secs between consecutive SSH checks.
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.
+    # I set the (default) value here to 5 secs between consecutive SSH checks.
+    # This should be incremented to 30, probably.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 5.
 
     @classmethod
     def _convert_username_fromstring(cls, string):

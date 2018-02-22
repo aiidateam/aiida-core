@@ -39,11 +39,14 @@ class AbstractJobCalculation(AbstractCalculation):
     remotely on a job scheduler.
     """
 
-    _updatable_attributes = AbstractCalculation._updatable_attributes + (
-        'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
-        'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
-
     _cacheable = True
+
+    @classproperty
+    def _updatable_attributes(cls):
+        return super(AbstractJobCalculation, cls)._updatable_attributes + (
+            'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+            'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list', 'state'
+        )
 
     @classproperty
     def _hash_ignored_attributes(cls):
@@ -55,12 +58,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'max_memory_kb',
         ]
 
-    def get_hash(
-        self,
-        ignore_errors=True,
-        ignored_folder_content=('raw_input',),
-        **kwargs
-    ):
+    def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
         return super(AbstractJobCalculation, self).get_hash(
             ignore_errors=ignore_errors,
             ignored_folder_content=ignored_folder_content,
@@ -78,16 +76,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _init_internal_params(self):
         """
-        Define here internal parameters that should be defined
-        right after the __init__. This function is actually called
-        by the __init__.
+        Define here internal parameters that should be defined right after the __init__
+        This function is actually called by the __init__
 
-        :note: if you inherit this function, ALWAYS remember to
-          call super()._init_internal_params() as the first thing
-          in your inherited function.
+        :note: if you inherit this function, ALWAYS remember to call super()._init_internal_params()
+            as the first thing in your inherited function.
         """
         # By default, no output parser
         self._default_parser = None
+
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
@@ -96,8 +93,7 @@ class AbstractJobCalculation(AbstractCalculation):
         self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
         self._SCHED_ERROR_FILE = '_scheduler-stderr.txt'
 
-        # Files that should be shown by default
-        # Set it to None if you do not have a default file
+        # Files that should be shown by default, set it to None if you do not have a default file
         # Used, e.g., by 'verdi calculation inputshow/outputshow
         self._DEFAULT_INPUT_FILE = None
         self._DEFAULT_OUTPUT_FILE = None

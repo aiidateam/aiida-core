@@ -47,9 +47,7 @@ class Process(plumpy.Process):
 
     _spec_type = ProcessSpec
 
-    SINGLE_RETURN_LINKNAME = '[return]'
-    # This is used for saving node pks in the saved instance state
-    NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
+    SINGLE_RETURN_LINKNAME = 'return'
 
     class SaveKeys(enum.Enum):
         """
@@ -413,8 +411,8 @@ class Process(plumpy.Process):
         # Second priority: config
         except KeyError:
             return (
-                    caching.get_use_cache(type(self)) or
-                    caching.get_use_cache(type(self._calc))
+                caching.get_use_cache(type(self)) or
+                caching.get_use_cache(type(self._calc))
             )
 
 

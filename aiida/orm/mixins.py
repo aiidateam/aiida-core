@@ -11,6 +11,7 @@
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.common.utils import classproperty
 
 
 class Sealable(object):
@@ -18,7 +19,9 @@ class Sealable(object):
     # The name of the attribute to indicate if the node is sealed or not
     SEALED_KEY = '_sealed'
 
-    _updatable_attributes = (SEALED_KEY,)
+    @classproperty
+    def _updatable_attributes(cls):
+        return (cls.SEALED_KEY,)
 
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         """
@@ -90,12 +93,11 @@ class Sealable(object):
     @override
     def copy(self, include_updatable_attrs=False):
         """
-        Create a copy of the node minus the updatable attributes
+        Create a copy of the node minus the updatable attributes if include_updatable_attrs is False
         """
         clone = super(Sealable, self).copy()
 
         if include_updatable_attrs is False:
-            # Remove the updatable attributes
             for key, value in self._iter_updatable_attributes():
                 clone._del_attr(key)
 

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from aiida.common.utils import classproperty
 from aiida.orm.implementation.calculation import Calculation
 
 
@@ -19,7 +20,9 @@ class WorkCalculation(Calculation):
 
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
-    _updatable_attributes = Calculation._updatable_attributes + (STEPPER_STATE_INFO_KEY,)
+    @classproperty
+    def _updatable_attributes(cls):
+        return super(WorkCalculation, cls)._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property
     def stepper_state_info(self):

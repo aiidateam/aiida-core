@@ -128,6 +128,14 @@ Interfaces have been written for some of the most used schedulers.
 
     ../scheduler/index
 
+==========
+Link types
+==========
+
+.. toctree::
+    :maxdepth: 4
+
+    ../link_types/index.rst
 
 =============
 Querying data

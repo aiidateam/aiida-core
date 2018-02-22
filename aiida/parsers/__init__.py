@@ -18,4 +18,4 @@ def ParserFactory(module):
     from aiida.common.pluginloader import BaseFactory
     from aiida.common.exceptions import MissingPluginError
 
-    return BaseFactory(module, Parser, 'aiida.parsers.plugins')
+    return BaseFactory(module, Parser, 'aiida.parsers')

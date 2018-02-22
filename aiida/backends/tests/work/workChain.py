@@ -12,15 +12,17 @@ import inspect
 import unittest
 import aiida.backends.settings as settings
 
+from aiida.orm import load_node
 from aiida.backends.testbase import AiidaTestCase
 from plum.engine.ticking import TickingEngine
+from plum.persistence.bundle import Bundle
 import plum.process_monitor
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.work.workchain import WorkChain, \
     ToContext, _Block, _If, _While, if_, while_, return_
 from aiida.work.workchain import _WorkChainSpec, Outputs
 from aiida.work.workfunction import workfunction
-from aiida.work.run import run, async, legacy_workflow
+from aiida.work.run import run, legacy_workflow
 from aiida.orm.data.base import Int, Str, Bool
 import aiida.work.util as util
 from aiida.common.links import LinkType
@@ -61,7 +63,7 @@ class Wf(WorkChain):
             [self.s1.__name__, self.s2.__name__, self.s3.__name__,
              self.s4.__name__, self.s5.__name__, self.s6.__name__,
              self.isA.__name__, self.isB.__name__, self.ltN.__name__]
-            }
+        }
 
     def s1(self):
         self._set_finished(inspect.stack()[0][3])
@@ -118,6 +120,33 @@ class TestContext(AiidaTestCase):
         del c['new_attr']
         with self.assertRaises(KeyError):
             c['new_attr']
+
+
+class IfTest(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(IfTest, cls).define(spec)
+        spec.outline(
+            if_(cls.condition)(
+                cls.step1,
+                cls.step2
+            )
+        )
+
+    def on_create(self, pid, inputs, saved_state):
+        super(IfTest, self).on_create(pid, inputs, saved_state)
+        if saved_state is None:
+            self.ctx.s1 = False
+            self.ctx.s2 = False
+
+    def condition(self):
+        return True
+
+    def step1(self):
+        self.ctx.s1 = True
+
+    def step2(self):
+        self.ctx.s2 = True
 
 
 class TestWorkchain(AiidaTestCase):
@@ -208,18 +237,19 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                return ToContext(r1=Outputs(async(a)), r2=Outputs(async(b)))
+                self.ctx.r1 = run(a)
+                self.ctx.r2 = run(b)
 
             def s2(self):
-                assert self.ctx.r1['_return'] == A
-                assert self.ctx.r2['_return'] == B
+                assert self.ctx.r1 == A
+                assert self.ctx.r2 == B
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(async(b)))
+                self.ctx.r1 = run(b)
 
             def s3(self):
-                assert self.ctx.r1['_return'] == B
-                assert self.ctx.r2['_return'] == B
+                assert self.ctx.r1 == B
+                assert self.ctx.r2 == B
 
         Wf.run()
 
@@ -295,31 +325,28 @@ class TestWorkchain(AiidaTestCase):
 
         WcWithReturn.run()
 
-    @unittest.skipIf(settings.BACKEND == u'sqlalchemy', "SQLA async functionality is in development")
-    def test_tocontext_async_workchain(self):
-        class MainWorkChain(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(MainWorkChain, cls).define(spec)
-                spec.outline(cls.run, cls.check)
-                spec.dynamic_output()
+    def test_if_block_persistence(self):
+        """ This test was created to capture issue #902 """
+        wc = IfTest.new_instance()
 
-            def run(self):
-                return ToContext(subwc=async(SubWorkChain))
+        while not wc.ctx.s1 and not wc.has_finished():
+            wc.tick()
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
 
-            def check(self):
-                assert self.ctx.subwc.out.value == Int(5)
+        # Now bundle the thing
+        b = Bundle()
+        wc.save_instance_state(b)
+        # Abort the current one
+        wc.stop()
+        wc.destroy(execute=True)
 
-        class SubWorkChain(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(SubWorkChain, cls).define(spec)
-                spec.outline(cls.run)
+        # Load from saved tate
+        wc = IfTest.create_from(b)
+        self.assertTrue(wc.ctx.s1)
+        self.assertFalse(wc.ctx.s2)
 
-            def run(self):
-                self.out("value", Int(5))
-
-        run(MainWorkChain)
+        wc.run_until_complete()
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         finished_steps = {}
@@ -336,16 +363,6 @@ class TestWorkchain(AiidaTestCase):
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
-
-    def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
-        import logging
-        logging.disable(logging.CRITICAL)
-
-    def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
-        import logging
-        logging.disable(logging.NOTSET)
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()
@@ -409,10 +426,12 @@ class TestHelpers(AiidaTestCase):
         self.assertEquals(outputs['a'], a)
         self.assertEquals(outputs['b'], b)
 
+
 class TestWorkChainAbort(AiidaTestCase):
     """
     Test the functionality to abort a workchain
     """
+
     class AbortableWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -490,11 +509,13 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(future.process.calc.has_aborted(), True)
         engine.shutdown()
 
+
 class TestWorkChainAbortChildren(AiidaTestCase):
     """
     Test the functionality to abort a workchain and verify that children
     are also aborted appropriately
     """
+
     class SubWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):

@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Test the plugin test case
 
@@ -21,24 +30,32 @@ def determine_backend():
 
 
 class PluginTestcaseTestCase(PluginTestCase):
-    """Test the PluginTestcase from utils.fixtures"""
+    """
+    Test the PluginTestcase from utils.fixtures
+    """
     BACKEND = determine_backend()
 
     def setUp(self):
-        from aiida.orm import DataFactory
-        from aiida.orm import Computer
         self.temp_dir = tempfile.mkdtemp()
         self.data = self.get_data()
         self.data_pk = self.data.pk
         self.computer = self.get_computer(temp_dir=self.temp_dir)
 
-    def get_data(self):
+    @staticmethod
+    def get_data():
+        """
+        Return some ParameterData
+        """
         from aiida.orm import DataFactory
         data = DataFactory('parameter')(dict={'data': 'test'})
         data.store()
         return data
 
-    def get_computer(self, temp_dir):
+    @staticmethod
+    def get_computer(temp_dir):
+        """
+        Create and store a new computer, and return it
+        """
         from aiida.orm import Computer
         computer = Computer(
             name='localhost',
@@ -52,14 +69,20 @@ class PluginTestcaseTestCase(PluginTestCase):
         return computer
 
     def test_data_loaded(self):
+        """
+        Check that the data is indeed in the DB when calling load_node
+        """
         from aiida.orm import Computer
         from aiida.orm import load_node
         self.assertTrue(is_dbenv_loaded())
         self.assertEqual(load_node(self.data_pk).uuid, self.data.uuid)
         self.assertEqual(Computer.get('localhost').uuid, self.computer.uuid)
 
-
     def test_tear_down(self):
+        """
+        Check that after tearing down, the previously stored nodes
+        are not there anymore. Then remove the temporary folder.
+        """
         from aiida.orm import load_node
         super(PluginTestcaseTestCase, self).tearDown()
         with self.assertRaises(Exception):

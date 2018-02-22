@@ -1,7 +1,7 @@
 .. _DevelopDataPluginTutorialFloat:
 
-Developer data plugin tutorial  - Float summation
-=================================================
+Tutorial: Data plugin - Float summation
+=======================================
 
 .. toctree::
    :maxdepth: 2
@@ -62,8 +62,7 @@ implementation can look like this::
            """
            self._set_attr('number', float(value))
 
-This file should be placed under ``aiida/orm/data/float.py`` and it should 
-extend the class ``Data``. 
+Assuming you placed this file in ``<aiida_yourplugin>/data/float.py`` you should now expose the following entry point in your ``setup.py``: ``aiida.data: {'yourplugin.float = aiida_yourplugin.data.float:FloatData'``. 
 
 
 Exercise: Modifying the calculation plugin

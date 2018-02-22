@@ -1,3 +1,6 @@
+.. warning:: This part of the documentation is outdated. Please disregard it.
+   It is only kept around because some information may yet be moved into updated parts.
+
 Verdi command line plugins
 ##########################
 

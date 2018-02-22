@@ -27,7 +27,7 @@ from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
 _category_mapping = {
     'calculations': 'aiida.orm.calculation.job',
     'data': 'aiida.orm.data',
-    'parsers': 'aiida.parsers.plugins',
+    'parsers': 'aiida.parsers',
     'schedulers': 'aiida.scheduler.plugins',
     'transports': 'aiida.transport.plugins',
     'workflows': 'aiida.workflows',
@@ -118,8 +118,10 @@ def get_plugin(category, name):
 
     try:
         plugin = entrypoint.load()
-    except ImportError:
-        raise LoadingPluginFailed("Loading the plugin '{}' failed".format(name))
+    except ImportError as exception:
+        import traceback
+        raise LoadingPluginFailed("Loading the plugin '{}' failed:\n{}"
+            .format(name, traceback.format_exc()))
 
     return plugin
 

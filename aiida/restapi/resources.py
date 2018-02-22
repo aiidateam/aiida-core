@@ -14,7 +14,6 @@ from flask_restful import Resource
 
 from aiida.restapi.common.utils import Utils
 
-
 class ServerInfo(Resource):
     def __init__(self, **kwargs):
         # Configure utils
@@ -88,11 +87,15 @@ class ServerInfo(Resource):
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
+
 ## TODO add the caching support. I cache total count, results, and possibly
 # set_query
 class BaseResource(Resource):
-    ## Each derived class will instantiate a different type of translator.
-    # This is the only difference in the classes.
+    """
+    Each derived class will instantiate a different type of translator.
+    This is the only difference in the classes.
+    """
+
     def __init__(self, **kwargs):
 
         self.trans = None
@@ -105,6 +108,7 @@ class BaseResource(Resource):
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
                             kwargs}
         self.utils = Utils(**self.utils_confs)
+        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
     def get(self, id=None, page=None):
         """
@@ -119,9 +123,10 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path,                                    parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path,
+                                                                      parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -172,8 +177,11 @@ class BaseResource(Resource):
 
 
 class Node(Resource):
-    ##Differs from BaseResource in trans.set_query() mostly because it takes
-    # query_type as an input and the presence of "tree" result type
+    """
+    Differs from BaseResource in trans.set_query() mostly because it takes
+    query_type as an input and the presence of additional result types like "tree"
+    """
+
     def __init__(self, **kwargs):
 
         # Set translator
@@ -191,6 +199,7 @@ class Node(Resource):
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in
                             kwargs}
         self.utils = Utils(**self.utils_confs)
+        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
     def get(self, id=None, page=None):
         """
@@ -208,7 +217,7 @@ class Node(Resource):
         (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-         nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
+         nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(limit=limit, offset=offset, perpage=perpage,
@@ -227,7 +236,7 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist, downloadformat, visformat) = self.utils.parse_query_string(query_string)
+             nelist, downloadformat, visformat, filename, rtype) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if len(filters) > 0:
                 usr = filters["user"]["=="]
@@ -244,7 +253,8 @@ class Node(Resource):
             self.trans.set_query(filters=filters, orders=orderby,
                                  query_type=query_type, id=id, alist=alist,
                                  nalist=nalist, elist=elist, nelist=nelist,
-                                 downloadformat=downloadformat, visformat=visformat)
+                                 downloadformat=downloadformat, visformat=visformat,
+                                 filename=filename, rtype=rtype)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -278,6 +288,26 @@ class Node(Resource):
 
                     else:
                         results = results["download"]["data"]
+
+                if query_type in ["retrieved_inputs", "retrieved_outputs"] and len(results) > 0:
+                    try:
+                        status = results[query_type]["status"]
+                    except KeyError:
+                        status = ""
+                    except TypeError:
+                        status = ""
+
+                    if status == 200:
+                        data = results[query_type]["data"]
+                        response = make_response(data)
+                        response.headers['content-type'] = 'application/octet-stream'
+                        response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
+                            results[query_type]["filename"])
+                        return response
+
+                    elif status == 500:
+                        results = results[query_type]["data"]
+
 
                 headers = self.utils.build_headers(url=request.url,
                                                    total_count=total_count)
@@ -397,5 +427,18 @@ class BandsData(Data):
         self.trans = BandsDataTranslator(**kwargs)
         from aiida.orm.data.array.bands import BandsData as BandsDataTclass
         self.tclass = BandsDataTclass
+
+        self.parse_pk_uuid = 'uuid'
+
+class UpfData(Data):
+    def __init__(self, **kwargs):
+
+        super(UpfData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.upf import \
+            UpfDataTranslator
+        self.trans = UpfDataTranslator(**kwargs)
+        from aiida.orm.data.upf import UpfData as UpfDataTclass
+        self.tclass = UpfDataTclass
 
         self.parse_pk_uuid = 'uuid'

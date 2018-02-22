@@ -31,9 +31,7 @@ class AbstractComputer(object):
     Stores attributes starting with an underscore.
 
     Caches files and attributes before the first save, and saves everything only on store().
-    After the call to store(), in general attributes cannot be changed, except for those
-    listed in the self._updatable_attributes tuple (empty for this class, can be
-    extended in a subclass).
+    After the call to store(), attributes cannot be changed.
 
     Only after storing (or upon loading from uuid) metadata can be modified
     and in this case they are directly set on the db.

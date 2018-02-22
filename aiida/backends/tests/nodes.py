@@ -10,9 +10,6 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
-"""
-Tests for nodes, attributes and links
-"""
 import unittest
 from sqlalchemy.exc import StatementError
 
@@ -131,56 +128,6 @@ class TestNodeHashing(AiidaTestCase):
         hash2 = c.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
-
-class TestDataNode(AiidaTestCase):
-    """
-    These tests check the features of Data nodes that differ from the base Node
-    """
-    boolval = True
-    intval = 123
-    floatval = 4.56
-    stringval = "aaaa"
-    # A recursive dictionary
-    dictval = {
-        'num': 3,
-        'something': 'else',
-        'emptydict': {},
-        'recursive': {
-            'a': 1,
-            'b': True,
-            'c': 1.2,
-            'd': [1, 2, None],
-            'e': {
-                'z': 'z',
-                'x': None,
-                'xx': {},
-                'yy': []
-            }
-        }
-    }
-    listval = [1, "s", True, None]
-    emptydict = {}
-    emptylist = []
-
-    def test_attr_after_storing(self):
-        a = Data()
-        a._set_attr('bool', self.boolval)
-        a._set_attr('integer', self.intval)
-        a.store()
-
-        # And now I try to edit/delete the keys; I should not be able to do it
-        # after saving. I try only for a couple of attributes
-        with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('bool')
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('integer', 13)
-
-    def test_modify_attr_after_store(self):
-        a = Data()
-        a.store()
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('i', 12)
-
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
@@ -343,6 +290,32 @@ class TestNodeBasic(AiidaTestCase):
     listval = [1, "s", True, None]
     emptydict = {}
     emptylist = []
+
+    def test_attribute_mutability(self):
+        """
+        Attributes of a node should be immutable after storing, unless the stored_check is
+        disabled in the call
+        """
+        a = Node()
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a.store()
+
+        # After storing attributes should now be immutable
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('bool')
+
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', self.intval)
+
+        # Passing stored_check=False should disable the mutability check
+        a._del_attr('bool', stored_check=False)
+        a._set_attr('integer', self.intval, stored_check=False)
+
+        self.assertEquals(a.get_attr('integer'), self.intval)
+
+        with self.assertRaises(AttributeError):
+            a.get_attr('bool')
 
     def test_attr_before_storing(self):
         a = Node()
@@ -1033,14 +1006,11 @@ class TestNodeBasic(AiidaTestCase):
         returned_attrs = {k: v for k, v in a.iterextras()}
         self.assertEquals(returned_attrs, all_extras)
 
-    def test_versioning_and_postsave_attributes(self):
+    def test_versioning(self):
         """
-        Checks the versioning.
+        Test the versioning of the node when setting attributes and extras
         """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
+        a = Node()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -1048,19 +1018,17 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': 267,
         }
 
-        for k, v in attrs_to_set.iteritems():
-            a._set_attr(k, v)
-
-        # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            a._set_attr(key, value)
+            self.assertEquals(a.get_attr(key), value)
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            self.assertEquals(a.get_attr(key), value)
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
@@ -1069,18 +1037,12 @@ class TestNodeBasic(AiidaTestCase):
         a.set_extra('a', 'b')
         self.assertEquals(a.dbnode.nodeversion, 2)
 
-        # I check that I can set this attribute
-        a._set_attr('state', 999)
-
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, 3)
-
         # In both cases, the node version must increase
         a.label = 'test'
-        self.assertEquals(a.dbnode.nodeversion, 4)
+        self.assertEquals(a.dbnode.nodeversion, 3)
 
         a.description = 'test description'
-        self.assertEquals(a.dbnode.nodeversion, 5)
+        self.assertEquals(a.dbnode.nodeversion, 4)
 
     def test_delete_extras(self):
         """
@@ -1249,9 +1211,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        from aiida.orm.test import myNodeWithFields
-
-        a = myNodeWithFields()
+        a = Node()
         a.store()
 
         # Even if I stored many attributes, this should stay at 1

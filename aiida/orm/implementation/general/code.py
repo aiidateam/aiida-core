@@ -32,6 +32,8 @@ class AbstractCode(Node):
     for the code to be run).
     """
 
+    HIDDEN_KEY = 'hidden'
+
     def _init_internal_params(self):
         """
         This function is called by the init method
@@ -42,20 +44,20 @@ class AbstractCode(Node):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        self.set_extra('hidden', True)
+        self.set_extra(self.HIDDEN_KEY, True)
 
     def _reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        self.set_extra('hidden', False)
+        self.set_extra(self.HIDDEN_KEY, False)
 
     def _is_hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.get_extra('hidden', False)
+        return self.get_extra(self.HIDDEN_KEY, False)
 
     def set_files(self, files):
         """

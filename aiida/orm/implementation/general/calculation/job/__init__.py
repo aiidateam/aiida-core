@@ -9,16 +9,17 @@
 ###########################################################################
 
 from abc import abstractmethod
-import datetime
 import copy
+import datetime
 
-from aiida.utils import timezone
-from aiida.common.utils import str_timedelta
+from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.backends.utils import get_automatic_user
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.common.utils import str_timedelta
+from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -31,11 +32,15 @@ from aiida.common.old_pluginloader import from_type_to_pluginclassname
 _input_subfolder = 'raw_input'
 
 
-class AbstractJobCalculation(object):
+class AbstractJobCalculation(AbstractCalculation):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    _updatable_attributes = AbstractCalculation._updatable_attributes + (
+        'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+        'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
 
     @classmethod
     def process(cls):
@@ -56,13 +61,6 @@ class AbstractJobCalculation(object):
         self._default_parser = None
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
-
-        self._updatable_attributes = (
-            'state', 'job_id', 'scheduler_state',
-            'scheduler_lastchecktime',
-            'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list'
-        )
 
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.

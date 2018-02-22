@@ -694,8 +694,12 @@ class Code(VerdiCommandWithSubcommands):
         if plugin_filter is not None:
             qb_code_filters['attributes.input_plugin'] = plugin_filter
 
+        # If were not showing all, only show those codes without 'hidden' extra or where it is False
         if not reveal_filter:
-            qb_code_filters['attributes.hidden'] = {"~==": True}
+            qb_code_filters['or'] = [
+                {'extras': {'!has_key': Code.HIDDEN_KEY}},
+                {'extras.{}'.format(Code.HIDDEN_KEY): {'==': False}}
+            ]
 
         print "# List of configured codes:"
         print "# (use 'verdi code show CODEID' to see the details)"
@@ -855,17 +859,19 @@ class Code(VerdiCommandWithSubcommands):
 
         code = set_params.create_code()
 
-        # Enforcing the code to be not hidden.
-        code._reveal()
-
         try:
             code.store()
         except ValidationError as e:
             print "Unable to store the computer: {}. Exiting...".format(e.message)
             sys.exit(1)
 
+        # Enforcing the code to be not hidden.
+        code._reveal()
+
         print "Code '{}' successfully stored in DB.".format(code.label)
         print "pk: {}, uuid: {}".format(code.pk, code.uuid)
+
+        return code
 
     def code_rename(self, *args):
         import argparse

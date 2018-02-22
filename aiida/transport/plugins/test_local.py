@@ -13,7 +13,6 @@ from aiida.transport.plugins.local import *
 
 # This will be used by test_all_plugins
 
-
 plugin_transport = LocalTransport()
 
 

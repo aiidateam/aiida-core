@@ -321,7 +321,7 @@ def parse_upf(fname, check_filename=True):
 #            try:
 #                data = parse_upf(os.path.join(folder, fn))
 #            except ParsingError as e:
-#                print ">>>>>>>>>>>>>>>> ERROR: %s" % e.message
+#                print "~~~~~~~~~~~~~~~~~~~~ ERROR: %s" % e.message
 
 
 

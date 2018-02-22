@@ -1264,15 +1264,15 @@ class AbstractJobCalculation(object):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return get_authinfo(computer=computer._dbcomputer,
-                            aiidauser=self.dbnode.user)
+        return AuthInfo.get(computer=computer._dbcomputer,
+                            user=self.dbnode.user)
 
     def _get_transport(self):
         """

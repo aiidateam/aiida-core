@@ -160,16 +160,6 @@ class DbContentError(AiidaException):
     """
     pass
 
-
-class AuthenticationError(AiidaException):
-    """
-    Raised when a user tries to access a resource for which it is
-    not authenticated, e.g. an aiidauser tries to access a computer
-    for which there is no entry in the AuthInfo table.
-    """
-    pass
-
-
 class InputValidationError(ValidationError):
     """
     The input data for a calculation did not validate (e.g., missing

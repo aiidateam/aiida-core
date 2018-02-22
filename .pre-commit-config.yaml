@@ -10,6 +10,8 @@
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         docs/update_req_for_rtd.py| # a|b -> match a OR b
         .travis_data/test_setup.py|
+        aiida/transport/.*.py|
+        aiida/scheduler/.*.py|
         .travis-data/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/utils/fixtures.py

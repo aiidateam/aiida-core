@@ -16,7 +16,7 @@ import unittest
 #import uuid
 
 #This was executed with ps -o pid,stat,user,time | tail -n +2
-mac_ps_output_str="""21259 S+   broeder   0:00.04
+mac_ps_output_str = """21259 S+   broeder   0:00.04
 87619 S+   broeder   0:00.44
 87634 S+   broeder   0:00.01
 87649 S+   broeder   0:00.02
@@ -41,12 +41,12 @@ mac_ps_output_str="""21259 S+   broeder   0:00.04
 16814 S    broeder   0:00.02
 24516 S+   broeder   0:00.06
 """
-linux_ps_output_str="""11354 Ss   aiida    00:00:00
+linux_ps_output_str = """11354 Ss   aiida    00:00:00
 11383 R+   aiida    00:00:00
 11384 S+   aiida    00:00:00
 """
 
-wrong_output="""aaa"""
+wrong_output = """aaa"""
 
 
 class TestParserGetJobList(unittest.TestCase):
@@ -78,7 +78,6 @@ class TestParserGetJobList(unittest.TestCase):
         job_ids = [job.job_id for job in result]
         self.assertIn("87849", job_ids)
 
-
     def test_parse_linux_joblist_output(self):
         """
         Test whether _parse_joblist can parse the qstat -f output
@@ -93,5 +92,5 @@ class TestParserGetJobList(unittest.TestCase):
         self.assertIn("11383", job_ids)
 
 
-if __name__ == '__main__':        
+if __name__ == '__main__':
     unittest.main()

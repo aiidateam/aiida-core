@@ -32,7 +32,6 @@ from .pbsbaseclasses import PbsBaseClass
 #X  Subjob has completed execution or has been deleted.
 
 
-
 class PbsproScheduler(PbsBaseClass, Scheduler):
     """
     Subclass to support the PBSPro scheduler
@@ -50,7 +49,8 @@ class PbsproScheduler(PbsBaseClass, Scheduler):
     #_map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_machine, max_memory_kb, max_wallclock_seconds):
+                            num_cores_per_machine, max_memory_kb,
+                            max_wallclock_seconds):
         """
         Return the lines for machines, memory and wallclock relative
         to pbspro.

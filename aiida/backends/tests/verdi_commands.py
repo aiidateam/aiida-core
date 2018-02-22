@@ -851,3 +851,90 @@ class TestVerdiDataRemoteCommands(AiidaTestCase):
                     "\n".join(output), content,
                     "The file content for file {} differs: {} vs. {}".format(
                         fname, "\n".join(output), content))
+
+
+class TestVerdiComputerCommands(AiidaTestCase):
+    """
+    Test the commands under 'verdi computer'
+
+    Implicitly also tests creating and configuring a computer with a local transport
+    """
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create a configured computer to
+        """
+        from aiida.orm import Computer
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        super(TestVerdiComputerCommands, cls).setUpClass()
+
+        cls.computer_name = 'test_computer'
+        cls.new_comp = Computer(
+            name=cls.computer_name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        cls.new_comp.store()
+
+        # I need to configure the computer here; being 'local',
+        # there should not be any options asked here
+        with Capturing():
+            ComputerCmd().run('configure', cls.computer_name)
+
+        assert cls.new_comp.is_user_configured(get_automatic_user(
+        )), "There was a problem configuring the test computer"
+
+    def test_computer_test(self):
+        """
+        Test if the 'verdi computer test' command works
+
+        It should work as it is a local connection
+        """
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+
+        # Check that indeed, if there is a problem, we detect it as such
+        with self.assertRaises(SystemExit):
+            with Capturing(capture_stderr=True):
+                ComputerCmd().run('test', "not_existent_computer_name")
+
+        # Test the computer
+        with Capturing():
+            ComputerCmd().run('test', self.computer_name)
+
+    def test_computer_enable_disable(self):
+        """
+        Check if the computer enable/disable works
+        """
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        user = get_automatic_user()
+        self.assertTrue(self.new_comp.is_enabled())
+        self.assertTrue(self.new_comp.is_user_enabled(user))
+
+        with Capturing():
+            ComputerCmd().run('disable', '-u', user.email, self.computer_name)
+        self.assertFalse(self.new_comp.is_user_enabled(user))
+
+        with Capturing():
+            ComputerCmd().run('enable', '-u', user.email, self.computer_name)
+        self.assertTrue(self.new_comp.is_user_enabled(user))
+
+        try:
+            with Capturing():
+                ComputerCmd().run('disable', self.computer_name)
+
+            self.assertFalse(self.new_comp.is_enabled())
+
+            with Capturing():
+                ComputerCmd().run('enable', self.computer_name)
+            self.assertTrue(self.new_comp.is_enabled())
+        finally:
+            # Make sure we re-enable even if some assertions are false
+            # as this can potentially block the tests (even if I don't know why)
+            with Capturing():
+                ComputerCmd().run('enable', self.computer_name)

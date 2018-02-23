@@ -15,7 +15,6 @@ from aiida.common.exceptions import AiidaException
 from aiida.scheduler.datastructures import JobTemplate
 
 
-
 def SchedulerFactory(module):
     """
     Used to load a suitable Scheduler subclass.
@@ -145,7 +144,6 @@ class Scheduler(object):
 
         empty_line = ""
 
-
         # I fill the list with the lines, and finally join them and return
         script_lines = []
 
@@ -166,8 +164,8 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(job_tmpl.codes_info,
-                                               job_tmpl.codes_run_mode))
+        script_lines.append(
+            self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -241,21 +239,21 @@ class Scheduler(object):
                 command_to_exec_list.append(escape_for_bash(arg))
             command_to_exec = " ".join(command_to_exec_list)
 
-            stdin_str = "< {}".format(
-                escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
-            stdout_str = "> {}".format(
-                escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
+            stdin_str = "< {}".format(escape_for_bash(
+                code_info.stdin_name)) if code_info.stdin_name else ""
+            stdout_str = "> {}".format(escape_for_bash(
+                code_info.stdout_name)) if code_info.stdout_name else ""
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = "2>&1"
             else:
                 stderr_str = "2> {}".format(
-                    escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
+                    escape_for_bash(
+                        code_info.stderr_name)) if code_info.stderr_name else ""
 
-            output_string = ("{} {} {} {}".format(
-                command_to_exec,
-                stdin_str, stdout_str, stderr_str))
+            output_string = ("{} {} {} {}".format(command_to_exec, stdin_str,
+                                                  stdout_str, stderr_str))
 
             list_of_runlines.append(output_string)
 

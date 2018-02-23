@@ -206,6 +206,9 @@ class Process(plumpy.Process):
             pass
 
     def on_except(self, exc_info):
+        """
+        Log the exception by calling the report method with formatted stack trace from exception info object
+        """
         super(Process, self).on_except(exc_info)
         self.report(traceback.format_exc())
 
@@ -267,7 +270,7 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance:
             try:
                 self.calc.store_all(use_cache=self._use_cache_enabled())
-                if self.calc.has_finished_ok():
+                if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
                         if name.endswith('_{pk}'.format(pk=value.pk)):
@@ -307,7 +310,7 @@ class Process(plumpy.Process):
         return deserialize_data(encoded)
 
     def update_node_state(self, state):
-        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, state.LABEL.value)
+        self.calc._set_process_state(state.LABEL)
         self.update_outputs()
 
     def update_outputs(self):
@@ -334,7 +337,7 @@ class Process(plumpy.Process):
             "Calculation cannot be sealed when setting up the database record"
 
         # Save the name of this process
-        self.calc._set_attr(WorkCalculation.PROCESS_STATE_KEY, None)
+        self.calc._set_process_state(None)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()

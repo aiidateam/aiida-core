@@ -7,14 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Classes needed for tests.
-Must be here because subclasses of 'Node' must be within aiida.orm
-"""
-from aiida.orm.calculation import Calculation
+from aiida.orm.implementation import AuthInfo
 
 
-
-class myNodeWithFields(Calculation):
-    # State can be updated even after storing
-    _updatable_attributes = ('state',)

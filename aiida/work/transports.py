@@ -2,6 +2,7 @@ from collections import namedtuple
 import logging
 import threading
 import traceback
+from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,10 +18,9 @@ class TransportQueue(object):
     up to that point.  This way opening of transports (a costly operation) can
     be minimised.
     """
-    DEFAULT_INTERVAL = 30.0
     AuthinfoEntry = namedtuple("AuthinfoEntry", ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
-    def __init__(self, loop=None, interval=DEFAULT_INTERVAL):
+    def __init__(self, loop=None, interval=DEFAULT_TRANSPORT_INTERVAL):
         """
         :param loop: The io loop
         :param interval: The callback interval in seconds
@@ -47,8 +47,10 @@ class TransportQueue(object):
         transport = authinfo.get_transport()
 
         # Check if the transport is happy to be opened with any frequency
+        # I put <= 0 to avoid that if the user, by mistake, puts a negative
+        # number, we get errors. Negative errors will be considered as zero.
         safe_open_interval = transport.get_safe_open_interval()
-        if safe_open_interval == 0.:
+        if safe_open_interval <= 0.:
             callback_handle = self._loop.add_callback(self._do_callback, authinfo.id)
         else:
             # Ok, we have to use a delay

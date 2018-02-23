@@ -17,8 +17,8 @@ from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
 from aiida.common.utils import str_timedelta, classproperty
+from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.utils import timezone
-
 
 # TODO: set the following as properties of the Calculation
 # 'email',
@@ -33,11 +33,15 @@ DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index
 _input_subfolder = 'raw_input'
 
 
-class AbstractJobCalculation(object):
+class AbstractJobCalculation(AbstractCalculation):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    _updatable_attributes = AbstractCalculation._updatable_attributes + (
+        'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+        'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
 
     _cacheable = True
 
@@ -86,13 +90,6 @@ class AbstractJobCalculation(object):
         self._default_parser = None
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
-
-        self._updatable_attributes = (
-            'state', 'job_id', 'scheduler_state',
-            'scheduler_lastchecktime',
-            'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_singlefile_list', 'retrieve_temporary_list'
-        )
 
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.
@@ -662,32 +659,25 @@ class AbstractJobCalculation(object):
             calc_states.PARSING
         ]
 
-    def has_finished(self):
+    @property
+    def finished_ok(self):
         """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
+        Returns whether the Calculation has finished successfully, which means that it
+        terminated nominally and had a zero exit code indicating a successful execution
 
-        This is equivalent to calling return has_finished_ok() or has_failed()
-
-        :return: True if the calculation has finished running, False otherwise.
+        :return: True if the calculation has finished successfully, False otherwise
         :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
-    def has_finished_ok(self):
-        """
-        Get whether the calculation is in the FINISHED status.
-
-        :return: a boolean
         """
         return self.get_state() in [calc_states.FINISHED]
 
-    def has_failed(self):
+    @property
+    def failed(self):
         """
-        Get whether the calculation is in a failed status,
-        i.e. SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
+        Returns whether the Calculation has failed, which means that it terminated nominally
+        but it had a non-zero exit status
 
-        :return: a boolean
+        :return: True if the calculation has failed, False otherwise
+        :rtype: bool
         """
         return self.get_state() in [calc_states.SUBMISSIONFAILED,
                                     calc_states.RETRIEVALFAILED,
@@ -1271,15 +1261,15 @@ class AbstractJobCalculation(object):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return get_authinfo(computer=computer._dbcomputer,
-                            aiidauser=self.dbnode.user)
+        return AuthInfo.get(computer=computer._dbcomputer,
+                            user=self.dbnode.user)
 
     def _get_transport(self):
         """

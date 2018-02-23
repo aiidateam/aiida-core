@@ -16,12 +16,11 @@ from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
-
-from aiida.backends.utils import get_authinfo
 from aiida.common.datastructures import calc_states
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
+from aiida.orm.authinfo import AuthInfo
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_builder import JobProcessBuilder
@@ -40,9 +39,13 @@ RETRIEVE_COMMAND = 'retrieve'
 class TransportTask(plumpy.Future):
     """ A general task that requires transport """
     def __init__(self, calc_node, transport_queue):
+        from aiida.orm.authinfo import AuthInfo
+
         super(TransportTask, self).__init__()
         self._calc = calc_node
-        self._authinfo = get_authinfo(calc_node.get_computer(), calc_node.get_user())
+        self._authinfo = AuthInfo.get(
+            computer=calc_node.get_computer(),
+            user=calc_node.get_user())
         transport_queue.call_me_with_transport(self._authinfo, self._execute)
 
     def execute(self, transport):
@@ -236,17 +239,18 @@ class JobProcess(processes.Process):
             options = {
                 'max_wallclock_seconds': int,
                 'resources': dict,
-                'custom_scheduler_commands': unicode,
+                'custom_scheduler_commands': basestring,
                 'queue_name': basestring,
                 'computer': Computer,
                 'withmpi': bool,
                 'mpirun_extra_params': Any(list, tuple),
                 'import_sys_environment': bool,
                 'environment_variables': dict,
-                'priority': unicode,
+                'priority': basestring,
                 'max_memory_kb': int,
-                'prepend_text': unicode,
-                'append_text': unicode,
+                'prepend_text': basestring,
+                'append_text': basestring,
+                'parser_name': basestring,
             }
             spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
 

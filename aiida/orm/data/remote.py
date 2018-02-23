@@ -43,10 +43,10 @@ class RemoteData(Data):
         """
         Check if remote folder is empty
         """
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(),
+                                user=self.get_user())
         t = authinfo.get_transport()
 
         with t:
@@ -65,10 +65,10 @@ class RemoteData(Data):
         :param destpath: A path on the local computer to get the file
         :return: a string with the file content
         """
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(),
+                            user=self.get_user())
         t = authinfo.get_transport()
 
         with t:
@@ -93,10 +93,10 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a flat list of file/directory names (as strings).
         """
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(),
+                            user=self.get_user())
         t = authinfo.get_transport()
 
         with t:
@@ -133,10 +133,10 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
         """
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(),
+                            user=self.get_user())
         t = authinfo.get_transport()
 
         with t:
@@ -170,11 +170,11 @@ class RemoteData(Data):
         """
         Remove all content of the remote folder on the remote computer
         """
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
         import os
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(),
+                            user=self.get_user())
         t = authinfo.get_transport()
 
         remote_dir = self.get_remote_path()

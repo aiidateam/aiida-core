@@ -125,15 +125,19 @@ def get_plugin(category, name):
 
     return plugin
 
-def load_plugin_safe(base_class, plugins_module, plugin_type):
+def load_plugin_safe(base_class, plugins_module, plugin_type, nodeType, nodePk):
     """
-    It is a copy of load_plugin function to return closely related node class
-    if plugin is not available. We are duplicating load_plugin function to not break
-    its default behaviour.
+    It is a wrapper of load_plugin function to return closely related node class
+    if plugin is not available. By default it returns base Node class and does not
+    raise exception.
 
-    params: Look at the docstring of aiida.common.old_pluginloader.load_plugin for more Info
+    params: Look at the docstring of aiida.common.old_pluginloader.load_plugin for more Info +
+    :param: nodeType: type of the node
+    :param nodePk: node pk
+
     :return: The plugin class
     """
+    from aiida.common import aiidalogger
 
     try:
         PluginClass = load_plugin(base_class, plugins_module, plugin_type)
@@ -164,6 +168,16 @@ def load_plugin_safe(base_class, plugins_module, plugin_type):
                 PluginClass = load_plugin(base_class, plugins_module, 'calculation.work.WorkCalculation')
             else:
                 PluginClass = load_plugin(base_class, plugins_module, 'calculation.Calculation')
+
+        ## for base node
+        elif baseNodeType == "node":
+            PluginClass = base_class
+
+        ## default case
+        else:
+            aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
+                              "will use base Node class".format(nodeType, nodePk))
+            PluginClass = base_class
 
     return PluginClass
 

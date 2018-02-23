@@ -1492,6 +1492,12 @@ class TestNodeBasic(AiidaTestCase):
         obj = kpoint.dbnode.get_aiida_class()
         self.assertEqual(type(data), type(obj))
 
+        ###### for node
+        n1 = Node().store()
+        obj = n1.dbnode.get_aiida_class()
+        self.assertEqual(type(n1), type(obj))
+
+
 
 class TestSubNodesAndLinks(AiidaTestCase):
 

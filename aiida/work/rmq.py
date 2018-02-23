@@ -1,4 +1,4 @@
-import json
+import yaml
 import plumpy
 import plumpy.rmq
 
@@ -50,7 +50,7 @@ def encode_response(response):
     :rtype: str
     """
     serialized = serialize_data(response)
-    return json.dumps(serialized)
+    return yaml.dump(serialized)
 
 
 def decode_response(response):
@@ -64,7 +64,7 @@ def decode_response(response):
     :param response: The response string to decode
     :return: A data structure containing deserialized node instances
     """
-    response = json.loads(response)
+    response = yaml.load(response)
     return deserialize_data(response)
 
 

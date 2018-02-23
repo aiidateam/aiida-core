@@ -103,7 +103,7 @@ class Process(plumpy.Process):
             if name not in inputs:
                 continue
             if isinstance(port, PortNamespace):
-                cls._serialize_inputs(port, inputs[name])
+                cls._serialize_inputs_inplace(port, inputs[name])
             else:
                 inputs[name] = port.serialize(inputs[name])
 

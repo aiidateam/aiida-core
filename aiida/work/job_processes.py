@@ -23,7 +23,6 @@ from aiida.daemon import execmanager
 from aiida.orm.authinfo import AuthInfo
 from aiida.orm.calculation.job import JobCalculation
 from aiida.scheduler.datastructures import job_states
-from aiida.work.process_builder import JobProcessBuilder
 from aiida.work.process_spec import DictSchema
 
 from . import processes
@@ -279,10 +278,6 @@ class JobProcess(processes.Process):
                 '_CALC_CLASS': calc_class
             }
         )
-
-    @classmethod
-    def get_builder(cls):
-        return JobProcessBuilder(cls)
 
     @classmethod
     def get_state_classes(cls):

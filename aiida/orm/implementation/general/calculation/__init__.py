@@ -9,6 +9,7 @@
 ###########################################################################
 
 import collections
+import enum
 import logging
 
 from plumpy import ProcessState
@@ -258,6 +259,9 @@ class AbstractCalculation(Sealable):
         """
         if status is None:
             status = 0
+
+        if isinstance(status, enum.Enum):
+            status = status.value
 
         if not isinstance(status, int):
             raise ValueError('finish status has to be an integer, got {}'.format(status))

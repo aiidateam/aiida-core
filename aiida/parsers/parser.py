@@ -11,6 +11,9 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
+import logging
+from aiida.common.exceptions import NotExistent
+from aiida.common.log import aiidalogger, get_dblogger_extra
 
 
 class Parser(object):
@@ -22,12 +25,11 @@ class Parser(object):
     Looks for the attached parser_opts or input_settings nodes attached to the calculation.
     Get the child Folderdata, parse it and store the parsed data.
     """
+
     _linkname_outparams = 'output_parameters'
     _retrieved_temporary_folder_key = 'retrieved_temporary_folder'
 
     def __init__(self, calc):
-        from aiida.common import aiidalogger
-
         self._logger = aiidalogger.getChild('parser').getChild( self.__class__.__name__)
         self._calc = calc
 
@@ -37,9 +39,6 @@ class Parser(object):
         Return the logger, also with automatic extras of the associated
         extras of the calculation
         """
-        import logging
-        from aiida.common.log import get_dblogger_extra
-
         return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self._calc))
 
     @property
@@ -52,24 +51,33 @@ class Parser(object):
 
     def parse_with_retrieved(self, retrieved):
         """
-        Receives in input a dictionary of retrieved nodes.
-        Implement all the logic in this function of the subclass.
+        This function should be implemented in the Parser subclass and should parse the desired
+        output from the retrieved nodes in the 'retrieved' input dictionary. It should return a
+        tuple of an integer and a list of tuples. The integer serves as an exit code to indicate
+        the successfulness of the parsing, where 0 means success and any non-zero integer indicates
+        a failure. These integer codes can be chosen by the plugin developer. The list of tuples
+        are the parsed nodes that need to be stored as ouput nodes of the calculation. The first key
+        should be the link name and the second key the output node itself.
 
         :param retrieved: dictionary of retrieved nodes
+        :returns: exit code, list of tuples ('link_name', output_node)
+        :rtype: int, [(basestring, Data)]
         """
         raise NotImplementedError
 
     def parse_from_calc(self, retrieved_temporary_folder=None):
         """
-        Parses the datafolder, stores results.
-        Main functionality of the class. If you only have one retrieved node,
-        you do not need to reimplement this. Implement only the
-        parse_with_retrieved
+        Parse the contents of the retrieved folder data node and return a tuple of to be stored
+        output data nodes. If you only have one retrieved node, the default folder data node, this
+        function does not have to be reimplemented in a plugin, only the parse_with_retrieved method.
+
+        :param retrieved_temporary_folder: optional absolute path to directory with temporary retrieved files
+        :returns: exit code, list of tuples ('link_name', output_node)
+        :rtype: int, [(basestring, Data)]
         """
-        # select the folder object
         out_folder = self._calc.get_retrieved_node()
         if out_folder is None:
-            self.logger.error("No retrieved folder found")
+            self.logger.error('No retrieved folder found')
             return False, ()
 
         retrieved = {self._calc._get_linkname_retrieved(): out_folder}
@@ -92,11 +100,9 @@ class Parser(object):
         Return a dictionary with all results (faster than doing multiple queries)
 
         :note: the function returns an empty dictionary if no output params node
-          can be found (either because the parser did not create it, or because
-          the calculation has not been parsed yet).
+            can be found (either because the parser did not create it, or because
+            the calculation has not been parsed yet).
         """
-        from aiida.common.exceptions import NotExistent
-
         try:
             resnode = self.get_result_parameterdata_node()
         except NotExistent:
@@ -112,22 +118,21 @@ class Parser(object):
         :raise NotExistent: if the node does not exist
         """
         from aiida.orm.data.parameter import ParameterData
-        from aiida.common.exceptions import NotExistent
 
         out_parameters = self._calc.get_outputs(type=ParameterData, also_labels=True)
-        out_parameterdata = [i[1] for i in out_parameters
-                             if i[0] == self.get_linkname_outparams()]
+        out_parameter_data = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
 
-        if not out_parameterdata:
-            raise NotExistent("No output .res ParameterData node found")
-        elif len(out_parameterdata) > 1:
+        if not out_parameter_data:
+            raise NotExistent('No output .res ParameterData node found')
+
+        elif len(out_parameter_data) > 1:
             from aiida.common.exceptions import UniquenessError
 
-            raise UniquenessError("Output ParameterData should be found once, "
-                                  "found it instead {} times"
-                                  .format(len(out_parameterdata)))
+            raise UniquenessError(
+                'Output ParameterData should be found once, found it instead {} times'
+                .format(len(out_parameter_data)))
 
-        return out_parameterdata[0]
+        return out_parameter_data[0]
 
     def get_result_keys(self):
         """
@@ -135,20 +140,18 @@ class Parser(object):
         that can be then passed to the get_result() method.
 
         :note: the function returns an empty list if no output params node
-          can be found (either because the parser did not create it, or because
-          the calculation has not been parsed yet).
+            can be found (either because the parser did not create it, or because
+            the calculation has not been parsed yet).
 
         :raise UniquenessError: if more than one output node with the name
-          self._get_linkname_outparams() is found.
+            self._get_linkname_outparams() is found.
         """
-        from aiida.common.exceptions import NotExistent
-
         try:
-            resnode = self.get_result_parameterdata_node()
+            node = self.get_result_parameterdata_node()
         except NotExistent:
             return iter([])
 
-        return resnode.keys()
+        return node.keys()
 
     def get_result(self, key_name):
         """
@@ -156,17 +159,13 @@ class Parser(object):
         The following method will should work for a generic parser,
         provided it has to query only one ParameterData object.
         """
-        resnode = self.get_result_parameterdata_node()
+        node = self.get_result_parameterdata_node()
 
         try:
-            value = resnode.get_attr(key_name)
+            value = node.get_attr(key_name)
         except KeyError:
             from aiida.common.exceptions import ContentNotExistent
 
             raise ContentNotExistent("Key {} not found in results".format(key_name))
-
-        # TODO: eventually, here insert further operations
-        # (ex: key_name = energy_float_rydberg could return only the last element of a list,
-        # and convert in the right units)
 
         return value

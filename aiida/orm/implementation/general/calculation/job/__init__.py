@@ -10,6 +10,7 @@
 import abc
 import copy
 import datetime
+import enum
 
 from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
@@ -33,11 +34,47 @@ DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index
 _input_subfolder = 'raw_input'
 
 
+class JobCalculationFinishStatus(enum.Enum):
+    """
+    This enumeration maps specific calculation states to an integer. This integer can
+    then be used to set the finish status of a JobCalculation node. The values defined
+    here map directly on the failed calculation states, but the idea is that sub classes
+    of AbstractJobCalculation can extend this enum with additional error codes
+    """
+    FINISHED = 0
+    SUBMISSIONFAILED = 100
+    RETRIEVALFAILED = 200
+    PARSINGFAILED = 300
+    FAILED = 400
+    I_AM_A_TEAPOT = 418
+
+
 class AbstractJobCalculation(AbstractCalculation):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    @classproperty
+    def finish_status_enum(cls):
+        return JobCalculationFinishStatus
+
+    @property
+    def finish_status_label(self):
+        """
+        Return the label belonging to the finish status of the Calculation
+
+        :returns: the finish status, an integer exit code or None
+        """
+        finish_status = self.finish_status
+
+        try:
+            finish_status_enum = self.finish_status_enum(finish_status)
+            finish_status_label = finish_status_enum.name
+        except ValueError:
+            finish_status_label = 'UNKNOWN'
+
+        return finish_status_label
 
     _cacheable = True
 

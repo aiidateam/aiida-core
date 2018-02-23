@@ -18,8 +18,8 @@ __all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner',
 
 _LOGGER = logging.getLogger(__name__)
 
-ResultAndCalcNode = namedtuple("ResultWithPid", ["result", "calc"])
-ResultAndPid = namedtuple("ResultWithPid", ["result", "pid"])
+ResultAndCalcNode = namedtuple('ResultAndCalcNode', ['result', 'calc'])
+ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 _runner = None
 

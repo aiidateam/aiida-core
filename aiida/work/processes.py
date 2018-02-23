@@ -167,6 +167,13 @@ class Process(plumpy.Process):
         else:
             return super(Process, self).out(output_port, value)
 
+    def out_many(self, out_dict):
+        """
+        Add all values given in ``out_dict`` to the outputs. The keys of the dictionary will be used as output names.
+        """
+        for key, value in out_dict.items():
+            self.out(key, value)
+
     # region Process messages
     @override
     def on_entering(self, state):
@@ -279,7 +286,7 @@ class Process(plumpy.Process):
 
     @override
     def encode_input_args(self, inputs):
-        """ 
+        """
         Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -292,7 +299,7 @@ class Process(plumpy.Process):
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
-        :param encoded: 
+        :param encoded:
         :return: The decoded input args
         """
         return deserialize_data(encoded)
@@ -410,6 +417,97 @@ class Process(plumpy.Process):
                     caching.get_use_cache(type(self._calc))
             )
 
+
+    def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
+        """
+        Gather a dictionary of the inputs that were exposed for a given Process class under an optional namespace.
+
+        :param process_class: Process class whose inputs to try and retrieve
+
+        :param namespace: PortNamespace in which to look for the inputs
+        :type namespace: str
+
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for inputs. Inputs in lower-lying namespaces take precedence.
+        :type agglomerate: bool
+        """
+        exposed_inputs = {}
+
+        namespace_list = self._get_namespace_list(namespace=namespace, agglomerate=agglomerate)
+        for namespace in namespace_list:
+            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
+            # The namespace None indicates the base level namespace
+            if namespace is None:
+                inputs = self.inputs
+                port_namespace = self.spec().inputs
+            else:
+                inputs = self.inputs
+                for ns in namespace.split('.'):
+                    inputs = inputs[ns]
+                try:
+                    port_namespace = self.spec().inputs.get_port(namespace)
+                except KeyError:
+                    raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
+
+            for name, port in port_namespace.ports.iteritems():
+                if name in inputs and name in exposed_inputs_list:
+                    exposed_inputs[name] = inputs[name]
+
+        return exposed_inputs
+
+    def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
+        """
+        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific ``process_instance`` in a dictionary.
+
+        :param namespace: Namespace in which to search for exposed outputs.
+        :type namespace: str
+
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for outputs. Outputs in lower-lying namespaces take precedence.
+        :type agglomerate: bool
+        """
+        namespace_separator = self.spec().namespace_separator
+
+        output_key_map = {}
+        # maps the exposed name to all outputs that belong to it
+        top_namespace_map = collections.defaultdict(list)
+        process_outputs_dict = {
+            k: v for k, v in process_instance.get_outputs(also_labels=True, link_type=LinkType.RETURN)
+        }
+
+        for port_name in process_outputs_dict:
+            top_namespace = port_name.split(namespace_separator)[0]
+            top_namespace_map[top_namespace].append(port_name)
+
+        for ns in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
+            # only the top-level key is stored in _exposed_outputs
+            for top_name in top_namespace_map:
+                if top_name in self.spec()._exposed_outputs[ns][process_class]:
+                    output_key_map[top_name] = ns
+
+        result = {}
+
+        for top_name, ns in output_key_map.items():
+            # collect all outputs belonging to the given top_name
+            for port_name in top_namespace_map[top_name]:
+                if ns is None:
+                    result[port_name] = process_outputs_dict[port_name]
+                else:
+                    result[ns + namespace_separator + port_name] = process_outputs_dict[port_name]
+        return result
+
+
+    @staticmethod
+    def _get_namespace_list(namespace=None, agglomerate=True):
+        if not agglomerate:
+            return [namespace]
+        else:
+            namespace_list = [None]
+            if namespace is not None:
+                split_ns = namespace.split('.')
+                namespace_list.extend([
+                    '.'.join(split_ns[:i])
+                    for i in range(1, len(split_ns) + 1)
+                ])
+            return namespace_list
 
 class FunctionProcess(Process):
     _func_args = None

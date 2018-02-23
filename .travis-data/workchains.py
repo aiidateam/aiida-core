@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.base import Int
+from aiida.orm.data.base import Int, Str
 from aiida.work import submit
+from aiida.work.class_loader import CLASS_LOADER
 from aiida.work.workchain import WorkChain, ToContext, append_
 
 class NestedWorkChain(WorkChain):
@@ -46,3 +47,19 @@ class NestedWorkChain(WorkChain):
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
+
+class SerializeWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(SerializeWorkChain, cls).define(spec)
+
+        spec.input(
+            'test',
+            valid_type=Str,
+            serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x))
+        )
+
+        spec.outline(cls.echo)
+
+    def echo(self):
+        self.out('test', self.inputs.test)

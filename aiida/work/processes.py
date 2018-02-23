@@ -99,13 +99,14 @@ class Process(plumpy.Process):
 
     @classmethod
     def _serialize_inputs_inplace(cls, portnamespace, inputs):
-        for name, port in portnamespace.items():
-            if name not in inputs:
-                continue
-            if isinstance(port, PortNamespace):
-                cls._serialize_inputs_inplace(port, inputs[name])
-            else:
-                inputs[name] = port.serialize(inputs[name])
+        if inputs is not None:
+            for name, port in portnamespace.items():
+                if name not in inputs:
+                    continue
+                if isinstance(port, PortNamespace):
+                    cls._serialize_inputs_inplace(port, inputs[name])
+                else:
+                    inputs[name] = port.serialize(inputs[name])
 
     def on_create(self):
         super(Process, self).on_create()

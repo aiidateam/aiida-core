@@ -15,7 +15,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
 from aiida.work.launch import run_get_node, submit
-from workchains import NestedWorkChain
+from workchains import NestedWorkChain, SerializeWorkChain
 
 ParameterData = DataFactory('parameter')
 
@@ -212,7 +212,7 @@ def create_cache_calc(code, counter, inputval):
 def main():
     expected_results_calculations = {}
     expected_results_workchains = {}
-    
+
     code = Code.get_from_string(codename)
 
     # Submitting the Calculations the old way, creating and storing a JobCalc first and submitting it
@@ -239,6 +239,10 @@ def main():
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
+
+    print("Submitting the serializing workchain")
+    pk = submit(SerializeWorkChain, test=Int).pk
+    expected_results_workchains[pk] = 'aiida.orm.data.base.Int'
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

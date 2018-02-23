@@ -23,10 +23,13 @@ class WorkChainDocumenter(ClassDocumenter):
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        import aiida
-        aiida.try_load_dbenv()
-        from aiida.work.workchain import WorkChain
-        return issubclass(member, WorkChain)
+        try:
+            import aiida
+            aiida.try_load_dbenv()
+            from aiida.work.workchain import WorkChain
+            return issubclass(member, WorkChain)
+        except:
+            return False
 
 class AiidaWorkchainDirective(Directive):
     """

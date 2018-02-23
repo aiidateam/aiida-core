@@ -24,7 +24,8 @@ class WithSerializeFct(object):
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs that are not AiiDA data types.
     """
-    def __init__(self, *args, serialize_fct=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        serialize_fct = kwargs.pop('serialize_fct', None)
         super(WithSerializeFct, self).__init__(*args, **kwargs)
         self._serialize_fct = serialize_fct
 

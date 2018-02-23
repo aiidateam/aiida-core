@@ -167,7 +167,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with mock.patch(
                 '__builtin__.raw_input', side_effect=code_setup_input_1):
             with Capturing():
-                code_cmd.code_setup()
+                cls.code1 = code_cmd.code_setup()
 
         # Setup computer #2
         with mock.patch(
@@ -179,7 +179,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with mock.patch(
                 '__builtin__.raw_input', side_effect=code_setup_input_2):
             with Capturing():
-                code_cmd.code_setup()
+                cls.code2 = code_cmd.code_setup()
 
     def test_code_list(self):
         """
@@ -194,13 +194,11 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list()
         out_str_1 = ''.join(output)
         self.assertTrue(computer_name_1 in out_str_1,
-                        "The computer 1 name should be included into "
-                        "this list")
+                        "The computer 1 name should be included into this list")
         self.assertTrue(code_name_1 in out_str_1,
                         "The code 1 name should be included into this list")
         self.assertTrue(computer_name_2 in out_str_1,
-                        "The computer 2 name should be included into "
-                        "this list")
+                        "The computer 2 name should be included into this list")
         self.assertTrue(code_name_2 in out_str_1,
                         "The code 2 name should be included into this list")
 
@@ -218,11 +216,28 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list(*['-c', computer_name_1])
         out_str = ''.join(output)
         self.assertTrue(computer_name_1 in out_str,
-                        "The computer 1 name should be included into "
-                        "this list")
-        self.assertFalse(computer_name_2 in out_str,
-                         "The computer 2 name should not be included into "
-                         "this list")
+                        "The computer 1 name should be included into this list")
+        self.assertFalse(
+            computer_name_2 in out_str,
+            "The computer 2 name should not be included into this list")
+
+        # Hide code 2
+        self.code2._hide()
+
+        # Run verdi code list again, checking that code 2 is now not shown
+        with Capturing() as output:
+            code_cmd.code_list()
+        out_str_3 = ''.join(output)
+        self.assertTrue(computer_name_1 in out_str_3,
+                        "The computer 1 name should be included into this list")
+        self.assertTrue(code_name_1 in out_str_3,
+                        "The code 1 name should be included into this list")
+        self.assertFalse(
+            computer_name_2 in out_str_3,
+            "The computer 2 name should not be included into this list")
+        self.assertFalse(
+            code_name_2 in out_str_3,
+            "The code 2 name should not be included into this list")
 
 
 class TestVerdiWorkCommands(AiidaTestCase):

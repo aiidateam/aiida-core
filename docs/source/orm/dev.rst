@@ -43,7 +43,12 @@ Code
    :special-members: __init__
 
 
+Mixins
+++++++
+.. automodule:: aiida.orm.mixins
+   :members:
 
+.. autoclass:: aiida.orm.mixins.Sealable
 
 ORM documentation: Data
 =======================

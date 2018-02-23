@@ -517,8 +517,8 @@ class CifData(SinglefileData):
         self._values = None
 
         if not self.is_stored and self.get_attr('parse_policy') == 'eager':
-            self._set_attr('formulae', self.get_formulae())
-            self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+            self.get_formulae()
+            self.get_spacegroup_numbers()
 
     # pylint: disable=arguments-differ
     def store(self, *args, **kwargs):
@@ -583,6 +583,8 @@ class CifData(SinglefileData):
         Note: This does not compute the formula, it only reads it from the
         appropriate tag. Use refine_inline to compute formulae.
         """
+        # note: If formulae are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
         formula_tag = "_chemical_formula_{}".format(mode)
         formulae = []
         for datablock in self.values.keys():
@@ -590,12 +592,16 @@ class CifData(SinglefileData):
             if formula_tag in self.values[datablock].keys():
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
+
+        self._set_attr('formulae', formulae)
         return formulae
 
     def get_spacegroup_numbers(self):
         """
         Get the spacegroup international number.
         """
+        # note: If spacegroup_numbers are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
         spg_tags = [
             "_space_group.it_number", "_space_group_it_number",
             "_symmetry_int_tables_number"
@@ -613,6 +619,8 @@ class CifData(SinglefileData):
                 except ValueError:
                     pass
             spacegroup_numbers.append(spacegroup_number)
+
+        self._set_attr('spacegroup_numbers', spacegroup_numbers)
         return spacegroup_numbers
 
     def has_partial_occupancies(self):

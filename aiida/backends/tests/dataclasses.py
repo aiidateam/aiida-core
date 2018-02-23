@@ -746,7 +746,7 @@ _publ_section_title                     'Test CIF'
             lazy.store()
 
             # this should parse the cif
-            lazy.get_formulae()
+            lazy.values
             self.assertIsNot(lazy._values, None)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

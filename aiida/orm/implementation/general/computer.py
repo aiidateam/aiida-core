@@ -21,6 +21,7 @@ from aiida.common.exceptions import (
 
 from aiida.common.utils import classproperty
 from aiida.common.utils import abstractclassmethod, abstractstaticmethod
+from aiida.common.exceptions import NotExistent
 
 
 class AbstractComputer(object):
@@ -30,9 +31,7 @@ class AbstractComputer(object):
     Stores attributes starting with an underscore.
 
     Caches files and attributes before the first save, and saves everything only on store().
-    After the call to store(), in general attributes cannot be changed, except for those
-    listed in the self._updatable_attributes tuple (empty for this class, can be
-    extended in a subclass).
+    After the call to store(), attributes cannot be changed.
 
     Only after storing (or upon loading from uuid) metadata can be modified
     and in this case they are directly set on the db.
@@ -211,6 +210,11 @@ class AbstractComputer(object):
 
     @abstractproperty
     def to_be_stored(self):
+        """
+        Is it already stored or not?
+
+        :return: Boolean
+        """
         pass
 
     @abstractclassmethod
@@ -750,43 +754,37 @@ class AbstractComputer(object):
     def is_enabled(self):
         pass
 
-    @abstractmethod
-    def get_dbauthinfo(self, user):
-        """
-        Return the aiida.backends.djsite.db.models.DbAuthInfo instance for the
-        given user on this computer, if the computer
-        is not configured for the given user.
 
-        :param user: a DbUser instance.
-        :return: a aiida.backends.djsite.db.models.DbAuthInfo instance
+    def get_authinfo(self, user):
+        """
+        Return the aiida.orm.authinfo.AuthInfo instance for the
+        given user on this computer, if the computer
+        is configured for the given user.
+
+        :param user: a User instance.
+        :return: a AuthInfo instance
         :raise NotExistent: if the computer is not configured for the given
             user.
         """
-        pass
+        from aiida.orm.authinfo import AuthInfo
 
-    @abstractmethod
+        return AuthInfo.get(computer=self, user=user)
+
     def is_user_configured(self, user):
-        """
-        Return True if the computer is configured for the given user,
-        False otherwise.
+        try:
+            self.get_authinfo(user)
+            return True
+        except NotExistent:
+            return False
 
-        :param user: a DbUser instance.
-        :return: a boolean.
-        """
-        pass
-
-    @abstractmethod
     def is_user_enabled(self, user):
-        """
-        Return True if the computer is enabled for the given user (looking only
-        at the per-user setting: the computer could still be globally disabled).
-
-        :note: Return False also if the user is not configured for the computer.
-
-        :param user: a DbUser instance.
-        :return: a boolean.
-        """
-        pass
+        try:
+            authinfo = self.get_authinfo(user)
+            return authinfo.enabled
+        except NotExistent:
+            # Return False if the user is not configured (in a sense,
+            # it is disabled for that user)
+            return False
 
     @abstractmethod
     def set_enabled_state(self, enabled):

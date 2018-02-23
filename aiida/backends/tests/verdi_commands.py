@@ -15,6 +15,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.datastructures import calc_states
 from aiida.utils.capturing import Capturing
+from aiida.work import WorkChain
 
 # Common computer information
 computer_common_info = [
@@ -167,7 +168,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with mock.patch(
                 '__builtin__.raw_input', side_effect=code_setup_input_1):
             with Capturing():
-                code_cmd.code_setup()
+                cls.code1 = code_cmd.code_setup()
 
         # Setup computer #2
         with mock.patch(
@@ -179,7 +180,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with mock.patch(
                 '__builtin__.raw_input', side_effect=code_setup_input_2):
             with Capturing():
-                code_cmd.code_setup()
+                cls.code2 = code_cmd.code_setup()
 
     def test_code_list(self):
         """
@@ -194,13 +195,11 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list()
         out_str_1 = ''.join(output)
         self.assertTrue(computer_name_1 in out_str_1,
-                        "The computer 1 name should be included into "
-                        "this list")
+                        "The computer 1 name should be included into this list")
         self.assertTrue(code_name_1 in out_str_1,
                         "The code 1 name should be included into this list")
         self.assertTrue(computer_name_2 in out_str_1,
-                        "The computer 2 name should be included into "
-                        "this list")
+                        "The computer 2 name should be included into this list")
         self.assertTrue(code_name_2 in out_str_1,
                         "The code 2 name should be included into this list")
 
@@ -218,11 +217,44 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list(*['-c', computer_name_1])
         out_str = ''.join(output)
         self.assertTrue(computer_name_1 in out_str,
-                        "The computer 1 name should be included into "
-                        "this list")
-        self.assertFalse(computer_name_2 in out_str,
-                         "The computer 2 name should not be included into "
-                         "this list")
+                        "The computer 1 name should be included into this list")
+        self.assertFalse(
+            computer_name_2 in out_str,
+            "The computer 2 name should not be included into this list")
+
+        # Hide code 2
+        self.code2._hide()
+
+        # Run verdi code list again, checking that code 2 is now not shown
+        with Capturing() as output:
+            code_cmd.code_list()
+        out_str_3 = ''.join(output)
+        self.assertTrue(computer_name_1 in out_str_3,
+                        "The computer 1 name should be included into this list")
+        self.assertTrue(code_name_1 in out_str_3,
+                        "The code 1 name should be included into this list")
+        self.assertFalse(
+            computer_name_2 in out_str_3,
+            "The computer 2 name should not be included into this list")
+        self.assertFalse(
+            code_name_2 in out_str_3,
+            "The code 2 name should not be included into this list")
+
+
+# pylint: disable=abstract-method
+class Wf(WorkChain):
+    """
+    Utility workchain used for testing
+    """
+    TEST_STRING = 'Test report.'
+
+    @classmethod
+    def define(cls, spec):
+        super(Wf, cls).define(spec)
+        spec.outline(cls.create_logs)
+
+    def create_logs(self):
+        self.report(self.TEST_STRING)
 
 
 class TestVerdiWorkCommands(AiidaTestCase):
@@ -234,20 +266,8 @@ class TestVerdiWorkCommands(AiidaTestCase):
         """
         super(TestVerdiWorkCommands, cls).setUpClass()
         from aiida.work.launch import run_get_pid
-        from aiida.work.workchain import WorkChain
-        TEST_STRING = 'Test report.'
-        cls.test_string = TEST_STRING
 
-        # pylint: disable=abstract-method
-        class Wf(WorkChain):
-
-            @classmethod
-            def define(cls, spec):
-                super(Wf, cls).define(spec)
-                spec.outline(cls.create_logs)
-
-            def create_logs(self):
-                self.report(TEST_STRING)
+        cls.test_string = Wf.TEST_STRING
 
         _, cls.workchain_pid = run_get_pid(Wf)
 
@@ -745,3 +765,191 @@ class TestVerdiDataCommands(AiidaTestCase):
                             sub_cmd,
                             str(self.cmd_to_nodeid_map_for_groups[sub_cmd]) +
                             "The output was {}".format(out_str)))
+
+
+class TestVerdiDataRemoteCommands(AiidaTestCase):
+    """
+    Test the commands under 'verdi data remote'
+
+    Implicitly also tests creating and configuring a computer with a local transport
+    """
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create a configured computer to
+        """
+        from aiida.orm import Computer
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        super(TestVerdiDataRemoteCommands, cls).setUpClass()
+
+        cls.computer_name = 'test_remote_ls'
+        cls.new_comp = Computer(
+            name=cls.computer_name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        cls.new_comp.store()
+
+        # I need to configure the computer here; being 'local',
+        # there should not be any options asked here
+        with Capturing():
+            ComputerCmd().run('configure', cls.computer_name)
+
+        assert cls.new_comp.is_user_configured(get_automatic_user(
+        )), "There was a problem configuring the test computer"
+
+    def test_remote_ls(self):
+        """
+        Test if the 'verdi remote ls' command works
+        """
+        from aiida.cmdline.commands.data import _Remote
+        import os
+        from aiida.orm.data.remote import RemoteData
+        from aiida.common.folders import SandboxFolder
+
+        with SandboxFolder() as folder:
+
+            files = {'test1.txt': 'the_content_1', 'test2.txt': 'the_content_2'}
+            for fname, content in files.items():
+                with open(os.path.join(folder.abspath, fname), 'w') as f:
+                    f.write(content)
+
+            r = RemoteData(computer=self.new_comp, remote_path=folder.abspath)
+            r.store()
+
+            with Capturing() as output:
+                _Remote().run('ls', str(r.pk))
+
+            # output is a Capturing objects, looping on it returns the lines
+            found_files = set(output)
+            self.assertEquals(set(files.keys()), found_files)
+
+            # Testing also ls -l, that calls a different implementation
+            with Capturing() as output:
+                _Remote().run('ls', '-l', str(r.pk))
+
+            # The filename is the last part of each line
+            found_files = set(_.split()[-1] for _ in output)
+            self.assertEquals(set(files.keys()), found_files)
+
+    def test_remote_cat(self):
+        """
+        Test if the 'verdi remote ls' command works
+        """
+        from aiida.cmdline.commands.data import _Remote
+        import os
+        from aiida.orm.data.remote import RemoteData
+        from aiida.common.folders import SandboxFolder
+
+        with SandboxFolder() as folder:
+
+            files = {
+                'test1.txt': 'the_content_1\nsecond line',
+                'test2.txt': 'the_content_2'
+            }
+            for fname, content in files.items():
+                with open(os.path.join(folder.abspath, fname), 'w') as f:
+                    f.write(content)
+
+            r = RemoteData(computer=self.new_comp, remote_path=folder.abspath)
+            r.store()
+
+            for fname, content in files.items():
+                with Capturing() as output:
+                    _Remote().run('cat', str(r.pk), fname)
+
+                self.assertEquals(
+                    "\n".join(output), content,
+                    "The file content for file {} differs: {} vs. {}".format(
+                        fname, "\n".join(output), content))
+
+
+class TestVerdiComputerCommands(AiidaTestCase):
+    """
+    Test the commands under 'verdi computer'
+
+    Implicitly also tests creating and configuring a computer with a local transport
+    """
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create a configured computer to
+        """
+        from aiida.orm import Computer
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        super(TestVerdiComputerCommands, cls).setUpClass()
+
+        cls.computer_name = 'test_computer'
+        cls.new_comp = Computer(
+            name=cls.computer_name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        cls.new_comp.store()
+
+        # I need to configure the computer here; being 'local',
+        # there should not be any options asked here
+        with Capturing():
+            ComputerCmd().run('configure', cls.computer_name)
+
+        assert cls.new_comp.is_user_configured(get_automatic_user(
+        )), "There was a problem configuring the test computer"
+
+    def test_computer_test(self):
+        """
+        Test if the 'verdi computer test' command works
+
+        It should work as it is a local connection
+        """
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+
+        # Check that indeed, if there is a problem, we detect it as such
+        with self.assertRaises(SystemExit):
+            with Capturing(capture_stderr=True):
+                ComputerCmd().run('test', "not_existent_computer_name")
+
+        # Test the computer
+        with Capturing():
+            ComputerCmd().run('test', self.computer_name)
+
+    def test_computer_enable_disable(self):
+        """
+        Check if the computer enable/disable works
+        """
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.backends.utils import get_automatic_user
+
+        user = get_automatic_user()
+        self.assertTrue(self.new_comp.is_enabled())
+        self.assertTrue(self.new_comp.is_user_enabled(user))
+
+        with Capturing():
+            ComputerCmd().run('disable', '-u', user.email, self.computer_name)
+        self.assertFalse(self.new_comp.is_user_enabled(user))
+
+        with Capturing():
+            ComputerCmd().run('enable', '-u', user.email, self.computer_name)
+        self.assertTrue(self.new_comp.is_user_enabled(user))
+
+        try:
+            with Capturing():
+                ComputerCmd().run('disable', self.computer_name)
+
+            self.assertFalse(self.new_comp.is_enabled())
+
+            with Capturing():
+                ComputerCmd().run('enable', self.computer_name)
+            self.assertTrue(self.new_comp.is_enabled())
+        finally:
+            # Make sure we re-enable even if some assertions are false
+            # as this can potentially block the tests (even if I don't know why)
+            with Capturing():
+                ComputerCmd().run('enable', self.computer_name)

@@ -96,7 +96,6 @@ class AiiDAPersister(plumpy.Persister):
     This node is responsible to taking saved process instance states and
     persisting them to the database.
     """
-    CALC_NODE_CHECKPOINT_KEY = 'checkpoints'
 
     def save_checkpoint(self, process, tag=None):
         if tag is not None:
@@ -104,15 +103,15 @@ class AiiDAPersister(plumpy.Persister):
 
         bundle = Bundle(process, class_loader.CLASS_LOADER)
         calc = process.calc
-        calc._set_attr(self.CALC_NODE_CHECKPOINT_KEY, yaml.dump(bundle))
+        calc._set_checkpoint(yaml.dump(bundle))
 
     def load_checkpoint(self, pid, tag=None):
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        calc_node = orm.load_node(pid)
+        calc = orm.load_node(pid)
         try:
-            bundle = yaml.load(calc_node.get_attr(self.CALC_NODE_CHECKPOINT_KEY))
+            bundle = yaml.load(calc.checkpoint)
             return bundle
         except ValueError:
             raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")
@@ -138,7 +137,8 @@ class AiiDAPersister(plumpy.Persister):
         pass
 
     def delete_checkpoint(self, pid, tag=None):
-        orm.load_node(pid)._del_attr(self.CALC_NODE_CHECKPOINT_KEY)
+        calc = orm.load_node(pid)
+        calc._del_checkpoint()
 
     def delete_process_checkpoints(self, pid):
         """

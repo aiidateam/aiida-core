@@ -752,7 +752,6 @@ Unable to copy file 543984.E
 """
 
 
-
 class TestParserQstat(unittest.TestCase):
     """
     Tests to verify if teh function _parse_joblist_output behave correctly
@@ -868,7 +867,9 @@ class TestParserQstat(unittest.TestCase):
                 self.assertTrue(j.num_cpus == num_cpus)
                 # TODO : parse the env_vars
 
+
 class TestSubmitScript(unittest.TestCase):
+
     def test_submit_script(self):
         """
         Test to verify if scripts works fine with default options
@@ -880,11 +881,14 @@ class TestSubmitScript(unittest.TestCase):
 
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
-        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = [
+            "mpirun", "-np", "23", "pw.x", "-npool", "1"
+        ]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = code_run_modes.SERIAL
@@ -893,8 +897,8 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00'
-                        in submit_script_text)
+        self.assertTrue(
+            '#PBS -l nodes=1:ppn=1,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
@@ -913,14 +917,12 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
-            num_cores_per_machine=24
-        )
+            num_cores_per_machine=24)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
         code_info.cmdline_params = [
-            "mpirun", "-np", "23",
-            "pw.x", "-npool", "1"
+            "mpirun", "-np", "23", "pw.x", "-npool", "1"
         ]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
@@ -930,11 +932,10 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
-                        in submit_script_text)
+        self.assertTrue(
+            '#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
                         " < 'aiida.in'" in submit_script_text)
-
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """
@@ -951,14 +952,12 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = s.create_job_resource(
             num_machines=1,
             num_mpiprocs_per_machine=1,
-            num_cores_per_mpiproc=24
-        )
+            num_cores_per_mpiproc=24)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
         code_info.cmdline_params = [
-            "mpirun", "-np", "23",
-            "pw.x", "-npool", "1"
+            "mpirun", "-np", "23", "pw.x", "-npool", "1"
         ]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
@@ -968,11 +967,10 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
-                        in submit_script_text)
+        self.assertTrue(
+            '#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
                         " < 'aiida.in'" in submit_script_text)
-
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
         """
@@ -992,14 +990,12 @@ class TestSubmitScript(unittest.TestCase):
             num_machines=1,
             num_mpiprocs_per_machine=1,
             num_cores_per_machine=24,
-            num_cores_per_mpiproc=24
-        )
+            num_cores_per_mpiproc=24)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
         code_info.cmdline_params = [
-            "mpirun", "-np", "23",
-            "pw.x", "-npool", "1"
+            "mpirun", "-np", "23", "pw.x", "-npool", "1"
         ]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
@@ -1009,11 +1005,10 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00'
-                        in submit_script_text)
+        self.assertTrue(
+            '#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" +
                         " < 'aiida.in'" in submit_script_text)
-
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
         """
@@ -1033,5 +1028,4 @@ class TestSubmitScript(unittest.TestCase):
                 num_machines=1,
                 num_mpiprocs_per_machine=1,
                 num_cores_per_machine=24,
-                num_cores_per_mpiproc=23
-            )
+                num_cores_per_mpiproc=23)

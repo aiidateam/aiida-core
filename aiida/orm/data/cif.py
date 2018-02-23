@@ -352,6 +352,14 @@ class CifData(SinglefileData):
     _set_incompatibilities = [("ase", "file"), ("ase", "values"), ("file",
                                                                    "values")]
     _scan_types = ['default', 'flex']
+    _parse_policies = ['eager', 'lazy']
+
+    @property
+    def parse_policy(self):
+        try:
+            return self._parse_policy
+        except AttributeError:
+            return self._parse_policies[0]
 
     @property
     def scan_type(self):
@@ -369,6 +377,7 @@ class CifData(SinglefileData):
         parent_dict = super(CifData, self)._set_defaults
         parent_dict.update({
             "scan_type": self._scan_types[0],
+            "parse_policy": 'eager',
         })
 
         return parent_dict
@@ -544,8 +553,10 @@ class CifData(SinglefileData):
         self._set_attr('md5', md5sum)
         self._values = None
         self._ase = None
-        self._set_attr('formulae', self.get_formulae())
-        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+
+        if self.parse_policy == 'eager':
+            self._set_attr('formulae', self.get_formulae())
+            self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     def set_scan_type(self, scan_type):
         """
@@ -561,6 +572,18 @@ class CifData(SinglefileData):
             self._set_attr('_scan_type', scan_type)
         else:
             raise ValueError("Got unknown scan_type {}".format(scan_type))
+
+    def set_parse_policy(self, parse_policy):
+        """
+        Set the parse policy.
+
+        :param parse_policy: Either 'eager' (parse CIF file on set_file)
+            or 'lazy' (defer parsing until needed)
+        """
+        if parse_policy in self._parse_policies:
+            self._set_attr('_parse_policy', parse_policy)
+        else:
+            raise ValueError("Got unknown parse_policy {}".format(parse_policy))
 
     def get_formulae(self, mode='sum'):
         """

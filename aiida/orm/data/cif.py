@@ -351,6 +351,27 @@ class CifData(SinglefileData):
     """
     _set_incompatibilities = [("ase", "file"), ("ase", "values"), ("file",
                                                                    "values")]
+    _scan_types = ['default', 'flex']
+
+    @property
+    def scan_type(self):
+        try:
+            return self._scan_type
+        except AttributeError:
+            return self._scan_types[0]
+
+    @property
+    def _set_defaults(self):
+        """
+        Add defaults for some attributes.
+
+        """
+        parent_dict = super(CifData, self)._set_defaults
+        parent_dict.update({
+            "scan_type": self._scan_types[0],
+        })
+
+        return parent_dict
 
     @staticmethod
     def read_cif(fileobj, index=-1, **kwargs):
@@ -476,7 +497,8 @@ class CifData(SinglefileData):
             except ImportError as e:
                 raise ImportError(
                     str(e) + '. You need to install the PyCifRW package.')
-            self._values = CifFile.ReadCif(self.get_file_abs_path())
+            self._values = CifFile.ReadCif(
+                self.get_file_abs_path(), scantype=self.scan_type)
         return self._values
 
     def set_values(self, values):
@@ -508,7 +530,9 @@ class CifData(SinglefileData):
 
     def set_file(self, filename):
         """
-        Set the file. If the source is set and the MD5 checksum of new file
+        Set the file.
+
+        If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
         """
         super(CifData, self).set_file(filename)
@@ -522,6 +546,21 @@ class CifData(SinglefileData):
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
         self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+
+    def set_scan_type(self, scan_type):
+        """
+        Set the scan_type for PyCifRW.
+
+        The 'flex' scan_type of PyCifRW is faster for large CIF files but
+        does not yet support the CIF2 format as of 02/2018.
+        See the CifFile.ReadCif function
+
+        :param scan_type: Either 'default' or 'flex' (see _scan_types)
+        """
+        if scan_type in self._scan_types:
+            self._set_attr('_scan_type', scan_type)
+        else:
+            raise ValueError("Got unknown scan_type {}".format(scan_type))
 
     def get_formulae(self, mode='sum'):
         """

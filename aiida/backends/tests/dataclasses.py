@@ -664,6 +664,42 @@ _publ_section_title                     'Test CIF'
         with self.assertRaises(ValueError):
             parse_formula("H0.5.2 O")
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_scan_type(self):
+        """
+        Check that different scan_types of PyCifRW produce the same result.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 0
+                O 0.5 0.5 0.5 .
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+
+            default = CifData(file=f.name)
+            default2 = CifData(file=f.name, scan_type='default')
+            self.assertEquals(default._prepare_cif(), default2._prepare_cif())
+
+            flex = CifData(file=f.name, scan_type='flex')
+            self.assertEquals(default._prepare_cif(), flex._prepare_cif())
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

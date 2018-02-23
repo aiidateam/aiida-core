@@ -22,7 +22,7 @@ from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, InlineCalcRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace
+    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
 )
 
 ParameterData = DataFactory('parameter')
@@ -338,6 +338,10 @@ def main():
     value = Str('test_string')
     pk = submit(InlineCalcRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
+
+    print("Submitting the serializing workchain")
+    pk = submit(SerializeWorkChain, test=Int).pk
+    expected_results_workchains[pk] = 'aiida.orm.data.base.Int'
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

@@ -21,6 +21,7 @@ from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.utils.capturing import Capturing
+from aiida.work.class_loader import CLASS_LOADER
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import Process
@@ -1030,3 +1031,38 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
             }
         )
+        work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+class TestSerializeWorkChain(AiidaTestCase):
+    """
+    Test workchains with serialized input / output.
+    """
+    def setUp(self):
+        super(TestSerializeWorkChain, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestSerializeWorkChain, self).tearDown()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_serialize(self):
+        """
+        Test a simple serialization of a class to its identifier.
+        """
+        test_class = self
+
+        class TestSerializeWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestSerializeWorkChain, cls).define(spec)
+
+                spec.input('test', serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)))
+                spec.input('reference', valid_type=Str)
+
+                spec.outline(cls.do_test)
+
+            def do_test(self):
+                assert isinstance(self.inputs.test, Str)
+                assert self.inputs.test == self.inputs.reference
+
+        work.launch.run(TestSerializeWorkChain, test=Str, reference=Str('aiida.orm.data.base.Str'))

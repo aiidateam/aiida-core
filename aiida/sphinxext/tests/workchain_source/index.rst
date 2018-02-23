@@ -21,9 +21,3 @@ The command is also hooked into ``sphinx.ext.autodoc``, so you can also use that
 
 .. automodule:: demo_workchain
     :members:
-
-This is an additional test which checks that
-
-.. autoclass:: demo_workchain.DemoWorkChain
-
-    .. :module:

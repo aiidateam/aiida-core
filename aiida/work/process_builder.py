@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from aiida.common.extendeddicts import AttributeDict, FixedFieldsAttributeDict
 from aiida.work.launch import run, submit
+from aiida.work.ports import PortNamespace
 from aiida.work.runners import _object_factory
 
 
-__all__ = ['ProcessBuilder', 'JobProcessBuilder']
+__all__ = ['ProcessBuilder']
 
 
 class ProcessBuilderInput(object):
+    __slots__ = ['_value', '__doc__']
 
     def __init__(self, port, value):
         self._value = value
@@ -25,17 +27,17 @@ class ProcessBuilderInputDefault(ProcessBuilderInput):
     def __str__(self):
         return '{} [default]'.format(self._value.__str__())
 
+class ProcessBuilderInputDict(FixedFieldsAttributeDict):
 
-class ProcessBuilder(FixedFieldsAttributeDict):
+    def __init__(self, port_namespace):
+        self._valid_fields = port_namespace.keys()
+        self._port_namespace = port_namespace
+        super(ProcessBuilderInputDict, self).__init__()
 
-    def __init__(self, process_class):
-        self._process_class = process_class
-        self._process_spec = self._process_class.spec()
-        self._valid_fields = self._process_spec.inputs.keys()
-        super(ProcessBuilder, self).__init__()
-
-        for name, port in self._process_spec.inputs.iteritems():
-            if port.has_default():
+        for name, port in port_namespace.items():
+            if isinstance(port, PortNamespace):
+                self[name] = ProcessBuilderInputDict(port)
+            elif port.has_default():
                 self[name] = ProcessBuilderInputDefault(port, port.default)
             else:
                 self[name] = ProcessBuilderInput(port, None)
@@ -48,69 +50,34 @@ class ProcessBuilder(FixedFieldsAttributeDict):
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
-            port = self._process_spec.inputs[attr]
+            port = self._port_namespace[attr]
             is_valid, message = port.validate(value)
 
             if not is_valid:
                 raise ValueError('invalid attribute value: {}'.format(message))
 
-            super(ProcessBuilder, self).__setattr__(attr, value)
+            super(ProcessBuilderInputDict, self).__setattr__(attr, value)
 
     def __repr__(self):
         return dict(self).__repr__()
 
     def __dir__(self):
-        return super(ProcessBuilder, self).__dir__() + ['launch']
+        return super(ProcessBuilderInputDict, self).__dir__()
 
-    def launch(self, daemon=True):
-        """
-        Launch the process taking the internal attributes dictionary as the inputs dictionary, omitting
-        those keys that have not been explicitly set by the user. Setting the argument daemon to False
-        will run the Process blocking in the local interpreter
+    def _todict(self):
+        result = {}
+        for name, value in self.items():
+            if isinstance(value, ProcessBuilderInput):
+                continue
+            elif isinstance(value, ProcessBuilderInputDict):
+                result[name] = value._todict()
+            else:
+                result[name] = value
+        return result
 
-        :param daemon: boolean, when True submits the Process to the daemon
-        """
-        inputs = {}
+class ProcessBuilder(ProcessBuilderInputDict):
 
-        for key, value in dict(self).iteritems():
-            if not isinstance(value, ProcessBuilderInput):
-                inputs[key] = value
-
-        if daemon is True:
-            node = submit(self._process_class, **inputs)
-            return node
-        else:
-            result = run(self._process_class, **inputs)
-            return result
-
-
-class JobProcessBuilder(ProcessBuilder):
-
-    def launch(self, daemon=True, test=False):
-        """
-        Launch the process taking the internal attributes dictionary as the inputs dictionary, omitting
-        those keys that have not been explicitly set by the user. Setting the argument daemon to False
-        will run the Process blocking in the local interpreter
-
-        :param daemon: boolean, when True submits the Process to the daemon
-        :param test: boolean, when True will not actually submit the JobProcess but will create a temporary
-            folder in the current folder with the calculation files that would be created in an actual launch
-        """
-        inputs = AttributeDict()
-
-        for key, value in dict(self).iteritems():
-            if not isinstance(value, ProcessBuilderInput):
-                inputs[key] = value
-
-        if test is True:
-            inputs.store_provenance = False
-            process = _object_factory(self._process_class, inputs=inputs)
-            process.calc.submit_test()
-            return process.calc
-
-        if daemon is True:
-            node = submit(self._process_class, **inputs)
-            return node
-        else:
-            result = run(self._process_class, **inputs)
-            return result
+    def __init__(self, process_class):
+        self._process_class = process_class
+        self._process_spec = self._process_class.spec()
+        super(ProcessBuilder, self).__init__(port_namespace=self._process_spec.inputs)

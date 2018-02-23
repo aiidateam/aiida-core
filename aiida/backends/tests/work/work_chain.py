@@ -16,7 +16,7 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.orm.data.base import Int, Str, Bool
+from aiida.orm.data.base import Int, Str, Bool, Float
 from aiida.work.utils import ProcessStack
 from aiida.work.class_loader import CLASS_LOADER
 from aiida.workflows.wf_demo import WorkflowDemo
@@ -807,3 +807,176 @@ class TestSerializeWorkChain(AiidaTestCase):
                 assert self.inputs.test == self.inputs.reference
 
         work.launch.run(TestSerializeWorkChain, test=Str, reference=Str('aiida.orm.data.base.Str'))
+
+
+class GrandParentExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(GrandParentExposeWorkChain, cls).define(spec)
+
+        spec.expose_inputs(ParentExposeWorkChain, namespace='sub.sub')
+        spec.expose_outputs(ParentExposeWorkChain, namespace='sub.sub')
+
+        spec.outline(cls.do_run, cls.finalize)
+
+    def do_run(self):
+        return ToContext(child=self.submit(
+            ParentExposeWorkChain,
+            **self.exposed_inputs(ParentExposeWorkChain, namespace='sub.sub')
+        ))
+
+    def finalize(self):
+        self.out_many(
+            self.exposed_outputs(
+                self.ctx.child,
+                ParentExposeWorkChain,
+                namespace='sub.sub'
+            )
+        )
+
+class ParentExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ParentExposeWorkChain, cls).define(spec)
+
+        spec.expose_inputs(ChildExposeWorkChain, include=['a'])
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            exclude=['a'],
+            namespace='sub_1',
+        )
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            include=['b'],
+            namespace='sub_2',
+        )
+        spec.expose_inputs(
+            ChildExposeWorkChain,
+            include=['c'],
+            namespace='sub_2.sub_3',
+        )
+
+        spec.expose_outputs(ChildExposeWorkChain, include=['a'])
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            exclude=['a'],
+            namespace='sub_1'
+        )
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            include=['b'],
+            namespace='sub_2'
+        )
+        spec.expose_outputs(
+            ChildExposeWorkChain,
+            include=['c'],
+            namespace='sub_2.sub_3'
+        )
+
+        spec.outline(
+            cls.start_children,
+            cls.finalize
+        )
+
+    def start_children(self):
+        child_1 = self.submit(
+            ChildExposeWorkChain,
+            a=self.exposed_inputs(ChildExposeWorkChain)['a'],
+            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
+        )
+        child_2 = self.submit(
+            ChildExposeWorkChain,
+            **self.exposed_inputs(
+                ChildExposeWorkChain,
+                namespace='sub_2.sub_3',
+            )
+        )
+        return ToContext(child_1=child_1, child_2=child_2)
+
+    def finalize(self):
+        exposed_1 = self.exposed_outputs(
+            self.ctx.child_1,
+            ChildExposeWorkChain,
+            namespace='sub_1',
+            agglomerate=False
+        )
+        self.out_many(exposed_1)
+        exposed_2 = self.exposed_outputs(
+            self.ctx.child_2,
+            ChildExposeWorkChain,
+            namespace='sub_2.sub_3'
+        )
+        self.out_many(exposed_2)
+
+class ChildExposeWorkChain(work.WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ChildExposeWorkChain, cls).define(spec)
+
+        spec.input('a', valid_type=Int)
+        spec.input('b', valid_type=Float)
+        spec.input('c', valid_type=Bool)
+
+        spec.output('a', valid_type=Float)
+        spec.output('b', valid_type=Float)
+        spec.output('c', valid_type=Bool)
+
+        spec.outline(cls.do_run)
+
+    def do_run(self):
+        self.out('a', self.inputs.a + self.inputs.b)
+        self.out('b', self.inputs.b)
+        self.out('c', self.inputs.c)
+
+class TestWorkChainExpose(AiidaTestCase):
+    """
+    Test the expose inputs / outputs functionality
+    """
+
+    def setUp(self):
+        super(TestWorkChainExpose, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestWorkChainExpose, self).tearDown()
+        work.set_runner(None)
+        self.runner.close()
+        self.runner = None
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_expose(self):
+        res = work.launch.run(
+            ParentExposeWorkChain,
+            a=Int(1),
+            sub_1={'b': Float(2.3), 'c': Bool(True)},
+            sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+        )
+        self.assertEquals(
+            res,
+            {
+                'a': Float(2.2),
+                'sub_1.b': Float(2.3), 'sub_1.c': Bool(True),
+                'sub_2.b': Float(1.2), 'sub_2.sub_3.c': Bool(False)
+            }
+        )
+
+    def test_nested_expose(self):
+        res = work.launch.run(
+            GrandParentExposeWorkChain,
+            sub=dict(
+                sub=dict(
+                    a=Int(1),
+                    sub_1={'b': Float(2.3), 'c': Bool(True)},
+                    sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+                )
+            )
+        )
+        self.assertEquals(
+            res,
+            {
+                'sub.sub.a': Float(2.2),
+                'sub.sub.sub_1.b': Float(2.3), 'sub.sub.sub_1.c': Bool(True),
+                'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
+            }
+        )

@@ -27,6 +27,9 @@ This section describes the different classes related to workflows, workfunctions
 .. automodule:: aiida.work.process_builder
    :members:
 
+.. automodule:: aiida.work.process_spec
+    :members:
+
 .. automodule:: aiida.work.processes
    :members:
 

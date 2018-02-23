@@ -34,7 +34,7 @@ class CalculationFuture(Future):
             "Must poll or have a communicator to use"
 
         calc_node = aiida.orm.load_node(pk=pk)
-        if calc_node.has_finished():
+        if calc_node.is_terminated:
             self.set_result(calc_node)
         else:
             self._communicator = communicator
@@ -62,7 +62,7 @@ class CalculationFuture(Future):
 
     @tornado.gen.coroutine
     def _poll_calculation(self, calc_node, poll_interval):
-        while not self.done() and not calc_node.has_finished():
+        while not self.done() and not calc_node.is_terminated:
             yield tornado.gen.sleep(poll_interval)
 
         if not self.done():

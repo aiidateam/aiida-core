@@ -694,8 +694,12 @@ class Code(VerdiCommandWithSubcommands):
         if plugin_filter is not None:
             qb_code_filters['attributes.input_plugin'] = plugin_filter
 
+        # If were not showing all, only show those codes without 'hidden' extra or where it is False
         if not reveal_filter:
-            qb_code_filters['attributes.hidden'] = {"~==": True}
+            qb_code_filters['or'] = [
+                {'extras': {'!has_key': Code.HIDDEN_KEY}},
+                {'extras.{}'.format(Code.HIDDEN_KEY): {'==': False}}
+            ]
 
         print "# List of configured codes:"
         print "# (use 'verdi code show CODEID' to see the details)"
@@ -716,6 +720,7 @@ class Code(VerdiCommandWithSubcommands):
             qb.append(Computer, computer_of="code",
                       project=["name"],
                       filters=qb_computer_filters)
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
         # If there is no filter on computers
@@ -733,6 +738,7 @@ class Code(VerdiCommandWithSubcommands):
                       filters=qb_user_filters)
             qb.append(Computer, computer_of="code",
                       project=["name"])
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
             # Now print all the local codes. To get the local codes we ask
@@ -753,6 +759,7 @@ class Code(VerdiCommandWithSubcommands):
             qb.append(User, creator_of="code",
                       project=["email"],
                       filters=qb_user_filters)
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
     @staticmethod
@@ -855,17 +862,19 @@ class Code(VerdiCommandWithSubcommands):
 
         code = set_params.create_code()
 
-        # Enforcing the code to be not hidden.
-        code._reveal()
-
         try:
             code.store()
         except ValidationError as e:
             print "Unable to store the computer: {}. Exiting...".format(e.message)
             sys.exit(1)
 
+        # Enforcing the code to be not hidden.
+        code._reveal()
+
         print "Code '{}' successfully stored in DB.".format(code.label)
         print "pk: {}, uuid: {}".format(code.pk, code.uuid)
+
+        return code
 
     def code_rename(self, *args):
         import argparse

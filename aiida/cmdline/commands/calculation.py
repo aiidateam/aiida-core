@@ -712,7 +712,7 @@ class Calculation(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.backends.utils import get_automatic_user
-        from aiida.backends.utils import get_authinfo
+        from aiida.orm.authinfo import AuthInfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
         from aiida.orm.user import User as OrmUser
@@ -789,8 +789,8 @@ class Calculation(VerdiCommandWithSubcommands):
         remotes = {}
         for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': get_authinfo(
-                computer=computer, aiidauser=user._dbuser).get_transport(),
+            remotes[computer.name] = {'transport': AuthInfo.get(
+                computer=computer, user=user).get_transport(),
                                       'computer': computer,
             }
 

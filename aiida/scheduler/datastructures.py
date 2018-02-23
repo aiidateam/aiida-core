@@ -16,11 +16,9 @@ the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
 from __future__ import division
-from aiida.common.extendeddicts import (
-    DefaultFieldsAttributeDict, Enumerate)
+from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
 
 from aiida.common import aiidalogger
-
 
 scheduler_logger = aiidalogger.getChild('scheduler')
 
@@ -113,7 +111,8 @@ class NodeNumberJobResource(JobResource):
         Return a list of valid keys to be passed to the __init__
         """
         return super(NodeNumberJobResource, cls).get_valid_keys() + [
-            "tot_num_mpiprocs", "default_mpiprocs_per_machine"]
+            "tot_num_mpiprocs", "default_mpiprocs_per_machine"
+        ]
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -138,7 +137,8 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("num_machines must an integer")
 
         try:
-            default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine')
+            default_mpiprocs_per_machine = kwargs.pop(
+                'default_mpiprocs_per_machine')
             if default_mpiprocs_per_machine is not None:
                 default_mpiprocs_per_machine = int(default_mpiprocs_per_machine)
         except KeyError:
@@ -147,7 +147,8 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("default_mpiprocs_per_machine must an integer")
 
         try:
-            num_mpiprocs_per_machine = int(kwargs.pop('num_mpiprocs_per_machine'))
+            num_mpiprocs_per_machine = int(
+                kwargs.pop('num_mpiprocs_per_machine'))
         except KeyError:
             num_mpiprocs_per_machine = None
         except ValueError:
@@ -161,14 +162,16 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("tot_num_mpiprocs must an integer")
 
         try:
-            self.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
+            self.num_cores_per_machine = int(
+                kwargs.pop('num_cores_per_machine'))
         except KeyError:
             self.num_cores_per_machine = None
         except ValueError:
             raise ValueError("num_cores_per_machine must an integer")
 
         try:
-            self.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
+            self.num_cores_per_mpiproc = int(
+                kwargs.pop('num_cores_per_mpiproc'))
         except KeyError:
             self.num_cores_per_mpiproc = None
         except ValueError:
@@ -184,8 +187,10 @@ class NodeNumberJobResource(JobResource):
                 num_mpiprocs_per_machine = default_mpiprocs_per_machine
 
             if num_mpiprocs_per_machine is None or tot_num_mpiprocs is None:
-                raise TypeError("At least two among num_machines, "
-                                "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
+                raise TypeError(
+                    "At least two among num_machines, "
+                    "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified"
+                )
             else:
                 # To avoid divisions by zero
                 if num_mpiprocs_per_machine <= 0:
@@ -202,8 +207,10 @@ class NodeNumberJobResource(JobResource):
 
             if num_mpiprocs_per_machine is None:
                 if tot_num_mpiprocs is None:
-                    raise TypeError("At least two among num_machines, "
-                                    "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
+                    raise TypeError(
+                        "At least two among num_machines, "
+                        "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified"
+                    )
                 else:
                     # To avoid divisions by zero
                     if num_machines <= 0:
@@ -215,10 +222,11 @@ class NodeNumberJobResource(JobResource):
 
         if tot_num_mpiprocs is not None:
             if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
-                raise ValueError("tot_num_mpiprocs must be equal to "
-                                 "num_mpiprocs_per_machine * num_machines, and in particular it "
-                                 "should be a multiple of num_mpiprocs_per_machine and/or "
-                                 "num_machines")
+                raise ValueError(
+                    "tot_num_mpiprocs must be equal to "
+                    "num_mpiprocs_per_machine * num_machines, and in particular it "
+                    "should be a multiple of num_mpiprocs_per_machine and/or "
+                    "num_machines")
 
         if self.num_mpiprocs_per_machine <= 0:
             raise ValueError("num_mpiprocs_per_machine must be >= 1")
@@ -258,17 +266,21 @@ class ParEnvJobResource(JobResource):
         try:
             self.parallel_env = str(kwargs.pop('parallel_env'))
         except (KeyError, TypeError, ValueError):
-            raise TypeError("'parallel_env' must be specified and must be a string")
+            raise TypeError(
+                "'parallel_env' must be specified and must be a string")
 
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError):
-            raise TypeError("tot_num_mpiprocs must be specified and must be an integer")
+            raise TypeError(
+                "tot_num_mpiprocs must be specified and must be an integer")
 
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+        default_mpiprocs_per_machine = kwargs.pop(
+            'default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError("default_mpiprocs_per_machine cannot be set "
-                                     "for schedulers that use ParEnvJobResource")
+            raise ConfigurationError(
+                "default_mpiprocs_per_machine cannot be set "
+                "for schedulers that use ParEnvJobResource")
 
         if self.tot_num_mpiprocs <= 0:
             raise ValueError("tot_num_mpiprocs must be >= 1")
@@ -475,27 +487,13 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``finish_time``: the absolute time at which the job first entered the
          'finished' state, of type datetime.datetime
     """
-    _default_fields = (
-        'job_id',
-        'title',
-        'exit_status',
-        'terminating_signal',
-        'annotation',
-        'job_state',
-        'job_substate',
-        'allocated_machines',
-        'job_owner',
-        'num_mpiprocs',
-        'num_cpus',
-        'num_machines',
-        'queue_name',
-        'wallclock_time_seconds',
-        'requested_wallclock_time_seconds',
-        'cpu_time',
-        'submission_time',
-        'dispatch_time',
-        'finish_time'
-    )
+    _default_fields = ('job_id', 'title', 'exit_status', 'terminating_signal',
+                       'annotation', 'job_state', 'job_substate',
+                       'allocated_machines', 'job_owner', 'num_mpiprocs',
+                       'num_cpus', 'num_machines', 'queue_name',
+                       'wallclock_time_seconds',
+                       'requested_wallclock_time_seconds', 'cpu_time',
+                       'submission_time', 'dispatch_time', 'finish_time')
 
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and
@@ -522,11 +520,15 @@ class JobInfo(DefaultFieldsAttributeDict):
             scheduler_logger.debug("Datetime to serialize in JobInfo is naive, "
                                    "this should be fixed!")
             # v = v.replace(tzinfo = pytz.utc)
-            return {'date': v.strftime(
-                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
+            return {
+                'date': v.strftime('%Y-%m-%dT%H:%M:%S.%f'),
+                'timezone': None
+            }
         else:
-            return {'date': v.astimezone(pytz.utc).strftime(
-                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
+            return {
+                'date': v.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f'),
+                'timezone': 'UTC'
+            }
 
     def _deserialize_date(self, v):
         import datetime
@@ -537,17 +539,15 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         if v['timezone'] is None:
             # naive date
-            return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f')
+            return datetime.datetime.strptime(v['date'], '%Y-%m-%dT%H:%M:%S.%f')
         elif v['timezone'] == 'UTC':
-            return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
-                tzinfo=pytz.utc)
+            return datetime.datetime.strptime(
+                v['date'], '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
         else:
             # Try your best
-            return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
-                tzinfo=pytz.timezone(v['timezone']))
+            return datetime.datetime.strptime(
+                v['date'], '%Y-%m-%dT%H:%M:%S.%f').replace(
+                    tzinfo=pytz.timezone(v['timezone']))
 
     def serialize_field(self, value, field_type):
         if field_type is None:
@@ -561,16 +561,18 @@ class JobInfo(DefaultFieldsAttributeDict):
         if field_type is None:
             return value
 
-        deserializer_method = getattr(self, "_deserialize_{}".format(field_type))
+        deserializer_method = getattr(self,
+                                      "_deserialize_{}".format(field_type))
 
         return deserializer_method(value)
 
     def serialize(self):
         import json
 
-        ser_data = {k: self.serialize_field(
-            v, self._special_serializers.get(k, None))
-                    for k, v in self.iteritems()}
+        ser_data = {
+            k: self.serialize_field(v, self._special_serializers.get(k, None))
+            for k, v in self.iteritems()
+        }
 
         return json.dumps(ser_data)
 
@@ -580,5 +582,6 @@ class JobInfo(DefaultFieldsAttributeDict):
         deser_data = json.loads(data)
 
         for k, v in deser_data.iteritems():
-            self[k] = self.deserialize_field(
-                v, self._special_serializers.get(k, None))
+            self[k] = self.deserialize_field(v,
+                                             self._special_serializers.get(
+                                                 k, None))

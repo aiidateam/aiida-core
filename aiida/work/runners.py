@@ -265,7 +265,7 @@ class Runner(object):
             self._loop.call_later(self._poll_interval, self._poll_legacy_wf, workflow, callback)
 
     def _poll_calculation(self, calc_node, callback):
-        if calc_node.has_finished():
+        if calc_node.is_terminated:
             self._loop.add_callback(callback, calc_node.pk)
         else:
             self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node, callback)

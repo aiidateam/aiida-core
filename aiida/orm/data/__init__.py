@@ -100,38 +100,6 @@ class Data(Node):
             return None
 
     @override
-    def _set_attr(self, key, value, **kwargs):
-        """
-        Set a new attribute to the Node (in the DbAttribute table).
-
-        :param str key: key name
-        :param value: its value
-        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored)
-
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
-        """
-        if self.is_stored:
-            raise ModificationNotAllowed(
-                "Cannot change the attributes of a stored data node.")
-        super(Data, self)._set_attr(key, value, **kwargs)
-
-    @override
-    def _del_attr(self, key):
-        """
-        Delete an attribute.
-
-        :param key: attribute to delete.
-        :raise AttributeError: if key does not exist.
-        :raise ModificationNotAllowed: if the Node was already stored.
-        """
-        if self.is_stored:
-            raise ModificationNotAllowed(
-                "Cannot delete the attributes of a stored data node.")
-        super(Data, self)._del_attr(key)
-
-    @override
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
         from aiida.orm.calculation import Calculation
 

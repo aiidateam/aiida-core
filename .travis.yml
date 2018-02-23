@@ -1,7 +1,5 @@
-# Next two to activate the beta Ubuntu Trusty machine without sudo
-# But apparently, SSH does not work, to check
-#dist: trusty
-#sudo: false
+dist: trusty
+sudo: required
 
 language: python
 
@@ -16,8 +14,8 @@ services:
     - docker
 
 addons:
-    postgresql: "9.4"
-#  postgresql: "9.5" # Available in Trusty only
+    postgresql: "9.5"
+
     apt:
         packages:
             - texlive-base
@@ -61,10 +59,6 @@ env:
 
 before_script:
     - .travis-data/setup_profiles.sh
-    # make the time between tests shorter to speed-up tests
-    # This script might need to be adapted when changing the logic
-    # of the daemon loops or the schema of the config.json file
-    - if [ "$TEST_TYPE" == "tests" ] ; then .travis-data/set_daemon_times.py $TEST_AIIDA_BACKEND ; fi
     - .travis-data/before_script.sh
 
 script: .travis-data/test_script.sh

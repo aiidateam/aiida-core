@@ -11,10 +11,8 @@ import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
-from aiida.transport.queue import TransportQueue
 from aiida.transport.transport import Transport
 from aiida.transport.util import TransportFactory
-
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination,
@@ -31,11 +29,5 @@ def copy_from_remote_to_remote(transportsource, transportdestination,
 
     .. note:: it uses the method transportsource.copy_from_remote_to_remote
     """
-    transportsource.copy_from_remote_to_remote(transportdestination,
-                                               remotesource, remotedestination,
-                                               **kwargs)
-
-_GLOBAL_TRANSPORT_QUEUE = TransportQueue()
-
-def get_transport_queue():
-    return _GLOBAL_TRANSPORT_QUEUE
+    transportsource.copy_from_remote_to_remote(
+        transportdestination, remotesource, remotedestination, **kwargs)

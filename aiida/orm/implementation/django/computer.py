@@ -29,11 +29,11 @@ class Computer(AbstractComputer):
 
     @property
     def pk(self):
-        return self._dbcomputer.pk
+        return self.dbcomputer.pk
 
     @property
     def id(self):
-        return self._dbcomputer.pk
+        return self.dbcomputer.pk
 
     def __init__(self, **kwargs):
         super(Computer, self).__init__()
@@ -143,7 +143,7 @@ class Computer(AbstractComputer):
         if self.to_be_stored:
             raise InvalidOperation(
                 "You can copy a computer only after having stored it")
-        newdbcomputer = DbComputer.objects.get(pk=self.dbcomputer.pk)
+        newdbcomputer = DbComputer.objects.get(pk=self.pk)
         newdbcomputer.pk = None
 
         newobject = self.__class__(newdbcomputer)
@@ -152,6 +152,14 @@ class Computer(AbstractComputer):
 
     @property
     def dbcomputer(self):
+        """
+        Return the DbComputer. If already saved, reloads it from the DB.
+
+        :return: Return the DbComputer
+        """
+        if self._dbcomputer.pk:
+            self._dbcomputer = DbComputer.objects.get(pk=self._dbcomputer.pk)
+
         return self._dbcomputer
 
     def store(self):
@@ -163,7 +171,7 @@ class Computer(AbstractComputer):
             # transactions are needed here for Postgresql:
             # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
             sid = transaction.savepoint()
-            self.dbcomputer.save()
+            self._dbcomputer.save()
             transaction.savepoint_commit(sid)
         except IntegrityError:
             transaction.savepoint_rollback(sid)
@@ -191,11 +199,13 @@ class Computer(AbstractComputer):
         return json.loads(self.dbcomputer.metadata)
 
     def _set_metadata(self, metadata_dict):
+        # When setting, use the uncached _dbcomputer
+
         # if not self.to_be_stored:
         #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
-        self.dbcomputer.metadata = json.dumps(metadata_dict)
+        self._dbcomputer.metadata = json.dumps(metadata_dict)
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_transport_params(self):
         try:
@@ -206,13 +216,15 @@ class Computer(AbstractComputer):
                     self.hostname))
 
     def set_transport_params(self, val):
+        # When setting, use the uncached _dbcomputer
+
         # if self.to_be_stored:
         try:
-            self.dbcomputer.transport_params = json.dumps(val)
+            self._dbcomputer.transport_params = json.dumps(val)
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_workdir(self):
         try:
@@ -243,25 +255,28 @@ class Computer(AbstractComputer):
         return self.dbcomputer.name
 
     def set_name(self, val):
-        self.dbcomputer.name = val
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.name = val
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_hostname(self):
         return self.dbcomputer.hostname
 
     def set_hostname(self, val):
-        self.dbcomputer.hostname = val
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.hostname = val
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_description(self):
         return self.dbcomputer.description
 
     def set_description(self, val):
-        self.dbcomputer.description = val
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.description = val
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_calculations_on_computer(self):
         from aiida.backends.djsite.db.models import DbNode
@@ -271,53 +286,34 @@ class Computer(AbstractComputer):
     def is_enabled(self):
         return self.dbcomputer.enabled
 
-    def get_dbauthinfo(self, user):
-        from aiida.backends.djsite.db.models import DbAuthInfo
-        try:
-            return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer,
-                                          aiidauser=user)
-        except ObjectDoesNotExist:
-            raise NotExistent("The user '{}' is not configured for "
-                              "computer '{}'".format(
-                user.email, self.name))
-
-    def is_user_configured(self, user):
-        try:
-            self.get_dbauthinfo(user)
-            return True
-        except NotExistent:
-            return False
-
-    def is_user_enabled(self, user):
-        try:
-            dbauthinfo = self.get_dbauthinfo(user)
-            return dbauthinfo.enabled
-        except NotExistent:
-            # Return False if the user is not configured (in a sense,
-            # it is disabled for that user)
-            return False
-
     def set_enabled_state(self, enabled):
-        self.dbcomputer.enabled = enabled
+        """
+        Set the enabled state.
+
+        :param enabled: the new state
+        """
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.enabled = enabled
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_scheduler_type(self):
         return self.dbcomputer.scheduler_type
 
     def set_scheduler_type(self, val):
-
-        self.dbcomputer.scheduler_type = val
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.scheduler_type = val
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
     def get_transport_type(self):
         return self.dbcomputer.transport_type
 
     def set_transport_type(self, val):
-        self.dbcomputer.transport_type = val
+        # When setting, use the uncached _dbcomputer
+        self._dbcomputer.transport_type = val
         if not self.to_be_stored:
-            self.dbcomputer.save()
+            self._dbcomputer.save()
 
 
 class Util(ComputerUtil):

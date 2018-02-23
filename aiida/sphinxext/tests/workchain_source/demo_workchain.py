@@ -1,5 +1,9 @@
 """This module defines an example workchain for the aiida-workchain documentation directive."""
 
+# This import is here to test an error which is triggered if
+# can_document_member raises an exception.
+import re
+
 from aiida.work.workchain import WorkChain
 from aiida.orm.data.base import Int, Float, Bool
 

@@ -355,20 +355,6 @@ class CifData(SinglefileData):
     _parse_policies = ['eager', 'lazy']
 
     @property
-    def parse_policy(self):
-        try:
-            return self._parse_policy
-        except AttributeError:
-            return self._parse_policies[0]
-
-    @property
-    def scan_type(self):
-        try:
-            return self._scan_type
-        except AttributeError:
-            return self._scan_types[0]
-
-    @property
     def _set_defaults(self):
         """
         Add defaults for some attributes.
@@ -457,6 +443,7 @@ class CifData(SinglefileData):
             else:
                 return cifs[0], False
 
+    # pylint: disable=attribute-defined-outside-init
     @property
     def ase(self):
         """
@@ -507,7 +494,7 @@ class CifData(SinglefileData):
                 raise ImportError(
                     str(e) + '. You need to install the PyCifRW package.')
             self._values = CifFile.ReadCif(
-                self.get_file_abs_path(), scantype=self.scan_type)
+                self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
         return self._values
 
     def set_values(self, values):
@@ -525,9 +512,13 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
+        # Note: this will set attributes, if specified as kwargs
         super(CifData, self).__init__(**kwargs)
         self._values = None
-        self._ase = None
+
+        if not self.is_stored and self.get_attr('parse_policy') == 'eager':
+            self._set_attr('formulae', self.get_formulae())
+            self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     # pylint: disable=arguments-differ
     def store(self, *args, **kwargs):
@@ -537,6 +528,7 @@ class CifData(SinglefileData):
         self._set_attr('md5', self.generate_md5())
         return super(CifData, self).store(*args, **kwargs)
 
+    # pylint: disable=attribute-defined-outside-init
     def set_file(self, filename):
         """
         Set the file.
@@ -554,10 +546,6 @@ class CifData(SinglefileData):
         self._values = None
         self._ase = None
 
-        if self.parse_policy == 'eager':
-            self._set_attr('formulae', self.get_formulae())
-            self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
-
     def set_scan_type(self, scan_type):
         """
         Set the scan_type for PyCifRW.
@@ -569,7 +557,7 @@ class CifData(SinglefileData):
         :param scan_type: Either 'default' or 'flex' (see _scan_types)
         """
         if scan_type in self._scan_types:
-            self._set_attr('_scan_type', scan_type)
+            self._set_attr('scan_type', scan_type)
         else:
             raise ValueError("Got unknown scan_type {}".format(scan_type))
 
@@ -581,7 +569,7 @@ class CifData(SinglefileData):
             or 'lazy' (defer parsing until needed)
         """
         if parse_policy in self._parse_policies:
-            self._set_attr('_parse_policy', parse_policy)
+            self._set_attr('parse_policy', parse_policy)
         else:
             raise ValueError("Got unknown parse_policy {}".format(parse_policy))
 

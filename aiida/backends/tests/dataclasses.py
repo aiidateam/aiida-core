@@ -700,6 +700,47 @@ _publ_section_title                     'Test CIF'
             flex = CifData(file=f.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_parse_policy(self):
+        """
+        Test that loading of CIF file occurs as defined by parse_policy.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 0
+                O 0.5 0.5 0.5 .
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+
+            # this will parse the cif
+            eager = CifData(file=f.name)
+            self.assertIsNot(eager._values, None)
+
+            # this should not parse the cif
+            lazy = CifData(file=f.name, parse_policy='lazy')
+            self.assertIs(lazy._values, None)
+
+            # this should parse the cif
+            lazy.get_formulae()
+            self.assertIsNot(lazy._values, None)
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

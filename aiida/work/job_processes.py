@@ -386,8 +386,7 @@ class JobProcess(processes.Process):
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
-        # Done, so return the output
-        return self.outputs
+        return
 
 
 class ContinueJobCalculation(JobProcess):

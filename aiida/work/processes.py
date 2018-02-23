@@ -206,14 +206,21 @@ class Process(plumpy.Process):
         self.report(traceback.format_exc())
 
     @override
+    def on_finish(self, result):
+        """
+        Set the finish status on the Calculation node
+        """
+        super(Process, self).on_finish(result)
+        self.calc._set_finish_status(result)
+
+    @override
     def on_fail(self, exc_info):
+        """
+        Format the exception info into a string and log it as an error
+        """
         super(Process, self).on_fail(exc_info)
-
-        exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))
-
-        exception = exc_info[1]
-        self.calc._set_attr(WorkCalculation.FAILED_KEY, True)
+        exception = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
+        self.logger.error('{} failed:\n{}'.format(self.pid, ''.join(exception)))
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -652,4 +659,5 @@ class FunctionProcess(Process):
                     "Must be a Data type or a Mapping of {{string: Data}}".
                         format(result.__class__))
 
-        return result
+        # Execution successful so we return exit code (finish status) 0
+        return 0

@@ -73,6 +73,16 @@ class TestWf(AiidaTestCase):
 
         result = add_mul_wf(Int(3), Int(4), Int(5))
 
+    def test_finish_status(self):
+        """
+        If a workfunction reaches the FINISHED process state, it has to have been successful
+        which means that the finish status always has to be 0
+        """
+        result, calculation = single_return_value.run_get_node()
+        self.assertEquals(calculation.finish_status, 0)
+        self.assertEquals(calculation.is_finished_ok, True)
+        self.assertEquals(calculation.is_failed, False)
+
     def test_hashes(self):
         result, w1 = run_get_node(return_input, inp=Int(2))
         result, w2 = run_get_node(return_input, inp=Int(2))

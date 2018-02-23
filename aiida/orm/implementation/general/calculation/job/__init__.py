@@ -50,13 +50,12 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classproperty
     def _hash_ignored_attributes(cls):
-        # _updatable_attributes are ignored automatically.
-        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + (
             'queue_name',
             'priority',
             'max_wallclock_seconds',
             'max_memory_kb',
-        ]
+        )
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
         return super(AbstractJobCalculation, self).get_hash(

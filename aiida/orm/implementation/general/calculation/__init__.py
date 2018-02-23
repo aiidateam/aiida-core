@@ -44,13 +44,6 @@ class AbstractCalculation(Sealable):
         )
 
     @classproperty
-    def _hash_ignored_attributes(cls):
-        return super(AbstractCalculation, cls)._hash_ignored_attributes + [
-            '_sealed',
-            '_finished',
-        ]
-
-    @classproperty
     def _use_methods(cls):
         """
         Return the list of valid input nodes that can be set using the

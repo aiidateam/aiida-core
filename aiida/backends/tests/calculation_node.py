@@ -7,12 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for calculation nodes, attributes and links
-"""
 
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import ModificationNotAllowed
+from aiida.orm.calculation import Calculation
 
 
 class TestCalcNode(AiidaTestCase):
@@ -23,24 +21,25 @@ class TestCalcNode(AiidaTestCase):
     boolval = True
     intval = 123
     floatval = 4.56
-    stringval = "aaaa"
-    # A recursive dictionary
-    dictval = {'num': 3, 'something': 'else', 'emptydict': {},
-               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
-                             'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}}}
-    listval = [1, "s", True, None]
-    emptydict = {}
-    emptylist = []
+    stringval = 'aaaa'
+    listval = [1, 's', True, None]
+    dictval = {
+        'num': 3, 'something': 'else', 'emptydict': {},
+        'recursive': {
+            'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
+            'e': {
+                'z': 'z', 'x': None, 'xx': {}, 'yy': []
+            }
+        }
+    }
+    stateval = 'RUNNING'
 
-    def test_updatable_not_copied(self):
+    def test_calculation_updatable_not_copied(self):
         """
-        Checks the versioning.
+        Check that updatable attributes of Calculation are not copied
         """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
-        a._set_attr('state', 267)
+        a = Calculation()
+        a._set_attr('state', self.stateval)
         a.store()
         b = a.copy()
 
@@ -48,14 +47,11 @@ class TestCalcNode(AiidaTestCase):
         with self.assertRaises(AttributeError):
             b.get_attr('state')
 
-    def test_delete_updatable_attributes(self):
+    def test_calculation_updatable_attribute(self):
         """
-        Checks the versioning.
+        Check that updatable attributes and only those can be mutated for a stored but unsealed Calculation
         """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
+        a = Calculation()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -63,102 +59,35 @@ class TestCalcNode(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': 267,  # updatable
+            'state': self.stateval
         }
 
         for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
 
         # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
+        self.assertEquals(a.get_attr('state'), self.stateval)
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
+        self.assertEquals(a.get_attr('state'), self.stateval)
 
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a.dbnode.nodeversion, 1)
-
-        # I should be able to delete the attribute
+        # I should be able to mutate the updatable attribute but not the others
+        a._set_attr('state', 'FINISHED')
         a._del_attr('state')
 
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, 2)
-
-        with self.assertRaises(AttributeError):
-            # I check that I cannot modify this attribute
-            _ = a.get_attr('state')
-
-    def test_versioning_and_updatable_attributes(self):
-        """
-        Checks the versioning.
-        """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
-        attrs_to_set = {
-            'bool': self.boolval,
-            'integer': self.intval,
-            'float': self.floatval,
-            'string': self.stringval,
-            'dict': self.dictval,
-            'list': self.listval,
-            'state': 267,
-        }
-
-        expected_version = 1
-
-        for k, v in attrs_to_set.iteritems():
-            a._set_attr(k, v)
-
-        # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
-
-        a.store()
-
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
-
-        # Sealing ups the version number
-        a.seal()
-        expected_version += 1
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
-
-        # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
-
-        # I check increment on new version
-        a.set_extra('a', 'b')
-        expected_version += 1
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
-
-        # I check that I can set this attribute
-        a._set_attr('state', 999)
-        expected_version += 1
-
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('bool', False)
 
         with self.assertRaises(ModificationNotAllowed):
-            # I check that I cannot modify this attribute
-            a._set_attr('otherattribute', 222)
+            a._del_attr('bool')
 
-        # I check that the counter was not incremented
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
+        a.seal()
 
-        # In both cases, the node version must increase
-        a.label = 'test'
-        expected_version += 1
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
+        # After sealing, even updatable attributes should be immutable
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('state', 'FINISHED')
 
-        a.description = 'test description'
-        expected_version += 1
-        self.assertEquals(a.dbnode.nodeversion, expected_version)
-
-        b = a.copy()
-        # updatable attributes are not copied
-        with self.assertRaises(AttributeError):
-            b.get_attr('state')
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('state')

@@ -25,6 +25,7 @@ from aiida.utils import timezone
 
 
 class JobCalculation(AbstractJobCalculation, Calculation):
+
     def _set_state(self, state):
         """
         Set the state of the calculation.

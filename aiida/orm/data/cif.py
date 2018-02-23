@@ -543,8 +543,11 @@ class CifData(SinglefileData):
                         self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
+
         self._values = None
         self._ase = None
+        self._set_attr('formulae', None)
+        self._set_attr('spacegroup_numbers', None)
 
     def set_scan_type(self, scan_type):
         """
@@ -575,7 +578,10 @@ class CifData(SinglefileData):
 
     def get_formulae(self, mode='sum'):
         """
-        Get the formula.
+        Return chemical formulae specified in CIF file.
+
+        Note: This does not compute the formula, it only reads it from the
+        appropriate tag. Use refine_inline to compute formulae.
         """
         formula_tag = "_chemical_formula_{}".format(mode)
         formulae = []

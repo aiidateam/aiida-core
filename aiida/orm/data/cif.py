@@ -515,10 +515,24 @@ class CifData(SinglefileData):
         # Note: this will set attributes, if specified as kwargs
         super(CifData, self).__init__(**kwargs)
         self._values = None
+        self._ase = None
 
-        if not self.is_stored and self.get_attr('parse_policy') == 'eager':
-            self.get_formulae()
-            self.get_spacegroup_numbers()
+        if not self.is_stored and 'file' in kwargs \
+           and self.get_attr('parse_policy') == 'eager':
+            self.parse()
+
+    def parse(self, scan_type=None):
+        """
+        Parses CIF file and sets attributes.
+
+        :param scan_type:  See set_scan_type
+        """
+        if scan_type is not None:
+            self.set_scan_type(scan_type)
+
+        # Note: this causes parsing, if not already parsed
+        self._set_attr('formulae', self.get_formulae())
+        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     # pylint: disable=arguments-differ
     def store(self, *args, **kwargs):
@@ -593,7 +607,6 @@ class CifData(SinglefileData):
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
 
-        self._set_attr('formulae', formulae)
         return formulae
 
     def get_spacegroup_numbers(self):
@@ -620,7 +633,6 @@ class CifData(SinglefileData):
                     pass
             spacegroup_numbers.append(spacegroup_number)
 
-        self._set_attr('spacegroup_numbers', spacegroup_numbers)
         return spacegroup_numbers
 
     def has_partial_occupancies(self):

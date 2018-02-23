@@ -775,10 +775,20 @@ _publ_section_title                     'Test CIF'
 
             # this should populate formulae
             f2 = a.get_formulae()
+            a.parse()
             self.assertIsNot(a.get_attr('formulae'), None)
 
-        self.assertNotEquals(f1, f2)
+            # empty cifdata should be possible
+            a = CifData()
+            # but it does not have a file
+            with self.assertRaises(AttributeError):
+                a.filename
+            #now it has
+            a.set_file(f.name)
+            a.parse()
+            a.filename
 
+        self.assertNotEquals(f1, f2)
 
 
 class TestKindValidSymbols(AiidaTestCase):

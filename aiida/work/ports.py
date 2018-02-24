@@ -41,6 +41,8 @@ class InputPort(WithSerializeFct, WithNonDb, ports.InputPort):
 
 class PortNamespace(WithNonDb, ports.PortNamespace):
     def serialize(self, mapping):
+        if mapping is None:
+            return
         result = {}
         for name, value in mapping.items():
             if name in self:

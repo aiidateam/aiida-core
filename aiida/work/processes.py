@@ -83,7 +83,7 @@ class Process(plumpy.Process):
         self._runner = runner if runner is not None else get_runner()
 
         super(Process, self).__init__(
-            inputs=inputs,
+            inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
             communicator=self.runner.communicator)

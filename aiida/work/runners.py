@@ -91,7 +91,7 @@ def _create_inputs_dictionary(process, *args, **kwargs):
     if utils.is_workfunction(process):
         inputs = convert_to_inputs(process, *args, **kwargs)
     else:
-        inputs =process.spec().inputs.serialize(kwargs)
+        inputs = kwargs
         assert len(args) == 0, "Processes do not take positional arguments"
 
     return inputs

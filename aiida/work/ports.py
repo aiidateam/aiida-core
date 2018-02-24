@@ -40,4 +40,12 @@ class InputPort(WithSerializeFct, WithNonDb, ports.InputPort):
 
 
 class PortNamespace(WithNonDb, ports.PortNamespace):
-    pass
+    def serialize(self, mapping):
+        result = {}
+        for name, value in mapping.items():
+            if name in self:
+                port = self[name]
+                result[name] = port.serialize(value)
+            else:
+                result[name] = value
+        return result

@@ -6,6 +6,7 @@ import plumpy
 import plumpy.rmq
 
 import aiida.orm
+from . import ports
 from . import class_loader
 from . import futures
 from . import persistence
@@ -90,11 +91,10 @@ def _create_inputs_dictionary(process, *args, **kwargs):
     if utils.is_workfunction(process):
         inputs = convert_to_inputs(process, *args, **kwargs)
     else:
-        inputs = kwargs
+        inputs =process.spec().inputs.serialize(kwargs)
         assert len(args) == 0, "Processes do not take positional arguments"
 
     return inputs
-
 
 class Runner(object):
     _persister = None

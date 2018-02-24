@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.base import Int
+from aiida.orm.data.int import Int
 from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 

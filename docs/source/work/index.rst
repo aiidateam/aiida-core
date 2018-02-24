@@ -26,7 +26,7 @@ Workfunctions
 A workfunction is simply a python function with a decorator and a couple of constraints on its inputs and return value.
 Let's dive in.
 
->>> from aiida.orm.data.base import Int
+>>> from aiida.orm.data.int import Int
 >>> from aiida.work.workfunctions import workfunctions as wf
 >>>
 >>> @wf
@@ -96,7 +96,7 @@ Here is the code::
         return new_structure
 
     from aiida_quantumespresso.calculations.pw import PwCalculation
-    from aiida.orm.data.base import Float
+    from aiida.orm.data.float import Float
     from aiida.work.run import run
 
     @wf
@@ -210,7 +210,7 @@ Now the input types and their names are enforced.
 >>> ProdSumEx.run(a=Int(2), b=Int(3))
 TypeError: Cannot run process 'ProdSumEx' because required value was not provided for 'c'
 >>> ProdSumEx.run(a=Float(2), b=Int(3), c=Int(4))
-TypeError: Cannot run process 'ProdSumEx' because value 'a' is not of the right type. Got '<class 'aiida.orm.data.base.Float'>', expected '<class 'aiida.orm.data.base.Int'>'
+TypeError: Cannot run process 'ProdSumEx' because value 'a' is not of the right type. Got '<class 'aiida.orm.data.float.Float'>', expected '<class 'aiida.orm.data.int.Int'>'
 
 This an example of the additional power of workchains.
 

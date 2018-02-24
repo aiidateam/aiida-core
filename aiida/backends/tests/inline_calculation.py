@@ -11,7 +11,7 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.caching import enable_caching
 from aiida.orm.calculation.inline import make_inline, InlineCalculation
-from aiida.orm.data.base import Int
+from aiida.orm.data.int import Int
 
 
 class TestInlineCalculation(AiidaTestCase):

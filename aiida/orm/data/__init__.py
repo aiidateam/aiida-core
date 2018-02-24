@@ -78,7 +78,7 @@ class Data(Node):
         """
         if not isinstance(source, dict):
             raise ValueError("Source must be supplied as a dictionary")
-        unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
+        unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
             raise KeyError("Unknown source parameters: "
                            "{}".format(", ".join(unknown_attrs)))

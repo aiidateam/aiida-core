@@ -5,7 +5,7 @@ import uuid
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation import Calculation
-from aiida.orm.data import base
+from aiida.orm.data.int import Int
 from aiida.work import runners
 from aiida.work import test_utils
 
@@ -49,8 +49,8 @@ class TestProcessControl(AiidaTestCase):
         self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
     def test_launch_with_inputs(self):
-        a = base.Int(5)
-        b = base.Int(10)
+        a = Int(5)
+        b = Int(10)
 
         calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
         self._wait_for_calc(calc_node)
@@ -59,7 +59,7 @@ class TestProcessControl(AiidaTestCase):
 
     def test_submit_bad_input(self):
         with self.assertRaises(ValueError):
-            self.runner.submit(test_utils.AddProcess, a=base.Int(5))
+            self.runner.submit(test_utils.AddProcess, a=Int(5))
 
     def test_exception_process(self):
         calc_node = self.runner.submit(test_utils.ExceptionProcess)

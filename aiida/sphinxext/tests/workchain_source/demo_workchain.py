@@ -5,7 +5,9 @@
 import re
 
 from aiida.work.workchain import WorkChain
-from aiida.orm.data.base import Int, Float, Bool
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
 
 
 class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method

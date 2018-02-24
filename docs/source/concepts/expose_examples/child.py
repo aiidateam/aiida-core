@@ -1,4 +1,6 @@
-from aiida.orm.data.base import Float, Int, Bool
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
 from aiida.work import WorkChain 
 
 class ChildWorkChain(WorkChain):

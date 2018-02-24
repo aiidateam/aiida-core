@@ -8,7 +8,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.base import Float, Int, NumericType
+from aiida.orm.data.base import NumericType
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
 from aiida import work
 
 """

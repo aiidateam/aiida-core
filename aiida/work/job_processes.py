@@ -98,8 +98,7 @@ class UpdateSchedulerState(TransportTask):
             # Has the state changed?
             last_jobinfo = self._calc._get_last_jobinfo()
 
-            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
-                execmanager.update_job_calc_from_job_info(self._calc, info)
+            execmanager.update_job_calc_from_job_info(self._calc, info)
 
             job_done = info.job_state == job_states.DONE
 

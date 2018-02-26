@@ -12,6 +12,7 @@
 def tick_legacy_workflows(runner, interval=30):
     from functools import partial
     from aiida.daemon.tasks import workflow_stepper
+    print 'ticking legacy workflows.'
     workflow_stepper()
     runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))
 

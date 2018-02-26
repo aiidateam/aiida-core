@@ -50,6 +50,7 @@ WORKFLOWS_SUBDIR = 'workflows'
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 RMQ_PREFIX_KEY = 'RMQ_PREFIX'
+CIRCUS_PORT_KEY = 'CIRCUS_PORT'
 
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
@@ -371,6 +372,7 @@ key_explanation = {
     "AIIDADB_USER": "AiiDA Database user",
     DEFAULT_USER_CONFIG_FIELD: "Default user email",
     RMQ_PREFIX_KEY: "Prefix for the RabbitMQ queue",
+    CIRCUS_PORT_KEY: "TCP port for the circus daemon",
 }
 
 
@@ -476,6 +478,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
 
     # set RMQ_PREFIX
     new_profile[RMQ_PREFIX_KEY] = uuid.uuid4().hex
+    new_profile[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
     # finalizing
     write = not dry_run
@@ -486,6 +489,15 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             set_default_profile('verdi', profile)
             set_default_profile('daemon', profile)
     return new_profile
+
+
+def generate_new_circus_port(self, config=None):
+    config = get_config()
+    port = 6000
+    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config.values()]
+    while port in used_ports:
+        port += 3
+    return port
 
 
 def create_configuration(profile='default'):
@@ -744,6 +756,7 @@ def create_configuration(profile='default'):
 
         # Add RabbitMQ prefix
         this_new_confs[RMQ_PREFIX_KEY] = uuid.uuid4().hex
+        this_new_confs[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
         confs['profiles'][profile] = this_new_confs
 

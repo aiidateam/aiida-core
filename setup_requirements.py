@@ -68,6 +68,7 @@ install_requires = [
     'ipython<6.0',
     'scipy<1.0.0',  # At this moment the install of 1.0.0 release is broken
     'plumpy>=0.10.0.dev8',
+    'matplotlib',
 ]
 
 extras_require = {
@@ -104,7 +105,6 @@ extras_require = {
         'docutils==0.13.1',
         'Jinja2==2.9.5',
         'MarkupSafe==0.23',
-        'matplotlib',
         # Required by readthedocs
         'sphinx-rtd-theme==0.2.5b2',
     ],

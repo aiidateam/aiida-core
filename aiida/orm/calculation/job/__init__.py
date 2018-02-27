@@ -8,4 +8,4 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.calculation import Calculation
-from aiida.orm.implementation.calculation import JobCalculation, _input_subfolder
+from aiida.orm.implementation.calculation import JobCalculation, _input_subfolder, JobCalculationFinishStatus

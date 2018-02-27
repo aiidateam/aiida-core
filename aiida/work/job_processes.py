@@ -22,6 +22,7 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.authinfo import AuthInfo
 from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_spec import DictSchema
 
@@ -33,6 +34,12 @@ __all__ = ['JobProcess']
 SUBMIT_COMMAND = 'submit'
 UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
+
+
+class TransportTaskException(Exception):
+
+    def __init__(self, calc_state):
+        self.calc_state = calc_state
 
 
 class TransportTask(plumpy.Future):
@@ -60,12 +67,17 @@ class TransportTask(plumpy.Future):
 
 class SubmitJob(TransportTask):
     """ A task to submit a job calculation """
+
     def execute(self, transport):
-        return execmanager.submit_calc(self._calc, self._authinfo, transport)
+        try:
+            execmanager.submit_calc(self._calc, self._authinfo, transport)
+        except Exception as exception:
+            raise TransportTaskException(calc_states.SUBMISSIONFAILED)
 
 
 class UpdateSchedulerState(TransportTask):
     """ A task to update the scheduler state of a job calculation """
+
     def execute(self, transport):
         scheduler = self._calc.get_computer().get_scheduler()
         scheduler.set_transport(transport)
@@ -86,8 +98,7 @@ class UpdateSchedulerState(TransportTask):
             # Has the state changed?
             last_jobinfo = self._calc._get_last_jobinfo()
 
-            if last_jobinfo is not None and info.job_state != last_jobinfo.job_state:
-                execmanager.update_job_calc_from_job_info(self._calc, info)
+            execmanager.update_job_calc_from_job_info(self._calc, info)
 
             job_done = info.job_state == job_states.DONE
 
@@ -117,7 +128,10 @@ class RetrieveJob(TransportTask):
 
     def execute(self, transport):
         """ This returns the retrieved temporary folder """
-        return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
+        try:
+            return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
+        except Exception as exception:
+            raise TransportTaskException(calc_states.RETRIEVALFAILED)
 
 
 class Waiting(plumpy.Waiting):
@@ -153,6 +167,7 @@ class Waiting(plumpy.Waiting):
             if self.data == SUBMIT_COMMAND:
                 self._task = SubmitJob(calc, transport_queue)
                 yield self._task
+
                 # Now get scheduler updates
                 self.scheduler_update()
 
@@ -177,6 +192,10 @@ class Waiting(plumpy.Waiting):
             else:
                 raise RuntimeError("Unknown waiting command")
 
+        except TransportTaskException as exception:
+            # calc._set_state(exception.calc_state)
+            finish_status = JobCalculationFinishStatus[exception.calc_state]
+            self.finished(finish_status)
         except plumpy.KilledError:
             self.transition_to(processes.ProcessState.KILLED)
             if self._cancelling_future is not None:
@@ -207,6 +226,9 @@ class Waiting(plumpy.Waiting):
             processes.ProcessState.RUNNING,
             self.process.retrieved,
             retrieved_temporary_folder)
+
+    def finished(self, result):
+        self.transition_to(processes.ProcessState.FINISHED, result)
 
     def cancel(self, msg=None):
         if self._cancelling_future is not None:
@@ -371,7 +393,7 @@ class JobProcess(processes.Process):
         for the calculation to be finished and the data has been retrieved.
         """
         try:
-            execmanager.parse_results(self.calc, retrieved_temporary_folder)
+            exit_code = execmanager.parse_results(self.calc, retrieved_temporary_folder)
         except BaseException:
             try:
                 self.calc._set_state(calc_states.PARSINGFAILED)
@@ -386,8 +408,7 @@ class JobProcess(processes.Process):
         for label, node in self.calc.get_outputs_dict().iteritems():
             self.out(label, node)
 
-        # Done, so return the output
-        return self.outputs
+        return exit_code
 
 
 class ContinueJobCalculation(JobProcess):

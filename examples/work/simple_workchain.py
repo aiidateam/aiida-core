@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 
 from aiida import work
-from aiida.orm.data.base import *
+from aiida.orm.data.int import Int
 import aiida.work.globals as globals
 
 persistence = globals.get_persistence()

@@ -9,7 +9,8 @@
 ###########################################################################
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.frozendict import FrozenDict
-from aiida.orm.data.base import Int, Str
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 
 
 class TestFrozenDict(AiidaTestCase):

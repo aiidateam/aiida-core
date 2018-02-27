@@ -15,7 +15,7 @@ Caching is also implemented for Data nodes. This is not very useful in practice 
 
     In [1]: from __future__ import print_function
 
-    In [2]: from aiida.orm.data.base import Str
+    In [2]: from aiida.orm.data.str import Str
 
     In [3]: n1 = Str('test string')
 
@@ -50,20 +50,20 @@ Of course, using caching would be quite tedious if you had to set ``use_cache`` 
       default: False
       enabled:
         - aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation
-        - aiida.orm.data.base.Str
+        - aiida.orm.data.str.Str
       disabled:
-        - aiida.orm.data.base.Float
+        - aiida.orm.data.float.Float
 
-This means that caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes. In this example, manually disabling ``aiida.orm.data.base.Float`` is actually not needed, since the ``default: False`` configuration means that caching is disabled for all classes unless it is manually enabled. Note also that the fully qualified class import name (e.g., ``aiida.orm.data.base.Str``) must be given, not just the class name (``Str``). This is to avoid accidentally matching classes with the same name. You can get this name by combining the module name and class name, or (usually) from the string representation of the class:
+This means that caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes. In this example, manually disabling ``aiida.orm.data.float.Float`` is actually not needed, since the ``default: False`` configuration means that caching is disabled for all classes unless it is manually enabled. Note also that the fully qualified class import name (e.g., ``aiida.orm.data.str.Str``) must be given, not just the class name (``Str``). This is to avoid accidentally matching classes with the same name. You can get this name by combining the module name and class name, or (usually) from the string representation of the class:
 
 .. ipython::
     :verbatim:
 
     In [1]: Str.__module__ + '.' + Str.__name__
-    Out[1]: 'aiida.orm.data.base.Str'
+    Out[1]: 'aiida.orm.data.str.Str'
 
     In [2]: str(Str)
-    Out[2]: "<class 'aiida.orm.data.base.Str'>"
+    Out[2]: "<class 'aiida.orm.data.str.Str'>"
 
 Note that this is not the same as the type string stored in the database.
 
@@ -134,7 +134,7 @@ Finally, workchains can create links not only to nodes which they create themsel
 
 .. code:: python
 
-    from aiida.orm.data.base import Int
+    from aiida.orm.data.int import Int
     from aiida.work.workfunction import workfunction
 
     @workfunction

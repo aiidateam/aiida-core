@@ -50,9 +50,9 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.data import base as basedatatypes
+    from aiida.orm.data import BaseType
 
-    if isinstance(value, basedatatypes.BaseType):
+    if isinstance(value, BaseType):
         return value.value
     elif isinstance(value, dict):
         # Check dictionary before iterables

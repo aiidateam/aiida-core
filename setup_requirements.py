@@ -104,6 +104,7 @@ extras_require = {
         'docutils==0.13.1',
         'Jinja2==2.9.5',
         'MarkupSafe==0.23',
+        'matplotlib',
         # Required by readthedocs
         'sphinx-rtd-theme==0.2.5b2',
     ],

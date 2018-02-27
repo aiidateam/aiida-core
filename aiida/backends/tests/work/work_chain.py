@@ -16,7 +16,10 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.orm.data.base import Int, Str, Bool, Float
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work

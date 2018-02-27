@@ -14,7 +14,7 @@ from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.orm import load_node
-from aiida.orm.data.base import Int
+from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.work import utils
 from aiida.work import test_utils

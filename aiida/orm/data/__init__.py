@@ -471,6 +471,10 @@ class List(Data, MutableSequence):
     """
     _LIST_KEY = 'list'
 
+    def __init__(self):
+        super(List, self).__init__()
+        self._set_list(list())
+
     def __getitem__(self, item):
         return self._get_list()[item]
 

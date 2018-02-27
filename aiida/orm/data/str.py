@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from past.builtins import basestring
-from aiida.orm.data.base import BaseType
-from aiida.orm.data.base import to_aiida_type
+from aiida.orm.data import BaseType
+from aiida.orm.data import to_aiida_type
 
 
 class Str(BaseType):

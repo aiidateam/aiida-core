@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numbers
-from aiida.orm.data.base import NumericType
-from aiida.orm.data.base import to_aiida_type
+from aiida.orm.data import to_aiida_type
+from aiida.orm.data.numeric import NumericType
 
 
 class Float(NumericType):

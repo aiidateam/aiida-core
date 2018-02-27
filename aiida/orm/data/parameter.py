@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm import Data
-from aiida.orm.data.base import to_aiida_type
+from aiida.orm.data import to_aiida_type
 
 
 class ParameterData(Data):

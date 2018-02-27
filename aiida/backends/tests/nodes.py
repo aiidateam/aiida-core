@@ -1135,8 +1135,8 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
+        from aiida.orm.data import List
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.data.base import List
         from aiida.orm.data.str import Str
 
         # This one is unstored
@@ -1178,7 +1178,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
-        from aiida.orm.data.base import List
+        from aiida.orm.data import List
         from aiida.orm.data.str import Str
 
         # This one is unstored

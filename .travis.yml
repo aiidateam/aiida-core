@@ -41,7 +41,7 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
-    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[rest,docs,atomic_tools,testing,dev_precommit]; fi
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt && pip install -e git://github.com/muhrin/plumpy.git@3fc79acaa3ca0b9c568897616d5f01182df10171#egg=plumpy; else pip install .[rest,docs,atomic_tools,testing,dev_precommit] && pip install -r requirements.txt; fi
 
 env:
 ## Build matrix to test both backends, and the docs

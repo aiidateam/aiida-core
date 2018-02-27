@@ -34,6 +34,8 @@ else:
     AIIDA_CONFIG_FOLDER = '~/.aiida'
 
 CONFIG_FNAME = 'config.json'
+CONFIG_INDENT_SIZE = 4
+
 SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = 'daemon'
@@ -112,7 +114,7 @@ def _load_config():
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     try:
-        with open(conf_file, "r") as json_file:
+        with open(conf_file, 'r') as json_file:
             return json.load(json_file)
     except IOError:
         # No configuration file
@@ -140,8 +142,8 @@ def store_config(confs):
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(conf_file, "w") as json_file:
-            json.dump(confs, json_file)
+        with open(conf_file, 'w') as json_file:
+            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
 

@@ -8,16 +8,131 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import inspect
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import classproperty
 
 
+class FunctionCalculationMixin(object):
+    """
+    This mixin should be used for Calculation subclasses that are used to record the execution
+    of a python function. For example the Calculation nodes that are used for a function that
+    was wrapped by the `workfunction` or `make_inline` function decorators. The `store_source_info`
+    method can then be called with the wrapped function to store information about that function
+    in the calculation node through the inspect module. Various property getters are defined to
+    later retrieve that information from the node
+    """
+
+    FUNCTION_NAME_KEY = 'function_name'
+    FUNCTION_NAMESPACE_KEY = 'function_namespace'
+    FUNCTION_STARTING_LINE_NUMBER_KEY = 'function_starting_line_number'
+    FUNCTION_SOURCE_FILE_PATH = 'source_file'
+
+    def store_source_info(self, func):
+        """
+        Retrieve source information about the wrapped function `func` through the inspect module,
+        and store it in the attributes and repository of the node. The function name, namespace
+        and the starting line number in the source file will be stored in the attributes. The
+        source file itself will be copied into the repository
+
+        :param func: the function to inspect and whose information to store in the node
+        """
+        self._set_function_name(func.__name__)
+
+        try:
+            source_code, starting_line_number = inspect.getsourcelines(func)
+            self._set_function_starting_line_number(starting_line_number)
+        except (IOError, OSError):
+            pass
+
+        try:
+            self._set_function_namespace(func.func_globals['__name__'])
+        except Exception:
+            pass
+
+        try:
+            self._set_source_file(inspect.getsourcefile(func))
+        except (IOError, OSError):
+            pass
+
+    @property
+    def function_name(self):
+        """
+        Return the function name of the wrapped function
+
+        :returns: the function name or None
+        """
+        return self.get_attr(self.FUNCTION_NAME_KEY, None)
+
+    def _set_function_name(self, function_name):
+        """
+        Set the function name of the wrapped function
+
+        :param function_name: the function name
+        """
+        self._set_attr(self.FUNCTION_NAME_KEY, function_name)
+
+    @property
+    def function_namespace(self):
+        """
+        Return the function namespace of the wrapped function
+
+        :returns: the function namespace or None
+        """
+        return self.get_attr(self.FUNCTION_NAMESPACE_KEY, None)
+
+    def _set_function_namespace(self, function_namespace):
+        """
+        Set the function namespace of the wrapped function
+
+        :param function_namespace: the function namespace
+        """
+        self._set_attr(self.FUNCTION_NAMESPACE_KEY, function_namespace)
+
+    @property
+    def function_starting_line_number(self):
+        """
+        Return the starting line number of the wrapped function in its source file
+
+        :returns: the starting line number or None
+        """
+        return self.get_attr(self.FUNCTION_STARTING_LINE_NUMBER_KEY, None)
+
+    def _set_function_starting_line_number(self, function_starting_line_number):
+        """
+        Set the starting line number of the wrapped function in its source file
+
+        :param function_starting_line_number: the starting line number
+        """
+        self._set_attr(self.FUNCTION_STARTING_LINE_NUMBER_KEY, function_starting_line_number)
+
+    @property
+    def function_source_file(self):
+        """
+        Return the absolute path to the source file in the repository
+
+        :returns: the absolute path of the source file in the repository, or None if it does not exist
+        """
+        try:
+            return self.folder.get_abs_path(self.FUNCTION_SOURCE_FILE_PATH, check_existence=True)
+        except OSError:
+            return None
+
+    def _set_source_file(self, source_file_path):
+        """
+        Store a copy of the source file from `source_file_path` in the repository
+        The `insert_path` method of `Folder` class should verify that `source_file_path` is absolute
+
+        :param source_file_path: absolute path to the source file
+        """
+        self.folder.insert_path(source_file_path, self.FUNCTION_SOURCE_FILE_PATH)
+
+
 class Sealable(object):
 
-    # The name of the attribute to indicate if the node is sealed or not
-    SEALED_KEY = '_sealed'
+    SEALED_KEY = 'sealed'
 
     @classproperty
     def _updatable_attributes(cls):

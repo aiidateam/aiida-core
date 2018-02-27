@@ -19,6 +19,7 @@ from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
@@ -28,6 +29,9 @@ from aiida.utils import timezone
 # 'rerunnable',
 # 'resourceLimits',
 
+SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
+FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 
@@ -917,6 +921,9 @@ class AbstractJobCalculation(AbstractCalculation):
         'mtime': ('calculation', 'mtime'),
         'sched': ('calculation', 'attributes.scheduler_state'),
         'state': ('calculation', 'state'),
+        'process_state': ('calculation', PROCESS_STATE_KEY),
+        'finish_status': ('calculation', FINISH_STATUS_KEY),
+        'sealed': ('calculation', SEALED_KEY),
         'type': ('calculation', 'type'),
         'description': ('calculation', 'description'),
         'label': ('calculation', 'label'),
@@ -966,10 +973,13 @@ class AbstractJobCalculation(AbstractCalculation):
 
         projection_label_dict = {
             'pk': 'PK',
-            'state': 'State',
+            'process_state': 'Process state',
+            'finish_status': 'Finish status',
+            'sealed': 'Sealed',
+            'state': 'Calculation state',
             'ctime': 'Creation',
             'mtime': 'Modification',
-            'sched': 'Sched. state',
+            'sched': 'Scheduler state',
             'computer': 'Computer',
             'type': 'Type',
             'description': 'Description',
@@ -1175,6 +1185,20 @@ class AbstractJobCalculation(AbstractCalculation):
                             1].split('.')[0].rsplit(":", 1)[0]])
             except (KeyError, ValueError):
                 pass
+
+        if PROCESS_STATE_KEY in d['calculation']:
+
+            process_state = d['calculation'][PROCESS_STATE_KEY]
+
+            if process_state is None:
+                process_state = 'unknown'
+
+            d['calculation'][PROCESS_STATE_KEY] = process_state.capitalize()
+
+        if SEALED_KEY in d['calculation']:
+            sealed = 'True' if d['calculation'][SEALED_KEY] == 1 else 'False'
+            d['calculation'][SEALED_KEY] = sealed
+
         try:
             if d['calculation']['state'] == calc_states.IMPORTED:
                 d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"

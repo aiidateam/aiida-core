@@ -191,8 +191,7 @@ class Calculation(VerdiCommandWithSubcommands):
                                     'mtime', 'user'
                                 ),
                             nargs='+',
-                            default=get_property("verdishell.calculation_list"),
-                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
+                            default=get_property('verdishell.calculation_list'),
                             help="Define the list of properties to show"
                         )
 

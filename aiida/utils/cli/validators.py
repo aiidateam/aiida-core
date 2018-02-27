@@ -113,7 +113,7 @@ def validate_kpoint_mesh(callback_kwargs, ctx, param, value):
 
     return kpoints
 
-def validate_validate_calculation(callback_kwargs, ctx, param, value):
+def validate_calculation(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA JobCalculation pk. It expects
     an integer for the value and will try to load the corresponding node. it

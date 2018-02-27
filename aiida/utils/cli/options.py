@@ -55,7 +55,7 @@ code = overridable_option(
 structure = overridable_option(
     '-s', '--structure', type=click.INT, required=True,
     callback=validators.validate_structure,
-    help='the node pk of the structure'
+    help='the pk of a structure node'
 )
 
 
@@ -74,7 +74,7 @@ kpoint_mesh = overridable_option(
 
 
 calculation = overridable_option(
-    '-r', '--calculation', type=click.INT, required=True,
+    '-C', '--calculation', type=click.INT, required=True,
     callback=validators.validate_calculation,
     help='the pk of a calculation node'
 )

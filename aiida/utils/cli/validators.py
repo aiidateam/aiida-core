@@ -113,7 +113,7 @@ def validate_kpoint_mesh(callback_kwargs, ctx, param, value):
 
     return kpoints
 
-def validate_parent_calc(callback_kwargs, ctx, param, value):
+def validate_calculation(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA JobCalculation pk. It expects
     an integer for the value and will try to load the corresponding node. it
@@ -145,14 +145,14 @@ def validate_parent_calc(callback_kwargs, ctx, param, value):
         cls = JobCalculation
 
     try:
-        parent_calc = load_node(int(value))
+        calculation = load_node(int(value))
     except NotExistent as exception:
         raise click.BadParameter('failed to load the node<{}>\n{}'.format(value, exception))
 
-    if not isinstance(parent_calc, cls):
+    if not isinstance(calculation, cls):
         raise click.BadParameter('node<{}> is not of type {}'.format(value, cls.__name__))
 
-    return parent_calc
+    return calculation
 
 def validate_group(callback_kwargs, ctx, param, value):
     """

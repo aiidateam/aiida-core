@@ -25,9 +25,9 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import load_node
 from aiida.orm.calculation import Calculation
+from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
-from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
@@ -432,7 +432,8 @@ class Process(plumpy.Process):
         :param namespace: PortNamespace in which to look for the inputs
         :type namespace: str
 
-        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for inputs. Inputs in lower-lying namespaces take precedence.
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be
+            searched for inputs. Inputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
         """
         exposed_inputs = {}
@@ -461,12 +462,14 @@ class Process(plumpy.Process):
 
     def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
         """
-        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific ``process_instance`` in a dictionary.
+        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific
+        ``process_instance`` in a dictionary.
 
         :param namespace: Namespace in which to search for exposed outputs.
         :type namespace: str
 
-        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for outputs. Outputs in lower-lying namespaces take precedence.
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also
+            be searched for outputs. Outputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
         """
         namespace_separator = self.spec().namespace_separator
@@ -515,8 +518,9 @@ class Process(plumpy.Process):
             return namespace_list
 
 class FunctionProcess(Process):
+
     _func_args = None
-    _calc_node_class = WorkCalculation
+    _calc_node_class = FunctionCalculation
 
     @staticmethod
     def _func(*args, **kwargs):
@@ -548,7 +552,7 @@ class FunctionProcess(Process):
         first_default_pos = nargs - ndefaults
 
         if calc_node_class is None:
-            calc_node_class = WorkCalculation
+            calc_node_class = FunctionCalculation
 
         def _define(cls, spec):
             super(FunctionProcess, cls).define(spec)
@@ -621,8 +625,7 @@ class FunctionProcess(Process):
     @override
     def _setup_db_record(self):
         super(FunctionProcess, self)._setup_db_record()
-        add_source_info(self.calc, self._func)
-        # Save the name of the function
+        self.calc.store_source_info(self._func)
         self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)
 
     @override

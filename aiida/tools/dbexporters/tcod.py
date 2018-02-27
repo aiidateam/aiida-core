@@ -383,13 +383,25 @@ def _inline_to_standalone_script(calc):
         created by the ``\*_inline`` function, are already stored.
     """
     input_dict = calc.get_inputs_dict()
-    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
-            for x in input_dict.keys()]
-    args_string = ",\n    ".join(sorted(args))
-    code_string = calc.get_attr('source_file').encode('utf-8')
-    if calc.get_attr('namespace', '__main__').startswith('aiida.'):
-        code_string = "from {} import {}".format(calc.get_attr('namespace', '__main__'),
-                                                 calc.get_attr('function_name','f'))
+    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid) for x in input_dict.keys()]
+    args_string = ',\n    '.join(sorted(args))
+
+    function_name = calc.function_name
+    function_namespace = calc.function_namespace
+    function_source_file = calc.function_source_file
+
+    if function_name is None:
+        function_name = 'f'
+
+    if function_namespace is None:
+        function_namespace = '__main__'
+
+    with open(function_source_file) as handle:
+        code_string = handle.read().encode('utf-8')
+
+    if function_namespace.startswith('aiida.'):
+        code_string = "from {} import {}".format(function_namespace, function_name)
+
     return """#!/usr/bin/env runaiida
 {}
 
@@ -397,7 +409,7 @@ for key, value in {}(
     {}
     ).iteritems():
     value.store()
-""".format(code_string, calc.get_attr('function_name','f'), args_string)
+""".format(code_string, function_name, args_string)
 
 
 def _collect_calculation_data(calc):

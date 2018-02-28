@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-
 from aiida.orm import DataFactory
+from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
 
 aiida_executable_name = '_aiidasubmit.sh'
@@ -853,7 +853,7 @@ def _collect_tags(node, calc,parameters=None,
 
 
 @optional_inline
-def add_metadata_inline(what, node=None, parameters=None, args=None):
+def add_metadata_inline(what, node, parameters, args):
     """
     Add metadata of original exported node to the produced TCOD CIF.
 
@@ -1030,6 +1030,8 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
         function_args['node'] = node
     if parameters is not None:
         function_args['parameters'] = parameters
+    else:
+        function_args['parameters'] = ParameterData(dict={})
     ret_dict = add_metadata_inline(**function_args)
 
     return ret_dict['cif']

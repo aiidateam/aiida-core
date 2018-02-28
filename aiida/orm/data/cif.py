@@ -93,7 +93,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 
 
 @optional_inline
-def _get_aiida_structure_ase_inline(cif=None, parameters=None):
+def _get_aiida_structure_ase_inline(cif, parameters):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 

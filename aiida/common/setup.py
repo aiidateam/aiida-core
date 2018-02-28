@@ -40,10 +40,15 @@ DAEMON_SUBDIR = 'daemon'
 LOG_SUBDIR = 'daemon/log'
 DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-CELERY_LOG_FILE = 'celery.log'
-CELERY_PID_FILE = 'celery.pid'
-DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
-DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+CELERY_LOG_FILE = 'celery.log'  # TODO get rid of this
+CELERY_PID_FILE = 'celery.pid'  # TODO get rid of this
+DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)  # TODO get rid of this
+DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)  # TODO get rid of this
+
+CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
+CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
+DAEMON_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.log')
+DAEMON_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.pid')
 
 WORKFLOWS_SUBDIR = 'workflows'
 
@@ -491,10 +496,10 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     return new_profile
 
 
-def generate_new_circus_port(self, config=None):
+def generate_new_circus_port(config=None):
     config = get_config()
     port = 6000
-    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config.values()]
+    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config['profiles'].values()]
     while port in used_ports:
         port += 3
     return port

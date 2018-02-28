@@ -12,12 +12,33 @@ import os
 import subprocess
 import gzip
 import shutil
+from functools import wraps
 from datetime import timedelta, datetime
+
+import click
+from circus import logger, get_arbiter
+from circus.circusd import get_maxfd, daemonize, closerange
+from circus.arbiter import Arbiter
+from circus.pidfile import Pidfile
+from circus import __version__
+from circus.util import configure_logger
+from circus.util import check_future_exception_and_log
+from circus.client import CircusClient
+from circus.exc import CallError
+
 from aiida.common import aiidalogger
+from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-
+from aiida.cmdline.dbenv_lazyloading import with_dbenv
 from aiida.backends.utils import is_dbenv_loaded
+from aiida.backends import settings as backend_settings
+from aiida.common.setup import CIRCUS_PORT_KEY, RMQ_PREFIX_KEY, generate_new_circus_port, update_profile
+
+
+VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
+VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
+
+
 logger = aiidalogger.getChild('workflowmanager')
 
 
@@ -43,6 +64,35 @@ def _get_env_with_venv_bin():
         setup.AIIDA_CONFIG_FOLDER
     ))
     return currenv
+
+
+@with_dbenv()
+def get_current_profile():
+    click.echo(backend_settings.AIIDADB_PROFILE)
+    return backend_settings.AIIDADB_PROFILE
+
+
+@with_dbenv()
+def get_current_profile_config():
+    from aiida.common.setup import get_profile_config
+    return get_profile_config(get_current_profile())
+
+
+@with_dbenv()
+def get_daemon_files():
+    from aiida.common import setup
+    return {
+        'circus': {
+            'pid': setup.CIRCUS_PID_FILE_TEMPLATE.format(get_current_profile()),
+            'log': setup.CIRCUS_LOG_FILE_TEMPLATE.format(get_current_profile()),
+        },
+        'daemon': {
+            'pid': setup.DAEMON_PID_FILE_TEMPLATE.format(get_current_profile()),
+            'log': setup.DAEMON_LOG_FILE_TEMPLATE.format(get_current_profile()),
+        }
+    }
+
+
 
 class Daemon(VerdiCommandWithSubcommands):
     """
@@ -73,7 +123,7 @@ class Daemon(VerdiCommandWithSubcommands):
         from aiida.common import setup
 
         self.valid_subcommands = {
-            'start': (self.daemon_start, self.complete_none),
+            'start': (self.cli, self.complete_none),
             'stop': (self.daemon_stop, self.complete_none),
             'status': (self.daemon_status, self.complete_none),
             'logshow': (self.daemon_logshow, self.complete_none),
@@ -85,6 +135,9 @@ class Daemon(VerdiCommandWithSubcommands):
         self.pidfile = setup.DAEMON_PID_FILE
         self.workdir = os.path.join(os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
         self.celerybeat_schedule = os.path.join(setup.AIIDA_CONFIG_FOLDER, setup.DAEMON_SUBDIR, "celerybeat-schedule")
+
+    def cli(self, *args):
+        verdi.main()
 
     def _get_pid_full_path(self):
         """
@@ -486,3 +539,164 @@ class Daemon(VerdiCommandWithSubcommands):
             # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
                 raise
+
+
+
+def generate_rmq_prefix():
+    import uuid
+    return uuid.uuid4().hex
+
+
+class ProfileConfig(object):
+    _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
+
+    def __init__(self):
+        self.profile = get_current_profile()
+        self.profile_config = get_current_profile_config()
+        self.profile_config[CIRCUS_PORT_KEY] = self.profile_config.get(CIRCUS_PORT_KEY, generate_new_circus_port(self.profile))
+        self.profile_config[RMQ_PREFIX_KEY] = self.profile_config.get(RMQ_PREFIX_KEY, generate_rmq_prefix())
+        update_profile(self.profile, self.profile_config)
+
+    def get_endpoint(self, port_incr=0):
+        port = self.profile_config[CIRCUS_PORT_KEY]
+        return self._ENDPOINT_TPL.format(port=port + port_incr)
+
+    def get_client(self):
+        return CircusClient(endpoint=self.get_endpoint(), timeout=0.5)
+
+    @property
+    def daemon_name(self):
+        return 'aiida-{}'.format(self.profile)
+
+    @property
+    def cmd_string(self):
+        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile)
+
+
+def daemon_user_guard(function):
+    """
+    Function decorator that checks wether the user is the daemon user before running the function
+
+    Example::
+
+        @daemon_user_guard
+        def create_my_calculation():
+            ... do stuff ...
+    """
+
+    @wraps(function)
+    @with_dbenv(process='daemon')
+    def decorated_function(*args, **kwargs):
+        """load dbenv if not yet loaded, then run the original function"""
+        from aiida.backends.utils import get_daemon_user
+        from aiida.common.utils import get_configured_user_email
+        if not is_daemon_user():
+            print "You are not the daemon user! I will not start the daemon."
+            print "(The daemon user is '{}', you are '{}')".format(
+                get_daemon_user(), get_configured_user_email())
+            print ""
+            print "** FOR ADVANCED USERS ONLY: **"
+            print "To change the current default user, use 'verdi install --only-config'"
+            print "To change the daemon user, use 'verdi daemon configureuser'"
+
+            sys.exit(1)
+        return function(*args, **kwargs)
+
+    return decorated_function
+
+
+@daemon_cmd.command()
+@click.option('--fg', '--foreground', is_flag=True,
+              help="Start circusd in the background. Not supported on Windows")
+@with_dbenv(process='daemon')
+@daemon_user_guard
+def start(foreground):
+    """Run an aiida daemon"""
+    logs_pids = get_daemon_files()
+
+    import zmq
+    try:  # TODO: delete or factor out into decorator
+        zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
+        if len(zmq_version) < 2:
+            raise ValueError()
+    except (AttributeError, ValueError):
+        print('Unknown PyZQM version - aborting...')
+        sys.exit(0)
+
+    if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
+        print('aiida daemon needs PyZMQ >= 13.1.0 to run - aborting...')
+        sys.exit(0)
+
+    loglevel = 'INFO'
+    logoutput = '-'
+
+    if not foreground:
+        logoutput = logs_pids['circus']['log']
+        daemonize()
+
+    # Create the arbiter
+    profile = get_current_profile()
+    profile_config = ProfileConfig()
+
+    env = _get_env_with_venv_bin()
+    env['PYTHONUNBUFFERED'] = 'True'
+
+    arbiter = get_arbiter(
+        controller=profile_config.get_endpoint(0),
+        pubsub_endpoint=profile_config.get_endpoint(1),
+        stats_endpoint=profile_config.get_endpoint(2),
+        logoutput=logoutput,
+        loglevel=loglevel,
+        debug=False,
+        statsd=True,
+        pidfile=logs_pids['circus']['pid'],  # aiida.common.setup.AIIDA_CONFIG_FOLDER + '/daemon/aiida-{}.pid'.format(uuid)
+        watchers=[{
+            'name': profile_config.daemon_name,
+            'cmd': profile_config.cmd_string,
+            'virtualenv': VIRTUALENV,
+            'copy_env': True,
+            'stdout_stream': {
+                'class': 'FileStream',
+                'filename': logs_pids['daemon']['log']
+            },
+            'env': env,
+        }]
+    )
+
+    # go ahead and set umask early if it is in the config
+    if arbiter.umask is not None:  # TODO: probably not needed
+        os.umask(arbiter.umask)
+
+    pidfile = Pidfile(arbiter.pidfile)
+
+    try:
+        pidfile.create(os.getpid())
+    except RuntimeError as e:
+        print(str(e))
+        sys.exit(1)
+
+    # configure the logger
+    loggerconfig = None
+    loggerconfig = loggerconfig or arbiter.loggerconfig or None
+    configure_logger(logger, loglevel, logoutput, loggerconfig)
+
+    # Main loop
+    restart = True
+    while restart:
+        try:
+            arbiter = arbiter
+            future = arbiter.start()
+            restart = False
+            if check_future_exception_and_log(future) is None:
+                restart = arbiter._restarting
+        except Exception as e:
+            # emergency stop
+            arbiter.loop.run_sync(arbiter._emergency_stop)
+            raise(e)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            arbiter = None
+            if pidfile is not None:
+                pidfile.unlink()
+    sys.exit(0)

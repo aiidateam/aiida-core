@@ -14,13 +14,11 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node
 from aiida.orm.data.numeric import NumericType
-from aiida.orm.data import List
+from aiida.orm.data.list import List
 from aiida.orm.data.bool import Bool, get_true_node, get_false_node
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
-import aiida.orm.data.base as base
-
 
 
 class TestList(AiidaTestCase):

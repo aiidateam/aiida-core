@@ -301,6 +301,20 @@ class AbstractCalculation(Sealable):
         return self.get_outputs(link_type=LinkType.CALL)
 
     @property
+    def called_descendants(self):
+        """
+        Return a list of all nodes that the Calculation called recursively calling this
+        function on all its called children and extending the list
+        """
+        descendants = []
+
+        for descendant in self.called:
+            descendants.append(descendant)
+            descendants.extend(descendant.called_descendants)
+
+        return descendants
+
+    @property
     def called_by(self):
         """
         Return the Calculation that called this Calculation, or None if it does not have a caller

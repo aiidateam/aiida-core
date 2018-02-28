@@ -37,7 +37,7 @@ Each of these classes can most often be used transparently (e.g. you can sum two
 :py:class:`~aiida.orm.data.int.Int` objects, etc.). If you need to access the bare
 value and not the whole AiiDA class, use the `.value` property.
 
-In the same module, there is also a :py:class:`~aiida.orm.data.List` class to
+In the same module, there is also a :py:class:`~aiida.orm.data.list.List` class to
 store a list of base data types.
 
 ParameterData

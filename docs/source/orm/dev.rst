@@ -146,6 +146,10 @@ BaseType and NumericType
 .. automodule:: aiida.orm.data.base
    :members:
 
+List
+----
+.. autoclass:: aiida.orm.data.list.List
+
 Bool
 ----
 .. automodule:: aiida.orm.data.bool

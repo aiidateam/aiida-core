@@ -23,9 +23,6 @@ from . import class_loader
 
 __all__ = ['ProcessStack']
 
-# The name of the attribute to store the label of a process in a node with.
-PROCESS_LABEL_ATTR = '_process_label'
-
 load_object = plumpy.utils.load_object
 load_class = load_object
 

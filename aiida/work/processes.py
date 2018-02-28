@@ -338,7 +338,7 @@ class Process(plumpy.Process):
 
         # Save the name of this process
         self.calc._set_process_state(None)
-        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
+        self.calc._set_process_label(self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
@@ -626,7 +626,7 @@ class FunctionProcess(Process):
     def _setup_db_record(self):
         super(FunctionProcess, self)._setup_db_record()
         self.calc.store_source_info(self._func)
-        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)
+        self.calc._set_process_label(self._func.__name__)
 
     @override
     def _run(self):

@@ -128,24 +128,9 @@ def _generate_node_label(node, node_attr, show_pk):
     :return: The generated label
     :rtype: str
     """
-    from aiida.orm.mixins import FunctionCalculationMixin
-    from aiida.orm.implementation.general.calculation import AbstractCalculation
-    from aiida.orm.implementation.general.calculation.work import WorkCalculation
-    from aiida.work.utils import PROCESS_LABEL_ATTR
-
-    PROCESS_STATE_KEY = AbstractCalculation.PROCESS_STATE_KEY
-    FUNCTION_NAME_KEY = FunctionCalculationMixin.FUNCTION_NAME_KEY
-    STEPPER_STATE_INFO_KEY = WorkCalculation.STEPPER_STATE_INFO_KEY
-
     label = None
     if node_attr is None:
-        attrs = node.get_attrs()
-        # Try a list of default ones
-        for l in ['value', FUNCTION_NAME_KEY, PROCESS_LABEL_ATTR]:
-            try:
-                label = str(attrs[l])
-            except KeyError:
-                pass
+        label = node.process_label
     else:
         try:
             label = str(getattr(node, node_attr))
@@ -174,9 +159,9 @@ def calc_info(calc_node):
     from aiida.orm.calculation.job import JobCalculation
 
     if isinstance(calc_node, WorkCalculation):
-        plabel = calc_node.get_attr(PROCESS_LABEL_ATTR)
-        pstate = calc_node.get_attr(PROCESS_STATE_KEY)
-        winfo = calc_node.get_attr(STEPPER_STATE_INFO_KEY, None)
+        plabel = calc_node.process_label
+        pstate = calc_node.process_state
+        winfo = calc_node.stepper_state_info
 
         if winfo is None:
             s = u"{} <pk={}> [{}]".format(plabel, calc_node.pk, pstate)

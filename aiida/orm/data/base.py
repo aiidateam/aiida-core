@@ -13,3 +13,4 @@ from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
+from aiida.orm.data.list import List

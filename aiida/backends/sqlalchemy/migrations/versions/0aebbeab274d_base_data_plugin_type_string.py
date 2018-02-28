@@ -27,6 +27,7 @@ def upgrade():
         UPDATE db_dbnode SET type = 'data.float.Float.' WHERE type = 'data.base.Float.';
         UPDATE db_dbnode SET type = 'data.int.Int.' WHERE type = 'data.base.Int.';
         UPDATE db_dbnode SET type = 'data.str.Str.' WHERE type = 'data.base.Str.';
+        UPDATE db_dbnode SET type = 'data.list.List.' WHERE type = 'data.base.List.';
     """)
     conn.execute(statement)
 
@@ -39,5 +40,6 @@ def downgrade():
         UPDATE db_dbnode SET type = 'data.base.Float.' WHERE type = 'data.float.Float.';
         UPDATE db_dbnode SET type = 'data.base.Int.' WHERE type = 'data.int.Int.';
         UPDATE db_dbnode SET type = 'data.base.Str.' WHERE type = 'data.str.Str.';
+        UPDATE db_dbnode SET type = 'data.base.List.' WHERE type = 'data.list.List.';
     """)
     conn.execute(statement)

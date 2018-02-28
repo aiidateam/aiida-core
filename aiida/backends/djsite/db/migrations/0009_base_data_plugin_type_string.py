@@ -30,6 +30,7 @@ class Migration(migrations.Migration):
             UPDATE db_dbnode SET type = 'data.float.Float.' WHERE type = 'data.base.Float.';
             UPDATE db_dbnode SET type = 'data.int.Int.' WHERE type = 'data.base.Int.';
             UPDATE db_dbnode SET type = 'data.str.Str.' WHERE type = 'data.base.Str.';
+            UPDATE db_dbnode SET type = 'data.list.List.' WHERE type = 'data.base.List.';
         """),
         update_schema_version(SCHEMA_VERSION)
     ]

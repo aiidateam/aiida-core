@@ -157,6 +157,7 @@ def _ctime(node):
 def calc_info(calc_node):
     from aiida.orm.calculation.work import WorkCalculation
     from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.calculation.function import FunctionCalculation
 
     if isinstance(calc_node, WorkCalculation):
         plabel = calc_node.process_label
@@ -164,16 +165,20 @@ def calc_info(calc_node):
         winfo = calc_node.stepper_state_info
 
         if winfo is None:
-            s = u"{} <pk={}> [{}]".format(plabel, calc_node.pk, pstate)
+            s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)
         else:
-            s = u"{} <pk={}> [{}] [{}]".format(plabel, calc_node.pk, pstate, winfo)
+            s = u'{} <pk={}> [{}] [{}]'.format(plabel, calc_node.pk, pstate, winfo)
 
     elif isinstance(calc_node, JobCalculation):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
-        s = u"{} <pk={}> [{}]".format(clabel, calc_node.pk, cstate)
+        s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
+    elif isinstance(calc_node, FunctionCalculation):
+        plabel = calc_node.process_label
+        pstate = calc_node.process_state
+        s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)
     else:
-        raise TypeError("Unknown type")
+        raise TypeError('Unknown type: {}'.format(type(calc_node)))
 
     return s
 
@@ -192,6 +197,7 @@ def print_call_graph(calc_node, info_fn=calc_info):
 def build_call_graph(calc_node, info_fn=calc_info):
     info_string = info_fn(calc_node)
     called = calc_node.called
+    called.sort(key=lambda x: x.ctime)
     if called:
         return info_string, [build_call_graph(child, info_fn) for child in called]
     else:

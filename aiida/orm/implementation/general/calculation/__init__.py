@@ -28,6 +28,7 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
+    PROCESS_LABEL_KEY = '_process_label'
     PROCESS_STATE_KEY = 'process_state'
     FINISH_STATUS_KEY = 'finish_status'
     CHECKPOINT_KEY = 'checkpoints'
@@ -39,6 +40,7 @@ class AbstractCalculation(Sealable):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractCalculation, cls)._updatable_attributes + (
+            cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
             cls.FINISH_STATUS_KEY,
             cls.CHECKPOINT_KEY,
@@ -154,6 +156,23 @@ class AbstractCalculation(Sealable):
             return UseMethod(node=self, actual_name=actual_name, data=self._use_methods[actual_name])
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, name))
+
+    @property
+    def process_label(self):
+        """
+        Return the process label of the Calculation
+
+        :returns: the process label
+        """
+        return self.get_attr(self.PROCESS_LABEL_KEY, None)
+
+    def _set_process_label(self, label):
+        """
+        Set the process label of the Calculation
+
+        :param label: process label string
+        """
+        self._set_attr(self.PROCESS_LABEL_KEY, label)
 
     @property
     def process_state(self):
@@ -299,6 +318,20 @@ class AbstractCalculation(Sealable):
         :returns: list of Calculation nodes called by this Calculation instance
         """
         return self.get_outputs(link_type=LinkType.CALL)
+
+    @property
+    def called_descendants(self):
+        """
+        Return a list of all nodes that the Calculation called recursively calling this
+        function on all its called children and extending the list
+        """
+        descendants = []
+
+        for descendant in self.called:
+            descendants.append(descendant)
+            descendants.extend(descendant.called_descendants)
+
+        return descendants
 
     @property
     def called_by(self):

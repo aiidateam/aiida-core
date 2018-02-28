@@ -53,7 +53,9 @@ class FunctionCalculationMixin(object):
             pass
 
         try:
-            self._set_source_file(inspect.getsourcefile(func))
+            source_file_path = inspect.getsourcefile(func)
+            with open(source_file_path) as handle:
+                self._set_source_file(handle)
         except (IOError, OSError):
             pass
 
@@ -120,14 +122,13 @@ class FunctionCalculationMixin(object):
         except OSError:
             return None
 
-    def _set_source_file(self, source_file_path):
+    def _set_source_file(self, source_file_handle):
         """
-        Store a copy of the source file from `source_file_path` in the repository
-        The `insert_path` method of `Folder` class should verify that `source_file_path` is absolute
+        Store a copy of the source file from `source_file_handle` in the repository
 
-        :param source_file_path: absolute path to the source file
+        :param source_file_handle: a file like object with the source file
         """
-        self.folder.insert_path(source_file_path, self.FUNCTION_SOURCE_FILE_PATH)
+        self.folder.create_file_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
 
 
 class Sealable(object):

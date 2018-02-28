@@ -68,3 +68,8 @@ def user():
 @verdi.group('data')
 def data_cmd():
     pass
+
+
+@verdi.group('daemon')
+def daemon_cmd():
+    pass

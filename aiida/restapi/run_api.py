@@ -23,23 +23,21 @@ def run_api(App, Api, *args, **kwargs):
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    App: Class inheriting from Flask app class  
-    Api = flask_restful API class to be used to wrap the app
+    :App: Class inheriting from Flask app class  
+    :Api: flask_restful API class to be used to wrap the app
+    :args: required by argparse
+    :kwargs: List of valid parameters
 
-    *args: required by argparse
+      - :prog_name: name of the command before arguments are parsed. Useful when
+          api is embedded in a command, such as verdi restapi
+      - default_host: self-explanatory
+      - default_port: self-explanatory
+      - default_config_dir = directory containing the config.py file used to
+      - configure the RESTapi
+      - parse_aiida_profile= if True, parses an option to specify the AiiDA
+          profile
 
-    *kwargs:
-    List of valid parameters:
-    prog_name: name of the command before arguments are parsed. Useful when
-    api is embedded in a command, such as verdi restapi
-    default_host: self-explainatory
-    default_port: self-explainatory
-    default_config_dir = directory containing the config.py file used to
-    configure the RESTapi
-    parse_aiida_profile= if True, parses an option to specify the AiiDA
-    profile
     All other passed parameters are ignored.
-
     """
 
     import aiida  # Mainly needed to locate the correct aiida path

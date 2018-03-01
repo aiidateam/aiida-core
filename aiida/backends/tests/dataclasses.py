@@ -722,7 +722,32 @@ _publ_section_title                     'Test CIF'
             flex = CifData(file=f.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
-    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_empty_cif(self):
+        """
+        Test empty CifData
+
+        Note: This test does not need PyCifRW.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+
+            # empty cifdata should be possible
+            a = CifData()
+
+            # but it does not have a file
+            with self.assertRaises(AttributeError):
+                a.filename
+
+            #now it has
+            a.set_file(f.name)
+            a.filename
+
+            a.store()
+
     def test_parse_policy(self):
         """
         Test that loading of CIF file occurs as defined by parse_policy.
@@ -735,7 +760,7 @@ _publ_section_title                     'Test CIF'
             f.flush()
 
             # this will parse the cif
-            eager = CifData(file=f.name)
+            eager = CifData(file=f.name, parse_policy='eager')
             self.assertIsNot(eager._values, None)
 
             # this should not parse the cif
@@ -748,6 +773,7 @@ _publ_section_title                     'Test CIF'
             # this should parse the cif
             lazy.values
             self.assertIsNot(lazy._values, None)
+
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_set_file(self):
@@ -763,6 +789,7 @@ _publ_section_title                     'Test CIF'
 
             a = CifData(file=f.name)
             f1 = a.get_formulae()
+            self.assertIsNot(f1, None)
 
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.valid_sample_cif_str_2)
@@ -774,9 +801,9 @@ _publ_section_title                     'Test CIF'
             self.assertIs(a.get_attr('spacegroup_numbers'), None)
 
             # this should populate formulae
-            f2 = a.get_formulae()
             a.parse()
-            self.assertIsNot(a.get_attr('formulae'), None)
+            f2 = a.get_formulae()
+            self.assertIsNot(f2, None)
 
             # empty cifdata should be possible
             a = CifData()
@@ -789,7 +816,6 @@ _publ_section_title                     'Test CIF'
             a.filename
 
         self.assertNotEquals(f1, f2)
-
 
 class TestKindValidSymbols(AiidaTestCase):
     """

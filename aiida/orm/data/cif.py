@@ -498,11 +498,22 @@ class CifData(SinglefileData):
         return self._values
 
     def set_values(self, values):
+        """
+        Set internal representation to `values`.
+
+        Warning: This also writes a new CIF file.
+
+        :param values: PyCifRW CifFile object
+
+        .. note:: requires PyCifRW module.
+        """
         import tempfile
         with tempfile.NamedTemporaryFile() as f:
             f.write(values.WriteOut())
             f.flush()
             self.set_file(f.name)
+
+        self._values = values
 
     @values.setter
     def values(self, values):
@@ -677,7 +688,7 @@ class CifData(SinglefileData):
 
     def generate_md5(self):
         """
-        Generate MD5 hash of the file's contents on-the-fly.
+        Computes and returns MD5 hash of the CIF file.
         """
         import aiida.common.utils
         from aiida.common.exceptions import ValidationError
@@ -713,12 +724,17 @@ class CifData(SinglefileData):
 
     def _prepare_cif(self):
         """
-        Write the given CIF file to a string of format CIF.
+        Return CIF string of CifData object.
+
+        If parsed values are present, a CIF string is created
+        and written to file.
+        If no parsed values are present, the CIF string is read
+        from file.
         """
-        # If values have been changed and node is not stored,
-        # the file is updated.
         if self._values and not self.is_stored:
-            self.values = self._values
+            # Note: this overwrites the CIF file!
+            self.set_values(self._values)
+
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read(), {}
 
@@ -747,7 +763,7 @@ class CifData(SinglefileData):
 
     def _validate(self):
         """
-        Validate the structure.
+        Validates MD5 hash of CIF file.
         """
         from aiida.common.exceptions import ValidationError
 

@@ -119,7 +119,7 @@ class DbSearchResults(object):
         return self.DbSearchResultsIterator(self)
 
     def __len__(self):
-        return len(self.results)
+        return len(self._results)
 
     def __getitem__(self, key):
         return self.at(key)

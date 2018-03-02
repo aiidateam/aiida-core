@@ -61,9 +61,6 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 PROFILE_UUID_KEY = 'PROFILE_UUID'
 CIRCUS_PORT_KEY = 'CIRCUS_PORT'
 
-# This is the default process used by load_dbenv when no process is specified
-DEFAULT_PROCESS = 'verdi'
-
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0o0077
 
@@ -280,54 +277,39 @@ def create_base_dirs(config_dir=None):
     create_htaccess_file()
 
 
-def set_default_profile(process, profile, force_rewrite=False):
+def set_default_profile(profile, force_rewrite=False):
     """
-    Set a default db profile to be used by a process (default for verdi,
-    default for daemon, ...)
+    Set the default profile
 
-    :param process: A string identifying the process to modify (e.g. ``verdi``
-      or ``daemon``).
-    :param profile: A string specifying the profile that should be used
-      as default.
-    :param force_rewrite: if False, does not change the default profile
-      if this was already set. Otherwise, forces the default profile to be
-      the value specified as ``profile`` also if a default profile for the
-      given ``process`` was already set.
+    :param profile: A string specifying the profile that should be used as default
+    :param force_rewrite: if False, does not change the default profile if already set
     """
     from aiida.common.exceptions import ProfileConfigurationError
 
     if profile not in get_profiles_list():
-        raise ProfileConfigurationError(
-            'Profile {} has not been configured'.format(profile))
+        raise ProfileConfigurationError('Profile {} has not been configured'.format(profile))
+
     confs = get_config()
+    current_default_profile = confs.get('default_profile', None)
 
-    try:
-        confs['default_profiles']
-    except KeyError:
-        confs['default_profiles'] = {}
+    if current_default_profile is None or force_rewrite:
+        confs['default_profile'] = profile
 
-    if force_rewrite:
-        confs['default_profiles'][process] = profile
-    else:
-        confs['default_profiles'][process] = confs['default_profiles'].get(
-            process, profile)
     backup_config()
     store_config(confs)
 
 
-def get_default_profile(process):
+def get_default_profile():
     """
-    Return the profile name to be used by process
+    Return the default profile name from the configuration
 
-    :return: None if no default profile is found, otherwise the name of the
-      default profile for the given process
+    :return: None if no default profile is found
     """
     confs = get_config()
     try:
-        return confs['default_profiles'][process]
+        return confs['default_profile']
     except KeyError:
         return None
-        # raise ConfigurationError("No default profile found for the process {}".format(process))
 
 
 def get_profiles_list():

@@ -31,7 +31,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.dbenv_lazyloading import with_dbenv
 from aiida.backends.utils import is_dbenv_loaded
 from aiida.backends import settings as backend_settings
-from aiida.common.setup import CIRCUS_PORT_KEY, RMQ_PREFIX_KEY, generate_new_circus_port, update_profile
+from aiida.common.setup import CIRCUS_PORT_KEY, PROFILE_UUID_KEY, generate_new_circus_port, update_profile
 
 VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
 VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
@@ -191,7 +191,7 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         if not is_dbenv_loaded():
             from aiida.backends.utils import load_dbenv
-            load_dbenv(process='daemon')
+            load_dbenv()
 
         if args:
             click.echo(
@@ -301,8 +301,8 @@ class ProfileConfig(object):
         self.profile_config = get_current_profile_config()
         self.profile_config[CIRCUS_PORT_KEY] = self.profile_config.get(
             CIRCUS_PORT_KEY, generate_new_circus_port(self.profile))
-        self.profile_config[RMQ_PREFIX_KEY] = self.profile_config.get(
-            RMQ_PREFIX_KEY, generate_rmq_prefix())
+        self.profile_config[PROFILE_UUID_KEY] = self.profile_config.get(
+            PROFILE_UUID_KEY, generate_rmq_prefix())
         update_profile(self.profile, self.profile_config)
 
     def get_endpoint(self, port_incr=0):
@@ -352,7 +352,7 @@ def daemon_user_guard(function):
     """
 
     @wraps(function)
-    @with_dbenv(process='daemon')
+    @with_dbenv()
     def decorated_function(*args, **kwargs):
         """Check if the current user is allowed to run the daemon, only if yes, run the original function."""
         from aiida.backends.utils import get_daemon_user
@@ -459,7 +459,7 @@ def check_circus_zmq_version(function):
     '--foreground',
     is_flag=True,
     help="Start circusd in the background. Not supported on Windows")
-@with_dbenv(process='daemon')
+@with_dbenv()
 @daemon_user_guard
 @check_circus_zmq_version
 def start(foreground):
@@ -671,7 +671,7 @@ def decr(num):
 
 
 @daemon_cmd.command()
-@with_dbenv(process='daemon')
+@with_dbenv()
 @only_if_daemon_pid
 def logshow():
     """Show the log of the daemon, press CTRL+C to quit."""
@@ -692,7 +692,7 @@ def logshow():
 
 @daemon_cmd.command()
 @click.option('--wait', is_flag=True)
-@with_dbenv(process='daemon')
+@with_dbenv()
 @daemon_user_guard
 def restart(wait):
     """

@@ -113,7 +113,6 @@ class Devel(VerdiCommandWithSubcommands):
             'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
-            'tickd': (self.tick_daemon, self.complete_none),
             'run_daemon': (self.run_daemon, self.complete_none)
         }
 
@@ -366,16 +365,6 @@ class Devel(VerdiCommandWithSubcommands):
                 print >> sys.stderr, e.message
             except Exception as e:
                 print >> sys.stderr, "# Error loading job # %s (%s): %s" % (job, type(e), e)
-
-    def tick_daemon(self, *args):
-        """
-        Call all the functions that the daemon would call if running once and
-        return.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-        from aiida.daemon.tasks import manual_tick_all
-        manual_tick_all()
 
     def run_daemon(self, *args):
         """

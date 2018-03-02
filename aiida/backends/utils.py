@@ -12,10 +12,8 @@ from __future__ import absolute_import
 
 from aiida.backends import settings
 from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
-from aiida.common.exceptions import (
-        ConfigurationError, NotExistent,
-        InvalidOperation
-    )
+from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
+
 
 AIIDA_ATTRIBUTE_SEP = '.'
 
@@ -45,8 +43,7 @@ def QueryFactory():
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.queries import QueryManagerDjango as QueryManager
     else:
-        raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            settings.BACKEND))
+        raise ConfigurationError('Invalid settings.BACKEND: {}'.format(settings.BACKEND))
     return QueryManager
 
 
@@ -58,25 +55,22 @@ def is_dbenv_loaded():
     return settings.LOAD_DBENV_CALLED
 
 
-def load_dbenv(process=None, profile=None, *args, **kwargs):
+def load_dbenv(profile=None, *args, **kwargs):
     if is_dbenv_loaded():
         raise InvalidOperation("You cannot call load_dbenv multiple times!")
     settings.LOAD_DBENV_CALLED = True
 
-    # This is going to set global variables in settings, including
-    # settings.BACKEND
-    load_profile(process=process, profile=profile)
+    # This is going to set global variables in settings, including settings.BACKEND
+    load_profile(profile=profile)
 
     if settings.BACKEND == BACKEND_SQLA:
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
-        return load_dbenv_sqlalchemy(
-            process=process, profile=profile, *args, **kwargs)
+        return load_dbenv_sqlalchemy(profile=profile, *args, **kwargs)
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
-        return load_dbenv_django(
-            process=process, profile=profile, *args, **kwargs)
+        return load_dbenv_django(profile=profile, *args, **kwargs)
     else:
         raise ConfigurationError("Invalid settings.BACKEND: {}".format(
             settings.BACKEND))

@@ -477,7 +477,7 @@ def create_gin_index():
         print("db_dbnode_attributes_idx on db_node already exists.")
 
 
-def transition_load_db_env(process=None, profile=None, *args, **kwargs):
+def transition_load_db_env(profile=None, *args, **kwargs):
     from aiida.backends.profile import load_profile
     from aiida.backends import settings
     from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
@@ -486,9 +486,9 @@ def transition_load_db_env(process=None, profile=None, *args, **kwargs):
 
     # This is going to set global variables in settings, including
     # settings.BACKEND
-    load_profile(process=process, profile=profile)
+    load_profile(profile=profile)
 
-    _load_dbenv_noschemacheck(process=process, profile=profile)
+    _load_dbenv_noschemacheck(profile=profile)
 
 
 def set_correct_schema_version_and_backend():

@@ -31,8 +31,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--aiida-profile', help='The AiiDA profile that you would like to use')
-    parser.add_argument(
-        '--aiida-process', help='The AiiDA process that you would like to use')
 
     subparsers = parser.add_subparsers(
         help='sub-command help', dest='command')
@@ -67,8 +65,6 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
 
     if args.command in AVAIL_AL_COMMANDS:
-        # Use the default process if not specified
-        process_name = args.aiida_process
         # Use the default profile if not specified
         profile_name = args.aiida_profile
 
@@ -78,12 +74,12 @@ if __name__ == "__main__":
         # We load the needed profile.
         # This is going to set global variables in settings, including
         # settings.BACKEND
-        load_profile(process=process_name, profile=profile_name)
+        load_profile(profile=profile_name)
         if settings.BACKEND != BACKEND_SQLA:
             raise InvalidOperation("A SQLAlchemy (alembic) revision "
                                    "generation procedure is initiated "
                                    "but a different backend is used!")
-        _load_dbenv_noschemacheck(process=process_name, profile=profile_name)
+        _load_dbenv_noschemacheck(profile=profile_name)
 
         if 'arguments' in args:
             alembic_command(args.command, args.arguments)

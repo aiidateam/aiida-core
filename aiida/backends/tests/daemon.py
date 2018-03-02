@@ -11,7 +11,7 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
-from aiida.daemon.tasks import manual_tick_all
+from aiida.daemon.tasks import legacy_workflow_stepper
 from aiida.orm import User
 from aiida.orm.implementation import get_all_running_steps
 from aiida.workflows.test import WFTestSimpleWithSubWF
@@ -57,7 +57,7 @@ class TestDaemonBasic(AiidaTestCase):
         # Making the daemon to advance. This will automatically set
         # to FINISHED all the running steps that are (directly) under
         # a finished workflow
-        manual_tick_all()
+        legacy_workflow_stepper()
 
         self.assertEquals(len(list(get_all_running_steps())), 0,
                           "At this point there should be no running steps.")
@@ -72,7 +72,7 @@ class TestDaemonBasic(AiidaTestCase):
         # Make the daemon to advance a bit more and make sure that no
         # workflows resurrect.
         for _ in range(5):
-            manual_tick_all()
+            legacy_workflow_stepper()
 
         self.assertEquals(len(list(get_all_running_steps())), 0,
                           "At this point there should be no running steps.")

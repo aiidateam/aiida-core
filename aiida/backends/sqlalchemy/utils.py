@@ -79,21 +79,19 @@ def reset_session(config):
     register_after_fork(sa.engine, recreate_after_fork)
 
 
-def load_dbenv(process=None, profile=None, connection=None):
+def load_dbenv(profile=None, connection=None):
     """
     Load the database environment (SQLAlchemy) and perform some checks.
 
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
     :param profile: the string with the profile to use. If not specified,
         use the default one specified in the AiiDA configuration file.
     """
-    _load_dbenv_noschemacheck(process=process, profile=profile)
+    _load_dbenv_noschemacheck(profile=profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
 
-def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
+def _load_dbenv_noschemacheck(profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """

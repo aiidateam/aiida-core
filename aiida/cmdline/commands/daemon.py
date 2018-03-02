@@ -8,11 +8,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
 import os
+import sys
 import subprocess
-from functools import wraps
 import tabulate
+from functools import wraps
 
 import click
 from click_spinner import spinner as cli_spinner
@@ -25,18 +25,11 @@ from circus.util import check_future_exception_and_log
 from circus.client import CircusClient
 from circus.exc import CallError
 
-from aiida.common import aiidalogger
+from aiida.common.profile import ProfileConfig
 from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.dbenv_lazyloading import with_dbenv
 from aiida.backends.utils import is_dbenv_loaded
-from aiida.backends import settings as backend_settings
-from aiida.common.setup import CIRCUS_PORT_KEY
-
-VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
-VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
-
-LOGGER = aiidalogger.getChild('workflowmanager')
 
 
 def is_daemon_user():
@@ -58,35 +51,8 @@ def _get_env_with_venv_bin():
     pybin = os.path.dirname(sys.executable)
     currenv = os.environ.copy()
     currenv['PATH'] = pybin + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(
-        os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
     return currenv
-
-
-@with_dbenv()
-def get_current_profile():
-    return backend_settings.AIIDADB_PROFILE
-
-
-@with_dbenv()
-def get_current_profile_config():
-    from aiida.common.setup import get_profile_config
-    return get_profile_config(get_current_profile())
-
-
-@with_dbenv()
-def get_daemon_files():
-    from aiida.common import setup
-    return {
-        'circus': {
-            'pid': setup.CIRCUS_PID_FILE_TEMPLATE.format(get_current_profile()),
-            'log': setup.CIRCUS_LOG_FILE_TEMPLATE.format(get_current_profile()),
-        },
-        'daemon': {
-            'pid': setup.DAEMON_PID_FILE_TEMPLATE.format(get_current_profile()),
-            'log': setup.DAEMON_LOG_FILE_TEMPLATE.format(get_current_profile()),
-        }
-    }
 
 
 class Daemon(VerdiCommandWithSubcommands):
@@ -287,49 +253,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 raise
 
 
-class ProfileConfig(object):
-    """Convenient access to all the profile related configuration required for the daemon commands."""
-    _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
-
-    def __init__(self):
-        self.profile = get_current_profile()
-        self.profile_config = get_current_profile_config()
-
-    def get_endpoint(self, port_incr=0):
-        port = self.profile_config[CIRCUS_PORT_KEY]
-        return self._ENDPOINT_TPL.format(port=port + port_incr)
-
-    def get_client(self):
-        return CircusClient(endpoint=self.get_endpoint(), timeout=0.5)
-
-    @property
-    def daemon_name(self):
-        return 'aiida-{}'.format(self.profile)
-
-    @property
-    def cmd_string(self):
-        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile)
-
-    @classmethod
-    def get_daemon_pid(cls):
-        circus_pid_file = get_daemon_files()['circus']['pid']
-        if os.path.isfile(circus_pid_file):
-            try:
-                return int(open(circus_pid_file, 'r').read().strip())
-            except (ValueError, IOError):
-                return None
-        else:
-            return None
-
-    @property
-    def pid_file(self):
-        return get_daemon_files()['circus']['pid']
-
-    @property
-    def daemon_log_file(self):
-        return get_daemon_files()['daemon']['log']
-
-
 def daemon_user_guard(function):
     """
     Function decorator that checks wether the user is the daemon user before running the function
@@ -454,17 +377,17 @@ def check_circus_zmq_version(function):
 @check_circus_zmq_version
 def start(foreground):
     """Start an aiida daemon."""
-    logs_pids = get_daemon_files()
+
+    # Create the arbiter
+    profile_config = ProfileConfig()
 
     loglevel = 'INFO'
     logoutput = '-'
 
     if not foreground:
-        logoutput = logs_pids['circus']['log']
+        logoutput = profile_config.circus_log_file
         daemonize()
 
-    # Create the arbiter
-    profile_config = ProfileConfig()
 
     env = _get_env_with_venv_bin()
     env['PYTHONUNBUFFERED'] = 'True'
@@ -477,16 +400,15 @@ def start(foreground):
         loglevel=loglevel,
         debug=False,
         statsd=True,
-        pidfile=logs_pids['circus']
-        ['pid'],  # aiida.common.setup.AIIDA_CONFIG_FOLDER + '/daemon/aiida-{}.pid'.format(uuid)
+        pidfile=profile_config.circus_pid_file,
         watchers=[{
             'name': profile_config.daemon_name,
             'cmd': profile_config.cmd_string,
-            'virtualenv': VIRTUALENV,
+            'virtualenv': profile_config.virtualenv,
             'copy_env': True,
             'stdout_stream': {
                 'class': 'FileStream',
-                'filename': logs_pids['daemon']['log']
+                'filename': profile_config.daemon_log_file
             },
             'env': env,
         }])
@@ -665,15 +587,13 @@ def decr(num):
 @only_if_daemon_pid
 def logshow():
     """Show the log of the daemon, press CTRL+C to quit."""
-    files = get_daemon_files()
+    profile_config = ProfileConfig()
     try:
         currenv = _get_env_with_venv_bin()
         process = subprocess.Popen(
-            [
-                "tail",
-                "-f",
-                files['daemon']['log'],
-            ], env=currenv)  # , stdout=subprocess.PIPE)
+            ['tail', '-f', profile_config.daemon_log_file],
+            env=currenv
+        )
         process.wait()
     except KeyboardInterrupt:
         # exit on CTRL+C

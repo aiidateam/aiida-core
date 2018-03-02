@@ -22,19 +22,16 @@ def start_daemon():
     """
     Start a daemon runner for the currently configured profile
     """
-    from aiida import work
     from aiida.cmdline.commands.daemon import ProfileConfig
     from aiida.common.log import configure_logging
+    from aiida.work.rmq import get_rmq_config
+    from aiida.work import DaemonRunner, set_runner
 
     profile_config = ProfileConfig()
     configure_logging(daemon=True, daemon_log_file=profile_config.daemon_log_file)
 
-    rmq_config = {
-        'url': 'amqp://localhost',
-        'prefix': work.rmq._get_prefix(),
-    }
-    runner = work.DaemonRunner(rmq_config=rmq_config, rmq_submit=False)
-    work.set_runner(runner)
+    runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
+    set_runner(runner)
 
     tick_legacy_workflows(runner)
 

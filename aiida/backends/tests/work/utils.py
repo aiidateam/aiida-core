@@ -1,5 +1,6 @@
-from aiida import work
+# -*- coding: utf-8 -*-
 import uuid
+from aiida import work
 
 
 def create_test_runner(with_communicator=False):

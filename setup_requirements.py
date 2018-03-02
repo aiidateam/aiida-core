@@ -68,6 +68,7 @@ install_requires = [
     'ipython<6.0',
     'scipy<1.0.0',  # At this moment the install of 1.0.0 release is broken
     'plumpy>=0.10.0.dev8',
+    'circus>=0.14.0',
 ]
 
 extras_require = {

@@ -66,7 +66,8 @@ class SerializeWorkChain(WorkChain):
         spec.outline(cls.echo)
 
     def echo(self):
-        self.out('test', self.inputs.test)
+        self.out('output', self.inputs.test)
+
 class NestedInputNamespace(WorkChain):
     @classmethod
     def define(cls, spec):

@@ -499,7 +499,7 @@ def generate_new_circus_port(profiles=None):
     :returns: integer for the circus daemon port
     """
     if profiles is None:
-        profiles = get_config().get('profiles', {})
+        profiles = get_config().pop('profiles', {})
 
     port = 6000
     used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in profiles.values()]

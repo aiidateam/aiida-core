@@ -7,19 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Defines the migration functions between different config versions.
-"""
-import uuid
-
 
 # The current configuration version. Increment this value whenever a change
 # to the config.json structure is made.
-CURRENT_CONFIG_VERSION = 2
+CURRENT_CONFIG_VERSION = 3
 
 # The oldest config version where no backwards-incompatible changes have been made since.
 # When doing backwards-incompatible changes, set this to the current version.
-OLDEST_COMPATIBLE_CONFIG_VERSION = 0
+OLDEST_COMPATIBLE_CONFIG_VERSION = 3
 
 
 class ConfigMigration(object):
@@ -75,6 +70,26 @@ def _1_add_profile_uuid_and_circus_port(config):
     return config
 
 
+def _2_simplify_default_profiles(config):
+    """
+    The concept of a different 'process' for a profile has been removed and as such the
+    default profiles key in the configuration no longer needs a value per process ('verdi', 'daemon')
+    We remove the dictionary 'default_profiles' and replace it with a simple value 'default_profile'
+    """
+    from aiida.backends import settings
+
+    default_profiles = config.pop('default_profiles', None)
+
+    if default_profiles:
+        default_profile = default_profiles['daemon']
+    else:
+        default_profile = settings.AIIDADB_PROFILE
+
+    config['default_profile'] = default_profile
+
+    return config
+
+
 # Maps the initial config version to the ConfigMigration which updates it.
 _MIGRATION_LOOKUP = {
     0: ConfigMigration(
@@ -86,5 +101,10 @@ _MIGRATION_LOOKUP = {
         migrate_function=_1_add_profile_uuid_and_circus_port,
         current_version=2,
         oldest_version=0
+    ),
+    2: ConfigMigration(
+        migrate_function=_2_simplify_default_profiles,
+        current_version=3,
+        oldest_version=3
     )
 }

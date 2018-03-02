@@ -864,7 +864,7 @@ class TestSerializeWorkChain(AiidaTestCase):
                 assert isinstance(self.inputs.test, Str)
                 assert self.inputs.test == self.inputs.reference
 
-        work.launch.run(TestSerializeWorkChain, test=Str, reference=Str('aiida.orm.data.base.Str'))
+        work.launch.run(TestSerializeWorkChain, test=Int, reference=Str(CLASS_LOADER.class_identifier(Int)))
 
 
 class GrandParentExposeWorkChain(work.WorkChain):

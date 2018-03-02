@@ -15,6 +15,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.work.launch import run_get_node, submit
+from aiida.work.class_loader import CLASS_LOADER
 from workchains import NestedWorkChain, SerializeWorkChain
 
 ParameterData = DataFactory('parameter')
@@ -242,7 +243,7 @@ def main():
 
     print("Submitting the serializing workchain")
     pk = submit(SerializeWorkChain, test=Int).pk
-    expected_results_workchains[pk] = 'aiida.orm.data.base.Int'
+    expected_results_workchains[pk] = CLASS_LOADER.class_identifier(Int)
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

@@ -3,7 +3,7 @@ import plumpy
 import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
+from aiida.common.setup import get_profile_config, PROFILE_UUID_KEY
 from aiida.backends import settings
 from aiida.work.class_loader import CLASS_LOADER
 
@@ -19,7 +19,7 @@ _LAUNCH_QUEUE = 'process.queue'
 
 def _get_prefix():
     """Get the queue prefix from the profile."""
-    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
+    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[PROFILE_UUID_KEY]
 
 
 def get_rmq_config(prefix=None):

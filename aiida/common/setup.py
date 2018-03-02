@@ -34,6 +34,8 @@ else:
     AIIDA_CONFIG_FOLDER = '~/.aiida'
 
 CONFIG_FNAME = 'config.json'
+CONFIG_INDENT_SIZE = 4
+
 SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = 'daemon'
@@ -49,7 +51,9 @@ WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
-RMQ_PREFIX_KEY = 'RMQ_PREFIX'
+
+# This key will uniquely identify an AiiDA profile
+PROFILE_UUID_KEY = 'PROFILE_UUID'
 
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
@@ -112,7 +116,7 @@ def _load_config():
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     try:
-        with open(conf_file, "r") as json_file:
+        with open(conf_file, 'r') as json_file:
             return json.load(json_file)
     except IOError:
         # No configuration file
@@ -140,8 +144,8 @@ def store_config(confs):
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(conf_file, "w") as json_file:
-            json.dump(confs, json_file)
+        with open(conf_file, 'w') as json_file:
+            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
 
@@ -370,7 +374,7 @@ key_explanation = {
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
     DEFAULT_USER_CONFIG_FIELD: "Default user email",
-    RMQ_PREFIX_KEY: "Prefix for the RabbitMQ queue",
+    PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
 }
 
 
@@ -474,8 +478,8 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             os.umask(old_umask)
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
-    # set RMQ_PREFIX
-    new_profile[RMQ_PREFIX_KEY] = uuid.uuid4().hex
+    # Generate the profile uuid
+    new_profile[PROFILE_UUID_KEY] = uuid.uuid4().hex
 
     # finalizing
     write = not dry_run
@@ -742,8 +746,8 @@ def create_configuration(profile='default'):
 
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
-        # Add RabbitMQ prefix
-        this_new_confs[RMQ_PREFIX_KEY] = uuid.uuid4().hex
+        # Add the profile uuid
+        this_new_confs[PROFILE_UUID_KEY] = uuid.uuid4().hex
 
         confs['profiles'][profile] = this_new_confs
 

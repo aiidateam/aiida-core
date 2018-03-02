@@ -31,7 +31,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.dbenv_lazyloading import with_dbenv
 from aiida.backends.utils import is_dbenv_loaded
 from aiida.backends import settings as backend_settings
-from aiida.common.setup import CIRCUS_PORT_KEY, PROFILE_UUID_KEY, generate_new_circus_port, update_profile
+from aiida.common.setup import CIRCUS_PORT_KEY
 
 VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
 VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
@@ -287,11 +287,6 @@ class Daemon(VerdiCommandWithSubcommands):
                 raise
 
 
-def generate_rmq_prefix():
-    import uuid
-    return uuid.uuid4().hex
-
-
 class ProfileConfig(object):
     """Convenient access to all the profile related configuration required for the daemon commands."""
     _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
@@ -299,11 +294,6 @@ class ProfileConfig(object):
     def __init__(self):
         self.profile = get_current_profile()
         self.profile_config = get_current_profile_config()
-        self.profile_config[CIRCUS_PORT_KEY] = self.profile_config.get(
-            CIRCUS_PORT_KEY, generate_new_circus_port(self.profile))
-        self.profile_config[PROFILE_UUID_KEY] = self.profile_config.get(
-            PROFILE_UUID_KEY, generate_rmq_prefix())
-        update_profile(self.profile, self.profile_config)
 
     def get_endpoint(self, port_incr=0):
         port = self.profile_config[CIRCUS_PORT_KEY]

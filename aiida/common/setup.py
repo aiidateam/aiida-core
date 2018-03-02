@@ -498,13 +498,21 @@ def generate_new_circus_port(profiles=None):
     :param profiles: the profiles dictionary of the configuration file
     :returns: integer for the circus daemon port
     """
-    if profiles is None:
-        profiles = get_config().pop('profiles', {})
-
     port = 6000
+
+    if profiles is None:
+        try:
+            configuration = get_config()
+        except MissingConfigurationError:
+            configuration = {}
+
+        profiles = configuration.get('profiles', {})
+
     used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in profiles.values()]
+
     while port in used_ports:
         port += 3
+
     return port
 
 

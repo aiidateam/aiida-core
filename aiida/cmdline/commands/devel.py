@@ -370,7 +370,7 @@ class Devel(VerdiCommandWithSubcommands):
         """
         Run a daemon instance in this in the current interpreter
         """
-        from aiida.daemon.new import start_daemon
+        from aiida.daemon.runner import start_daemon
         start_daemon()
 
     def run_listproperties(self, *args):

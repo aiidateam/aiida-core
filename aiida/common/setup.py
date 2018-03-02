@@ -468,7 +468,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
     # Generate the profile uuid
-    new_profile[PROFILE_UUID_KEY] = uuid.uuid4().hex
+    new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
     new_profile[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
     # finalizing
@@ -482,10 +482,27 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     return new_profile
 
 
-def generate_new_circus_port(config=None):
-    config = get_config()
+def generate_new_profile_uuid():
+    """
+    Return a UUID for a new profile
+
+    :returns: the hexadecimal represenation of a uuid4 UUID
+    """
+    return uuid.uuid4().hex
+
+
+def generate_new_circus_port(profiles=None):
+    """
+    Return a unique port for the CIRCUS_PORT_KEY of a new profile
+
+    :param profiles: the profiles dictionary of the configuration file
+    :returns: integer for the circus daemon port
+    """
+    if profiles is None:
+        profiles = get_config().get('profiles', {})
+
     port = 6000
-    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config.get('profiles', {}).values()]
+    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in profiles.values()]
     while port in used_ports:
         port += 3
     return port
@@ -746,7 +763,7 @@ def create_configuration(profile='default'):
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
         # Add the profile uuid
-        this_new_confs[PROFILE_UUID_KEY] = uuid.uuid4().hex
+        this_new_confs[PROFILE_UUID_KEY] = generate_new_profile_uuid()
         this_new_confs[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
         confs['profiles'][profile] = this_new_confs

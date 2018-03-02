@@ -49,7 +49,7 @@ class CacheConfigTest(unittest.TestCase):
             self.assertRaises(ValueError, get_use_cache, TemplatereplacerCalculation)
 
     def test_disable_caching(self):
-        from aiida.orm.data.base import Float
+        from aiida.orm.data.float import Float
         with disable_caching(Float):
             self.assertFalse(get_use_cache(Float))
         self.assertTrue(get_use_cache(Float))

@@ -18,6 +18,7 @@ Modules
     ../parsers/dev
     ../querying/querybuilder/dev
     ../work/dev
+    ../restapi/dev
     ../import_export/dbimporters/dev
     ../import_export/dbexporters/dev
     ../testing/dev

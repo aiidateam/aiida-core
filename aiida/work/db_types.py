@@ -9,9 +9,11 @@
 ###########################################################################
 
 from aiida.orm import Data
-from aiida.orm.data.base import BaseType, Int, Bool, Float, Str
-
-
+from aiida.orm.data import BaseType
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 
 
 _TYPE_MAPPING = {

@@ -25,9 +25,9 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import load_node
 from aiida.orm.calculation import Calculation
+from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
-from aiida.utils.calculation import add_source_info
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
@@ -47,9 +47,7 @@ class Process(plumpy.Process):
 
     _spec_type = ProcessSpec
 
-    SINGLE_RETURN_LINKNAME = '[return]'
-    # This is used for saving node pks in the saved instance state
-    NODE_TYPE = uuid.UUID('5cac9bab-6f46-485b-9e81-d6a666cfdc1b')
+    SINGLE_RETURN_LINKNAME = 'return'
 
     class SaveKeys(enum.Enum):
         """
@@ -208,14 +206,21 @@ class Process(plumpy.Process):
         self.report(traceback.format_exc())
 
     @override
+    def on_finish(self, result):
+        """
+        Set the finish status on the Calculation node
+        """
+        super(Process, self).on_finish(result)
+        self.calc._set_finish_status(result)
+
+    @override
     def on_fail(self, exc_info):
+        """
+        Format the exception info into a string and log it as an error
+        """
         super(Process, self).on_fail(exc_info)
-
-        exc = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error("{} failed:\n{}".format(self.pid, "".join(exc)))
-
-        exception = exc_info[1]
-        self.calc._set_attr(WorkCalculation.FAILED_KEY, True)
+        exception = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
+        self.logger.error('{} failed:\n{}'.format(self.pid, ''.join(exception)))
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -333,7 +338,7 @@ class Process(plumpy.Process):
 
         # Save the name of this process
         self.calc._set_process_state(None)
-        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self.__class__.__name__)
+        self.calc._set_process_label(self.__class__.__name__)
 
         parent_calc = self.get_parent_calc()
 
@@ -413,8 +418,8 @@ class Process(plumpy.Process):
         # Second priority: config
         except KeyError:
             return (
-                    caching.get_use_cache(type(self)) or
-                    caching.get_use_cache(type(self._calc))
+                caching.get_use_cache(type(self)) or
+                caching.get_use_cache(type(self._calc))
             )
 
 
@@ -427,7 +432,8 @@ class Process(plumpy.Process):
         :param namespace: PortNamespace in which to look for the inputs
         :type namespace: str
 
-        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for inputs. Inputs in lower-lying namespaces take precedence.
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be
+            searched for inputs. Inputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
         """
         exposed_inputs = {}
@@ -456,12 +462,14 @@ class Process(plumpy.Process):
 
     def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
         """
-        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific ``process_instance`` in a dictionary.
+        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific
+        ``process_instance`` in a dictionary.
 
         :param namespace: Namespace in which to search for exposed outputs.
         :type namespace: str
 
-        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be searched for outputs. Outputs in lower-lying namespaces take precedence.
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also
+            be searched for outputs. Outputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
         """
         namespace_separator = self.spec().namespace_separator
@@ -510,8 +518,9 @@ class Process(plumpy.Process):
             return namespace_list
 
 class FunctionProcess(Process):
+
     _func_args = None
-    _calc_node_class = WorkCalculation
+    _calc_node_class = FunctionCalculation
 
     @staticmethod
     def _func(*args, **kwargs):
@@ -543,7 +552,7 @@ class FunctionProcess(Process):
         first_default_pos = nargs - ndefaults
 
         if calc_node_class is None:
-            calc_node_class = WorkCalculation
+            calc_node_class = FunctionCalculation
 
         def _define(cls, spec):
             super(FunctionProcess, cls).define(spec)
@@ -616,9 +625,8 @@ class FunctionProcess(Process):
     @override
     def _setup_db_record(self):
         super(FunctionProcess, self)._setup_db_record()
-        add_source_info(self.calc, self._func)
-        # Save the name of the function
-        self.calc._set_attr(utils.PROCESS_LABEL_ATTR, self._func.__name__)
+        self.calc.store_source_info(self._func)
+        self.calc._set_process_label(self._func.__name__)
 
     @override
     def _run(self):
@@ -654,4 +662,5 @@ class FunctionProcess(Process):
                     "Must be a Data type or a Mapping of {{string: Data}}".
                         format(result.__class__))
 
-        return result
+        # Execution successful so we return exit code (finish status) 0
+        return 0

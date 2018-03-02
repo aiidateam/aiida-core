@@ -42,6 +42,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
         """
+        super(JobCalculation, self)._set_state(state)
 
         from aiida.common.datastructures import sort_states
         from aiida.backends.djsite.db.models import DbCalcState

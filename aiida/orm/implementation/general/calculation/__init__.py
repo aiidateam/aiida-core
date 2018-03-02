@@ -9,67 +9,14 @@
 ###########################################################################
 
 import collections
+import enum
+import logging
 
 from plumpy import ProcessState
-from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
+from aiida.common.log import get_dblogger_extra
+from aiida.common.utils import classproperty
 from aiida.orm.mixins import Sealable
-
-def _parse_single_arg(function_name, additional_parameter,
-                      args, kwargs):
-    """
-    Verifies that a single additional argument has been given (or no
-    additional argument, if additional_parameter is None). Also
-    verifies its name.
-
-    :param function_name: the name of the caller function, used for
-        the output messages
-    :param additional_parameter: None if no additional parameters
-        should be passed, or a string with the name of the parameter
-        if one additional parameter should be passed.
-
-    :return: None, if additional_parameter is None, or the value of
-        the additional parameter
-    :raise TypeError: on wrong number of inputs
-    """
-    # Here all the logic to check if the parameters are correct.
-    if additional_parameter is not None:
-        if len(args) == 1:
-            if kwargs:
-                raise TypeError("{}() received too many args".format(
-                    function_name))
-            additional_parameter_data = args[0]
-        elif len(args) == 0:
-            kwargs_copy = kwargs.copy()
-            try:
-                additional_parameter_data = kwargs_copy.pop(
-                    additional_parameter)
-            except KeyError:
-                if kwargs_copy:
-                    raise TypeError("{}() got an unexpected keyword "
-                                    "argument '{}'".format(
-                        function_name, kwargs_copy.keys()[0]))
-                else:
-                    raise TypeError("{}() requires more "
-                                    "arguments".format(function_name))
-            if kwargs_copy:
-                raise TypeError("{}() got an unexpected keyword "
-                                "argument '{}'".format(
-                    function_name, kwargs_copy.keys()[0]))
-        else:
-            raise TypeError("{}() received too many args".format(
-                function_name))
-        return additional_parameter_data
-    else:
-        if kwargs:
-            raise TypeError("{}() got an unexpected keyword "
-                            "argument '{}'".format(
-                function_name, kwargs.keys()[0]))
-        if len(args) != 0:
-            raise TypeError("{}() received too many args".format(
-                function_name))
-
-        return None
 
 
 class AbstractCalculation(Sealable):
@@ -81,24 +28,24 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
-    CHECKPOINT_KEY = 'checkpoints'
+    PROCESS_LABEL_KEY = '_process_label'
     PROCESS_STATE_KEY = 'process_state'
-
-    _cacheable = False
-
-    _updatable_attributes = Sealable._updatable_attributes + ('state', PROCESS_STATE_KEY, CHECKPOINT_KEY)
+    FINISH_STATUS_KEY = 'finish_status'
+    CHECKPOINT_KEY = 'checkpoints'
 
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL']
+    _cacheable = False
 
     @classproperty
-    def _hash_ignored_attributes(cls):
-        return super(AbstractCalculation, cls)._hash_ignored_attributes + [
-            '_sealed',
-            '_finished',
-        ]
+    def _updatable_attributes(cls):
+        return super(AbstractCalculation, cls)._updatable_attributes + (
+            cls.PROCESS_LABEL_KEY,
+            cls.PROCESS_STATE_KEY,
+            cls.FINISH_STATUS_KEY,
+            cls.CHECKPOINT_KEY,
+        )
 
-    # Nodes that can be added as input using the use_* methods
     @classproperty
     def _use_methods(cls):
         """
@@ -135,32 +82,23 @@ class AbstractCalculation(Sealable):
     @property
     def logger(self):
         """
-        Get the logger of the Calculation object, so that it also logs to the
-        DB.
+        Get the logger of the Calculation object, so that it also logs to the DB.
 
-        :return: LoggerAdapter object, that works like a logger, but also has
-          the 'extra' embedded
+        :return: LoggerAdapter object, that works like a logger, but also has the 'extra' embedded
         """
-        import logging
-        from aiida.common.log import get_dblogger_extra
-
-        return logging.LoggerAdapter(
-            logger=self._logger, extra=get_dblogger_extra(self))
+        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self))
 
     def __dir__(self):
         """
         Allow to list all valid attributes, adding also the use_* methods
         """
-        return sorted(dir(type(self)) + list(['use_{}'.format(k)
-                                              for k in
-                                              self._use_methods.iterkeys()]))
+        return sorted(dir(type(self)) + list(['use_{}'.format(k) for k in self._use_methods.iterkeys()]))
 
     def __getattr__(self, name):
         """
-        Expand the methods with the use_* calls. Note that this method only
-        gets called if 'name' is not already defined as a method. Returning
-        None will then automatically raise the standard AttributeError
-        exception.
+        Expand the methods with the use_* calls. Note that this method only gets called if 'name'
+        is not already defined as a method. Returning one will then automatically raise the
+        standard AttributeError exception.
         """
         if name == '_use_methods':
             raise AttributeError("'{0}' object has no attribute '{1}'".format(type(self), name))
@@ -177,6 +115,7 @@ class AbstractCalculation(Sealable):
                 self.node = node
                 self.actual_name = actual_name
                 self.data = data
+
                 try:
                     self.__doc__ = data['docstring']
                 except KeyError:
@@ -184,9 +123,8 @@ class AbstractCalculation(Sealable):
                     pass
 
             def __call__(self, parent_node, *args, **kwargs):
-                # Not really needed, will be checked in get_linkname
-                # But I do anyway in order to raise an exception as soon as
-                # possible, with the most intuitive caller function name
+                # Not really needed, will be checked in get_linkname but I do anyway in order to raise
+                # an exception as soon as possible, with the most intuitive caller function name
                 additional_parameter = _parse_single_arg(
                     function_name='use_{}'.format(self.actual_name),
                     additional_parameter=self.data['additional_parameter'],
@@ -194,25 +132,18 @@ class AbstractCalculation(Sealable):
 
                 # Type check
                 if not isinstance(parent_node, self.data['valid_types']):
-                    if isinstance(self.data['valid_types'],
-                                  collections.Iterable):
-                        valid_types_string = ",".join([_.__name__ for _ in
-                                                       self.data[
-                                                           'valid_types']])
+                    if isinstance(self.data['valid_types'], collections.Iterable):
+                        valid_types_string = ','.join([_.__name__ for _ in self.data['valid_types']])
                     else:
                         valid_types_string = self.data['valid_types'].__name__
 
-                    raise TypeError("The given node is not of the valid type "
-                                    "for use_{}. Valid types are: {}, while "
-                                    "you provided {}".format(
-                        self.actual_name, valid_types_string,
-                        parent_node.__class__.__name__))
+                    raise TypeError(
+                        'The given node is not of the valid type for use_{}.'
+                        'Valid types are: {}, while you provided {}'.format(
+                            self.actual_name, valid_types_string, parent_node.__class__.__name__))
 
                 # Get actual link name
-                actual_linkname = self.node.get_linkname(actual_name, *args,
-                                                         **kwargs)
-                # Checks that such an argument exists have already been
-                # made inside actual_linkname
+                actual_linkname = self.node.get_linkname(actual_name, *args, **kwargs)
 
                 # Here I do the real job
                 self.node._replace_link_from(parent_node, actual_linkname)
@@ -222,11 +153,26 @@ class AbstractCalculation(Sealable):
 
         if name in valid_use_methods:
             actual_name = name[len(prefix):]
-            return UseMethod(node=self, actual_name=actual_name,
-                             data=self._use_methods[actual_name])
+            return UseMethod(node=self, actual_name=actual_name, data=self._use_methods[actual_name])
         else:
-            raise AttributeError("'{}' object has no attribute '{}'".format(
-                self.__class__.__name__, name))
+            raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, name))
+
+    @property
+    def process_label(self):
+        """
+        Return the process label of the Calculation
+
+        :returns: the process label
+        """
+        return self.get_attr(self.PROCESS_LABEL_KEY, None)
+
+    def _set_process_label(self, label):
+        """
+        Set the process label of the Calculation
+
+        :param label: process label string
+        """
+        self._set_attr(self.PROCESS_LABEL_KEY, label)
 
     @property
     def process_state(self):
@@ -298,24 +244,48 @@ class AbstractCalculation(Sealable):
         """
         Returns whether the Calculation has finished successfully, which means that it
         terminated nominally and had a zero exit code indicating a successful execution
-        # TODO when finish_status is implemented add that in return value determination
 
         :return: True if the calculation has finished successfully, False otherwise
         :rtype: bool
         """
-        return self.process_state == ProcessState.FINISHED
+        return self.is_finished and self.finish_status == 0
 
     @property
     def is_failed(self):
         """
         Returns whether the Calculation has failed, which means that it terminated nominally
         but it had a non-zero exit status
-        # TODO when finish_status is implemented add that in return value determination
 
         :return: True if the calculation has failed, False otherwise
         :rtype: bool
         """
-        return self.process_state == ProcessState.FINISHED and False
+        return self.is_finished and self.finish_status != 0
+
+    @property
+    def finish_status(self):
+        """
+        Return the finish status of the Calculation
+
+        :returns: the finish status, an integer exit code or None
+        """
+        return self.get_attr(self.FINISH_STATUS_KEY, None)
+
+    def _set_finish_status(self, status):
+        """
+        Set the finish status of the Calculation
+
+        :param state: an integer exit code or None, which will be interpreted as zero
+        """
+        if status is None:
+            status = 0
+
+        if isinstance(status, enum.Enum):
+            status = status.value
+
+        if not isinstance(status, int):
+            raise ValueError('finish status has to be an integer, got {}'.format(status))
+
+        return self._set_attr(self.FINISH_STATUS_KEY, status)
 
     @property
     def checkpoint(self):
@@ -338,14 +308,38 @@ class AbstractCalculation(Sealable):
         """
         Delete the checkpoint bundle set for the Calculation
         """
-        return self._det_attr(self.CHECKPOINT_KEY)
+        return self._del_attr(self.CHECKPOINT_KEY)
 
     @property
     def called(self):
+        """
+        Return a list of nodes that the Calculation called
+
+        :returns: list of Calculation nodes called by this Calculation instance
+        """
         return self.get_outputs(link_type=LinkType.CALL)
 
     @property
+    def called_descendants(self):
+        """
+        Return a list of all nodes that the Calculation called recursively calling this
+        function on all its called children and extending the list
+        """
+        descendants = []
+
+        for descendant in self.called:
+            descendants.append(descendant)
+            descendants.extend(descendant.called_descendants)
+
+        return descendants
+
+    @property
     def called_by(self):
+        """
+        Return the Calculation that called this Calculation, or None if it does not have a caller
+
+        :returns: Calculation that called this Calculation instance or None
+        """
         called_by = self.get_inputs(link_type=LinkType.CALL)
         if called_by:
             return called_by[0]
@@ -363,8 +357,7 @@ class AbstractCalculation(Sealable):
         try:
             data = self._use_methods[link]
         except KeyError:
-            raise ValueError("No '{}' link is defined for this "
-                             "calculation".format(link))
+            raise ValueError("No '{}' link is defined for this calculation".format(link))
 
         # Raises if the wrong # of parameters is passed
         additional_parameter = _parse_single_arg(
@@ -391,18 +384,14 @@ class AbstractCalculation(Sealable):
 
         if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
             if not isinstance(dest, Data):
-                raise ValueError(
-                    "The output of a calculation node can only be a data node")
+                raise ValueError('The output of a calculation node can only be a data node')
         elif link_type is LinkType.CALL:
             if not isinstance(dest, AbstractCalculation):
-                raise ValueError("Call links can only link two calculations.")
+                raise ValueError('Call links can only link two calculations')
         else:
-            raise ValueError(
-                "Calculation cannot have links of type {} as output".format(
-                    link_type))
+            raise ValueError('Calculation cannot have links of type {} as output'.format(link_type))
 
-        return super(AbstractCalculation, self)._linking_as_output(
-            dest, link_type)
+        return super(AbstractCalculation, self)._linking_as_output(dest, link_type)
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -416,24 +405,19 @@ class AbstractCalculation(Sealable):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        from aiida.orm.data import Data
         from aiida.orm.code import Code
+        from aiida.orm.data import Data
 
         if link_type is LinkType.INPUT:
             if not isinstance(src, (Data, Code)):
-                raise ValueError(
-                    "Nodes entering calculation as input link can only be of "
-                    "type data or code")
+                raise ValueError('Nodes entering calculation as input link can only be of type data or code')
         elif link_type is LinkType.CALL:
             if not isinstance(src, AbstractCalculation):
-                raise ValueError("Call links can only link two calculations.")
+                raise ValueError('Call links can only link two calculations')
         else:
-            raise ValueError(
-                "Calculation cannot have links of type {} as input".format(
-                    link_type))
+            raise ValueError('Calculation cannot have links of type {} as input'.format(link_type))
 
-        return super(AbstractCalculation, self).add_link_from(
-            src, label, link_type)
+        return super(AbstractCalculation, self).add_link_from( src, label, link_type)
 
     def get_code(self):
         """
@@ -441,6 +425,7 @@ class AbstractCalculation(Sealable):
         was not set.
         """
         from aiida.orm.code import Code
+
         return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
 
@@ -451,17 +436,20 @@ class AbstractCalculation(Sealable):
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
         """
-        from aiida.orm.data import Data
         from aiida.orm.code import Code
+        from aiida.orm.data import Data
 
         if not isinstance(src, (Data, Code)):
-            raise ValueError("Nodes entering in calculation can only be of "
-                             "type data or code")
+            raise ValueError('Nodes entering in calculation can only be of type data or code')
 
-        return super(AbstractCalculation, self)._replace_link_from(
-            src, label, link_type)
+        return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
 
     def _is_valid_cache(self):
+        """
+        Return whether the node is valid for caching
+
+        :returns: True if Calculation is valid to be used for caching, False otherwise
+        """
         return super(AbstractCalculation, self)._is_valid_cache() and self.is_finished_ok
 
     def _get_objects_to_hash(self):
@@ -471,9 +459,63 @@ class AbstractCalculation(Sealable):
         res = super(AbstractCalculation, self)._get_objects_to_hash()
         res.append({
             key: value.get_hash()
-            for key, value in self.get_inputs_dict(
-                link_type=LinkType.INPUT
-            ).items()
+            for key, value in self.get_inputs_dict(link_type=LinkType.INPUT).items()
             if key not in self._hash_ignored_inputs
         })
         return res
+
+
+def _parse_single_arg(function_name, additional_parameter, args, kwargs):
+    """
+    Verifies that a single additional argument has been given (or no
+    additional argument, if additional_parameter is None). Also
+    verifies its name.
+
+    :param function_name: the name of the caller function, used for
+        the output messages
+    :param additional_parameter: None if no additional parameters
+        should be passed, or a string with the name of the parameter
+        if one additional parameter should be passed.
+
+    :return: None, if additional_parameter is None, or the value of
+        the additional parameter
+    :raise TypeError: on wrong number of inputs
+    """
+    # Here all the logic to check if the parameters are correct.
+    if additional_parameter is not None:
+        if len(args) == 1:
+            if kwargs:
+                raise TypeError("{}() received too many args".format(
+                    function_name))
+            additional_parameter_data = args[0]
+        elif len(args) == 0:
+            kwargs_copy = kwargs.copy()
+            try:
+                additional_parameter_data = kwargs_copy.pop(
+                    additional_parameter)
+            except KeyError:
+                if kwargs_copy:
+                    raise TypeError("{}() got an unexpected keyword "
+                                    "argument '{}'".format(
+                        function_name, kwargs_copy.keys()[0]))
+                else:
+                    raise TypeError("{}() requires more "
+                                    "arguments".format(function_name))
+            if kwargs_copy:
+                raise TypeError("{}() got an unexpected keyword "
+                                "argument '{}'".format(
+                    function_name, kwargs_copy.keys()[0]))
+        else:
+            raise TypeError("{}() received too many args".format(
+                function_name))
+        return additional_parameter_data
+    else:
+        if kwargs:
+            raise TypeError("{}() got an unexpected keyword "
+                            "argument '{}'".format(
+                function_name, kwargs.keys()[0]))
+        if len(args) != 0:
+            raise TypeError("{}() received too many args".format(
+                function_name))
+
+        return None

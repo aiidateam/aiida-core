@@ -105,6 +105,8 @@ class AiiDAPersister(plumpy.Persister):
         calc = process.calc
         calc._set_checkpoint(yaml.dump(bundle))
 
+        return bundle
+
     def load_checkpoint(self, pid, tag=None):
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")

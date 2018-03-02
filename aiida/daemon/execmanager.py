@@ -801,22 +801,36 @@ def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
 
 
 def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
+    """
+    Parse the results for a given JobCalculation (job)
+
+    :returns: integer exit code, where 0 indicates success and non-zero failure
+    """
+    from aiida.orm.calculation.job import JobCalculationFinishStatus
+
     job._set_state(calc_states.PARSING)
 
     Parser = job.get_parserclass()
 
-    # If no parser is set, the calculation is successful
-    successful = True
     if Parser is not None:
+
         parser = Parser(job)
-        successful, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
+        exit_code, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
+
+        # Some implementations of parse_from_calc may still return a boolean for the exit_code
+        # If we get True we convert to 0, for false we simply use the generic value that
+        # maps to the calculation state FAILED
+        if isinstance(exit_code, bool) and exit_code is True:
+            exit_code = 0
+        elif isinstance(exit_code, bool) and exit_code is False:
+            exit_code = JobCalculationFinishStatus[calc_states.FAILED]
 
         for label, n in new_nodes_tuple:
             n.add_link_from(job, label=label, link_type=LinkType.CREATE)
             n.store()
 
     try:
-        if successful:
+        if exit_code == 0:
             job._set_state(calc_states.FINISHED)
         else:
             job._set_state(calc_states.FAILED)
@@ -825,14 +839,14 @@ def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
         # in order to avoid useless error messages, I just ignore
         pass
 
-    if not successful:
+    if exit_code is not 0:
         execlogger.error("[parsing of calc {}] "
                          "The parser returned an error, but it should have "
                          "created an output node with some partial results "
                          "and warnings. Check there for more information on "
                          "the problem".format(job.pk), extra=logger_extra)
 
-    return successful
+    return exit_code
 
 
 def _update_job_calc(calc, scheduler, job_info):

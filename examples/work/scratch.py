@@ -1,6 +1,7 @@
 
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
-from aiida.orm.data.base import Float, Str
+from aiida.orm.data.float import Float
+from aiida.orm.data.str import Str
 from aiida.orm.utils import DataFactory
 from aiida.work.workfunctions import workfunction as wf
 from aiida.work.launch import run, submit

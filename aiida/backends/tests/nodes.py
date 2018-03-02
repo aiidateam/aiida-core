@@ -1135,16 +1135,17 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
+        from aiida.orm.data.list import List
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.data.base import Str, List
+        from aiida.orm.data.str import Str
 
         # This one is unstored
         l1 = List()
-        l1._set_list(['b', [1, 2]])
+        l1.set_list(['b', [1, 2]])
 
         # This one is stored
         l2 = List()
-        l2._set_list(['f', True, {'gg': None}])
+        l2.set_list(['f', True, {'gg': None}])
         l2.store()
 
         # Manages to store, and value is converted to its base type
@@ -1177,15 +1178,16 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
-        from aiida.orm.data.base import Str, List
+        from aiida.orm.data.list import List
+        from aiida.orm.data.str import Str
 
         # This one is unstored
         l1 = List()
-        l1._set_list(['b', [1, 2]])
+        l1.set_list(['b', [1, 2]])
 
         # This one is stored
         l2 = List()
-        l2._set_list(['f', True, {'gg': None}])
+        l2.set_list(['f', True, {'gg': None}])
         l2.store()
 
         # Check also before storing

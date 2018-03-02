@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm import Data
-
+from aiida.orm.data import to_aiida_type
 
 
 class ParameterData(Data):
@@ -93,3 +93,8 @@ class ParameterData(Data):
         from aiida.orm.node import AttributeManager
 
         return AttributeManager(self)
+
+
+@to_aiida_type.register(dict)
+def _(value):
+    return ParameterData(dict=value)

@@ -10,7 +10,8 @@
 import aiida.orm
 import aiida.work.utils as util
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.data.base import get_true_node, Int
+from aiida.orm.data.bool import get_true_node
+from aiida.orm.data.int import Int
 from aiida.orm import load_node
 from aiida.work.launch import run, run_get_node
 from aiida.work.workfunctions import workfunction
@@ -72,6 +73,16 @@ class TestWf(AiidaTestCase):
             return mul(add(a, b), c)
 
         result = add_mul_wf(Int(3), Int(4), Int(5))
+
+    def test_finish_status(self):
+        """
+        If a workfunction reaches the FINISHED process state, it has to have been successful
+        which means that the finish status always has to be 0
+        """
+        result, calculation = single_return_value.run_get_node()
+        self.assertEquals(calculation.finish_status, 0)
+        self.assertEquals(calculation.is_finished_ok, True)
+        self.assertEquals(calculation.is_failed, False)
 
     def test_hashes(self):
         result, w1 = run_get_node(return_input, inp=Int(2))

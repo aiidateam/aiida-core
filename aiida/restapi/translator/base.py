@@ -252,13 +252,10 @@ class BaseTranslator(object):
         Add filters in query_help.
 
         :param filters: it is a dictionary where keys are the tag names
-         given in the path in query_help and their values are the dictionary
-         of filters want to add for that tag name. Format for the Filters
-         dictionary:
-         filters = {
-                    "tag1" : {k1:v1, k2:v2},
-                    "tag2" : {k1:v1, k2:v2},
-                  }
+          given in the path in query_help and their values are the dictionary
+          of filters want to add for that tag name. Format for the Filters
+          dictionary:
+          filters = { "tag1" : {k1:v1, k2:v2}, "tag2" : {k1:v1, k2:v2}, }
         :return: query_help dict including filters if any.
         """
         if isinstance(filters, dict):
@@ -360,7 +357,7 @@ class BaseTranslator(object):
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
         :param orders: dictionary with the projections
-        :param id (integer): id of a specific node
+        :param id: id of a specific node
         """
 
         tagged_filters = {}
@@ -482,7 +479,7 @@ class BaseTranslator(object):
         Returns either list of nodes or details of single node from database
 
         :return: either list of nodes or details of single node
-        from database
+          from database
         """
 
         ## Check whether the querybuilder object has been initialized

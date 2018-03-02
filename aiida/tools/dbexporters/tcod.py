@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-
 from aiida.orm import DataFactory
+from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
 
 aiida_executable_name = '_aiidasubmit.sh'
@@ -383,13 +383,25 @@ def _inline_to_standalone_script(calc):
         created by the ``\*_inline`` function, are already stored.
     """
     input_dict = calc.get_inputs_dict()
-    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
-            for x in input_dict.keys()]
-    args_string = ",\n    ".join(sorted(args))
-    code_string = calc.get_attr('source_file').encode('utf-8')
-    if calc.get_attr('namespace', '__main__').startswith('aiida.'):
-        code_string = "from {} import {}".format(calc.get_attr('namespace', '__main__'),
-                                                 calc.get_attr('function_name','f'))
+    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid) for x in input_dict.keys()]
+    args_string = ',\n    '.join(sorted(args))
+
+    function_name = calc.function_name
+    function_namespace = calc.function_namespace
+    function_source_file = calc.function_source_file
+
+    if function_name is None:
+        function_name = 'f'
+
+    if function_namespace is None:
+        function_namespace = '__main__'
+
+    with open(function_source_file) as handle:
+        code_string = handle.read().encode('utf-8')
+
+    if function_namespace.startswith('aiida.'):
+        code_string = "from {} import {}".format(function_namespace, function_name)
+
     return """#!/usr/bin/env runaiida
 {}
 
@@ -397,7 +409,7 @@ for key, value in {}(
     {}
     ).iteritems():
     value.store()
-""".format(code_string, calc.get_attr('function_name','f'), args_string)
+""".format(code_string, function_name, args_string)
 
 
 def _collect_calculation_data(calc):
@@ -841,7 +853,7 @@ def _collect_tags(node, calc,parameters=None,
 
 
 @optional_inline
-def add_metadata_inline(what, node=None, parameters=None, args=None):
+def add_metadata_inline(what, node, parameters, args):
     """
     Add metadata of original exported node to the produced TCOD CIF.
 
@@ -1018,6 +1030,8 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
         function_args['node'] = node
     if parameters is not None:
         function_args['parameters'] = parameters
+    else:
+        function_args['parameters'] = ParameterData(dict={})
     ret_dict = add_metadata_inline(**function_args)
 
     return ret_dict['cif']

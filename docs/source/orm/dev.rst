@@ -140,7 +140,34 @@ XyData
 
 Base data types
 +++++++++++++++
+
+BaseType and NumericType
+------------------------
 .. automodule:: aiida.orm.data.base
+   :members:
+
+List
+----
+.. autoclass:: aiida.orm.data.list.List
+
+Bool
+----
+.. automodule:: aiida.orm.data.bool
+   :members:
+
+Float
+-----
+.. automodule:: aiida.orm.data.float
+   :members:
+
+Int
+---
+.. automodule:: aiida.orm.data.int
+   :members:
+
+Str
+---
+.. automodule:: aiida.orm.data.str
    :members:
 
 

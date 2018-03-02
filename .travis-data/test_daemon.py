@@ -13,7 +13,7 @@ import sys
 import time
 from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
-from aiida.orm.data.base import Int
+from aiida.orm.data.int import Int
 from aiida.work.launch import run_get_node, submit
 from workchains import NestedWorkChain, SerializeWorkChain
 

@@ -24,7 +24,7 @@ def workfunction(func, calc_node_class=None):
     A decorator to turn a standard python function into a workfunction.
     Example usage:
 
-    >>> from aiida.orm.data.base import Int
+    >>> from aiida.orm.data.int import Int
     >>>
     >>> # Define the workfunction
     >>> @workfunction

@@ -684,7 +684,7 @@ def ase_refine_cell(aseatoms, **kwargs):
 
 
 @optional_inline
-def _get_cif_ase_inline(struct=None, parameters=None):
+def _get_cif_ase_inline(struct, parameters):
     """
     Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
 

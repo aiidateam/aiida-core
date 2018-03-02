@@ -395,11 +395,11 @@ class TestDbExtras(AiidaTestCase):
 
 class TestBool(AiidaTestCase):
     def test_bool_conversion(self):
-        from aiida.orm.data.base import Bool
+        from aiida.orm.data.bool import Bool
         for val in [True, False]:
             self.assertEqual(val, bool(Bool(val)))
 
     def test_int_conversion(self):
-        from aiida.orm.data.base import Bool
+        from aiida.orm.data.bool import Bool
         for val in [True, False]:
             self.assertEqual(int(val), int(Bool(val)))

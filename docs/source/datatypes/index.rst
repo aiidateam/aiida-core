@@ -28,16 +28,16 @@ below, and if you don't find what you need, give a look to
 Base types
 ++++++++++
 In the :py:mod:`aiida.orm.data.base` module you find a number of useful classes
-that wrap base python datatypes (like :py:class:`~aiida.orm.data.base.Int`,
-:py:class:`~aiida.orm.data.base.Float`, :py:class:`~aiida.orm.data.base.Str`, ...).
+that wrap base python datatypes (like :py:class:`~aiida.orm.data.int.Int`,
+:py:class:`~aiida.orm.data.float.Float`, :py:class:`~aiida.orm.data.str.Str`, ...).
 These are particularly useful when you need to provide a single parameter to e.g. a
 :py:class:`~aiida.work.workfunctions.workfunction`.
 
 Each of these classes can most often be used transparently (e.g. you can sum two
-:py:class:`~aiida.orm.data.base.Int` objects, etc.). If you need to access the bare
+:py:class:`~aiida.orm.data.int.Int` objects, etc.). If you need to access the bare
 value and not the whole AiiDA class, use the `.value` property.
 
-In the same module, there is also a :py:class:`~aiida.orm.data.base.List` class to
+In the same module, there is also a :py:class:`~aiida.orm.data.list.List` class to
 store a list of base data types.
 
 ParameterData

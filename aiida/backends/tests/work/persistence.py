@@ -11,7 +11,7 @@
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.persistence import Persistence
+from aiida.work.persistence import Persistence, AiiDAPersister
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
 from aiida import work
@@ -38,26 +38,26 @@ class TestProcess(AiidaTestCase):
 
         self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
 
-# class TestProcess(AiidaTestCase):
-#     def setUp(self):
-#         super(TestProcess, self).setUp()
-#         self.assertEquals(len(util.ProcessStack.stack()), 0)
-#
-#         self.persistence = Persistence(running_directory=tempfile.mkdtemp())
-#
-#     def tearDown(self):
-#         super(TestProcess, self).tearDown()
-#         self.assertEquals(len(util.ProcessStack.stack()), 0)
-#
-#     def test_save_load(self):
-#         dp = DummyProcess()
-#
-#         # Create a bundle
-#         b = self.persistence.create_bundle(dp)
-#         # Save a bundle and reload it
-#         self.persistence.save(dp)
-#         b2 = self.persistence._load_checkpoint(dp.pid)
-#         # Now check that they are equal
-#         self.assertEqual(b, b2)
-#
-#         work.run(dp)
+
+class TestAiiDAPersister(AiidaTestCase):
+
+    def setUp(self):
+        super(TestAiiDAPersister, self).setUp()
+        self.persister = AiiDAPersister()
+
+    def test_save_load_checkpoint(self):
+        process = DummyProcess()
+        bundle_saved = self.persister.save_checkpoint(process)
+        bundle_loaded = self.persister.load_checkpoint(process.calc.pk)
+
+        self.assertEquals(bundle_saved, bundle_loaded)
+
+    def test_delete_checkpoint(self):
+        process = DummyProcess()
+        self.assertEquals(process.calc.checkpoint, None)
+
+        self.persister.save_checkpoint(process)
+        self.assertTrue(isinstance(process.calc.checkpoint, basestring))
+
+        self.persister.delete_checkpoint(process.pid)
+        self.assertEquals(process.calc.checkpoint, None)

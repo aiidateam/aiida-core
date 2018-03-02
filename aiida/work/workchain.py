@@ -11,6 +11,7 @@ import functools
 import plumpy
 import plumpy.workchains
 
+from plumpy.workchains import if_, while_, return_, _PropagateReturn
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm.utils import load_node, load_workflow
 from aiida.common.lang import override
@@ -22,7 +23,6 @@ from .context import *
 
 __all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs', '_WorkChainSpec']
 
-from plumpy.workchains import if_, while_, return_, _PropagateReturn
 
 
 class _WorkChainSpec(processes.ProcessSpec, plumpy.WorkChainSpec):
@@ -120,26 +120,29 @@ class WorkChain(processes.Process):
         return self._do_step()
 
     def _do_step(self, wait_on=None):
+        """
+        Execute the next step in the outline, if the stepper returns a non-finished status
+        and the return value is of type ToContext, it will be added to the awaitables.
+        If the stepper returns that the process is finished, we return the return value
+        """
         self._awaitables = []
 
         try:
-            finished, retval = self._stepper.step()
-        except _PropagateReturn:
-            finished, retval = True, None
+            finished, return_value = self._stepper.step()
+        except _PropagateReturn as exception:
+            finished, return_value = True, exception.exit_code
 
-        if not finished:
-            if retval is not None:
-                if isinstance(retval, ToContext):
-                    self.to_context(**retval)
-                else:
-                    raise TypeError("Invalid value returned from step '{}'".format(retval))
+        if not finished and (return_value is None or isinstance(return_value, ToContext)):
+
+            if isinstance(return_value, ToContext):
+                self.to_context(**return_value)
 
             if self._awaitables:
                 return plumpy.Wait(self._do_step, 'Waiting before next step')
             else:
                 return plumpy.Continue(self._do_step)
         else:
-            return self.outputs
+            return return_value
 
     def on_wait(self, awaitables):
         super(WorkChain, self).on_wait(awaitables)

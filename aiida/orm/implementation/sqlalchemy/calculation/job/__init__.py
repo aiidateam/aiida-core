@@ -51,6 +51,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
         """
+        super(JobCalculation, self)._set_state(state)
 
         if not self.is_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "

@@ -204,7 +204,10 @@ class TestSimple(AiidaTestCase):
 
         from aiida.orm import DataFactory
         from aiida.orm import load_node
-        from aiida.orm.data.base import Str, Int, Float, Bool
+        from aiida.orm.data.bool import Bool
+        from aiida.orm.data.float import Float
+        from aiida.orm.data.int import Int
+        from aiida.orm.data.str import Str
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.importexport import export
 
@@ -719,7 +722,7 @@ class TestSimple(AiidaTestCase):
         import shutil,  os, tempfile
 
         from aiida.work.workfunctions import workfunction
-        from aiida.orm.data.base import Float
+        from aiida.orm.data.float import Float
         from aiida.orm import load_node
         from aiida.orm.importexport import export
         from aiida.common.exceptions import NotExistent
@@ -762,7 +765,8 @@ class TestSimple(AiidaTestCase):
         import shutil, os, tempfile
 
         from aiida.orm.calculation.work import WorkCalculation
-        from aiida.orm.data.base import Float,  Int
+        from aiida.orm.data.float import Float
+        from aiida.orm.data.int import Int
         from aiida.orm import load_node
         from aiida.common.links import LinkType
         from aiida.orm.importexport import export
@@ -1508,7 +1512,7 @@ class TestLinks(AiidaTestCase):
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.base import Int
+        from aiida.orm.data.int import Int
         from aiida.orm.importexport import export
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
@@ -1561,7 +1565,7 @@ class TestLinks(AiidaTestCase):
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.base import Int
+        from aiida.orm.data.int import Int
         from aiida.orm import Node, Data
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation
@@ -1627,7 +1631,7 @@ class TestLinks(AiidaTestCase):
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.base import Int
+        from aiida.orm.data.int import Int
         from aiida.orm import Node, Data
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation

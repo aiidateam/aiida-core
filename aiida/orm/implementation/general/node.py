@@ -50,9 +50,9 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.data import base as basedatatypes
+    from aiida.orm.data import BaseType
 
-    if isinstance(value, basedatatypes.BaseType):
+    if isinstance(value, BaseType):
         return value.value
     elif isinstance(value, dict):
         # Check dictionary before iterables
@@ -97,7 +97,11 @@ class AbstractNode(object):
         def __new__(cls, name, bases, attrs):
 
             newcls = ABCMeta.__new__(cls, name, bases, attrs)
-            newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
+
+            if not attrs['__module__'].startswith('aiida.'):
+                newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
+            else:
+                newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
 
             # Note: the reverse logic (from type_string to name that can
             # be passed to the plugin loader) is implemented in
@@ -144,8 +148,12 @@ class AbstractNode(object):
     # See documentation in the set() method.
     _set_incompatibilities = []
 
-    # A list of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes = []
+    # A tuple of attribute names that can be updated even after node is stored
+    # Requires Sealable mixin, but needs empty tuple for base class
+    _updatable_attributes = tuple()
+
+    # A tuple of attribute names that will be ignored when creating the hash.
+    _hash_ignored_attributes = tuple()
 
     # Flag that determines whether the class can be cached.
     _cacheable = True
@@ -1700,8 +1708,8 @@ class AbstractNode(object):
             {
                 key: val for key, val in self.get_attrs().items()
                 if (
-                    (key not in self._hash_ignored_attributes) and
-                    (key not in getattr(self, '_updatable_attributes', tuple()))
+                    key not in self._hash_ignored_attributes and
+                    key not in self._updatable_attributes
                 )
             },
             self.folder,

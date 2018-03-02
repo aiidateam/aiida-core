@@ -11,7 +11,9 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import CalculationFactory
 from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.base import Int, Float, Bool
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
 from aiida.work.process_builder import ProcessBuilder
 from aiida.work.workchain import WorkChain
 from aiida.work import utils

@@ -16,7 +16,10 @@ import unittest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.orm.data.base import Int, Str, Bool, Float
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.work.utils import ProcessStack
 from aiida.work.class_loader import CLASS_LOADER
 from aiida.workflows.wf_demo import WorkflowDemo
@@ -24,6 +27,20 @@ from aiida import work
 from aiida.work.workchain import *
 
 from . import utils
+
+
+def run_and_check_success(process_class, **kwargs):
+    """
+    Instantiates the process class and executes it followed by a check
+    that it is finished successfully
+
+    :returns: instance of process
+    """
+    process = process_class(inputs=kwargs)
+    process.execute()
+    assert process.calc.is_finished_ok == True
+
+    return process
 
 
 class Wf(work.WorkChain):
@@ -99,6 +116,44 @@ class Wf(work.WorkChain):
         self.finished_steps[function_name] = True
 
 
+class ReturnWorkChain(WorkChain):
+
+    FAILURE_STATUS = 1
+
+    @classmethod
+    def define(cls, spec):
+        super(ReturnWorkChain, cls).define(spec)
+        spec.input('success', valid_type=Bool)
+        spec.outline(
+            cls.failure,
+            cls.success
+        )
+
+    def failure(self):
+        if self.inputs.success.value is False:
+            return self.FAILURE_STATUS
+
+    def success(self):
+        return
+
+
+class TestFinishStatus(AiidaTestCase):
+
+    def test_failing_workchain(self):
+        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(False))
+        self.assertEquals(node.finish_status, ReturnWorkChain.FAILURE_STATUS)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, False)
+        self.assertEquals(node.is_failed, True)
+
+    def test_successful_workchain(self):
+        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(True))
+        self.assertEquals(node.finish_status, 0)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, True)
+        self.assertEquals(node.is_failed, False)
+
+
 class IfTest(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -147,6 +202,7 @@ class TestContext(AiidaTestCase):
 
 
 class TestWorkchain(AiidaTestCase):
+
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
@@ -215,7 +271,7 @@ class TestWorkchain(AiidaTestCase):
                 assert 'b' in self.inputs
 
         x = Int(1)
-        work.launch.run(Wf, a=x, b=x)
+        run_and_check_success(Wf, a=x, b=x)
 
     def test_context(self):
         A = Str("a")
@@ -224,12 +280,12 @@ class TestWorkchain(AiidaTestCase):
         class ReturnA(work.Process):
             def _run(self):
                 self.out('res', A)
-                return self.outputs
+                return
 
         class ReturnB(work.Process):
             def _run(self):
                 self.out('res', B)
-                return self.outputs
+                return
 
         class Wf(WorkChain):
             @classmethod
@@ -253,7 +309,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.r1['res'] == B
                 assert self.ctx.r2['res'] == B
 
-        work.launch.run(Wf)
+        run_and_check_success(Wf)
 
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), basestring)
@@ -326,42 +382,43 @@ class TestWorkchain(AiidaTestCase):
             def after(self):
                 raise RuntimeError("Shouldn't get here")
 
-        work.launch.run(WcWithReturn)
+        run_and_check_success(WcWithReturn)
 
     def test_tocontext_submit_workchain_no_daemon(self):
         class MainWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
-                spec.outline(cls.run, cls.check)
+                spec.outline(cls.do_run, cls.check)
                 spec.outputs.dynamic = True
 
-            def run(self):
+            def do_run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
+                pass
                 assert self.ctx.subwc.out.value == Int(5)
 
         class SubWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
                 super(SubWorkChain, cls).define(spec)
-                spec.outline(cls.run)
+                spec.outline(cls.do_run)
 
-            def run(self):
+            def do_run(self):
                 self.out("value", Int(5))
 
-        work.launch.run(MainWorkChain)
+        run_and_check_success(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
         class MainWorkChain(WorkChain):
             @classmethod
             def define(cls, spec):
                 super(MainWorkChain, cls).define(spec)
-                spec.outline(cls.run, cls.check)
+                spec.outline(cls.do_run, cls.check)
                 spec.outputs.dynamic = True
 
-            def run(self):
+            def do_run(self):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
@@ -371,12 +428,12 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super(SubWorkChain, cls).define(spec)
-                spec.outline(cls.run)
+                spec.outline(cls.do_run)
 
-            def run(self):
-                self.out("value", Int(5))
+            def do_run(self):
+                self.out('value', Int(5))
 
-        work.launch.run(MainWorkChain)
+        run_and_check_success(MainWorkChain)
 
     # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
@@ -425,7 +482,7 @@ class TestWorkchain(AiidaTestCase):
                 logs = self._backend.log.find()
                 assert len(logs) == 1
 
-        work.launch.run(TestWorkChain)
+        run_and_check_success(TestWorkChain)
 
     def test_to_context(self):
         val = Int(5)
@@ -433,7 +490,7 @@ class TestWorkchain(AiidaTestCase):
         class SimpleWc(work.Process):
             def _run(self):
                 self.out('_return', val)
-                return self.outputs
+                return
 
         class Workchain(WorkChain):
             @classmethod
@@ -450,7 +507,7 @@ class TestWorkchain(AiidaTestCase):
                 assert self.ctx.result_b['_return'] == val
                 return
 
-        work.launch.run(Workchain)
+        run_and_check_success(Workchain)
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
@@ -459,9 +516,10 @@ class TestWorkchain(AiidaTestCase):
         workchain.execute()
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
-        proc = wf_class(inputs=inputs)
-        work.launch.run(proc)
-        return wf_class.finished_steps
+        if inputs is None:
+            inputs = {}
+        proc = run_and_check_success(wf_class, **inputs)
+        return proc.finished_steps
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
@@ -495,7 +553,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert self.ctx.wf is not None
 
-        work.launch.run(_TestWf)
+        run_and_check_success(_TestWf)
 
     def test_old_wf_results(self):
         wf = WorkflowDemo()
@@ -515,7 +573,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
             def check(self):
                 assert set(self.ctx.res) == set(wf.get_results())
 
-        work.launch.run(_TestWf)
+        run_and_check_success(_TestWf)
 
 
 class TestWorkChainAbort(AiidaTestCase):
@@ -736,7 +794,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
                 test_class.assertNotIn('c', self.inputs)
                 test_class.assertEquals(self.inputs['a'].value, 1)
 
-        work.launch.run(Wf, a=Int(1), b=Int(2))
+        run_and_check_success(Wf, a=Int(1), b=Int(2))
 
     def test_immutable_input_groups(self):
         """
@@ -772,7 +830,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
         x = Int(1)
         y = Int(2)
-        work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
+        run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
 
 class TestSerializeWorkChain(AiidaTestCase):
     """

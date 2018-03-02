@@ -91,6 +91,12 @@ class TestList(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             l.reverse()
 
+    def test_store_load(self):
+        l = List(list=[1, 2, 3])
+        l.store()
+
+        l_loaded = load_node(l.pk)
+        assert l.get_list() == l_loaded.get_list()
 
 class TestFloat(AiidaTestCase):
     def setUp(self):

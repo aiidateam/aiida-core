@@ -335,6 +335,10 @@ class ProfileConfig(object):
     def pid_file(self):
         return get_daemon_files()['circus']['pid']
 
+    @property
+    def daemon_log_file(self):
+        return get_daemon_files()['daemon']['log']
+
 
 def daemon_user_guard(function):
     """

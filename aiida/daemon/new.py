@@ -8,28 +8,29 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from aiida.cmdline.dbenv_lazyloading import with_dbenv
+
 
 def tick_legacy_workflows(runner, interval=30):
     from functools import partial
-    from aiida.daemon.tasks import workflow_stepper
+    from aiida.daemon.tasks import legacy_workflow_stepper
     print 'ticking legacy workflows.'
-    workflow_stepper()
+    legacy_workflow_stepper()
     runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))
 
+
+@with_dbenv()
 def start_daemon():
     """
+    Start a daemon runner
     """
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv(process='daemon')
-
     from aiida import work
-    from aiida.backends import settings as backend_settings
+    from aiida.cmdline.commands.daemon import ProfileConfig, get_current_profile_config
     from aiida.common.log import configure_logging
-    from aiida.common.setup import get_profile_config
-    from aiida.daemon import settings as daemon_settings
+    from aiida.daemon import settings
 
-    configure_logging()
+    profile_config = ProfileConfig()
+    configure_logging(daemon=True, daemon_log_file=profile_config.daemon_log_file)
 
     rmq_config = {
         'url': 'amqp://localhost',
@@ -38,8 +39,8 @@ def start_daemon():
     runner = work.DaemonRunner(rmq_config=rmq_config, rmq_submit=False)
     work.set_runner(runner)
 
-    config = get_profile_config(backend_settings.AIIDADB_PROFILE)
-    interval = config.get('DAEMON_INTERVALS_WFSTEP', daemon_settings.DAEMON_INTERVALS_WFSTEP)
+    config = get_current_profile_config()
+    interval = config.get('DAEMON_INTERVALS_WFSTEP', settings.DAEMON_INTERVALS_WFSTEP)
     tick_legacy_workflows(runner, interval)
 
     try:

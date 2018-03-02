@@ -856,6 +856,40 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         y = Int(2)
         run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
 
+class TestSerializeWorkChain(AiidaTestCase):
+    """
+    Test workchains with serialized input / output.
+    """
+    def setUp(self):
+        super(TestSerializeWorkChain, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestSerializeWorkChain, self).tearDown()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_serialize(self):
+        """
+        Test a simple serialization of a class to its identifier.
+        """
+        test_class = self
+
+        class TestSerializeWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestSerializeWorkChain, cls).define(spec)
+
+                spec.input('test', serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)))
+                spec.input('reference', valid_type=Str)
+
+                spec.outline(cls.do_test)
+
+            def do_test(self):
+                assert isinstance(self.inputs.test, Str)
+                assert self.inputs.test == self.inputs.reference
+
+        work.launch.run(TestSerializeWorkChain, test=Int, reference=Str(CLASS_LOADER.class_identifier(Int)))
+
 
 class GrandParentExposeWorkChain(work.WorkChain):
     @classmethod

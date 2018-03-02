@@ -51,7 +51,9 @@ WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
-UUID_KEY = 'UUID'
+
+# This key will uniquely identify an AiiDA profile
+PROFILE_UUID_KEY = 'PROFILE_UUID'
 
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
@@ -372,7 +374,7 @@ key_explanation = {
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
     DEFAULT_USER_CONFIG_FIELD: "Default user email",
-    UUID_KEY: "Universally unique profile id",
+    PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
 }
 
 
@@ -477,7 +479,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
     # Generate the profile uuid
-    new_profile[UUID_KEY] = uuid.uuid4().hex
+    new_profile[PROFILE_UUID_KEY] = uuid.uuid4().hex
 
     # finalizing
     write = not dry_run
@@ -745,7 +747,7 @@ def create_configuration(profile='default'):
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
         # Add the profile uuid
-        this_new_confs[UUID_KEY] = uuid.uuid4().hex
+        this_new_confs[PROFILE_UUID_KEY] = uuid.uuid4().hex
 
         confs['profiles'][profile] = this_new_confs
 

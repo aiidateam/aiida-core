@@ -55,9 +55,9 @@ class ConfigMigration(object):
         return config
 
 def _1_add_profile_uuid(config):
-    from aiida.common.setup import UUID_KEY
+    from aiida.common.setup import PROFILE_UUID_KEY
     for profile in config.get('profiles', {}).values():
-        profile[UUID_KEY] = uuid.uuid4().hex
+        profile[PROFILE_UUID_KEY] = uuid.uuid4().hex
     return config
 
 # Maps the initial config version to the ConfigMigration which updates it.

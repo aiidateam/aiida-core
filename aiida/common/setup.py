@@ -499,7 +499,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
 def generate_new_circus_port(config=None):
     config = get_config()
     port = 6000
-    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config['profiles'].values()]
+    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in config.get('profiles', {}).values()]
     while port in used_ports:
         port += 3
     return port

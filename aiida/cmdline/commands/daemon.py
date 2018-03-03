@@ -79,9 +79,6 @@ class Daemon(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
-        import aiida
-        from aiida.common import setup
-
         self.valid_subcommands = {
             'start': (self.cli, self.complete_none),
             'stop': (self.cli, self.complete_none),
@@ -93,62 +90,8 @@ class Daemon(VerdiCommandWithSubcommands):
             'configureuser': (self.configure_user, self.complete_none),
         }
 
-        self.logfile = setup.DAEMON_LOG_FILE
-        self.pidfile = setup.DAEMON_PID_FILE
-        self.workdir = os.path.join(
-            os.path.split(os.path.abspath(aiida.__file__))[0], "daemon")
-        self.celerybeat_schedule = os.path.join(setup.AIIDA_CONFIG_FOLDER,
-                                                setup.DAEMON_SUBDIR,
-                                                "celerybeat-schedule")
-
     def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
         verdi.main()
-
-    def _get_pid_full_path(self):
-        """
-        Return the full path of the celery.pid file.
-        """
-        return os.path.normpath(os.path.expanduser(self.pidfile))
-
-    def get_daemon_pid(self):
-        """
-        Return the daemon pid, as read from the celery.pid file.
-        Return None if no pid is found (or the pid is not valid).
-        """
-        if os.path.isfile(self._get_pid_full_path()):
-            try:
-                return int(open(self._get_pid_full_path(), 'r').read().strip())
-            except (ValueError, IOError):
-                return None
-        else:
-            return None
-
-    def kill_daemon(self):
-        """
-        This is the actual call that kills the daemon.
-
-        There are some print statements inside, but no sys.exit, so it is
-        safe to be called from other parts of the code.
-        """
-        from signal import SIGTERM
-        import errno
-
-        pid = self.get_daemon_pid()
-        if pid is None:
-            click.echo("Daemon not running (cannot find the PID for it)")
-            return
-
-        click.echo("Shutting down AiiDA Daemon ({})...".format(pid))
-        try:
-            os.kill(pid, SIGTERM)
-        except OSError as err:
-            if err.errno == errno.ESRCH:  # No such process
-                click.echo("The process {} was not found! "
-                           "Assuming it was already stopped.".format(pid))
-                click.echo("Cleaning the .pid and .sock files...")
-                self._clean_pid_files()
-            else:
-                raise
 
     def configure_user(self, *args):  # pylint: disable=too-many-locals
         """
@@ -184,7 +127,8 @@ class Daemon(VerdiCommandWithSubcommands):
             click.echo(
                 "  (therefore, at the moment you are the user who can run "
                 "the daemon)")
-            pid = self.get_daemon_pid()
+            profile_daemon_client = ProfileDaemonClient()
+            pid = profile_daemon_client.get_daemon_pid
             if pid is not None:
                 click.echo("The daemon is running! I will not proceed.")
                 sys.exit(1)
@@ -236,21 +180,6 @@ class Daemon(VerdiCommandWithSubcommands):
         click.echo("The new user that can run the daemon is now {} {}.".format(
             found_users[0].first_name, found_users[0].last_name))
 
-    def _clean_pid_files(self):
-        """
-        Tries to remove the celery.pid files from the .aiida/daemon
-        subfolder. This is typically needed when the computer is restarted with
-        the daemon still on.
-        """
-        import errno
-
-        try:
-            os.remove(self._get_pid_full_path())
-        except OSError as err:
-            # Ignore if errno = errno.ENOENT (2): no file found
-            if err.errno != errno.ENOENT:  # No such file
-                raise
-
 
 @daemon_cmd.command()
 @click.option(
@@ -263,9 +192,8 @@ class Daemon(VerdiCommandWithSubcommands):
 @decorators.check_circus_zmq_version
 def start(foreground):
     """
-    Start an aiida daemon
+    Start the daemon
     """
-
     profile_daemon_client = ProfileDaemonClient()
 
     loglevel = 'INFO'
@@ -335,19 +263,11 @@ def start(foreground):
 
 
 @daemon_cmd.command()
-@click.option('--wait', is_flag=True)
+@click.option('--wait', is_flag=True, help='wait for confirmation')
 @decorators.only_if_daemon_pid
 def stop(wait):
     """
-    Stop the daemon.
-
-    :param wait: If True, also verifies that the process was already
-        killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
-        seconds between one attempt and the following one (both variables are
-        for the time being hardcoded in the function).
-
-    :return: None if ``wait_for_death`` is False. True/False if the process was
-        actually dead or after all the retries it was still alive.
+    Stop the daemon
     """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
@@ -365,7 +285,9 @@ def stop(wait):
 @daemon_cmd.command()
 @decorators.only_if_daemon_pid
 def status():
-    """Print the status of the daemon."""
+    """
+    Print the status of the daemon
+    """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
 
@@ -427,7 +349,9 @@ def status():
 @click.argument('num', default=1, type=int)
 @decorators.only_if_daemon_pid
 def incr(num):
-    """Add NUM [default=1] workers to a running daemon."""
+    """
+    Add NUM [default=1] workers to the running daemon
+    """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
 
@@ -447,7 +371,8 @@ def incr(num):
 @click.argument('num', default=1, type=int)
 @decorators.only_if_daemon_pid
 def decr(num):
-    """Add NUM [default=1] workers to a running daemon."""
+    """
+    Remove NUM [default=1] workers from the running daemon."""
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
 
@@ -467,7 +392,9 @@ def decr(num):
 @decorators.with_dbenv()
 @decorators.only_if_daemon_pid
 def logshow():
-    """Show the log of the daemon, press CTRL+C to quit."""
+    """
+    Show the log of the daemon, press CTRL+C to quit
+    """
     profile_daemon_client = ProfileDaemonClient()
     try:
         currenv = get_env_with_venv_bin()
@@ -475,19 +402,19 @@ def logshow():
             ['tail', '-f', profile_daemon_client.daemon_log_file], env=currenv)
         process.wait()
     except KeyboardInterrupt:
-        # exit on CTRL+C
         process.kill()
 
 
 @daemon_cmd.command()
-@click.option('--wait', is_flag=True)
+@click.option(
+    '--wait',
+    is_flag=True,
+    help='wait for the daemon to stop before restarting')
 @decorators.with_dbenv()
 @decorators.daemon_user_guard
 def restart(wait):
     """
-    Restart the daemon.
-
-    Before restarting, wait for the daemon to really shut down.
+    Restart the daemon
     """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()

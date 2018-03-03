@@ -40,12 +40,6 @@ SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = 'daemon'
 LOG_SUBDIR = 'daemon/log'
-DAEMON_CONF_FILE = 'aiida_daemon.conf'
-
-CELERY_LOG_FILE = 'celery.log'  # TODO get rid of this
-CELERY_PID_FILE = 'celery.pid'  # TODO get rid of this
-DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)  # TODO get rid of this
-DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)  # TODO get rid of this
 
 CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
 CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
@@ -69,9 +63,6 @@ aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
 aiidadb_backend_value_django = 'django'
-
-# Repository for tests
-TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.

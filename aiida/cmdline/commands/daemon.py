@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Daemon subcommand module."""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,51 +7,51 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Verdi daemon commands
+"""
 import os
 import sys
 import subprocess
-from functools import wraps
 
 import click
 import tabulate
-from click_spinner import spinner as cli_spinner
-from circus import logger, get_arbiter
+from circus import get_arbiter
+from circus import logger as circus_logger
 from circus.circusd import daemonize
+from circus.exc import CallError
 from circus.pidfile import Pidfile
-from circus import __version__
 from circus.util import configure_logger
 from circus.util import check_future_exception_and_log
-from circus.exc import CallError
+from click_spinner import spinner as cli_spinner
 
-from aiida.common.profile import ProfileConfig
-from aiida.cmdline.commands import verdi, daemon_cmd
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.dbenv_lazyloading import with_dbenv
 from aiida.backends.utils import is_dbenv_loaded
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import verdi, daemon_cmd
+from aiida.cmdline.utils import decorators
+from aiida.cmdline.utils.common import format_local_time, get_env_with_venv_bin
+from aiida.daemon.client import ProfileDaemonClient
 
 
-def is_daemon_user():
+@decorators.only_if_daemon_pid
+def try_calling_circus_client(client, cmd):
     """
-    Return True if the user is the current daemon user, False otherwise.
+    Call a given circus client with a given command only if pid file exists, handle timeout
     """
-    from aiida.backends.utils import get_daemon_user
-    from aiida.common.utils import get_configured_user_email
+    result = None
 
-    daemon_user = get_daemon_user()
-    this_user = get_configured_user_email()
+    try:
+        with cli_spinner():
+            result = client.call(cmd)
+    except CallError as err:
+        if str(err) == 'Timed out.':
+            click.echo('Daemon was not running but a PID file was found. '
+                       'This indicates the daemon was terminated unexpectedly; '
+                       'no action is required but proceed with caution.')
+            sys.exit(0)
+        raise err
 
-    return daemon_user == this_user
-
-
-def _get_env_with_venv_bin():
-    """Get the environment for the daemon to run in."""
-    from aiida.common import setup
-    pybin = os.path.dirname(sys.executable)
-    currenv = os.environ.copy()
-    currenv['PATH'] = pybin + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(
-        os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
-    return currenv
+    return result
 
 
 class Daemon(VerdiCommandWithSubcommands):
@@ -253,161 +252,49 @@ class Daemon(VerdiCommandWithSubcommands):
                 raise
 
 
-def daemon_user_guard(function):
-    """
-    Function decorator that checks wether the user is the daemon user before running the function
-
-    Example::
-
-        @daemon_user_guard
-        def create_my_calculation():
-            ... do stuff ...
-    """
-
-    @wraps(function)
-    @with_dbenv()
-    def decorated_function(*args, **kwargs):
-        """Check if the current user is allowed to run the daemon, only if yes, run the original function."""
-        from aiida.backends.utils import get_daemon_user
-        from aiida.common.utils import get_configured_user_email
-        if not is_daemon_user():
-            click.echo(
-                "You are not the daemon user! I will not start the daemon.")
-            click.echo("(The daemon user is '{}', you are '{}')".format(
-                get_daemon_user(), get_configured_user_email()))
-            click.echo("")
-            click.echo("** FOR ADVANCED USERS ONLY: **")
-            click.echo(
-                "To change the current default user, use 'verdi install --only-config'"
-            )
-            click.echo(
-                "To change the daemon user, use 'verdi daemon configureuser'")
-
-            sys.exit(1)
-        return function(*args, **kwargs)
-
-    return decorated_function
-
-
-def only_if_daemon_pid(function):
-    """
-    Function decorator to exit with a message if the daemon is not found running (by checking pid file).
-
-    Example::
-
-        @only_if_daemon_pid
-        def create_my_calculation():
-            ... do stuff ...
-    """
-
-    @wraps(function)
-    def decorated_function(*args, **kwargs):
-        """If daemon pid file is not found / empty, exit without doing anything."""
-        profile_config = ProfileConfig()
-
-        if not profile_config.get_daemon_pid:
-            click.echo('The daemon is not running.')
-            sys.exit(0)
-
-        return function(*args, **kwargs)
-
-    return decorated_function
-
-
-@only_if_daemon_pid
-def try_call_client(client, cmd):
-    """Call a given circus client with a given command only if pid file exists, handle timeout."""
-    result = None
-    try:
-        with cli_spinner():
-            result = client.call(cmd)
-    except CallError as err:
-        if str(err) == 'Timed out.':
-            click.echo('Daemon was not running but a PID file was found. '
-                       'This indicates the daemon was terminated unexpectedly; '
-                       'no action is required but proceed with caution.')
-            sys.exit(0)
-        raise err
-    return result
-
-
-def check_circus_zmq_version(function):
-    """
-    Function decorator to check for the right ZMQ version before trying to run circus.
-
-    Example::
-
-        @click.command()
-        @only_if_daemon_pid
-        def do_circus_stuff():
-            ... do stuff ...
-    """
-
-    @wraps(function)
-    def decorated_function(*args, **kwargs):
-        """If daemon pid file is not found / empty, exit without doing anything."""
-
-        import zmq
-        try:
-            zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
-            if len(zmq_version) < 2:
-                raise ValueError()
-        except (AttributeError, ValueError):
-            click.echo('Unknown PyZQM version - aborting...')
-            sys.exit(0)
-
-        if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
-            click.echo(
-                'aiida daemon needs PyZMQ >= 13.1.0 to run - aborting...')
-            sys.exit(0)
-
-        return function(*args, **kwargs)
-
-    return decorated_function
-
-
 @daemon_cmd.command()
 @click.option(
     '--fg',
     '--foreground',
     is_flag=True,
-    help="Start circusd in the background. Not supported on Windows")
-@with_dbenv()
-@daemon_user_guard
-@check_circus_zmq_version
+    help='Start circusd in the background. Not supported on Windows')
+@decorators.with_dbenv()
+@decorators.daemon_user_guard
+@decorators.check_circus_zmq_version
 def start(foreground):
-    """Start an aiida daemon."""
+    """
+    Start an aiida daemon
+    """
 
-    # Create the arbiter
-    profile_config = ProfileConfig()
+    profile_daemon_client = ProfileDaemonClient()
 
     loglevel = 'INFO'
     logoutput = '-'
 
     if not foreground:
-        logoutput = profile_config.circus_log_file
+        logoutput = profile_daemon_client.circus_log_file
         daemonize()
 
-    env = _get_env_with_venv_bin()
+    env = get_env_with_venv_bin()
     env['PYTHONUNBUFFERED'] = 'True'
 
     arbiter = get_arbiter(
-        controller=profile_config.get_endpoint(0),
-        pubsub_endpoint=profile_config.get_endpoint(1),
-        stats_endpoint=profile_config.get_endpoint(2),
+        controller=profile_daemon_client.get_endpoint(0),
+        pubsub_endpoint=profile_daemon_client.get_endpoint(1),
+        stats_endpoint=profile_daemon_client.get_endpoint(2),
         logoutput=logoutput,
         loglevel=loglevel,
         debug=False,
         statsd=True,
-        pidfile=profile_config.circus_pid_file,
+        pidfile=profile_daemon_client.circus_pid_file,
         watchers=[{
-            'name': profile_config.daemon_name,
-            'cmd': profile_config.cmd_string,
-            'virtualenv': profile_config.virtualenv,
+            'name': profile_daemon_client.daemon_name,
+            'cmd': profile_daemon_client.cmd_string,
+            'virtualenv': profile_daemon_client.virtualenv,
             'copy_env': True,
             'stdout_stream': {
                 'class': 'FileStream',
-                'filename': profile_config.daemon_log_file
+                'filename': profile_daemon_client.daemon_log_file
             },
             'env': env,
         }])
@@ -423,7 +310,7 @@ def start(foreground):
     # configure the logger
     loggerconfig = None
     loggerconfig = loggerconfig or arbiter.loggerconfig or None
-    configure_logger(logger, loglevel, logoutput, loggerconfig)
+    configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
 
     # Main loop
     should_restart = True
@@ -449,7 +336,7 @@ def start(foreground):
 
 @daemon_cmd.command()
 @click.option('--wait', is_flag=True)
-@only_if_daemon_pid
+@decorators.only_if_daemon_pid
 def stop(wait):
     """
     Stop the daemon.
@@ -462,38 +349,33 @@ def stop(wait):
     :return: None if ``wait_for_death`` is False. True/False if the process was
         actually dead or after all the retries it was still alive.
     """
-    profile_config = ProfileConfig()
-    client = profile_config.get_client()
+    profile_daemon_client = ProfileDaemonClient()
+    client = profile_daemon_client.get_client()
 
     quit_cmd = {'command': 'quit', 'properties': {'waiting': wait}}
 
     if wait:
         click.echo("Waiting for the AiiDA Daemon to shut down...")
 
-    try_call_client(client, quit_cmd)
+    try_calling_circus_client(client, quit_cmd)
 
     click.echo("AiiDA Daemon shut down correctly.")
 
 
-def format_local_time(epoch_sec, format_str='%Y-%m-%d %H:%M:%S'):
-    from aiida.utils import timezone
-    return timezone.datetime.fromtimestamp(epoch_sec).strftime(format_str)
-
-
 @daemon_cmd.command()
-@only_if_daemon_pid
+@decorators.only_if_daemon_pid
 def status():
     """Print the status of the daemon."""
-    profile_config = ProfileConfig()
-    client = profile_config.get_client()
+    profile_daemon_client = ProfileDaemonClient()
+    client = profile_daemon_client.get_client()
 
     status_cmd = {
         'command': 'status',
         'properties': {
-            'name': profile_config.daemon_name
+            'name': profile_daemon_client.daemon_name
         }
     }
-    status_response = try_call_client(client, status_cmd)
+    status_response = try_calling_circus_client(client, status_cmd)
 
     if status_response['status'] == 'stopped':
         click.echo('The daemon is paused')
@@ -507,13 +389,13 @@ def status():
     info_cmd = {
         'command': 'stats',
         'properties': {
-            'name': profile_config.daemon_name
+            'name': profile_daemon_client.daemon_name
         }
     }
-    info_response = try_call_client(client, info_cmd)
+    info_response = try_calling_circus_client(client, info_cmd)
 
     daemon_info_cmd = {'command': 'dstats', 'properties': {}}
-    daemon_info_response = try_call_client(client, daemon_info_cmd)
+    daemon_info_response = try_calling_circus_client(client, daemon_info_cmd)
 
     workers = [['PID', 'MEM %', 'CPU %', 'started']]
     for worker_pid, worker_info in info_response['info'].items():
@@ -543,54 +425,54 @@ def status():
 
 @daemon_cmd.command()
 @click.argument('num', default=1, type=int)
-@only_if_daemon_pid
+@decorators.only_if_daemon_pid
 def incr(num):
     """Add NUM [default=1] workers to a running daemon."""
-    profile_config = ProfileConfig()
-    client = profile_config.get_client()
+    profile_daemon_client = ProfileDaemonClient()
+    client = profile_daemon_client.get_client()
 
     incr_cmd = {
         'command': 'incr',
         'properties': {
-            'name': profile_config.daemon_name,
+            'name': profile_daemon_client.daemon_name,
             'nb': num
         }
     }
 
-    response = try_call_client(client, incr_cmd)
+    response = try_calling_circus_client(client, incr_cmd)
     click.echo(response['status'])
 
 
 @daemon_cmd.command()
 @click.argument('num', default=1, type=int)
-@only_if_daemon_pid
+@decorators.only_if_daemon_pid
 def decr(num):
     """Add NUM [default=1] workers to a running daemon."""
-    profile_config = ProfileConfig()
-    client = profile_config.get_client()
+    profile_daemon_client = ProfileDaemonClient()
+    client = profile_daemon_client.get_client()
 
     incr_cmd = {
         'command': 'decr',
         'properties': {
-            'name': profile_config.daemon_name,
+            'name': profile_daemon_client.daemon_name,
             'nb': num
         }
     }
 
-    response = try_call_client(client, incr_cmd)
+    response = try_calling_circus_client(client, incr_cmd)
     click.echo(response['status'])
 
 
 @daemon_cmd.command()
-@with_dbenv()
-@only_if_daemon_pid
+@decorators.with_dbenv()
+@decorators.only_if_daemon_pid
 def logshow():
     """Show the log of the daemon, press CTRL+C to quit."""
-    profile_config = ProfileConfig()
+    profile_daemon_client = ProfileDaemonClient()
     try:
-        currenv = _get_env_with_venv_bin()
+        currenv = get_env_with_venv_bin()
         process = subprocess.Popen(
-            ['tail', '-f', profile_config.daemon_log_file], env=currenv)
+            ['tail', '-f', profile_daemon_client.daemon_log_file], env=currenv)
         process.wait()
     except KeyboardInterrupt:
         # exit on CTRL+C
@@ -599,24 +481,24 @@ def logshow():
 
 @daemon_cmd.command()
 @click.option('--wait', is_flag=True)
-@with_dbenv()
-@daemon_user_guard
+@decorators.with_dbenv()
+@decorators.daemon_user_guard
 def restart(wait):
     """
     Restart the daemon.
 
     Before restarting, wait for the daemon to really shut down.
     """
-    profile_config = ProfileConfig()
-    client = profile_config.get_client()
+    profile_daemon_client = ProfileDaemonClient()
+    client = profile_daemon_client.get_client()
 
     restart_cmd = {
         'command': 'restart',
         'properties': {
-            'name': profile_config.daemon_name,
+            'name': profile_daemon_client.daemon_name,
             'waiting': wait
         }
     }
 
-    result = try_call_client(client, restart_cmd)
+    result = try_calling_circus_client(client, restart_cmd)
     click.echo(result['status'])

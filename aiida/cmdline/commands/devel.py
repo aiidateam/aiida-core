@@ -11,9 +11,10 @@ import sys
 import os
 
 import aiida
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import pass_to_django_manage, execname
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.utils import decorators
 from aiida.common.exceptions import InternalError, TestsNotAllowedError
 
 
@@ -366,6 +367,7 @@ class Devel(VerdiCommandWithSubcommands):
             except Exception as e:
                 print >> sys.stderr, "# Error loading job # %s (%s): %s" % (job, type(e), e)
 
+    @decorators.with_dbenv()
     def run_daemon(self, *args):
         """
         Run a daemon instance in this in the current interpreter

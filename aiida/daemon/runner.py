@@ -7,28 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from functools import partial
 
 from aiida.common.log import aiidalogger
-from aiida.cmdline.dbenv_lazyloading import with_dbenv
+from aiida.common.log import configure_logging
+from aiida.daemon.client import ProfileDaemonClient
+from aiida.work.rmq import get_rmq_config
+from aiida.work import DaemonRunner, set_runner
+
 
 logger = aiidalogger.getChild(__name__)
-
 
 DAEMON_LEGACY_WORKFLOW_INTERVAL = 30
 
 
-@with_dbenv()
 def start_daemon():
     """
     Start a daemon runner for the currently configured profile
     """
-    from aiida.cmdline.commands.daemon import ProfileConfig
-    from aiida.common.log import configure_logging
-    from aiida.work.rmq import get_rmq_config
-    from aiida.work import DaemonRunner, set_runner
-
-    profile_config = ProfileConfig()
-    configure_logging(daemon=True, daemon_log_file=profile_config.daemon_log_file)
+    profile_client = ProfileDaemonClient()
+    configure_logging(daemon=True, daemon_log_file=profile_client.daemon_log_file)
 
     runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
     set_runner(runner)
@@ -50,8 +48,6 @@ def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):
     :param runner: the DaemonRunner instance to perform the callback
     :param interval: the number of seconds to wait between callbacks
     """
-    from functools import partial
-
     logger.info('Ticking the legacy workflows')
     legacy_workflow_stepper()
     runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))

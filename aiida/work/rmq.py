@@ -31,7 +31,7 @@ def get_rmq_prefix():
 
     :returns: string prefix for the RMQ communicators
     """
-    from aiida.cmdline.commands.daemon import ProfileConfig
+    from aiida.common.profile import ProfileConfig
 
     profile_config = ProfileConfig()
     prefix = profile_config.rmq_prefix

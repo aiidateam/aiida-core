@@ -157,8 +157,6 @@ submission/retrieval of calculations.
   
   *  **restart**: restarts the daemon.
   
-  *  **configureuser**: sets the user which is running the daemon. See the installation guide for more details.
-  
   *  **logshow**: show the last lines of the daemon log (use for debugging)
   
   

@@ -13,8 +13,6 @@ import aiida
 import logging
 import json
 
-# The username (email) used by the default superuser, that should also run
-# as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
@@ -533,7 +531,7 @@ def create_configuration(profile='default'):
         # No configuration file found
         confs = {}
 
-        # first time creation check
+    # First time creation check
     try:
         confs['profiles']
     except KeyError:

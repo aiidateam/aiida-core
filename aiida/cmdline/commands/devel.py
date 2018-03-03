@@ -86,7 +86,6 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.scheduler',
         'aiida.transport',
         'aiida.common',
-        'aiida.tests.work',
         'aiida.utils',
         'aiida.control',
         'aiida.cmdline.tests'

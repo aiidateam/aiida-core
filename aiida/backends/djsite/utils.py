@@ -58,31 +58,6 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_daemon_user():
-    """
-    Return the username (email) of the user that should run the daemon,
-    or the default AiiDA user in case no explicit configuration is found
-    in the DbSetting table.
-    """
-    from aiida.backends.djsite.globalsettings import get_global_setting
-    from aiida.common.setup import DEFAULT_AIIDA_USER
-
-    try:
-        return get_global_setting('daemon|user')
-    except KeyError:
-        return DEFAULT_AIIDA_USER
-
-
-def set_daemon_user(user_email):
-    """
-    Set the username (email) of the user that is allowed to run the daemon.
-    """
-    from aiida.backends.djsite.globalsettings import set_global_setting
-
-    set_global_setting("daemon|user", user_email,
-                       description="The only user that is allowed to run the "
-                                   "AiiDA daemon on this DB instance")
-
 _aiida_autouser_cache = None
 
 

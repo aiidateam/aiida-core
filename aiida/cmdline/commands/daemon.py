@@ -21,11 +21,9 @@ from circus import logger as circus_logger
 from circus.circusd import daemonize
 from circus.exc import CallError
 from circus.pidfile import Pidfile
-from circus.util import configure_logger
-from circus.util import check_future_exception_and_log
+from circus.util import check_future_exception_and_log, configure_logger
 from click_spinner import spinner as cli_spinner
 
-from aiida.backends.utils import is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.utils import decorators
@@ -87,98 +85,10 @@ class Daemon(VerdiCommandWithSubcommands):
             'decr': (self.cli, self.complete_none),
             'logshow': (self.cli, self.complete_none),
             'restart': (self.cli, self.complete_none),
-            'configureuser': (self.configure_user, self.complete_none),
         }
 
     def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
         verdi.main()
-
-    def configure_user(self, *args):  # pylint: disable=too-many-locals
-        """
-        Configure the user that can run the daemon.
-        """
-        if not is_dbenv_loaded():
-            from aiida.backends.utils import load_dbenv
-            load_dbenv()
-
-        if args:
-            click.echo(
-                "No arguments allowed for the '{}' command.".format(
-                    self.get_full_command_name()),
-                err=True)
-            sys.exit(1)
-
-        from aiida.utils import timezone
-        from aiida.backends.utils import get_daemon_user, set_daemon_user
-        from aiida.common.utils import (get_configured_user_email, query_yes_no,
-                                        query_string)
-        from aiida.daemon.timestamps import get_most_recent_daemon_timestamp
-        from aiida.common.utils import str_timedelta
-        from aiida.orm.user import User
-
-        old_daemon_user = get_daemon_user()
-        this_user = get_configured_user_email()
-
-        click.echo("> Current default user: {}".format(this_user))
-        click.echo(
-            "> Currently configured user who can run the daemon: {}".format(
-                old_daemon_user))
-        if old_daemon_user == this_user:
-            click.echo(
-                "  (therefore, at the moment you are the user who can run "
-                "the daemon)")
-            profile_daemon_client = ProfileDaemonClient()
-            pid = profile_daemon_client.get_daemon_pid
-            if pid is not None:
-                click.echo("The daemon is running! I will not proceed.")
-                sys.exit(1)
-        else:
-            click.echo(
-                "  (therefore, you cannot run the daemon, at the moment)")
-
-        most_recent_timestamp = get_most_recent_daemon_timestamp()
-
-        click.echo("*" * 76)
-        click.echo("* {:72s} *".format(
-            "WARNING! Change this setting only if you "
-            "are sure of what you are doing."))
-        click.echo("* {:72s} *".format("Moreover, make sure that the "
-                                       "daemon is stopped."))
-
-        if most_recent_timestamp is not None:
-            timestamp_delta = timezone.now() - most_recent_timestamp
-            last_check_string = (
-                "[The most recent timestamp from the daemon was {}]".format(
-                    str_timedelta(timestamp_delta)))
-            click.echo("* {:72s} *".format(last_check_string))
-
-        click.echo("*" * 76)
-
-        answer = query_yes_no(
-            "Are you really sure that you want to change "
-            "the daemon user?",
-            default="no")
-        if not answer:
-            sys.exit(0)
-
-        click.echo("")
-        click.echo(
-            "Enter below the email of the new user who can run the daemon.")
-        new_daemon_user_email = query_string("New daemon user: ", None)
-
-        found_users = User.search_for_users(email=new_daemon_user_email)
-        if not found_users:
-            click.echo(
-                "ERROR! The user you specified ({}) does "
-                "not exist in the database!!".format(new_daemon_user_email))
-            click.echo("The available users are {}".format(
-                [_.email for _ in User.search_for_users()]))
-            sys.exit(1)
-
-        set_daemon_user(new_daemon_user_email)
-
-        click.echo("The new user that can run the daemon is now {} {}.".format(
-            found_users[0].first_name, found_users[0].last_name))
 
 
 @daemon_cmd.command()
@@ -188,7 +98,6 @@ class Daemon(VerdiCommandWithSubcommands):
     is_flag=True,
     help='Start circusd in the background. Not supported on Windows')
 @decorators.with_dbenv()
-@decorators.daemon_user_guard
 @decorators.check_circus_zmq_version
 def start(foreground):
     """
@@ -372,7 +281,8 @@ def incr(num):
 @decorators.only_if_daemon_pid
 def decr(num):
     """
-    Remove NUM [default=1] workers from the running daemon."""
+    Remove NUM [default=1] workers from the running daemon
+    """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
 
@@ -411,7 +321,6 @@ def logshow():
     is_flag=True,
     help='wait for the daemon to stop before restarting')
 @decorators.with_dbenv()
-@decorators.daemon_user_guard
 def restart(wait):
     """
     Restart the daemon

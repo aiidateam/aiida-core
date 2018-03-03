@@ -95,44 +95,6 @@ def dbenv():
     yield
 
 
-
-def daemon_user_guard(function):
-    """
-    Function decorator that checks wether the user is the daemon user before running the function
-
-    Example::
-
-        @daemon_user_guard
-        def create_my_calculation():
-            pass
-    """
-
-    @wraps(function)
-    @with_dbenv()
-    def decorated_function(*args, **kwargs):
-        """
-        Check if the current user is allowed to run the daemon, only if yes, run the original function
-        """
-        from aiida.backends.utils import get_daemon_user
-        from aiida.common.utils import get_configured_user_email
-
-        daemon_user = get_daemon_user()
-        current_user = get_configured_user_email()
-
-        if daemon_user != current_user:
-            click.echo("You are not the daemon user! I will not start the daemon.")
-            click.echo("(The daemon user is '{}', you are '{}')".format(daemon_user, current_user))
-            click.echo("")
-            click.echo("** FOR ADVANCED USERS ONLY: **")
-            click.echo("To change the current default user, use 'verdi install --only-config'")
-            click.echo("To change the daemon user, use 'verdi daemon configureuser'")
-
-            sys.exit(1)
-        return function(*args, **kwargs)
-
-    return decorated_function
-
-
 def only_if_daemon_pid(function):
     """
     Function decorator to exit with a message if the daemon is not found running (by checking pid file)

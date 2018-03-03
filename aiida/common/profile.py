@@ -5,6 +5,7 @@ import sys
 from aiida.backends import settings
 from aiida.common import setup
 from aiida.cmdline.dbenv_lazyloading import with_dbenv
+from circus.client import CircusClient
 
 
 VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
@@ -70,8 +71,8 @@ class ProfileConfig(object):
     def cmd_string(self):
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile)
 
-    @classmethod
-    def get_daemon_pid(cls):
+    @property
+    def get_daemon_pid(self):
         circus_pid_file = self.circus_pid_file
         if os.path.isfile(circus_pid_file):
             try:
@@ -87,16 +88,16 @@ class ProfileConfig(object):
 
     @property
     def circus_log_file(self):
-        return get_daemon_files()['circus']['pid']
-
-    @property
-    def circus_pid_file(self):
         return get_daemon_files()['circus']['log']
 
     @property
-    def daemon_pid_file(self):
-        return get_daemon_files()['daemon']['pid']
+    def circus_pid_file(self):
+        return get_daemon_files()['circus']['pid']
 
     @property
     def daemon_log_file(self):
         return get_daemon_files()['daemon']['log']
+
+    @property
+    def daemon_pid_file(self):
+        return get_daemon_files()['daemon']['pid']

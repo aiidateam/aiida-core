@@ -11,10 +11,10 @@
 import os
 import sys
 import subprocess
-import tabulate
 from functools import wraps
 
 import click
+import tabulate
 from click_spinner import spinner as cli_spinner
 from circus import logger, get_arbiter
 from circus.circusd import daemonize
@@ -22,7 +22,6 @@ from circus.pidfile import Pidfile
 from circus import __version__
 from circus.util import configure_logger
 from circus.util import check_future_exception_and_log
-from circus.client import CircusClient
 from circus.exc import CallError
 
 from aiida.common.profile import ProfileConfig
@@ -51,7 +50,8 @@ def _get_env_with_venv_bin():
     pybin = os.path.dirname(sys.executable)
     currenv = os.environ.copy()
     currenv['PATH'] = pybin + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    currenv['AIIDA_PATH'] = os.path.abspath(
+        os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
     return currenv
 
 
@@ -305,7 +305,7 @@ def only_if_daemon_pid(function):
         """If daemon pid file is not found / empty, exit without doing anything."""
         profile_config = ProfileConfig()
 
-        if not profile_config.get_daemon_pid():
+        if not profile_config.get_daemon_pid:
             click.echo('The daemon is not running.')
             sys.exit(0)
 
@@ -387,7 +387,6 @@ def start(foreground):
     if not foreground:
         logoutput = profile_config.circus_log_file
         daemonize()
-
 
     env = _get_env_with_venv_bin()
     env['PYTHONUNBUFFERED'] = 'True'
@@ -591,9 +590,7 @@ def logshow():
     try:
         currenv = _get_env_with_venv_bin()
         process = subprocess.Popen(
-            ['tail', '-f', profile_config.daemon_log_file],
-            env=currenv
-        )
+            ['tail', '-f', profile_config.daemon_log_file], env=currenv)
         process.wait()
     except KeyboardInterrupt:
         # exit on CTRL+C

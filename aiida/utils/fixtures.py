@@ -199,8 +199,7 @@ class FixtureManager(object):
             only_config=False,
             non_interactive=True,
             **self.profile)
-        aiida_cfg.set_default_profile('verdi', profile_name)
-        aiida_cfg.set_default_profile('daemon', profile_name)
+        aiida_cfg.set_default_profile(profile_name)
         self.__is_running_on_test_profile = True
 
     def reset_db(self):

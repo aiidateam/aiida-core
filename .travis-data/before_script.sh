@@ -8,9 +8,7 @@ then
     # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
     export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data
 
-    # start the daemon for the correct profile
-    # (actually, for the way it works now, the -p probably does not
-    #  have any effect...)
+    # Start the daemon for the correct profile
     verdi -p $TEST_AIIDA_BACKEND daemon start
     
     # Setup the torquessh computer

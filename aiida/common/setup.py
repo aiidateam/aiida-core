@@ -852,12 +852,12 @@ _property_table = {
         "Minimum level to log to the console",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.celery_loglevel": (
-        "logging_celery_log_level",
+    "logging.circus_loglevel": (
+        "logging_circus_log_level",
         "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'celery' logger",
-        "WARNING",
+        "Minimum level to log to the circus daemon log file"
+        "for the 'circus' logger",
+        "INFO",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.db_loglevel": (
         "logging_db_log_level",

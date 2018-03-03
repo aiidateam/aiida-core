@@ -13,10 +13,7 @@ SQLAlchemy==1.0.12
 Sphinx==1.5.2
 aldjemy==0.6.0
 alembic==0.9.6
-amqp==1.4.9
 anyjson==0.3.3
-billiard==3.3.0.23
-celery==3.1.25
 circus>=0.14.0
 click-plugins
 click-spinner

@@ -91,7 +91,7 @@ class AiidaApi(Api):
         """
 
         from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
-            Group, Node, StructureData, KpointsData, BandsData, UpfData, ServerInfo
+            Group, Node, StructureData, KpointsData, BandsData, UpfData, CifData, ServerInfo
 
         self.app = app
 
@@ -285,6 +285,29 @@ class AiidaApi(Api):
                           strict_slashes=False,
                           resource_class_kwargs=kwargs
                           )
+
+
+        self.add_resource(CifData,
+                   '/cifs/',
+                   '/cifs/schema/',
+                   '/cifs/page/',
+                   '/cifs/page/<int:page>',
+                   '/cifs/<id>/',
+                   '/cifs/<id>/io/inputs/',
+                   '/cifs/<id>/io/inputs/page/',
+                   '/cifs/<id>/io/inputs/page/<int:page>/',
+                   '/cifs/<id>/io/outputs/',
+                   '/cifs/<id>/io/outputs/page/',
+                   '/cifs/<id>/io/outputs/page/<int:page>/',
+                   '/cifs/<id>/io/tree/',
+                   '/cifs/<id>/content/attributes/',
+                   '/cifs/<id>/content/extras/',
+                   '/cifs/<id>/content/visualization/',
+                   '/cifs/<id>/content/download/',
+                   endpoint='cifs',
+                   strict_slashes=False,
+                   resource_class_kwargs=kwargs
+                   )
 
         self.add_resource(User,
                           '/users/',

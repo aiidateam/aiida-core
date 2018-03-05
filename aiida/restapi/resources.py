@@ -473,6 +473,21 @@ class BandsData(Data):
         self.parse_pk_uuid = 'uuid'
 
 
+class CifData(Data):
+
+    def __init__(self, **kwargs):
+
+        super(CifData, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.data.cif import \
+            CifDataTranslator
+        self.trans = CifDataTranslator(**kwargs)
+        from aiida.orm.data.cif import CifData as CifDataTclass
+        self.tclass = CifDataTclass
+
+        self.parse_pk_uuid = 'uuid'
+
+
 class UpfData(Data):
 
     def __init__(self, **kwargs):

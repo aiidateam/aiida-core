@@ -12,6 +12,7 @@
         .travis_data/test_setup.py|
         .travis-data/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
+        aiida/restapi/resources.py|
         aiida/utils/fixtures.py
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 
@@ -31,6 +32,7 @@
         .travis_data/test_setup.py|
         .travis-data/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
+        aiida/restapi/resources.py|
         aiida/utils/fixtures.py
       )$
 

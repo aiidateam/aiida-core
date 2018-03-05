@@ -315,20 +315,14 @@ class AiidaApi(Api):
         if isinstance(e, HTTPException):
             if e.code == 404:
 
-                from aiida.restapi.common.config import PREFIX
-                import json
+                from aiida.restapi.common.utils import list_routes
 
                 response = {}
 
                 response["status"] = "404 Not Found"
                 response["message"] = "The requested URL is not found on the server."
-                response["available_endpoints"] = []
-                tmp = []
 
-                for rule in sorted(self.app.url_map.iter_rules()):
-                    if rule.endpoint not in tmp and rule.endpoint != "static":
-                        tmp.append(rule.endpoint)
-                        response["available_endpoints"].append(PREFIX + "/" + rule.endpoint)
+                response["available_endpoints"]  = list_routes()
 
                 return jsonify(response)
 

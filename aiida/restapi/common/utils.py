@@ -869,3 +869,21 @@ class Utils(object):
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)
+
+
+def list_routes():
+    """List available routes"""
+    import urllib
+    from flask import current_app, url_for
+
+    output = []
+    for rule in sorted(current_app.url_map.iter_rules()):
+        if rule.endpoint is "static":
+            continue
+
+        methods = ','.join(rule.methods)
+        line = urllib.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
+        output.append(line)
+
+    return output
+    

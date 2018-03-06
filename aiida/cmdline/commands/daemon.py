@@ -124,7 +124,7 @@ def start(foreground):
     """
     Start the daemon
     """
-    profile_daemon_client = ProfileDaemonClient()
+    client = ProfileDaemonClient()
 
     env = get_env_with_venv_bin()
     env['PYTHONUNBUFFERED'] = 'True'
@@ -132,37 +132,29 @@ def start(foreground):
     logoutput = '-'
 
     if not foreground:
-        logoutput = profile_daemon_client.circus_log_file
+        logoutput = client.circus_log_file
 
     arbiter_config = {
-        'controller':
-        profile_daemon_client.get_endpoint(0),
-        'pubsub_endpoint':
-        profile_daemon_client.get_endpoint(1),
-        'stats_endpoint':
-        profile_daemon_client.get_endpoint(2),
-        'logoutput':
-        logoutput,
-        'loglevel':
-        loglevel,
-        'debug':
-        False,
-        'statsd':
-        True,
-        'pidfile':
-        profile_daemon_client.circus_pid_file,
+        'controller': client.get_endpoint(0),
+        'pubsub_endpoint': client.get_endpoint(1),
+        'stats_endpoint': client.get_endpoint(2),
+        'logoutput': logoutput,
+        'loglevel': loglevel,
+        'debug': False,
+        'statsd': True,
+        'pidfile': client.circus_pid_file,
         'watchers': [{
-            'name': profile_daemon_client.daemon_name,
-            'cmd': profile_daemon_client.cmd_string,
-            'virtualenv': profile_daemon_client.virtualenv,
+            'name': client.daemon_name,
+            'cmd': client.cmd_string,
+            'virtualenv': client.virtualenv,
             'copy_env': True,
             'stdout_stream': {
                 'class': 'FileStream',
-                'filename': profile_daemon_client.daemon_log_file
+                'filename': client.daemon_log_file
             },
             'env': env,
         }]
-    }
+    } # yapf: disable
 
     if not foreground:
         daemonize()
@@ -205,7 +197,7 @@ def start(foreground):
 
 
 @daemon_cmd.command()
-@click.option('--wait', is_flag=True, help='wait for confirmation')
+@click.option('--wait', is_flag=True, help='Wait for confirmation')
 @decorators.only_if_daemon_pid
 def stop(wait):
     """
@@ -217,11 +209,14 @@ def stop(wait):
     quit_cmd = {'command': 'quit', 'properties': {'waiting': wait}}
 
     if wait:
-        click.echo("Waiting for the AiiDA Daemon to shut down...")
+        click.echo('Waiting for the daemon to shut down... ', nl=False)
+    else:
+        click.echo('Shutting the daemon down')
 
-    try_calling_running_client(client, quit_cmd)
+    response = try_calling_running_client(client, quit_cmd)
 
-    click.echo("AiiDA Daemon shut down correctly.")
+    if wait:
+        click.echo(response['status'])
 
 
 @daemon_cmd.command()

@@ -384,6 +384,9 @@ class TestGroups(AiidaTestCase):
         g.delete()
 
     def test_rename(self):
+        """
+        Test the renaming of a Group
+        """
         from aiida.orm.group import Group
 
         name_original = 'groupie'

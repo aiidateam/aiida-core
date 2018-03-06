@@ -74,11 +74,21 @@ class Group(AbstractGroup):
 
     @name.setter
     def name(self, name):
+        """
+        Attempt to change the name of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired name, a
+        UniquenessError will be raised
+
+        :param name: the new group name
+        :raises UniquenessError: if another group of same type and name already exists
+        """
         self.dbgroup.name = name
 
-        # Update the entry in the DB, if the group is already stored
         if self.is_stored:
-            self.dbgroup.save()
+            try:
+                self.dbgroup.save()
+            except IntegrityError:
+                raise UniquenessError('a group of the same type with the name {} already exists'.format(name))
 
     @property
     def description(self):

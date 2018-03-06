@@ -72,6 +72,14 @@ class Group(AbstractGroup):
     def name(self):
         return self.dbgroup.name
 
+    @name.setter
+    def name(self, name):
+        self.dbgroup.name = name
+
+        # Update the entry in the DB, if the group is already stored
+        if self.is_stored:
+            self.dbgroup.save()
+
     @property
     def description(self):
         return self.dbgroup.description

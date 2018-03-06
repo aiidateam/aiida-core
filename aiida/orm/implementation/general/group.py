@@ -64,6 +64,16 @@ class AbstractGroup(object):
         """
         pass
 
+    @name.setter
+    @abstractproperty
+    def name(self, name):
+        """
+        Set a new name for the group
+
+        :param name: the new name of the group
+        """
+        pass
+
     @abstractproperty
     def description(self):
         """

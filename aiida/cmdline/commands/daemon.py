@@ -32,7 +32,7 @@ from aiida.daemon.client import ProfileDaemonClient
 
 
 @decorators.only_if_daemon_pid
-def try_calling_circus_client(client, cmd):
+def try_calling_running_client(client, cmd):
     """
     Call a given circus client with a given command only if pid file exists, handle timeout
     """
@@ -46,6 +46,27 @@ def try_calling_circus_client(client, cmd):
             click.echo('Daemon was not running but a PID file was found. '
                        'This indicates the daemon was terminated unexpectedly; '
                        'no action is required but proceed with caution.')
+            sys.exit(0)
+        raise err
+
+    return result
+
+
+def try_calling_client(client, cmd, timeout=None):
+    """
+    Call a given circus client with a given command with optional timeout
+    """
+    result = None
+
+    if timeout is not None:
+        client.timeout = timeout
+
+    try:
+        with cli_spinner():
+            result = client.call(cmd)
+    except CallError as err:
+        if str(err) == 'Timed out.':
+            click.echo('Timed out')
             sys.exit(0)
         raise err
 
@@ -92,7 +113,10 @@ class Daemon(VerdiCommandWithSubcommands):
 
 
 @daemon_cmd.command()
-@click.option('-f', '--foreground', is_flag=True,
+@click.option(
+    '-f',
+    '--foreground',
+    is_flag=True,
     help='Start circusd in the foreground, useful for debugging')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
@@ -111,27 +135,33 @@ def start(foreground):
         logoutput = profile_daemon_client.circus_log_file
 
     arbiter_config = {
-        'controller': profile_daemon_client.get_endpoint(0),
-        'pubsub_endpoint': profile_daemon_client.get_endpoint(1),
-        'stats_endpoint': profile_daemon_client.get_endpoint(2),
-        'logoutput': logoutput,
-        'loglevel': loglevel,
-        'debug': False,
-        'statsd': True,
-        'pidfile': profile_daemon_client.circus_pid_file,
-        'watchers': [
-            {
-                'name': profile_daemon_client.daemon_name,
-                'cmd': profile_daemon_client.cmd_string,
-                'virtualenv': profile_daemon_client.virtualenv,
-                'copy_env': True,
-                'stdout_stream': {
-                    'class': 'FileStream',
-                    'filename': profile_daemon_client.daemon_log_file
-                },
-                'env': env,
-            }
-        ]
+        'controller':
+        profile_daemon_client.get_endpoint(0),
+        'pubsub_endpoint':
+        profile_daemon_client.get_endpoint(1),
+        'stats_endpoint':
+        profile_daemon_client.get_endpoint(2),
+        'logoutput':
+        logoutput,
+        'loglevel':
+        loglevel,
+        'debug':
+        False,
+        'statsd':
+        True,
+        'pidfile':
+        profile_daemon_client.circus_pid_file,
+        'watchers': [{
+            'name': profile_daemon_client.daemon_name,
+            'cmd': profile_daemon_client.cmd_string,
+            'virtualenv': profile_daemon_client.virtualenv,
+            'copy_env': True,
+            'stdout_stream': {
+                'class': 'FileStream',
+                'filename': profile_daemon_client.daemon_log_file
+            },
+            'env': env,
+        }]
     }
 
     if not foreground:
@@ -189,7 +219,7 @@ def stop(wait):
     if wait:
         click.echo("Waiting for the AiiDA Daemon to shut down...")
 
-    try_calling_circus_client(client, quit_cmd)
+    try_calling_running_client(client, quit_cmd)
 
     click.echo("AiiDA Daemon shut down correctly.")
 
@@ -209,7 +239,7 @@ def status():
             'name': profile_daemon_client.daemon_name
         }
     }
-    status_response = try_calling_circus_client(client, status_cmd)
+    status_response = try_calling_running_client(client, status_cmd)
 
     if status_response['status'] == 'stopped':
         click.echo('The daemon is paused')
@@ -226,10 +256,10 @@ def status():
             'name': profile_daemon_client.daemon_name
         }
     }
-    info_response = try_calling_circus_client(client, info_cmd)
+    info_response = try_calling_running_client(client, info_cmd)
 
     daemon_info_cmd = {'command': 'dstats', 'properties': {}}
-    daemon_info_response = try_calling_circus_client(client, daemon_info_cmd)
+    daemon_info_response = try_calling_running_client(client, daemon_info_cmd)
 
     workers = [['PID', 'MEM %', 'CPU %', 'started']]
     for worker_pid, worker_info in info_response['info'].items():
@@ -275,7 +305,7 @@ def incr(num):
         }
     }
 
-    response = try_calling_circus_client(client, incr_cmd)
+    response = try_calling_running_client(client, incr_cmd)
     click.echo(response['status'])
 
 
@@ -297,7 +327,7 @@ def decr(num):
         }
     }
 
-    response = try_calling_circus_client(client, incr_cmd)
+    response = try_calling_running_client(client, incr_cmd)
     click.echo(response['status'])
 
 
@@ -320,24 +350,59 @@ def logshow():
 
 @daemon_cmd.command()
 @click.option(
+    '--reset',
+    is_flag=True,
+    help='Completely reset the daemon, including the circus daemon')
+@click.option(
     '--wait',
     is_flag=True,
-    help='wait for the daemon to stop before restarting')
+    help='Wait for the daemon to stop before restarting')
+@click.pass_context
 @decorators.with_dbenv()
-def restart(wait):
+def restart(ctx, reset, wait):
     """
-    Restart the daemon
+    Restart the daemon. By default will only reset the workers of the running daemon.
+    After the restart the same amount of workers will be running. If the --reset flag
+    is passed, however, the full circus daemon will be stopped and restarted, with just
+    a single worker
     """
     profile_daemon_client = ProfileDaemonClient()
     client = profile_daemon_client.get_client()
 
-    restart_cmd = {
-        'command': 'restart',
-        'properties': {
-            'name': profile_daemon_client.daemon_name,
-            'waiting': wait
-        }
-    }
+    if reset:
+        ctx.invoke(stop, wait=True)
 
-    result = try_calling_circus_client(client, restart_cmd)
-    click.echo(result['status'])
+        click.echo('Starting the daemon... ', nl=False)
+
+        currenv = get_env_with_venv_bin()
+        subprocess.check_output(['verdi', 'daemon', 'start'], env=currenv)
+
+        status_cmd = {
+            'command': 'status',
+            'properties': {
+                'name': profile_daemon_client.daemon_name,
+                'waiting': True
+            }
+        }
+
+        response = try_calling_client(client, status_cmd)
+        click.echo(response['status'])
+
+    else:
+        restart_cmd = {
+            'command': 'restart',
+            'properties': {
+                'name': profile_daemon_client.daemon_name,
+                'waiting': wait
+            }
+        }
+
+        if wait:
+            click.echo('Restarting the daemon... ', nl=False)
+        else:
+            click.echo('Restarting the daemon')
+
+        response = try_calling_running_client(client, restart_cmd)
+
+        if wait:
+            click.echo(response['status'])

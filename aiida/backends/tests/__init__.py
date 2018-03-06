@@ -42,6 +42,7 @@ db_test_list = {
         'parsers': ['aiida.backends.tests.parsers'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],
         'query': ['aiida.backends.tests.query'],
+        'utils.serialize': ['aiida.backends.tests.utils.serialize'],
         'workflows': ['aiida.backends.tests.workflows'],
         'calculation_node': ['aiida.backends.tests.calculation_node'],
         'backup_script': ['aiida.backends.tests.backup_script'],

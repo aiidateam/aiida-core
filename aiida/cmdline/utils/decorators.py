@@ -116,7 +116,7 @@ def only_if_daemon_pid(function):
         profile_daemon_client = ProfileDaemonClient()
 
         if not profile_daemon_client.get_daemon_pid:
-            click.echo('The daemon is not running.')
+            click.echo('The daemon is not running')
             sys.exit(0)
 
         return function(*args, **kwargs)

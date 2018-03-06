@@ -13,7 +13,7 @@ import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.exceptions import NotExistent
+from aiida.common.exceptions import NotExistent, UniquenessError
 
 
 
@@ -34,6 +34,7 @@ class Group(VerdiCommandWithSubcommands):
             'show': (self.group_show, self.complete_none),
             'description': (self.group_description, self.complete_none),
             'create': (self.group_create, self.complete_none),
+            'rename': (self.group_rename, self.complete_none),
             'delete': (self.group_delete, self.complete_none),
             'addnodes': (self.group_addnodes, self.complete_none),
             'removenodes': (self.group_removenodes, self.complete_none),
@@ -67,6 +68,57 @@ class Group(VerdiCommandWithSubcommands):
         else:
             print "Group '{}' already exists, PK = {}".format(
                 group.name, group.pk)
+
+    def group_rename(self, *args):
+        """
+        Rename an existing group.
+        """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        import argparse
+        from aiida.orm import Group as G
+        from aiida.orm import load_group
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Rename an existing group.')
+        parser.add_argument('GROUP', help='The name or PK of the group to rename')
+        parser.add_argument('NAME', help='The new name of the group')
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group = parsed_args.GROUP
+        name = parsed_args.NAME
+
+        try:
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        try:
+            group.name = name
+        except UniquenessError as exception:
+            print >> sys.stderr, "Error: {}.".format(exception.message)
+            sys.exit(1)
+        else:
+            print 'Name successfully changed'
+
 
     def group_delete(self, *args):
         """

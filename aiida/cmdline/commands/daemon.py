@@ -92,11 +92,8 @@ class Daemon(VerdiCommandWithSubcommands):
 
 
 @daemon_cmd.command()
-@click.option(
-    '--fg',
-    '--foreground',
-    is_flag=True,
-    help='Start circusd in the background. Not supported on Windows')
+@click.option('-f', '--foreground', is_flag=True,
+    help='Start circusd in the foreground, useful for debugging')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
 def start(foreground):
@@ -105,37 +102,42 @@ def start(foreground):
     """
     profile_daemon_client = ProfileDaemonClient()
 
+    env = get_env_with_venv_bin()
+    env['PYTHONUNBUFFERED'] = 'True'
     loglevel = 'INFO'
     logoutput = '-'
 
     if not foreground:
         logoutput = profile_daemon_client.circus_log_file
+
+    arbiter_config = {
+        'controller': profile_daemon_client.get_endpoint(0),
+        'pubsub_endpoint': profile_daemon_client.get_endpoint(1),
+        'stats_endpoint': profile_daemon_client.get_endpoint(2),
+        'logoutput': logoutput,
+        'loglevel': loglevel,
+        'debug': False,
+        'statsd': True,
+        'pidfile': profile_daemon_client.circus_pid_file,
+        'watchers': [
+            {
+                'name': profile_daemon_client.daemon_name,
+                'cmd': profile_daemon_client.cmd_string,
+                'virtualenv': profile_daemon_client.virtualenv,
+                'copy_env': True,
+                'stdout_stream': {
+                    'class': 'FileStream',
+                    'filename': profile_daemon_client.daemon_log_file
+                },
+                'env': env,
+            }
+        ]
+    }
+
+    if not foreground:
         daemonize()
 
-    env = get_env_with_venv_bin()
-    env['PYTHONUNBUFFERED'] = 'True'
-
-    arbiter = get_arbiter(
-        controller=profile_daemon_client.get_endpoint(0),
-        pubsub_endpoint=profile_daemon_client.get_endpoint(1),
-        stats_endpoint=profile_daemon_client.get_endpoint(2),
-        logoutput=logoutput,
-        loglevel=loglevel,
-        debug=False,
-        statsd=True,
-        pidfile=profile_daemon_client.circus_pid_file,
-        watchers=[{
-            'name': profile_daemon_client.daemon_name,
-            'cmd': profile_daemon_client.cmd_string,
-            'virtualenv': profile_daemon_client.virtualenv,
-            'copy_env': True,
-            'stdout_stream': {
-                'class': 'FileStream',
-                'filename': profile_daemon_client.daemon_log_file
-            },
-            'env': env,
-        }])
-
+    arbiter = get_arbiter(**arbiter_config)
     pidfile = Pidfile(arbiter.pidfile)
 
     try:
@@ -144,7 +146,7 @@ def start(foreground):
         click.echo(str(err))
         sys.exit(1)
 
-    # configure the logger
+    # Configure the logger
     loggerconfig = None
     loggerconfig = loggerconfig or arbiter.loggerconfig or None
     configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
@@ -168,6 +170,7 @@ def start(foreground):
             arbiter = None
             if pidfile is not None:
                 pidfile.unlink()
+
     sys.exit(0)
 
 

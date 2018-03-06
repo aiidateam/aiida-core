@@ -96,14 +96,14 @@ class Daemon(VerdiCommandWithSubcommands):
         start, stop, status and restart.
         """
         self.valid_subcommands = {
-            '_start_circus': (self.cli, self.complete_none),
             'start': (self.cli, self.complete_none),
-            'stop': (self.cli, self.complete_none),
             'status': (self.cli, self.complete_none),
+            'restart': (self.cli, self.complete_none),
+            'stop': (self.cli, self.complete_none),
             'incr': (self.cli, self.complete_none),
             'decr': (self.cli, self.complete_none),
             'logshow': (self.cli, self.complete_none),
-            'restart': (self.cli, self.complete_none),
+            '_start_circus': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
@@ -111,11 +111,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
 
 @daemon_cmd.command()
-@click.option(
-    '-f',
-    '--foreground',
-    is_flag=True,
-    help='Start circusd in the foreground, useful for debugging')
+@click.option('--foreground', is_flag=True, help='Run in foreground')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
 def start(foreground):
@@ -137,6 +133,7 @@ def start(foreground):
         subprocess.check_output(command, env=currenv)
     except subprocess.CalledProcessError as exception:
         click.echo('failed: {}'.format(exception))
+        sys.exit(1)
 
     status_cmd = {
         'command': 'status',
@@ -148,90 +145,6 @@ def start(foreground):
 
     response = try_calling_client(client, status_cmd)
     click.echo(response['status'])
-
-
-@daemon_cmd.command()
-@click.option(
-    '-f',
-    '--foreground',
-    is_flag=True,
-    help='Start circusd in the foreground, useful for debugging')
-@decorators.with_dbenv()
-@decorators.check_circus_zmq_version
-def _start_circus(foreground):
-    """
-    Start the daemon
-    """
-    client = ProfileDaemonClient()
-
-    env = get_env_with_venv_bin()
-    env['PYTHONUNBUFFERED'] = 'True'
-    loglevel = 'INFO'
-    logoutput = '-'
-
-    if not foreground:
-        logoutput = client.circus_log_file
-
-    arbiter_config = {
-        'controller': client.get_endpoint(0),
-        'pubsub_endpoint': client.get_endpoint(1),
-        'stats_endpoint': client.get_endpoint(2),
-        'logoutput': logoutput,
-        'loglevel': loglevel,
-        'debug': False,
-        'statsd': True,
-        'pidfile': client.circus_pid_file,
-        'watchers': [{
-            'name': client.daemon_name,
-            'cmd': client.cmd_string,
-            'virtualenv': client.virtualenv,
-            'copy_env': True,
-            'stdout_stream': {
-                'class': 'FileStream',
-                'filename': client.daemon_log_file
-            },
-            'env': env,
-        }]
-    } # yapf: disable
-
-    if not foreground:
-        daemonize()
-
-    arbiter = get_arbiter(**arbiter_config)
-    pidfile = Pidfile(arbiter.pidfile)
-
-    try:
-        pidfile.create(os.getpid())
-    except RuntimeError as err:
-        click.echo(str(err))
-        sys.exit(1)
-
-    # Configure the logger
-    loggerconfig = None
-    loggerconfig = loggerconfig or arbiter.loggerconfig or None
-    configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
-
-    # Main loop
-    should_restart = True
-    while should_restart:
-        try:
-            arbiter = arbiter
-            future = arbiter.start()
-            should_restart = False
-            if check_future_exception_and_log(future) is None:
-                should_restart = arbiter._restarting  # pylint: disable=protected-access
-        except Exception as err:
-            # emergency stop
-            arbiter.loop.run_sync(arbiter._emergency_stop)  # pylint: disable=protected-access
-            raise err
-        except KeyboardInterrupt:
-            pass
-        finally:
-            arbiter = None
-            if pidfile is not None:
-                pidfile.unlink()
-
-    sys.exit(0)
 
 
 @daemon_cmd.command()
@@ -354,14 +267,16 @@ def logshow():
 
 
 @daemon_cmd.command()
-@click.option('--wait', is_flag=True, help='Wait for confirmation')
+@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
 @decorators.only_if_daemon_pid
-def stop(wait):
+def stop(no_wait):
     """
     Stop the daemon
     """
     profile = ProfileDaemonClient()
     client = profile.get_client()
+
+    wait = not no_wait
 
     quit_cmd = {'command': 'quit', 'properties': {'waiting': wait}}
 
@@ -377,26 +292,22 @@ def stop(wait):
 
 
 @daemon_cmd.command()
-@click.option(
-    '--reset',
-    is_flag=True,
-    help='Completely reset the daemon, including the circus daemon')
-@click.option(
-    '--wait',
-    is_flag=True,
-    help='Wait for the daemon to stop before restarting')
+@click.option('--reset', is_flag=True, help='Completely reset the daemon')
+@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
 @click.pass_context
 @decorators.with_dbenv()
 @decorators.only_if_daemon_pid
-def restart(ctx, reset, wait):
+def restart(ctx, reset, no_wait):
     """
     Restart the daemon. By default will only reset the workers of the running daemon.
     After the restart the same amount of workers will be running. If the --reset flag
-    is passed, however, the full circus daemon will be stopped and restarted, with just
+    is passed, however, the full circus daemon will be stopped and restarted with just
     a single worker
     """
     profile = ProfileDaemonClient()
     client = profile.get_client()
+
+    wait = not no_wait
 
     if reset:
         ctx.invoke(stop, wait=True)
@@ -419,3 +330,86 @@ def restart(ctx, reset, wait):
 
         if wait:
             click.echo(response['status'])
+
+
+@daemon_cmd.command()
+@click.option('--foreground', is_flag=True, help='Run in foreground')
+@decorators.with_dbenv()
+@decorators.check_circus_zmq_version
+def _start_circus(foreground):
+    """
+    This will actually launch the circus daemon, either daemonized in the background
+    or in the foreground, printing all logs to stdout.
+
+    ..: Note: this should not be called directly from the commandline!
+    """
+    client = ProfileDaemonClient()
+
+    env = get_env_with_venv_bin()
+    env['PYTHONUNBUFFERED'] = 'True'
+    loglevel = 'INFO'
+    logoutput = '-'
+
+    if not foreground:
+        logoutput = client.circus_log_file
+
+    arbiter_config = {
+        'controller': client.get_endpoint(0),
+        'pubsub_endpoint': client.get_endpoint(1),
+        'stats_endpoint': client.get_endpoint(2),
+        'logoutput': logoutput,
+        'loglevel': loglevel,
+        'debug': False,
+        'statsd': True,
+        'pidfile': client.circus_pid_file,
+        'watchers': [{
+            'name': client.daemon_name,
+            'cmd': client.cmd_string,
+            'virtualenv': client.virtualenv,
+            'copy_env': True,
+            'stdout_stream': {
+                'class': 'FileStream',
+                'filename': client.daemon_log_file
+            },
+            'env': env,
+        }]
+    } # yapf: disable
+
+    if not foreground:
+        daemonize()
+
+    arbiter = get_arbiter(**arbiter_config)
+    pidfile = Pidfile(arbiter.pidfile)
+
+    try:
+        pidfile.create(os.getpid())
+    except RuntimeError as err:
+        click.echo(str(err))
+        sys.exit(1)
+
+    # Configure the logger
+    loggerconfig = None
+    loggerconfig = loggerconfig or arbiter.loggerconfig or None
+    configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
+
+    # Main loop
+    should_restart = True
+    while should_restart:
+        try:
+            arbiter = arbiter
+            future = arbiter.start()
+            should_restart = False
+            if check_future_exception_and_log(future) is None:
+                should_restart = arbiter._restarting  # pylint: disable=protected-access
+        except Exception as err:
+            # emergency stop
+            arbiter.loop.run_sync(arbiter._emergency_stop)  # pylint: disable=protected-access
+            raise err
+        except KeyboardInterrupt:
+            pass
+        finally:
+            arbiter = None
+            if pidfile is not None:
+                pidfile.unlink()
+
+    sys.exit(0)

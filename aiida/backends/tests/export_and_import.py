@@ -1542,7 +1542,155 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    def test_input_and_create_links_proper(self):
+    def construct_complex_graph(self):
+        from aiida.orm.data.base import Int
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.datastructures import calc_states
+        from aiida.common.links import LinkType
+
+        # Node creation
+        d1 = Int(1).store()
+        d2 = Int(1).store()
+        wc1 = WorkCalculation().store()
+        wc2 = WorkCalculation().store()
+
+        pw1 = JobCalculation()
+        pw1.set_computer(self.computer)
+        pw1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw1.store()
+
+        d3 = Int(1).store()
+        d4 = Int(1).store()
+
+        pw2 = JobCalculation()
+        pw2.set_computer(self.computer)
+        pw2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw2.store()
+
+        d5 = Int(1).store()
+        d6 = Int(1).store()
+
+        # Link creation
+        wc1.add_link_from(d1, 'input1', link_type=LinkType.INPUT)
+        wc1.add_link_from(d2, 'input2', link_type=LinkType.INPUT)
+
+        wc2.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+        wc2.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+
+        pw1.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+        pw1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+        pw1._set_state(calc_states.PARSING)
+
+        d3.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+        d3.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+        d4.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+        d4.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+        pw2.add_link_from(d4, 'input', link_type=LinkType.INPUT)
+        pw2._set_state(calc_states.PARSING)
+
+        d5.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+        d6.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+
+        # Return the generated nodes
+        graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
+
+        # Create various combinations of nodes that should be exported
+        # and the final set of nodes that are exported in each case, following
+        # predecessor/successor links.
+        export_dict = {
+            wc1 : [d1, d2, d3, d4, pw1, wc1, wc2],
+            wc2: [d1, d3, d4, pw1, wc2],
+            d3: [d1, d3, d4, pw1, wc2],
+            d4: [d1, d3, d4, pw1, wc2],
+            d5: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
+            d6: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
+            pw2: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
+            d1: [d1],
+            d2: [d2]
+        }
+
+        return graph_nodes, export_dict
+
+
+    def test_complex_workflow_graph_links(self):
+        import os, shutil, tempfile
+
+        from aiida.orm import Node
+        from aiida.orm.importexport import export
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            graph_nodes, _ = self.construct_complex_graph()
+
+            # Getting the input, create, return and call links
+            qb = QueryBuilder()
+            qb.append(Node, project='uuid')
+            qb.append(Node, project='uuid',
+                      edge_project=['label', 'type'],
+                      edge_filters={'type': {'in': (LinkType.INPUT.value,
+                                                    LinkType.CREATE.value,
+                                                    LinkType.RETURN.value,
+                                                    LinkType.CALL.value)}})
+            export_links = qb.all()
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([_.dbnode for _ in graph_nodes],
+                   outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+            import_links = self.get_all_node_links()
+
+            export_set = [tuple(_) for _ in export_links]
+            import_set = [tuple(_) for _ in import_links]
+
+            self.assertEquals(set(export_set), set(import_set))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    @unittest.skip("")
+    def test_complex_workflow_graph_export_set_expansion(self):
+        import os, shutil, tempfile
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+
+        graph_nodes, export_dict = self.construct_complex_graph()
+
+        for export_node, export_target in export_dict:
+            tmp_folder = tempfile.mkdtemp()
+            try:
+                export_file = os.path.join(tmp_folder, 'export.tar.gz')
+                export([_.dbnode for _ in graph_nodes],
+                       outfile=export_file, silent=True)
+
+                self.clean_db()
+                self.insert_data()
+
+                import_data(export_file, silent=True)
+
+                # Get all the nodes of the database
+                qb = QueryBuilder()
+                qb.append(Node, project='*')
+                imported_nodes = qb.all()
+
+                # Check that you have imported the right nodes (and only
+                # these nodes).
+                # Very likely the check should happen using the UUID.
+                self.assertEquals(set(export_target), set(imported_nodes))
+
+            finally:
+                shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    @unittest.skip("")
+    def test_recursive_export_input_and_create_links_proper(self):
         """
         Check that CALL links are not followed in the export procedure with
         dangling links as a consequence::

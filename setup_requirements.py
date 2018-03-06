@@ -55,6 +55,8 @@ install_requires = [
     'scipy<1.0.0',  # At this moment the install of 1.0.0 release is broken
     'plumpy>=0.10.0.dev8',
     'circus>=0.14.0',
+    # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
+    'tornado==4.5.3',
 ]
 
 extras_require = {

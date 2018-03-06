@@ -52,6 +52,7 @@ db_test_list = {
         'examplehelpers': ['aiida.backends.tests.example_helpers'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.log': ['aiida.backends.tests.orm.log'],
+        'orm.utils': ['aiida.backends.tests.orm.utils'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.futures': ['aiida.backends.tests.work.test_futures'],

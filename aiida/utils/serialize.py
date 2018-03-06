@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import collections
 from ast import literal_eval
-from aiida.orm import Group, Node, load_node
+from aiida.orm import Group, Node, load_group, load_node
 
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
@@ -76,6 +76,6 @@ def deserialize_data(data):
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):
-        return Group.query(uuid=data[len(_PREFIX_VALUE_GROUP):])[0]
+        return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
     else:
         return data

@@ -158,6 +158,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         print "Starting AiiDA Daemon (log file: {})...".format(self.logfile)
         currenv = _get_env_with_venv_bin()
+        _devnull = os.open(os.devnull, os.O_RDWR)
         _stdouterr = os.open(self.logfile, os.O_RDWR|os.O_CREAT|os.O_APPEND)
         process = subprocess.Popen([
                 "celery",  "worker",
@@ -169,10 +170,13 @@ class Daemon(VerdiCommandWithSubcommands):
                 ],
             cwd=self.workdir,
             close_fds=True,
+            stdin=_devnull,
             stdout=_stdouterr,
             stderr=subprocess.STDOUT,
             env=currenv)
+
         os.close(_stdouterr)
+        os.close(_devnull)
 
         # The following lines are needed for the workflow_stepper
         # (re-initialize the timestamps used to lock the task, in case

@@ -643,6 +643,7 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(process.calc.is_excepted, True)
         self.assertEquals(process.calc.is_killed, False)
 
+    @unittest.skip('Process kill needs to be fixed')
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it by calling kill

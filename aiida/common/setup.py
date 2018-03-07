@@ -13,8 +13,6 @@ import aiida
 import logging
 import json
 
-# The username (email) used by the default superuser, that should also run
-# as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
@@ -40,12 +38,11 @@ SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR = 'daemon'
 LOG_SUBDIR = 'daemon/log'
-DAEMON_CONF_FILE = 'aiida_daemon.conf'
 
-CELERY_LOG_FILE = 'celery.log'
-CELERY_PID_FILE = 'celery.pid'
-DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
-DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
+CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
+CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
+DAEMON_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.log')
+DAEMON_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.pid')
 
 WORKFLOWS_SUBDIR = 'workflows'
 
@@ -54,9 +51,7 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 
 # This key will uniquely identify an AiiDA profile
 PROFILE_UUID_KEY = 'PROFILE_UUID'
-
-# This is the default process used by load_dbenv when no process is specified
-DEFAULT_PROCESS = 'verdi'
+CIRCUS_PORT_KEY = 'CIRCUS_PORT'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0o0077
@@ -66,9 +61,6 @@ aiidadb_backend_key = 'AIIDADB_BACKEND'
 
 # Profile values
 aiidadb_backend_value_django = 'django'
-
-# Repository for tests
-TEMP_TEST_REPO = None
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
@@ -274,54 +266,39 @@ def create_base_dirs(config_dir=None):
     create_htaccess_file()
 
 
-def set_default_profile(process, profile, force_rewrite=False):
+def set_default_profile(profile, force_rewrite=False):
     """
-    Set a default db profile to be used by a process (default for verdi,
-    default for daemon, ...)
+    Set the default profile
 
-    :param process: A string identifying the process to modify (e.g. ``verdi``
-      or ``daemon``).
-    :param profile: A string specifying the profile that should be used
-      as default.
-    :param force_rewrite: if False, does not change the default profile
-      if this was already set. Otherwise, forces the default profile to be
-      the value specified as ``profile`` also if a default profile for the
-      given ``process`` was already set.
+    :param profile: A string specifying the profile that should be used as default
+    :param force_rewrite: if False, does not change the default profile if already set
     """
     from aiida.common.exceptions import ProfileConfigurationError
 
     if profile not in get_profiles_list():
-        raise ProfileConfigurationError(
-            'Profile {} has not been configured'.format(profile))
+        raise ProfileConfigurationError('Profile {} has not been configured'.format(profile))
+
     confs = get_config()
+    current_default_profile = confs.get('default_profile', None)
 
-    try:
-        confs['default_profiles']
-    except KeyError:
-        confs['default_profiles'] = {}
+    if current_default_profile is None or force_rewrite:
+        confs['default_profile'] = profile
 
-    if force_rewrite:
-        confs['default_profiles'][process] = profile
-    else:
-        confs['default_profiles'][process] = confs['default_profiles'].get(
-            process, profile)
     backup_config()
     store_config(confs)
 
 
-def get_default_profile(process):
+def get_default_profile():
     """
-    Return the profile name to be used by process
+    Return the default profile name from the configuration
 
-    :return: None if no default profile is found, otherwise the name of the
-      default profile for the given process
+    :return: None if no default profile is found
     """
     confs = get_config()
     try:
-        return confs['default_profiles'][process]
+        return confs['default_profile']
     except KeyError:
         return None
-        # raise ConfigurationError("No default profile found for the process {}".format(process))
 
 
 def get_profiles_list():
@@ -375,6 +352,7 @@ key_explanation = {
     "AIIDADB_USER": "AiiDA Database user",
     DEFAULT_USER_CONFIG_FIELD: "Default user email",
     PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
+    CIRCUS_PORT_KEY: "TCP port for the circus daemon",
 }
 
 
@@ -479,7 +457,8 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
     # Generate the profile uuid
-    new_profile[PROFILE_UUID_KEY] = uuid.uuid4().hex
+    new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+    new_profile[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
     # finalizing
     write = not dry_run
@@ -487,9 +466,42 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     new_profile = update_profile(profile, new_profile, write=write)
     if write:
         if not old_profiles:
-            set_default_profile('verdi', profile)
-            set_default_profile('daemon', profile)
+            set_default_profile(profile)
     return new_profile
+
+
+def generate_new_profile_uuid():
+    """
+    Return a UUID for a new profile
+
+    :returns: the hexadecimal represenation of a uuid4 UUID
+    """
+    return uuid.uuid4().hex
+
+
+def generate_new_circus_port(profiles=None):
+    """
+    Return a unique port for the CIRCUS_PORT_KEY of a new profile
+
+    :param profiles: the profiles dictionary of the configuration file
+    :returns: integer for the circus daemon port
+    """
+    port = 6000
+
+    if profiles is None:
+        try:
+            configuration = get_config()
+        except MissingConfigurationError:
+            configuration = {}
+
+        profiles = configuration.get('profiles', {})
+
+    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in profiles.values()]
+
+    while port in used_ports:
+        port += 3
+
+    return port
 
 
 def create_configuration(profile='default'):
@@ -519,7 +531,7 @@ def create_configuration(profile='default'):
         # No configuration file found
         confs = {}
 
-        # first time creation check
+    # First time creation check
     try:
         confs['profiles']
     except KeyError:
@@ -747,7 +759,8 @@ def create_configuration(profile='default'):
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
         # Add the profile uuid
-        this_new_confs[PROFILE_UUID_KEY] = uuid.uuid4().hex
+        this_new_confs[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+        this_new_confs[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
         confs['profiles'][profile] = this_new_confs
 
@@ -839,12 +852,12 @@ _property_table = {
         "Minimum level to log to the console",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.celery_loglevel": (
-        "logging_celery_log_level",
+    "logging.circus_loglevel": (
+        "logging_circus_log_level",
         "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'celery' logger",
-        "WARNING",
+        "Minimum level to log to the circus daemon log file"
+        "for the 'circus' logger",
+        "INFO",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.db_loglevel": (
         "logging_db_log_level",

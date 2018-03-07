@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import collections
 from ast import literal_eval
-from aiida.orm import Node, load_node
+from aiida.orm import Group, Node, load_group, load_node
 
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
+_PREFIX_VALUE_GROUP = 'aiida_group:'
 
 
 def encode_key(key):
@@ -53,6 +54,8 @@ def serialize_data(data):
         return tuple(serialize_data(value) for value in data)
     elif isinstance(data, Node):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
+    elif isinstance(data, Group):
+        return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
     else:
         return data
 
@@ -72,5 +75,7 @@ def deserialize_data(data):
         return tuple(deserialize_data(value) for value in data)
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
+    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):
+        return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
     else:
         return data

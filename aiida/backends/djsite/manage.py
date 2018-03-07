@@ -17,23 +17,9 @@ if __name__ == "__main__":
     # Copy sys.argv
     actual_argv = sys.argv[:]
 
-    # Check if the first cmdline option is --aiida-process=PROCESSNAME
-    try:
-        first_cmdline_option = sys.argv[1]
-    except IndexError:
-        first_cmdline_option = None
-
-    process_name = None  # Use the default process if not specified
-    if first_cmdline_option is not None:
-        cmdprefix = "--aiida-process="
-        if first_cmdline_option.startswith(cmdprefix):
-            process_name = first_cmdline_option[len(cmdprefix):]
-            # I remove the argument I just read
-            actual_argv = [sys.argv[0]] + sys.argv[2:]
-
     # Check if there is also a cmdline option is --aiida-profile=PROFILENAME
     try:
-        first_cmdline_option = actual_argv[1]
+        first_cmdline_option = sys.argv[1]
     except IndexError:
         first_cmdline_option = None
 
@@ -52,9 +38,8 @@ if __name__ == "__main__":
         # We load the needed profile.
         # This is going to set global variables in settings, including
         # settings.BACKEND
-        from aiida.backends.profile import load_profile
-        load_profile(process=process_name, profile=profile_name)
-        from aiida.backends.profile import BACKEND_DJANGO
+        from aiida.backends.profile import load_profile, BACKEND_DJANGO
+        load_profile(profile=profile_name)
         if settings.BACKEND != BACKEND_DJANGO:
             from aiida.common.exceptions import InvalidOperation
             raise InvalidOperation("A Django migration procedure is initiated "
@@ -64,10 +49,10 @@ if __name__ == "__main__":
         # we may abstract thw _load_dbenv_noschemacheck and make a common
         # one for both backends
         from aiida.backends.djsite.utils import _load_dbenv_noschemacheck
-        _load_dbenv_noschemacheck(process=process_name, profile=profile_name)
+        _load_dbenv_noschemacheck(profile=profile_name)
     else:
         # Load the general load_dbenv.
         from aiida.backends.utils import load_dbenv
-        load_dbenv(process=process_name, profile=profile_name)
+        load_dbenv(profile=profile_name)
 
     execute_from_command_line(actual_argv)

@@ -15,18 +15,20 @@ Increasing the debug level
 ==========================
 
 By default, the logging level of AiiDA is minimal to avoid filling logfiles.
-Only warnings and errors are logged (to the
-``~/.aiida/daemon/log/aiida_daemon.log`` file), while info and debug
+Only warnings and errors are logged to the daemon log files, while info and debug
 messages are discarded.
 
 If you are experiencing a problem, you can change the default minimum logging
-level of AiiDA messages (and celery messages -- celery is the library that we
+level of AiiDA messages (and circus messages -- circus is the library that we
 use to manage the daemon process) using, on the command line, the two
 following commands::
 
-  verdi devel setproperty logging.celery_loglevel DEBUG
+  verdi devel setproperty logging.circus_loglevel DEBUG
   verdi devel setproperty logging.aiida_loglevel DEBUG
 
+For each profile that runs a daemon, there will be two unique logfiles, one for
+AiiDA log messages and one from the circus daemonizer. These files can be found
+in the ``.aiida`` log folder, which by default can be found at ``~/.aiida/daemon/log/aiida_daemon.log``.
 After rebooting the daemon (``verdi daemon restart``), the number of messages
 logged will increase significantly and may help in understanding
 the source of the problem. 
@@ -38,7 +40,7 @@ the source of the problem.
 .. note:: When the problem is solved, we suggest to bring back the default
   logging level, using the two commands::
 
-    verdi devel delproperty logging.celery_loglevel
+    verdi devel delproperty logging.circus_loglevel
     verdi devel delproperty logging.aiida_loglevel
 
   to avoid to fill the logfiles.

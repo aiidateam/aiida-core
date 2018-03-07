@@ -6,8 +6,7 @@ import uuid
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.int import Int
-from aiida.work import runners
-from aiida.work import test_utils
+from aiida.work import runners, rmq, test_utils
 
 class TestProcessControl(AiidaTestCase):
     """
@@ -16,15 +15,11 @@ class TestProcessControl(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessControl, self).setUp()
-        prefix = "{}.{}".format(self.__class__.__name__, uuid.uuid4())
+        prefix = '{}.{}'.format(self.__class__.__name__, uuid.uuid4())
+        rmq_config = rmq.get_rmq_config(prefix)
 
         self.loop = plumpy.new_event_loop()
 
-        rmq_config = {
-            'url': 'amqp://localhost',
-            'prefix': prefix,
-            'testing_mode': True
-        }
         self.runner = runners.Runner(
             rmq_config=rmq_config,
             rmq_submit=True,

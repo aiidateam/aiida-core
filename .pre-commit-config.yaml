@@ -8,6 +8,7 @@
       (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
+        aiida/cmdline/commands/daemon.py|
         docs/update_req_for_rtd.py| # a|b -> match a OR b
         .travis_data/test_setup.py|
         aiida/transport/.*.py|
@@ -29,6 +30,7 @@
       (?x)^(
         aiida/control/.*.py|
         aiida/cmdline/tests/.*.py|
+        aiida/cmdline/commands/daemon.py|
         docs/update_req_for_rtd.py|
         .travis_data/test_setup.py|
         .travis-data/test_plugin_testcase.py|

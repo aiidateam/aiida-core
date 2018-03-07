@@ -13,6 +13,7 @@ Generic tests that need the be specific to sqlalchemy
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import UniquenessError
 from aiida.orm.node import Node
 
 
@@ -123,6 +124,49 @@ class TestGroupsSqla(AiidaTestCase):
         g1.delete()
         g2.delete()
         newuser.delete()
+
+    def test_rename_existing(self):
+        """
+        Test that renaming to an already existing name is not permitted
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm.group import Group
+
+        name_group_a = 'group_a'
+        name_group_b = 'group_b'
+        name_group_c = 'group_c'
+
+        group_a = Group(name=name_group_a, description='I am the Original G')
+        group_a.store()
+
+        # Before storing everything should be fine
+        group_b = Group(name=name_group_a, description='They will try to rename me')
+        group_c = Group(name=name_group_c, description='They will try to rename me')
+
+        session = get_scoped_session()
+
+        # Storing for duplicate group name should trigger UniquenessError
+        try:
+            session.begin_nested()
+            with self.assertRaises(UniquenessError):
+                group_b.store()
+        finally:
+            session.rollback()
+
+        # Before storing everything should be fine
+        group_c.name = name_group_a
+
+        # Reverting to unique name before storing
+        group_c.name = name_group_c
+        group_c.store()
+
+        # After storing name change to existing should raise
+        try:
+            session.begin_nested()
+            with self.assertRaises(UniquenessError):
+                group_c.name = name_group_a
+        finally:
+            session.rollback()
 
 
 class TestDbExtrasSqla(AiidaTestCase):

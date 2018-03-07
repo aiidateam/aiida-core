@@ -93,6 +93,7 @@ if __name__ == '__main__':
                 'cod = aiida.tools.dbimporters.cod',
                 'icsd = aiida.tools.dbimporters.icsd',
                 'mpod = aiida.tools.dbimporters.mpod',
+                'mpds = aiida.tools.dbimporters.mpds',
                 'nninc = aiida.tools.dbimporters.nninc',
                 'oqmd = aiida.tools.dbimporters.oqmd',
                 'pcod = aiida.tools.dbimporters.pcod',

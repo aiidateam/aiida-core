@@ -29,6 +29,7 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.ports import PortNamespace
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
@@ -206,11 +207,11 @@ class Process(plumpy.Process):
         self.report(traceback.format_exc())
 
     @override
-    def on_finish(self, result):
+    def on_finish(self, result, successful):
         """
         Set the finish status on the Calculation node
         """
-        super(Process, self).on_finish(result)
+        super(Process, self).on_finish(result, successful)
         self.calc._set_finish_status(result)
 
     @override
@@ -391,7 +392,7 @@ class Process(plumpy.Process):
         """
         items = []
 
-        if isinstance(port_value, collections.Mapping):
+        if isinstance(port_value, collections.Mapping) and isinstance(port, PortNamespace):
 
             for name, value in port_value.iteritems():
 

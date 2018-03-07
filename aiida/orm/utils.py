@@ -7,11 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
+from aiida.common.exceptions import InputValidationError, MultipleObjectsError, NotExistent
 from aiida.common.pluginloader import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_node', 'load_workflow']
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -23,15 +24,13 @@ def CalculationFactory(module, from_abstract=False):
         to subclasses of JobCalculation, not to the base Calculation class.
         If True, check for valid strings for plugins of the Calculation base class.
     """
-
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
 
     if from_abstract:
-        return BaseFactory(module, Calculation, "aiida.orm.calculation")
+        return BaseFactory(module, Calculation, 'aiida.orm.calculation')
     else:
-        return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
-                           suffix="Calculation")
+        return BaseFactory(module, JobCalculation, 'aiida.orm.calculation.job', suffix='Calculation')
 
 
 def DataFactory(module):
@@ -40,7 +39,7 @@ def DataFactory(module):
     """
     from aiida.orm.data import Data
 
-    return BaseFactory(module, Data, "aiida.orm.data")
+    return BaseFactory(module, Data, 'aiida.orm.data')
 
 
 def WorkflowFactory(module):
@@ -49,10 +48,10 @@ def WorkflowFactory(module):
     """
     from aiida.orm.workflow import Workflow
 
-    return BaseFactory(module, Workflow, "aiida.workflows")
+    return BaseFactory(module, Workflow, 'aiida.workflows')
 
-def create_node_id_qb(node_id=None, pk=None, uuid=None,
-                   parent_class=None, query_with_dashes=True):
+
+def create_node_id_qb(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):
     """
     Returns the QueryBuilder instance set to retrieve AiiDA objects given their
     (parent)class and PK (in which case the object should be unique) or UUID
@@ -68,23 +67,18 @@ def create_node_id_qb(node_id=None, pk=None, uuid=None,
 
     :return: a QueryBuilder instance
     """
-
-    from aiida.common.exceptions import InputValidationError
     # This must be done inside here, because at import time the profile
     # must have been already loaded. If you put it at the module level,
     # the implementation is frozen to the default one at import time.
     from aiida.orm.implementation import Node
     from aiida.orm.querybuilder import QueryBuilder
 
-
     # First checking if the inputs are valid:
     inputs_provided = [val is not None for val in (node_id, pk, uuid)].count(True)
     if inputs_provided == 0:
-        raise InputValidationError("one of the parameters 'node_id', 'pk' and 'uuid' "
-                         "has to be supplied")
+        raise InputValidationError("one of the parameters 'node_id', 'pk' and 'uuid' has to be supplied")
     elif inputs_provided > 1:
-        raise InputValidationError("only one of parameters 'node_id', 'pk' and 'uuid' "
-                         "has to be supplied")
+        raise InputValidationError("only one of parameters 'node_id', 'pk' and 'uuid' has to be supplied")
 
     # In principle, I can use this function to fetch any kind of AiiDA object,
     # but if I don't specify anything, I assume that I am looking for nodes
@@ -103,11 +97,11 @@ def create_node_id_qb(node_id=None, pk=None, uuid=None,
             raise TypeError("'node_id' has to be either string, unicode or "
                                  "integer, {} given".format(type(node_id)))
 
-            #I am checking whether uuid, if supplied,  is a string
+    # Check whether uuid, if supplied, is a string
     if uuid is not None:
         if not isinstance(uuid,(str, unicode)):
             raise TypeError("'uuid' has to be string or unicode")
-        # or whether the pk, if provided, is an integer
+    # Or whether the pk, if provided, is an integer
     elif pk is not None:
         if not isinstance(pk, int):
             raise TypeError("'pk' has to be an integer")
@@ -119,47 +113,78 @@ def create_node_id_qb(node_id=None, pk=None, uuid=None,
     qb.append(class_, tag='node')
 
     if pk:
-        qb.add_filter('node',  {'id':pk})
+        qb.add_filter('node',  {'id': pk})
     elif uuid:
         # Put back dashes in the right place
         start_uuid = uuid.replace('-', '')
-        #TODO (only if it brings any speed advantage) add a check on the number of characters to recognize if the uuid pattern is complete. If so, the filter operator can be
-        # '=='
+        # TODO (only if it brings any speed advantage) add a check on the number of characters
+        # to recognize if the uuid pattern is complete. If so, the filter operator can be '=='
         if query_with_dashes:
             # Essential that this is ordered from largest to smallest!
-            for dash_pos in [20,16,12,8]:
+            for dash_pos in [20, 16, 12, 8]:
                 if len(start_uuid) > dash_pos:
-                    start_uuid = "{}-{}".format(
+                    start_uuid = '{}-{}'.format(
                         start_uuid[:dash_pos], start_uuid[dash_pos:]
                         )
 
-        qb.add_filter('node',{'uuid': {'like': "{}%".format(start_uuid)}})
+        qb.add_filter('node', {'uuid': {'like': '{}%'.format(start_uuid)}})
 
     return qb
 
 
+def load_group(group_id=None, pk=None, uuid=None, query_with_dashes=True):
+    """
+    Load a group by its pk or uuid
+
+    :param group_id: pk (integer) or uuid (string) of a group
+    :param pk: pk of a group
+    :param uuid: uuid of a group, or the beginning of the uuid
+    :param bool query_with_dashes: allow to query for a uuid with dashes (default=True)
+    :returns: the requested group if existing and unique
+    :raise InputValidationError: if none or more than one of the arguments are supplied
+    :raise TypeError: if the wrong types are provided
+    :raise NotExistent: if no matching Node is found.
+    :raise MultipleObjectsError: if more than one Node was found
+    """
+    from aiida.orm import Group
+
+    kwargs = {
+        'node_id': group_id,
+        'pk': pk,
+        'uuid': uuid,
+        'parent_class': Group,
+        'query_with_dashes': query_with_dashes
+    }
+
+    qb = create_node_id_qb(**kwargs)
+    qb.add_projection('node', '*')
+    qb.limit(2)
+
+    try:
+        return qb.one()[0]
+    except MultipleObjectsError:
+        raise MultipleObjectsError('More than one group found. Provide longer starting pattern for uuid.')
+    except NotExistent:
+        raise NotExistent('No group was found')
+
+
 def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):
     """
-    Returns an AiiDA node given its PK or UUID.
+    Load a node by its pk or uuid
 
     :param node_id: PK (integer) or UUID (string) or a node
     :param pk: PK of a node
     :param uuid: UUID of a node, or the beginning of the uuid
     :param parent_class: if specified, checks whether the node loaded is a
         subclass of parent_class
-    :param bool query_with_dashes: Specific if uuid is passed, allows to put the uuid in the correct form.
-        Default=True
-    :param bool return_node: lets the function return the AiiDA node referred by the input.
-        Default=False
-    :return: the required AiiDA node if existing, unique, and (sub)instance
-        of parent_class
-    :raise InputValidationError: if none or more than one of parameters is supplied
-    :raise TypeError: I the wrong types are provided
+    :param bool query_with_dashes: allow to query for a uuid with dashes (default=True)
+    :returns: the requested node if existing, unique, and (sub)instance of parent_class
+    :raise InputValidationError: if none or more than one of the arguments are supplied
+    :raise TypeError: if the wrong types are provided
     :raise NotExistent: if no matching Node is found.
-    :raise MultipleObjectsError: If more than one Node was found
+    :raise MultipleObjectsError: if more than one Node was found
 
     """
-    from aiida.common.exceptions import MultipleObjectsError, NotExistent
     from aiida.orm.implementation import Node
 
     # I can use this functions to load only nodes, i.e. not users, groups etc ...
@@ -168,27 +193,24 @@ def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_da
     if not issubclass(class_,  Node):
         raise TypeError("{} is not a subclass of {}".format(class_, Node))
 
-    # The logic is to use the function is_node_existing with return_node=True
-    kwargs = dict(node_id=node_id,
-                  pk=pk,
-                  uuid=uuid,
-                  parent_class=parent_class,
-                  query_with_dashes=query_with_dashes)
+    kwargs = {
+        'node_id': node_id,
+        'pk': pk,
+        'uuid': uuid,
+        'parent_class': parent_class,
+        'query_with_dashes': query_with_dashes
+    }
 
     qb = create_node_id_qb(**kwargs)
     qb.add_projection('node', '*')
-
-    # For efficiency I do not go further than 2 results.
     qb.limit(2)
 
-    # FInally, I check the existence and unicity of the node
     try:
         return qb.one()[0]
     except MultipleObjectsError:
-        raise MultipleObjectsError("More than one node found. Provide longer "
-                                   "starting pattern for uuid.")
+        raise MultipleObjectsError('More than one node found. Provide longer starting pattern for uuid.')
     except NotExistent:
-        raise NotExistent("No node was found")
+        raise NotExistent('No node was found')
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

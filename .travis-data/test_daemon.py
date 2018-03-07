@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 from aiida.common.exceptions import NotExistent
+from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.work.launch import run_get_node, submit
@@ -26,12 +27,13 @@ number_calculations = 15 # Number of calculations to submit
 number_workchains = 8 # Number of workchains to submit
 
 def print_daemon_log():
-    home = os.environ['HOME']
-    print "Output of 'cat {}/.aiida/daemon/log/celery.log':".format(home)
+    profile_daemon_client = ProfileDaemonClient()
+    daemon_log = profile_daemon_client.daemon_log_file
+
+    print "Output of 'cat {}':".format(daemon_log)
     try:
         print subprocess.check_output(
-            ["cat", "{}/.aiida/daemon/log/celery.log".format(home)],
-            stderr=subprocess.STDOUT,
+            ['cat', '{}'.format(daemon_log)], stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
         print "Note: the command failed, message: {}".format(e.message)

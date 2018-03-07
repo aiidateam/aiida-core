@@ -1,7 +1,6 @@
 alabaster==0.7.10
 aldjemy==0.6.0
 alembic==0.9.6
-amqp==1.4.9
 aniso8601==2.0.0
 anyjson==0.3.3
 ase==3.12.0
@@ -12,9 +11,7 @@ Babel==2.5.3
 backports.functools-lru-cache==1.4
 backports.shutil-get-terminal-size==1.0.0
 bcrypt==3.1.4
-billiard==3.3.0.23
 cached-property==1.3.1
-celery==3.1.25
 certifi==2018.1.18
 cffi==1.11.4
 chardet==3.0.4
@@ -132,6 +129,7 @@ sqlparse==0.2.4
 subprocess32==3.2.7
 tabulate==0.7.5
 Tempita==0.5.2
+tornado==4.5.3
 traitlets==4.3.2
 tzlocal==1.3
 ujson==1.35
@@ -144,4 +142,4 @@ wcwidth==0.1.7
 Werkzeug==0.14.1
 wrapt==1.10.11
 yapf==0.19.0
--e git://github.com/muhrin/plumpy.git@3fc79acaa3ca0b9c568897616d5f01182df10171#egg=plumpy
+-e git://github.com/muhrin/plumpy.git@1dc151bbb5ee5f9a1f615589e545d29f547d93cf#egg=plumpy

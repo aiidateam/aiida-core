@@ -3,40 +3,79 @@ import plumpy
 import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.common.setup import get_profile_config, RMQ_PREFIX_KEY
-from aiida.backends import settings
 from aiida.work.class_loader import CLASS_LOADER
 
 __all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
+
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
 
-_MESSAGE_EXCHANGE = 'messages'
+
+# GP: Using here 127.0.0.1 instead of localhost because on some computers
+# localhost resolves first to IPv6 with address ::1 and if RMQ is not
+# running on IPv6 one gets an annoying warning. When moving this to
+# a user-configurable variable, make sure users are aware of this and
+# know how to avoid warnings. For more info see
+# https://github.com/aiidateam/aiida_core/issues/1142
+_RMQ_URL = 'amqp://127.0.0.1'
 _LAUNCH_QUEUE = 'process.queue'
+_MESSAGE_EXCHANGE = 'messages'
 
 
-def _get_prefix():
-    """Get the queue prefix from the profile."""
-    return 'aiida-' + get_profile_config(settings.AIIDADB_PROFILE)[RMQ_PREFIX_KEY]
+def get_rmq_prefix():
+    """
+    Get the prefix for the RabbitMQ message queues and exchanges for the current profile
+
+    :returns: string prefix for the RMQ communicators
+    """
+    from aiida.common.profile import ProfileConfig
+
+    profile_config = ProfileConfig()
+    prefix = profile_config.rmq_prefix
+
+    return prefix
 
 
 def get_rmq_config(prefix=None):
-    if prefix is None:
-        prefix = _get_prefix()
+    """
+    Get the RabbitMQ configuration dictionary for a given prefix. If the prefix is not
+    specified, the prefix will be retrieved from the currently loaded profile configuration
 
-    # GP: Using here 127.0.0.1 instead of localhost because on some computers
-    # localhost resolves first to IPv6 with address ::1 and if RMQ is not
-    # running on IPv6 one gets an annoying warning. When moving this to
-    # a user-configurable variable, make sure users are aware of this and
-    # know how to avoid warnings. For more info see
-    # https://github.com/aiidateam/aiida_core/issues/1142
+    :param prefix: a string prefix for the RabbitMQ communication queues and exchanges
+    :returns: the configuration dictionary for the RabbitMQ communicators
+    """
+    if prefix is None:
+        prefix = get_rmq_prefix()
+
     rmq_config = {
-        'url': 'amqp://127.0.0.1',
-        'prefix': _get_prefix(),
+        'url': _RMQ_URL,
+        'prefix': prefix,
     }
+
     return rmq_config
+
+
+def get_launch_queue_name(prefix=None):
+    """
+    Return the launch queue name with an optional prefix
+
+    :returns: launch queue name
+    """
+    if prefix is not None:
+        return '{}.{}'.format(prefix, _LAUNCH_QUEUE)
+
+    return _LAUNCH_QUEUE
+
+
+def get_message_exchange_name(prefix):
+    """
+    Return the message exchange name for a given prefix
+
+    :returns: message exchange name
+    """
+    return '{}.{}'.format(prefix, _MESSAGE_EXCHANGE)
 
 
 def encode_response(response):
@@ -66,17 +105,6 @@ def decode_response(response):
     """
     response = yaml.load(response)
     return deserialize_data(response)
-
-
-def get_launch_queue_name(prefix=None):
-    if prefix is not None:
-        return "{}.{}".format(prefix, _LAUNCH_QUEUE)
-
-    return _LAUNCH_QUEUE
-
-
-def get_message_exchange_name(prefix):
-    return "{}.{}".format(prefix, _MESSAGE_EXCHANGE)
 
 
 def store_and_serialize_inputs(inputs):
@@ -218,18 +246,19 @@ def new_blocking_control_panel():
     :return: A new control panel instance
     :rtype: :class:`BlockingProcessControlPanel`
     """
-    return BlockingProcessControlPanel(_get_prefix())
+    prefix = get_rmq_prefix()
+    return BlockingProcessControlPanel(prefix)
 
 
 def create_rmq_connector(loop=None):
     if loop is None:
         loop = events.new_event_loop()
-    return plumpy.rmq.RmqConnector(amqp_url=get_rmq_config()['url'], loop=loop)
+    return plumpy.rmq.RmqConnector(amqp_url=_RMQ_URL, loop=loop)
 
 
 def create_communicator(loop=None, prefix=None, testing_mode=False):
     if prefix is None:
-        prefix = _get_prefix()
+        prefix = get_rmq_prefix()
 
     message_exchange = get_message_exchange_name(prefix)
     task_queue = get_launch_queue_name(prefix)

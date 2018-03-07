@@ -18,5 +18,3 @@ def DbImporterFactory(pluginname):
     from aiida.tools.dbimporters.baseclasses import DbImporter
 
     return BaseFactory(pluginname, DbImporter, "aiida.tools.dbimporters.plugins")
-
-    raise NotImplementedError

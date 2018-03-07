@@ -7,19 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Defines the migration functions between different config versions.
-"""
-
-import uuid
 
 # The current configuration version. Increment this value whenever a change
 # to the config.json structure is made.
-CURRENT_CONFIG_VERSION = 2
-# The oldest config version where no backwards-incompatible changes have been
-# made since. When doing backwards-incompatible changes, set this to the current
-# version.
-OLDEST_COMPATIBLE_CONFIG_VERSION = 0
+CURRENT_CONFIG_VERSION = 3
+
+# The oldest config version where no backwards-incompatible changes have been made since.
+# When doing backwards-incompatible changes, set this to the current version.
+OLDEST_COMPATIBLE_CONFIG_VERSION = 3
+
 
 class ConfigMigration(object):
     """
@@ -33,12 +29,7 @@ class ConfigMigration(object):
     :param oldest_version: Oldest compatible config version after the migration.
     :type oldest_version: int
     """
-    def __init__(
-        self,
-        migrate_function,
-        current_version,
-        oldest_version
-    ):
+    def __init__(self, migrate_function, current_version, oldest_version):
         self.migrate_function = migrate_function
         self.current_version = int(current_version)
         self.oldest_version = int(oldest_version)
@@ -54,10 +45,50 @@ class ConfigMigration(object):
         )
         return config
 
-def _1_add_rmq_prefix(config):
-    for profile in config.get('profiles', {}).values():
-        profile['RMQ_PREFIX'] = uuid.uuid4().hex
+
+def _1_add_profile_uuid_and_circus_port(config):
+    """
+    This adds the required values for two new default profile keys
+
+        * PROFILE_UUID
+        * CIRCUS_PORT
+
+    The profile uuid will be used as a general purpose identifier for the profile, in
+    for example the RabbitMQ message queues and exchanges. The circus port is necessary
+    for the new daemon, which is daemonized by circus and to have an individual daemon
+    for each profile, a unique port is required
+    """
+    from aiida.common.setup import generate_new_profile_uuid, generate_new_circus_port
+    from aiida.common.setup import PROFILE_UUID_KEY, CIRCUS_PORT_KEY
+
+    profiles = config.get('profiles', {})
+
+    for profile in profiles.values():
+        profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+        profile[CIRCUS_PORT_KEY] = generate_new_circus_port(profiles)
+
     return config
+
+
+def _2_simplify_default_profiles(config):
+    """
+    The concept of a different 'process' for a profile has been removed and as such the
+    default profiles key in the configuration no longer needs a value per process ('verdi', 'daemon')
+    We remove the dictionary 'default_profiles' and replace it with a simple value 'default_profile'
+    """
+    from aiida.backends import settings
+
+    default_profiles = config.pop('default_profiles', None)
+
+    if default_profiles:
+        default_profile = default_profiles['daemon']
+    else:
+        default_profile = settings.AIIDADB_PROFILE
+
+    config['default_profile'] = default_profile
+
+    return config
+
 
 # Maps the initial config version to the ConfigMigration which updates it.
 _MIGRATION_LOOKUP = {
@@ -67,8 +98,13 @@ _MIGRATION_LOOKUP = {
         oldest_version=0
     ),
     1: ConfigMigration(
-        migrate_function=_1_add_rmq_prefix,
+        migrate_function=_1_add_profile_uuid_and_circus_port,
         current_version=2,
         oldest_version=0
+    ),
+    2: ConfigMigration(
+        migrate_function=_2_simplify_default_profiles,
+        current_version=3,
+        oldest_version=3
     )
 }

@@ -220,8 +220,6 @@ For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
 
     export PATH=~/Library/Python/2.7/bin:${PATH}
 
-To verify if this is the correct path to add, navigate to this location and you should find the executable ``supervisord``, or ``celeryd``, in the directory.
-
 After updating your ``PATH`` you can check if it worked in the following way:
 
 * type ``verdi`` on your terminal, and check if the program starts (it should

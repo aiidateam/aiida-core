@@ -12,4 +12,4 @@
 # This is used both in the work.transports.TransportQueue and in the
 # transport.Transport class
 # (unless replaced in plugins, as it actually is the case for SSH and local)
-DEFAULT_TRANSPORT_INTERVAL = 5.
+DEFAULT_TRANSPORT_INTERVAL = 30.

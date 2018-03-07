@@ -10,7 +10,7 @@ class List(Data, MutableSequence):
     _LIST_KEY = 'list'
 
     def __init__(self, **kwargs):
-        if 'list' not in kwargs:
+        if 'list' not in kwargs and 'dbnode' not in kwargs:
             kwargs['list'] = list()
         super(List, self).__init__(**kwargs)
 

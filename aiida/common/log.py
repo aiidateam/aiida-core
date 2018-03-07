@@ -143,9 +143,9 @@ def configure_logging(daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
-    daemon running a task for one of the celery workers, set the argument 'daemon' to True
-    and specify the path to the log file. This will cause a 'daemon_handler' to be added
-    to all the configured loggers, that is a RotatingFileHandler that writes to the log file.
+    daemon, set the argument 'daemon' to True and specify the path to the log file. This
+    will cause a 'daemon_handler' to be added to all the configured loggers, that is a
+    RotatingFileHandler that writes to the log file.
 
     :param daemon: configure the logging for a daemon task by adding a file handler instead
         of the default 'console' StreamHandler

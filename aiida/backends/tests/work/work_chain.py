@@ -536,9 +536,7 @@ class TestWorkchain(AiidaTestCase):
             def check_input(self):
                 assert self.inputs.namespace.sub == value
 
-        res, pid = work.launch.run_get_pid(TestWorkChain, namespace={'sub': value})
-        assert load_node(pid).has_finished_ok()
-
+        run_and_check_success(TestWorkChain, namespace={'sub': value})
 
 
 

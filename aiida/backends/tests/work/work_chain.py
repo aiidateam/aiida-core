@@ -520,6 +520,25 @@ class TestWorkchain(AiidaTestCase):
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
 
+    def test_nondb_dynamic(self):
+        """
+        Test that non-db inputs can be passed in a dynamic input namespace.
+        """
+        value = [1, 2, {'a': 1}]
+        class TestWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestWorkChain, cls).define(spec)
+
+                spec.input_namespace('namespace', dynamic=True)
+                spec.outline(cls.check_input)
+
+            def check_input(self):
+                assert self.inputs.namespace.value == value
+
+        run_and_check_success(TestWorkChain, namespace={'value': value})
+
+
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):

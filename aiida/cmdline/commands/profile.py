@@ -72,46 +72,46 @@ class Profile(VerdiCommandWithSubcommands):
             click.echo(err_msg, err=True)
             sys.exit(1)
 
-        use_colors = False
+        use_colors = True
         if args:
             try:
                 if len(args) != 1:
                     raise ValueError
-                if args[0] != "--color":
+                if args[0] != '--no-color':
                     raise ValueError
-                use_colors = True
+                use_colors = False
             except ValueError:
-                print >> sys.stderr, ("You can pass only one further argument, "
-                                      "--color, to show the results with colors")
+                print >> sys.stderr, ('You can pass only one further argument, '
+                                      '--no-color, to show the results without colors')
                 sys.exit(1)
 
         if default_profile is None:
             print >> sys.stderr, "### No default profile configured yet, run 'verdi install'! ###"
             return
         else:
-            print >> sys.stderr, "The default profile is marked by the '>' symbol"
+            print >> sys.stderr, 'The default profile is highlighted and marked by the * symbol'
 
         for profile in get_profiles_list():
             color_id = 39  # Default foreground color
             if profile == default_profile:
-                symbol = ">"
-                color_id = 31
+                symbol = '*'
+                color_id = 32
             else:
-                symbol = "*"
+                symbol = ' '
 
             if use_colors:
-                start_color = "\x1b[{}m".format(color_id)
-                end_color = "\x1b[0m"
-                bold_sequence = "\x1b[1;{}m".format(color_id)
-                nobold_sequence = "\x1b[0;{}m".format(color_id)
+                start_color = '\x1b[{}m'.format(color_id)
+                end_color = '\x1b[0m'
+                bold_sequence = '\x1b[1;{}m'.format(color_id)
+                nobold_sequence = '\x1b[0;{}m'.format(color_id)
             else:
-                start_color = ""
-                end_color = ""
-                bold_sequence = ""
-                nobold_sequence = ""
+                start_color = ''
+                end_color = ''
+                bold_sequence = ''
+                nobold_sequence = ''
 
-            print "{}{} {}{} {}{}".format(
-                start_color, symbol, bold_sequence, profile, nobold_sequence, end_color)
+            print '{}{} {}{} {}{}'.format(
+                start_color, symbol, nobold_sequence, profile, nobold_sequence, end_color)
 
     def profile_delete(self, *args):
         """ Deletes profile

@@ -310,7 +310,7 @@ def restart(ctx, reset, no_wait):
     wait = not no_wait
 
     if reset:
-        ctx.invoke(stop, wait=True)
+        ctx.invoke(stop)
         ctx.invoke(start)
     else:
         restart_cmd = {

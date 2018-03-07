@@ -10,9 +10,7 @@
 import os
 from aiida.backends import settings
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
-from aiida.common.setup import (get_config, get_secret_key, get_property,
-                                get_profile_config, get_default_profile,
-                                parse_repository_uri)
+from aiida.common.setup import get_config, get_profile_config, parse_repository_uri
 
 
 USE_TZ = True
@@ -40,7 +38,7 @@ DBPORT = profile_conf.get('AIIDADB_PORT', '')
 REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 
-## Checks on the REPOSITORY_* variables
+# Checks on the REPOSITORY_* variables
 try:
     REPOSITORY_URI
 except NameError:

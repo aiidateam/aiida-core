@@ -23,20 +23,6 @@ install_requires = [
     'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
-    # We need for the time being to stay with an old version
-    # of celery, including the versions of the AMQP libraries below,
-    # because the support for a SQLA broker has been dropped in later
-    # versions... Actually, this might be source or problems with
-    # SQLA for us... probably switch to using rabbitmq?
-    # Note that however this requires a new server process.
-    # We also need to fix the celery version because support for Django 1.7
-    # was dropped from celery 3.2
-    'celery==3.1.25',
-    # The next two are internal dependencies of celery, but since
-    # in the past we had version mismatch problems, we freeze them
-    # as well
-    'billiard==3.3.0.23',
-    'amqp==1.4.9',
     'anyjson==0.3.3',
     'psutil==5.4.0',
     'meld3==1.0.0',
@@ -68,6 +54,9 @@ install_requires = [
     'ipython<6.0',
     'scipy<1.0.0',  # At this moment the install of 1.0.0 release is broken
     'plumpy>=0.10.0.dev8',
+    'circus>=0.14.0',
+    # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
+    'tornado==4.5.3',
 ]
 
 extras_require = {

@@ -98,8 +98,7 @@ SECRET_KEY = get_secret_key()
 
 # Usual Django settings starts here.............
 
-# Keep it to False! Otherwise every query is stored
-# in memory and looks like a memory leak with celery
+# Keep it to False! Otherwise every query is stored in memory
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 

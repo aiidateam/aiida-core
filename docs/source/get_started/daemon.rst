@@ -8,34 +8,6 @@ Starting the daemon is relatively straight forward by issuing the command::
 
 	$ verdi daemon start
 
-If you run the ``verdi quicksetup`` to setup AiiDA and you entered your own personal email address, you will see the following error message::
-
-	You are not the daemon user! I will not start the daemon.
-	(The daemon user is 'aiida@localhost', you are 'richard.wagner@leipzig.de')
-
-	** FOR ADVANCED USERS ONLY: **
-	To change the current default user, use 'verdi install --only-config'
-	To change the daemon user, use 'verdi daemon configureuser'
-
-This is a safeguard, because AiiDA detects that the person whose profile is active is not the same as the one configured for the daemon.
-If you are working in a single-user mode, and you are sure that nobody else is going to run the daemon, you can configure your user as the (only) one who can run the daemon.
-To configure the deamon for your profile, first make sure the daemon is stopped::
-
-	$ verdi daemon stop
-
-and then run the command::
-
-    $ verdi daemon configureuser
-
-This will prompt you with a warning which you can accept and then fill in the email address of your profile.
-If all went well, it will confirm that the new email address was set for the daemon::
-
-	The new user that can run the daemon is now Richard Wagner.
-
-Now that the daemon is properly configured, you can start it with::
-
-    verdi daemon start
-
 If everything was done correctly, the daemon should start.
 You can inspect the status of the daemon by running::
 

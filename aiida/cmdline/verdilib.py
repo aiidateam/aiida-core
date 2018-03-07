@@ -496,9 +496,8 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 e.message)
             sys.exit(1)
 
-        # set default DB profiles
-        set_default_profile('verdi', gprofile, force_rewrite=False)
-        set_default_profile('daemon', gprofile, force_rewrite=False)
+        # Det default DB profile
+        set_default_profile(gprofile, force_rewrite=False)
 
     if only_user_config:
         print ("Only user configuration requested, "
@@ -538,16 +537,14 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             print("...for SQLAlchemy backend")
             from aiida import is_dbenv_loaded
             from aiida.backends import settings
-            from aiida.backends.sqlalchemy.utils import (
-                _load_dbenv_noschemacheck, check_schema_version)
+            from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck, check_schema_version
             from aiida.backends.profile import load_profile
 
             # We avoid calling load_dbenv since we want to force the schema
             # migration
             if not is_dbenv_loaded():
                 settings.LOAD_DBENV_CALLED = True
-                # This is going to set global variables in settings, including
-                # settings.BACKEND
+                # This is going to set global variables in settings, including settings.BACKEND
                 load_profile()
                 _load_dbenv_noschemacheck()
 
@@ -741,30 +738,23 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     }
     setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 
-    # Loop over all valid processes and check if a default profile is set for them
-    # If not set the newly created profile as default, otherwise prompt whether to override
-    from aiida.cmdline.commands.profile import valid_processes
+    default_profile = confs.get('default_profile', None)
 
-    default_profiles = confs.get('default_profiles', {})
-
-    for process in valid_processes:
-
-        # if the user specifies whether to override that's fine
-        if set_default in [True, False]:
-            _set_default = set_default
-        # otherwise we may need to ask
+    # If the user specifies whether to override that's fine
+    if set_default in [True, False]:
+        do_set_default = set_default
+    # Otherwise we may need to ask
+    else:
+        # If a default profile exists, confirm to overwrite
+        if default_profile:
+            do_set_default = click.confirm(
+                "The current default profile is set to '{}': do you want to set the newly created '{}' "
+                "as the new default? (can be reverted later)".format(default_profile, profile_name))
         else:
-            default_profile = default_profiles.get(process, '')
-            if default_profile:
-                _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                    "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                    .format(process, default_profile, profile_name))
-            # if there are no other default profiles, we don't need to ask
-            else:
-                _set_default = True
+            do_set_default = True
 
-        if _set_default:
-            set_default_profile(process, profile_name, force_rewrite=True)
+    if do_set_default:
+        set_default_profile(profile_name, force_rewrite=True)
 
 def _check_db_name(dbname, postgres):
     '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
@@ -1021,8 +1011,6 @@ def exec_from_cmdline(argv):
     # We now set the internal variable, if needed
     if profile is not None:
         settings_profile.AIIDADB_PROFILE = profile
-    # I set the process to verdi
-    settings_profile.CURRENT_AIIDADB_PROCESS = "verdi"
 
     # Finally, we parse the commands and their options
     try:

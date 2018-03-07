@@ -7,10 +7,41 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import os
+import sys
+from tabulate import tabulate
+
+
+def get_env_with_venv_bin():
+    """
+    Create a clone of the current running environment with the AIIDA_PATH variable set to the
+    value configured in the AIIDA_CONFIG_FOLDER variable
+    """
+    from aiida.common import setup
+    pybin = os.path.dirname(sys.executable)
+    currenv = os.environ.copy()
+    currenv['PATH'] = pybin + ':' + currenv['PATH']
+    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    return currenv
+
+
+def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
+    """
+    Format a timestamp in a human readable format
+
+    :param timestamp: UNIX timestamp
+    :param format_str: optional string format to pass to strftime
+    """
+    from aiida.utils import timezone
+    return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
+
 
 def print_node_summary(node):
-    from tabulate import tabulate
+    """
+    Output a pretty printed summary of a Node
 
+    :params node: a Node instance
+    """
     table = []
     table.append(['type', node.__class__.__name__])
     table.append(['pk', str(node.pk)])
@@ -39,7 +70,11 @@ def print_node_summary(node):
 
 
 def print_node_info(node, print_summary=True):
-    from tabulate import tabulate
+    """
+    Print information about the given node, such as the incoming and outcoming links
+
+    :param print_summary: also print out a summary of node properties
+    """
     from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
     from aiida.orm.calculation.work import WorkCalculation

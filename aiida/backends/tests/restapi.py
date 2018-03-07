@@ -703,7 +703,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the list of give calculation inputs
         """
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
-        import pdb; pdb.set_trace()
         self.process_test("calculations", "/calculations/" + str(
             node_uuid) + "/io/inputs?orderby=id",
                           expected_list_ids=[4, 2], uuid=node_uuid,
@@ -797,8 +796,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()["cifdata"][0]["uuid"]
-        url = self.get_url_prefix() + '/cifs/' + str(
-            node_uuid) + '/content/download'
+        url = self.get_url_prefix() + '/cifs/' + node_uuid + '/content/download'
 
         with self.app.test_client() as client:
             rv = client.get(url)

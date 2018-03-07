@@ -30,6 +30,7 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.ports import PortNamespace
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
@@ -392,7 +393,7 @@ class Process(plumpy.Process):
         """
         items = []
 
-        if isinstance(port_value, collections.Mapping):
+        if isinstance(port_value, collections.Mapping) and isinstance(port, PortNamespace):
 
             for name, value in port_value.iteritems():
 

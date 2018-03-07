@@ -17,6 +17,7 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
+USE_TZ = True
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 
 AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]

@@ -51,6 +51,7 @@ class ProcessBuilderInputDict(FixedFieldsAttributeDict):
             object.__setattr__(self, attr, value)
         else:
             port = self._port_namespace[attr]
+            value = port.serialize(value)
             is_valid, message = port.validate(value)
 
             if not is_valid:

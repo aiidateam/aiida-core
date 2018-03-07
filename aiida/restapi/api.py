@@ -315,6 +315,7 @@ class AiidaApi(Api):
                           '/users/page/',
                           '/users/page/<int:page>/',
                           '/users/<id>/',
+                          endpoint='users',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 

@@ -666,18 +666,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     are also aborted appropriately
     """
 
-    def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = utils.create_test_runner()
-
-    def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
     class SubWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -850,6 +838,46 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+
+class SerializeWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(SerializeWorkChain, cls).define(spec)
+
+        spec.input('test', serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)))
+        spec.input('reference', valid_type=Str)
+
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        assert isinstance(self.inputs.test, Str)
+        assert self.inputs.test == self.inputs.reference
+
+class TestSerializeWorkChain(AiidaTestCase):
+    """
+    Test workchains with serialized input / output.
+    """
+    def setUp(self):
+        super(TestSerializeWorkChain, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def tearDown(self):
+        super(TestSerializeWorkChain, self).tearDown()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
+    def test_serialize(self):
+        """
+        Test a simple serialization of a class to its identifier.
+        """
+        work.launch.run(SerializeWorkChain, test=Int, reference=Str(CLASS_LOADER.class_identifier(Int)))
+
+    def test_serialize_builder(self):
+        """
+        Test serailization when using a builder.
+        """
+        pass
+
 
 class GrandParentExposeWorkChain(work.WorkChain):
     @classmethod

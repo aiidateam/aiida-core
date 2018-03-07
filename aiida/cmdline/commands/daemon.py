@@ -124,7 +124,7 @@ def start(foreground):
     click.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', 'daemon', '_start_circus', '-f']
+        command = ['verdi', 'daemon', '_start_circus', '--foreground']
     else:
         command = ['verdi', 'daemon', '_start_circus']
 

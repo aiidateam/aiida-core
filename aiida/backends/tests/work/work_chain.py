@@ -520,6 +520,27 @@ class TestWorkchain(AiidaTestCase):
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
 
+    def test_namespace_nondb_mapping(self):
+        """
+        Regression test for a bug in _flatten_inputs
+        """
+        value = {'a': 1, 'b': {'c': 2}}
+        class TestWorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(TestWorkChain, cls).define(spec)
+
+                spec.input('namespace.sub', non_db=True)
+                spec.outline(cls.check_input)
+
+            def check_input(self):
+                assert self.inputs.namespace.sub == value
+
+        res, pid = work.launch.run_get_pid(TestWorkChain, namespace={'sub': value})
+        assert load_node(pid).has_finished_ok()
+
+
+
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):

@@ -877,7 +877,7 @@ def list_routes():
     from flask import current_app, url_for
 
     output = []
-    for rule in sorted(current_app.url_map.iter_rules()):
+    for rule in current_app.url_map.iter_rules():
         if rule.endpoint is "static":
             continue
 
@@ -885,5 +885,5 @@ def list_routes():
         line = urllib.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
         output.append(line)
 
-    return output
+    return sorted(set(output))
     

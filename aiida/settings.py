@@ -13,7 +13,6 @@ from aiida.common.exceptions import ConfigurationError, MissingConfigurationErro
 from aiida.common.setup import get_config, get_profile_config, parse_repository_uri
 
 
-USE_TZ = True
 TESTING_MODE = False
 
 try:

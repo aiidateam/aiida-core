@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 from aiida.backends import settings
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import setup
 
 
-@with_dbenv()
 def get_current_profile_name():
     """
-    Return the currently configured profile name
+    Return the currently configured profile name or if not set, the default profile
     """
-    return settings.AIIDADB_PROFILE
+    return settings.AIIDADB_PROFILE or setup.get_default_profile()
 
 
-@with_dbenv()
 def get_current_profile_config():
     """
-    Return the configuration of the currently active profile
+    Return the configuration of the currently active profile or if not set, the default profile
     """
     return setup.get_profile_config(get_current_profile_name())
 
@@ -28,9 +25,17 @@ class ProfileConfig(object):
 
     _RMQ_PREFIX = 'aiida-{uuid}'
 
-    def __init__(self):
-        self.profile_name = get_current_profile_name()
-        self.profile_config = get_current_profile_config()
+    def __init__(self, profile_name=None):
+        """
+        Construct the ProfileConfig for the given profile_name or retrieve it from
+        the backend settings
+        """
+        if not profile_name:
+            self.profile_name = get_current_profile_name()
+            self.profile_config = get_current_profile_config()
+        else:
+            self.profile_name = profile_name
+            self.profile_config = setup.get_profile_config(profile_name)
 
     @property
     def circus_port(self):

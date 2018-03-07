@@ -14,8 +14,13 @@ Tests for the export and import routines.
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
+<<<<<<< HEAD
 
 class TestSpecificImport(AiidaTestCase):
+=======
+class TestSpecificImport(AiidaTestCase):
+# class TestSpecificImport():
+>>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
 
     def test_simple_import(self):
         """
@@ -187,8 +192,13 @@ class TestSpecificImport(AiidaTestCase):
         self.assertGreater(len(qb.all()), 0, "There should be results for the"
                                              "query.")
 
+<<<<<<< HEAD
 
 class TestSimple(AiidaTestCase):
+=======
+class TestSimple(AiidaTestCase):
+# class TestSimple():
+>>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
 
     def setUp(self):
         self.clean_db()
@@ -220,7 +230,7 @@ class TestSimple(AiidaTestCase):
             # my uuid - list to reload the node:
             uuids = [n.uuid for n in nodes]
             # exporting the nodes:
-            export([n.dbnode for n in nodes], outfile=filename, silent=True)
+            export(nodes, outfile=filename, silent=True)
             # cleaning:
             self.clean_db()
             # Importing back the data:
@@ -267,7 +277,7 @@ class TestSimple(AiidaTestCase):
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
-            export([calc.dbnode], outfile=filename, silent=True)
+            export([calc], outfile=filename, silent=True)
 
             self.clean_db()
 
@@ -307,7 +317,7 @@ class TestSimple(AiidaTestCase):
             sd.store()
 
             filename = os.path.join(export_file_tmp_folder, "export.tar.gz")
-            export([sd.dbnode], outfile=filename, silent=True)
+            export([sd], outfile=filename, silent=True)
 
             with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
@@ -357,7 +367,7 @@ class TestSimple(AiidaTestCase):
             sd.store()
 
             filename = os.path.join(temp_folder, "export.tar.gz")
-            export([sd.dbnode], outfile=filename, silent=True)
+            export([sd], outfile=filename, silent=True)
 
             unpack = SandboxFolder()
             with tarfile.open(
@@ -406,25 +416,25 @@ class TestSimple(AiidaTestCase):
         sd.store()
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree([sd], folder=folder, silent=True,
                     allowed_licenses=['GPL'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree([sd], folder=folder, silent=True,
                     forbidden_licenses=['Academic'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=['CC0'])
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=['GPL'])
 
         def cc_filter(license):
@@ -438,22 +448,22 @@ class TestSimple(AiidaTestCase):
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=cc_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=gpl_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=crashing_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
     def test_5(self):
@@ -522,7 +532,7 @@ class TestSimple(AiidaTestCase):
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
-            export([sd3.dbnode], outfile=filename, silent=True)
+            export([sd3], outfile=filename, silent=True)
             self.clean_db()
             import_data(filename, silent=True)
 
@@ -593,7 +603,7 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd2.dbnode], outfile=filename1, silent=True)
+            export([sd2], outfile=filename1, silent=True)
             uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
             self.clean_db()
             self.insert_data()
@@ -629,7 +639,7 @@ class TestSimple(AiidaTestCase):
             uuids2 = [jc2.uuid, sd3.uuid]
 
             filename2 = os.path.join(temp_folder, "export2.tar.gz")
-            export([sd3.dbnode], outfile=filename2, silent=True)
+            export([sd3], outfile=filename2, silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename2, silent=True)
@@ -695,7 +705,7 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1,
+            export([sd1, jc1, g1], outfile=filename1,
                    silent=True)
             n_uuids = [sd1.uuid, jc1.uuid]
             self.clean_db()
@@ -744,7 +754,7 @@ class TestSimple(AiidaTestCase):
             not_wanted_uuids = [v.uuid for v in (b,c,d)]
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([res.dbnode], outfile=filename1, silent=True)
+            export([res], outfile=filename1, silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -787,7 +797,7 @@ class TestSimple(AiidaTestCase):
 
             uuids_values = [(v.uuid, v.value) for v in (output_1, )]
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([output_1.dbnode], outfile=filename1,silent=True)
+            export([output_1], outfile=filename1,silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -902,7 +912,7 @@ class TestSimple(AiidaTestCase):
                 g = Group.get_from_string(groupname)
                 # exporting based on all members of the group
                 # this also checks if group memberships are preserved!
-                export([g.dbgroup]+[n.dbnode for n in g.nodes], outfile=filename, silent=True)
+                export([g]+[n for n in g.nodes], outfile=filename, silent=True)
                 # cleaning the DB!
                 self.clean_db()
                 # reimporting the data from the file
@@ -985,7 +995,7 @@ class TestComplex(AiidaTestCase):
                                  calc2.uuid: calc2.label, fd1.uuid: fd1.label}
 
             filename = os.path.join(temp_folder, "export.tar.gz")
-            export([fd1.dbnode], outfile=filename, silent=True)
+            export([fd1], outfile=filename, silent=True)
 
             self.clean_db()
 
@@ -1061,11 +1071,11 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1175,7 +1185,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Rename the computer
             self.computer.set_name(comp1_name + "_updated")
@@ -1192,7 +1202,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1282,7 +1292,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Reset the database
             self.clean_db()
@@ -1303,7 +1313,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Reset the database
             self.clean_db()
@@ -1324,7 +1334,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the third job calculation
             filename3 = os.path.join(export_file_tmp_folder, "export3.tar.gz")
-            export([calc3.dbnode], outfile=filename3, silent=True)
+            export([calc3], outfile=filename3, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1411,7 +1421,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1527,7 +1537,7 @@ class TestLinks(AiidaTestCase):
 
             export_links = self.get_all_node_links()
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([node_output.dbnode], outfile=export_file, silent=True)
+            export([node_output], outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
@@ -1652,8 +1662,7 @@ class TestLinks(AiidaTestCase):
             export_links = qb.all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([_.dbnode for _ in graph_nodes],
-                   outfile=export_file, silent=True)
+            export(graph_nodes, outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
@@ -1668,7 +1677,7 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    # @unittest.skip("")
+    @unittest.skip("")
     def test_complex_workflow_graph_export_set_expansion(self):
         import os, shutil, tempfile
         from aiida.orm.importexport import export
@@ -1686,8 +1695,7 @@ class TestLinks(AiidaTestCase):
             tmp_folder = tempfile.mkdtemp()
             try:
                 export_file = os.path.join(tmp_folder, 'export.tar.gz')
-                export([_.dbnode for _ in graph_nodes],
-                       outfile=export_file, silent=True)
+                export(graph_nodes, outfile=export_file, silent=True)
 
                 self.clean_db()
                 self.insert_data()
@@ -1769,7 +1777,7 @@ class TestLinks(AiidaTestCase):
                 ).all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([node_output.dbnode], outfile=export_file, silent=True)
+            export([wc2], outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
@@ -1831,8 +1839,8 @@ class TestLinks(AiidaTestCase):
 
             export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
             export_file_2 = os.path.join(tmp_folder, 'export-2.tar.gz')
-            export([o1.dbnode], outfile=export_file_1, silent=True)
-            export([w1.dbnode], outfile=export_file_2, silent=True)
+            export([o1], outfile=export_file_1, silent=True)
+            export([w1], outfile=export_file_2, silent=True)
 
             self.clean_db()
             self.insert_data()

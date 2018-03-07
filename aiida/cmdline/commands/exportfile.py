@@ -61,6 +61,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
 
     node_id_set = set(nodes)
     group_dict = dict()
+    groups_list = list()
 
     if group_names:
         qb = QueryBuilder()
@@ -68,7 +69,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
+        groups_list.append(group['group']['*'] for group in res)
         node_id_set.update([node['node']['id'] for node in res])
 
     if groups:
@@ -77,11 +78,8 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
+        groups_list.append(group['group']['*'] for group in res)
         node_id_set.update([node['node']['id'] for node in res])
-
-    # The db_groups that correspond to what was searched above
-    dbgroups_list = group_dict.values()
 
     # Getting the nodes that correspond to the ids that were found above
     if len(node_id_set) > 0:
@@ -96,9 +94,6 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     for node_id in missing_nodes:
         print >> sys.stderr, ('WARNING! Node with pk={} not found, skipping'.format(node_id))
 
-    # The dbnodes of the above node list
-    dbnode_list = [node.dbnode for node in node_list]
-
     if computers:
         qb = QueryBuilder()
         qb.append(Computer, tag='comp', project=['*'], filters={'id': {'in': set(computers)}})
@@ -110,10 +105,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     else:
         computer_list = []
 
-    # The dbcomputers of the above computer list
-    dbcomputer_list = [computer.dbcomputer for computer in computer_list]
-
-    what_list = dbnode_list + dbcomputer_list + dbgroups_list
+    what_list = node_list + computer_list + groups_list
     additional_kwargs = dict()
 
     if archive_format == 'zip':

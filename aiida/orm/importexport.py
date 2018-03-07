@@ -1669,7 +1669,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     import json
     import aiida
 
-    from aiida.orm import Node, Calculation, Data
+    from aiida.orm import Node, Calculation, Data, Group
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -1686,17 +1686,14 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     # I store a list of the actual dbnodes
     for entry in what:
-        # This returns the class name (as in imports). E.g. for a model node:
-        # aiida.backends.djsite.db.models.DbNode
-        entry_class_string = get_class_string(entry)
-        # Now a load the backend-independent name into entry_entity_name, e.g. Node!
-        entry_entity_name = schema_to_entity_names(entry_class_string)
-        if entry_entity_name == GROUP_ENTITY_NAME:
+        if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
-        elif entry_entity_name == NODE_ENTITY_NAME:
+        elif issubclass(entry.__class__, Node):
             given_node_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
+            raise ValueError("I was given {}, which is not a Node nor Group "
+                             "instance. It is of type {}"
+                             .format(entry, entry.__class__))
 
     # # Here to add the algorithm about the export
     to_be_visited = set()

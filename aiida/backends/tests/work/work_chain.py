@@ -845,7 +845,11 @@ class SerializeWorkChain(WorkChain):
     def define(cls, spec):
         super(SerializeWorkChain, cls).define(spec)
 
-        spec.input('test', serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)))
+        spec.input(
+            'test',
+            valid_type=Str,
+            serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)),
+        )
         spec.input('reference', valid_type=Str)
 
         spec.outline(cls.do_test)
@@ -870,13 +874,21 @@ class TestSerializeWorkChain(AiidaTestCase):
         """
         Test a simple serialization of a class to its identifier.
         """
-        work.launch.run(SerializeWorkChain, test=Int, reference=Str(CLASS_LOADER.class_identifier(Int)))
+        work.launch.run(
+            SerializeWorkChain,
+            test=Int,
+            reference=Str(CLASS_LOADER.class_identifier(Int))
+        )
 
     def test_serialize_builder(self):
         """
         Test serailization when using a builder.
         """
-        pass
+        builder = SerializeWorkChain.get_builder()
+        builder.test = Int
+        builder.reference = Str(CLASS_LOADER.class_identifier(Int))
+
+        work.launch.run(builder)
 
 
 class GrandParentExposeWorkChain(work.WorkChain):

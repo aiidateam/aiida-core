@@ -1543,6 +1543,13 @@ class TestLinks(AiidaTestCase):
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def construct_complex_graph(self):
+        """
+        This method creates a "complex" graph with all available link types
+        (INPUT, CREATE, RETURN and CALL) and returns the nodes of the graph. It
+        also returns various combinations of nodes that need to be extracted
+        but also the final expected set of nodes (after adding the expected
+        predecessors, desuccessors).
+        """
         from aiida.orm.data.base import Int
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.calculation.work import WorkCalculation
@@ -1616,6 +1623,12 @@ class TestLinks(AiidaTestCase):
 
 
     def test_complex_workflow_graph_links(self):
+        """
+        This test checks that all the needed links are correctly exported and
+        imported. More precisely, it checks that INPUT, CREATE, RETURN and CALL
+        links connecting Data nodes, JobCalculations and WorkCalculations are
+        exported and imported correctly.
+        """
         import os, shutil, tempfile
 
         from aiida.orm import Node
@@ -1655,7 +1668,7 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_complex_workflow_graph_export_set_expansion(self):
         import os, shutil, tempfile
         from aiida.orm.importexport import export
@@ -1664,7 +1677,12 @@ class TestLinks(AiidaTestCase):
 
         graph_nodes, export_dict = self.construct_complex_graph()
 
-        for export_node, export_target in export_dict:
+        print "export_dict ===> ", export_dict
+
+        for export_node, export_target in export_dict.iteritems():
+            print "export_node ==>", export_node
+            print "export_target ==>", export_target
+
             tmp_folder = tempfile.mkdtemp()
             try:
                 export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -1678,13 +1696,21 @@ class TestLinks(AiidaTestCase):
 
                 # Get all the nodes of the database
                 qb = QueryBuilder()
-                qb.append(Node, project='*')
-                imported_nodes = qb.all()
+                qb.append(Node, project='uuid')
+                imported_node_uuids = set(str(_[0]) for _ in qb.all())
+
+                export_target_uuids = set(str(_.uuid) for _ in export_target)
 
                 # Check that you have imported the right nodes (and only
                 # these nodes).
-                # Very likely the check should happen using the UUID.
-                self.assertEquals(set(export_target), set(imported_nodes))
+                self.assertEquals(
+                    export_target_uuids,
+                    imported_node_uuids,
+                    "Problem in comparison of export node: " +
+                    str(export_node) + "\n"
+                    "Expected set: " + str(export_target_uuids)  + "\n" +
+                    "Imported set: " + str(imported_node_uuids)
+                )
 
             finally:
                 shutil.rmtree(tmp_folder, ignore_errors=True)

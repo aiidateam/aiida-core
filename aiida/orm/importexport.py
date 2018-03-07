@@ -1698,6 +1698,12 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         else:
             raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
 
+    # # Here to add the algorithm about the export
+    to_be_visited = set()
+    to_be_exported = set()
+    while to_be_visited:
+        elem = to_be_visited.pop()
+
     if also_parents:
         if given_node_entry_ids:
             # Also add the parents (to any level) to the query
@@ -1864,7 +1870,10 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         links_qb.append(Node,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type':{'in':(LinkType.CREATE.value, LinkType.INPUT.value)}},
+                        edge_filters={'type':{'in':(LinkType.CREATE.value,
+                                                    LinkType.INPUT.value,
+                                                    LinkType.RETURN.value,
+                                                    LinkType.CALL.value)}},
                         edge_project=['label', 'type'], output_of='input')
 
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():

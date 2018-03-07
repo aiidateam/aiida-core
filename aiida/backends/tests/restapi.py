@@ -801,7 +801,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv = client.get(url)
 
-        node = load_node(node_uuid)
-        self.assertEquals(rv.data, node._prepare_cif()[0] )
+        cif = load_node(node_uuid)._prepare_cif()[0]
+        self.assertEquals(rv.data, cif )
 
 

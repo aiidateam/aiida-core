@@ -722,7 +722,8 @@ class CifData(SinglefileData):
         ret_dict = conv_f(cif=self, parameters=param, store=store)
         return ret_dict['structure']
 
-    def _prepare_cif(self):
+    #pylint: disable=unused-argument
+    def _prepare_cif(self, main_file_name=""):
         """
         Return CIF string of CifData object.
 
@@ -738,7 +739,8 @@ class CifData(SinglefileData):
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read(), {}
 
-    def _prepare_tcod(self, **kwargs):
+    #pylint: disable=unused-argument
+    def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given CIF to a string of format TCOD CIF.
         """

@@ -12,6 +12,7 @@
         .travis_data/test_setup.py|
         .travis-data/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
+        aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py
@@ -33,6 +34,7 @@
         .travis_data/test_setup.py|
         .travis-data/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
+        aiida/orm/data/cif.py|
         aiida/restapi/translator/data/cif.py|
         aiida/restapi/resources.py|
         aiida/utils/fixtures.py

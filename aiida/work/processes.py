@@ -207,11 +207,11 @@ class Process(plumpy.Process):
         self.report(traceback.format_exc())
 
     @override
-    def on_finish(self, result):
+    def on_finish(self, result, successful):
         """
         Set the finish status on the Calculation node
         """
-        super(Process, self).on_finish(result)
+        super(Process, self).on_finish(result, successful)
         self.calc._set_finish_status(result)
 
     @override

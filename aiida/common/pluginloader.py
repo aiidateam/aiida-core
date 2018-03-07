@@ -125,6 +125,62 @@ def get_plugin(category, name):
 
     return plugin
 
+def load_plugin_safe(base_class, plugins_module, plugin_type, node_type, node_pk):
+    """
+    It is a wrapper of load_plugin function to return closely related node class
+    if plugin is not available. By default it returns base Node class and does not
+    raise exception.
+
+    params: Look at the docstring of aiida.common.old_pluginloader.load_plugin for more Info +
+    :param: node_type: type of the node
+    :param node_pk: node pk
+
+    :return: The plugin class
+    """
+    from aiida.common import aiidalogger
+
+    try:
+        PluginClass = load_plugin(base_class, plugins_module, plugin_type)
+    except MissingPluginError:
+        node_parts = plugin_type.partition(".")
+        base_node_type = node_parts[0]
+
+        ## data node: temporarily returning base data node.
+        # In future its better to check the closest available plugin and return it.
+        # For example if type is "aiida.orm.data.array.kpoints_tmp.KpointsData"
+        # it should return array data node and not base data node
+        if base_node_type == "data":
+            PluginClass = load_plugin(base_class, plugins_module, 'data.Data')
+
+        ## code node
+        elif base_node_type == "code":
+            PluginClass = load_plugin(base_class, plugins_module, 'code.Code')
+
+        ## calculation node: for calculation currently we are hardcoding cases
+        elif base_node_type == "calculation":
+            sub_node_parts = node_parts[2].partition(".")
+            sub_node_type = sub_node_parts[0]
+            if sub_node_type == "job":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.job.JobCalculation')
+            elif sub_node_type == "inline":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.inline.InlineCalculation')
+            elif sub_node_type == "work":
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.work.WorkCalculation')
+            else:
+                PluginClass = load_plugin(base_class, plugins_module, 'calculation.Calculation')
+
+        ## for base node
+        elif base_node_type == "node":
+            PluginClass = base_class
+
+        ## default case
+        else:
+            aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
+                              "will use base Node class".format(node_type, node_pk))
+            PluginClass = base_class
+
+    return PluginClass
+
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """

@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0007_update_linktypes'
+LATEST_MIGRATION = '0008_code_hidden_to_extra'
 
 
 def _update_schema_version(version, apps, schema_editor):

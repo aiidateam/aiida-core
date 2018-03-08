@@ -7,6 +7,12 @@ SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
 
+# Added for sphinx-apidoc
+SPHINXAPIDOC  = sphinx-apidoc
+APIDOCDIR     = source/apidoc
+PACKAGEDIR    = ../aiida
+ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private
+
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
@@ -16,10 +22,14 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext all default
 
-default:
+default: apidoc
 	$(SPHINXBUILD) -b html -nW $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
-all: html
+all: apidoc html
+
+# Added for sphinx-apidoc
+apidoc:
+	$(SPHINXAPIDOC) $(ALLAPIDOCOPTS)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -45,6 +55,7 @@ help:
 
 clean:
 	-rm -r $(BUILDDIR)
+	-rm -r $(APIDOCDIR)
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

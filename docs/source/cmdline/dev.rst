@@ -5,6 +5,7 @@ aiida.cmdline documentation
    :maxdepth: 2
 
 .. automodule:: aiida.cmdline
+   :noindex:
 
 Baseclass
 +++++++++

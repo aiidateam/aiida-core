@@ -5,6 +5,7 @@ aiida.common documentation
    :maxdepth: 2
 
 .. automodule:: aiida.common
+   :noindex:
 
 Calculation datastructures
 ++++++++++++++++++++++++++

@@ -174,6 +174,9 @@ class Daemon(VerdiCommandWithSubcommands):
             stdout=_stdouterr,
             stderr=subprocess.STDOUT,
             env=currenv,
+            # Important: put the new process in a different process
+            # group, so signals are not propagated (e.g. if the shell
+            # is closed, celery does not get a SIGHUP)
             preexec_fn=os.setpgrp
             )
 

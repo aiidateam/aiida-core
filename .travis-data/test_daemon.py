@@ -15,6 +15,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
 from workchains import NestedWorkChain, ListEcho, InlineCalcRunnerWorkChain

@@ -25,14 +25,6 @@ from aiida.common.setup import get_profile_config, DAEMON_LOG_FILE
 from aiida.common.exceptions import ConfigurationError
 from aiida.daemon.timestamps import set_daemon_timestamp,get_last_daemon_timestamp
 
-# From https://github.com/celery/celery/issues/2615
-# Recent versions of billiard have TERMSIGS_DEFAULT as a set() while 3.3.0.23 uses a tuple()
-import billiard.common
-TERMSIGS_CUSTOM = list(billiard.common.TERMSIGS_DEFAULT)
-TERMSIGS_CUSTOM.remove('SIGUSR2')
-billiard.common.TERMSIGS_DEFAULT = type(billiard.common.TERMSIGS_DEFAULT)(TERMSIGS_CUSTOM)
-
-
 DAEMON_INTERVALS_SUBMIT = 10
 DAEMON_INTERVALS_RETRIEVE = 10
 DAEMON_INTERVALS_UPDATE = 30

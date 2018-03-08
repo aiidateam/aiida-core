@@ -9,6 +9,8 @@
 ###########################################################################
 from aiida.orm.data.int import Int
 from aiida.orm.data.list import List
+from aiida.orm.data.str import Str 
+from aiida.orm.calculation.inline import make_inline
 from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
@@ -60,3 +62,20 @@ class ListEcho(WorkChain):
 
     def do_echo(self):
         self.out('output', self.inputs.list)
+
+class InlineCalcRunnerWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(InlineCalcRunnerWorkChain, cls).define(spec)
+
+        spec.input('input', valid_type=Str)
+        spec.output('output', valid_type=Str)
+
+        spec.outline(cls.do_run)
+
+    def do_run(self):
+        self.out('output', echo_inline(input_string=self.inputs.input)[1]['output'])
+
+@make_inline
+def echo_inline(input_string):
+    return {'output': input_string}

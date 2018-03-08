@@ -803,11 +803,12 @@ class TestSimple(AiidaTestCase):
     def test_reexport(self):
         """
         Export something, import and reexport and check if everything is valid.
-        The export is rather easy:
-         ___       ___          ___
-        |   | INP |   | CREATE |   |
-        | p | --> | c | -----> | a |
-        |___|     |___|        |___|
+        The export is rather easy::
+
+            ___       ___          ___
+           |   | INP |   | CREATE |   |
+           | p | --> | c | -----> | a |
+           |___|     |___|        |___|
 
         """
         import os, shutil, tempfile, numpy as np, string, random
@@ -1544,20 +1545,20 @@ class TestLinks(AiidaTestCase):
     def test_input_and_create_links_proper(self):
         """
         Check that CALL links are not followed in the export procedure with
-        dangling links as a consequence
+        dangling links as a consequence::
 
+               ---------->---------
+            __|_       ___        _|_
+           |    | INP |   | CALL |   |
+           | i1 | --> | C | <--  | W |
+           |____|     |___|      |___|
+                        |
+                        v  CREATE
+                       ____ 
+                      |    |
+                      | o1 |
+                      |____|
 
-            ---------->---------
-         __|_       ___        _|_
-        |    | INP |   | CALL |   |
-        | i1 | --> | C | <--  | W |
-        |____|     |___|      |___|
-                     |
-                     v  CREATE
-                    ____ 
-                   |    |
-                   | o1 |
-                   |____|
         """
         import os, shutil, tempfile
 
@@ -1613,17 +1614,19 @@ class TestLinks(AiidaTestCase):
     def test_links_for_workflows(self):
         """
         Check that CALL links are not followed in the export procedure, and the only creation
-        is followed for data:
-         ____       ____        ____
-        |    | INP |    | CALL |    |
-        | i1 | --> | w1 | <--- | w2 |
-        |____|     |____|      |____|
-                    | |
-             CREATE v v RETURN
-                    ____
-                   |    |
-                   | o1 |
-                   |____|
+        is followed for data::
+
+            ____       ____        ____
+           |    | INP |    | CALL |    |
+           | i1 | --> | w1 | <--- | w2 |
+           |____|     |____|      |____|
+                       | |
+                CREATE v v RETURN
+                       ____
+                      |    |
+                      | o1 |
+                      |____|
+
         """
         import os, shutil, tempfile
 

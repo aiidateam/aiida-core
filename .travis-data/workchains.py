@@ -54,9 +54,9 @@ class ListEcho(WorkChain):
         super(ListEcho, cls).define(spec)
 
         spec.input('list', valid_type=List)
-        spec.output('list', valid_type=List)
+        spec.output('output', valid_type=List)
 
         spec.outline(cls.do_echo)
 
     def do_echo(self):
-        self.out('list', self.inputs.list)
+        self.out('output', self.inputs.list)

@@ -1681,6 +1681,14 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
+    # The dictionary that contains nodes ids of nodes that should be visited.
+    # The nodes ids are categorised per node type
+    to_be_visited = dict()
+    to_be_visited[Calculation] = set()
+    to_be_visited[Data] = set()
+    # The set that contains the nodes ids of the nodes that should be exported
+    to_be_exported = set()
+
     given_node_entry_ids = set()
     given_group_entry_ids = set()
 
@@ -1690,47 +1698,122 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             given_group_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Node):
             given_node_entry_ids.add(entry.pk)
+            # We also add to the to_be_exported, to_be_visited structures the
+            # node provided
+            to_be_exported.add(entry.pk)
+            if issubclass(entry.__class__, Data):
+                to_be_visited[Data].add(entry.pk)
+            elif issubclass(entry.__class__, Calculation):
+                to_be_visited[Calculation].add(entry.pk)
         else:
             raise ValueError("I was given {}, which is not a Node nor Group "
                              "instance. It is of type {}"
                              .format(entry, entry.__class__))
 
-    # # Here to add the algorithm about the export
-    to_be_visited = set()
-    to_be_exported = set()
-    while to_be_visited:
-        elem = to_be_visited.pop()
+    # We will iteratively explore the AiiDA graph to find further nodes that
+    # should also be exported.
+    # We initially populate the set that should be visited with the initial set
+    # of nodes that should be exported.
+    to_be_visited = set(to_be_exported[Calculation])
 
-    if also_parents:
-        if given_node_entry_ids:
-            # Also add the parents (to any level) to the query
-            # This is done via the ancestor relationship.
-            if use_querybuilder_ancestors:
-                qb = QueryBuilder()
-                qb.append(Node, tag='low_node',
-                          filters={'id': {'in': given_node_entry_ids}})
-                qb.append(Node, ancestor_of='low_node', project=['id'])
-                additional_ids = [_ for _, in qb.all()]
-            else:
-                q = QueryFactory()()
-                additional_ids = [_ for _, in q.get_all_parents(given_node_entry_ids, return_values=['id'])]
-
-            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
-
-    if also_calc_outputs:
-        if given_node_entry_ids:
-            # Add all (direct) outputs of a calculation object that was already
-             # selected
+    # We repeat until there are no further nodes to be visited
+    while to_be_visited[Calculation] or to_be_visited[Data]:
+        # If is is a calculation node
+        if to_be_visited[Calculation]:
+            curr_node = to_be_visited[Calculation].pop()
+            # Case 1:
+            # INPUT(Data, Calculation) - Reversed
             qb = QueryBuilder()
-            # Only looking at calculations and subclasses that are in my entries:
-            qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_node_entry_ids}})
-            # Only looking at the output that was created by a calculation.
-            # From the OPM we know it has to be Data, linked by CREATE.
-            qb.append(Data, output_of='high_node', project=['id'],
-                edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
-            additional_ids = [_ for [_] in qb.all()]
-            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
+            qb.append(Data, tag='predecessor', project=['id'])
+            qb.append(Calculation, output_of='successor',
+                      filters={'id': {'==': curr_node.id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.INPUT.value}})
+            res = [_[0] for _ in qb.all()]
+            to_be_visited[Data].add(res)
+            to_be_exported.add(res)
+
+            # Case 2 & 3:
+            # CREATE/RETURN(Calculation, Data) - Forward
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node.id}})
+            qb.append(Data, output_of='successor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              'in': [LinkType.CREATE.value,
+                                     LinkType.RETURN.value]}})
+            res = [_[0] for _ in qb.all()]
+            to_be_visited[Data].add(res)
+            to_be_exported.add(res)
+
+            # Case 4:
+            # CALL(Calculation, Calculation) - Forward
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node.id}})
+            qb.append(Calculation, output_of='successor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CALL.value}})
+            res = [_[0] for _ in qb.all()]
+            to_be_visited[Calculation].add(res)
+            to_be_exported.add(res)
+
+
+        # If it is a Data node
+        else:
+            curr_node = to_be_visited[Data].pop()
+            # Case 2:
+            # CREATE(Calculation, Data) - Reversed
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor', project=['id'])
+            qb.append(Data, output_of='successor',
+                      filters={'id': {'==': curr_node.id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CREATE.value}})
+            res = [_[0] for _ in qb.all()]
+            to_be_visited[Calculation].add(res)
+            to_be_exported.add(res)
+
+
+
+
+
+
+
+    # if also_parents:
+    #     if given_node_entry_ids:
+    #         # Also add the parents (to any level) to the query
+    #         # This is done via the ancestor relationship.
+    #         if use_querybuilder_ancestors:
+    #             qb = QueryBuilder()
+    #             qb.append(Node, tag='low_node',
+    #                       filters={'id': {'in': given_node_entry_ids}})
+    #             qb.append(Node, ancestor_of='low_node', project=['id'])
+    #             additional_ids = [_ for _, in qb.all()]
+    #         else:
+    #             q = QueryFactory()()
+    #             additional_ids = [_ for _, in q.get_all_parents(given_node_entry_ids, return_values=['id'])]
+    #
+    #         given_node_entry_ids = given_node_entry_ids.union(additional_ids)
+    #
+    # if also_calc_outputs:
+    #     if given_node_entry_ids:
+    #         # Add all (direct) outputs of a calculation object that was already
+    #          # selected
+    #         qb = QueryBuilder()
+    #         # Only looking at calculations and subclasses that are in my entries:
+    #         qb.append(Calculation, tag='high_node',
+    #                   filters={'id': {'in': given_node_entry_ids}})
+    #         # Only looking at the output that was created by a calculation.
+    #         # From the OPM we know it has to be Data, linked by CREATE.
+    #         qb.append(Data, output_of='high_node', project=['id'],
+    #             edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
+    #         additional_ids = [_ for [_] in qb.all()]
+    #         given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract

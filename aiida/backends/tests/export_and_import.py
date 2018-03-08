@@ -15,12 +15,17 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 class TestSpecificImport(AiidaTestCase):
 =======
 class TestSpecificImport(AiidaTestCase):
 # class TestSpecificImport():
 >>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
+=======
+# class TestSpecificImport(AiidaTestCase):
+class TestSpecificImport():
+>>>>>>> 6c6caa3... Adding the new graph traversal logic to the export function
 
     def test_simple_import(self):
         """
@@ -193,12 +198,17 @@ class TestSpecificImport(AiidaTestCase):
                                              "query.")
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 class TestSimple(AiidaTestCase):
 =======
 class TestSimple(AiidaTestCase):
 # class TestSimple():
 >>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
+=======
+# class TestSimple(AiidaTestCase):
+class TestSimple():
+>>>>>>> 6c6caa3... Adding the new graph traversal logic to the export function
 
     def setUp(self):
         self.clean_db()
@@ -1677,7 +1687,7 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_complex_workflow_graph_export_set_expansion(self):
         import os, shutil, tempfile
         from aiida.orm.importexport import export
@@ -1761,20 +1771,60 @@ class TestLinks(AiidaTestCase):
             node_input = Int(1).store()
             node_output = Int(2).store()
 
-            node_work.add_link_from(node_input, 'input-to-work', link_type=LinkType.INPUT)
-            node_calc.add_link_from(node_input, 'input-to-calc', link_type=LinkType.INPUT)
-            node_calc.add_link_from(node_work, 'call', link_type=LinkType.CALL)
-            node_output.add_link_from(node_calc, 'output', link_type=LinkType.CREATE)
+            wc2 = WorkCalculation().store()
+            wc1 = WorkCalculation().store()
+            c1 = InlineCalculation().store()
+            ni1 = Int(1).store()
+            ni2 = Int(2).store()
+            no1 = Int(1).store()
+            no2 = Int(2).store()
 
-            export_links = QueryBuilder().append(
-                    Data, project='uuid').append(
-                    InlineCalculation, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.INPUT.value, )}}
-                ).all() + QueryBuilder().append(
-                    InlineCalculation, project='uuid').append(
-                    Data, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.CREATE.value, )}}
-                ).all()
+            # Create the connections between workcalculations and calculations
+            wc1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+            c1.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+
+            # Connect the first data node to wc1 & c1
+            wc1.add_link_from(ni1, 'ni1-to-wc1',
+                              link_type=LinkType.INPUT)
+            c1.add_link_from(ni1, 'ni1-to-c1',
+                             link_type=LinkType.INPUT)
+
+            # Connect the second data node to wc1 & c1
+            wc1.add_link_from(ni2, 'ni2-to-wc1',
+                              link_type=LinkType.INPUT)
+            c1.add_link_from(ni2, 'ni2-to-c1',
+                             link_type=LinkType.INPUT)
+
+            # Connecting the first output node to wc1 & c1
+            no1.add_link_from(wc1, 'output',
+                              link_type=LinkType.RETURN)
+            no1.add_link_from(c1, 'output',
+                              link_type=LinkType.CREATE)
+
+            # Connecting the second output node to wc1 & c1
+            no2.add_link_from(wc1, 'output',
+                              link_type=LinkType.RETURN)
+            no2.add_link_from(c1, 'output',
+                              link_type=LinkType.CREATE)
+
+            # Getting the input, create, return and call links
+            qb = QueryBuilder()
+            qb.append(Node, project='uuid')
+            qb.append(Node, project='uuid',
+                edge_project=['label', 'type'],
+                edge_filters={'type': {'in': (LinkType.INPUT.value,
+                                              LinkType.CREATE.value,
+                                              LinkType.RETURN.value,
+                                              LinkType.CALL.value)}})
+            export_links = qb.all()
+
+            # Adding the input links
+            qb = QueryBuilder()
+            qb.append(Node, project='uuid')
+            qb.append(Node, project='uuid',
+                edge_project=['label', 'type'],
+                edge_filters={'type': {'in': (LinkType.INPUT.value,)}})
+            export_links.appen.all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([wc2], outfile=export_file, silent=True)

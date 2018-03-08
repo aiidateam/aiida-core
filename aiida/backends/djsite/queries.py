@@ -299,6 +299,7 @@ class QueryManagerDjango(AbstractQueryManager):
 def get_closest_parents(pks,*args,**kwargs):
     """
     Get the closest parents dbnodes of a set of nodes.
+
     :param pks: one pk or an iterable of pks of nodes
     :param chunk_size: we chunk the pks into groups of this size,
         to optimize the speed (default=50)
@@ -309,6 +310,7 @@ def get_closest_parents(pks,*args,**kwargs):
          pk2: pk of closest parent of node with pk2,
          etc.
          }
+
     .. note:: It works also if pks is a list of nodes rather than their pks
 
     .. todo:: find a way to always get a parent (when there is one) from each pk.
@@ -316,6 +318,7 @@ def get_closest_parents(pks,*args,**kwargs):
         one of them is kept. This is a BUG, related to the use of a dictionary
         (children_dict, see below...).
         For now a work around is to use chunk_size=1.
+
     """
     from aiida.orm import Node
     from aiida.backends.djsite.db import models

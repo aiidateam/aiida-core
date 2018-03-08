@@ -16,17 +16,20 @@ Generic transport class
 
 .. automodule:: aiida.transport
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 Existing plugins
 ----------------
 .. automodule:: aiida.transport.plugins.ssh
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 
 .. automodule:: aiida.transport.plugins.local
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 Developing a plugin

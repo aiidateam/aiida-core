@@ -9,6 +9,7 @@ Database schema
 
 .. automodule:: aiida.backends.sqlalchemy.models
    :members:
+   :noindex:
 
 
 

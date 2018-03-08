@@ -14,6 +14,7 @@ High level interface to read information from the cached registry, find plugins,
 
 .. automodule:: aiida.plugins.info
    :members:
+   :noindex:
 
 Lowlevel Registry Interface
 +++++++++++++++++++++++++++
@@ -21,9 +22,11 @@ This is the low level interface for operations that have to connect to the regis
 
 .. automodule:: aiida.plugins.registry
    :members:
+   :noindex:
 
 Cached Info for each Plugin
 +++++++++++++++++++++++++++
 
 .. automodule:: aiida.plugins.entry
    :members:
+   :noindex:

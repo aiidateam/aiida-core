@@ -173,7 +173,9 @@ class Daemon(VerdiCommandWithSubcommands):
             stdin=_devnull,
             stdout=_stdouterr,
             stderr=subprocess.STDOUT,
-            env=currenv)
+            env=currenv,
+            preexec_fn=os.setpgrp
+            )
 
         os.close(_stdouterr)
         os.close(_devnull)

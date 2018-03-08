@@ -9,6 +9,7 @@ Database schema
 
 .. automodule:: aiida.backends.djsite.db.models
    :members:
+   :noindex:
 
 
 

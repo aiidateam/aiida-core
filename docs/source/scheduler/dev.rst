@@ -11,6 +11,7 @@ Generic scheduler class
 
 .. automodule:: aiida.scheduler
    :members:
+   :noindex:
    :special-members: __enter__
 
 Scheduler datastructures
@@ -18,4 +19,5 @@ Scheduler datastructures
 
 .. automodule:: aiida.scheduler.datastructures
    :members:
+   :noindex:
 

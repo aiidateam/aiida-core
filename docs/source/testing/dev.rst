@@ -9,3 +9,4 @@ Tests
 
 .. automodule:: aiida.backends.tests
    :members:
+   :noindex:

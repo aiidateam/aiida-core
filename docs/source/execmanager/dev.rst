@@ -10,4 +10,5 @@ Execution Manager
 
 .. automodule:: aiida.daemon.execmanager
    :members:
+   :noindex:
    :undoc-members:

@@ -66,10 +66,11 @@ class DynamicNonDbInput(WorkChain):
     def define(cls, spec):
         super(DynamicNonDbInput, cls).define(spec)
         spec.input_namespace('namespace', dynamic=True)
+        spec.output('output', valid_type=List)
         spec.outline(cls.do_test)
 
     def do_test(self):
         input_list = self.inputs.namespace.input
-        assert isinstance(input_list, list)
+        assert isinstance(input_list, tuple)
         assert not isinstance(input_list, List)
-        self.out('output', List(list=input_list))
+        self.out('output', List(list=list(input_list)))

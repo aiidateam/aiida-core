@@ -487,6 +487,7 @@ def generate_new_circus_port(profiles=None):
     :param profiles: the profiles dictionary of the configuration file
     :returns: integer for the circus daemon port
     """
+    from aiida.common.exceptions import MissingConfigurationError
     port = 6000
 
     if profiles is None:

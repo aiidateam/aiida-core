@@ -206,6 +206,10 @@ class VerdiCommandWithSubcommands(VerdiCommand):
 
     valid_subcommands = {}
 
+    @property
+    def completed_subcommands(self):
+        return {k: v for k, v in self.valid_subcommands.iteritems() if not k.startswith('_')}
+
     def run(self, *args):
         try:
             function_to_call = self.valid_subcommands[args[0]][0]
@@ -218,14 +222,14 @@ class VerdiCommandWithSubcommands(VerdiCommand):
 
     def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
+            print "\n".join(self.completed_subcommands.keys())
         elif subargs_idx >= 1:
             try:
                 first_subarg = subargs[0]
             except IndexError:
                 first_subarg = ''
             try:
-                complete_function = self.valid_subcommands[first_subarg][1]
+                complete_function = self.completed_subcommands[first_subarg][1]
             except KeyError:
                 print ""
                 return

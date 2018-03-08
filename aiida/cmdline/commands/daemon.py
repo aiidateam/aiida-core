@@ -124,7 +124,7 @@ def start(foreground):
     click.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', 'daemon', '_start_circus', '-f']
+        command = ['verdi', 'daemon', '_start_circus', '--foreground']
     else:
         command = ['verdi', 'daemon', '_start_circus']
 
@@ -310,7 +310,7 @@ def restart(ctx, reset, no_wait):
     wait = not no_wait
 
     if reset:
-        ctx.invoke(stop, wait=True)
+        ctx.invoke(stop)
         ctx.invoke(start)
     else:
         restart_cmd = {

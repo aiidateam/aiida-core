@@ -1712,76 +1712,76 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     # We will iteratively explore the AiiDA graph to find further nodes that
     # should also be exported.
-    # We initially populate the set that should be visited with the initial set
-    # of nodes that should be exported.
-    to_be_visited = set(to_be_exported[Calculation])
 
     # We repeat until there are no further nodes to be visited
     while to_be_visited[Calculation] or to_be_visited[Data]:
         # If is is a calculation node
         if to_be_visited[Calculation]:
-            curr_node = to_be_visited[Calculation].pop()
+            curr_node_id = to_be_visited[Calculation].pop()
+            # If it is already visited continue to the next node
+            if curr_node_id in to_be_exported:
+                continue
             # Case 1:
             # INPUT(Data, Calculation) - Reversed
             qb = QueryBuilder()
             qb.append(Data, tag='predecessor', project=['id'])
-            qb.append(Calculation, output_of='successor',
-                      filters={'id': {'==': curr_node.id}},
+            qb.append(Calculation, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
                       edge_filters={
                           'type': {
                               '==': LinkType.INPUT.value}})
             res = [_[0] for _ in qb.all()]
-            to_be_visited[Data].add(res)
-            to_be_exported.add(res)
+            to_be_visited[Data].update(res)
+            to_be_exported.update(res)
 
             # Case 2 & 3:
             # CREATE/RETURN(Calculation, Data) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
-                      filters={'id': {'==': curr_node.id}})
-            qb.append(Data, output_of='successor', project=['id'],
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Data, output_of='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               'in': [LinkType.CREATE.value,
                                      LinkType.RETURN.value]}})
             res = [_[0] for _ in qb.all()]
-            to_be_visited[Data].add(res)
-            to_be_exported.add(res)
+            to_be_visited[Data].update(res)
+            to_be_exported.update(res)
 
             # Case 4:
             # CALL(Calculation, Calculation) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
-                      filters={'id': {'==': curr_node.id}})
-            qb.append(Calculation, output_of='successor', project=['id'],
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Calculation, output_of='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               '==': LinkType.CALL.value}})
             res = [_[0] for _ in qb.all()]
-            to_be_visited[Calculation].add(res)
-            to_be_exported.add(res)
+            to_be_visited[Calculation].update(res)
+            to_be_exported.update(res)
 
 
         # If it is a Data node
         else:
-            curr_node = to_be_visited[Data].pop()
+            curr_node_id = to_be_visited[Data].pop()
+            # If it is already visited continue to the next node
+            if curr_node_id in to_be_exported:
+                continue
             # Case 2:
             # CREATE(Calculation, Data) - Reversed
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Data, output_of='successor',
-                      filters={'id': {'==': curr_node.id}},
+            qb.append(Data, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
                       edge_filters={
                           'type': {
                               '==': LinkType.CREATE.value}})
             res = [_[0] for _ in qb.all()]
-            to_be_visited[Calculation].add(res)
-            to_be_exported.add(res)
+            to_be_visited[Calculation].update(res)
+            to_be_exported.update(res)
 
-
-
-
-
+    given_node_entry_ids = given_node_entry_ids.union(to_be_exported)
 
 
     # if also_parents:

@@ -100,8 +100,8 @@ def validate_workchains(expected_results):
                 pk, expected_value, type(exception), exception)
 
         if actual_value != expected_value:
-            print "* UNEXPECTED VALUE {} for workchain pk={}: I expected {}".format(
-                actual_value, pk, expected_value)
+            print "* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}".format(
+                actual_value, type(actual_value), pk, expected_value, type(expected_value))
             valid = False
 
     return valid

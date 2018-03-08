@@ -41,6 +41,9 @@ class List(Data, MutableSequence):
         except AttributeError:
             return self.get_list() == other
 
+    def __ne__(self, other):
+        return not self == other
+
     def append(self, value):
         l = self.get_list()
         l.append(value)

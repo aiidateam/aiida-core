@@ -63,7 +63,6 @@ class Process(plumpy.Process):
         spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
         spec.input('description', valid_type=basestring, required=False, non_db=True)
         spec.input('label', valid_type=basestring, required=False, non_db=True)
-        spec.inputs.valid_type = (Data, Calculation)
         spec.outputs.valid_type = (Data)
 
     @classmethod

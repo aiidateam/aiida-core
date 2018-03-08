@@ -87,6 +87,7 @@ class NodeTranslator(BaseTranslator):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
+
         :param query_type:(string) the value assigned to either variable.
         """
 
@@ -142,9 +143,8 @@ class NodeTranslator(BaseTranslator):
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
         :param projections: dictionary with the projection. It is discarded
-        if query_type=='attributes'/'extras'
-        :param query_type: (string) specify the result or the content (
-        "attr")
+            if query_type=='attributes'/'extras'
+        :param query_type: (string) specify the result or the content ("attr")
         :param id: (integer) id of a specific node
         """
 
@@ -465,7 +465,7 @@ class NodeTranslator(BaseTranslator):
         Returns either a list of nodes or details of single node from database
 
         :return: either a list of nodes or the details of single node
-        from the database
+            from the database
         """
         if self._content_type is not None:
             return self._get_content()

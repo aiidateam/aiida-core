@@ -390,9 +390,10 @@ class Stepper(object):
     def step(self):
         """
         Execute on step of the instructions.
+
         :return: A 2-tuple with entries
-           0. True if the stepper has finished, False otherwise
-           1. The return value from the executed step
+            0. True if the stepper has finished, False otherwise
+            1. The return value from the executed step
         :rtype: tuple
         """
         pass

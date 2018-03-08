@@ -99,7 +99,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
             calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
             print "\n{} calculation{} {} lose at least one called instance".format(
                     len(calculation_pks_losing_called),
-                    's' if len(calculation_pks_losing_created) > 1 else '',
+                    's' if len(calculation_pks_losing_called) > 1 else '',
                     'would' if dry_run else 'will')
             if verbosity > 1:
                 print "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will')

@@ -16,7 +16,7 @@ from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.work.launch import run_get_node, submit
-from workchains import NestedWorkChain
+from workchains import NestedWorkChain, DynamicNonDbInput
 
 ParameterData = DataFactory('parameter')
 
@@ -214,7 +214,7 @@ def create_cache_calc(code, counter, inputval):
 def main():
     expected_results_calculations = {}
     expected_results_workchains = {}
-    
+
     code = Code.get_from_string(codename)
 
     # Submitting the Calculations the old way, creating and storing a JobCalc first and submitting it
@@ -241,6 +241,11 @@ def main():
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
+
+    print "Submitting a workchain with a dynamic non-db input."
+    value = [1, 2, 3]
+    pk = submit(DynamicNonDbInput, namespace={'input': value})
+    expected_results_workchains[pk] = value
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

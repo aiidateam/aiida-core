@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.int import Int
+from aiida.orm.data.list import List
 from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
@@ -46,3 +47,16 @@ class NestedWorkChain(WorkChain):
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
+
+class DynamicNonDbInput(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(DynamicNonDbInput, cls).define(spec)
+        spec.input_namespace('namespace', dynamic=True)
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        input_list = self.inputs.namespace.input
+        assert isinstance(input_list, list)
+        assert not isinstance(input_list, List)
+        self.out('output', List(list=input_list))

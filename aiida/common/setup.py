@@ -187,8 +187,8 @@ def create_htaccess_file():
     exist yet), that is important
 
     .. note:: some default Apache configurations ignore the ``.htaccess``
-    files unless otherwise specified: read the documentation on
-    how to setup properly your Apache server!
+        files unless otherwise specified: read the documentation on
+        how to setup properly your Apache server!
 
     .. note:: if a ``.htaccess`` file already exists, this is not overwritten.
     """

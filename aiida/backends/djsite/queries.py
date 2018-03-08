@@ -304,12 +304,11 @@ def get_closest_parents(pks,*args,**kwargs):
     :param chunk_size: we chunk the pks into groups of this size,
         to optimize the speed (default=50)
     :param print_progress: print the the progression if True (default=False).
-    :param args & kwargs: additional query parameters
-    :return: a dictionary of the form:
-        {pk1: pk of closest parent of node with pk1,
-         pk2: pk of closest parent of node with pk2,
-         etc.
-         }
+    :param args: additional query parameters
+    :param kwargs: additional query parameters
+    :returns: a dictionary of the form
+        pk1: pk of closest parent of node with pk1,
+        pk2: pk of closest parent of node with pk2
 
     .. note:: It works also if pks is a list of nodes rather than their pks
 

@@ -48,12 +48,12 @@ class AbstractGroup(object):
         or pass the parameters for the Group creation.
 
         :param dbgroup: the dbgroup object, if you want to reload the group
-          from the DB rather than creating a new one.
+            from the DB rather than creating a new one.
         :param name: The group name, required on creation
         :param description: The group description (by default, an empty string)
         :param user: The owner of the group (by default, the automatic user)
         :param type_string: a string identifying the type of group (by default,
-           an empty string, indicating an user-defined group.
+            an empty string, indicating an user-defined group.
         """
         pass
 
@@ -230,37 +230,38 @@ class AbstractGroup(object):
               user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups.
-        :note:  By default, query for user-defined groups only (type_string=="").
-          If you want to query for all type of groups, pass type_string=None.
-          If you want to query for a specific type of groups, pass a specific
-          string as the type_string argument.
+
+        :note: By default, query for user-defined groups only (type_string=="").
+            If you want to query for all type of groups, pass type_string=None.
+            If you want to query for a specific type of groups, pass a specific
+            string as the type_string argument.
 
         :param name: the name of the group
         :param nodes: a node or list of nodes that belongs to the group (alternatively,
-          you can also pass a DbNode or list of DbNodes)
+            you can also pass a DbNode or list of DbNodes)
         :param pk: the pk of the group
         :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look
-          only for user-defined groups (see note above).
+            only for user-defined groups (see note above).
         :param user: by default, query for groups of all users; if specified,
-          must be a DbUser object, or a string for the user email.
+            must be a DbUser object, or a string for the user email.
         :param past_days: by default, query for all groups; if specified, query
-          the groups created in the last past_days. Must be a datetime object.
+            the groups created in the last past_days. Must be a datetime object.
         :param node_attributes: if not None, must be a dictionary with
-          format {k: v}. It will filter and return only groups where there
-          is at least a node with an attribute with key=k and value=v.
-          Different keys of the dictionary are joined with AND (that is, the
-          group should satisfy all requirements.
-          v can be a base data type (str, bool, int, float, ...)
-          If it is a list or iterable, that the condition is checked so that
-          there should be at least a node in the group with key=k and
-          value=each of the values of the iterable.
+            format {k: v}. It will filter and return only groups where there
+            is at least a node with an attribute with key=k and value=v.
+            Different keys of the dictionary are joined with AND (that is, the
+            group should satisfy all requirements.
+            v can be a base data type (str, bool, int, float, ...)
+            If it is a list or iterable, that the condition is checked so that
+            there should be at least a node in the group with key=k and
+            value=each of the values of the iterable.
         :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
-          Example: if ``node_attributes = {'elements': ['Ba', 'Ti'],
-             'md5sum': 'xxx'}``, it will find groups that contain the node
-             with md5sum = 'xxx', and moreover contain at least one node for
-             element 'Ba' and one node for element 'Ti'.
+            Example: if ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``,
+                it will find groups that contain the node with md5sum = 'xxx', and moreover
+                contain at least one node for element 'Ba' and one node for element 'Ti'.
+
         """
         pass
 

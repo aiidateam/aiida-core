@@ -101,11 +101,11 @@ class BaseTranslator(object):
     def __repr__(self):
         """
         This function is required for the caching system to be able to compare
-        two NodeTranslator objects. Comparison is done on the value returned by
-        __repr__
+        two NodeTranslator objects. Comparison is done on the value returned by __repr__
+
         :return: representation of NodeTranslator objects. Returns nothing
-        because the inputs of self.get_nodes are sufficient to determine the
-        identity of two queries.
+            because the inputs of self.get_nodes are sufficient to determine the
+            identity of two queries.
         """
         return ""
 
@@ -253,13 +253,14 @@ class BaseTranslator(object):
         Add filters in query_help.
 
         :param filters: it is a dictionary where keys are the tag names
-          given in the path in query_help and their values are the dictionary
-          of filters want to add for that tag name. Format for the Filters
-          dictionary:
-          filters = {
-             "tag1" : {k1:v1, k2:v2},
-             "tag2" : {k1:v1, k2:v2},
-          }
+            given in the path in query_help and their values are the dictionary
+            of filters want to add for that tag name. Format for the Filters
+            dictionary::
+
+                filters = {
+                    "tag1" : {k1:v1, k2:v2},
+                    "tag2" : {k1:v1, k2:v2},
+                }
 
         :return: query_help dict including filters if any.
         """

@@ -20,10 +20,11 @@ from aiida.common.exceptions import NotExistent
 class Graph(VerdiCommandWithSubcommands):
     """
     Utility to explore the nodes in the database graph
-    More specifically it allow the user to:
-        1) Generate and render graph
-        2) (TODO) Find if two nodes of a graph are connected
-        3) (TODO) Extend functionalities
+    More specifically it allow the user to::
+
+        - Generate and render graph
+        - (TODO) Find if two nodes of a graph are connected
+        - (TODO) Extend functionalities
 
     A list dictionary with available subcommands can be found in __init__ function
     """

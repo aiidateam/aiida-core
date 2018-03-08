@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.data.int import Int
+from aiida.orm.data.list import List
 from aiida.work import submit
 from aiida.work.workchain import WorkChain, ToContext, append_
 
@@ -46,3 +47,16 @@ class NestedWorkChain(WorkChain):
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
+
+class ListEcho(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ListEcho, cls).define(spec)
+
+        spec.input('list', valid_type=List)
+        spec.output('list', valid_type=List)
+
+        spec.outline(cls.do_echo)
+
+    def do_echo(self):
+        self.out('list', self.inputs.list)

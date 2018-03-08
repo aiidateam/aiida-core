@@ -8,9 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.orm.implementation.calculation import Calculation
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.orm.implementation.calculation import Calculation
+
 
 class WorkCalculation(Calculation):
     """
@@ -21,6 +22,9 @@ class WorkCalculation(Calculation):
     FAILED_KEY = '_failed'
     ABORTED_KEY = '_aborted'
     DO_ABORT_KEY = '_do_abort'
+
+    _updatable_attributes = Calculation._updatable_attributes + (
+        FINISHED_KEY, FAILED_KEY, ABORTED_KEY, DO_ABORT_KEY)
 
     @override
     def has_finished(self):

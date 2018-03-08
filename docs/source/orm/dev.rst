@@ -14,11 +14,28 @@ Some generic methods of the module aiida.orm.utils
 
 Computer
 ++++++++
+
 .. automodule:: aiida.orm.implementation.general.computer
    :members:
+   :private-members:
+
+Group
++++++
+
+.. automodule:: aiida.orm.implementation.general.group
+   :members:
+   :private-members:
+
+User
+++++
+
+.. automodule:: aiida.orm.implementation.general.user
+   :members:
+   :private-members:
 
 Node
 ++++
+
 .. automodule:: aiida.orm.implementation.general.node
    :members:
    :private-members:
@@ -43,7 +60,12 @@ Code
    :special-members: __init__
 
 
+Mixins
+++++++
+.. automodule:: aiida.orm.mixins
+   :members:
 
+.. autoclass:: aiida.orm.mixins.Sealable
 
 ORM documentation: Data
 =======================

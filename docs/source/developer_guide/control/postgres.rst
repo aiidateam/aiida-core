@@ -14,11 +14,14 @@ The Postgres Class
 
 .. autoclass:: aiida.control.postgres.Postgres
    :members:
+   :noindex:
 
 
 Further utilities
 -----------------
 
 .. autofunction:: aiida.control.postgres.manual_setup_instructions
+   :noindex:
 
 .. autofunction:: aiida.control.postgres.prompt_db_info
+   :noindex:

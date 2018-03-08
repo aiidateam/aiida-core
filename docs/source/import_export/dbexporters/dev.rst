@@ -14,6 +14,7 @@ TCOD database exporter
 ----------------------
 .. automodule:: aiida.tools.dbexporters.tcod
    :members:
+   :noindex:
 
 TCOD parameter translator documentation
 ---------------------------------------
@@ -22,5 +23,6 @@ Base class
 ++++++++++
 .. automodule:: aiida.tools.dbexporters.tcod_plugins
    :members:
+   :noindex:
 
 

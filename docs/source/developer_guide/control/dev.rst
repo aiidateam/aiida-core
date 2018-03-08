@@ -6,6 +6,8 @@ Scripting API
 =============
 
 .. automodule:: aiida.control
+    :members:
+    :noindex:
 
 .. toctree::
 

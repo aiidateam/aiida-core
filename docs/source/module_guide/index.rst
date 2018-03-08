@@ -5,7 +5,7 @@ Modules (API documentation)
    :maxdepth: 3
 
    aiida.common <../common/dev>
-   aiida.control <../developer_guide/control/index>
+   aiida.control <../developer_guide/control/dev>
    aiida.plugins <../registrytools/dev>
    ../transport/dev
    ../scheduler/dev

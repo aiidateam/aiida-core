@@ -52,6 +52,7 @@ Node
    :noindex:
 
 .. autoclass:: aiida.orm.node.Node
+   :noindex:
 
 Workflow
 ++++++++
@@ -75,6 +76,7 @@ Mixins
    :noindex:
 
 .. autoclass:: aiida.orm.mixins.Sealable
+   :noindex:
 
 ORM documentation: Data
 =======================

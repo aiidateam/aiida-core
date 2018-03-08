@@ -243,16 +243,16 @@ def main():
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
 
+    print "Submitting a workchain with a dynamic non-db input."
+    value = [4, 2, 3]
+    pk = submit(DynamicNonDbInput, namespace={'input': value}).pk
+    expected_results_workchains[pk] = value
+
     print "Submitting the ListEcho workchain."
     list_value = List()
     list_value.extend([1, 2, 3])
     pk = submit(ListEcho, list=list_value).pk
     expected_results_workchains[pk] = list_value
-
-    print "Submitting a workchain with a dynamic non-db input."
-    value = [1, 2, 3]
-    pk = submit(DynamicNonDbInput, namespace={'input': value})
-    expected_results_workchains[pk] = value
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

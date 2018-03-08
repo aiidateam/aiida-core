@@ -238,7 +238,8 @@ class BaseTranslator(object):
 
     def get_total_count(self):
         """
-        Returns the number of rows of the query
+        Returns the number of rows of the query.
+
         :return: total_count
         """
         ## Count the results if needed
@@ -252,13 +253,14 @@ class BaseTranslator(object):
         Add filters in query_help.
 
         :param filters: it is a dictionary where keys are the tag names
-         given in the path in query_help and their values are the dictionary
-         of filters want to add for that tag name. Format for the Filters
-         dictionary:
-         filters = {
-                    "tag1" : {k1:v1, k2:v2},
-                    "tag2" : {k1:v1, k2:v2},
-                  }
+          given in the path in query_help and their values are the dictionary
+          of filters want to add for that tag name. Format for the Filters
+          dictionary:
+          filters = {
+             "tag1" : {k1:v1, k2:v2},
+             "tag2" : {k1:v1, k2:v2},
+          }
+
         :return: query_help dict including filters if any.
         """
         if isinstance(filters, dict):
@@ -360,7 +362,8 @@ class BaseTranslator(object):
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
         :param orders: dictionary with the projections
-        :param id (integer): id of a specific node
+        :param id: id of a specific node
+        :type id: int
         """
 
         tagged_filters = {}
@@ -455,9 +458,11 @@ class BaseTranslator(object):
 
     def get_formatted_result(self, label):
         """
-        Runs the query and retrieves results tagged as "label"
-        :param label (string): the tag of the results to be extracted out of
-        the query rows.
+        Runs the query and retrieves results tagged as "label".
+
+        :param label: the tag of the results to be extracted out of
+          the query rows.
+        :type label: str
         :return: a list of the query results
         """
 
@@ -479,10 +484,9 @@ class BaseTranslator(object):
 
     def get_results(self):
         """
-        Returns either list of nodes or details of single node from database
+        Returns either list of nodes or details of single node from database.
 
-        :return: either list of nodes or details of single node
-        from database
+        :return: either list of nodes or details of single node from database
         """
 
         ## Check whether the querybuilder object has been initialized

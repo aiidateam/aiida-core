@@ -69,7 +69,7 @@ API reference
 .. toctree::
    :maxdepth: 4
 
-   apidoc/modules
+   API Documentation <apidoc/modules>
 
 
 Indices and tables

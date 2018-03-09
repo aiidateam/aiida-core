@@ -11,7 +11,7 @@ BUILDDIR      = build
 SPHINXAPIDOC  = sphinx-apidoc
 APIDOCDIR     = source/apidoc
 PACKAGEDIR    = ../aiida
-ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private
+ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private --force -d 2
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4

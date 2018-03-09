@@ -15,12 +15,31 @@ Some generic methods of the module aiida.orm.utils
 
 Computer
 ++++++++
+
 .. automodule:: aiida.orm.implementation.general.computer
    :members:
    :noindex:
+   :private-members:
+
+Group
++++++
+
+.. automodule:: aiida.orm.implementation.general.group
+   :members:
+   :noindex:
+   :private-members:
+
+User
+++++
+
+.. automodule:: aiida.orm.implementation.general.user
+   :members:
+   :noindex:
+   :private-members:
 
 Node
 ++++
+
 .. automodule:: aiida.orm.implementation.general.node
    :members:
    :noindex:

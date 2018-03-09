@@ -93,7 +93,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 
 
 @optional_inline
-def _get_aiida_structure_ase_inline(cif, parameters):
+def _get_aiida_structure_ase_inline(cif, parameters=None):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
@@ -103,32 +103,51 @@ def _get_aiida_structure_ase_inline(cif, parameters):
     from aiida.orm.data.structure import StructureData
 
     kwargs = {}
+
     if parameters is not None:
         kwargs = parameters.get_dict()
+
+    kwargs.pop('occupancy_tolerance', None)
+    kwargs.pop('site_tolerance', None)
+
     return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
 
 
 @optional_inline
-def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
+def _get_aiida_structure_pymatgen_inline(cif, parameters=None):
     """
-    Creates :py:class:`aiida.orm.data.structure.StructureData` using
-    pymatgen.
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using pymatgen.
+
+    :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+        the occupancies will be scaled down to 1.
+    :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+        in which case they will be combined to a single disordered site. Defaults to 1e-4.
 
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
     from aiida.orm.data.structure import StructureData
 
-    kwargs = {}
+    call_kwargs = {}
+    constructor_kwargs = {}
+
     if parameters is not None:
-        kwargs = parameters.get_dict()
-    kwargs['primitive'] = kwargs.pop('primitive_cell', False)
-    parser = CifParser(cif.get_file_abs_path())
+        call_kwargs = parameters.get_dict()
+
+    call_kwargs['primitive'] = call_kwargs.pop('primitive_cell', False)
+
+    for argument in ['occupancy_tolerance', 'site_tolerance']:
+        if argument in call_kwargs:
+            constructor_kwargs[argument] = call_kwargs.pop(argument)
+
+    parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+
     try:
-        struct = parser.get_structures(**kwargs)[0]
-        return {'structure': StructureData(pymatgen_structure=struct)}
+        structure = parser.get_structures(**call_kwargs)[0]
     except IndexError:
-        raise ValueError("pymatgen failed to provide a structure from the cif file")
+        raise ValueError('pymatgen failed to provide a structure from the cif file')
+
+    return {'structure': StructureData(pymatgen_structure=structure)}
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
@@ -638,6 +657,10 @@ class CifData(SinglefileData):
             AiiDA database for record. Default False.
         :param primitive_cell: if True, primitive cell is returned,
             conventional cell if False. Default False.
+        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+            the occupancies will be scaled down to 1. (pymatgen only)
+        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData

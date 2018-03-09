@@ -1,3 +1,20 @@
+## v0.11.1:
+
+### Improvements
+- Support visualization of structures with VESTA [[#1093]](https://github.com/aiidateam/aiida_core/pull/1093)
+- Better fallback when node class is not available [[#1185]](https://github.com/aiidateam/aiida_core/pull/1185)
+- CifData now supports faster parsing and lazy loading [[#1190]](https://github.com/aiidateam/aiida_core/pull/1190)
+- REST endpoint for CifData, API reports full list of available endpoints [[#1228]](https://github.com/aiidateam/aiida_core/pull/1228)
+- Various smaller improvements [[#1100]](https://github.com/aiidateam/aiida_core/pull/1100) [[#1182]](https://github.com/aiidateam/aiida_core/pull/1182)
+
+### Critical bug fixes
+- Restore attribute immutability in nodes [[#1111]](https://github.com/aiidateam/aiida_core/pull/1111)
+- Fix daemonization issue that could cause aiida daemon to be killed [[#1246]](https://github.com/aiidateam/aiida_core/pull/1246)
+
+### Minor bug fixes
+- Fix type column in verdi calculation list [[#960]](https://github.com/aiidateam/aiida_core/pull/960) [[#1053]](https://github.com/aiidateam/aiida_core/pull/1053)
+- fix verdi import from URLs [[#1139]](https://github.com/aiidateam/aiida_core/pull/1139)
+
 ## v0.11.0:
 
 ### Improvements

@@ -15,9 +15,10 @@ from aiida.common.exceptions import NotExistent
 from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
+from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
 from aiida.work.class_loader import CLASS_LOADER
-from workchains import NestedWorkChain, SerializeWorkChain
+from workchains import NestedWorkChain, SerializeWorkChain, ListEcho
 
 ParameterData = DataFactory('parameter')
 
@@ -100,8 +101,8 @@ def validate_workchains(expected_results):
                 pk, expected_value, type(exception), exception)
 
         if actual_value != expected_value:
-            print "* UNEXPECTED VALUE {} for workchain pk={}: I expected {}".format(
-                actual_value, pk, expected_value)
+            print "* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}".format(
+                actual_value, type(actual_value), pk, expected_value, type(expected_value))
             valid = False
 
     return valid
@@ -246,6 +247,12 @@ def main():
     print("Submitting the serializing workchain")
     pk = submit(SerializeWorkChain, test=Int).pk
     expected_results_workchains[pk] = CLASS_LOADER.class_identifier(Int)
+
+    print "Submitting the ListEcho workchain."
+    list_value = List()
+    list_value.extend([1, 2, 3])
+    pk = submit(ListEcho, list=list_value).pk
+    expected_results_workchains[pk] = list_value
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

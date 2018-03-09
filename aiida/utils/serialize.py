@@ -42,20 +42,20 @@ def serialize_data(data):
     Serialize a value or collection that may potentially contain AiiDA nodes, which
     will be serialized to their UUID. Keys encountered in any mappings, such as a dictionary,
     will also be encoded if necessary. An example is where tuples are used as keys in the
-    pseudo potential input dictionaries. These operations will ensure that the returned data is 
+    pseudo potential input dictionaries. These operations will ensure that the returned data is
     JSON serializable.
 
     :param data: a single value or collection
     :return: the serialized data with the same internal structure
     """
-    if isinstance(data, collections.Mapping):
-        return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
-        return tuple(serialize_data(value) for value in data)
-    elif isinstance(data, Node):
+    if isinstance(data, Node):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
     elif isinstance(data, Group):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
+    elif isinstance(data, collections.Mapping):
+        return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
+    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
+        return tuple(serialize_data(value) for value in data)
     else:
         return data
 

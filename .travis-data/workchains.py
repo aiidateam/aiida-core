@@ -7,7 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.base import Int, Str
+from aiida.orm.data.str import Str
+from aiida.orm.data.int import Int
+from aiida.orm.data.list import List
 from aiida.work import submit
 from aiida.work.class_loader import CLASS_LOADER
 from aiida.work.workchain import WorkChain, ToContext, append_
@@ -63,3 +65,16 @@ class SerializeWorkChain(WorkChain):
 
     def echo(self):
         self.out('output', self.inputs.test)
+
+class ListEcho(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(ListEcho, cls).define(spec)
+
+        spec.input('list', valid_type=List)
+        spec.output('output', valid_type=List)
+
+        spec.outline(cls.do_echo)
+
+    def do_echo(self):
+        self.out('output', self.inputs.list)

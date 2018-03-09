@@ -270,7 +270,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.cmdline.common import print_node_info
+        from aiida.cmdline.utils.common import print_node_info
 
         if not is_dbenv_loaded():
             load_dbenv()

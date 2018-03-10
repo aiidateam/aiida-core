@@ -2135,6 +2135,41 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2, link_type=LinkType.CREATE)
 
+    def test_node_get_inputs_outputs_link_type_stored(self):
+        """
+        Test that the link_type parameter in get_inputs and get_outputs only
+        returns those nodes with the correct link type for stored nodes
+        """
+        node_origin = Node().store()
+        node_caller = Node().store()
+        node_called = Node().store()
+        node_input = Node().store()
+        node_output = Node().store()
+        node_return = Node().store()
+
+        # Input links of node_origin
+        node_origin.add_link_from(node_caller, label='caller', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input, label='input', link_type=LinkType.INPUT)
+
+        # Output links of node_origin
+        node_called.add_link_from(node_origin, label='called', link_type=LinkType.CALL)
+        node_output.add_link_from(node_origin, label='output', link_type=LinkType.CREATE)
+        node_return.add_link_from(node_origin, label='return', link_type=LinkType.RETURN)
+
+        # All inputs and outputs
+        self.assertEquals(len(node_origin.get_inputs()), 2)
+        self.assertEquals(len(node_origin.get_outputs()), 3)
+
+        # Link specific inputs
+        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
+        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
+
+        # Link specific outputs
+        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.CALL)), 1)
+        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.CREATE)), 1)
+        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.RETURN)), 1)
+
+
 class AnyValue(object):
     """
     Helper class that compares equal to everything.

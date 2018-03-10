@@ -35,6 +35,15 @@ class List(Data, MutableSequence):
     def __str__(self):
         return self.get_list().__str__()
 
+    def __eq__(self, other):
+        try:
+            return self.get_list() == other.get_list()
+        except AttributeError:
+            return self.get_list() == other
+
+    def __ne__(self, other):
+        return not self == other
+
     def append(self, value):
         l = self.get_list()
         l.append(value)

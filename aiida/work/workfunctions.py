@@ -41,11 +41,7 @@ def workfunction(func, calc_node_class=None):
 
     """
 
-    @functools.wraps(func)
-    def wrapped_function(*args, **kwargs):
-        """
-        This wrapper function is the actual function that is called.
-        """
+    def run_get_node(*args, **kwargs):
         # Build up the Process representing this function
         wf_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class, **kwargs)
         inputs = wf_class.create_inputs(*args, **kwargs)
@@ -53,14 +49,16 @@ def workfunction(func, calc_node_class=None):
         # the global because otherwise a workfunction that calls another from
         # within its scope would be blocking the event loop
         runner = runners.Runner(rmq_config=None, rmq_submit=False, enable_persistence=False)
-        return wf_class(inputs=inputs, runner=runner).execute()
-
-    def run_get_node(*args, **kwargs):
-        # Build up the Process representing this function
-        wf_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class, **kwargs)
-        inputs = wf_class.create_inputs(*args, **kwargs)
-        proc = wf_class(inputs=inputs)
+        proc = wf_class(inputs=inputs, runner=runner)
         return proc.execute(), proc.calc
+
+    @functools.wraps(func)
+    def wrapped_function(*args, **kwargs):
+        """
+        This wrapper function is the actual function that is called.
+        """
+        proc, node = run_get_node(*args, **kwargs)
+        return proc
 
     wrapped_function.run_get_node = run_get_node
 

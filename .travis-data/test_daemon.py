@@ -15,8 +15,10 @@ from aiida.common.exceptions import NotExistent
 from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
+from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
-from workchains import NestedWorkChain
+from workchains import NestedWorkChain, ListEcho, InlineCalcRunnerWorkChain, WorkFunctionRunnerWorkChain
 
 ParameterData = DataFactory('parameter')
 
@@ -99,8 +101,8 @@ def validate_workchains(expected_results):
                 pk, expected_value, type(exception), exception)
 
         if actual_value != expected_value:
-            print "* UNEXPECTED VALUE {} for workchain pk={}: I expected {}".format(
-                actual_value, pk, expected_value)
+            print "* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}".format(
+                actual_value, type(actual_value), pk, expected_value, type(expected_value))
             valid = False
 
     return valid
@@ -214,7 +216,7 @@ def create_cache_calc(code, counter, inputval):
 def main():
     expected_results_calculations = {}
     expected_results_workchains = {}
-    
+
     code = Code.get_from_string(codename)
 
     # Submitting the Calculations the old way, creating and storing a JobCalc first and submitting it
@@ -241,6 +243,22 @@ def main():
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
+
+    print "Submitting the ListEcho workchain."
+    list_value = List()
+    list_value.extend([1, 2, 3])
+    pk = submit(ListEcho, list=list_value).pk
+    expected_results_workchains[pk] = list_value
+
+    print "Submitting a WorkChain which contains a workfunction."
+    value = Str('workfunction test string')
+    pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
+    expected_results_workchains[pk] = value
+
+    print "Submitting a WorkChain which contains an InlineCalculation."
+    value = Str('test_string')
+    pk = submit(InlineCalcRunnerWorkChain, input=value).pk
+    expected_results_workchains[pk] = value
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

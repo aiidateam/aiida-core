@@ -17,6 +17,7 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
+USE_TZ = True
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 
 AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
@@ -486,6 +487,7 @@ def generate_new_circus_port(profiles=None):
     :param profiles: the profiles dictionary of the configuration file
     :returns: integer for the circus daemon port
     """
+    from aiida.common.exceptions import MissingConfigurationError
     port = 6000
 
     if profiles is None:

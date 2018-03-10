@@ -119,7 +119,7 @@ class Parser(object):
         """
         from aiida.orm.data.parameter import ParameterData
 
-        out_parameters = self._calc.get_outputs(type=ParameterData, also_labels=True)
+        out_parameters = self._calc.get_outputs(node_type=ParameterData, also_labels=True)
         out_parameter_data = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
 
         if not out_parameter_data:

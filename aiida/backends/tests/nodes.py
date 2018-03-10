@@ -2086,6 +2086,27 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.CREATE)), 1)
         self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.RETURN)), 1)
 
+    def test_node_get_inputs_link_type_unstored(self):
+        """
+        Test that the link_type parameter in get_inputs only returns those nodes with
+        the correct link type for unstored nodes. We don't check this analogously for
+        get_outputs because there is not output links cache
+        """
+        node_origin = Node()
+        node_caller = Node()
+        node_input = Node()
+
+        # Input links of node_origin
+        node_origin.add_link_from(node_caller, label='caller', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input, label='input', link_type=LinkType.INPUT)
+
+        # All inputs and outputs
+        self.assertEquals(len(node_origin.get_inputs()), 2)
+
+        # Link specific inputs
+        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
+        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
+
 
 class AnyValue(object):
     """

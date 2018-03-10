@@ -278,7 +278,7 @@ class Node(AbstractNode):
         if link_type is not None:
             link_filter['type'] = link_type.value
         return [(i.label, i.input.get_aiida_class()) for i in
-                DbLink.query.filter_by(output=self.dbnode).distinct().all()]
+                DbLink.query.filter_by(**link_filter).distinct().all()]
 
 
     def _get_db_output_links(self, link_type):

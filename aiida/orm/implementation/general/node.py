@@ -703,14 +703,13 @@ class AbstractNode(object):
         """
         pass
 
-    # pylint: disable=no-else-return
     @override
-    def get_outputs(self, type=None, also_labels=False, link_type=None):
+    def get_outputs(self, node_type=None, also_labels=False, link_type=None):
         """
         Return a list of nodes that exit (directly) from this node
 
-        :param type: if specified, should be a class, and it filters only
-            elements of that specific type (or a subclass of 'type')
+        :param node_type: if specified, should be a class, and it filters only
+            elements of that specific node_type (or a subclass of 'node_type')
         :param also_labels: if False (default) only return a list of input nodes.
             If True, return a list of tuples, where each tuple has the
             following format: ('label', Node), with 'label' the link label,
@@ -722,10 +721,10 @@ class AbstractNode(object):
 
         outputs_list = self._get_db_output_links(link_type=link_type)
 
-        if type is None:
+        if node_type is None:
             filtered_list = outputs_list
         else:
-            filtered_list = (i for i in outputs_list if isinstance(i[1], type))
+            filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
 
         if also_labels:
             return list(filtered_list)

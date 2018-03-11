@@ -74,13 +74,14 @@ def start(foreground):
     Start the daemon
     """
     client = CircusClient()
+    profile = client.daemon_client.profile_name
 
     click.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', 'daemon', '_start_circus', '--foreground']
+        command = ['verdi', '-p', profile, 'daemon', '_start_circus', '--foreground']
     else:
-        command = ['verdi', 'daemon', '_start_circus']
+        command = ['verdi', '-p', profile, 'daemon', '_start_circus']
 
     try:
         currenv = get_env_with_venv_bin()

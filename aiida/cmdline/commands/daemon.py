@@ -28,6 +28,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.common import format_local_time, get_env_with_venv_bin
+from aiida.cmdline.utils.daemon import CircusClient
 from aiida.daemon.client import ProfileDaemonClient
 
 
@@ -149,60 +150,24 @@ def start(foreground):
 
 @daemon_cmd.command()
 @decorators.only_if_daemon_pid
-def status():
+@click.option('-a', '--all', 'all_profiles', is_flag=True, help='Show status for all daemons')
+def status(all_profiles):
     """
-    Print the status of the daemon
+    Print the status of the current daemon or all daemons
     """
-    profile = ProfileDaemonClient()
-    client = profile.get_client()
+    from aiida.common.profile import get_current_profile_name
+    from aiida.common.setup import get_profiles_list
 
-    status_cmd = {
-        'command': 'status',
-        'properties': {
-            'name': profile.daemon_name
-        }
-    }
-    status_response = try_calling_running_client(client, status_cmd)
+    if all_profiles is True:
+        profile_list = [p for p in get_profiles_list() if not p.startswith('test_')]
+    else:
+        profile_list = [get_current_profile_name()]
 
-    if status_response['status'] == 'stopped':
-        click.echo('The daemon is paused')
-        sys.exit(0)
-    elif status_response['status'] == 'error':
-        click.echo(
-            'The daemon is in an unexpected state. Please try restarting or stopping and then starting.'
-        )
-        sys.exit(0)
-
-    info_cmd = {'command': 'stats', 'properties': {'name': profile.daemon_name}}
-    info_response = try_calling_running_client(client, info_cmd)
-
-    daemon_info_cmd = {'command': 'dstats', 'properties': {}}
-    daemon_info_response = try_calling_running_client(client, daemon_info_cmd)
-
-    workers = [['PID', 'MEM %', 'CPU %', 'started']]
-    for worker_pid, worker_info in info_response['info'].items():
-        worker_row = [
-            worker_pid, worker_info['mem'], worker_info['cpu'],
-            format_local_time(worker_info['create_time'])
-        ]
-        workers.append(worker_row)
-
-    no_workers_msg = '--> No workers are running. Use verdi daemon incr to start some!\n'
-    workers_table = tabulate.tabulate(
-        workers, headers='firstrow',
-        tablefmt='simple') if len(workers) > 1 else no_workers_msg
-
-    info = {
-        'pid': daemon_info_response['info']['pid'],
-        'time': format_local_time(daemon_info_response['info']['create_time']),
-        'nworkers': len(workers) - 1,
-        'workers': workers_table
-    }
-
-    message_tpl = (
-        'Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\nuse verdi daemon [incr | decr]'
-        ' [num] to increase / decrease the amount of workers.')
-    click.echo(message_tpl.format(**info))
+    for profile_name in profile_list:
+        click.secho('Profile: ', fg='red', bold=True, nl=False)
+        click.secho('{}'.format(profile_name), bold=True)
+        print_daemon_status(profile_name)
+        click.echo()
 
 
 @daemon_cmd.command()
@@ -413,3 +378,55 @@ def _start_circus(foreground):
                 pidfile.unlink()
 
     sys.exit(0)
+
+
+def print_daemon_status(profile_name):
+    """
+    Print the status information of the daemon for a given profile
+
+    :param profile_name: the name of the profile
+    """
+    client = CircusClient(profile_name)
+
+    if not client.is_daemon_running:
+        click.echo('The daemon is not running')
+        return
+
+    status_response = client.get_status()
+
+    if status_response['status'] == 'stopped':
+        click.echo('The daemon is paused')
+        return
+    elif status_response['status'] == 'error':
+        click.echo('The daemon is in an unexpected state. Please try restarting or stopping and then starting')
+        return
+
+    worker_response = client.get_worker_info()
+    daemon_response = client.get_daemon_info()
+
+    workers = [['PID', 'MEM %', 'CPU %', 'started']]
+    for worker_pid, worker_info in worker_response['info'].items():
+        worker_row = [
+            worker_pid, worker_info['mem'], worker_info['cpu'],
+            format_local_time(worker_info['create_time'])
+        ]
+        workers.append(worker_row)
+
+    if len(workers) > 1:
+        workers_info = tabulate.tabulate(workers, headers='firstrow', tablefmt='simple')
+    else:
+        workers_info = '--> No workers are running. Use verdi daemon incr to start some!\n'
+
+    info = {
+        'pid': daemon_response['info']['pid'],
+        'time': format_local_time(daemon_response['info']['create_time']),
+        'nworkers': len(workers) - 1,
+        'workers': workers_info
+    }
+
+    message_tpl = (
+        'Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
+        'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
+    )
+
+    click.echo(message_tpl.format(**info))

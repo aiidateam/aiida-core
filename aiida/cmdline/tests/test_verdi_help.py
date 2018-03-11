@@ -28,11 +28,8 @@ class VerdiHelpTest(unittest.TestCase):
         ``verdi help`` was printing only the first letter of the docstring
         of non-click commands
         """
-        self.assertFalse(
-            hasattr(Import, '_ctx'),
-            'This test must use a non-click verdi subcommand')
-        fail_msg = ('Has the docstring for ``verdi import`` changed? '
-                    'If not, this is a regression of #700')
+        self.assertFalse(hasattr(Import, '_ctx'), 'This test must use a non-click verdi subcommand')
+        fail_msg = ('Has the docstring for ``verdi import`` changed? ' 'If not, this is a regression of #700')
         with captured_output() as (out, _):
             try:
                 self.help_cmd.run()
@@ -40,5 +37,4 @@ class VerdiHelpTest(unittest.TestCase):
                 pass
             finally:
                 output = [l.strip() for l in out.getvalue().split('\n')]
-                self.assertIn('* import        Import nodes and group of nodes',
-                              output, fail_msg)
+                self.assertIn('* import        Import nodes and group of nodes', output, fail_msg)

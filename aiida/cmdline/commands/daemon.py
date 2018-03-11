@@ -136,13 +136,7 @@ def start(foreground):
         click.echo('failed: {}'.format(exception))
         sys.exit(1)
 
-    status_cmd = {
-        'command': 'status',
-        'properties': {
-            'name': profile.daemon_name,
-            'waiting': True
-        }
-    }
+    status_cmd = {'command': 'status', 'properties': {'name': profile.daemon_name, 'waiting': True}}
 
     response = try_calling_client(client, status_cmd)
     click.echo(response['status'])
@@ -180,13 +174,7 @@ def incr(num):
     profile = ProfileDaemonClient()
     client = profile.get_client()
 
-    incr_cmd = {
-        'command': 'incr',
-        'properties': {
-            'name': profile.daemon_name,
-            'nb': num
-        }
-    }
+    incr_cmd = {'command': 'incr', 'properties': {'name': profile.daemon_name, 'nb': num}}
 
     response = try_calling_running_client(client, incr_cmd)
     click.echo(response['status'])
@@ -202,13 +190,7 @@ def decr(num):
     profile = ProfileDaemonClient()
     client = profile.get_client()
 
-    incr_cmd = {
-        'command': 'decr',
-        'properties': {
-            'name': profile.daemon_name,
-            'nb': num
-        }
-    }
+    incr_cmd = {'command': 'decr', 'properties': {'name': profile.daemon_name, 'nb': num}}
 
     response = try_calling_running_client(client, incr_cmd)
     click.echo(response['status'])
@@ -224,8 +206,7 @@ def logshow():
     profile = ProfileDaemonClient()
     try:
         currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(
-            ['tail', '-f', profile.daemon_log_file], env=currenv)
+        process = subprocess.Popen(['tail', '-f', profile.daemon_log_file], env=currenv)
         process.wait()
     except KeyboardInterrupt:
         process.kill()
@@ -278,13 +259,7 @@ def restart(ctx, reset, no_wait):
         ctx.invoke(stop)
         ctx.invoke(start)
     else:
-        restart_cmd = {
-            'command': 'restart',
-            'properties': {
-                'name': profile.daemon_name,
-                'waiting': wait
-            }
-        }
+        restart_cmd = {'command': 'restart', 'properties': {'name': profile.daemon_name, 'waiting': wait}}
 
         if wait:
             click.echo('Restarting the daemon... ', nl=False)
@@ -406,10 +381,7 @@ def print_daemon_status(profile_name):
 
     workers = [['PID', 'MEM %', 'CPU %', 'started']]
     for worker_pid, worker_info in worker_response['info'].items():
-        worker_row = [
-            worker_pid, worker_info['mem'], worker_info['cpu'],
-            format_local_time(worker_info['create_time'])
-        ]
+        worker_row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
         workers.append(worker_row)
 
     if len(workers) > 1:
@@ -424,9 +396,7 @@ def print_daemon_status(profile_name):
         'workers': workers_info
     }
 
-    message_tpl = (
-        'Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
-        'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
-    )
+    message_tpl = ('Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
+                   'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
 
     click.echo(message_tpl.format(**info))

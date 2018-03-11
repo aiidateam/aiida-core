@@ -88,9 +88,7 @@ class Scheduler(object):
         try:
             return self._features[feature_name]
         except KeyError:
-            raise NotImplementedError(
-                "Feature {} not implemented for this scheduler".format(
-                    feature_name))
+            raise NotImplementedError("Feature {} not implemented for this scheduler".format(feature_name))
 
     @property
     def logger(self):
@@ -164,8 +162,7 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(
-            self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -239,21 +236,16 @@ class Scheduler(object):
                 command_to_exec_list.append(escape_for_bash(arg))
             command_to_exec = " ".join(command_to_exec_list)
 
-            stdin_str = "< {}".format(escape_for_bash(
-                code_info.stdin_name)) if code_info.stdin_name else ""
-            stdout_str = "> {}".format(escape_for_bash(
-                code_info.stdout_name)) if code_info.stdout_name else ""
+            stdin_str = "< {}".format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
+            stdout_str = "> {}".format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = "2>&1"
             else:
-                stderr_str = "2> {}".format(
-                    escape_for_bash(
-                        code_info.stderr_name)) if code_info.stderr_name else ""
+                stderr_str = "2> {}".format(escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
 
-            output_string = ("{} {} {} {}".format(command_to_exec, stdin_str,
-                                                  stdout_str, stderr_str))
+            output_string = ("{} {} {} {}".format(command_to_exec, stdin_str, stdout_str, stderr_str))
 
             list_of_runlines.append(output_string)
 
@@ -350,8 +342,7 @@ stderr:
         comments in _get_joblist_command.
         """
         with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(
-                self._get_joblist_command(jobs=jobs, user=user))
+            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
@@ -368,8 +359,7 @@ stderr:
         Return the transport set for this scheduler.
         """
         if self._transport is None:
-            raise SchedulerError("Use the set_transport function to set the "
-                                 "transport for the scheduler first.")
+            raise SchedulerError("Use the set_transport function to set the " "transport for the scheduler first.")
         else:
             return self._transport
 
@@ -425,8 +415,7 @@ stderr:
 
         :return: True if everything seems ok, False otherwise.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_kill_command(jobid))
+        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 
     def _get_kill_command(self, jobid):

@@ -48,8 +48,7 @@ class PbsproScheduler(PbsBaseClass, Scheduler):
     ## for the time being, but I can redefine it if needed.
     #_map_status = _map_status_pbs_common
 
-    def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine,
-                            num_cores_per_machine, max_memory_kb,
+    def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
                             max_wallclock_seconds):
         """
         Return the lines for machines, memory and wallclock relative
@@ -72,16 +71,14 @@ class PbsproScheduler(PbsBaseClass, Scheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    "max_wallclock_seconds must be "
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    "".format(max_wallclock_seconds))
+                raise ValueError("max_wallclock_seconds must be "
+                                 "a positive integer (in seconds)! It is instead '{}'"
+                                 "".format(max_wallclock_seconds))
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
-            return_lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
-                hours, minutes, seconds))
+            return_lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(hours, minutes, seconds))
 
         if max_memory_kb:
             try:
@@ -89,10 +86,9 @@ class PbsproScheduler(PbsBaseClass, Scheduler):
                 if virtualMemoryKb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    "max_memory_kb must be "
-                    "a positive integer (in kB)! It is instead '{}'"
-                    "".format((max_memory_kb)))
+                raise ValueError("max_memory_kb must be "
+                                 "a positive integer (in kB)! It is instead '{}'"
+                                 "".format((max_memory_kb)))
             select_string += ":mem={}kb".format(virtualMemoryKb)
 
         return_lines.append("#PBS -l {}".format(select_string))

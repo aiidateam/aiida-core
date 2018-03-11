@@ -23,6 +23,8 @@ from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.common import format_local_time, get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import CircusClient
+from aiida.common.profile import get_current_profile_name
+from aiida.common.setup import get_profiles_list
 
 
 class Daemon(VerdiCommandWithSubcommands):
@@ -104,9 +106,6 @@ def status(all_profiles):
     """
     Print the status of the current daemon or all daemons
     """
-    from aiida.common.profile import get_current_profile_name
-    from aiida.common.setup import get_profiles_list
-
     if all_profiles is True:
         profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
     else:
@@ -161,24 +160,38 @@ def logshow():
 
 @daemon_cmd.command()
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
-@decorators.only_if_daemon_pid
-def stop(no_wait):
+@click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons')
+def stop(no_wait, all_profiles):
     """
     Stop the daemon
     """
-    client = CircusClient()
-
-    wait = not no_wait
-
-    if wait:
-        click.echo('Waiting for the daemon to shut down... ', nl=False)
+    if all_profiles is True:
+        profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
     else:
-        click.echo('Shutting the daemon down')
+        profiles = [get_current_profile_name()]
 
-    response = client.stop_daemon(wait)
+    for profile_name in profiles:
 
-    if wait:
-        click.echo(response['status'])
+        client = CircusClient(profile_name)
+
+        click.secho('Profile: ', fg='red', bold=True, nl=False)
+        click.secho('{}'.format(profile_name), bold=True)
+
+        if not client.is_daemon_running:
+            click.echo('Daemon was not running')
+            continue
+
+        wait = not no_wait
+
+        if wait:
+            click.echo('Waiting for the daemon to shut down... ', nl=False)
+        else:
+            click.echo('Shutting the daemon down')
+
+        response = client.stop_daemon(wait)
+
+        if wait:
+            click.echo(response['status'])
 
 
 @daemon_cmd.command()

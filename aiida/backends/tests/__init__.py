@@ -66,6 +66,7 @@ db_test_list = {
         'work.run': ['aiida.backends.tests.work.run'],
         'work.runners': ['aiida.backends.tests.work.test_runners'],
         'work.work_chain': ['aiida.backends.tests.work.work_chain'],
+        'work.utils': ['aiida.backends.tests.work.test_utils'],
         'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
         'work.job_processes': ['aiida.backends.tests.work.job_processes'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],

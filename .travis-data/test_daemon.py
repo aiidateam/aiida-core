@@ -15,9 +15,13 @@ from aiida.common.exceptions import NotExistent
 from aiida.daemon.client import ProfileDaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
-from workchains import NestedWorkChain, DynamicNonDbInput, ListEcho
+from workchains import (
+    NestedWorkChain, DynamicNonDbInput, ListEcho,
+    InlineCalcRunnerWorkChain, WorkFunctionRunnerWorkChain
+)
 
 ParameterData = DataFactory('parameter')
 
@@ -253,6 +257,16 @@ def main():
     list_value.extend([1, 2, 3])
     pk = submit(ListEcho, list=list_value).pk
     expected_results_workchains[pk] = list_value
+
+    print "Submitting a WorkChain which contains a workfunction."
+    value = Str('workfunction test string')
+    pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
+    expected_results_workchains[pk] = value
+
+    print "Submitting a WorkChain which contains an InlineCalculation."
+    value = Str('test_string')
+    pk = submit(InlineCalcRunnerWorkChain, input=value).pk
+    expected_results_workchains[pk] = value
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

@@ -597,7 +597,7 @@ _tag   {}
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEqual(a.has_attached_hydrogens(), False)
+        self.assertEqual(a.has_attached_hydrogens, False)
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
@@ -621,7 +621,7 @@ _tag   {}
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEqual(a.has_attached_hydrogens(), True)
+        self.assertEqual(a.has_attached_hydrogens, True)
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

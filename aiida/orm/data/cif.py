@@ -616,15 +616,15 @@ class CifData(SinglefileData):
             spacegroup_numbers.append(spacegroup_number)
         return spacegroup_numbers
 
+    @property
     def has_partial_occupancies(self):
         """
-        Check if there are float values in the atom occupancies.
-        :return: True if there are partial occupancies, False
-        otherwise.
+        Check if there are float values in the atomic occupancies
+
+        :returns: True if there are partial occupancies, False otherwise
         """
-        # precision
         epsilon = 1e-6
-        tag = "_atom_site_occupancy"
+        tag = '_atom_site_occupancy'
         partial_occupancies = False
         for datablock in self.values.keys():
             if tag in self.values[datablock].keys():
@@ -642,11 +642,13 @@ class CifData(SinglefileData):
 
         return partial_occupancies
 
+    @property
     def has_attached_hydrogens(self):
         """
-        Check if there are hydrogens without coordinates, specified
-        as attached to the atoms of the structure.
-        :return: True if there are attached hydrogens, False otherwise.
+        Check if there are hydrogens without coordinates, specified as attached
+        to the atoms of the structure.
+
+        :returns: True if there are attached hydrogens, False otherwise.
         """
         tag = '_atom_site_attached_hydrogens'
         for datablock in self.values.keys():
@@ -654,6 +656,51 @@ class CifData(SinglefileData):
                 for value in self.values[datablock][tag]:
                     if value != '.' and value != '?' and value != '0':
                         return True
+
+        return False
+
+    @property
+    def has_atomic_sites(self):
+        """
+        Returns whether there are any atomic sites defined in the cif data. That
+        is to say, it will check all the values for the `_atom_site_fract_*` tags
+        and if they are all equal to `?` that means there are no relevant atomic
+        sites defined and the function will return False. In all other cases the
+        function will return True
+
+        :returns: False when at least one atomic site fractional coordinate is not
+            equal to `?` and True otherwise
+        """
+        tag_x = '_atom_site_fract_x'
+        tag_y = '_atom_site_fract_y'
+        tag_z = '_atom_site_fract_z'
+        coords = []
+        for datablock in self.values.keys():
+            for tag in [tag_x, tag_y, tag_z]:
+                if tag in self.values[datablock].keys():
+                    coords.extend(self.values[datablock][tag])
+
+        return not all([coord == '?' for coord in coords])
+
+    @property
+    def has_unknown_species(self):
+        """
+        Returns whether the cif contains atomic species that are not recognized by AiiDA.
+        The known species are taken from the elements dictionary in aiida.common.constants.
+        If any of the formula of the cif data contain species that are not in that elements
+        dictionary, the function will return True and False in all other cases
+
+        :returns: True when there are unknown species in any of the formulae
+        """
+        from aiida.common.constants import elements
+
+        known_species = [element['symbol'] for index, element in elements.items()]
+
+        for formula in self.get_formulae():
+            species = parse_formula(formula).keys()
+            if any([specie not in known_species for specie in species]):
+                return True
+
         return False
 
     def generate_md5(self):

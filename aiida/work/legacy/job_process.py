@@ -45,6 +45,7 @@ class JobProcess(Process):
                 "max_memory_kb": int,
                 "prepend_text": unicode,
                 "append_text": unicode,
+                'parser_name': unicode,
             }
             spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options))
 

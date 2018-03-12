@@ -9,24 +9,29 @@
 ###########################################################################
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-import collections
-import logging
 import os
 import types
+import logging
+import importlib
+import collections
+try:
+    import pathlib
+except ImportError:
+    import pathlib2 as pathlib
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError, ValidationError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
-
+from aiida.common.caching import get_use_cache
 from aiida.common.links import LinkType
 from aiida.common.lang import override
 from aiida.common.old_pluginloader import get_query_type_string
 from aiida.backends.utils import validate_attribute_key
 
 _NO_DEFAULT = tuple()
-
+_HASH_EXTRA_KEY = '_aiida_hash'
 
 def clean_value(value):
     """
@@ -137,6 +142,12 @@ class AbstractNode(object):
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
     _set_incompatibilities = []
+
+    # A list of attribute names that will be ignored when creating the hash.
+    _hash_ignored_attributes = []
+
+    # Flag that determines whether the class can be cached.
+    _cacheable = True
 
     def get_desc(self):
         """
@@ -1129,9 +1140,9 @@ class AbstractNode(object):
             # added (in particular, we do not even have an ID to use!)
             # Return without value, meaning that this is an empty generator
             return
-            yield  # Needed after return to convert it to a generator
-        for _ in self._db_iterextras():
-            yield _
+            yield # Needed after return to convert it to a generator
+        for extra in self._db_iterextras():
+            yield extra
 
     def iterattrs(self):
         """
@@ -1256,7 +1267,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def copy(self):
+    def copy(self, **kwargs):
         """
         Return a copy of the current object to work with, not stored yet.
 
@@ -1428,7 +1439,7 @@ class AbstractNode(object):
             section, reset_limit=True).get_abs_path(
                 path, check_existence=True)
 
-    def store_all(self, with_transaction=True):
+    def store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1453,10 +1464,10 @@ class AbstractNode(object):
                     "unstored parents, cannot proceed (only direct parents "
                     "can be unstored and will be stored by store_all, not "
                     "grandparents or other ancestors".format(parent_node.uuid))
-        return self._db_store_all(with_transaction)
+        return self._db_store_all(with_transaction, use_cache=use_cache)
 
     @abstractmethod
-    def _db_store_all(self, with_transaction=True):
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -1464,6 +1475,9 @@ class AbstractNode(object):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param use_cache: Determines whether caching is used to find an equivalent node.
+        :type use_cache: bool
         """
         pass
 
@@ -1524,7 +1538,7 @@ class AbstractNode(object):
         """
         pass
 
-    def store(self, with_transaction=True):
+    def store(self, with_transaction=True, use_cache=None):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -1553,8 +1567,17 @@ class AbstractNode(object):
             # the case.
             self._check_are_parents_stored()
 
-            # call implementation-dependent store method
-            self._db_store(with_transaction)
+            # Get default for use_cache if it's not set explicitly.
+            if use_cache is None:
+                use_cache = get_use_cache(type(self))
+            # Retrieve the cached node.
+            same_node = self._get_same_node() if use_cache else None
+            if same_node is not None:
+                self._store_from_cache(same_node, with_transaction=with_transaction)
+                self._add_outputs_from_cache(same_node)
+            else:
+                # call implementation-dependent store method
+                self._db_store(with_transaction)
 
             # Set up autogrouping used by verdi run
             from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
@@ -1576,6 +1599,28 @@ class AbstractNode(object):
         # n = Node().store()
         return self
 
+    def _store_from_cache(self, cache_node, with_transaction):
+        new_node = cache_node.copy(include_updatable_attrs=True)
+        inputlinks_cache = self._inputlinks_cache
+        # "impersonate" the copied node by getting all its attributes
+        self.__dict__ = new_node.__dict__
+        # restore the input links
+        self._inputlinks_cache = inputlinks_cache
+
+        # Make sure the node doesn't have any RETURN links
+        if cache_node.get_outputs(link_type=LinkType.RETURN):
+            raise ValueError("Cannot use cache from nodes with RETURN links.")
+
+        self.store(with_transaction=with_transaction, use_cache=False)
+        self.set_extra('_aiida_cached_from', cache_node.uuid)
+
+    def _add_outputs_from_cache(self, cache_node):
+        # add CREATE links
+        output_mapping = {}
+        for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
+            new_node = out_node.copy(include_updatable_attrs=True).store()
+            new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
+
     @abstractmethod
     def _db_store(self, with_transaction=True):
         """
@@ -1596,6 +1641,7 @@ class AbstractNode(object):
         """
         pass
 
+
     def __del__(self):
         """
         Called only upon real object destruction from memory
@@ -1604,6 +1650,95 @@ class AbstractNode(object):
         """
         if getattr(self, '_temp_folder', None) is not None:
             self._temp_folder.erase()
+
+
+    def get_hash(self, ignore_errors=True, **kwargs):
+        """
+        Making a hash based on my attributes
+        """
+        from aiida.common.hashing import make_hash
+        try:
+            return make_hash(self._get_objects_to_hash(), **kwargs)
+        except Exception as e:
+            if ignore_errors:
+                return None
+            else:
+                raise e
+
+    def _get_objects_to_hash(self):
+        """
+        Return a list of objects which should be included in the hash.
+        """
+        computer = self.get_computer()
+        return [
+            importlib.import_module(
+                self.__module__.split('.', 1)[0]
+            ).__version__,
+            {
+                key: val for key, val in self.get_attrs().items()
+                if (
+                    (key not in self._hash_ignored_attributes) and
+                    (key not in getattr(self, '_updatable_attributes', tuple()))
+                )
+            },
+            self.folder,
+            computer.uuid if computer is not None else None
+        ]
+
+    def rehash(self):
+        """
+        Re-generates the stored hash of the Node.
+        """
+        self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+
+    def clear_hash(self):
+        """
+        Sets the stored hash of the Node to None.
+        """
+        self.set_extra(_HASH_EXTRA_KEY, None)
+
+    def _get_same_node(self):
+        """
+        Returns a stored node from which the current Node can be cached, meaning that the returned Node is a valid cache, and its ``_aiida_hash`` attribute matches ``self.get_hash()``.
+
+        If there are multiple valid matches, the first one is returned. If no matches are found, ``None`` is returned.
+
+        Note that after ``self`` is stored, this function can return ``self``.
+        """
+        try:
+            return next(self._iter_all_same_nodes())
+        except StopIteration:
+            return None
+
+    def get_all_same_nodes(self):
+        """
+        Return a list of stored nodes which match the type and hash of the current node. For the stored nodes, the ``_aiida_hash`` extra is checked to determine the hash, while ``self.get_hash()`` is executed on the current node.
+
+        Only nodes which are a valid cache are returned. If the current node is already stored, it can be included in the returned list if ``self.get_hash()`` matches its ``_aiida_hash``.
+        """
+        return list(self._iter_all_same_nodes())
+
+    def _iter_all_same_nodes(self):
+        """
+        Returns an iterator of all same nodes.
+        """
+        if not self._cacheable:
+            return iter(())
+
+        from aiida.orm.querybuilder import QueryBuilder
+
+        hash_ = self.get_hash()
+        if hash_:
+            qb = QueryBuilder()
+            qb.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
+            same_nodes = (n[0] for n in qb.iterall())
+        return (n for n in same_nodes if n._is_valid_cache())
+
+    def _is_valid_cache(self):
+        """
+        Subclass hook to exclude certain Nodes (e.g. failed calculations) from being considered in the caching process.
+        """
+        return True
 
     @property
     def out(self):

@@ -141,12 +141,12 @@ class StructureDataTranslator(DataTranslator):
                     kind_string = node.get_kind(kind_name).get_symbols_string()
 
                     atoms_json.append(
-                        {'l': kind_name,
+                        {'l': kind_string,
                          'x': base_site['position'][0] + shift[0],
                          'y': base_site['position'][1] + shift[1],
                          'z': base_site['position'][2] + shift[2],
-                         # 'atomic_elments_html': kind_string
-                         'atomic_elments_html': atom_kinds_to_html(kind_string)
+                         # 'atomic_elements_html': kind_string
+                         'atomic_elements_html': atom_kinds_to_html(kind_string)
                         })
 
             cell_json = {

@@ -129,20 +129,15 @@ class LsfJobResource(JobResource):
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError):
-            raise TypeError(
-                "tot_num_mpiprocs must be specified and must be an integer")
+            raise TypeError("tot_num_mpiprocs must be specified and must be an integer")
 
-        default_mpiprocs_per_machine = kwargs.pop(
-            'default_mpiprocs_per_machine', None)
+        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError(
-                "default_mpiprocs_per_machine cannot be set "
-                "for LSF scheduler")
+            raise ConfigurationError("default_mpiprocs_per_machine cannot be set " "for LSF scheduler")
 
         num_machines = kwargs.pop('num_machines', None)
         if num_machines is not None:
-            raise ConfigurationError("num_machines cannot be set "
-                                     "for LSF scheduler")
+            raise ConfigurationError("num_machines cannot be set " "for LSF scheduler")
 
         if self.tot_num_mpiprocs <= 0:
             raise ValueError("tot_num_mpiprocs must be >= 1")
@@ -263,8 +258,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
         command = [
-            "bjobs", "-noheader", "-o '{} delimiter=\"{}\"'".format(
-                ' '.join(self._joblist_fields), _field_separator)
+            "bjobs", "-noheader", "-o '{} delimiter=\"{}\"'".format(' '.join(self._joblist_fields), _field_separator)
         ]
 
         if user and jobs:
@@ -279,9 +273,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
-                    raise TypeError(
-                        "If provided, the 'jobs' variable must be a string or "
-                        "a list of strings")
+                    raise TypeError("If provided, the 'jobs' variable must be a string or " "a list of strings")
                 joblist = jobs
             command.append(' '.join(joblist))
 
@@ -343,8 +335,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid character
-            if not job_title or (
-                    job_title[0] not in string.letters + string.digits):
+            if not job_title or (job_title[0] not in string.letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 128 characters
@@ -353,8 +344,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append('#BSUB -J "{}"'.format(job_title))
 
         if not job_tmpl.import_sys_environment:
-            self.logger.warning("LSF scheduler cannot ignore "
-                                "the user environment")
+            self.logger.warning("LSF scheduler cannot ignore " "the user environment")
 
         if job_tmpl.sched_output_path:
             lines.append("#BSUB -o {}".format(job_tmpl.sched_output_path))
@@ -383,18 +373,15 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append("#BSUB -sp {}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the tot_num_mpiprocs) are "
-                             "required for the LSF scheduler plugin")
+            raise ValueError("Job resources (as the tot_num_mpiprocs) are " "required for the LSF scheduler plugin")
 
-        lines.append("#BSUB -n {}".format(
-            job_tmpl.job_resource.get_tot_num_mpiprocs()))
+        lines.append("#BSUB -n {}".format(job_tmpl.job_resource.get_tot_num_mpiprocs()))
         # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
         # defined in lsb.params (you can check with the output of bparams -l).
         # Note: the -n option of bsub can also contain a maximum number of
         # procs to be used
         if job_tmpl.job_resource.parallel_env:
-            lines.append('#BSUB -m "{}"'.format(
-                job_tmpl.job_resource.parallel_env))
+            lines.append('#BSUB -m "{}"'.format(job_tmpl.job_resource.parallel_env))
 
         if job_tmpl.max_wallclock_seconds is not None:
             # ABS_RUNLIMIT=Y should be set, in lsb.params (check with bparams -l)
@@ -403,10 +390,9 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    "max_wallclock_seconds must be "
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    "".format((job_tmpl.max_wallclock_seconds)))
+                raise ValueError("max_wallclock_seconds must be "
+                                 "a positive integer (in seconds)! It is instead '{}'"
+                                 "".format((job_tmpl.max_wallclock_seconds)))
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
             # of the division
@@ -420,10 +406,9 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                 if virtualMemoryKb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    "max_memory_kb must be "
-                    "a positive integer (in kB)! It is instead '{}'"
-                    "".format((job_tmpl.MaxMemoryKb)))
+                raise ValueError("max_memory_kb must be "
+                                 "a positive integer (in kB)! It is instead '{}'"
+                                 "".format((job_tmpl.MaxMemoryKb)))
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
             lines.append("#BSUB -M {}".format(virtualMemoryKb))
@@ -440,11 +425,9 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be "
-                                 "a dictionary")
+                raise ValueError("If you provide job_environment, it must be " "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(k.strip(),
-                                                   escape_for_bash(v)))
+                lines.append("export {}={}".format(k.strip(), escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES END  ###")
             lines.append(empty_line)
 
@@ -521,12 +504,10 @@ fi
 
         if retval != 0:
             self.logger.warning("Error in _parse_joblist_output: retval={}; "
-                                "stdout={}; stderr={}".format(
-                                    retval, stdout, stderr))
+                                "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during parsing joblist output, "
                                  "retval={}\n"
-                                 "stdout={}\nstderr={}".format(
-                                     retval, stdout, stderr))
+                                 "stdout={}\nstderr={}".format(retval, stdout, stderr))
 
         # will contain raw data parsed from output: only lines with the
         # separator, and already split in fields
@@ -535,10 +516,7 @@ fi
         # the last field), I don't split the title.
         # This assumes that _field_separator never
         # appears in any previous field.
-        jobdata_raw = [
-            l.split(_field_separator, num_fields) for l in stdout.splitlines()
-            if _field_separator in l
-        ]
+        jobdata_raw = [l.split(_field_separator, num_fields) for l in stdout.splitlines() if _field_separator in l]
 
         # Create dictionary and parse specific fields
         job_list = []
@@ -548,8 +526,7 @@ fi
             if len(job) != num_fields:
                 # I skip this calculation
                 # (I don't append anything to job_list before continuing)
-                self.logger.error("Wrong line length in squeue output! '{}'"
-                                  "".format(job))
+                self.logger.error("Wrong line length in squeue output! '{}'" "".format(job))
                 continue
 
             this_job = JobInfo()
@@ -561,8 +538,7 @@ fi
                 job_state_string = _map_status_lsf[job_state_raw]
             except KeyError:
                 self.logger.warning("Unrecognized job_state '{}' for job "
-                                    "id {}".format(job_state_raw,
-                                                   this_job.job_id))
+                                    "id {}".format(job_state_raw, this_job.job_id))
                 job_state_string = job_states.UNDETERMINED
 
             this_job.job_state = job_state_string
@@ -575,24 +551,21 @@ fi
             #            (_, _, _, executing_host, username, number_nodes,
             #             number_cpus, allocated_machines, partition,
             #             time_limit, time_used, dispatch_time, job_name) = job
-            (_, _, _, executing_host, username, number_nodes, number_cpus,
-             allocated_machines, partition, finish_time, start_time,
-             percent_complete, submission_time, job_name) = job
+            (_, _, _, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, finish_time,
+             start_time, percent_complete, submission_time, job_name) = job
 
             this_job.job_owner = username
             try:
                 this_job.num_machines = int(number_nodes)
             except ValueError:
                 self.logger.warning("The number of allocated nodes is not "
-                                    "an integer ({}) for job id {}!".format(
-                                        number_nodes, this_job.job_id))
+                                    "an integer ({}) for job id {}!".format(number_nodes, this_job.job_id))
 
             try:
                 this_job.num_mpiprocs = int(number_cpus)
             except ValueError:
                 self.logger.warning("The number of allocated cores is not "
-                                    "an integer ({}) for job id {}!".format(
-                                        number_cpus, this_job.job_id))
+                                    "an integer ({}) for job id {}!".format(number_cpus, this_job.job_id))
 
             # ALLOCATED NODES HERE
             # string may be in the format
@@ -605,12 +578,9 @@ fi
 
             this_job.queue_name = partition
 
-            psd_finish_time = self._parse_time_string(
-                finish_time, fmt='%b %d %H:%M')
-            psd_start_time = self._parse_time_string(
-                start_time, fmt='%b %d %H:%M')
-            psd_submission_time = self._parse_time_string(
-                submission_time, fmt='%b %d %H:%M')
+            psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
+            psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
+            psd_submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M')
 
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
@@ -630,33 +600,23 @@ fi
                         new_year = psd_start_time.year + 1
                         # note: we assume that no job will last more than 1 year...
                         psd_finish_time = datetime.datetime(
-                            year=new_year,
-                            month=old_month,
-                            day=old_day,
-                            hour=old_hour,
-                            minute=old_minute)
+                            year=new_year, month=old_month, day=old_day, hour=old_hour, minute=old_minute)
                         requested_walltime = psd_finish_time - psd_start_time
 
-                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds(
-                    )
+                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
                 except (TypeError, ValueError):
-                    self.logger.warning("Error parsing the time limit "
-                                        "for job id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing the time limit " "for job id {}".format(this_job.job_id))
 
                 try:
-                    psd_percent_complete = float(
-                        percent_complete.strip(' L').strip("%"))
-                    this_job.wallclock_time_seconds = requested_walltime.total_seconds(
-                    ) * psd_percent_complete / 100.
+                    psd_percent_complete = float(percent_complete.strip(' L').strip("%"))
+                    this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.
                 except ValueError:
-                    self.logger.warning("Error parsing the time used "
-                                        "for job id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing the time used " "for job id {}".format(this_job.job_id))
 
             try:
                 this_job.submission_time = psd_submission_time
             except ValueError:
-                self.logger.warning("Error parsing submission time for job "
-                                    "id {}".format(this_job.job_id))
+                self.logger.warning("Error parsing submission time for job " "id {}".format(this_job.job_id))
 
             this_job.title = job_name
 
@@ -666,14 +626,12 @@ fi
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if (this_job.allocated_machines is not None and
-                    this_job.num_machines is not None):
+            if (this_job.allocated_machines is not None and this_job.num_machines is not None):
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                                          len(this_job.allocated_machines),
-                                          this_job.num_machines))
+                                          len(this_job.allocated_machines), this_job.num_machines))
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -691,11 +649,9 @@ fi
         """
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
-                                 "stdout={}\nstderr={}".format(
-                                     retval, stdout, stderr))
+                                 "stdout={}\nstderr={}".format(retval, stdout, stderr))
 
         try:
             transport_string = " for {}".format(self.transport)
@@ -704,14 +660,12 @@ fi
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output{}: "
-                                "there was some text in stderr: {}".format(
-                                    transport_string, stderr))
+                                "there was some text in stderr: {}".format(transport_string, stderr))
 
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError:
-            raise SchedulerParsingError("Cannot parse submission output: {}"
-                                        "".format(stdout))
+            raise SchedulerParsingError("Cannot parse submission output: {}" "".format(stdout))
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
         """
@@ -733,11 +687,9 @@ fi
             try:
                 thetime = datetime.datetime.strptime(actual_string, actual_fmt)
             except ValueError:
-                thetime = datetime.datetime.strptime(actual_string,
-                                                     "{} L".format(actual_fmt))
+                thetime = datetime.datetime.strptime(actual_string, "{} L".format(actual_fmt))
         except Exception as e:
-            self.logger.debug("Unable to parse time string {}, the message "
-                              "was {}".format(string, e.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, e.message))
             raise ValueError("Problem parsing the time string.")
 
         return thetime
@@ -757,15 +709,13 @@ fi
         :return: True if everything seems ok, False otherwise.
         """
         if retval == 255:
-            self.logger.error(
-                "Error in _parse_kill_output: retval={} (Job already finished); "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            self.logger.error("Error in _parse_kill_output: retval={} (Job already finished); "
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         try:
@@ -775,12 +725,10 @@ fi
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output{}: "
-                                "there was some text in stderr: {}".format(
-                                    transport_string, stderr))
+                                "there was some text in stderr: {}".format(transport_string, stderr))
 
         if stdout.strip():
             self.logger.warning("in _parse_kill_output{}: "
-                                "there was some text in stdout: {}".format(
-                                    transport_string, stdout))
+                                "there was some text in stdout: {}".format(transport_string, stdout))
 
         return True

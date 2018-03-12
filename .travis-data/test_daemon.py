@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 from aiida.common.exceptions import NotExistent
-from aiida.daemon.client import ProfileDaemonClient
+from aiida.daemon.client import DaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
@@ -28,8 +28,8 @@ number_calculations = 15 # Number of calculations to submit
 number_workchains = 8 # Number of workchains to submit
 
 def print_daemon_log():
-    profile_daemon_client = ProfileDaemonClient()
-    daemon_log = profile_daemon_client.daemon_log_file
+    daemon_client = DaemonClient()
+    daemon_log = daemon_client.daemon_log_file
 
     print "Output of 'cat {}':".format(daemon_log)
     try:

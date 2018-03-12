@@ -102,8 +102,7 @@ class Postgres(object):
         # This will work for the default Debian postgres setup
         if self.pg_execute == _pg_execute_not_connected:
             dbinfo['user'] = 'postgres'
-            if _try_subcmd(
-                    non_interactive=bool(not self.interactive), **dbinfo):
+            if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
                 self.pg_execute = _pg_execute_sh
                 self.dbinfo = dbinfo
 
@@ -112,10 +111,8 @@ class Postgres(object):
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
-            click.echo((
-                'Database setup not confirmed, (non-interactive). '
-                'This may cause problems if the current user is not allowed to create databases.'
-            ))
+            click.echo(('Database setup not confirmed, (non-interactive). '
+                        'This may cause problems if the current user is not allowed to create databases.'))
 
         return bool(self.pg_execute != _pg_execute_not_connected)
 
@@ -126,8 +123,7 @@ class Postgres(object):
         :param dbuser: (str), Name of the user to be created.
         :param dbpass: (str), Password the user should be given.
         """
-        self.pg_execute(
-            _CREATE_USER_COMMAND.format(dbuser, dbpass), **self.dbinfo)
+        self.pg_execute(_CREATE_USER_COMMAND.format(dbuser, dbpass), **self.dbinfo)
 
     def drop_dbuser(self, dbuser):
         """
@@ -144,8 +140,7 @@ class Postgres(object):
         :param dbuser: (str) database user to check for
         :return: (bool) True if user exists, False otherwise
         """
-        return bool(
-            self.pg_execute(_GET_USERS_COMMAND.format(dbuser), **self.dbinfo))
+        return bool(self.pg_execute(_GET_USERS_COMMAND.format(dbuser), **self.dbinfo))
 
     def create_db(self, dbuser, dbname):
         """
@@ -154,10 +149,8 @@ class Postgres(object):
         :param dbuser: (str), Name of the user which should own the db.
         :param dbname: (str), Name of the database.
         """
-        self.pg_execute(
-            _CREATE_DB_COMMAND.format(dbname, dbuser), **self.dbinfo)
-        self.pg_execute(
-            _GRANT_PRIV_COMMAND.format(dbname, dbuser), **self.dbinfo)
+        self.pg_execute(_CREATE_DB_COMMAND.format(dbname, dbuser), **self.dbinfo)
+        self.pg_execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser), **self.dbinfo)
 
     def drop_db(self, dbname):
         """
@@ -168,8 +161,7 @@ class Postgres(object):
         self.pg_execute(_DROP_DB_COMMAND.format(dbname), **self.dbinfo)
 
     def copy_db(self, src_db, dest_db, dbuser):
-        self.pg_execute(
-            _COPY_DB_COMMAND.format(dest_db, src_db, dbuser), **self.dbinfo)
+        self.pg_execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser), **self.dbinfo)
 
     def db_exists(self, dbname):
         """
@@ -178,23 +170,20 @@ class Postgres(object):
         :param dbname: Name of the database to check for
         :return: (bool), True if database exists, False otherwise
         """
-        return bool(
-            self.pg_execute(
-                _CHECK_DB_EXISTS_COMMAND.format(dbname), **self.dbinfo))
+        return bool(self.pg_execute(_CHECK_DB_EXISTS_COMMAND.format(dbname), **self.dbinfo))
 
     def _no_setup_detected(self):
         """Print a warning message and calls the failed setup callback"""
         message = '\n'.join([
-            'Detected no known postgres setup, some information is needed to create the aiida database and grant aiida access to it.',
-            'If you feel unsure about the following parameters, first check if postgresql is installed.',
-            'If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
+            'Detected no known postgres setup, some information is needed to create the aiida database and grant ',
+            'aiida access to it. If you feel unsure about the following parameters, first check if postgresql is ',
+            'installed. If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
             'If postgresql is installed, please ask your system manager to provide you with the following parameters:'
         ])
         if not self.quiet:
             click.echo(message)
         if self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
-            self.dbinfo = self.setup_fail_callback(self.interactive,
-                                                   self.dbinfo)
+            self.dbinfo = self.setup_fail_callback(self.interactive, self.dbinfo)
             self.determine_setup()
 
 
@@ -223,23 +212,17 @@ def prompt_db_info(*args):  # pylint: disable=unused-argument
     access = False
     while not access:
         dbinfo = {}
-        dbinfo['host'] = click.prompt(
-            'postgres host', default='localhost', type=str)
+        dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
         dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
-        dbinfo['database'] = click.prompt(
-            'template', default='template1', type=str)
-        dbinfo['user'] = click.prompt(
-            'postgres super user', default='postgres', type=str)
+        dbinfo['database'] = click.prompt('template', default='template1', type=str)
+        dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
         click.echo('')
         click.echo('trying to access postgres..')
         if _try_connect(**dbinfo):
             access = True
         else:
             dbinfo['password'] = click.prompt(
-                'postgres password of {}'.format(dbinfo['user']),
-                hide_input=True,
-                type=str,
-                default='')
+                'postgres password of {}'.format(dbinfo['user']), hide_input=True, type=str, default='')
             if not dbinfo.get('password'):
                 dbinfo.pop('password')
     return dbinfo
@@ -330,10 +313,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
         sudo_cmd += ['-n']
     su_cmd = ['su', user, '-c']
     from aiida.common.utils import escape_for_bash
-    psql_cmd = [
-        'psql {options} -tc {}'.format(
-            escape_for_bash(command), options=options)
-    ]
+    psql_cmd = ['psql {options} -tc {}'.format(escape_for_bash(command), options=options)]
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
     result = subprocess.check_output(sudo_su_psql, **kwargs)
 

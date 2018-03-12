@@ -249,7 +249,7 @@ def main():
 
     print "Submitting a workchain with a nested input namespace."
     value = Int(-12)
-    pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}})
+    pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk
     expected_results_workchains[pk] = value
 
     print "Submitting the ListEcho workchain."

@@ -175,7 +175,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
             raise ValueError('pymatgen failed to provide a structure from the cif file')
         else:
             # If it now succeeds, non-unity occupancies were the culprit
-            raise InvalidOccupationsError('detected atomic sites with an occupation number exceeding the tolerance')
+            raise InvalidOccupationsError(
+                'detected atomic sites with an occupation number larger than the occupation tolerance')
 
     return {'structure': StructureData(pymatgen_structure=structures[0])}
 
@@ -703,7 +704,7 @@ class CifData(SinglefileData):
         """
         from aiida.common.constants import elements
 
-        known_species = [element['symbol'] for index, element in elements.items()]
+        known_species = [element['symbol'] for element in elements.values()]
 
         for formula in self.get_formulae():
             species = parse_formula(formula).keys()
@@ -725,11 +726,11 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
-    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
+    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
-        :param converter: specify the converter. Default 'ase'.
+        :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
         :param primitive_cell: if True, primitive cell is returned,
@@ -740,16 +741,19 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
+        import cif
         from aiida.orm.data.parameter import ParameterData
-        import cif  # This same module
 
-        param = ParameterData(dict=kwargs)
+        parameters = ParameterData(dict=kwargs)
+
         try:
-            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
+            convert_function = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
-        ret_dict = conv_f(cif=self, parameters=param, store=store)
-        return ret_dict['structure']
+
+        result = convert_function(cif=self, parameters=parameters, store=store)
+
+        return result['structure']
 
     def _prepare_cif(self, main_file_name=""):
         """

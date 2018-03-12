@@ -74,3 +74,8 @@ def data_cmd():
 @verdi.group('daemon')
 def daemon_cmd():
     pass
+
+
+@verdi.group('code')
+def code_cmd():
+    pass

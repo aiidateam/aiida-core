@@ -103,28 +103,32 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 
 
 @optional_inline
-def _get_aiida_structure_ase_inline(cif, parameters=None):
+def _get_aiida_structure_ase_inline(cif, **kwargs):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
+    from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    kwargs = {}
+    if 'parameters' in kwargs:
+        parameters = kwargs['parameters']
+    else:
+        parameters = {}
 
-    if parameters is not None:
-        kwargs = parameters.get_dict()
+    if isinstance(parameters, ParameterData):
+        parameters = parameters.get_dict()
 
-    kwargs.pop('occupancy_tolerance', None)
-    kwargs.pop('site_tolerance', None)
+    parameters.pop('occupancy_tolerance', None)
+    parameters.pop('site_tolerance', None)
 
-    return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
+    return {'structure': StructureData(ase=cif.get_ase(**parameters))}
 
 
 @optional_inline
-def _get_aiida_structure_pymatgen_inline(cif, parameters=None):
+def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using pymatgen.
 
@@ -136,31 +140,36 @@ def _get_aiida_structure_pymatgen_inline(cif, parameters=None):
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
+    from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    call_kwargs = {}
+    if 'parameters' in kwargs:
+        parameters = kwargs['parameters']
+    else:
+        parameters = {}
+
+    if isinstance(parameters, ParameterData):
+        parameters = parameters.get_dict()
+
     constructor_kwargs = {}
 
-    if parameters is not None:
-        call_kwargs = parameters.get_dict()
-
-    call_kwargs['primitive'] = call_kwargs.pop('primitive_cell', False)
+    parameters['primitive'] = parameters.pop('primitive_cell', False)
 
     for argument in ['occupancy_tolerance', 'site_tolerance']:
-        if argument in call_kwargs:
-            constructor_kwargs[argument] = call_kwargs.pop(argument)
+        if argument in parameters:
+            constructor_kwargs[argument] = parameters.pop(argument)
 
     parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
 
     try:
-        structures = parser.get_structures(**call_kwargs)
+        structures = parser.get_structures(**parameters)
     except ValueError:
 
         # Verify whether the failure was due to wrong occupancy numbers
         try:
-            constructor_kwargs['occupancy_tolerance'] = 10000000
+            constructor_kwargs['occupancy_tolerance'] = 1E10
             parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
-            structures = parser.get_structures(**call_kwargs)
+            structures = parser.get_structures(**parameters)
         except ValueError:
             # If it still fails, the occupancies were not the reason for failure
             raise ValueError('pymatgen failed to provide a structure from the cif file')

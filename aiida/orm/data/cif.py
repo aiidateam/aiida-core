@@ -12,6 +12,16 @@ from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
 
 
+class InvalidOccupationsError(Exception):
+    """
+    An exception that will be raised if pymatgen fails to parse the structure from a
+    cif because some site occupancies exceed the occupancy tolerance. This often happens
+    for structures that have attached species, such as hydrogen, and specify a placeholder
+    position for it, leading to occupancies greater than one. Pymatgen only issues a
+    warning in this case and simply does not return a structure
+    """
+
+
 ase_loops = {
     '_atom_site': [
         '_atom_site_label',
@@ -143,11 +153,22 @@ def _get_aiida_structure_pymatgen_inline(cif, parameters=None):
     parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
 
     try:
-        structure = parser.get_structures(**call_kwargs)[0]
-    except IndexError:
-        raise ValueError('pymatgen failed to provide a structure from the cif file')
+        structures = parser.get_structures(**call_kwargs)
+    except ValueError:
 
-    return {'structure': StructureData(pymatgen_structure=structure)}
+        # Verify whether the failure was due to wrong occupancy numbers
+        try:
+            constructor_kwargs['occupancy_tolerance'] = 10000000
+            parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+            structures = parser.get_structures(**call_kwargs)
+        except ValueError:
+            # If it still fails, the occupancies were not the reason for failure
+            raise ValueError('pymatgen failed to provide a structure from the cif file')
+        else:
+            # If it now succeeds, non-unity occupancies were the culprit
+            raise InvalidOccupationsError('detected atomic sites with an occupation number exceeding the tolerance')
+
+    return {'structure': StructureData(pymatgen_structure=structures[0])}
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):

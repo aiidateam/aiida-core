@@ -30,6 +30,7 @@ sys.path.append( os.path.join( os.path.split(__file__)[0],
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 import aiida
+from aiida.backends import settings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -230,6 +231,8 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# We set that we are in documentation mode - even for local compilation
+settings.IN_DOC_MODE = True
 
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed
 # from docs.readthedocs.org
@@ -251,8 +254,8 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
         load_dbenv()
 else:
     # Back-end settings for readthedocs online documentation.
-    from aiida.backends import settings
-    settings.IN_DOC_MODE = True
+    # from aiida.backends import settings
+    settings.IN_RT_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
 

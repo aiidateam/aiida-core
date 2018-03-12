@@ -8,6 +8,14 @@ Node
 The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.implementation.general.code.AbstractCode` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
 
 
+Immutability concept
+********************
+A node can store information through attributes. Since AiiDA guarantees a certain level of provenance, these attributes become immutable as soon as the node is stored.
+This means that as soon as a node is stored any attempt to alter its attributes, changing its value or deleting it altogether, shall be met with a raised exception.
+Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class (see `calculation updatable attributes`_), but since the immutability
+of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level. This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
+
+
 Methods & properties
 ********************
 In the sequel the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
@@ -363,6 +371,15 @@ Objects of this class correspond to the repository folders. The :py:class:`~aiid
 
 
 
+Calculation
++++++++++++
 
+.. _calculation updatable attributes:
 
-
+Updatable attributes
+********************
+The :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class is a subclass of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, which means that its attributes become immutable once stored.
+However, for a ``Calculation`` to be runnable it needs to be stored, but that would mean that its state, which is stored in an attribute can no longer be updated.
+To solve this issue the :py:class:`~aiida.orm.mixins.Sealable` mixin is introduced. This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.
+The mixin defines the ``_updatable_attributes`` tuple, which defines the attributes that are considered to be mutable even when the node is stored.
+It also allows the node to be *sealed*, after which even the updatable attributes become immutable.

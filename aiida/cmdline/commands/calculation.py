@@ -122,7 +122,7 @@ class Calculation(VerdiCommandWithSubcommands):
         # get the command to run (does not require to open the connection!)
         cmd_to_run = t.gotocomputer_command(remotedir)
         # Connect (execute command)
-        print "Going the the remote folder..."
+        print "Going to the remote folder..."
         # print cmd_to_run
         os.system(cmd_to_run)
 

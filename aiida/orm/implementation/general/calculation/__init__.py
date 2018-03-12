@@ -13,8 +13,7 @@ import collections
 
 from aiida.common.utils import classproperty
 from aiida.common.links import LinkType
-from aiida.orm.mixins import SealableWithUpdatableAttributes
-
+from aiida.orm.mixins import Sealable
 
 
 def _parse_single_arg(function_name, additional_parameter,
@@ -74,7 +73,7 @@ def _parse_single_arg(function_name, additional_parameter,
         return None
 
 
-class AbstractCalculation(SealableWithUpdatableAttributes):
+class AbstractCalculation(Sealable):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.
@@ -83,6 +82,7 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
     calculations run via a scheduler.
     """
 
+    _updatable_attributes = Sealable._updatable_attributes + ('state',)
     _cacheable = False
 
     @classproperty
@@ -121,11 +121,11 @@ class AbstractCalculation(SealableWithUpdatableAttributes):
         """
         from aiida.orm.code import Code
         return {
-            "code": {
+            'code': {
                 'valid_types': Code,
                 'additional_parameter': None,
                 'linkname': 'code',
-                'docstring': "Choose the code to use",
+                'docstring': 'Choose the code to use',
             },
         }
 

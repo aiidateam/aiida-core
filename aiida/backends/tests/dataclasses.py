@@ -149,6 +149,45 @@ class TestCifData(AiidaTestCase):
     from distutils.version import StrictVersion
     
 
+    valid_sample_cif_str = '''
+        data_test
+        _cell_length_a    10
+        _cell_length_b    10
+        _cell_length_c    10
+        _cell_angle_alpha 90
+        _cell_angle_beta  90
+        _cell_angle_gamma 90
+        _chemical_formula_sum 'C O2'
+        loop_
+        _atom_site_label
+        _atom_site_fract_x
+        _atom_site_fract_y
+        _atom_site_fract_z
+        _atom_site_attached_hydrogens
+        C 0 0 0 0
+        O 0.5 0.5 0.5 .
+        H 0.75 0.75 0.75 0
+    '''
+
+    valid_sample_cif_str_2 = '''
+        data_test
+        _cell_length_a    10
+        _cell_length_b    10
+        _cell_length_c    10
+        _cell_angle_alpha 90
+        _cell_angle_beta  90
+        _cell_angle_gamma 90
+        _chemical_formula_sum 'C O'
+        loop_
+        _atom_site_label
+        _atom_site_fract_x
+        _atom_site_fract_y
+        _atom_site_fract_z
+        _atom_site_attached_hydrogens
+        C 0 0 0 0
+        O 0.5 0.5 0.5 .
+    '''
+
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_reload_cifdata(self):
         import os
@@ -710,6 +749,119 @@ _tag   {}
         with self.assertRaises(ValueError):
             parse_formula("H0.5.2 O")
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_scan_type(self):
+        """
+        Check that different scan_types of PyCifRW produce the same result.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+
+            default = CifData(file=f.name)
+            default2 = CifData(file=f.name, scan_type='standard')
+            self.assertEquals(default._prepare_cif(), default2._prepare_cif())
+
+            flex = CifData(file=f.name, scan_type='flex')
+            self.assertEquals(default._prepare_cif(), flex._prepare_cif())
+
+    def test_empty_cif(self):
+        """
+        Test empty CifData
+
+        Note: This test does not need PyCifRW.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+
+            # empty cifdata should be possible
+            a = CifData()
+
+            # but it does not have a file
+            with self.assertRaises(AttributeError):
+                a.filename
+
+            #now it has
+            a.set_file(f.name)
+            a.filename
+
+            a.store()
+
+    def test_parse_policy(self):
+        """
+        Test that loading of CIF file occurs as defined by parse_policy.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+
+            # this will parse the cif
+            eager = CifData(file=f.name, parse_policy='eager')
+            self.assertIsNot(eager._values, None)
+
+            # this should not parse the cif
+            lazy = CifData(file=f.name, parse_policy='lazy')
+            self.assertIs(lazy._values, None)
+
+            # also lazy-loaded nodes should be storable
+            lazy.store()
+
+            # this should parse the cif
+            lazy.values
+            self.assertIsNot(lazy._values, None)
+
+
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_set_file(self):
+        """
+        Test that setting a new file clears formulae and spacegroups.
+        """
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+
+            a = CifData(file=f.name)
+            f1 = a.get_formulae()
+            self.assertIsNot(f1, None)
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str_2)
+            f.flush()
+
+            # this should reset formulae and spacegroup_numbers
+            a.set_file(f.name)
+            self.assertIs(a.get_attr('formulae'), None)
+            self.assertIs(a.get_attr('spacegroup_numbers'), None)
+
+            # this should populate formulae
+            a.parse()
+            f2 = a.get_formulae()
+            self.assertIsNot(f2, None)
+
+            # empty cifdata should be possible
+            a = CifData()
+            # but it does not have a file
+            with self.assertRaises(AttributeError):
+                a.filename
+            #now it has
+            a.set_file(f.name)
+            a.parse()
+            a.filename
+
+        self.assertNotEquals(f1, f2)
 
 class TestKindValidSymbols(AiidaTestCase):
     """

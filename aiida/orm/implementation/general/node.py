@@ -78,9 +78,7 @@ class AbstractNode(object):
     Stores attributes starting with an underscore.
 
     Caches files and attributes before the first save, and saves everything
-    only on store(). After the call to store(), in general attributes cannot
-    be changed, except for those listed in the self._updatable_attributes
-    tuple (empty for this class, can be extended in a subclass).
+    only on store(). After the call to store(), attributes cannot be changed.
 
     Only after storing (or upon loading from uuid) extras can be modified
     and in this case they are directly set on the db.
@@ -798,22 +796,22 @@ class AbstractNode(object):
         """
         pass
 
-    def _set_attr(self, key, value, clean=True):
+    def _set_attr(self, key, value, clean=True, stored_check=True):
         """
         Set a new attribute to the Node (in the DbAttribute table).
 
-        :param str key: key name
+        :param key: key name
         :param value: its value
         :param clean: whether to clean values.
             WARNING: when set to False, storing will throw errors
             for any data types not recognized by the db backend
-        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
-            because the node was already stored, and the attribute is not listed
-            as updatable).
-
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
+        :param stored_check: when set to False will disable the mutability check
+        :raise ModificationNotAllowed: if node is already stored
+        :raise ValidationError: if the key is not valid, e.g. it contains the separator symbol
         """
+        if stored_check and self.is_stored:
+            raise ModificationNotAllowed('Cannot change the attributes of a stored node')
+
         validate_attribute_key(key)
 
         if self._to_be_stored:
@@ -828,14 +826,13 @@ class AbstractNode(object):
         """
         Append value to an attribute of the Node (in the DbAttribute table).
 
-        :param str key: key name of "list-type" attribute
+        :param key: key name of "list-type" attribute
             If attribute doesn't exist, it is created.
         :param value: the value to append to the list
         :param clean: whether to clean the value
             WARNING: when set to False, storing will throw errors
             for any data types not recognized by the db backend
-        :raise ValidationError: if the key is not valid (e.g. it contains the
-            separator symbol).
+        :raise ValidationError: if the key is not valid, e.g. it contains the separator symbol
         """
         validate_attribute_key(key)
 
@@ -863,19 +860,23 @@ class AbstractNode(object):
 
         DO NOT USE DIRECTLY.
 
-        :param str key: key name
+        :param key: key name
         :param value: its value
         """
         pass
 
-    def _del_attr(self, key):
+    def _del_attr(self, key, stored_check=True):
         """
         Delete an attribute.
 
         :param key: attribute to delete.
+        :param stored_check: when set to False will disable the mutability check
         :raise AttributeError: if key does not exist.
-        :raise ModificationNotAllowed: if the Node was already stored.
+        :raise ModificationNotAllowed: if node is already stored
         """
+        if stored_check and self.is_stored:
+            raise ModificationNotAllowed('Cannot change the attributes of a stored node')
+
         if self._to_be_stored:
             try:
                 del self._attrs_cache[key]
@@ -1073,7 +1074,7 @@ class AbstractNode(object):
 
         DO NOT USE DIRECTLY.
 
-        :param str key: key name
+        :param key: key name
         :return: the key value
         :raise AttributeError: if the key does not exist
         """
@@ -1096,7 +1097,7 @@ class AbstractNode(object):
         Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
 
-        :param str key: key name
+        :param key: key name
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node is not stored yet
         """
@@ -1113,7 +1114,7 @@ class AbstractNode(object):
 
         DO NOT USE DIRECTLY.
 
-        :param str key: key name
+        :param key: key name
         """
         pass
 

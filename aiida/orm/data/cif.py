@@ -7,10 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tools for handling Crystallographic Information Files (CIF)"""
+# pylint: disable=invalid-name,too-many-locals,too-many-statements
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
-
 
 ase_loops = {
     '_atom_site': [
@@ -32,15 +33,12 @@ ase_loops = {
 symmetry_tags = [
     '_symmetry_equiv_pos_site_id',
     '_symmetry_equiv_pos_as_xyz',
-
     '_symmetry_Int_Tables_number',
     '_symmetry_space_group_name_H-M',
     '_symmetry_space_group_name_Hall',
-
     '_space_group_symop_id',
     '_space_group_symop_operation_xyz',
     '_space_group_symop_sg_id',
-
     '_space_group_id',
     '_space_group_IT_number',
     '_space_group_name_H-M_alt',
@@ -52,6 +50,7 @@ def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
     """
+    # pylint: disable=unused-variable
     try:
         import CifFile
         from CifFile import CifBlock
@@ -88,7 +87,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
             if tr[i] < -eps:
                 sign = "-"
             parts[i] = format("{}{}{}".format(parts[i], sign, abs(tr[i])))
-        parts[i] = re.sub('^\+', '', parts[i])
+        parts[i] = re.sub(r'^\+', '', parts[i])
     return ",".join(parts)
 
 
@@ -128,7 +127,8 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
         struct = parser.get_structures(**kwargs)[0]
         return {'structure': StructureData(pymatgen_structure=struct)}
     except IndexError:
-        raise ValueError("pymatgen failed to provide a structure from the cif file")
+        raise ValueError(
+            "pymatgen failed to provide a structure from the cif file")
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
@@ -149,7 +149,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
         ase = [ase]
 
     datablocks = []
-    for i, atoms in enumerate(ase):
+    for _, atoms in enumerate(ase):
         datablock = dict()
 
         cell = atoms.cell
@@ -208,7 +208,8 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     return datablocks
 
 
-def pycifrw_from_cif(datablocks, loops=dict(), names=None):
+# pylint: disable=too-many-branches
+def pycifrw_from_cif(datablocks, loops=None, names=None):
     """
     Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
@@ -220,18 +221,20 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
     import CifFile
     from CifFile import CifBlock
 
+    if loops is None:
+        loops = dict()
+
     cif = CifFile.CifFile()
     try:
         cif.set_grammar("1.1")
     except AttributeError:
         # if no grammar can be set, we assume it's 1.1 (widespread standard)
         pass
-    
+
     if names and len(names) < len(datablocks):
         raise ValueError("Not enough names supplied for "
                          "datablocks: {} (names) < "
-                         "{} (datablocks)".format(len(names),
-                                                  len(datablocks)))
+                         "{} (datablocks)".format(len(names), len(datablocks)))
     for i, values in enumerate(datablocks):
         name = str(i)
         if names:
@@ -260,7 +263,8 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
             # create automatically a loop for non-scalar values
-            if isinstance(values[tag],(tuple,list)) and tag not in loops.keys():
+            if isinstance(values[tag],
+                          (tuple, list)) and tag not in loops.keys():
                 datablock.CreateLoop([tag])
     return cif
 
@@ -297,7 +301,7 @@ def refine_inline(node):
 
     cif = CifData(ase=refined_atoms)
     if name != str(0):
-        cif.values.rename(str(0),name)
+        cif.values.rename(str(0), name)
 
     # Remove all existing symmetry tags before overwriting:
     for tag in symmetry_tags:
@@ -334,14 +338,14 @@ def parse_formula(formula):
     import re
 
     contents = {}
-    for part in re.split('\s+', formula):
-        m = re.match('(\D+)([\.\d]+)?', part)
+    for part in re.split(r'\s+', formula):
+        m = re.match(r'(\D+)([\.\d]+)?', part)
         specie = m.group(1)
         quantity = m.group(2)
         if quantity is None:
             quantity = 1
         else:
-            if re.match('^\d+$', quantity):
+            if re.match(r'^\d+$', quantity):
                 quantity = int(quantity)
             else:
                 quantity = float(quantity)
@@ -349,6 +353,8 @@ def parse_formula(formula):
     return contents
 
 
+# pylint: disable=abstract-method
+# Note:  Method 'query' is abstract in class 'Node' but is not overridden
 class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
@@ -358,8 +364,24 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
-    _set_incompatibilities = [("ase", "file"), ("ase", "values"),
-                              ("file", "values")]
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file',
+                                                                   'values')]
+    _scan_types = ['standard', 'flex']
+    _parse_policies = ['eager', 'lazy']
+
+    @property
+    def _set_defaults(self):
+        """
+        Add defaults for some attributes.
+
+        """
+        parent_dict = super(CifData, self)._set_defaults
+        parent_dict.update({
+            'scan_type': self._scan_types[0],
+            'parse_policy': 'eager',
+        })
+
+        return parent_dict
 
     @staticmethod
     def read_cif(fileobj, index=-1, **kwargs):
@@ -377,10 +399,9 @@ class CifData(SinglefileData):
         if index is None:
             # If index is explicitely set to None, the list is returned as such.
             return struct_list
-        else:
-            # otherwise return the desired structure specified by index.
-            # If no index is specified, the last structure is assumed by default
-            return struct_list[index]
+        # otherwise return the desired structure specified by index.
+        # If no index is specified, the last structure is assumed by default
+        return struct_list[index]
 
     @classmethod
     def from_md5(cls, md5):
@@ -413,33 +434,31 @@ class CifData(SinglefileData):
         """
         import aiida.common.utils
         import os
-        from aiida.common.exceptions import ParsingError
 
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
 
         cifs = cls.from_md5(md5)
-        if len(cifs) == 0:
+        if not cifs:
             if store_cif:
                 instance = cls(file=filename).store()
                 return (instance, True)
-            else:
-                instance = cls(file=filename)
-                return (instance, True)
+            instance = cls(file=filename)
+            return (instance, True)
         else:
             if len(cifs) > 1:
                 if use_first:
                     return (cifs[0], False)
                 else:
-                    raise ValueError(
-                        "More than one copy of a CIF file "
-                        "with the same MD5 has been found in "
-                        "the DB. pks={}".format(
-                            ",".join([str(i.pk) for i in cifs])))
+                    raise ValueError("More than one copy of a CIF file "
+                                     "with the same MD5 has been found in "
+                                     "the DB. pks={}".format(
+                                         ",".join([str(i.pk) for i in cifs])))
             else:
                 return cifs[0], False
 
+    # pylint: disable=attribute-defined-outside-init
     @property
     def ase(self):
         """
@@ -461,9 +480,8 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        else:
-            return CifData.read_cif(
-                self._get_folder_pathsubfolder.open(self.filename), **kwargs)
+        return CifData.read_cif(
+            self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
         import tempfile
@@ -490,21 +508,35 @@ class CifData(SinglefileData):
                 import CifFile
                 from CifFile import CifBlock
             except ImportError as e:
-                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
-            c = CifFile.ReadCif(self.get_file_abs_path())
-            # change all StarBlocks into CifBlocks
-            for k,v in c.items():
+                raise ImportError(
+                    str(e) + '. You need to install the PyCifRW package.')
+
+            c = CifFile.ReadCif(
+                self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
+            for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
+
         return self._values
 
     def set_values(self, values):
+        """
+        Set internal representation to `values`.
+
+        Warning: This also writes a new CIF file.
+
+        :param values: PyCifRW CifFile object
+
+        .. note:: requires PyCifRW module.
+        """
         import tempfile
         with tempfile.NamedTemporaryFile() as f:
             with HiddenPrints():
                 f.write(values.WriteOut())
             f.flush()
             self.set_file(f.name)
+
+        self._values = values
 
     @values.setter
     def values(self, values):
@@ -514,10 +546,29 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
+        # Note: this will set attributes, if specified as kwargs
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None
 
+        if not self.is_stored and 'file' in kwargs \
+           and self.get_attr('parse_policy') == 'eager':
+            self.parse()
+
+    def parse(self, scan_type=None):
+        """
+        Parses CIF file and sets attributes.
+
+        :param scan_type:  See set_scan_type
+        """
+        if scan_type is not None:
+            self.set_scan_type(scan_type)
+
+        # Note: this causes parsing, if not already parsed
+        self._set_attr('formulae', self.get_formulae())
+        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+
+    # pylint: disable=arguments-differ
     def store(self, *args, **kwargs):
         """
         Store the node.
@@ -525,9 +576,12 @@ class CifData(SinglefileData):
         self._set_attr('md5', self.generate_md5())
         return super(CifData, self).store(*args, **kwargs)
 
+    # pylint: disable=attribute-defined-outside-init
     def set_file(self, filename):
         """
-        Set the file. If the source is set and the MD5 checksum of new file
+        Set the file.
+
+        If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
         """
         super(CifData, self).set_file(filename)
@@ -537,15 +591,48 @@ class CifData(SinglefileData):
                         self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
+
         self._values = None
         self._ase = None
-        self._set_attr('formulae', self.get_formulae())
-        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+        self._set_attr('formulae', None)
+        self._set_attr('spacegroup_numbers', None)
+
+    def set_scan_type(self, scan_type):
+        """
+        Set the scan_type for PyCifRW.
+
+        The 'flex' scan_type of PyCifRW is faster for large CIF files but
+        does not yet support the CIF2 format as of 02/2018.
+        See the CifFile.ReadCif function
+
+        :param scan_type: Either 'standard' or 'flex' (see _scan_types)
+        """
+        if scan_type in self._scan_types:
+            self._set_attr('scan_type', scan_type)
+        else:
+            raise ValueError("Got unknown scan_type {}".format(scan_type))
+
+    def set_parse_policy(self, parse_policy):
+        """
+        Set the parse policy.
+
+        :param parse_policy: Either 'eager' (parse CIF file on set_file)
+            or 'lazy' (defer parsing until needed)
+        """
+        if parse_policy in self._parse_policies:
+            self._set_attr('parse_policy', parse_policy)
+        else:
+            raise ValueError("Got unknown parse_policy {}".format(parse_policy))
 
     def get_formulae(self, mode='sum'):
         """
-        Get the formula.
+        Return chemical formulae specified in CIF file.
+
+        Note: This does not compute the formula, it only reads it from the
+        appropriate tag. Use refine_inline to compute formulae.
         """
+        # note: If formulae are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
         formula_tag = "_chemical_formula_{}".format(mode)
         formulae = []
         for datablock in self.values.keys():
@@ -553,25 +640,33 @@ class CifData(SinglefileData):
             if formula_tag in self.values[datablock].keys():
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
+
         return formulae
 
     def get_spacegroup_numbers(self):
         """
         Get the spacegroup international number.
         """
-        spg_tags = ["_space_group.it_number", "_space_group_it_number",
-                    "_symmetry_int_tables_number"]
+        # note: If spacegroup_numbers are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
+        spg_tags = [
+            "_space_group.it_number", "_space_group_it_number",
+            "_symmetry_int_tables_number"
+        ]
         spacegroup_numbers = []
         for datablock in self.values.keys():
             spacegroup_number = None
-            correct_tags = [tag for tag in spg_tags
-                            if tag in self.values[datablock].keys()]
+            correct_tags = [
+                tag for tag in spg_tags if tag in self.values[datablock].keys()
+            ]
             if correct_tags:
                 try:
-                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
+                    spacegroup_number = int(
+                        self.values[datablock][correct_tags[0]])
                 except ValueError:
                     pass
             spacegroup_numbers.append(spacegroup_number)
+
         return spacegroup_numbers
 
     def has_partial_occupancies(self):
@@ -616,7 +711,7 @@ class CifData(SinglefileData):
 
     def generate_md5(self):
         """
-        Generate MD5 hash of the file's contents on-the-fly.
+        Computes and returns MD5 hash of the CIF file.
         """
         import aiida.common.utils
         from aiida.common.exceptions import ValidationError
@@ -639,27 +734,35 @@ class CifData(SinglefileData):
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
-        import cif  # This same module
 
         param = ParameterData(dict=kwargs)
+        conv_name = '_get_aiida_structure_{}_inline'.format(converter)
         try:
-            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
-        except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
+            conv_f = globals()[conv_name]
+        except KeyError:
+            raise ValueError(
+                "No such converter '{}' available".format(converter))
         ret_dict = conv_f(cif=self, parameters=param, store=store)
         return ret_dict['structure']
 
+    #pylint: disable=unused-argument
     def _prepare_cif(self, main_file_name=""):
         """
-        Write the given CIF file to a string of format CIF.
+        Return CIF string of CifData object.
+
+        If parsed values are present, a CIF string is created
+        and written to file.
+        If no parsed values are present, the CIF string is read
+        from file.
         """
-        # If values have been changed and node is not stored,
-        # the file is updated.
         if self._values and not self.is_stored:
-            self.values = self._values
+            # Note: this overwrites the CIF file!
+            self.set_values(self._values)
+
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read(), {}
 
+    #pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given CIF to a string of format TCOD CIF.
@@ -685,7 +788,7 @@ class CifData(SinglefileData):
 
     def _validate(self):
         """
-        Validate the structure.
+        Validates MD5 hash of CIF file.
         """
         from aiida.common.exceptions import ValidationError
 

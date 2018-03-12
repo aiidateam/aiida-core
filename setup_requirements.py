@@ -43,8 +43,8 @@ install_requires = [
     'numpy==1.12.0',
     'plumpy==0.7.11',
     'portalocker==1.1.0',
-    'SQLAlchemy==1.0.12',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
-    'SQLAlchemy-Utils==0.31.2',
+    'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
+    'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.6',
     'ujson==1.35',
     'enum34==1.1.6',
@@ -58,7 +58,7 @@ install_requires = [
     'tabulate==0.7.5',
     'ete3==3.0.0b35',
     'uritools==1.0.2',
-    'psycopg2==2.7.1',
+    'psycopg2-binary==2.7.4',
     # Requirements for ssh transport
     'paramiko==2.4.0',
     'ecdsa==0.13',

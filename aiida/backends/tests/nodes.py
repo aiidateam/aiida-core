@@ -10,9 +10,6 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
-"""
-Tests for nodes, attributes and links
-"""
 import unittest
 from sqlalchemy.exc import StatementError
 
@@ -20,6 +17,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.common import caching
+from aiida.orm.calculation import Calculation
 from aiida.orm.code import Code
 from aiida.orm.data import Data
 from aiida.orm.node import Node
@@ -125,9 +123,9 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        c = Code()
+        c = Calculation()
         hash1 = c.get_hash()
-        c._hide()
+        c._set_attr('_sealed', True)
         hash2 = c.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
@@ -343,6 +341,32 @@ class TestNodeBasic(AiidaTestCase):
     listval = [1, "s", True, None]
     emptydict = {}
     emptylist = []
+
+    def test_attribute_mutability(self):
+        """
+        Attributes of a node should be immutable after storing, unless the stored_check is
+        disabled in the call
+        """
+        a = Node()
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a.store()
+
+        # After storing attributes should now be immutable
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('bool')
+
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', self.intval)
+
+        # Passing stored_check=False should disable the mutability check
+        a._del_attr('bool', stored_check=False)
+        a._set_attr('integer', self.intval, stored_check=False)
+
+        self.assertEquals(a.get_attr('integer'), self.intval)
+
+        with self.assertRaises(AttributeError):
+            a.get_attr('bool')
 
     def test_attr_before_storing(self):
         a = Node()
@@ -1033,14 +1057,11 @@ class TestNodeBasic(AiidaTestCase):
         returned_attrs = {k: v for k, v in a.iterextras()}
         self.assertEquals(returned_attrs, all_extras)
 
-    def test_versioning_and_postsave_attributes(self):
+    def test_versioning(self):
         """
-        Checks the versioning.
+        Test the versioning of the node when setting attributes and extras
         """
-        from aiida.orm.test import myNodeWithFields
-
-        # Has 'state' as updatable attribute
-        a = myNodeWithFields()
+        a = Node()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -1048,19 +1069,17 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': 267,
         }
 
-        for k, v in attrs_to_set.iteritems():
-            a._set_attr(k, v)
-
-        # Check before storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            a._set_attr(key, value)
+            self.assertEquals(a.get_attr(key), value)
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267, a.get_attr('state'))
+        for key, value in attrs_to_set.iteritems():
+            self.assertEquals(a.get_attr(key), value)
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
@@ -1069,18 +1088,12 @@ class TestNodeBasic(AiidaTestCase):
         a.set_extra('a', 'b')
         self.assertEquals(a.dbnode.nodeversion, 2)
 
-        # I check that I can set this attribute
-        a._set_attr('state', 999)
-
-        # I check increment on new version
-        self.assertEquals(a.dbnode.nodeversion, 3)
-
         # In both cases, the node version must increase
         a.label = 'test'
-        self.assertEquals(a.dbnode.nodeversion, 4)
+        self.assertEquals(a.dbnode.nodeversion, 3)
 
         a.description = 'test description'
-        self.assertEquals(a.dbnode.nodeversion, 5)
+        self.assertEquals(a.dbnode.nodeversion, 4)
 
     def test_delete_extras(self):
         """
@@ -1249,9 +1262,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        from aiida.orm.test import myNodeWithFields
-
-        a = myNodeWithFields()
+        a = Node()
         a.store()
 
         # Even if I stored many attributes, this should stay at 1
@@ -1563,6 +1574,55 @@ class TestNodeBasic(AiidaTestCase):
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
                 load_node(spec, parent_class=ArrayData)
+
+    def test_load_plugin_safe(self):
+        from aiida.orm import (JobCalculation, CalculationFactory, DataFactory)
+
+        ###### for calculation
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+        }
+
+        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        testcalc = TemplateReplacerCalc(**calc_params).store()
+        jobcalc = JobCalculation(**calc_params).store()
+
+        # compare if plugin exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(testcalc), type(obj))
+
+        # change node type and save in database again
+        testcalc.dbnode.type = "calculation.job.simpleplugins_tmp.templatereplacer.TemplatereplacerCalculation."
+        testcalc.dbnode.save()
+
+        # changed node should return job calc as its plugin is not exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(jobcalc), type(obj))
+
+        ####### for data
+        KpointsData = DataFactory('array.kpoints')
+        kpoint = KpointsData().store()
+        Data = DataFactory("Data")
+        data = Data().store()
+
+        # compare if plugin exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(kpoint), type(obj))
+
+        # change node type and save in database again
+        kpoint.dbnode.type = "data.array.kpoints_tmp.KpointsData."
+        kpoint.dbnode.save()
+
+        # changed node should return data node as its plugin is not exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(data), type(obj))
+
+        ###### for node
+        n1 = Node().store()
+        obj = n1.dbnode.get_aiida_class()
+        self.assertEqual(type(n1), type(obj))
+
 
 
 class TestSubNodesAndLinks(AiidaTestCase):

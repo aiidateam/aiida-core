@@ -1574,6 +1574,31 @@ class _Cif(VerdiCommandWithSubcommands,
                 else:
                     raise
 
+    def _show_vesta(self, exec_name, structure_list):
+        """
+        Plugin for VESTA, added by Yue-Wen FANG and Abel Carreras
+        at Kyoto University in the group of Prof. Isao Tanaka's lab
+        """
+        import tempfile, subprocess
+
+        with tempfile.NamedTemporaryFile(suffix='.cif') as f:
+            for structure in structure_list:
+                f.write(structure._exportstring('cif')[0])
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                            "or try with an absolute path.".format(exec_name))
+                    sys.exit(1)
+                else:
+                    raise
+
     def query(self, args):
         """
         Perform the query and return information for the list.

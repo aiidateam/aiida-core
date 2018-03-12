@@ -122,7 +122,6 @@ def store_and_serialize_inputs(inputs):
     return serialize_data(inputs)
 
 def _store_inputs(inputs):
-    print(inputs)
     for node in inputs.values():
         try:
             node.store()

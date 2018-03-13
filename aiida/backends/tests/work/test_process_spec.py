@@ -30,9 +30,9 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        self.assertTrue(self.spec.validate_inputs({'key': 'foo'})[0])
-        self.assertTrue(self.spec.validate_inputs({'key': 5})[0])
-        self.assertTrue(self.spec.validate_inputs({'key': n})[0])
+        self.assertFalse(self.spec.validate_inputs({'key': 'foo'})[0])
+        self.assertFalse(self.spec.validate_inputs({'key': 5})[0])
+        self.assertFalse(self.spec.validate_inputs({'key': n})[0])
         self.assertTrue(self.spec.validate_inputs({'key': d})[0])
 
     def test_dynamic_output(self):

@@ -18,7 +18,10 @@ from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
-from workchains import NestedWorkChain, ListEcho, InlineCalcRunnerWorkChain, WorkFunctionRunnerWorkChain
+from workchains import (
+    NestedWorkChain, ListEcho, InlineCalcRunnerWorkChain,
+    WorkFunctionRunnerWorkChain, NestedInputNamespace
+)
 
 ParameterData = DataFactory('parameter')
 
@@ -243,6 +246,11 @@ def main():
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
+
+    print "Submitting a workchain with a nested input namespace."
+    value = Int(-12)
+    pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk
+    expected_results_workchains[pk] = value
 
     print "Submitting the ListEcho workchain."
     list_value = List()

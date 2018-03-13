@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
+import collections
+
 import plumpy
 import plumpy.rmq
 
@@ -116,12 +118,19 @@ def store_and_serialize_inputs(inputs):
     :param inputs: dictionary where keys are potentially unstored node instances
     :returns: a dictionary where nodes are serialized
     """
-    for node in inputs.itervalues():
+    _store_inputs(inputs)
+    return serialize_data(inputs)
+
+def _store_inputs(inputs):
+    """
+    Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
+    """
+    for node in inputs.values():
         try:
             node.store()
         except AttributeError:
-            pass
-    return serialize_data(inputs)
+            if isinstance(node, collections.Mapping):
+                _store_inputs(node)
 
 
 class LaunchProcessAction(plumpy.LaunchProcessAction):

@@ -51,6 +51,18 @@ class NestedWorkChain(WorkChain):
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
 
+class NestedInputNamespace(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(NestedInputNamespace, cls).define(spec)
+
+        spec.input('foo.bar.baz', valid_type=Int)
+        spec.output('output', valid_type=Int)
+        spec.outline(cls.do_echo)
+
+    def do_echo(self):
+        self.out('output', self.inputs.foo.bar.baz)
+
 class ListEcho(WorkChain):
     @classmethod
     def define(cls, spec):

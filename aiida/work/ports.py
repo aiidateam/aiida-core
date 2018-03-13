@@ -25,5 +25,5 @@ class InputPort(WithNonDb, ports.InputPort):
     pass
 
 
-class PortNamespace(WithNonDb, ports.PortNamespace):
+class PortNamespace(ports.PortNamespace):
     pass

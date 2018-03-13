@@ -84,26 +84,20 @@ class AiidaWorkchainDirective(Directive):
 
         content += self.build_doctree(
             title='Inputs:', port_namespace=self.workchain_spec.inputs,
-            filter_fct=lambda port: not _is_non_db(port)
         )
-        if self.HIDE_UNSTORED_INPUTS_FLAG not in self.options:
-            content += self.build_doctree(
-                title='Inputs not stored in the database:', port_namespace=self.workchain_spec.inputs,
-                filter_fct=_is_non_db
-            )
         content += self.build_doctree(
             title='Outputs:', port_namespace=self.workchain_spec.outputs
         )
 
         return content
 
-    def build_doctree(self, title, port_namespace, filter_fct=lambda x: True):
+    def build_doctree(self, title, port_namespace):
         """
         Returns a doctree for a given port namespace, including a title.
         """
         paragraph = nodes.paragraph()
         paragraph += nodes.strong(text=title)
-        namespace_doctree = self.build_portnamespace_doctree(port_namespace, filter_fct=filter_fct)
+        namespace_doctree = self.build_portnamespace_doctree(port_namespace)
         if len(namespace_doctree) > 0:
             paragraph += namespace_doctree
         else:
@@ -111,7 +105,7 @@ class AiidaWorkchainDirective(Directive):
 
         return paragraph
 
-    def build_portnamespace_doctree(self, port_namespace, filter_fct):
+    def build_portnamespace_doctree(self, port_namespace):
         """
         Builds the doctree for a port namespace.
         """
@@ -120,18 +114,15 @@ class AiidaWorkchainDirective(Directive):
         result = nodes.bullet_list(bullet='*')
         for name, port in sorted(port_namespace.items()):
             item = nodes.list_item()
-            if not filter_fct(port):
+            if _is_non_db(port) and self.HIDE_UNSTORED_INPUTS_FLAG in self.options:
                 continue
             if isinstance(port, (InputPort, OutputPort)):
                 item += self.build_port_paragraph(name, port)
             elif isinstance(port, PortNamespace):
-                # item += addnodes.literal_strong(
-                #     text='Namespace {}'.format(name)
-                # )
                 item += addnodes.literal_strong(text=name)
                 item += nodes.Text(', ')
                 item += nodes.emphasis(text='Namespace')
-                item += self.build_portnamespace_doctree(port, filter_fct=filter_fct)
+                item += self.build_portnamespace_doctree(port)
             else:
                 raise NotImplementedError
             result += item
@@ -149,6 +140,9 @@ class AiidaWorkchainDirective(Directive):
         )
         paragraph += nodes.Text(', ')
         paragraph += nodes.Text('required' if port.required else 'optional')
+        if _is_non_db(port):
+            paragraph += nodes.Text(', ')
+            paragraph += nodes.emphasis(text='non_db')
         if port.help:
             paragraph += nodes.Text(' -- ')
             # publish_doctree returns <document: <paragraph...>>.

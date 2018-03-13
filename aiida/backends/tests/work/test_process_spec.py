@@ -41,7 +41,7 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        self.assertFalse(self.spec.validate_inputs({'key': 'foo'})[0])
-        self.assertFalse(self.spec.validate_inputs({'key': 5})[0])
-        self.assertFalse(self.spec.validate_inputs({'key': n})[0])
-        self.assertTrue(self.spec.validate_inputs({'key': d})[0])
+        self.assertFalse(self.spec.validate_outputs({'key': 'foo'})[0])
+        self.assertFalse(self.spec.validate_outputs({'key': 5})[0])
+        self.assertFalse(self.spec.validate_outputs({'key': n})[0])
+        self.assertTrue(self.spec.validate_outputs({'key': d})[0])

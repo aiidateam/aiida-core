@@ -336,7 +336,7 @@ class JobProcess(processes.Process):
 
             port = self.spec().inputs[name]
 
-            if input_value is None or port.non_db:
+            if input_value is None or getattr(port, 'non_db', False):
                 continue
 
             # Call the 'use' methods to set up the data-calc links

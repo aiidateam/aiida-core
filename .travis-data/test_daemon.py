@@ -19,7 +19,7 @@ from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
 from workchains import (
-    NestedWorkChain, ListEcho, InlineCalcRunnerWorkChain,
+    NestedWorkChain, DynamicNonDbInput, ListEcho, InlineCalcRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace
 )
 
@@ -250,6 +250,10 @@ def main():
     print "Submitting a workchain with a nested input namespace."
     value = Int(-12)
     pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk
+
+    print "Submitting a workchain with a dynamic non-db input."
+    value = [4, 2, 3]
+    pk = submit(DynamicNonDbInput, namespace={'input': value}).pk
     expected_results_workchains[pk] = value
 
     print "Submitting the ListEcho workchain."

@@ -122,6 +122,9 @@ def store_and_serialize_inputs(inputs):
     return serialize_data(inputs)
 
 def _store_inputs(inputs):
+    """
+    Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
+    """
     for node in inputs.values():
         try:
             node.store()

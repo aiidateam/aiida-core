@@ -86,3 +86,24 @@ Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``
 When calling the children, we again use the :meth:`.Process.exposed_inputs` method to forward the exposed inputs. Since the inputs ``b`` and ``c`` are now in a specific namespace, we need to pass this namespace as an additional parameter. By default, :meth:`.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``. If the same input key exists in multiple namespaces, the input in the lowest namespace takes precedence. It's also possible to disable this behavior, and instead search only in the explicit namespace that was passed. This is done by setting ``agglomerate=False``, as shown in the call to ``child_2``. Of course, we then need to explicitly pass the input ``a``.
 
 Finally, we use :meth:`.exposed_outputs` and :meth:`.out_many` to forward the outputs of the children to the outputs of the parent. Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`.exposed_outputs` method.
+
+.. _serialize_inputs:
+
+Automatic input serialization
+-----------------------------
+
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a workflow. Doing this manually can be cumbersome, so you can define a function which does this automatically when defining the input spec. This function, passed as ``serialize_fct`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+
+For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type. For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
+
+The following example workchain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`.to_aiida_type` function is used as serialization function.
+
+.. include:: serialize_examples/serialize_workchain.py
+    :code: python
+
+This workchain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`.to_aiida_type`.
+
+.. include:: serialize_examples/run_serialize.py
+    :code: python
+
+Of course, you can also use the serialization feature to perform a more complex serialization of the inputs.

@@ -21,7 +21,8 @@ from click_spinner import spinner
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.utils import decorators
-from aiida.cmdline.utils.common import format_local_time, get_env_with_venv_bin
+from aiida.cmdline.utils.common import get_env_with_venv_bin
+from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
 from aiida.common.profile import get_current_profile_name
 from aiida.common.setup import get_profiles_list
 from aiida.daemon.client import DaemonClient
@@ -96,7 +97,7 @@ def start(foreground):
         time.sleep(1)
         response = client.get_status()
 
-    click.echo(response['status'])
+    print_client_response_status(response)
 
 
 @daemon_cmd.command()
@@ -111,9 +112,10 @@ def status(all_profiles):
         profiles = [get_current_profile_name()]
 
     for profile_name in profiles:
+        client = DaemonClient(profile_name)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile_name), bold=True)
-        result = get_daemon_status(profile_name)
+        result = get_daemon_status(client)
         click.echo(result)
 
 
@@ -126,7 +128,7 @@ def incr(number):
     """
     client = DaemonClient()
     response = client.increase_workers(number)
-    click.echo(response['status'])
+    print_client_response_status(response)
 
 
 @daemon_cmd.command()
@@ -138,7 +140,7 @@ def decr(number):
     """
     client = DaemonClient()
     response = client.decrease_workers(number)
-    click.echo(response['status'])
+    print_client_response_status(response)
 
 
 @daemon_cmd.command()
@@ -189,7 +191,7 @@ def stop(no_wait, all_profiles):
         response = client.stop_daemon(wait)
 
         if wait:
-            click.echo(response['status'])
+            print_client_response_status(response)
 
 
 @daemon_cmd.command()
@@ -222,7 +224,7 @@ def restart(ctx, reset, no_wait):
         response = client.restart_daemon(wait)
 
         if wait:
-            click.echo(response['status'])
+            print_client_response_status(response)
 
 
 @daemon_cmd.command()
@@ -243,14 +245,15 @@ def _start_circus(foreground):
     from circus.util import check_future_exception_and_log, configure_logger
 
     client = DaemonClient()
-
-    env = get_env_with_venv_bin()
-    env['PYTHONUNBUFFERED'] = 'True'
-    loglevel = 'INFO'
-    logoutput = '-'
+    loglevel = client.loglevel
+    logoutput = client.circus_log_file
 
     if not foreground:
         logoutput = client.circus_log_file
+        daemonize()
+
+    # Running in foreground so set logging filehandle to stdout
+    logoutput = '-'
 
     arbiter_config = {
         'controller': client.get_endpoint(0),
@@ -270,20 +273,17 @@ def _start_circus(foreground):
                 'class': 'FileStream',
                 'filename': client.daemon_log_file
             },
-            'env': env,
+            'env': get_env_with_venv_bin(),
         }]
     } # yapf: disable
-
-    if not foreground:
-        daemonize()
 
     arbiter = get_arbiter(**arbiter_config)
     pidfile = Pidfile(arbiter.pidfile)
 
     try:
         pidfile.create(os.getpid())
-    except RuntimeError as err:
-        click.echo(str(err))
+    except RuntimeError as exception:
+        click.echo(str(exception))
         sys.exit(1)
 
     # Configure the logger
@@ -293,6 +293,7 @@ def _start_circus(foreground):
 
     # Main loop
     should_restart = True
+
     while should_restart:
         try:
             arbiter = arbiter
@@ -300,10 +301,10 @@ def _start_circus(foreground):
             should_restart = False
             if check_future_exception_and_log(future) is None:
                 should_restart = arbiter._restarting  # pylint: disable=protected-access
-        except Exception as err:
-            # emergency stop
+        except Exception as exception:
+            # Emergency stop
             arbiter.loop.run_sync(arbiter._emergency_stop)  # pylint: disable=protected-access
-            raise err
+            raise exception
         except KeyboardInterrupt:
             pass
         finally:
@@ -312,49 +313,3 @@ def _start_circus(foreground):
                 pidfile.unlink()
 
     sys.exit(0)
-
-
-def get_daemon_status(profile_name):
-    """
-    Print the status information of the daemon for a given profile
-
-    :param profile_name: the name of the profile
-    """
-    from tabulate import tabulate
-
-    client = DaemonClient(profile_name)
-
-    if not client.is_daemon_running:
-        return 'The daemon is not running'
-
-    status_response = client.get_status()
-
-    if status_response['status'] == 'stopped':
-        return 'The daemon is paused'
-    elif status_response['status'] == 'error':
-        return 'The daemon is in an unexpected state, try verdi daemon restart --reset'
-
-    worker_response = client.get_worker_info()
-    daemon_response = client.get_daemon_info()
-
-    workers = [['PID', 'MEM %', 'CPU %', 'started']]
-    for worker_pid, worker_info in worker_response['info'].items():
-        worker_row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
-        workers.append(worker_row)
-
-    if len(workers) > 1:
-        workers_info = tabulate(workers, headers='firstrow', tablefmt='simple')
-    else:
-        workers_info = '--> No workers are running. Use verdi daemon incr to start some!\n'
-
-    info = {
-        'pid': daemon_response['info']['pid'],
-        'time': format_local_time(daemon_response['info']['create_time']),
-        'nworkers': len(workers) - 1,
-        'workers': workers_info
-    }
-
-    template = ('Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
-                'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
-
-    return template.format(**info)

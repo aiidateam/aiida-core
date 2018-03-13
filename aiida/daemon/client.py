@@ -18,7 +18,9 @@ class DaemonClient(ProfileConfig):
     properties related to the daemon client
     """
 
+    DAEMON_ERROR = 'daemon-error'
     _DAEMON_NAME = 'aiida-{name}'
+    _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
 
     @property
@@ -28,6 +30,10 @@ class DaemonClient(ProfileConfig):
     @property
     def cmd_string(self):
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
+
+    @property
+    def loglevel(self):
+        return self._DEFAULT_LOGLEVEL
 
     @property
     def virtualenv(self):
@@ -78,7 +84,7 @@ class DaemonClient(ProfileConfig):
         causing the pid file to not be cleaned up properly
         """
         if not self.get_daemon_pid:
-            return {'status': 'The daemon is not running'}
+            return {'status': self.DAEMON_ERROR}
 
         try:
             result = self.client.call(command)

@@ -22,9 +22,9 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, daemon_cmd
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.common import format_local_time, get_env_with_venv_bin
-from aiida.cmdline.utils.daemon import CircusClient
 from aiida.common.profile import get_current_profile_name
 from aiida.common.setup import get_profiles_list
+from aiida.daemon.client import DaemonClient
 
 
 class Daemon(VerdiCommandWithSubcommands):
@@ -75,15 +75,14 @@ def start(foreground):
     """
     Start the daemon
     """
-    client = CircusClient()
-    profile = client.daemon_client.profile_name
+    client = DaemonClient()
 
     click.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', profile, 'daemon', '_start_circus', '--foreground']
+        command = ['verdi', '-p', client.profile_name, 'daemon', '_start_circus', '--foreground']
     else:
-        command = ['verdi', '-p', profile, 'daemon', '_start_circus']
+        command = ['verdi', '-p', client.profile_name, 'daemon', '_start_circus']
 
     try:
         currenv = get_env_with_venv_bin()
@@ -125,7 +124,7 @@ def incr(number):
     """
     Add NUMBER [default=1] workers to the running daemon
     """
-    client = CircusClient()
+    client = DaemonClient()
     response = client.increase_workers(number)
     click.echo(response['status'])
 
@@ -137,7 +136,7 @@ def decr(number):
     """
     Remove NUMBER [default=1] workers from the running daemon
     """
-    client = CircusClient()
+    client = DaemonClient()
     response = client.decrease_workers(number)
     click.echo(response['status'])
 
@@ -147,12 +146,11 @@ def logshow():
     """
     Show the log of the daemon, press CTRL+C to quit
     """
-    client = CircusClient()
-    logfile = client.daemon_client.daemon_log_file
+    client = DaemonClient()
 
     try:
         currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(['tail', '-f', logfile], env=currenv)
+        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)
         process.wait()
     except KeyboardInterrupt:
         process.kill()
@@ -172,7 +170,7 @@ def stop(no_wait, all_profiles):
 
     for profile_name in profiles:
 
-        client = CircusClient(profile_name)
+        client = DaemonClient(profile_name)
 
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile_name), bold=True)
@@ -207,7 +205,7 @@ def restart(ctx, reset, no_wait):
     is passed, however, the full circus daemon will be stopped and restarted with just
     a single worker
     """
-    client = CircusClient()
+    client = DaemonClient()
 
     wait = not no_wait
 
@@ -244,8 +242,7 @@ def _start_circus(foreground):
     from circus.pidfile import Pidfile
     from circus.util import check_future_exception_and_log, configure_logger
 
-    circus_client = CircusClient()
-    daemon_client = circus_client.daemon_client
+    client = DaemonClient()
 
     env = get_env_with_venv_bin()
     env['PYTHONUNBUFFERED'] = 'True'
@@ -253,25 +250,25 @@ def _start_circus(foreground):
     logoutput = '-'
 
     if not foreground:
-        logoutput = daemon_client.circus_log_file
+        logoutput = client.circus_log_file
 
     arbiter_config = {
-        'controller': circus_client.get_endpoint(0),
-        'pubsub_endpoint': circus_client.get_endpoint(1),
-        'stats_endpoint': circus_client.get_endpoint(2),
+        'controller': client.get_endpoint(0),
+        'pubsub_endpoint': client.get_endpoint(1),
+        'stats_endpoint': client.get_endpoint(2),
         'logoutput': logoutput,
         'loglevel': loglevel,
         'debug': False,
         'statsd': True,
-        'pidfile': daemon_client.circus_pid_file,
+        'pidfile': client.circus_pid_file,
         'watchers': [{
-            'name': daemon_client.name,
-            'cmd': daemon_client.cmd_string,
-            'virtualenv': daemon_client.virtualenv,
+            'name': client.daemon_name,
+            'cmd': client.cmd_string,
+            'virtualenv': client.virtualenv,
             'copy_env': True,
             'stdout_stream': {
                 'class': 'FileStream',
-                'filename': daemon_client.daemon_log_file
+                'filename': client.daemon_log_file
             },
             'env': env,
         }]
@@ -325,7 +322,7 @@ def get_daemon_status(profile_name):
     """
     from tabulate import tabulate
 
-    client = CircusClient(profile_name)
+    client = DaemonClient(profile_name)
 
     if not client.is_daemon_running:
         return 'The daemon is not running'

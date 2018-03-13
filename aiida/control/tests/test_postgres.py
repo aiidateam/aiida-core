@@ -27,8 +27,7 @@ class PostgresTest(unittest.TestCase):
     def setUp(self):
         """Set up a temporary database cluster for testing potentially destructive operations"""
         self.pg_test = PGTest()
-        self.postgres = Postgres(
-            port=self.pg_test.port, interactive=False, quiet=True)
+        self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=True)
         self.dbuser = 'aiida'
         self.dbpass = 'password'
         self.dbname = 'aiida_db'
@@ -57,8 +56,7 @@ class PostgresTest(unittest.TestCase):
         self.postgres.determine_setup()
         self.assertTrue(self.postgres.pg_execute)
 
-    @mock.patch(
-        'aiida.control.postgres._try_connect', new=_try_connect_always_fail)
+    @mock.patch('aiida.control.postgres._try_connect', new=_try_connect_always_fail)
     @mock.patch('aiida.control.postgres._try_subcmd')
     def test_fallback_on_subcmd(self, try_subcmd):
         """Ensure that accessing postgres via subcommand is tried if psychopg does not work."""

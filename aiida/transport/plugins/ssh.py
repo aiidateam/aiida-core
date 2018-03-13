@@ -421,8 +421,7 @@ class SshTransport(aiida.transport.Transport):
         if self._load_system_host_keys:
             self._client.load_system_host_keys()
 
-        self._missing_key_policy = kwargs.pop(
-            'key_policy', 'RejectPolicy')  # This is paramiko default
+        self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default
         if self._missing_key_policy == 'RejectPolicy':
             self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
         elif self._missing_key_policy == 'WarningPolicy':
@@ -442,8 +441,7 @@ class SshTransport(aiida.transport.Transport):
 
         if kwargs:
             raise ValueError("The following parameters were not accepted by "
-                             "the transport: {}".format(
-                                 ",".join(str(k) for k in kwargs)))
+                             "the transport: {}".format(",".join(str(k) for k in kwargs)))
 
     def open(self):
         """
@@ -470,9 +468,7 @@ class SshTransport(aiida.transport.Transport):
             self._client.connect(self._machine, **connection_arguments)
         except Exception as e:
             self.logger.error("Error connecting through SSH: [{}] {}, "
-                              "connect_args were: {}".format(
-                                  e.__class__.__name__, e.message,
-                                  self._connect_args))
+                              "connect_args were: {}".format(e.__class__.__name__, e.message, self._connect_args))
             raise
 
         # Open also a SFTPClient
@@ -495,8 +491,7 @@ class SshTransport(aiida.transport.Transport):
         from aiida.common.exceptions import InvalidOperation
 
         if not self._is_open:
-            raise InvalidOperation("Cannot close the transport: "
-                                   "it is already closed")
+            raise InvalidOperation("Cannot close the transport: " "it is already closed")
 
         self._sftp.close()
         self._client.close()
@@ -505,17 +500,15 @@ class SshTransport(aiida.transport.Transport):
     @property
     def sshclient(self):
         if not self._is_open:
-            raise aiida.transport.transport.TransportInternalError(
-                "Error, ssh method called for SshTransport "
-                "without opening the channel first")
+            raise aiida.transport.transport.TransportInternalError("Error, ssh method called for SshTransport "
+                                                                   "without opening the channel first")
         return self._client
 
     @property
     def sftp(self):
         if not self._is_open:
-            raise aiida.transport.transport.TransportInternalError(
-                "Error, sftp method called for SshTransport "
-                "without opening the channel first")
+            raise aiida.transport.transport.TransportInternalError("Error, sftp method called for SshTransport "
+                                                                   "without opening the channel first")
         return self._sftp
 
     def __str__(self):
@@ -524,8 +517,7 @@ class SshTransport(aiida.transport.Transport):
         """
         conn_info = self._machine
         try:
-            conn_info = "{}@{}".format(self._connect_args['username'],
-                                       conn_info)
+            conn_info = "{}@{}".format(self._connect_args['username'], conn_info)
         except KeyError:
             # No username explicitly defined: ignore
             pass
@@ -535,8 +527,7 @@ class SshTransport(aiida.transport.Transport):
             # No port explicitly defined: ignore
             pass
 
-        return "{} [{}]".format("OPEN"
-                                if self._is_open else "CLOSED", conn_info)
+        return "{} [{}]".format("OPEN" if self._is_open else "CLOSED", conn_info)
 
     def chdir(self, path):
         """
@@ -618,11 +609,9 @@ class SshTransport(aiida.transport.Transport):
             if count > 0:
                 this_dir += '/'
             this_dir += element
-            if count + 1 == len(to_create) and self.isdir(
-                    this_dir) and ignore_existing:
+            if count + 1 == len(to_create) and self.isdir(this_dir) and ignore_existing:
                 return
-            if count + 1 == len(to_create) and self.isdir(
-                    this_dir) and not ignore_existing:
+            if count + 1 == len(to_create) and self.isdir(this_dir) and not ignore_existing:
                 self.mkdir(this_dir)
             if not self.isdir(this_dir):
                 self.mkdir(this_dir)
@@ -646,13 +635,11 @@ class SshTransport(aiida.transport.Transport):
             if os.path.isabs(path):
                 raise OSError("Error during mkdir of '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(
-                                  path, e.message))
+                              "or the directory already exists? ({})".format(path, e.message))
             else:
                 raise OSError("Error during mkdir of '{}' from folder '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(
-                                  path, self.getcwd(), e.message))
+                              "or the directory already exists? ({})".format(path, self.getcwd(), e.message))
 
     # TODO : implement rmtree
     def rmtree(self, path):
@@ -672,8 +659,7 @@ class SshTransport(aiida.transport.Transport):
         rm_flags = '-r -f'
         # if in input I give an invalid object raise ValueError
         if not path:
-            raise ValueError('Input to rmtree() must be a non empty string. ' +
-                             'Found instead %s as path' % path)
+            raise ValueError('Input to rmtree() must be a non empty string. ' + 'Found instead %s as path' % path)
 
         command = '{} {} {}'.format(rm_exe, rm_flags, escape_for_bash(path))
 
@@ -681,15 +667,12 @@ class SshTransport(aiida.transport.Transport):
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the rm "
-                                    "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the rm " "command: {}".format(stderr))
             return True
         else:
-            self.logger.error(
-                "Problem executing rm. Exit code: {}, stdout: '{}', "
-                "stderr: '{}'".format(retval, stdout, stderr))
-            raise IOError(
-                "Error while executing rm. Exit code: {}".format(retval))
+            self.logger.error("Problem executing rm. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}'".format(retval, stdout, stderr))
+            raise IOError("Error while executing rm. Exit code: {}".format(retval))
 
     def rmdir(self, path):
         """
@@ -743,13 +726,7 @@ class SshTransport(aiida.transport.Transport):
         parts.reverse()
         return parts
 
-    def put(self,
-            localpath,
-            remotepath,
-            callback=None,
-            dereference=True,
-            overwrite=True,
-            ignore_nonexisting=False):
+    def put(self, localpath, remotepath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
         """
         Put a file or a folder from local to remote.
         Redirects to putfile or puttree.
@@ -776,8 +753,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
-                raise ValueError("Pathname patterns are not allowed in the "
-                                 "destination")
+                raise ValueError("Pathname patterns are not allowed in the " "destination")
 
             # use the imported glob to analyze the path locally
             to_copy_list = glob.glob(localpath)
@@ -788,8 +764,7 @@ class SshTransport(aiida.transport.Transport):
                 if self.isfile(remotepath):
                     raise OSError("Remote destination is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not self.path_exists(
-                        remotepath):  # questo dovrebbe valere solo per file
+                elif not self.path_exists(remotepath):  # questo dovrebbe valere solo per file
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_remote = True
@@ -805,36 +780,26 @@ class SshTransport(aiida.transport.Transport):
                         r = os.path.join(remotepath, os.path.split(s)[1])
                         self.putfile(s, r, callback, dereference, overwrite)
                     else:  # one file to copy on one file
-                        self.putfile(s, remotepath, callback, dereference,
-                                     overwrite)
+                        self.putfile(s, remotepath, callback, dereference, overwrite)
                 else:
-                    self.puttree(s, remotepath, callback, dereference,
-                                 overwrite)
+                    self.puttree(s, remotepath, callback, dereference, overwrite)
 
         else:
             if os.path.isdir(localpath):
-                self.puttree(localpath, remotepath, callback, dereference,
-                             overwrite)
+                self.puttree(localpath, remotepath, callback, dereference, overwrite)
             elif os.path.isfile(localpath):
                 if self.isdir(remotepath):
                     r = os.path.join(remotepath, os.path.split(localpath)[1])
                     self.putfile(localpath, r, callback, dereference, overwrite)
                 else:
-                    self.putfile(localpath, remotepath, callback, dereference,
-                                 overwrite)
+                    self.putfile(localpath, remotepath, callback, dereference, overwrite)
             else:
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise OSError("The local path {} does not exist"
-                                  .format(localpath))
+                    raise OSError("The local path {} does not exist".format(localpath))
 
-    def putfile(self,
-                localpath,
-                remotepath,
-                callback=None,
-                dereference=True,
-                overwrite=True):
+    def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):
         """
         Put a file from local to remote.
 
@@ -861,12 +826,7 @@ class SshTransport(aiida.transport.Transport):
 
         return self.sftp.put(localpath, remotepath, callback=callback)
 
-    def puttree(self,
-                localpath,
-                remotepath,
-                callback=None,
-                dereference=True,
-                overwrite=True):  # by default overwrite
+    def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # by default overwrite
         """
         Put a folder recursively from local to remote.
 
@@ -895,8 +855,7 @@ class SshTransport(aiida.transport.Transport):
             raise OSError("The localpath does not exists")
 
         if not os.path.isdir(localpath):
-            raise ValueError(
-                "Input localpath is not a folder: {}".format(localpath))
+            raise ValueError("Input localpath is not a folder: {}".format(localpath))
 
         if not remotepath:
             raise IOError("remotepath must be a non empty string")
@@ -906,9 +865,7 @@ class SshTransport(aiida.transport.Transport):
         if self.isfile(remotepath):
             raise OSError("Cannot copy a directory into a file")
 
-        if not self.isdir(
-                remotepath
-        ):  # in this case copy things in the remotepath directly
+        if not self.isdir(remotepath):  # in this case copy things in the remotepath directly
             self.mkdir(remotepath)  # and make a directory at its place
         else:  # remotepath exists already: copy the folder inside of it!
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
@@ -918,8 +875,7 @@ class SshTransport(aiida.transport.Transport):
         # the folder exists, but it would be better to use it
         for this_source in os.walk(localpath):
             # Get the relative path
-            this_basename = os.path.relpath(
-                path=this_source[0], start=localpath)
+            this_basename = os.path.relpath(path=this_source[0], start=localpath)
 
             try:
                 self.sftp.stat(os.path.join(remotepath, this_basename))
@@ -931,19 +887,11 @@ class SshTransport(aiida.transport.Transport):
                     raise
 
             for this_file in this_source[2]:
-                this_local_file = os.path.join(localpath, this_basename,
-                                               this_file)
-                this_remote_file = os.path.join(remotepath, this_basename,
-                                                this_file)
+                this_local_file = os.path.join(localpath, this_basename, this_file)
+                this_remote_file = os.path.join(remotepath, this_basename, this_file)
                 self.putfile(this_local_file, this_remote_file)
 
-    def get(self,
-            remotepath,
-            localpath,
-            callback=None,
-            dereference=True,
-            overwrite=True,
-            ignore_nonexisting=False):
+    def get(self, remotepath, localpath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
         """
         Get a file or folder from remote to local.
         Redirects to getfile or gettree.
@@ -968,8 +916,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
-                raise ValueError("Pathname patterns are not allowed in the "
-                                 "destination")
+                raise ValueError("Pathname patterns are not allowed in the " "destination")
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
 
@@ -979,8 +926,7 @@ class SshTransport(aiida.transport.Transport):
                 if os.path.isfile(localpath):
                     raise IOError("Remote destination is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not os.path.exists(
-                        localpath):  # this should hold only for files
+                elif not os.path.exists(localpath):  # this should hold only for files
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_local = True
@@ -992,36 +938,26 @@ class SshTransport(aiida.transport.Transport):
                         r = os.path.join(localpath, os.path.split(s)[1])
                         self.getfile(s, r, callback, dereference, overwrite)
                     else:  # one file to copy on one file
-                        self.getfile(s, localpath, callback, dereference,
-                                     overwrite)
+                        self.getfile(s, localpath, callback, dereference, overwrite)
                 else:
                     self.gettree(s, localpath, callback, dereference, overwrite)
 
         else:
             if self.isdir(remotepath):
-                self.gettree(remotepath, localpath, callback, dereference,
-                             overwrite)
+                self.gettree(remotepath, localpath, callback, dereference, overwrite)
             elif self.isfile(remotepath):
                 if os.path.isdir(localpath):
                     r = os.path.join(localpath, os.path.split(remotepath)[1])
-                    self.getfile(remotepath, r, callback, dereference,
-                                 overwrite)
+                    self.getfile(remotepath, r, callback, dereference, overwrite)
                 else:
-                    self.getfile(remotepath, localpath, callback, dereference,
-                                 overwrite)
+                    self.getfile(remotepath, localpath, callback, dereference, overwrite)
             else:
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError("The remote path {} does not exist"
-                                  .format(remotepath))
+                    raise IOError("The remote path {} does not exist".format(remotepath))
 
-    def getfile(self,
-                remotepath,
-                localpath,
-                callback=None,
-                dereference=True,
-                overwrite=True):
+    def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
         """
         Get a file from remote to local.
 
@@ -1054,12 +990,7 @@ class SshTransport(aiida.transport.Transport):
                 pass
             raise
 
-    def gettree(self,
-                remotepath,
-                localpath,
-                callback=None,
-                dereference=True,
-                overwrite=True):
+    def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
         """
         Get a folder recursively from remote to local.
 
@@ -1088,17 +1019,14 @@ class SshTransport(aiida.transport.Transport):
             raise ValueError("Localpaths must be an absolute path")
 
         if not self.isdir(remotepath):
-            raise IOError(
-                "Input remotepath is not a folder: {}".format(localpath))
+            raise IOError("Input remotepath is not a folder: {}".format(localpath))
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
         if os.path.isfile(localpath):
             raise OSError("Cannot copy a directory into a file")
 
-        if not os.path.isdir(
-                localpath
-        ):  # in this case copy things in the remotepath directly
+        if not os.path.isdir(localpath):  # in this case copy things in the remotepath directly
             os.mkdir(localpath)  # and make a directory at its place
         else:  # localpath exists already: copy the folder inside of it!
             localpath = os.path.join(localpath, os.path.split(remotepath)[1])
@@ -1111,11 +1039,9 @@ class SshTransport(aiida.transport.Transport):
             item = str(item)
 
             if self.isdir(os.path.join(remotepath, item)):
-                self.gettree(
-                    os.path.join(remotepath, item), os.path.join(dest, item))
+                self.gettree(os.path.join(remotepath, item), os.path.join(dest, item))
             else:
-                self.getfile(
-                    os.path.join(remotepath, item), os.path.join(dest, item))
+                self.getfile(os.path.join(remotepath, item), os.path.join(dest, item))
 
     def get_attribute(self, path):
         """
@@ -1130,11 +1056,7 @@ class SshTransport(aiida.transport.Transport):
             aiida_attr[key] = getattr(paramiko_attr, key)
         return aiida_attr
 
-    def copyfile(self,
-                 remotesource,
-                 remotedestination,
-                 dereference=False,
-                 pattern=None):
+    def copyfile(self, remotesource, remotedestination, dereference=False, pattern=None):
         """
         Copy a file from remote source to remote destination
         Redirects to copy().
@@ -1145,14 +1067,9 @@ class SshTransport(aiida.transport.Transport):
         :param pattern:
         """
         cp_flags = '-f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags,
-                         pattern)
+        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
 
-    def copytree(self,
-                 remotesource,
-                 remotedestination,
-                 dereference=False,
-                 pattern=None):
+    def copytree(self, remotesource, remotedestination, dereference=False, pattern=None):
         """
         copy a folder recursively from remote source to remote destination
         Redirects to copy()
@@ -1163,8 +1080,7 @@ class SshTransport(aiida.transport.Transport):
         :param pattern:
         """
         cp_flags = '-r -f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags,
-                         pattern)
+        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
 
     def copy(self, remotesource, remotedestination, dereference=False):
         """
@@ -1202,22 +1118,18 @@ class SshTransport(aiida.transport.Transport):
                              'Found instead %s as remotesource' % remotesource)
 
         if not remotedestination:
-            raise ValueError(
-                'Input to copy() must be a non empty string. ' +
-                'Found instead %s as remotedestination' % remotedestination)
+            raise ValueError('Input to copy() must be a non empty string. ' +
+                             'Found instead %s as remotedestination' % remotedestination)
 
         if self.has_magic(remotedestination):
-            raise ValueError("Pathname patterns are not allowed in the "
-                             "destination")
+            raise ValueError("Pathname patterns are not allowed in the " "destination")
 
         if self.has_magic(remotesource):
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
-                if not self.path_exists(remotedestination) or self.isfile(
-                        remotedestination):
-                    raise OSError("Can't copy more than one file in the same "
-                                  "destination file")
+                if not self.path_exists(remotedestination) or self.isfile(remotedestination):
+                    raise OSError("Can't copy more than one file in the same " "destination file")
 
             for s in to_copy_list:
                 self._exec_cp(cp_exe, cp_flags, s, remotedestination)
@@ -1227,9 +1139,7 @@ class SshTransport(aiida.transport.Transport):
 
     def _exec_cp(self, cp_exe, cp_flags, src, dst):
         # to simplify writing the above copy function
-        command = '{} {} {} {}'.format(cp_exe, cp_flags,
-                                       escape_for_bash(src),
-                                       escape_for_bash(dst))
+        command = '{} {} {} {}'.format(cp_exe, cp_flags, escape_for_bash(src), escape_for_bash(dst))
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
@@ -1237,17 +1147,13 @@ class SshTransport(aiida.transport.Transport):
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the cp "
-                                    "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the cp " "command: {}".format(stderr))
         else:
-            self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', "
-                "stderr: '{}', command: '{}'".format(retval, stdout, stderr,
-                                                     command))
+            self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}', command: '{}'".format(retval, stdout, stderr, command))
             raise IOError("Error while executing cp. Exit code: {}, "
                           "stdout: '{}', stderr: '{}', "
-                          "command: '{}'".format(retval, stdout, stderr,
-                                                 command))
+                          "command: '{}'".format(retval, stdout, stderr, command))
 
     def _local_listdir(self, path, pattern=None):
         """
@@ -1257,8 +1163,7 @@ class SshTransport(aiida.transport.Transport):
             return os.listdir(path)
         else:
             import re
-            if path.startswith(
-                    '/'):  # always this is the case in the local case
+            if path.startswith('/'):  # always this is the case in the local case
                 base_dir = path
             else:
                 base_dir = os.path.join(os.getcwd(), path)
@@ -1330,10 +1235,10 @@ class SshTransport(aiida.transport.Transport):
         if not path:
             return False
         try:
-            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(
-                path,
-                self.sftp.normalize(path),
-                self.sftp.stat(path), self.sftp.stat(path).st_mode))
+            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path,
+                                                                          self.sftp.normalize(path),
+                                                                          self.sftp.stat(path),
+                                                                          self.sftp.stat(path).st_mode))
             return S_ISREG(self.sftp.stat(path).st_mode)
         except IOError as e:
             if getattr(e, "errno", None) == 2:
@@ -1369,14 +1274,11 @@ class SshTransport(aiida.transport.Transport):
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
             command_to_execute = ("cd {escaped_folder} && "
-                                  "{real_command}".format(
-                                      escaped_folder=escaped_folder,
-                                      real_command=command))
+                                  "{real_command}".format(escaped_folder=escaped_folder, real_command=command))
         else:
             command_to_execute = command
 
-        self.logger.debug(
-            "Command to be executed: {}".format(command_to_execute))
+        self.logger.debug("Command to be executed: {}".format(command_to_execute))
 
         channel.exec_command(command_to_execute)
 
@@ -1386,11 +1288,7 @@ class SshTransport(aiida.transport.Transport):
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait(self,
-                          command,
-                          stdin=None,
-                          combine_stderr=False,
-                          bufsize=-1):
+    def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):
         """
         Executes the specified command and waits for it to finish.
         
@@ -1406,8 +1304,7 @@ class SshTransport(aiida.transport.Transport):
         """
         # TODO: To see if like this it works or hangs because of buffer problems.
 
-        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
-            command, combine_stderr, bufsize=bufsize)
+        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
             if isinstance(stdin, basestring):
@@ -1419,8 +1316,7 @@ class SshTransport(aiida.transport.Transport):
                 for l in filelike_stdin.readlines():
                     ssh_stdin.write(l)
             except AttributeError:
-                raise ValueError("stdin can only be either a string of a "
-                                 "file-like object!")
+                raise ValueError("stdin can only be either a string of a " "file-like object!")
 
         # I flush and close them anyway; important to call shutdown_write
         # to avoid hangouts
@@ -1446,15 +1342,13 @@ class SshTransport(aiida.transport.Transport):
 
         further_params = []
         if 'username' in self._connect_args:
-            further_params.append("-l {}".format(
-                escape_for_bash(self._connect_args['username'])))
+            further_params.append("-l {}".format(escape_for_bash(self._connect_args['username'])))
 
         if 'port' in self._connect_args:
             further_params.append("-p {}".format(self._connect_args['port']))
 
         if 'key_filename' in self._connect_args:
-            further_params.append("-i {}".format(
-                escape_for_bash(self._connect_args['key_filename'])))
+            further_params.append("-i {}".format(escape_for_bash(self._connect_args['key_filename'])))
 
         further_params_str = " ".join(further_params)
         connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
@@ -1490,8 +1384,7 @@ class SshTransport(aiida.transport.Transport):
             # find all files matching pattern
             for this_s in self.glob(s):
                 # create the name of the link: take the last part of the path
-                this_d = os.path.join(remotedestination,
-                                      os.path.split(this_s)[-1])
+                this_d = os.path.join(remotedestination, os.path.split(this_s)[-1])
                 self.sftp.symlink(this_s, this_d)
         else:
             self.sftp.symlink(s, d)

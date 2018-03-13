@@ -33,8 +33,7 @@ class Transport(object):
         """
         __init__ method of the Transport base class.
         """
-        self._logger = aiida.common.aiidalogger.getChild('transport').getChild(
-            self.__class__.__name__)
+        self._logger = aiida.common.aiidalogger.getChild('transport').getChild(self.__class__.__name__)
 
         self._logger_extra = None
         self._enters = 0
@@ -152,8 +151,7 @@ class Transport(object):
             from aiida.common.log import get_dblogger_extra
 
             if self._logger_extra is not None:
-                return logging.LoggerAdapter(
-                    logger=self._logger, extra=self._logger_extra)
+                return logging.LoggerAdapter(logger=self._logger, extra=self._logger_extra)
             else:
                 return self._logger
         except AttributeError:
@@ -252,8 +250,7 @@ class Transport(object):
         """
         raise NotImplementedError
 
-    def copy_from_remote_to_remote(self, transportdestination, remotesource,
-                                   remotedestination, **kwargs):
+    def copy_from_remote_to_remote(self, transportdestination, remotesource, remotedestination, **kwargs):
         """
         Copy files or folders from a remote computer to another remote computer.
 
@@ -293,8 +290,7 @@ class Transport(object):
         }
 
         if kwargs:
-            self.logger.error(
-                "Unknown parameters passed to copy_from_remote_to_remote")
+            self.logger.error("Unknown parameters passed to copy_from_remote_to_remote")
 
         with SandboxFolder() as sandbox:
             self.get(remotesource, sandbox.abspath, **kwargs_get)
@@ -304,9 +300,7 @@ class Transport(object):
             # from sandbox.get_abs_path('*') would not work for files
             # beginning with a dot ('.').
             for filename in sandbox.get_content_list():
-                transportdestination.put(
-                    os.path.join(sandbox.abspath, filename), remotedestination,
-                    **kwargs_put)
+                transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
     def _exec_command_internal(self, command, **kwargs):
         """
@@ -468,11 +462,7 @@ class Transport(object):
         for f in self.listdir():
             filepath = os.path.join(full_path, f)
             attributes = self.get_attribute(filepath)
-            retlist.append({
-                'name': f,
-                'attributes': attributes,
-                'isdir': self.isdir(filepath)
-            })
+            retlist.append({'name': f, 'attributes': attributes, 'isdir': self.isdir(filepath)})
         return retlist
 
     def makedirs(self, path, ignore_existing=False):
@@ -623,15 +613,12 @@ class Transport(object):
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the whoami "
-                                    "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the whoami " "command: {}".format(stderr))
             return username.strip()
         else:
-            self.logger.error(
-                "Problem executing whoami. Exit code: {}, stdout: '{}', "
-                "stderr: '{}'".format(retval, username, stderr))
-            raise IOError(
-                "Error while executing whoami. Exit code: {}".format(retval))
+            self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}'".format(retval, username, stderr))
+            raise IOError("Error while executing whoami. Exit code: {}".format(retval))
 
     def path_exists(self, path):
         """
@@ -687,9 +674,7 @@ class Transport(object):
             # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
         if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
-            dirname = unicode(dirname,
-                              sys.getfilesystemencoding() or
-                              sys.getdefaultencoding())
+            dirname = unicode(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             # names = os.listdir(dirname)
             # print dirname

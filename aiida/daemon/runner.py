@@ -11,7 +11,7 @@ from functools import partial
 
 from aiida.common.log import aiidalogger
 from aiida.common.log import configure_logging
-from aiida.daemon.client import ProfileDaemonClient
+from aiida.daemon.client import DaemonClient
 from aiida.work.rmq import get_rmq_config
 from aiida.work import DaemonRunner, set_runner
 
@@ -25,8 +25,8 @@ def start_daemon():
     """
     Start a daemon runner for the currently configured profile
     """
-    profile_client = ProfileDaemonClient()
-    configure_logging(daemon=True, daemon_log_file=profile_client.daemon_log_file)
+    daemon_client = DaemonClient()
+    configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
     runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
     set_runner(runner)

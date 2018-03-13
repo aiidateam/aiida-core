@@ -2,7 +2,6 @@
 import os
 import sys
 
-from circus.client import CircusClient
 from aiida.common.profile import ProfileConfig
 
 
@@ -10,23 +9,16 @@ VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
 VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
 
 
-class ProfileDaemonClient(ProfileConfig):
+class DaemonClient(ProfileConfig):
     """
     Extension of the ProfileConfig which also provides handles to retrieve profile specific
     properties related to the daemon client
     """
 
     _DAEMON_NAME = 'aiida-{name}'
-    _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
-
-    def get_endpoint(self, port_incr=0):
-        return self._ENDPOINT_TPL.format(port=self.circus_port + port_incr)
-
-    def get_client(self):
-        return CircusClient(endpoint=self.get_endpoint(), timeout=0.5)
 
     @property
-    def daemon_name(self):
+    def name(self):
         return self._DAEMON_NAME.format(name=self.profile_name)
 
     @property

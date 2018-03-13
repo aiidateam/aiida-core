@@ -220,8 +220,7 @@ class TestCommand(unittest.TestCase):
 
         #TEST 2:
         logging.disable(logging.ERROR)
-        with self.assertRaisesRegexp(SchedulerError,
-                                     '^Error during submission, retval=1'):
+        with self.assertRaisesRegexp(SchedulerError, '^Error during submission, retval=1'):
             sge_parse_submit_output = sge._parse_submit_output(1, '', '')
         logging.disable(logging.NOTSET)
 
@@ -262,18 +261,14 @@ class TestCommand(unittest.TestCase):
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         dispatch_time = [self._parse_time_string('2013-06-18T12:08:23')]
-        parsed_dispatch_time = [
-            j.dispatch_time for j in job_list if j.dispatch_time
-        ]
+        parsed_dispatch_time = [j.dispatch_time for j in job_list if j.dispatch_time]
         self.assertEquals(set(dispatch_time), set(parsed_dispatch_time))
 
         submission_times = [
             self._parse_time_string('2013-06-18T12:00:57'),
             self._parse_time_string('2013-06-18T12:09:47')
         ]
-        parsed_submission_times = [
-            j.submission_time for j in job_list if j.submission_time
-        ]
+        parsed_submission_times = [j.submission_time for j in job_list if j.submission_time]
         self.assertEquals(set(submission_times), set(parsed_submission_times))
 
         running_jobs = [test_raw_data]
@@ -320,24 +315,18 @@ class TestCommand(unittest.TestCase):
         job_tmpl.queue_name = "FavQ.q"
         job_tmpl.priority = None
         job_tmpl.max_wallclock_seconds = "3600"  #"23:59:59"
-        job_tmpl.job_environment = {
-            "HOME": "/home/users/dorigm7s/",
-            "WIENROOT": "$HOME:/WIEN2k"
-        }
+        job_tmpl.job_environment = {"HOME": "/home/users/dorigm7s/", "WIENROOT": "$HOME:/WIEN2k"}
 
         submit_script_text = sge._get_submit_script_header(job_tmpl)
 
-        self.assertTrue(
-            '#$ -wd /home/users/dorigm7s/test' in submit_script_text)
+        self.assertTrue('#$ -wd /home/users/dorigm7s/test' in submit_script_text)
         self.assertTrue('#$ -N BestJobEver' in submit_script_text)
         self.assertTrue('#$ -q FavQ.q' in submit_script_text)
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
         #self.assertTrue( 'export HOME=/home/users/dorigm7s/'
         #                 in submit_script_text )
-        self.assertTrue(
-            "# ENVIRONMENT VARIABLES BEGIN ###" in submit_script_text)
-        self.assertTrue(
-            "export HOME='/home/users/dorigm7s/'" in submit_script_text)
+        self.assertTrue("# ENVIRONMENT VARIABLES BEGIN ###" in submit_script_text)
+        self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
         self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
 
     def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
@@ -351,8 +340,7 @@ class TestCommand(unittest.TestCase):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as e:
-            self.logger.debug("Unable to parse time string {}, the message "
-                              "was {}".format(string, e.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, e.message))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

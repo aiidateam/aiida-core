@@ -156,9 +156,7 @@ class FixtureManager(object):
     def create_aiida_db(self):
         """Create the necessary database on the temporary postgres instance"""
         if is_dbenv_loaded():
-            raise FixtureError(
-                'AiiDA dbenv can not be loaded while creating a test db environment'
-            )
+            raise FixtureError('AiiDA dbenv can not be loaded while creating a test db environment')
         if not self.db_params:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True)
@@ -166,8 +164,7 @@ class FixtureManager(object):
         self.postgres.determine_setup()
         self.db_params = self.postgres.dbinfo
         if not self.postgres.pg_execute:
-            raise FixtureError(
-                'Could not connect to the test postgres instance')
+            raise FixtureError('Could not connect to the test postgres instance')
         self.postgres.create_dbuser(self.db_user, self.db_pass)
         self.postgres.create_db(self.db_user, self.db_name)
         self.__is_running_on_test_db = True
@@ -182,8 +179,7 @@ class FixtureManager(object):
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
         if is_dbenv_loaded():
-            raise FixtureError(
-                'AiiDA dbenv can not be loaded while creating a test profile')
+            raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
         from aiida.cmdline.verdilib import setup
@@ -194,19 +190,14 @@ class FixtureManager(object):
         backend_settings.AIIDADB_PROFILE = None
         aiida_cfg.create_base_dirs()
         profile_name = 'test_profile'
-        setup(
-            profile=profile_name,
-            only_config=False,
-            non_interactive=True,
-            **self.profile)
+        setup(profile=profile_name, only_config=False, non_interactive=True, **self.profile)
         aiida_cfg.set_default_profile(profile_name)
         self.__is_running_on_test_profile = True
 
     def reset_db(self):
         """Cleans all data from the database between tests"""
         if not self.__is_running_on_test_profile:
-            raise FixtureError(
-                'No test profile has been set up yet, can not reset the db')
+            raise FixtureError('No test profile has been set up yet, can not reset the db')
         if self.profile_info['backend'] == BACKEND_DJANGO:
             self.__clean_db_django()
         elif self.profile_info['backend'] == BACKEND_SQLA:
@@ -306,8 +297,7 @@ class FixtureManager(object):
     def backend(self, backend):
         valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
         if backend not in valid_backends:
-            raise ValueError('invalid backend {}, must be one of {}'.format(
-                backend, valid_backends))
+            raise ValueError('invalid backend {}, must be one of {}'.format(backend, valid_backends))
         self.profile_info['backend'] = backend
 
     @property

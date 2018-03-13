@@ -15,8 +15,7 @@ from aiida.transport.transport import Transport
 from aiida.transport.util import TransportFactory
 
 
-def copy_from_remote_to_remote(transportsource, transportdestination,
-                               remotesource, remotedestination, **kwargs):
+def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):
     """
     Copy files or folders from a remote computer to another remote computer.
 
@@ -29,5 +28,4 @@ def copy_from_remote_to_remote(transportsource, transportdestination,
 
     .. note:: it uses the method transportsource.copy_from_remote_to_remote
     """
-    transportsource.copy_from_remote_to_remote(
-        transportdestination, remotesource, remotedestination, **kwargs)
+    transportsource.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)

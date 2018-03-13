@@ -39,7 +39,7 @@ class InputPort(WithSerializeFct, WithNonDb, ports.InputPort):
     pass
 
 
-class PortNamespace(WithNonDb, ports.PortNamespace):
+class PortNamespace(ports.PortNamespace):
     def serialize(self, mapping):
         if mapping is None:
             return

@@ -24,6 +24,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import load_node
+from aiida.orm.node import Node
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
@@ -401,13 +402,14 @@ class Process(plumpy.Process):
                 try:
                     nested_port = port[name]
                 except KeyError:
-                    # Port does not exist in the port namespace, add it regardless of type of value
-                    items.append((prefixed_key, value))
+                    # For dynamic PortNamespaces, only add Node values.
+                    if isinstance(value, Node):
+                        items.append((prefixed_key, value))
                 else:
                     sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
                     items.extend(sub_items)
         else:
-            if not port.non_db:
+            if not getattr(port, 'non_db', False):
                 items.append((parent_name, port_value))
 
         return items

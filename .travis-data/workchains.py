@@ -94,6 +94,20 @@ class ListEcho(WorkChain):
     def do_echo(self):
         self.out('output', self.inputs.list)
 
+class DynamicNonDbInput(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(DynamicNonDbInput, cls).define(spec)
+        spec.input_namespace('namespace', dynamic=True)
+        spec.output('output', valid_type=List)
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        input_list = self.inputs.namespace.input
+        assert isinstance(input_list, tuple)
+        assert not isinstance(input_list, List)
+        self.out('output', List(list=list(input_list)))
+
 class InlineCalcRunnerWorkChain(WorkChain):
     """
     WorkChain which calls an InlineCalculation in its step.

@@ -937,8 +937,11 @@ class TestSimple():
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+class TestComputer():
+# class TestComplex(AiidaTestCase):
+    import unittest
 
-class TestComplex(AiidaTestCase):
+    @unittest.skip("")
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -1022,8 +1025,8 @@ class TestComplex(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-
-class TestComputer(AiidaTestCase):
+class TestComputer():
+# class TestComputer(AiidaTestCase):
 
     def setUp(self):
         self.clean_db()
@@ -1562,7 +1565,7 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    def construct_complex_graph(self):
+    def construct_complex_graph(self, export_combination = 0):
         """
         This method creates a "complex" graph with all available link types
         (INPUT, CREATE, RETURN and CALL) and returns the nodes of the graph. It
@@ -1575,6 +1578,9 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
+
+        if export_combination < 0 or export_combination > 8:
+            return None
 
         # Node creation
         d1 = Int(1).store()
@@ -1627,21 +1633,21 @@ class TestLinks(AiidaTestCase):
         # Create various combinations of nodes that should be exported
         # and the final set of nodes that are exported in each case, following
         # predecessor/successor links.
-        export_dict = {
-            wc1 : [d1, d2, d3, d4, pw1, wc1, wc2],
-            wc2: [d1, d3, d4, pw1, wc2],
-            d3: [d1, d3, d4, pw1, wc2],
-            d4: [d1, d3, d4, pw1, wc2],
-            d5: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
-            d6: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
-            pw2: [d1, d3, d4, d5, d6, pw1, pw2, wc2],
-            d1: [d1],
-            d2: [d2]
-        }
+        export_list = [
+            (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
+            (wc2, [d1, d3, d4, pw1, wc2]),
+            (d3, [d1, d3, d4, pw1, wc2]),
+            (d4, [d1, d3, d4, pw1, wc2]),
+            (d5, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+            (d6, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+            (pw2, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+            (d1, [d1]),
+            (d2, [d2])
+        ]
 
-        return graph_nodes, export_dict
+        return graph_nodes, export_list[export_combination]
 
-
+    @unittest.skip("")
     def test_complex_workflow_graph_links(self):
         """
         This test checks that all the needed links are correctly exported and
@@ -1694,18 +1700,21 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
 
-        graph_nodes, export_dict = self.construct_complex_graph()
+        for export_conf in range(0,8):
 
-        print "export_dict ===> ", export_dict
+            graph_nodes, (export_node, export_target) = self.construct_complex_graph(export_conf)
 
-        for export_node, export_target in export_dict.iteritems():
+            print "graph_nodes ===> ", graph_nodes
+            for gf in graph_nodes:
+                print gf.pk, gf.uuid, gf.dbnode.type
+
             print "export_node ==>", export_node
             print "export_target ==>", export_target
 
             tmp_folder = tempfile.mkdtemp()
             try:
                 export_file = os.path.join(tmp_folder, 'export.tar.gz')
-                export(graph_nodes, outfile=export_file, silent=True)
+                export([export_node], outfile=export_file, silent=True)
 
                 self.clean_db()
                 self.insert_data()
@@ -1719,19 +1728,27 @@ class TestLinks(AiidaTestCase):
 
                 export_target_uuids = set(str(_.uuid) for _ in export_target)
 
+                print "imported_node_uuids => " + str(imported_node_uuids)
+                print "export_target_uuids => " + str(export_target_uuids)
+
                 # Check that you have imported the right nodes (and only
                 # these nodes).
+                from aiida.orm.utils import load_node
                 self.assertEquals(
                     export_target_uuids,
                     imported_node_uuids,
                     "Problem in comparison of export node: " +
                     str(export_node) + "\n"
                     "Expected set: " + str(export_target_uuids)  + "\n" +
-                    "Imported set: " + str(imported_node_uuids)
+                    "Imported set: " + str(imported_node_uuids)  + "\n" +
+                    "Difference: " + str([load_node(_) for _ in
+                        export_target_uuids.symmetric_difference(
+                            imported_node_uuids)])
                 )
 
             finally:
-                shutil.rmtree(tmp_folder, ignore_errors=True)
+                pass
+                # shutil.rmtree(tmp_folder, ignore_errors=True)
 
     @unittest.skip("")
     def test_recursive_export_input_and_create_links_proper(self):

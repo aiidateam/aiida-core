@@ -1697,10 +1697,10 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Node):
-            given_node_entry_ids.add(entry.pk)
+            # given_node_entry_ids.add(entry.pk)
             # We also add to the to_be_exported, to_be_visited structures the
             # node provided
-            to_be_exported.add(entry.pk)
+            # to_be_exported.add(entry.pk)
             if issubclass(entry.__class__, Data):
                 to_be_visited[Data].add(entry.pk)
             elif issubclass(entry.__class__, Calculation):
@@ -1721,6 +1721,10 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             # If it is already visited continue to the next node
             if curr_node_id in to_be_exported:
                 continue
+            # Otherwise say that it is a node to be exported
+            else:
+                to_be_exported.add(curr_node_id)
+
             # Case 1:
             # INPUT(Data, Calculation) - Reversed
             qb = QueryBuilder()
@@ -1730,9 +1734,9 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                       edge_filters={
                           'type': {
                               '==': LinkType.INPUT.value}})
-            res = [_[0] for _ in qb.all()]
-            to_be_visited[Data].update(res)
-            to_be_exported.update(res)
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Data].update(res - to_be_exported)
+            # to_be_exported.update(res)
 
             # Case 2 & 3:
             # CREATE/RETURN(Calculation, Data) - Forward
@@ -1744,9 +1748,9 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                           'type': {
                               'in': [LinkType.CREATE.value,
                                      LinkType.RETURN.value]}})
-            res = [_[0] for _ in qb.all()]
-            to_be_visited[Data].update(res)
-            to_be_exported.update(res)
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Data].update(res - to_be_exported)
+            # to_be_exported.update(res)
 
             # Case 4:
             # CALL(Calculation, Calculation) - Forward
@@ -1757,17 +1761,22 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                       edge_filters={
                           'type': {
                               '==': LinkType.CALL.value}})
-            res = [_[0] for _ in qb.all()]
-            to_be_visited[Calculation].update(res)
-            to_be_exported.update(res)
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Calculation].update(res - to_be_exported)
+            # to_be_exported.update(res)
 
 
         # If it is a Data node
         else:
             curr_node_id = to_be_visited[Data].pop()
             # If it is already visited continue to the next node
+            # If it is already visited continue to the next node
             if curr_node_id in to_be_exported:
                 continue
+            # Otherwise say that it is a node to be exported
+            else:
+                to_be_exported.add(curr_node_id)
+
             # Case 2:
             # CREATE(Calculation, Data) - Reversed
             qb = QueryBuilder()
@@ -1777,11 +1786,11 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                       edge_filters={
                           'type': {
                               '==': LinkType.CREATE.value}})
-            res = [_[0] for _ in qb.all()]
-            to_be_visited[Calculation].update(res)
-            to_be_exported.update(res)
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Calculation].update(res - to_be_exported)
+            # to_be_exported.update(res)
 
-    given_node_entry_ids = given_node_entry_ids.union(to_be_exported)
+    given_node_entry_ids.update(to_be_exported)
 
 
     # if also_parents:

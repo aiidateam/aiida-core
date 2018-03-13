@@ -246,12 +246,12 @@ class VerdiCommandWithSubcommands(VerdiCommand):
     def no_subcommand(self, *args):
         import sys
 
-        if self.valid_subcommands:
+        if self.completed_subcommands:
             print >> sys.stderr, ("You have to pass a valid subcommand to "
                                   "'{}'.\nValid subcommands are:".format(
                 self.get_full_command_name()))
             print >> sys.stderr, "\n".join("  {}".format(sc)
-                                           for sc in self.valid_subcommands)
+                                           for sc in self.completed_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommands to "
                                   "'{}'.".format(self.get_full_command_name()))
@@ -260,12 +260,12 @@ class VerdiCommandWithSubcommands(VerdiCommand):
     def invalid_subcommand(self, *args):
         import sys
 
-        if self.valid_subcommands:
+        if self.completed_subcommands:
             print >> sys.stderr, ("You passed an invalid subcommand to '{}'.\n"
                                   "Valid subcommands are:".format(
                 self.get_full_command_name()))
             print >> sys.stderr, "\n".join("  {}".format(sc)
-                                           for sc in self.valid_subcommands)
+                                           for sc in self.completed_subcommands)
         else:
             print >> sys.stderr, ("There are no valid subcommands to "
                                   "'{}'.".format(self.get_full_command_name()))

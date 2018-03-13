@@ -20,11 +20,7 @@ from aiida.transport.plugins.ssh import SshTransport
 
 # This will be used by test_all_plugins
 
-plugin_transport = SshTransport(
-    machine='localhost',
-    timeout=30,
-    load_system_host_keys=True,
-    key_policy='AutoAddPolicy')
+plugin_transport = SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy')
 
 
 class TestBasicConnection(unittest.TestCase):
@@ -33,14 +29,12 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection_ssh(self):
-        with self.assertRaises(
-                aiida.transport.transport.TransportInternalError):
+        with self.assertRaises(aiida.transport.transport.TransportInternalError):
             t = SshTransport(machine='localhost')
             t._exec_command_internal('ls')
 
     def test_closed_connection_sftp(self):
-        with self.assertRaises(
-                aiida.transport.transport.TransportInternalError):
+        with self.assertRaises(aiida.transport.transport.TransportInternalError):
             t = SshTransport(machine='localhost')
             t.listdir()
 
@@ -49,11 +43,7 @@ class TestBasicConnection(unittest.TestCase):
             SshTransport(machine='localhost', invalid_param=True)
 
     def test_auto_add_policy(self):
-        with SshTransport(
-                machine='localhost',
-                timeout=30,
-                load_system_host_keys=True,
-                key_policy='AutoAddPolicy'):
+        with SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'):
             pass
 
     def test_no_host_key(self):
@@ -61,9 +51,7 @@ class TestBasicConnection(unittest.TestCase):
         logging.disable(logging.ERROR)
 
         with self.assertRaises(paramiko.SSHException):
-            with SshTransport(
-                    machine='localhost', timeout=30,
-                    load_system_host_keys=False):
+            with SshTransport(machine='localhost', timeout=30, load_system_host_keys=False):
                 pass
 
         # Reset logging level

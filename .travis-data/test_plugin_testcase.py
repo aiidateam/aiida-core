@@ -24,9 +24,7 @@ from aiida import is_dbenv_loaded
 
 
 def determine_backend():
-    return BACKEND_DJANGO if os.environ.get(
-        'TEST_AIIDA_BACKEND',
-        BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
+    return BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
 
 
 class PluginTestcaseTestCase(PluginTestCase):

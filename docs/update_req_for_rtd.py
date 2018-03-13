@@ -21,13 +21,11 @@ import click
 @click.option('--pre-commit', is_flag=True)
 def update_req_for_rtd(pre_commit):
     """Update the separate requirements file for Read the Docs"""
-    sys.path.append(
-        os.path.join(os.path.split(os.path.abspath(__file__))[0], os.pardir))
+    sys.path.append(os.path.join(os.path.split(os.path.abspath(__file__))[0], os.pardir))
 
     import setup_requirements
 
-    req_for_rtd_lines = list(setup_requirements.extras_require['docs'] +
-                             setup_requirements.extras_require['REST'])
+    req_for_rtd_lines = list(setup_requirements.extras_require['docs'] + setup_requirements.extras_require['REST'])
 
     required_packages = list(setup_requirements.install_requires)
     for package in required_packages:
@@ -42,9 +40,7 @@ def update_req_for_rtd(pre_commit):
     basename = 'requirements_for_rtd.txt'
 
     # pylint: disable=bad-continuation
-    with open(
-            os.path.join(os.path.split(os.path.abspath(__file__))[0], basename),
-            'w') as requirements_file:
+    with open(os.path.join(os.path.split(os.path.abspath(__file__))[0], basename), 'w') as requirements_file:
         requirements_file.write(req_for_rtd)
 
     click.echo("File '{}' written.".format(basename))
@@ -52,8 +48,7 @@ def update_req_for_rtd(pre_commit):
         msg = 'some requirements for Read the Docs have changed, {}'
         local_help = 'please add the changes and commit again'
         travis_help = 'please run aiida/docs/update_req_for_rtd.py locally and commit the changes it makes'
-        help_msg = msg.format(
-            travis_help if os.environ.get('TRAVIS') else local_help)
+        help_msg = msg.format(travis_help if os.environ.get('TRAVIS') else local_help)
         click.echo(help_msg, err=True)
 
 

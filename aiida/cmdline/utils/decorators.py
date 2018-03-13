@@ -17,7 +17,7 @@ import click
 from contextlib import contextmanager
 from functools import wraps
 
-from click_spinner import spinner as cli_spinner
+from click_spinner import spinner
 
 
 def load_dbenv_if_not_loaded(**kwargs):
@@ -28,7 +28,7 @@ def load_dbenv_if_not_loaded(**kwargs):
     from aiida.backends.settings import AIIDADB_PROFILE
     kwargs['profile'] = kwargs.get('profile', AIIDADB_PROFILE)
     if not is_dbenv_loaded():
-        with cli_spinner():
+        with spinner():
             load_dbenv(**kwargs)
 
 
@@ -111,11 +111,11 @@ def only_if_daemon_pid(function):
         """
         If daemon pid file is not found / empty, exit without doing anything
         """
-        from aiida.daemon.client import ProfileDaemonClient
+        from aiida.daemon.client import DaemonClient
 
-        profile_daemon_client = ProfileDaemonClient()
+        daemon_client = DaemonClient()
 
-        if not profile_daemon_client.get_daemon_pid:
+        if not daemon_client.get_daemon_pid:
             click.echo('The daemon is not running')
             sys.exit(0)
 

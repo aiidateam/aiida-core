@@ -409,7 +409,7 @@ class Process(plumpy.Process):
                     sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
                     items.extend(sub_items)
         else:
-            if not port.non_db:
+            if not getattr(port, 'non_db', False):
                 items.append((parent_name, port_value))
 
         return items

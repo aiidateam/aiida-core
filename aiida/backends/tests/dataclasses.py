@@ -2485,7 +2485,44 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            (0.0, 2.30408996235, 6.6894259),
                            (1.9956, 1.15239062923, 9.6063741)])
 
-
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_partial_occ_and_spin(self):
+        """
+        Tests StructureData -> pymatgen, with partial occupancies and spins.
+        This should raise a ValueError.
+        """
+        from aiida.orm.data.structure import StructureData
+        
+        a = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
+        a.append_atom(position=(0,0,0), symbols=('Fe','Al'),weights=(0.8,0.2),name='FeAl1')
+        a.append_atom(position=(2,2,2), symbols=('Fe','Al'),weights=(0.8,0.2),name='FeAl2')
+        
+        # a few checks on the structure kinds and symbols
+        self.assertEquals(a.get_symbols_set(),set(['Fe', 'Al']))
+        self.assertEquals(a.get_site_kindnames(),['FeAl1','FeAl2'])
+        self.assertEquals(a.get_formula(),'{Al0.20Fe0.80}2')
+        
+        with self.assertRaises(ValueError): 
+            a.get_pymatgen()
+        
+        # same, with vacancies
+        a = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
+        a.append_atom(position=(0,0,0), symbols='Fe',weights=0.8,name='FeX1')
+        a.append_atom(position=(2,2,2), symbols='Fe',weights=0.8,name='FeX2')
+        
+        # a few checks on the structure kinds and symbols
+        self.assertEquals(a.get_symbols_set(),set(['Fe']))
+        self.assertEquals(a.get_site_kindnames(),['FeX1','FeX2'])
+        self.assertEquals(a.get_formula(),'{Fe0.80X0.20}2')
+        
+        with self.assertRaises(ValueError): 
+            a.get_pymatgen()
+        
+        
 class TestArrayData(AiidaTestCase):
     """
     Tests the ArrayData objects.

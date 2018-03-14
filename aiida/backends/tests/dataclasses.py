@@ -2104,6 +2104,29 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertEquals(list(atoms2.get_chemical_symbols()),list(atoms.get_chemical_symbols()))
         self.assertEquals(atoms2.get_chemical_formula(),'Fe5')
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    def test_conversion_of_types_6(self):
+        """
+        Tests roundtrip StructureData -> ASE -> StructureData, with tags/kind names
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
+        a.append_atom(position=(0,0,0), symbols='Ni', name='Ni1')
+        a.append_atom(position=(2,2,2), symbols='Ni', name='Ni2')
+        a.append_atom(position=(1,0,1), symbols='Cl', name='Cl')
+        a.append_atom(position=(1,3,1), symbols='Cl', name='Cl')
+        
+        b = a.get_ase()
+        self.assertEquals(b.get_chemical_symbols(), ['Ni', 'Ni', 'Cl','Cl'])
+        self.assertEquals(list(b.get_tags()), [1, 2, 0, 0])
+        
+        c = StructureData(ase=b)
+        self.assertEquals(c.get_site_kindnames(), ['Ni1', 'Ni2', 'Cl','Cl'])
+        self.assertEquals([k.symbol for k in c.kinds], ['Ni', 'Ni', 'Cl'])
+        self.assertEquals([s.position for s in c.sites],
+                          [(0.,0.,0.),(2.,2.,2.),(1.,0.,1.),(1.,3.,1.)])
+
 
 class TestStructureDataFromPymatgen(AiidaTestCase):
     """

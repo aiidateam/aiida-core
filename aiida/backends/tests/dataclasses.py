@@ -2420,6 +2420,71 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         self.assertEquals([s.position for s in c.sites],
                           [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
 
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_roundtrip_partial_occ(self):
+        """
+        Tests roundtrip StructureData -> pymatgen -> StructureData
+        (with partial occupancies).
+        Structure initially from ICSD (id: 251993).
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=[[3.9912, 0.0, 0.0],
+                                [-1.9956, 3.456480591584452, 0.0],
+                                [0.0, 0.0, 16.2958]])
+        a.append_atom(position=(0.0,0.0,13.49455198), symbols='Fe')
+        a.append_atom(position=(0.0,0.0,2.80124802), symbols='Fe')
+        a.append_atom(position=(0.0,0.0,5.34665198), symbols='Fe')
+        a.append_atom(position=(0.0,0.0,10.94914802), symbols='Fe')
+        a.append_atom(position=(1.9956,1.15239062923,12.22185), symbols='Fe',weights=0.9)
+        a.append_atom(position=(0.0,2.30408996235,4.07395), symbols='Fe',weights=0.9)
+        a.append_atom(position=(0.0,2.30408996235,12.22185),symbols='Ge')
+        a.append_atom(position=(1.9956,1.15239062923,4.07395),symbols='Ge')
+        a.append_atom(position=(1.9956,1.15239062923,14.8373259),symbols='Te')
+        a.append_atom(position=(0.0,2.30408996235,1.4584741),symbols='Te')
+        a.append_atom(position=(0.0,2.30408996235,6.6894259),symbols='Te')
+        a.append_atom(position=(1.9956,1.15239062923,9.6063741),symbols='Te')
+        
+        # a few checks on the structure kinds and symbols
+        self.assertEquals(a.get_symbols_set(),set(['Fe', 'Ge', 'Te']))
+        self.assertEquals(a.get_site_kindnames(),
+                          ['Fe','Fe','Fe','Fe','FeX','FeX','Ge','Ge','Te','Te','Te','Te'])
+        self.assertEquals(a.get_formula(),'Fe4Ge2Te4{Fe0.90X0.10}2')
+        
+        b = a.get_pymatgen()
+        # check the partial occupancies
+        self.assertEquals([s.as_dict() for s in b.species_and_occu],
+                          [{'Fe':1.0},{'Fe':1.0},{'Fe':1.0},{'Fe':1.0},
+                           {'Fe':0.9},{'Fe':0.9},{'Ge':1.0},{'Ge':1.0},
+                           {'Te':1.0},{'Te':1.0},{'Te':1.0},{'Te':1.0}])
+                           
+        # back to StructureData
+        c = StructureData(pymatgen=b)
+        self.assertEquals(c.cell,[[3.9912, 0.0, 0.0],
+                                  [-1.9956, 3.456480591584452, 0.0],
+                                  [0.0, 0.0, 16.2958]])
+        self.assertEquals(c.get_symbols_set(),set(['Fe', 'Ge', 'Te']))
+        self.assertEquals(c.get_site_kindnames(),
+                          ['Fe','Fe','Fe','Fe','FeX','FeX','Ge','Ge','Te','Te','Te','Te'])
+        self.assertEquals(c.get_formula(),'Fe4Ge2Te4{Fe0.90X0.10}2')
+        self.assertEquals([s.position for s in c.sites],
+                          [(0.0, 0.0, 13.49455198),
+                           (0.0, 0.0, 2.80124802),
+                           (0.0, 0.0, 5.34665198),
+                           (0.0, 0.0, 10.94914802),
+                           (1.9956, 1.15239062923, 12.22185),
+                           (0.0, 2.30408996235, 4.07395),
+                           (0.0, 2.30408996235, 12.22185),
+                           (1.9956, 1.15239062923, 4.07395),
+                           (1.9956, 1.15239062923, 14.8373259),
+                           (0.0, 2.30408996235, 1.4584741),
+                           (0.0, 2.30408996235, 6.6894259),
+                           (1.9956, 1.15239062923, 9.6063741)])
+
 
 class TestArrayData(AiidaTestCase):
     """

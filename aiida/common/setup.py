@@ -818,7 +818,7 @@ _property_table = {
         "when typing 'verdi calculation list'. "
         "Set by passing the projections space separated as a string, for example: "
         "verdi devel setproperty verdishell.calculation_list 'pk time state'",
-        ('pk', 'ctime', 'state', 'sched', 'computer', 'type'),
+        ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'),
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",

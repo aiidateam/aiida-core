@@ -30,6 +30,8 @@ from aiida.utils import timezone
 # 'resourceLimits',
 
 SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+CALCULATION_STATE_KEY = 'state'
+SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
 PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
 FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
@@ -915,12 +917,12 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             return None
 
-    projection_to_qb_tag_map = {
+    projection_map = {
         'pk': ('calculation', 'id'),
         'ctime': ('calculation', 'ctime'),
         'mtime': ('calculation', 'mtime'),
-        'sched': ('calculation', 'attributes.scheduler_state'),
-        'state': ('calculation', 'state'),
+        'scheduler_state': ('calculation', SCHEDULER_STATE_KEY),
+        'calculation_state': ('calculation', CALCULATION_STATE_KEY),
         'process_state': ('calculation', PROCESS_STATE_KEY),
         'finish_status': ('calculation', FINISH_STATUS_KEY),
         'sealed': ('calculation', SEALED_KEY),
@@ -930,6 +932,11 @@ class AbstractJobCalculation(AbstractCalculation):
         'uuid': ('calculation', 'uuid'),
         'user': ('user', 'email'),
         'computer': ('computer', 'name')
+    }
+
+    compound_projection_map = {
+        'state': ('calculation', (PROCESS_STATE_KEY, FINISH_STATUS_KEY)),
+        'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
     }
 
     @classmethod
@@ -973,13 +980,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
         projection_label_dict = {
             'pk': 'PK',
+            'state': 'State',
             'process_state': 'Process state',
             'finish_status': 'Finish status',
             'sealed': 'Sealed',
-            'state': 'Calculation state',
             'ctime': 'Creation',
             'mtime': 'Modification',
-            'sched': 'Scheduler state',
+            'job_state': 'Job state',
+            'calculation_state': 'Calculation state',
+            'scheduler_state': 'Scheduler state',
             'computer': 'Computer',
             'type': 'Type',
             'description': 'Description',
@@ -1051,19 +1060,26 @@ class AbstractJobCalculation(AbstractCalculation):
             tag='calculation'
         )
         if group_filters is not None:
-            qb.append(type="group", filters=group_filters,
-                      group_of="calculation")
-        qb.append(type="computer", computer_of='calculation', tag='computer')
-        qb.append(type="user", creator_of="calculation", tag="user")
-        # The joining is done
-        # Now the projections:
+            qb.append(type='group', filters=group_filters, group_of='calculation')
+
+        qb.append(type='computer', computer_of='calculation', tag='computer')
+        qb.append(type='user', creator_of="calculation", tag="user")
+
+
         projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
-        for k, v in [cls.projection_to_qb_tag_map[p] for p in projections]:
-            projections_dict[k].append(v)
+        # Expand compound projections
+        for compound_projection in ['state', 'job_state']:
+            if compound_projection in projections:
+                field, values = cls.compound_projection_map[compound_projection]
+                for value in values:
+                    projections_dict[field].append(value)
 
-        if 'state' in projections:
-            projections_dict['calculation'].append('attributes.state')
+        for p in projections:
+            if p in cls.projection_map:
+                for k, v in [cls.projection_map[p]]:
+                    projections_dict[k].append(v)
+
         for k, v in projections_dict.iteritems():
             qb.add_projection(k, v)
 
@@ -1083,6 +1099,7 @@ class AbstractJobCalculation(AbstractCalculation):
             try:
                 for i in range(100):
                     res = results_generator.next()
+
                     row = cls._get_calculation_info_row(
                         res, projections, now if relative_ctime else None)
 
@@ -1186,6 +1203,7 @@ class AbstractJobCalculation(AbstractCalculation):
             except (KeyError, ValueError):
                 pass
 
+
         if PROCESS_STATE_KEY in d['calculation']:
 
             process_state = d['calculation'][PROCESS_STATE_KEY]
@@ -1200,13 +1218,25 @@ class AbstractJobCalculation(AbstractCalculation):
             d['calculation'][SEALED_KEY] = sealed
 
         try:
-            if d['calculation']['state'] == calc_states.IMPORTED:
-                d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"
+            if d['calculation'][CALCULATION_STATE_KEY] == calc_states.IMPORTED:
+                d['calculation'][CALCULATION_STATE_KEY] = d['calculation']['attributes.state'] or "UNKNOWN"
         except KeyError:
             pass
 
-        return [d[cls.projection_to_qb_tag_map[p][0]][cls.projection_to_qb_tag_map[p][1]]
-                for p in projections]
+        result = []
+
+        for projection in projections:
+
+            if projection in cls.compound_projection_map:
+                field, attributes = cls.compound_projection_map[projection]
+                projected_attributes = [str(d[field][attribute]) for attribute in attributes]
+                result.append(' | '.join(projected_attributes))
+            else:
+                field = cls.projection_map[projection][0]
+                attribute = cls.projection_map[projection][1]
+                result.append(d[field][attribute])
+
+        return result
 
     @classmethod
     def _get_all_with_state(

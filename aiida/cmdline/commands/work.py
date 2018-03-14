@@ -19,8 +19,8 @@ from aiida.utils.ascii_vis import print_tree_descending
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-LIST_CMDLINE_PROJECT_CHOICES = ['pk', 'uuid', 'ctime', 'mtime', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description']
-LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'process_state', 'sealed', 'process_label')
+LIST_CMDLINE_PROJECT_CHOICES = ['pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description']
+LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 
 LOG_LEVEL_MAPPING = {
     levelname: i for levelname, i in [
@@ -99,10 +99,9 @@ def do_list(past_days, all_states, limit, project):
     from aiida.orm.calculation import Calculation
     from aiida.utils import timezone
     from aiida.work.processes import ProcessState
-    from aiida.work.utils import PROCESS_LABEL_ATTR
 
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    PROCESS_LABEL_KEY = 'attributes.{}'.format(PROCESS_LABEL_ATTR)
+    PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
     PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
     FINISH_STATUS_KEY = 'attributes.{}'.format(Calculation.FINISH_STATUS_KEY)
     TERMINAL_STATES = [ProcessState.FINISHED.value, ProcessState.KILLED.value, ProcessState.EXCEPTED.value]
@@ -114,6 +113,7 @@ def do_list(past_days, all_states, limit, project):
         'uuid': 'UUID',
         'ctime': 'Creation',
         'mtime': 'Modification',
+        'state': 'State',
         'process_state': 'Process state',
         'finish_status': 'Finish status',
         'sealed': 'Sealed',
@@ -136,20 +136,19 @@ def do_list(past_days, all_states, limit, project):
     }
 
     projection_format_map = {
-        'pk': lambda value: value,
-        'uuid': lambda value: value,
-        'ctime': lambda value: str_timedelta(timezone.delta(value, now), negative_to_zero=True, max_num_fields=1),
-        'mtime': lambda value: str_timedelta(timezone.delta(value, now), negative_to_zero=True, max_num_fields=1),
-        'process_state': lambda value: value.capitalize(),
-        'finish_status': lambda value: value,
-        'sealed': lambda value: 'True' if value == 1 else 'False',
-        'process_label': lambda value: value,
-        'label': lambda value: value,
-        'description': lambda value: value,
+        'pk': lambda value: value['id'],
+        'uuid': lambda value: value['uuid'],
+        'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
+        'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
+        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize(), value[FINISH_STATUS_KEY]),
+        'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
+        'finish_status': lambda value: value[FINISH_STATUS_KEY],
+        'sealed': lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
+        'process_label': lambda value: value[PROCESS_LABEL_KEY],
+        'label': lambda value: value['label'],
+        'description': lambda value: value['description'],
     }
 
-    projection_labels = list(map(lambda p: projection_label_map[p], project))
-    projection_attributes = list(map(lambda p: projection_attribute_map[p], project))
     table = []
     filters = {}
 
@@ -158,7 +157,7 @@ def do_list(past_days, all_states, limit, project):
 
     query = _build_query(
         limit=limit,
-        projections=projection_attributes,
+        projections=projection_attribute_map.values(),
         filters=filters,
         past_days=past_days,
         order_by={'ctime': 'desc'}
@@ -170,18 +169,17 @@ def do_list(past_days, all_states, limit, project):
         calculation = result['calculation']
 
         for p in project:
-            projection_attribute = projection_attribute_map[p]
-            attribute = calculation[projection_attribute]
-            value = projection_format_map[p](attribute)
+            value = projection_format_map[p](calculation)
             table_row.append(value)
 
         table.append(table_row)
 
     # Since we sorted by descending creation time, we revert the list to print the most recent entries last
+    projection_labels = list(map(lambda p: projection_label_map[p], project))
     table = table[::-1]
     tabulated = tabulate(table, headers=projection_labels)
 
-    print(tabulated)
+    click.echo(tabulated)
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)

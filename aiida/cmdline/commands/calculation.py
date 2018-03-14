@@ -186,13 +186,11 @@ class Calculation(VerdiCommandWithSubcommands):
                             help='order the results')
         parser.add_argument('--project',
                             choices=(
-                                    'pk', 'state', 'ctime', 'sched', 'computer',
-                                    'type', 'description', 'label', 'uuid',
-                                    'mtime', 'user'
+                                    'pk', 'state', 'ctime', 'job_state', 'calculation_state', 'scheduler_state',
+                                    'computer', 'type', 'description', 'label', 'uuid', 'mtime', 'user', 'sealed'
                                 ),
                             nargs='+',
-                            default=get_property("verdishell.calculation_list"),
-                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
+                            default=get_property('verdishell.calculation_list'),
                             help="Define the list of properties to show"
                         )
 

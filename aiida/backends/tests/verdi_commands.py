@@ -121,19 +121,15 @@ class TestVerdiCalculationCommands(AiidaTestCase):
             calc_cmd.calculation_list()
 
         out_str = ''.join(output)
-        self.assertTrue(calc_states.TOSUBMIT in out_str, "The TOSUBMIT calculations should be part fo the "
-                        "simple calculation list.")
-        self.assertTrue(calc_states.COMPUTED in out_str, "The COMPUTED calculations should be part fo the "
-                        "simple calculation list.")
-        self.assertFalse(calc_states.FINISHED in out_str, "The FINISHED calculations should not be part fo the "
-                         "simple calculation list.")
+        self.assertTrue(calc_states.TOSUBMIT in out_str, 'TOSUBMIT state not found in: {}'.format(out_str))
+        self.assertTrue(calc_states.COMPUTED in out_str, 'COMPUTED state not found in: {}'.format(out_str))
+        self.assertFalse(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
 
         with Capturing() as output:
             calc_cmd.calculation_list(*['-a'])
 
         out_str = ''.join(output)
-        self.assertTrue(calc_states.FINISHED in out_str, "The FINISHED calculations should be part fo the "
-                        "simple calculation list.")
+        self.assertTrue(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
 
 
 class TestVerdiCodeCommands(AiidaTestCase):

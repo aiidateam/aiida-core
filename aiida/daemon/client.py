@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import enum
 import os
 import socket
 import sys
@@ -13,6 +14,15 @@ VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
 VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
 
 
+class ControllerProtocol(enum.Enum):
+    """
+    The protocol to use to for the controller of the Circus daemon
+    """
+
+    IPC = 0
+    TCP = 1
+
+
 class DaemonClient(ProfileConfig):
     """
     Extension of the ProfileConfig which also provides handles to retrieve profile specific
@@ -22,7 +32,7 @@ class DaemonClient(ProfileConfig):
     DAEMON_ERROR = 'daemon-error'
     _DAEMON_NAME = 'aiida-{name}'
     _DEFAULT_LOGLEVEL = 'INFO'
-    _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
+    _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
     @property
     def daemon_name(self):
@@ -45,6 +55,10 @@ class DaemonClient(ProfileConfig):
     @property
     def virtualenv(self):
         return VIRTUALENV
+
+    @property
+    def circus_sockets(self):
+        return self.filepaths['circus']['socket']
 
     @property
     def circus_log_file(self):
@@ -124,25 +138,80 @@ class DaemonClient(ProfileConfig):
 
     def get_controller_endpoint(self):
         """
-        Get the endpoint string for the circus controller. The TCP port will correspond
-        to the circus port, written in the port file
+        Get the endpoint string for the circus controller. For the IPC protocol a profile specific
+        socket will be used, whereas for the TCP protocol an available port will be found and
+        saved in the profile specific port file
 
-        :return: the endpoint string, e.g. tcp://127.0.0.1:6000
+        :return: the endpoint string
         """
-        port = self.get_circus_port
-        return self.get_endpoint(port)
+        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
+            endpoint = self.get_ipc_endpoint(self.circus_sockets['controller'])
+        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+            endpoint = self.get_tcp_endpoint(self.get_circus_port)
+        else:
+            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
 
-    def get_endpoint(self, port=None):
+        return endpoint
+
+    def get_pubsub_endpoint(self):
         """
-        Get the endpoint string for a circus daemon endpoint. If the port is unspecified, the operating
-        system will be asked for a currently available port.
+        Get the endpoint string for the circus pubsub endpoint. For the IPC protocol a profile specific
+        socket will be used, whereas for the TCP protocol any available port will be used
+
+        :return: the endpoint string
+        """
+        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
+            endpoint = self.get_ipc_endpoint(self.circus_sockets['pubsub'])
+        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+            endpoint = self.get_tcp_endpoint()
+        else:
+            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
+
+        return endpoint
+
+    def get_stats_endpoint(self):
+        """
+        Get the endpoint string for the circus stats endpoint. For the IPC protocol a profile specific
+        socket will be used, whereas for the TCP protocol any available port will be used
+
+        :return: the endpoint string
+        """
+        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
+            endpoint = self.get_ipc_endpoint(self.circus_sockets['stats'])
+        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+            endpoint = self.get_tcp_endpoint()
+        else:
+            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
+
+        return endpoint
+
+    def get_ipc_endpoint(self, socket):
+        """
+        Get the ipc endpoint string for a circus daemon endpoint for a given socket
+
+        :param socket: absolute path to socket
+        :return: the ipc endpoint string
+        """
+        template = 'ipc://{socket}'
+        endpoint = template.format(socket=socket)
+
+        return endpoint
+
+    def get_tcp_endpoint(self, port=None):
+        """
+        Get the tcp endpoint string for a circus daemon endpoint. If the port is unspecified,
+        the operating system will be asked for a currently available port.
 
         :param port: a port to use for the endpoint
-        :return: the endpoint string
+        :return: the tcp endpoint string
         """
         if port is None:
             port = self.get_available_port()
-        return self._ENDPOINT_TPL.format(port=port)
+
+        template = 'tcp://127.0.0.1:{port}'
+        endpoint = template.format(port=port)
+
+        return endpoint
 
     @property
     def client(self):

@@ -49,6 +49,11 @@ class ProfileConfig(object):
                 'log': setup.CIRCUS_LOG_FILE_TEMPLATE.format(self.profile_name),
                 'pid': setup.CIRCUS_PID_FILE_TEMPLATE.format(self.profile_name),
                 'port': setup.CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
+                'socket': {
+                    'controller': setup.CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_name),
+                    'pubsub': setup.CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_name),
+                    'stats': setup.CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_name),
+                }
             },
             'daemon': {
                 'log': setup.DAEMON_LOG_FILE_TEMPLATE.format(self.profile_name),

@@ -250,8 +250,8 @@ def _start_circus(foreground):
 
     arbiter_config = {
         'controller': client.get_controller_endpoint(),
-        'pubsub_endpoint': client.get_endpoint(),
-        'stats_endpoint': client.get_endpoint(),
+        'pubsub_endpoint': client.get_pubsub_endpoint(),
+        'stats_endpoint': client.get_stats_endpoint(),
         'logoutput': logoutput,
         'loglevel': loglevel,
         'debug': False,

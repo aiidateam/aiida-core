@@ -535,7 +535,7 @@ aside to the final optimal cell parameter value.
             optimal_alat = self.get_attribute("optimal_alat")
 	        
             opt_calc = self.get_step_calculations(self.optimize)[0] #.get_calculations()[0]
-            opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
+            opt_e = opt_calc.get_outputs(node_type=ParameterData)[0].get_dict()['energy']
             
             self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
             
@@ -741,7 +741,7 @@ phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
                 run_ph_calcs = self.get_step_calculations(self.run_ph) #.get_calculations()
 
                 for c in run_ph_calcs:
-                    dm = c.get_outputs(type=ParameterData)[0].get_dict()['dynamical_matrix_1']
+                    dm = c.get_outputs(node_type=ParameterData)[0].get_dict()['dynamical_matrix_1']
                     self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
 
                 self.next(self.exit)

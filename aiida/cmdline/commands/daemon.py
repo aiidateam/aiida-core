@@ -248,13 +248,6 @@ def _start_circus(foreground):
     loglevel = client.loglevel
     logoutput = client.circus_log_file
 
-    if not foreground:
-        logoutput = client.circus_log_file
-        daemonize()
-
-    # Running in foreground so set logging filehandle to stdout
-    logoutput = '-'
-
     arbiter_config = {
         'controller': client.get_controller_endpoint(),
         'pubsub_endpoint': client.get_endpoint(),
@@ -276,6 +269,11 @@ def _start_circus(foreground):
             'env': get_env_with_venv_bin(),
         }]
     } # yapf: disable
+
+    if not foreground:
+        daemonize()
+    else:
+        logoutput = '-'
 
     arbiter = get_arbiter(**arbiter_config)
     pidfile = Pidfile(arbiter.pidfile)

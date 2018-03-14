@@ -26,10 +26,16 @@ class DaemonClient(ProfileConfig):
 
     @property
     def daemon_name(self):
+        """
+        Get the daemon name which is tied to the profile name
+        """
         return self._DAEMON_NAME.format(name=self.profile_name)
 
     @property
     def cmd_string(self):
+        """
+        Return the command string to start the AiiDA daemon
+        """
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
 
     @property
@@ -63,24 +69,32 @@ class DaemonClient(ProfileConfig):
     @property
     def get_circus_port(self):
         """
-        Retrieve the port for the circus controller, which should be written to the circus port file. If the file
-        does not exist, cannot be read or the port cannot be parsed, obtain a new available port from the operation
-        system and write that to file. This file should be deleted when the daemon is stopped.
-        """
-        try:
-            port = int(open(self.circus_port_file, 'r').read().strip())
-        except (ValueError, IOError):
-            port = None
+        Retrieve the port for the circus controller, which should be written to the circus port file. If the 
+        daemon is running, the port file should exist and contain the port to which the controller is connected.
+        If it cannot be read, a RuntimeError will be thrown. If the daemon is not running, an available port
+        will be requested from the operating system, written to the port file and returned
 
-        if port is None:
+        :return: the port for the circus controller
+        """
+        if self.is_daemon_running:
+            try:
+                return int(open(self.circus_port_file, 'r').read().strip())
+            except (ValueError, IOError):
+                raise RuntimeError('daemon is running so port file should have been there but could not read it')
+        else:
             port = self.get_available_port()
             with open(self.circus_port_file, 'w') as handle:
                 handle.write(str(port))
 
-        return port
+            return port
 
     @property
     def get_daemon_pid(self):
+        """
+        Get the daemon pid which should be written in the daemon pid file specific to the profile
+
+        :return: the pid of the circus daemon process or None if not found
+        """
         if os.path.isfile(self.circus_pid_file):
             try:
                 return int(open(self.circus_pid_file, 'r').read().strip())
@@ -91,27 +105,53 @@ class DaemonClient(ProfileConfig):
 
     @property
     def is_daemon_running(self):
+        """
+        Return whether the daemon is running, which is determined by seeing if the daemon pid file is present
+
+        :return: True if daemon is running, False otherwise
+        """
         return self.get_daemon_pid is not None
 
     def get_available_port(self):
         """
         Get an available port from the operating system
+
+        :return: a currently available port
         """
         open_socket = socket.socket()
         open_socket.bind(('', 0))
         return open_socket.getsockname()[1]
 
     def get_controller_endpoint(self):
+        """
+        Get the endpoint string for the circus controller. The TCP port will correspond
+        to the circus port, written in the port file
+
+        :return: the endpoint string, e.g. tcp://127.0.0.1:6000
+        """
         port = self.get_circus_port
         return self.get_endpoint(port)
 
     def get_endpoint(self, port=None):
+        """
+        Get the endpoint string for a circus daemon endpoint. If the port is unspecified, the operating
+        system will be asked for a currently available port.
+
+        :param port: a port to use for the endpoint
+        :return: the endpoint string
+        """
         if port is None:
             port = self.get_available_port()
         return self._ENDPOINT_TPL.format(port=port)
 
     @property
     def client(self):
+        """
+        Return an instance of the CircusClient with the endpoint defined by the controller endpoint, which
+        used the port that was written to the port file upon starting of the daemon
+
+        :return: CircucClient instance
+        """
         return CircusClient(endpoint=self.get_controller_endpoint(), timeout=0.5)
 
     def call_client(self, command):
@@ -120,6 +160,9 @@ class DaemonClient(ProfileConfig):
         by checking for the pid file. When the pid is found yet the call still fails with a
         timeout, this means the daemon was actually not running and it was terminated unexpectedly
         causing the pid file to not be cleaned up properly
+
+        :param command: command to call the circus client with
+        :return: the result of the circus client call
         """
         if not self.get_daemon_pid:
             return {'status': self.DAEMON_ERROR}
@@ -140,6 +183,8 @@ class DaemonClient(ProfileConfig):
     def get_status(self):
         """
         Get the daemon running status
+
+        :return: the client call response
         """
         command = {
             'command': 'status',
@@ -153,6 +198,8 @@ class DaemonClient(ProfileConfig):
     def get_worker_info(self):
         """
         Get workers statistics for this daemon
+
+        :return: the client call response
         """
         command = {
             'command': 'stats',
@@ -166,6 +213,8 @@ class DaemonClient(ProfileConfig):
     def get_daemon_info(self):
         """
         Get statistics about this daemon itself
+
+        :return: the client call response
         """
         command = {
             'command': 'dstats',
@@ -179,6 +228,7 @@ class DaemonClient(ProfileConfig):
         Increase the number of workers
 
         :param number: the number of workers to add
+        :return: the client call response
         """
         command = {
             'command': 'incr',
@@ -195,6 +245,7 @@ class DaemonClient(ProfileConfig):
         Decrease the number of workers
 
         :param number: the number of workers to remove
+        :return: the client call response
         """
         command = {
             'command': 'decr',
@@ -211,6 +262,7 @@ class DaemonClient(ProfileConfig):
         Stop the daemon
 
         :param wait: boolean to indicate whether to wait for the result of the command
+        :return: the client call response
         """
         command = {
             'command': 'quit',
@@ -219,22 +271,14 @@ class DaemonClient(ProfileConfig):
             }
         }
 
-        response = self.call_client(command)
-
-        # If successfully stopped, attempt to delete the circus port file
-        if response['status'] == 'ok':
-            try:
-                os.remove(self.circus_port_file)
-            except OSError:
-                pass
-
-        return response
+        return self.call_client(command)
 
     def restart_daemon(self, wait):
         """
         Restart the daemon
 
         :param wait: boolean to indicate whether to wait for the result of the command
+        :return: the client call response
         """
         command = {
             'command': 'restart',

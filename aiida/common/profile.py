@@ -1,6 +1,22 @@
 # -*- coding: utf-8 -*-
+import os
+
 from aiida.backends import settings
 from aiida.common import setup
+
+
+CONFIG_DIR = setup.AIIDA_CONFIG_FOLDER
+DAEMON_DIR = 'daemon'
+DAEMON_LOG_DIR = 'daemon/log'
+
+CIRCUS_PID_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.pid')
+DAEMON_PID_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'aiida-{}.pid')
+CIRCUS_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'circus-{}.log')
+DAEMON_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'aiida-{}.log')
+CIRCUS_PORT_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.port')
+CIRCUS_CONTROLLER_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.controller.socket')
+CIRCUS_PUBSUB_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.pubsub.socket')
+CIRCUS_STATS_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.stats.socket') 
 
 
 def get_current_profile_name():
@@ -46,17 +62,17 @@ class ProfileConfig(object):
     def filepaths(self):
         return {
             'circus': {
-                'log': setup.CIRCUS_LOG_FILE_TEMPLATE.format(self.profile_name),
-                'pid': setup.CIRCUS_PID_FILE_TEMPLATE.format(self.profile_name),
-                'port': setup.CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
+                'log': CIRCUS_LOG_FILE_TEMPLATE.format(self.profile_name),
+                'pid': CIRCUS_PID_FILE_TEMPLATE.format(self.profile_name),
+                'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
                 'socket': {
-                    'controller': setup.CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_name),
-                    'pubsub': setup.CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_name),
-                    'stats': setup.CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_name),
+                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_name),
+                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_name),
+                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_name),
                 }
             },
             'daemon': {
-                'log': setup.DAEMON_LOG_FILE_TEMPLATE.format(self.profile_name),
-                'pid': setup.DAEMON_PID_FILE_TEMPLATE.format(self.profile_name),
+                'log': DAEMON_LOG_FILE_TEMPLATE.format(self.profile_name),
+                'pid': DAEMON_PID_FILE_TEMPLATE.format(self.profile_name),
             }
         }

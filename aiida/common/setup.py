@@ -37,18 +37,6 @@ CONFIG_INDENT_SIZE = 4
 
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = 'daemon'
-LOG_SUBDIR = 'daemon/log'
-
-CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
-CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
-CIRCUS_PORT_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.port')
-CIRCUS_CONTROLLER_SOCKET_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.controller.socket')
-CIRCUS_PUBSUB_SOCKET_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pubsub.socket')
-CIRCUS_STATS_SOCKET_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.stats.socket') 
-DAEMON_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.log')
-DAEMON_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.pid')
-
 WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
@@ -244,11 +232,12 @@ def create_base_dirs(config_dir=None):
     Create dirs for AiiDA, and install default daemon files.
     """
     import getpass
+    from aiida.common.profile import DAEMON_DIR, DAEMON_LOG_DIR
 
     # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
-    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
-    aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
+    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_DIR)
+    aiida_log_dir = os.path.join(aiida_dir, DAEMON_LOG_DIR)
     local_user = getpass.getuser()
 
     old_umask = os.umask(DEFAULT_UMASK)

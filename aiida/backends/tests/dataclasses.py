@@ -2358,6 +2358,68 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [2.0, 2.0, 2.0],
                            [3.0, 3.0, 3.0]])
 
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_roundtrip(self):
+        """
+        Tests roundtrip StructureData -> pymatgen -> StructureData
+        (no spins)
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=[[5.6,0,0],[0,5.6,0],[0,0,5.6]])
+        a.append_atom(position=(0,0,0), symbols='Cl')
+        a.append_atom(position=(2.8,0,2.8), symbols='Cl')
+        a.append_atom(position=(0,2.8,2.8), symbols='Cl')
+        a.append_atom(position=(2.8,2.8,0), symbols='Cl')
+        a.append_atom(position=(2.8,2.8,2.8), symbols='Na')
+        a.append_atom(position=(2.8,0,0), symbols='Na')
+        a.append_atom(position=(0,2.8,0), symbols='Na')
+        a.append_atom(position=(0,0,2.8), symbols='Na')
+        
+        b = a.get_pymatgen()
+        c = StructureData(pymatgen=b)
+        self.assertEquals(c.get_site_kindnames(), ['Cl','Cl','Cl','Cl','Na','Na','Na','Na'])
+        self.assertEquals([k.symbol for k in c.kinds], ['Cl','Na'])
+        self.assertEquals([s.position for s in c.sites],
+                          [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
+
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_roundtrip_spins(self):
+        """
+        Tests roundtrip StructureData -> pymatgen -> StructureData
+        (with spins)
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=[[5.6,0,0],[0,5.6,0],[0,0,5.6]])
+        a.append_atom(position=(0,0,0), symbols='Mn',name='Mn1')
+        a.append_atom(position=(2.8,0,2.8), symbols='Mn',name='Mn1')
+        a.append_atom(position=(0,2.8,2.8), symbols='Mn',name='Mn1')
+        a.append_atom(position=(2.8,2.8,0), symbols='Mn',name='Mn1')
+        a.append_atom(position=(2.8,2.8,2.8), symbols='Mn',name='Mn2')
+        a.append_atom(position=(2.8,0,0), symbols='Mn',name='Mn2')
+        a.append_atom(position=(0,2.8,0), symbols='Mn',name='Mn2')
+        a.append_atom(position=(0,0,2.8), symbols='Mn',name='Mn2')
+        
+        b = a.get_pymatgen()
+        # check the spins
+        self.assertEquals([s.as_dict()['properties']['spin'] for s in b.species],
+                          [-1, -1, -1, -1, 1, 1, 1, 1])
+        # back to StructureData
+        c = StructureData(pymatgen=b)
+        self.assertEquals(c.get_site_kindnames(), ['Mn1','Mn1','Mn1','Mn1','Mn2','Mn2','Mn2','Mn2'])
+        self.assertEquals([k.symbol for k in c.kinds], ['Mn','Mn'])
+        self.assertEquals([s.position for s in c.sites],
+                          [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
+
 
 class TestArrayData(AiidaTestCase):
     """

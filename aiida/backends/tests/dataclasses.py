@@ -2064,7 +2064,7 @@ class TestStructureDataFromAse(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_4(self):
         """
-        Tests ASE -> StructureData, in particular conversion tags / kind names
+        Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
         """
         from aiida.orm.data.structure import StructureData
         import ase
@@ -2076,11 +2076,16 @@ class TestStructureDataFromAse(AiidaTestCase):
         s = StructureData(ase=atoms)
         kindnames = set([k.name for k in s.kinds])
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
+        # check roundtrip ASE -> StructureData -> ASE
+        atoms2 = s.get_ase()
+        self.assertEquals(list(atoms2.get_tags()),list(atoms.get_tags()))
+        self.assertEquals(list(atoms2.get_chemical_symbols()),list(atoms.get_chemical_symbols()))
+        self.assertEquals(atoms2.get_chemical_formula(),'Fe5')
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_5(self):
         """
-        Tests ASE -> StructureData, in particular conversion tags / kind names
+        Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
         (subtle variation of test_conversion_of_types_4)
         """
         from aiida.orm.data.structure import StructureData
@@ -2093,6 +2098,11 @@ class TestStructureDataFromAse(AiidaTestCase):
         s = StructureData(ase=atoms)
         kindnames = set([k.name for k in s.kinds])
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
+        # check roundtrip ASE -> StructureData -> ASE
+        atoms2 = s.get_ase()
+        self.assertEquals(list(atoms2.get_tags()),list(atoms.get_tags()))
+        self.assertEquals(list(atoms2.get_chemical_symbols()),list(atoms.get_chemical_symbols()))
+        self.assertEquals(atoms2.get_chemical_formula(),'Fe5')
 
 
 class TestStructureDataFromPymatgen(AiidaTestCase):

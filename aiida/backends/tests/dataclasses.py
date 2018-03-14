@@ -2257,6 +2257,42 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                 [round(x, 2) for x in list(struct.sites[4].position)],
                 [5.77, 5.89, 5.73])
 
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_partial_occ_and_spin(self):
+        """
+        Tests pymatgen -> StructureData, with partial occupancies and spins.
+        This should raise a ValueError.
+        """
+        from aiida.orm.data.structure import StructureData
+        import pymatgen
+        
+        Fe_spin_up = pymatgen.structure.Specie('Fe',0,properties={'spin':1})
+        Mn_spin_up = pymatgen.structure.Specie('Mn',0,properties={'spin':1})
+        Fe_spin_down = pymatgen.structure.Specie('Fe',0,properties={'spin':-1})
+        Mn_spin_down = pymatgen.structure.Specie('Mn',0,properties={'spin':-1})
+        FeMn1 = pymatgen.Composition({Fe_spin_up:0.5,Mn_spin_up:0.5})
+        FeMn2 = pymatgen.Composition({Fe_spin_down:0.5,Mn_spin_down:0.5})
+        a = pymatgen.structure.Structure(lattice=[[4,0,0],[0,4,0],[0,0,4]],
+                                         species=[FeMn1,FeMn2],
+                                         coords=[[0,0,0],[0.5,0.5,0.5]])
+                
+        with self.assertRaises(ValueError): 
+            StructureData(pymatgen=a)
+        
+        # same, with vacancies
+        Fe1 = pymatgen.Composition({Fe_spin_up:0.5})
+        Fe2 = pymatgen.Composition({Fe_spin_down:0.5})
+        a = pymatgen.structure.Structure(lattice=[[4,0,0],[0,4,0],[0,0,4]],
+                                         species=[Fe1,Fe2],
+                                         coords=[[0,0,0],[0.5,0.5,0.5]])
+                
+        with self.assertRaises(ValueError): 
+            StructureData(pymatgen=a)
+        
 
 class TestPymatgenFromStructureData(AiidaTestCase):
     """

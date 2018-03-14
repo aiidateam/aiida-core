@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import socket
 import sys
 
 from circus.client import CircusClient
@@ -48,12 +49,35 @@ class DaemonClient(ProfileConfig):
         return self.filepaths['circus']['pid']
 
     @property
+    def circus_port_file(self):
+        return self.filepaths['circus']['port']
+
+    @property
     def daemon_log_file(self):
         return self.filepaths['daemon']['log']
 
     @property
     def daemon_pid_file(self):
         return self.filepaths['daemon']['pid']
+
+    @property
+    def get_circus_port(self):
+        """
+        Retrieve the port for the circus controller, which should be written to the circus port file. If the file
+        does not exist, cannot be read or the port cannot be parsed, obtain a new available port from the operation
+        system and write that to file. This file should be deleted when the daemon is stopped.
+        """
+        try:
+            port = int(open(self.circus_port_file, 'r').read().strip())
+        except (ValueError, IOError):
+            port = None
+
+        if port is None:
+            port = self.get_available_port()
+            with open(self.circus_port_file, 'w') as handle:
+                handle.write(str(port))
+
+        return port
 
     @property
     def get_daemon_pid(self):
@@ -69,12 +93,26 @@ class DaemonClient(ProfileConfig):
     def is_daemon_running(self):
         return self.get_daemon_pid is not None
 
-    def get_endpoint(self, port_incr=0):
-        return self._ENDPOINT_TPL.format(port=self.circus_port + port_incr)
+    def get_available_port(self):
+        """
+        Get an available port from the operating system
+        """
+        open_socket = socket.socket()
+        open_socket.bind(('', 0))
+        return open_socket.getsockname()[1]
+
+    def get_controller_endpoint(self):
+        port = self.get_circus_port
+        return self.get_endpoint(port)
+
+    def get_endpoint(self, port=None):
+        if port is None:
+            port = self.get_available_port()
+        return self._ENDPOINT_TPL.format(port=port)
 
     @property
     def client(self):
-        return CircusClient(endpoint=self.get_endpoint(), timeout=0.5)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=0.5)
 
     def call_client(self, command):
         """
@@ -181,7 +219,16 @@ class DaemonClient(ProfileConfig):
             }
         }
 
-        return self.call_client(command)
+        response = self.call_client(command)
+
+        # If successfully stopped, attempt to delete the circus port file
+        if response['status'] == 'ok':
+            try:
+                os.remove(self.circus_port_file)
+            except OSError:
+                pass
+
+        return response
 
     def restart_daemon(self, wait):
         """

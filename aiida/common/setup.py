@@ -42,6 +42,7 @@ LOG_SUBDIR = 'daemon/log'
 
 CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
 CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
+CIRCUS_PORT_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.port')
 DAEMON_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.log')
 DAEMON_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.pid')
 

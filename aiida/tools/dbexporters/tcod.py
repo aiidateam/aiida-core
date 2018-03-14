@@ -875,8 +875,8 @@ def add_metadata_inline(what, node=None, parameters=None, args=None):
     for tag in node.values[dataname].keys():
         datablock[tag] = node.values[dataname][tag]
     datablocks.append(datablock)
-    for loop in node.values[dataname].loops:
-        loops[loop.keys()[0]] = loop.keys()
+    for loop in node.values[dataname].loops.values():
+        loops[loop[0]] = loop
 
     # Unpacking the kwargs from ParameterData
     kwargs = {}

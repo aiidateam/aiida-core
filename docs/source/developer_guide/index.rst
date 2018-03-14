@@ -22,3 +22,4 @@ Developer's guide
    ../verdi/properties
    database_schema
    control/index
+   caching

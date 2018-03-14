@@ -16,9 +16,168 @@ from sqlalchemy.exc import StatementError
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
+from aiida.common import caching
+from aiida.orm.calculation import Calculation
+from aiida.orm.code import Code
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
+
+class TestNodeHashing(AiidaTestCase):
+    """
+    Tests the functionality of hashing a node
+    """
+    @staticmethod
+    def create_simple_node(a, b=0, c=0):
+        n = Node()
+        n._set_attr('a', a)
+        n._set_attr('b', b)
+        n._set_attr('c', c)
+        return n
+
+    def test_simple_equal_nodes(self):
+        attributes = [
+            (1.0, 1.1, 1.2),
+            ({'a': 'b', 'c': 'd'}, [1, 2, 3], {4, 1, 2})
+        ]
+        for attr in attributes:
+            n1 = self.create_simple_node(*attr)
+            n2 = self.create_simple_node(*attr)
+            n1.store(use_cache=True)
+            n2.store(use_cache=True)
+            self.assertEqual(n1.uuid, n2.get_extra('_aiida_cached_from'))
+
+    @staticmethod
+    def create_folderdata_with_empty_file():
+        from aiida.orm.data.folder import FolderData
+        res = FolderData()
+        with res.folder.get_subfolder('path').open('name', 'w') as f:
+            pass
+        return res
+
+    @staticmethod
+    def create_folderdata_with_empty_folder():
+        from aiida.orm.data.folder import FolderData
+        res = FolderData()
+        res.folder.get_subfolder('path/name').create()
+        return res
+
+    def test_folder_file_different(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_folder()
+
+        assert (
+            f1.folder.get_subfolder('path').get_content_list() ==
+            f2.folder.get_subfolder('path').get_content_list()
+        )
+        assert f1.get_hash() != f2.get_hash()
+
+    def test_folder_same(self):
+        f1 = self.create_folderdata_with_empty_folder()
+        f2 = self.create_folderdata_with_empty_folder()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
+
+    def test_file_same(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_file()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
+
+    def test_simple_unequal_nodes(self):
+        attributes = [
+            [(1.0, 1.1, 1.2), (2.0, 1.1, 1.2)],
+            [(1e-14,), (2e-14,)],
+        ]
+        for attr1, attr2 in attributes:
+            n1 = self.create_simple_node(*attr1)
+            n2 = self.create_simple_node(*attr2)
+            n1.store()
+            n2.store(use_cache=True)
+            self.assertNotEquals(n1.uuid, n2.uuid)
+            self.assertFalse('_aiida_cached_from' in n2.extras())
+
+    def test_unequal_arrays(self):
+        import numpy as np
+        from aiida.orm.data.array import ArrayData
+        arrays = [
+            (np.zeros(1001), np.zeros(1005)),
+            (np.array([1, 2, 3]), np.array([2, 3, 4]))
+        ]
+        def create_arraydata(arr):
+            a = ArrayData()
+            a.set_array('a', arr)
+            return a
+
+        for arr1, arr2 in arrays:
+            a1 = create_arraydata(arr1)
+            a1.store()
+            a2 = create_arraydata(arr2)
+            a2.store(use_cache=True)
+            self.assertNotEquals(a1.uuid, a2.uuid)
+            self.assertFalse('_aiida_cached_from' in a2.extras())
+
+    def test_updatable_attributes(self):
+        """
+        Tests that updatable attributes are ignored.
+        """
+        c = Calculation()
+        hash1 = c.get_hash()
+        c._set_attr('_sealed', True)
+        hash2 = c.get_hash()
+        self.assertNotEquals(hash1, None)
+        self.assertEquals(hash1, hash2)
+
+class TestDataNode(AiidaTestCase):
+    """
+    These tests check the features of Data nodes that differ from the base Node
+    """
+    boolval = True
+    intval = 123
+    floatval = 4.56
+    stringval = "aaaa"
+    # A recursive dictionary
+    dictval = {
+        'num': 3,
+        'something': 'else',
+        'emptydict': {},
+        'recursive': {
+            'a': 1,
+            'b': True,
+            'c': 1.2,
+            'd': [1, 2, None],
+            'e': {
+                'z': 'z',
+                'x': None,
+                'xx': {},
+                'yy': []
+            }
+        }
+    }
+    listval = [1, "s", True, None]
+    emptydict = {}
+    emptylist = []
+
+    def test_attr_after_storing(self):
+        a = Data()
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a.store()
+
+        # And now I try to edit/delete the keys; I should not be able to do it
+        # after saving. I try only for a couple of attributes
+        with self.assertRaises(ModificationNotAllowed):
+            a._del_attr('bool')
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', 13)
+
+    def test_modify_attr_after_store(self):
+        a = Data()
+        a.store()
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('i', 12)
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -454,6 +613,7 @@ class TestNodeBasic(AiidaTestCase):
             'bool': 'some non-boolean value',
             'some_other_name': 987
         }
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
@@ -478,12 +638,12 @@ class TestNodeBasic(AiidaTestCase):
         b.store()
         # and I finally add a extras
         b.set_extra('meta', 'textofext')
-        b_expected_extras = {'meta': 'textofext'}
+        b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check for the attributes
         # First I check that nothing has changed
         self.assertEquals({k: v for k, v in a.iterattrs()}, attrs_to_set)
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         # I check then on the 'b' copy
         self.assertEquals({k: v
@@ -808,7 +968,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
 
-        self.assertEquals(a.get_extras(), {'bool': a_string})
+        self.assertEquals(a.get_extras(), {'bool': a_string, '_aiida_hash': AnyValue()})
 
     def test_get_extras_with_default(self):
         a = Node()
@@ -886,14 +1046,16 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
+
         self.assertEquals(set(a.attrs()), set(attrs_to_set.keys()))
-        self.assertEquals(set(a.extras()), set(extras_to_set.keys()))
+        self.assertEquals(set(a.extras()), set(all_extras.keys()))
 
         returned_internal_attrs = {k: v for k, v in a.iterattrs()}
         self.assertEquals(returned_internal_attrs, attrs_to_set)
 
         returned_attrs = {k: v for k, v in a.iterextras()}
-        self.assertEquals(returned_attrs, extras_to_set)
+        self.assertEquals(returned_attrs, all_extras)
 
     def test_versioning(self):
         """
@@ -950,10 +1112,12 @@ class TestNodeBasic(AiidaTestCase):
             'further': 267,
         }
 
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
+
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
@@ -961,8 +1125,8 @@ class TestNodeBasic(AiidaTestCase):
             # I delete one by one the keys and check if the operation is
             # performed correctly
             a.del_extra(k)
-            del extras_to_set[k]
-            self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+            del all_extras[k]
+            self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
     def test_replace_extras_1(self):
         """
@@ -986,6 +1150,7 @@ class TestNodeBasic(AiidaTestCase):
                 'h': 'j'
             }, [9, 8, 7]],
         }
+        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         # I redefine the keys with more complicated data, and
         # changing the data type too
@@ -1004,7 +1169,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
 
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         for k, v in new_extras.iteritems():
             # I delete one by one the keys and check if the operation is
@@ -1013,8 +1178,8 @@ class TestNodeBasic(AiidaTestCase):
 
         # I update extras_to_set with the new entries, and do the comparison
         # again
-        extras_to_set.update(new_extras)
-        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        all_extras.update(new_extras)
+        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
     def test_basetype_as_attr(self):
         """
@@ -2024,3 +2189,160 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Link specific inputs
         self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
         self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
+
+class AnyValue(object):
+    """
+    Helper class that compares equal to everything.
+    """
+    def __eq__(self, other):
+        return True
+
+class TestNodeDeletion(AiidaTestCase):
+    def _check_existence(self, uuids_check_existence, uuids_check_deleted):
+        """
+        I get 2 lists of uuids
+        :param list uuids_check_existence: The list of uuids that have to exist
+        :param list uuids_check_deleted:
+            The list of uuids that should not exist,
+            I check that NotExistent is raised.
+        """
+        from aiida.common.exceptions import NotExistent
+        for uuid in uuids_check_existence:
+            # This will raise if node is not existent:
+            load_node(uuid)
+        for uuid in uuids_check_deleted:
+            # I check that it raises
+            with self.assertRaises(NotExistent):
+                load_node(uuid)
+    def _create_calls_n_returns_graph(self):
+        """
+        Creates a complicated graph with a master with 1 inputs,
+        2 slaves of it also using that input and an additional 1,
+        producing output that is either returned or not returned by the master.
+        Master also creates one nodes. This allows to check whether the delete_nodes
+        command works as anticipated.
+        """
+        from aiida.common.links import LinkType
+
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = [Node().store() for i in range(9)]
+        wf.add_link_from(in1, link_type=LinkType.INPUT)
+        slave1.add_link_from(in1, link_type=LinkType.INPUT)
+        slave1.add_link_from(in2, link_type=LinkType.INPUT)
+        slave2.add_link_from(in2, link_type=LinkType.INPUT)
+        slave1.add_link_from(wf, link_type=LinkType.CALL)
+        slave2.add_link_from(wf, link_type=LinkType.CALL)
+        outp1.add_link_from(slave1, link_type=LinkType.CREATE)
+        outp2.add_link_from(slave2, link_type=LinkType.CREATE)
+        outp2.add_link_from(wf, link_type=LinkType.RETURN)
+        outp3.add_link_from(wf, link_type=LinkType.CREATE)
+        outp4.add_link_from(wf, link_type=LinkType.RETURN)
+        return in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4
+
+    def test_deletion_simple(self):
+        """
+        I'm setting up a sequence of nodes connected by data provenance links.
+        Testing whether I will delete the right ones.
+        """
+        from aiida.common.links import LinkType
+        from aiida.utils.delete_nodes import delete_nodes
+
+        nodes = [Node().store() for i in range(15)]
+        uuids_check_existence = [n.uuid for n in nodes[:3]]
+        uuids_check_deleted = [n.uuid for n in nodes[3:]]
+
+        # Now I am linking the nodes in a branched network
+        # Connecting nodes 1,2,3 to 0
+        for i in range(1,4):
+            nodes[i].add_link_from(nodes[0], link_type=LinkType.INPUT)
+        # Connecting nodes 4,5,6 to 3
+        for i in range(4, 7):
+            nodes[i].add_link_from(nodes[3], link_type=LinkType.CREATE)
+        # Connecting nodes 7,8 to 4
+        for i in range(7, 9):
+            nodes[i].add_link_from(nodes[4], link_type=LinkType.INPUT)
+        # Connecting nodes 9 to 5
+        for i in range(9, 10):
+            nodes[i].add_link_from(nodes[5], link_type=LinkType.INPUT)
+        for i in range(10, 14):
+            nodes[i+1].add_link_from(nodes[i], link_type=LinkType.INPUT)
+        delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=0)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+
+    def test_deletion_with_calls_with_returns(self):
+        """
+        Checking the case where I follow calls and return links for deletion
+        """
+        from aiida.utils.delete_nodes import delete_nodes
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # The inputs are not harmed.
+        uuids_check_existence = (in1.uuid, in2.uuid)
+        # the slaves and their outputs have to disappear since calls are followed!
+        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2, outp4)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=True, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_with_calls_no_returns(self):
+        """
+        Checking the case where I follow calls and not return links for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # The inputs are not harmed.
+        uuids_check_existence = (in1.uuid, in2.uuid, outp4.uuid)
+        # the slaves and their outputs have to disappear since calls are followed!
+        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=True, follow_returns=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_no_calls_no_returns(self):
+        """
+        Checking the case where I don't follow calls and also not return links for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # I don't follow calls, so the slaves and their output are unharmed, as well as input
+        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, slave2, outp4)]
+        # the wf and it's direct output
+        uuids_check_deleted = [n.uuid for n in (wf, outp3)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=False, follow_returns=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_no_calls_with_returns(self):
+        """
+        Checking the case where I follow returns and not calls for deletion
+        """
+
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
+        # I don't follow calls, so the slaves and their output are unharmed, as well as input
+        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, slave2)]
+        # the wf and it's direct output and what it returned
+        uuids_check_deleted = [n.uuid for n in (wf, outp3, outp2, outp4)]
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_calls=False, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_deletion_with_returns_n_loops(self):
+        """
+        Setting up a simple loop, to check that the following doesn't go bananas.
+        """
+        from aiida.common.links import LinkType
+        from aiida.utils.delete_nodes import delete_nodes
+
+        in1, in2, wf = [Node().store() for i in range(3)]
+        wf.add_link_from(in1, link_type=LinkType.INPUT)
+        wf.add_link_from(in2, link_type=LinkType.INPUT)
+        in2.add_link_from(wf, link_type=LinkType.RETURN)
+
+        uuids_check_existence = (in1.uuid, )
+        uuids_check_deleted = [n.uuid for n in (wf, in2)]
+
+        delete_nodes([wf.pk], verbosity=0, force=True, follow_returns=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)

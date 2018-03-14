@@ -26,11 +26,10 @@ def update_req_for_rtd(pre_commit):
 
     import setup_requirements
 
+    req_for_rtd_lines = list(setup_requirements.extras_require['docs'] +
+                             setup_requirements.extras_require['REST'])
+
     required_packages = list(setup_requirements.install_requires)
-
-    # Required version
-    req_for_rtd_lines = ['Sphinx>=1.5']
-
     for package in required_packages:
         # To avoid that it requires also the postgres libraries
         if package.startswith('psycopg2'):

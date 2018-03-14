@@ -66,6 +66,8 @@ db_test_list = {
         'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
         'daemon': ['aiida.backends.tests.daemon'],
         'verdi_commands': ['aiida.backends.tests.verdi_commands'],
+        'caching_config': ['aiida.backends.tests.test_caching_config'],
+        'inline_calculation': ['aiida.backends.tests.inline_calculation'],
     }
 }
 

@@ -304,6 +304,15 @@ This command is deprecated, please use the :ref:`setup <setup>` command instead
     
   * **tree**: shows a tree of the nodes
 
+  * **delete**: Delete a node and everything that has a provenance from this node.
+
+
+.. note:: **WARNING!** In order to preserve the provenance, this function
+  will delete not only the list of specified nodes,
+  but also all the children nodes! So please be sure to double check what
+  is going to be deleted before running this function.
+  Once delete, this is cannot be undone.
+
 
 .. _profile:
 

@@ -1932,6 +1932,9 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_ase(self):
+        """
+        Tests roundtrip ASE -> StructureData -> ASE
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -1957,6 +1960,9 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_1(self):
+        """
+        Tests roundtrip ASE -> StructureData -> ASE, with tags
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -1987,6 +1993,10 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_2(self):
+        """
+        Tests roundtrip ASE -> StructureData -> ASE, with tags, and 
+        changing the atomic masses
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -2019,6 +2029,9 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_3(self):
+        """
+        Tests StructureData -> ASE, with all sorts of kind names
+        """
         from aiida.orm.data.structure import StructureData
 
         a = StructureData()
@@ -2050,6 +2063,9 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_4(self):
+        """
+        Tests ASE -> StructureData, in particular conversion tags / kind names
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -2063,6 +2079,10 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_5(self):
+        """
+        Tests ASE -> StructureData, in particular conversion tags / kind names
+        (subtle variation of test_conversion_of_types_4)
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -2090,7 +2110,8 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
-        Test's imput is derived from COD entry 9011963, processed with
+        Tests roundtrip pymatgen -> StructureData -> pymatgen
+        Test's input is derived from COD entry 9011963, processed with
         cif_mark_disorder (from cod-tools) and abbreviated.
         """
         from aiida.orm.data.structure import StructureData
@@ -2162,6 +2183,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
+        Tests xyz -> pymatgen -> StructureData
         Input source: http://pymatgen.org/_static/Molecule.html
         """
         from aiida.orm.data.structure import StructureData
@@ -2219,7 +2241,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
-        Test the check of periodic boundary conditions.
+        Tests the check of periodic boundary conditions.
         """
         from aiida.orm.data.structure import StructureData
 
@@ -2239,6 +2261,9 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
+        """
+        Tests ASE -> StructureData -> pymatgen
+        """
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -2274,7 +2299,8 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_3(self):
         """
-        Test the conversion of StructureData to pymatgen's Molecule.
+        Tests the conversion of StructureData to pymatgen's Molecule
+        (ASE -> StructureData -> pymatgen)
         """
         from aiida.orm.data.structure import StructureData
         import ase

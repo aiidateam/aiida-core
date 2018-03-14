@@ -1,3 +1,9 @@
+## v0.11.2:
+
+### Critical bug fixes
+- Link types were not respected in `Node.get_inputs` for SqlAlchemy [[#1271]](https://github.com/aiidateam/aiida_core/pull/1271)
+
+
 ## v0.11.1:
 
 ### Improvements

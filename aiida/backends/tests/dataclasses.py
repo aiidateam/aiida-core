@@ -2446,7 +2446,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         a.append_atom(position=(0,0,2.8), symbols='Na',name='Na4')
         
         b = a.get_pymatgen()
-        self.assertEquals([site.as_dict()['properties']['kind_names'] for site in b.sites],
+        self.assertEquals([site.as_dict()['properties']['kind_name'] for site in b.sites],
                          ['Cl','Cl10','Cla','cl_x','Na1','Na2','Na_Na','Na4'])
         
         c = StructureData(pymatgen=b)

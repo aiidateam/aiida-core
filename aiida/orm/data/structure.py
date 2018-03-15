@@ -182,7 +182,21 @@ def _create_weights_tuple(weights):
         weights_tuple = tuple(float(i) for i in weights)
     return weights_tuple
 
+    
+def create_automatic_kind_name(symbols,weights):
+    """
+    Create a string obtained with the symbols appended one
+    after the other, without spaces, in alphabetical order;
+    if the site has a vacancy, a X is appended at the end too.
+    """
+    sorted_symbol_list = list(set(symbols))
+    sorted_symbol_list.sort()  # In-place sort
+    name_string = "".join(sorted_symbol_list)
+    if has_vacancies(weights):
+        name_string += "X"
+    return name_string
 
+            
 def validate_weights_tuple(weights_tuple, threshold):
     """
     Validates the weight of the atomic kinds.
@@ -1782,13 +1796,20 @@ class StructureData(Data):
                              "all three dimensions of real space")
 
         species = []
+        additional_kwargs = {}
         for s in self.sites:
             k = self.get_kind(s.kind_name)
             species.append({s: w for s, w in zip(k.symbols, k.weights)})
+        
+        if any([create_automatic_kind_name(self.get_kind(name).symbols,self.get_kind(name).weights)!=name
+                for name in self.get_site_kindnames()]):
+                # add "kind_name" as a properties to each site, whenever
+                # the kind_name cannot be automatically obtained from the symbols
+            additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
 
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions,
-                         coords_are_cartesian=True)
+                         coords_are_cartesian=True,**additional_kwargs)
 
     def _get_object_pymatgen_molecule(self):
         """
@@ -2022,11 +2043,7 @@ class Kind(object):
         after the other, without spaces, in alphabetical order;
         if the site has a vacancy, a X is appended at the end too.
         """
-        sorted_symbol_list = list(set(self.symbols))
-        sorted_symbol_list.sort()  # In-place sort
-        name_string = "".join(sorted_symbol_list)
-        if self.has_vacancies():
-            name_string += "X"
+        name_string = create_automatic_kind_name(self.symbols,self.weights)
         if tag is None:
             self.name = name_string
         else:

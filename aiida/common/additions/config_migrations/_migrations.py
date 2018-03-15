@@ -46,26 +46,22 @@ class ConfigMigration(object):
         return config
 
 
-def _1_add_profile_uuid_and_circus_port(config):
+def _1_add_profile_uuid(config):
     """
-    This adds the required values for two new default profile keys
+    This adds the required values for a new default profile
 
         * PROFILE_UUID
-        * CIRCUS_PORT
 
     The profile uuid will be used as a general purpose identifier for the profile, in
-    for example the RabbitMQ message queues and exchanges. The circus port is necessary
-    for the new daemon, which is daemonized by circus and to have an individual daemon
-    for each profile, a unique port is required
+    for example the RabbitMQ message queues and exchanges.
     """
-    from aiida.common.setup import generate_new_profile_uuid, generate_new_circus_port
-    from aiida.common.setup import PROFILE_UUID_KEY, CIRCUS_PORT_KEY
+    from aiida.common.setup import generate_new_profile_uuid
+    from aiida.common.setup import PROFILE_UUID_KEY
 
     profiles = config.get('profiles', {})
 
     for profile in profiles.values():
         profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
-        profile[CIRCUS_PORT_KEY] = generate_new_circus_port(profiles)
 
     return config
 
@@ -98,7 +94,7 @@ _MIGRATION_LOOKUP = {
         oldest_version=0
     ),
     1: ConfigMigration(
-        migrate_function=_1_add_profile_uuid_and_circus_port,
+        migrate_function=_1_add_profile_uuid,
         current_version=2,
         oldest_version=0
     ),

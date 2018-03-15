@@ -18,10 +18,12 @@ def get_env_with_venv_bin():
     value configured in the AIIDA_CONFIG_FOLDER variable
     """
     from aiida.common import setup
-    pybin = os.path.dirname(sys.executable)
+
     currenv = os.environ.copy()
-    currenv['PATH'] = pybin + ':' + currenv['PATH']
+    currenv['PATH'] = os.path.dirname(sys.executable) + ':' + currenv['PATH']
     currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    currenv['PYTHONUNBUFFERED'] = 'True'
+
     return currenv
 
 

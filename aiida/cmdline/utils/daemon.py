@@ -1,155 +1,69 @@
 # -*- coding: utf-8 -*-
-from circus.client import CircusClient as LibCircusClient
-from circus.exc import CallError
+import click
+from tabulate import tabulate
 
+from aiida.cmdline.utils.common import format_local_time
 from aiida.daemon.client import DaemonClient
 
 
-class CircusClient(object):
+def print_client_response_status(response):
+    """
+    Print the response status of a call to the CircusClient through the DaemonClient
 
-    _ENDPOINT_TPL = 'tcp://127.0.0.1:{port}'
+    :param response: the response object
+    """
+    if 'status' not in response:
+        return
 
-    def __init__(self, profile_name=None):
-        self._daemon_client = DaemonClient(profile_name)
+    if response['status'] == 'active':
+        click.secho('RUNNING', fg='green', bold=True)
+    elif response['status'] == DaemonClient.DAEMON_ERROR:
+        click.secho('FAILED', fg='red', bold=True)
+        click.echo('Try to run \'verdi daemon start --foreground\' to potentially see the exception')
+    elif response['status'] == 'ok':
+        click.secho('OK', fg='green', bold=True)
+    else:
+        click.echo(response['status'])
 
-    def get_endpoint(self, port_incr=0):
-        return self._ENDPOINT_TPL.format(port=self.daemon_client.circus_port + port_incr)
 
-    @property
-    def client(self):
-        return LibCircusClient(endpoint=self.get_endpoint(), timeout=0.5)
+def get_daemon_status(client):
+    """
+    Print the status information of the daemon for a given profile through its DaemonClient
 
-    @property
-    def daemon_client(self):
-        return self._daemon_client
+    :param client: the DaemonClient
+    """
 
-    @property
-    def daemon_name(self):
-        return self._daemon_client.name
+    if not client.is_daemon_running:
+        return 'The daemon is not running'
 
-    @property
-    def is_daemon_running(self):
-        return self.daemon_client.get_daemon_pid is not None
+    status_response = client.get_status()
 
-    def call_client(self, command):
-        """
-        Call the client with a specific command. Will check whether the daemon is running first
-        by checking for the pid file. When the pid is found yet the call still fails with a
-        timeout, this means the daemon was actually not running and it was terminated unexpectedly
-        causing the pid file to not be cleaned up properly
-        """
-        if not self.daemon_client.get_daemon_pid:
-            return {'status': 'The daemon is not running'}
+    if status_response['status'] == 'stopped':
+        return 'The daemon is paused'
+    elif status_response['status'] == 'error':
+        return 'The daemon is in an unexpected state, try verdi daemon restart --reset'
 
-        try:
-            result = self.client.call(command)
-        except CallError as exception:
-            if str(exception) == 'Timed out.':
-                return {
-                    'status': 'Daemon was not running but a PID file was found. '
-                    'This indicates the daemon was terminated unexpectedly; '
-                    'no action is required but proceed with caution.'
-                }
-            raise exception
+    worker_response = client.get_worker_info()
+    daemon_response = client.get_daemon_info()
 
-        return result
+    workers = [['PID', 'MEM %', 'CPU %', 'started']]
+    for worker_pid, worker_info in worker_response['info'].items():
+        worker_row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
+        workers.append(worker_row)
 
-    def get_status(self):
-        """
-        Get the daemon running status
-        """
-        command = {
-            'command': 'status',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+    if len(workers) > 1:
+        workers_info = tabulate(workers, headers='firstrow', tablefmt='simple')
+    else:
+        workers_info = '--> No workers are running. Use verdi daemon incr to start some!\n'
 
-        return self.call_client(command)
+    info = {
+        'pid': daemon_response['info']['pid'],
+        'time': format_local_time(daemon_response['info']['create_time']),
+        'nworkers': len(workers) - 1,
+        'workers': workers_info
+    }
 
-    def get_worker_info(self):
-        """
-        Get workers statistics for this daemon
-        """
-        command = {
-            'command': 'stats',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+    template = ('Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
+                'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
 
-        return self.call_client(command)
-
-    def get_daemon_info(self):
-        """
-        Get statistics about this daemon itself
-        """
-        command = {
-            'command': 'dstats', 
-            'properties': {}
-        }
-
-        return self.call_client(command)
-
-    def increase_workers(self, number):
-        """
-        Increase the number of workers
-
-        :param number: the number of workers to add
-        """
-        command = {
-            'command': 'incr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
-
-        return self.call_client(command)
-
-    def decrease_workers(self, number):
-        """
-        Decrease the number of workers
-
-        :param number: the number of workers to remove
-        """
-        command = {
-            'command': 'decr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
-
-        return self.call_client(command)
-
-    def stop_daemon(self, wait):
-        """
-        Stop the daemon
-
-        :param wait: boolean to indicate whether to wait for the result of the command
-        """
-        command = {
-            'command': 'quit',
-            'properties': {
-                'waiting': wait
-            }
-        }
-
-        return self.call_client(command)
-
-    def restart_daemon(self, wait):
-        """
-        Restart the daemon
-
-        :param wait: boolean to indicate whether to wait for the result of the command
-        """
-        command = {
-            'command': 'restart',
-            'properties': {
-                'name': self.daemon_name,
-                'waiting': wait
-            }
-        }
-
-        return self.call_client(command)
+    return template.format(**info)

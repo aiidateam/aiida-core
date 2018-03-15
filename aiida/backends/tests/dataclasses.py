@@ -2428,6 +2428,38 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      StrictVersion(get_pymatgen_version()) !=
                      StrictVersion('4.5.3'),
                      "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_roundtrip_kindnames(self):
+        """
+        Tests roundtrip StructureData -> pymatgen -> StructureData
+        (no spins, but with all kind of kind names)
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=[[5.6,0,0],[0,5.6,0],[0,0,5.6]])
+        a.append_atom(position=(0,0,0), symbols='Cl',name='Cl')
+        a.append_atom(position=(2.8,0,2.8), symbols='Cl',name='Cl10')
+        a.append_atom(position=(0,2.8,2.8), symbols='Cl',name='Cla')
+        a.append_atom(position=(2.8,2.8,0), symbols='Cl',name='cl_x')
+        a.append_atom(position=(2.8,2.8,2.8), symbols='Na',name='Na1')
+        a.append_atom(position=(2.8,0,0), symbols='Na',name='Na2')
+        a.append_atom(position=(0,2.8,0), symbols='Na',name='Na_Na')
+        a.append_atom(position=(0,0,2.8), symbols='Na',name='Na4')
+        
+        b = a.get_pymatgen()
+        self.assertEquals([site.as_dict()['properties']['kind_names'] for site in b.sites],
+                         ['Cl','Cl10','Cla','cl_x','Na1','Na2','Na_Na','Na4'])
+        
+        c = StructureData(pymatgen=b)
+        self.assertEquals(c.get_site_kindnames(), ['Cl','Cl10','Cla','Cl_x','Na1','Na2','Na_Na','Na4'])
+        self.assertEquals([k.symbol for k in c.kinds], ['Cl','Na'])
+        self.assertEquals([s.position for s in c.sites],
+                          [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
+
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and
+                     StrictVersion(get_pymatgen_version()) !=
+                     StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_roundtrip_spins(self):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData

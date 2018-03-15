@@ -1181,10 +1181,14 @@ class StructureData(Data):
         Get pymatgen object. Returns Structure for structures with
         periodic boundary conditions (in three dimensions) and Molecule
         otherwise.
-        :param add_spin: True to add the spins to the pymatgen structure according to the rule:
-          if the kind name ends with 1 -> spin=+1
-          if the kind name ends with 2 -> spin=-1
-          Default is False (no spin added).
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
@@ -1194,10 +1198,14 @@ class StructureData(Data):
     def get_pymatgen_structure(self,**kwargs):
         """
         Get the pymatgen Structure object.
-        :param add_spin: True to add the spins to the pymatgen structure according to the rule:
-          if the kind name ends with 1 -> spin=+1
-          if the kind name ends with 2 -> spin=-1
-          Default is False (no spin added).
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
@@ -1806,10 +1814,14 @@ class StructureData(Data):
         Converts
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
         to pymatgen Structure object
-        :param add_spin: True to add the spins to the pymatgen structure according to the rule:
-          if the kind name ends with 1 -> spin=+1
-          if the kind name ends with 2 -> spin=-1
-          Default is False (no spin added).
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.data.structure.StructureData>`

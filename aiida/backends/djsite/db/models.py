@@ -148,6 +148,7 @@ class DbNode(m.Model):
     # starting with the same string
     # max_length required for index by MySql
     type = m.CharField(max_length=255, db_index=True)
+    process_type = m.CharField(max_length=255, db_index=True, null=True)
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time

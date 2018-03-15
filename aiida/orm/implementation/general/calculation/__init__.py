@@ -15,6 +15,7 @@ import logging
 from plumpy import ProcessState
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
+from aiida.common.new_pluginloader import get_entry_point_string_from_class
 from aiida.common.utils import classproperty
 from aiida.orm.mixins import Sealable
 
@@ -156,6 +157,17 @@ class AbstractCalculation(Sealable):
             return UseMethod(node=self, actual_name=actual_name, data=self._use_methods[actual_name])
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, name))
+
+    def _set_process_type(self, process_class):
+        """
+        Set the process type
+
+        :param process_class: the process class using this calculation node as storage
+        """
+        class_module = process_class.__module__
+        class_name = process_class.__name__
+        process_type = get_entry_point_string_from_class(class_module, class_name)
+        self.dbnode.process_type = process_type
 
     @property
     def process_label(self):

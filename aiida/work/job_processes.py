@@ -326,6 +326,8 @@ class JobProcess(processes.Process):
         """
         from aiida.common.links import LinkType
 
+        self.calc._set_process_type(self._CALC_CLASS)
+
         # Set all the attributes using the setter methods
         for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
             if value is not None:

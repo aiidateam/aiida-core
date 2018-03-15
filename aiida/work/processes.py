@@ -341,6 +341,7 @@ class Process(plumpy.Process):
         # Save the name of this process
         self.calc._set_process_state(None)
         self.calc._set_process_label(self.__class__.__name__)
+        self.calc._set_process_type(self.__class__)
 
         parent_calc = self.get_parent_calc()
 

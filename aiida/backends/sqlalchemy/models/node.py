@@ -74,6 +74,7 @@ class DbNode(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     type = Column(String(255), index=True)
+    process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True,
                    default="")  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=True, default="")

@@ -207,7 +207,7 @@ class WorkflowXTiO3_EOS(Workflow):
         optimal_alat = self.get_attribute("optimal_alat")
 
         opt_calc = self.get_step_calculations(self.optimize)[0]  # .get_calculations()[0]
-        opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
+        opt_e = opt_calc.get_outputs(node_type=ParameterData)[0].get_dict()['energy']
 
         self.append_to_report(x_material + "Ti03 optimal with a=" + str(optimal_alat) + ", e=" + str(opt_e))
 

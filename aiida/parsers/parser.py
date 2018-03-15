@@ -114,20 +114,19 @@ class Parser(object):
         from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import NotExistent
 
-        out_parameters = self._calc.get_outputs(type=ParameterData, also_labels=True)
-        out_parameterdata = [i[1] for i in out_parameters
-                             if i[0] == self.get_linkname_outparams()]
+        out_parameters = self._calc.get_outputs(node_type=ParameterData, also_labels=True)
+        out_parameter_data = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
 
-        if not out_parameterdata:
+        if not out_parameter_data:
             raise NotExistent("No output .res ParameterData node found")
-        elif len(out_parameterdata) > 1:
+        elif len(out_parameter_data) > 1:
             from aiida.common.exceptions import UniquenessError
 
             raise UniquenessError("Output ParameterData should be found once, "
                                   "found it instead {} times"
-                                  .format(len(out_parameterdata)))
+                                  .format(len(out_parameter_data)))
 
-        return out_parameterdata[0]
+        return out_parameter_data[0]
 
     def get_result_keys(self):
         """

@@ -2450,8 +2450,8 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                          ['Cl','Cl10','Cla','cl_x','Na1','Na2','Na_Na','Na4'])
         
         c = StructureData(pymatgen=b)
-        self.assertEquals(c.get_site_kindnames(), ['Cl','Cl10','Cla','Cl_x','Na1','Na2','Na_Na','Na4'])
-        self.assertEquals([k.symbol for k in c.kinds], ['Cl','Na'])
+        self.assertEquals(c.get_site_kindnames(), ['Cl','Cl10','Cla','cl_x','Na1','Na2','Na_Na','Na4'])
+        self.assertEquals(c.get_symbols_set(), set(['Cl','Na']))
         self.assertEquals([s.position for s in c.sites],
                           [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
 

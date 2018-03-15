@@ -2477,7 +2477,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         a.append_atom(position=(0,2.8,0), symbols='Mn',name='Mn2')
         a.append_atom(position=(0,0,2.8), symbols='Mn',name='Mn2')
         
-        b = a.get_pymatgen()
+        b = a.get_pymatgen(add_spin=True)
         # check the spins
         self.assertEquals([s.as_dict()['properties']['spin'] for s in b.species],
                           [-1, -1, -1, -1, 1, 1, 1, 1])
@@ -2575,7 +2575,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         self.assertEquals(a.get_formula(),'{Al0.20Fe0.80}2')
         
         with self.assertRaises(ValueError): 
-            a.get_pymatgen()
+            a.get_pymatgen(add_spin=True)
         
         # same, with vacancies
         a = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
@@ -2588,7 +2588,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         self.assertEquals(a.get_formula(),'{Fe0.80X0.20}2')
         
         with self.assertRaises(ValueError): 
-            a.get_pymatgen()
+            a.get_pymatgen(add_spin=True)
         
         
 class TestArrayData(AiidaTestCase):

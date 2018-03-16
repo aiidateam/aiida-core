@@ -29,7 +29,7 @@ To do so place in your ``__init__.py`` file in the main workflow directory
 	    """
 	    Return a suitable Workflow subclass for the workflows defined here.
 	    """
-	    from aiida.common.pluginloader import BaseFactory
+	    from aiida.plugins.factory import BaseFactory
 	
 	    return BaseFactory(module, Workflow, "aiida.workflows.user.myname")
 	

@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import traceback
-from reentry import manager as epm
-from aiida.common.exceptions import AiidaException
+try:
+    from reentry import manager as epm
+except ImportError:
+    import pkg_resources as epm
+
+from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
 
 ENTRY_POINT_STRING_SEPARATOR = ':'
@@ -22,25 +26,25 @@ entry_point_group_to_module_path_map = {
 }
 
 
-class MissingEntryPointError(AiidaException):
-    """
-    Raised when the requested entry point is not registered with the entry point manager
-    """
-    pass
+module_path_to_entry_point_group_map = {
+    v: k for k, v in entry_point_group_to_module_path_map.iteritems()
+}
 
 
-class MultipleEntryPointError(AiidaException):
+def get_entry_point_names(group, sort=True):
     """
-    Raised when the requested entry point cannot uniquely be resolved by the entry point manager
-    """
-    pass
+    Return a list of all the entry point names within a specific group
 
+    :param group: the entry point group
+    :param sort: if True, the returned list will be sorted alphabetically
+    :return: a list of entry point names
+    """
+    entry_point_names = [ep.name for ep in get_entry_points(group)]
 
-class LoadingEntryPointError(AiidaException):
-    """
-    Raised when the class corresponding to requested entry point cannot be loaded
-    """
-    pass
+    if sort is True:
+        sorted(entry_point_names)
+
+    return entry_point_names
 
 
 def get_entry_points(group):

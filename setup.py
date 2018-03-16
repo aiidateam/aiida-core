@@ -94,6 +94,8 @@ if __name__ == '__main__':
             ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',
+                'lsf = aiida.scheduler.plugins.lsf:LsfScheduler',
+                'sge = aiida.scheduler.plugins.sge:SgeScheduler',
                 'slurm = aiida.scheduler.plugins.slurm:SlurmScheduler',
                 'pbspro = aiida.scheduler.plugins.pbspro:PbsproScheduler',
                 'torque = aiida.scheduler.plugins.torque:TorqueScheduler',
@@ -102,7 +104,11 @@ if __name__ == '__main__':
                 'ssh = aiida.transport.plugins.ssh:SshTransport',
                 'local = aiida.transport.plugins.local:LocalTransport',
             ],
-            'aiida.workflows': [],
+            'aiida.workflows': [
+                'wf_XTiO3 = aiida.workflows.wf_XTiO3:WorkflowXTiO3_EOS',
+                'wf_demo = aiida.workflows.wf_demo:WorkflowDemo',
+                'wf_loop_branch_demo = aiida.workflows.wf_demo:LoopBranchWorkflowDemo'
+            ],
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'
             ],

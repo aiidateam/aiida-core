@@ -586,19 +586,17 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.common.old_pluginloader import from_type_to_pluginclassname
+                from aiida.plugins.loader import type_string_to_plugin_type
                 from aiida.plugins.loader import load_plugin
                 ormclass = self.Node
                 try:
-                    pluginclassname = from_type_to_pluginclassname(ormclasstype)
+                    pluginclassname = type_string_to_plugin_type(ormclasstype)
 
                     # I want to check at this point if that is a valid class,
                     # so I use the load_plugin to load the plugin class
                     # and use the classes _plugin_type_string attribute
                     # In the future, assuming the user knows what he or she is doing
                     # we could remove that check
-                    # The query_type_string we can get from
-                    # the aiida.common.old_pluginloader function get_query_type_string
                     PluginClass = load_plugin(self.AiidaNode, 'aiida.orm', pluginclassname)
                 except (DbContentError, MissingPluginError) as e:
                     raise InputValidationError(

@@ -8,7 +8,7 @@ def TransportFactory(module):
     :param str module: name of the module containing the Transport subclass
     :return: the transport subclass located in module 'module'
     """
-    from aiida.common.pluginloader import BaseFactory
+    from aiida.plugins.factory import BaseFactory
 
     return BaseFactory(module, Transport, "aiida.transport.plugins")
 

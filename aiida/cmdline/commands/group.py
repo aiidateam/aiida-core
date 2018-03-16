@@ -16,7 +16,6 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import NotExistent, UniquenessError
 
 
-
 class Group(VerdiCommandWithSubcommands):
     """
     Setup and manage groups
@@ -198,7 +197,7 @@ class Group(VerdiCommandWithSubcommands):
         from aiida.orm import Group as G
         from aiida.common.utils import str_timedelta
         from aiida.utils import timezone
-        from aiida.common.old_pluginloader import from_type_to_pluginclassname
+        from aiida.plugins.loader import type_string_to_plugin_type
         from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
@@ -272,7 +271,7 @@ class Group(VerdiCommandWithSubcommands):
                 if parsed_args.uuid:
                     row.append(n.uuid)
                 row.append(n.pk)
-                row.append(from_type_to_pluginclassname(n.dbnode.type).
+                row.append(type_string_to_plugin_type(n.dbnode.type).
                            rsplit(".", 1)[1])
 
                 row.append(str_timedelta(now - n.ctime, short=True,

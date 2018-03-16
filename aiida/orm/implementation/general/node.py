@@ -19,21 +19,21 @@ try:
 except ImportError:
     import pathlib2 as pathlib
 
-from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     UniquenessError, ValidationError)
-from aiida.common.folders import SandboxFolder
-from aiida.common.utils import abstractclassmethod
-from aiida.common.utils import combomethod
-
+from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.folders import SandboxFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.old_pluginloader import get_query_type_string
-from aiida.common.new_pluginloader import get_orm_class_type_string
-from aiida.backends.utils import validate_attribute_key
+from aiida.common.utils import abstractclassmethod
+from aiida.common.utils import combomethod
+from aiida.plugins.entry_point import get_orm_class_type_string
+from aiida.plugins.loader import type_string_to_query_type
+
 
 _NO_DEFAULT = tuple()
 _HASH_EXTRA_KEY = '_aiida_hash'
+
 
 def clean_value(value):
     """
@@ -107,7 +107,7 @@ class AbstractNode(object):
 
             # Set the plugin type string and query type string
             plugin_type_string = get_orm_class_type_string(attrs['__module__'], name)
-            query_type_string = get_query_type_string(plugin_type_string)
+            query_type_string = type_string_to_query_type(plugin_type_string)
 
             newcls._plugin_type_string = plugin_type_string
             newcls._query_type_string = query_type_string

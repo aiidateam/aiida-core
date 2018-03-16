@@ -160,7 +160,7 @@ def OrbitalFactory(module):
 
     :param module: a valid string recognized as a Orbital subclass
     """
-    from aiida.common.pluginloader import BaseFactory
+    from aiida.plugins.factory import BaseFactory
 
     return BaseFactory(module, Orbital, "aiida.common.orbital")
 

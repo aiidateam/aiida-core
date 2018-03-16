@@ -9,7 +9,7 @@
 ###########################################################################
 from abc import ABCMeta
 from aiida.common.exceptions import InputValidationError, MultipleObjectsError, NotExistent
-from aiida.common.pluginloader import BaseFactory
+from aiida.plugins.factory import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
 __all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']

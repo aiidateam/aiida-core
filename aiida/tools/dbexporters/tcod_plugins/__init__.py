@@ -13,7 +13,7 @@ def TcodExporterFactory(module):
     """
     Return a suitable BaseTcodtranslator subclass.
     """
-    from aiida.common.pluginloader import BaseFactory
+    from aiida.plugins.factory import BaseFactory
 
     return BaseFactory(module, BaseTcodtranslator, 'aiida.tools.dbexporters.tcod_plugins')
 

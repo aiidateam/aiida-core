@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.common.exceptions import MissingPluginError
-from aiida.common.new_pluginloader import load_entry_point, strip_prefix, MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.common.exceptions import DbContentError, MissingPluginError
+from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.plugins.entry_point import load_entry_point, strip_prefix
 
 
 type_string_to_entry_point_group_map = {
@@ -10,6 +11,42 @@ type_string_to_entry_point_group_map = {
     'data.': 'aiida.data',
     'node.': 'aiida.node',
 }
+
+
+def type_string_to_plugin_type(type_string):
+    """
+    Take the type string of a Node and create the loadable plugin type string
+
+    :param type_string: the value from the 'type' column of the Node table
+    :return: the type string that can be used to load the plugin
+    """
+    if type_string == '':
+        type_string = 'node.Node.'
+
+    if not type_string.endswith('.'):
+        raise DbContentError("The type string '{}' is invalid".format(type_string))
+
+    # Return the type string minus the trailing period
+    return type_string[:-1]
+
+
+def type_string_to_query_type(type_string):
+    """
+    Take the type string of a Node and create the queryable type string
+
+    :param type_string: the plugin_type_string attribute of a Node
+    :return: the type string that can be used to query for
+    """
+    if type_string == '':
+        return ''
+
+    if not type_string.endswith('.') or type_string.count('.') == 1:
+        raise DbContentError("The type string '{}' is invalid".format(type_string))
+
+    type_path, type_class, sep = type_string.rsplit('.', 2)
+    type_string = type_path + '.'
+
+    return type_string
 
 
 def load_plugin(base_class, plugins_module, plugin_type):

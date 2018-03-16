@@ -55,10 +55,8 @@ RealHydrogen
 
 Plugin loaders
 ++++++++++++++
-.. automodule:: aiida.common.pluginloader
+.. automodule:: aiida.plugins.loader
    :members:
-
-.. automodule:: aiida.common.old_pluginloader
 
 Utilities
 +++++++++

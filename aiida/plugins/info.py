@@ -32,6 +32,18 @@ example registry::
 """
 
 
+def entry_point_from_tpstr(typestring):
+    if typestring.startswith('calculation.job.'):
+        typestring = typestring.split('.', 2)[-1]
+    elif typestring.startswith('calculation.'):
+        typestring = typestring.split('.', 1)[-1]
+    elif typestring.startswith('data.'):
+        typestring = typestring.split('.', 1)[-1]
+    else:
+        raise ValueError('weird typestring')
+    return typestring.split('.', 1)[0]
+
+
 def plugin_ep_iterator():
     """
     return an iterator over the plugin entrypoint base strings

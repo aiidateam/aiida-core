@@ -485,7 +485,7 @@ class IcsdSearchResults(DbSearchResults):
         self.db_parameters = db_parameters
         self.query = query
         self.number_of_results = None
-        self.results = []
+        self._results = []
         self.cif_numbers = []
         self.entries = {}
         self.page = 1
@@ -516,7 +516,7 @@ class IcsdSearchResults(DbSearchResults):
 
         if position < 0 or position >= self.number_of_results:
             raise IndexError("index out of bounds")
-        while position + 1 >= len(self.results) and len(self.results) < self.number_of_results:
+        while position + 1 >= len(self._results) and len(self._results) < self.number_of_results:
             self.page = self.page + 1
             self.query_page()
 
@@ -524,15 +524,15 @@ class IcsdSearchResults(DbSearchResults):
             if self.db_parameters["querydb"]:
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]),
+                        self._results[position]),
                     db_name=self.db_name, id=self.cif_numbers[position], 
                     version = self.db_version, 
-                    extras={'idnum': self.results[position]})
+                    extras={'idnum': self._results[position]})
             else:
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]),
-                    db_name=self.db_name, extras={'idnum': self.results[position]})
+                        self._results[position]),
+                    db_name=self.db_name, extras={'idnum': self._results[position]})
         return self.entries[position]
 
 
@@ -583,7 +583,7 @@ class IcsdSearchResults(DbSearchResults):
             self.db.commit()
 
             for row in self.cursor.fetchall():
-                self.results.append(str(row[0]))
+                self._results.append(str(row[0]))
                 self.cif_numbers.append(str(row[1]))
 
             if self.number_of_results is None:
@@ -613,7 +613,7 @@ class IcsdSearchResults(DbSearchResults):
                 raise NoResultsWebExp
 
             for i in self.soup.find_all('input', type="checkbox"):
-                self.results.append(i['id'])
+                self._results.append(i['id'])
 
     def _connect_db(self):
         """

@@ -29,7 +29,9 @@ class DaemonClient(ProfileConfig):
     properties related to the daemon client
     """
 
-    DAEMON_ERROR = 'daemon-error'
+    DAEMON_ERROR_NOT_RUNNING = 'daemon-error-not-running'
+    DAEMON_ERROR_TIMEOUT = 'daemon-error-timeout'
+
     _DAEMON_NAME = 'aiida-{name}'
     _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
@@ -221,7 +223,7 @@ class DaemonClient(ProfileConfig):
 
         :return: CircucClient instance
         """
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=0.5)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=3.)
 
     def call_client(self, command):
         """
@@ -234,17 +236,13 @@ class DaemonClient(ProfileConfig):
         :return: the result of the circus client call
         """
         if not self.get_daemon_pid:
-            return {'status': self.DAEMON_ERROR}
+            return {'status': self.DAEMON_ERROR_NOT_RUNNING}
 
         try:
             result = self.client.call(command)
         except CallError as exception:
             if str(exception) == 'Timed out.':
-                return {
-                    'status': 'Daemon was not running but a PID file was found. '
-                    'This indicates the daemon was terminated unexpectedly; '
-                    'no action is required but proceed with caution.'
-                }
+                return {'status': self.DAEMON_ERROR_TIMEOUT}
             raise exception
 
         return result

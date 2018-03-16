@@ -153,11 +153,11 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.plugins.loader import type_string_to_plugin_type
+        from aiida.plugins.loader import get_plugin_type_from_type_string
         from aiida.orm.node import Node
 
         try:
-            pluginclassname = type_string_to_plugin_type(self.type)
+            pluginclassname = get_plugin_type_from_type_string(self.type)
         except DbContentError:
             raise DbContentError("The type name of node with pk= {} is "
                                  "not valid: '{}'".format(self.pk, self.type))

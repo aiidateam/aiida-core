@@ -27,8 +27,7 @@ from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
-from aiida.plugins.entry_point import get_orm_class_type_string
-from aiida.plugins.loader import type_string_to_query_type
+from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 
 
 _NO_DEFAULT = tuple()
@@ -106,8 +105,8 @@ class AbstractNode(object):
                 newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
 
             # Set the plugin type string and query type string
-            plugin_type_string = get_orm_class_type_string(attrs['__module__'], name)
-            query_type_string = type_string_to_query_type(plugin_type_string)
+            plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+            query_type_string = get_query_type_from_type_string(plugin_type_string)
 
             newcls._plugin_type_string = plugin_type_string
             newcls._query_type_string = query_type_string

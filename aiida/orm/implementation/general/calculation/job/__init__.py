@@ -16,7 +16,7 @@ from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.plugins.loader import type_string_to_plugin_type
+from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.orm.mixins import Sealable
@@ -1175,7 +1175,7 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             prefix = 'calculation.job.'
             calculation_type = d['calculation']['type']
-            calculation_class = type_string_to_plugin_type(calculation_type)
+            calculation_class = get_plugin_type_from_type_string(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
             # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'

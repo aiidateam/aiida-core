@@ -578,11 +578,11 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # The only valid string at this point is a string
                 # that matches exactly the _plugin_type_string
                 # of a node class
-                from aiida.plugins.loader import type_string_to_plugin_type
+                from aiida.plugins.loader import get_plugin_type_from_type_string
                 from aiida.plugins.loader import load_plugin
                 ormclass = self.Node
                 try:
-                    pluginclassname = type_string_to_plugin_type(ormclasstype)
+                    pluginclassname = get_plugin_type_from_type_string(ormclasstype)
 
                     # I want to check at this point if that is a valid class,
                     # so I use the load_plugin to load the plugin class

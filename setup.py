@@ -105,9 +105,6 @@ if __name__ == '__main__':
                 'local = aiida.transport.plugins.local:LocalTransport',
             ],
             'aiida.workflows': [
-                'wf_XTiO3 = aiida.workflows.wf_XTiO3:WorkflowXTiO3_EOS',
-                'wf_demo = aiida.workflows.wf_demo:WorkflowDemo',
-                'wf_loop_branch_demo = aiida.workflows.wf_demo:LoopBranchWorkflowDemo'
             ],
             'aiida.tools.dbexporters': [
                 'tcod = aiida.tools.dbexporters.tcod'

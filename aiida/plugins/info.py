@@ -68,7 +68,6 @@ def find_for_typestring(typestring):
     :return: dict with plugin keys if found, None if not found
     """
     from aiida.plugins.registry import load_cached
-    from aiida.common.pluginloader import entry_point_from_tpstr
     plugins = load_cached()
     entry_point = entry_point_from_tpstr(typestring)
     return plugins.get(entry_point, None)

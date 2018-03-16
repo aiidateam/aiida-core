@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-from aiida.plugins.entry_point import module_path_to_entry_point_group_map, load_entry_point
+from aiida.plugins.entry_point import load_entry_point
+from aiida.plugins.loader import entry_point_group_to_module_path_map
 
+
+module_path_to_entry_point_group_map = {
+    v: k for k, v in entry_point_group_to_module_path_map.iteritems()
+}
 
 def BaseFactory(module, base_class, base_modname, suffix=None):
     """

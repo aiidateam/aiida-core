@@ -7,9 +7,11 @@ from aiida.common.exceptions import AiidaException
 ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
-entry_point_group_orm_class_mapping = {
+entry_point_group_to_module_path_map = {
     'aiida.calculations': 'aiida.orm.calculation.job',
+    'aiida.code': 'aiida.orm.code',
     'aiida.data': 'aiida.orm.data',
+    'aiida.node': 'aiida.orm.node',
     'aiida.parsers': 'aiida.parsers',
     'aiida.schedulers': 'aiida.scheduler.plugins',
     'aiida.transports': 'aiida.transport.plugins',
@@ -168,7 +170,7 @@ def get_orm_class_type_string(class_module, class_name):
 
     # If we can reverse engineer an entry point group and name, we're dealing with an external class
     if group and entry_point:
-        module_base_path = entry_point_group_orm_class_mapping[group]
+        module_base_path = entry_point_group_to_module_path_map[group]
         orm_class = '{}.{}.{}.'.format(module_base_path, entry_point.name, class_name)
 
     # Otherwise we are dealing with an internal class

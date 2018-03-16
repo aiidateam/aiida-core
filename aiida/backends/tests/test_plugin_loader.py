@@ -13,7 +13,7 @@ from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.orm import Workflow
 from aiida.parsers import Parser, ParserFactory
 from aiida.orm.data import Data
-from aiida.orm import JobCalculation
+from aiida.orm import Calculation
 from aiida.scheduler import Scheduler, SchedulerFactory
 from aiida.transport import Transport, TransportFactory
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
@@ -36,8 +36,8 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(calculations, list)
         for i in calculations:
             cls = CalculationFactory(i)
-            self.assertTrue(issubclass(cls, JobCalculation),
-                'Calculation plugin class {} is not subclass of {}'.format(cls, JobCalculation))
+            self.assertTrue(issubclass(cls, Calculation),
+                'Calculation plugin class {} is not subclass of {}'.format(cls, Calculation))
 
     def test_existing_data(self):
         """

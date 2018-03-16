@@ -28,9 +28,9 @@ from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQu
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common import aiidalogger
-from aiida.common.pluginloader import load_plugin
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
+from aiida.plugins.loader import load_plugin
 
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.computer import DbComputer

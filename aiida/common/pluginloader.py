@@ -126,31 +126,6 @@ def get_plugin(category, name):
     return plugin
 
 
-def load_plugin(base_class, plugins_module, plugin_type):
-    """
-    load file or extension point plugins using the file plugin interface.
-
-    Prefer file plugins and if not found, translate the arguments to extension point notation
-
-    :params: Look at the docstring of aiida.common.old_pluginloader.load_plugin for more Info
-    :return: The plugin class
-    """
-    from aiida.common.old_pluginloader import load_plugin as load_old
-    try:
-        plugin = load_old(base_class, plugins_module, plugin_type)
-    except MissingPluginError as e:
-        full_name = plugins_module + '.' + plugin_type
-        catlist = [(c, pm) for c, pm in _category_mapping.iteritems() if pm in full_name]
-        if not catlist:  # find category for new style type string
-            catlist = [(c, 'aiida.orm.' + c) for c in _category_mapping.iterkeys() if c in full_name]
-        if not catlist:
-            raise e
-        category, path = catlist.pop(0)
-        classname = full_name.replace(path, '').strip('.')
-        name = '.'.join(classname.split('.')[:-1])
-        plugin = get_plugin(category, name)
-    return plugin
-
 
 def BaseFactory(module, base_class, base_modname, suffix=None):
     """

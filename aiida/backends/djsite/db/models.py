@@ -186,8 +186,8 @@ class DbNode(m.Model):
         """
         from aiida.orm.node import Node
         from aiida.common.old_pluginloader import from_type_to_pluginclassname
-        from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
+        from aiida.plugins.loader import load_plugin
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)

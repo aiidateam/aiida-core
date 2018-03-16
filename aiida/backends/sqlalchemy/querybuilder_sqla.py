@@ -579,7 +579,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # that matches exactly the _plugin_type_string
                 # of a node class
                 from aiida.common.old_pluginloader import from_type_to_pluginclassname
-                from aiida.common.pluginloader import load_plugin
+                from aiida.plugins.loader import load_plugin
                 ormclass = self.Node
                 try:
                     pluginclassname = from_type_to_pluginclassname(ormclasstype)

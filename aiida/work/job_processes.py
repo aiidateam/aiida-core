@@ -243,10 +243,12 @@ class Waiting(plumpy.Waiting):
 
 
 class JobProcess(processes.Process):
+
     TRANSPORT_OPERATION = 'TRANSPORT_OPERATION'
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = 'options'
-    _CALC_CLASS = None
+
+    _calc_class = None
 
     @classmethod
     def build(cls, calc_class):
@@ -290,14 +292,14 @@ class JobProcess(processes.Process):
             # Outputs
             spec.outputs.valid_type = Data
 
-        class_name = "{}_{}".format(cls.__name__, utils.class_name(calc_class))
+        class_name = '{}_{}'.format(cls.__name__, utils.class_name(calc_class))
 
         # Dynamically create the type for this Process
         return type(
             class_name, (cls,),
             {
                 plumpy.Process.define.__name__: classmethod(define),
-                '_CALC_CLASS': calc_class
+                '_calc_class': calc_class
             }
         )
 
@@ -317,7 +319,7 @@ class JobProcess(processes.Process):
 
     @override
     def get_or_create_db_record(self):
-        return self._CALC_CLASS()
+        return self._calc_class()
 
     @override
     def _setup_db_record(self):
@@ -326,7 +328,7 @@ class JobProcess(processes.Process):
         """
         from aiida.common.links import LinkType
 
-        self.calc._set_process_type(self._CALC_CLASS)
+        self.calc._set_process_type(self._calc_class)
 
         # Set all the attributes using the setter methods
         for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
@@ -343,7 +345,7 @@ class JobProcess(processes.Process):
 
             # Call the 'use' methods to set up the data-calc links
             if isinstance(port, PortNamespace):
-                additional = self._CALC_CLASS._use_methods[name]['additional_parameter']
+                additional = self._calc_class._use_methods[name]['additional_parameter']
 
                 for k, v in input_value.iteritems():
                     try:
@@ -442,3 +444,8 @@ class ContinueJobCalculation(JobProcess):
 
     def get_or_create_db_record(self):
         return self.inputs._calc
+
+    @override
+    def _setup_db_record(self):
+        self._calc_class = self.inputs._calc.__class__
+        super(ContinueJobCalculation, self)._setup_db_record()

@@ -48,6 +48,7 @@ class Process(plumpy.Process):
     __metaclass__ = abc.ABCMeta
 
     _spec_type = ProcessSpec
+    _calc_class = WorkCalculation
 
     SINGLE_RETURN_LINKNAME = 'return'
 
@@ -77,7 +78,7 @@ class Process(plumpy.Process):
         this process.
         :return: A calculation
         """
-        return WorkCalculation()
+        return cls._calc_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else get_runner()

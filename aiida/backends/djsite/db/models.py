@@ -184,19 +184,18 @@ class DbNode(m.Model):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm.node import Node
-        from aiida.plugins.loader import get_plugin_type_from_type_string
         from aiida.common import aiidalogger
-        from aiida.plugins.loader import load_plugin
+        from aiida.orm.node import Node
+        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
 
         try:
-            pluginclassname = get_plugin_type_from_type_string(self.type)
+            plugin_type = get_plugin_type_from_type_string(self.type)
         except DbContentError:
             raise DbContentError("The type name of node with pk= {} is "
                                  "not valid: '{}'".format(self.pk, self.type))
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
+            PluginClass = load_plugin(plugin_type)
         except MissingPluginError:
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
                               "will use base Node class".format(self.type, self.pk))

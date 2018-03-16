@@ -12,19 +12,17 @@ from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
+from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate
 
 
-def SchedulerFactory(module):
+def SchedulerFactory(entry_point):
     """
-    Used to load a suitable Scheduler subclass.
+    Return the Scheduler plugin class for a given entry point
 
-    :param str module: a string with the module name
-    :return: the scheduler subclass contained in module 'module'
+    :param entry_point: the entry point name of the Scheduler plugin
     """
-    from aiida.plugins.factory import BaseFactory
-
-    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+    return BaseFactory('aiida.schedulers', entry_point)
 
 
 class SchedulerError(AiidaException):

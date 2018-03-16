@@ -20,16 +20,23 @@ entry_point_group_to_module_path_map = {
     'aiida.node': 'aiida.orm.node',
     'aiida.parsers': 'aiida.parsers',
     'aiida.schedulers': 'aiida.scheduler.plugins',
+    'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
+    'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins',
+    'aiida.tools.dbimporters': 'aiida.tools.dbimporters',
     'aiida.transports': 'aiida.transport.plugins',
     'aiida.workflows': 'aiida.workflows',
-    'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
-    'aiida.tools.dbimporters': 'aiida.tools.dbimporters',
-    'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins'
 }
 
 
-def load_plugin(base_class, plugins_module, plugin_type):
+def load_plugin(plugin_type):
     """
+    Load a plugin class from its plugin type, which is essentially its ORM type string
+    minus the trailing period
+
+    :param plugin_type: the plugin type string
+    :return: the plugin class
+    :raises MissingPluginError: plugin_type could not be resolved to registered entry point
+    :raises LoadingPluginFailed: the entry point matching the plugin_type could not be loaded
     """
     from aiida.orm.data import Data
 
@@ -54,7 +61,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
             else:
                 return plugin
 
-    raise LoadingPluginFailed
+    raise MissingPluginError
 
 
 def get_plugin_type_from_type_string(type_string):

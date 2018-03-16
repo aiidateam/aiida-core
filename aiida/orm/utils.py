@@ -15,40 +15,31 @@ from aiida.common.utils import abstractclassmethod
 __all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']
 
 
-def CalculationFactory(module, from_abstract=False):
+def CalculationFactory(entry_point):
     """
-    Return a suitable JobCalculation subclass.
+    Return the Calculation plugin class for a given entry point
 
-    :param module: a valid string recognized as a Calculation plugin
-    :param from_abstract: A boolean. If False (default), actually look only
-        to subclasses of JobCalculation, not to the base Calculation class.
-        If True, check for valid strings for plugins of the Calculation base class.
+    :param entry_point: the entry point name of the Calculation plugin
     """
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.job import JobCalculation
-
-    if from_abstract:
-        return BaseFactory(module, Calculation, 'aiida.orm.calculation')
-    else:
-        return BaseFactory(module, JobCalculation, 'aiida.orm.calculation.job', suffix='Calculation')
+    return BaseFactory('aiida.calculations', entry_point)
 
 
-def DataFactory(module):
+def DataFactory(entry_point):
     """
-    Return a suitable Data subclass.
+    Return the Data plugin class for a given entry point
+
+    :param entry_point: the entry point name of the Data plugin
     """
-    from aiida.orm.data import Data
-
-    return BaseFactory(module, Data, 'aiida.orm.data')
+    return BaseFactory('aiida.data', entry_point)
 
 
-def WorkflowFactory(module):
+def WorkflowFactory(entry_point):
     """
-    Return a suitable Workflow subclass.
-    """
-    from aiida.orm.workflow import Workflow
+    Return the Workflow plugin class for a given entry point
 
-    return BaseFactory(module, Workflow, 'aiida.workflows')
+    :param entry_point: the entry point name of the Workflow plugin
+    """
+    return BaseFactory('aiida.workflows', entry_point)
 
 
 def create_node_id_qb(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):

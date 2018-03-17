@@ -15,9 +15,7 @@ Create Date: 2018-02-21 22:00:43.460534
 
 """
 from alembic import op
-from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.attributes import flag_modified
-from aiida.backends.sqlalchemy.models.node import DbNode
+from sqlalchemy.sql import text
 
 
 # revision identifiers, used by Alembic.
@@ -29,41 +27,31 @@ depends_on = None
 
 def upgrade():
     conn = op.get_bind()
-    session = Session(bind=conn)
 
-    # The 'hidden' property of AbstractCode has been changed from an attribute to an extra
-    # Therefore we find all nodes of type Code and if they have an attribute with the key 'hidden'
-    # we move that value to the extra field
-    codes = session.query(DbNode).filter(DbNode.type == 'code.Code.')
-    for code in codes:
-        if 'hidden' in code.attributes:
-            session.add(code)
+    # Set hidden=True in extras if the attributes contain hidden=True
+    statement = text("""UPDATE db_dbnode SET extras = jsonb_set(extras, '{"hidden"}', to_jsonb(True)) WHERE type = 'code.Code.' AND attributes @> '{"hidden": true}'""")
+    conn.execute(statement)
 
-            hidden = code.attributes.pop('hidden')
-            code.extras['hidden'] = hidden
+    # Set hidden=False in extras if the attributes contain hidden=False
+    statement = text("""UPDATE db_dbnode SET extras = jsonb_set(extras, '{"hidden"}', to_jsonb(False)) WHERE type = 'code.Code.' AND attributes @> '{"hidden": false}'""")
+    conn.execute(statement)
 
-            flag_modified(code, 'attributes')
-            flag_modified(code, 'extras')
-
-    session.flush()
-    session.commit()
+    # Delete the hidden key from the attributes
+    statement = text("""UPDATE db_dbnode SET attributes = attributes-'hidden' WHERE type = 'code.Code.'""")
+    conn.execute(statement)
 
 
 def downgrade():
     conn = op.get_bind()
-    session = Session(bind=conn)
 
-    # Reverse logic from the upgrade
-    codes = session.query(DbNode).filter(DbNode.type == 'code.Code.')
-    for code in codes:
-        if 'hidden' in code.extras:
-            session.add(code)
+    # Set hidden=True in attributes if the extras contain hidden=True
+    statement = text("""UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"hidden"}', to_jsonb(True)) WHERE type = 'code.Code.' AND extras @> '{"hidden": true}'""")
+    conn.execute(statement)
 
-            hidden = code.extras.pop('hidden')
-            code.attributes['hidden'] = hidden
+    # Set hidden=False in attributes if the extras contain hidden=False
+    statement = text("""UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"hidden"}', to_jsonb(False)) WHERE type = 'code.Code.' AND extras @> '{"hidden": false}'""")
+    conn.execute(statement)
 
-            flag_modified(code, 'attributes')
-            flag_modified(code, 'extras')
-
-    session.flush()
-    session.commit()
+    # Delete the hidden key from the extras
+    statement = text("""UPDATE db_dbnode SET extras = extras-'hidden' WHERE type = 'code.Code.'""")
+    conn.execute(statement)

@@ -166,8 +166,15 @@ class AbstractCalculation(Sealable):
         """
         class_module = process_class.__module__
         class_name = process_class.__name__
+
+        # If the process is a registered plugin the corresponding entry point will be used as process type
         process_type = get_entry_point_string_from_class(class_module, class_name)
-        self.dbnode.process_type = process_type
+
+        # If no entry point was found, default to fully qualified path name
+        if process_type is None:
+            self.dbnode.process_type = '{}.{}'.format(class_module, class_name)
+        else:
+            self.dbnode.process_type = process_type
 
     @property
     def process_label(self):

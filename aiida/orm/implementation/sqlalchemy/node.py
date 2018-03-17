@@ -516,6 +516,10 @@ class Node(AbstractNode):
         return self.dbnode.id
 
     @property
+    def process_type(self):
+        return self.dbnode.process_type
+
+    @property
     def dbnode(self):
         return self._dbnode
 

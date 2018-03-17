@@ -310,11 +310,9 @@ class DbNode(Base):
         # and instantiate an object that has the same attributes as self.
         from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
         dbnode = DjangoSchemaDbNode(
-                id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
-                mtime=self.mtime, label=self.label,
-                description=self.description, dbcomputer_id=self.dbcomputer_id,
-                user_id=self.user_id, public=self.public,
-                nodeversion=self.nodeversion
+            id=self.id, type=self.type, process_type=self.process_type, uuid=self.uuid, ctime=self.ctime,
+            mtime=self.mtime, label=self.label, description=self.description, dbcomputer_id=self.dbcomputer_id,
+            user_id=self.user_id, public=self.public, nodeversion=self.nodeversion
         )
         return dbnode.get_aiida_class()
 

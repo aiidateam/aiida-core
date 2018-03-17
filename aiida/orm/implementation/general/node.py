@@ -1824,6 +1824,25 @@ class AbstractNode(object):
             qb.append(self_or_cls.__class__, filters=filters, **kwargs)
         return qb
 
+    def load_process_class(self):
+        """
+        For nodes that were ran by a Process, the process_type will be set. This can either be an entry point
+        string or a module path, which is the identifier for that Process. This method will attempt to load
+        the Process class and return
+        """
+        from aiida.plugins.entry_point import load_entry_point_from_string, is_valid_entry_point_string
+
+        if self.process_type is None:
+            return None
+
+        if is_valid_entry_point_string(self.process_type):
+            process_class = load_entry_point_from_string(self.process_type)
+        else:
+            class_module, class_name = self.process_type.rsplit('.', 1)
+            module = importlib.import_module(class_module)
+            process_class = getattr(module, class_name)
+
+        return process_class
 
 # pylint: disable=too-few-public-methods
 class NodeOutputManager(object):

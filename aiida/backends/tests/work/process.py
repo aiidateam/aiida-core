@@ -196,6 +196,10 @@ class TestProcess(AiidaTestCase):
         expected_process_type = 'aiida.calculations:{}'.format(entry_point)
         self.assertEqual(process.calc.process_type, expected_process_type)
 
+        # Verify that load_process_class on the calculation node returns the original entry point class
+        recovered_process = process.calc.load_process_class()
+        self.assertEqual(recovered_process, calculation)
+
     def test_process_type_without_entry_point(self):
         """
         For a process without a registered entry point, the process_type will fall back on the fully
@@ -204,6 +208,10 @@ class TestProcess(AiidaTestCase):
         process = test_utils.DummyProcess()
         expected_process_type = '{}.{}'.format(process.__class__.__module__, process.__class__.__name__)
         self.assertEqual(process.calc.process_type, expected_process_type)
+
+        # Verify that load_process_class on the calculation node returns the original entry point class
+        recovered_process = process.calc.load_process_class()
+        self.assertEqual(recovered_process, process.__class__)
 
 
 class TestFunctionProcess(AiidaTestCase):

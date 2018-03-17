@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
-from aiida.plugins.entry_point import load_entry_point, get_entry_point_from_class
+from aiida.plugins.entry_point import load_entry_point, get_entry_point_from_class, entry_point_group_to_module_path_map
 
 
 type_string_to_entry_point_group_map = {
@@ -10,21 +10,6 @@ type_string_to_entry_point_group_map = {
     'code.': 'aiida.code',
     'data.': 'aiida.data',
     'node.': 'aiida.node',
-}
-
-
-entry_point_group_to_module_path_map = {
-    'aiida.calculations': 'aiida.orm.calculation.job',
-    'aiida.code': 'aiida.orm.code',
-    'aiida.data': 'aiida.orm.data',
-    'aiida.node': 'aiida.orm.node',
-    'aiida.parsers': 'aiida.parsers',
-    'aiida.schedulers': 'aiida.scheduler.plugins',
-    'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
-    'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins',
-    'aiida.tools.dbimporters': 'aiida.tools.dbimporters',
-    'aiida.transports': 'aiida.transport.plugins',
-    'aiida.workflows': 'aiida.workflows',
 }
 
 

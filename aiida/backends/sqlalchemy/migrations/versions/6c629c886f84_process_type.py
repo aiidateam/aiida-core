@@ -20,6 +20,7 @@ def upgrade():
     op.add_column('db_dbnode',
         sa.Column('process_type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     )
+    op.create_index('ix_db_dbnode_process_type', 'db_dbnode', ['process_type'])
 
 
 def downgrade():

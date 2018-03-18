@@ -17,11 +17,13 @@ def print_client_response_status(response):
 
     if response['status'] == 'active':
         click.secho('RUNNING', fg='green', bold=True)
-    elif response['status'] == DaemonClient.DAEMON_ERROR:
-        click.secho('FAILED', fg='red', bold=True)
-        click.echo('Try to run \'verdi daemon start --foreground\' to potentially see the exception')
     elif response['status'] == 'ok':
         click.secho('OK', fg='green', bold=True)
+    elif response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
+        click.secho('FAILED', fg='red', bold=True)
+        click.echo('Try to run \'verdi daemon start --foreground\' to potentially see the exception')
+    elif response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
+        click.secho('TIMEOUT', fg='red', bold=True)
     else:
         click.echo(response['status'])
 
@@ -42,9 +44,14 @@ def get_daemon_status(client):
         return 'The daemon is paused'
     elif status_response['status'] == 'error':
         return 'The daemon is in an unexpected state, try verdi daemon restart --reset'
+    elif status_response['status'] == 'timeout':
+        return 'The daemon is running but the call to the circus controller timed out'
 
     worker_response = client.get_worker_info()
     daemon_response = client.get_daemon_info()
+
+    if 'info' not in worker_response or 'info' not in daemon_response:
+        return 'Call to the circus controller timed out'
 
     workers = [['PID', 'MEM %', 'CPU %', 'started']]
     for worker_pid, worker_info in worker_response['info'].items():

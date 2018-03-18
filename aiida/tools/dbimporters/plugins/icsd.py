@@ -498,6 +498,13 @@ class IcsdSearchResults(DbSearchResults):
             self.query_db_version()
         self.query_page()
 
+    @property
+    def results(self):
+        """
+        Return the list of results
+        """
+        return self._results
+
     def next(self):
         """
         Return next result as IcsdEntry.

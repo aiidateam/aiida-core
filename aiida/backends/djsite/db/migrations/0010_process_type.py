@@ -7,14 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.plugins.factory import BaseFactory
-from aiida.tools.dbimporters.baseclasses import DbImporter
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+from aiida.backends.djsite.db.migrations import update_schema_version
 
 
-def DbImporterFactory(entry_point):
-    """
-    Return the DbImporter plugin class for a given entry point
+SCHEMA_VERSION = "1.0.10"
 
-    :param entry_point: the entry point name of the DbImporter plugin
-    """
-    return BaseFactory('aiida.tools.dbimporters', entry_point)
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('db', '0009_base_data_plugin_type_string'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='dbnode',
+            name='process_type',
+            field=models.CharField(max_length=255, db_index=True, null=True)
+        ),
+        update_schema_version(SCHEMA_VERSION)
+    ]

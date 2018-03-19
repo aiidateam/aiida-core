@@ -14,7 +14,6 @@ from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-from aiida.common.old_pluginloader import from_type_to_pluginclassname
 from aiida.orm.implementation.general.calculation.job import _input_subfolder
 from aiida.orm.implementation.general.calculation.job import JobCalculationFinishStatus
 

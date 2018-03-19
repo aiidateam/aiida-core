@@ -60,13 +60,13 @@ class Work(VerdiCommandWithSubcommands):
         from aiida import try_load_dbenv
         try_load_dbenv()
 
-        from aiida.common.pluginloader import plugin_list
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        plugins = sorted(plugin_list('workflows'))
+        plugins = get_entry_point_names('aiida.workflows')
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
-        return "\n".join(return_plugins)
+        return '\n'.join(return_plugins)
 
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)
@@ -461,17 +461,17 @@ def plugins(entry_point):
     if not is_dbenv_loaded():
         load_dbenv()
     from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
-    from aiida.common.pluginloader import plugin_list, get_plugin
+    from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
     if entry_point:
         try:
-            plugin = get_plugin('workflows', entry_point)
+            plugin = load_entry_point('aiida.workflows', entry_point)
         except (LoadingPluginFailed, MissingPluginError) as exception:
             click.echo("Error: {}".format(exception))
         else:
             click.echo(plugin.get_description())
     else:
-        entry_points = sorted(plugin_list('workflows'))
+        entry_points = get_entry_point_names('aiida.workflows')
         if entry_points:
             click.echo('Registered workflow entry points:')
             for entry_point in entry_points:

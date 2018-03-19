@@ -51,14 +51,12 @@ RealHydrogen
 .. automodule:: aiida.common.orbital.realhydrogen
    :members:
  
-.. _aiida-autodocs-pluginloader:
+.. _aiida-autodocs-plugin-loader:
 
 Plugin loaders
 ++++++++++++++
-.. automodule:: aiida.common.pluginloader
+.. automodule:: aiida.plugins.loader
    :members:
-
-.. automodule:: aiida.common.old_pluginloader
 
 Utilities
 +++++++++

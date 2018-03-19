@@ -17,9 +17,8 @@ from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.backends.djsite.utils import get_automatic_user
 from aiida.orm.group import Group
 from aiida.orm.implementation.django.calculation import Calculation
-from aiida.orm.implementation.general.calculation.job import (
-    AbstractJobCalculation)
-from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
+from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.utils import timezone
 
 

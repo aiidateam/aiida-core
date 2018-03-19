@@ -7,15 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from aiida.plugins.factory import BaseFactory
 
 
-def TcodExporterFactory(module):
+def TcodExporterFactory(entry_point):
     """
-    Return a suitable BaseTcodtranslator subclass.
-    """
-    from aiida.common.pluginloader import BaseFactory
+    Return the TcodExporter plugin class for a given entry point
 
-    return BaseFactory(module, BaseTcodtranslator, 'aiida.tools.dbexporters.tcod_plugins')
+    :param entry_point: the entry point name of the TcodExporter plugin
+    """
+    return BaseFactory('aiida.tools.dbexporters.tcod_plugins', entry_point)
 
 
 class BaseTcodtranslator(object):

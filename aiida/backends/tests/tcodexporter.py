@@ -16,13 +16,13 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
 def has_nwchem_plugin():
-    from aiida.common.pluginloader import get_plugin
-    from aiida.common.exceptions import MissingPluginError
+    from aiida.common.exceptions import MissingEntryPointError
+    from aiida.plugins.entry_point import load_entry_point
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
     try:
-        get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
-    except MissingPluginError:
+        load_entry_point('aiida.tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
+    except MissingEntryPointError:
         return False
 
     return True
@@ -253,10 +253,10 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_nwcpymatgen_translation(self):
         from tcodexporter import FakeObject
         from aiida.orm.data.parameter import ParameterData
-        from aiida.common.pluginloader import get_plugin
+        from aiida.plugins.entry_point import load_entry_point
         from aiida.tools.dbexporters.tcod import translate_calculation_specific_values
 
-        nwchem_plugin = get_plugin('tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
+        nwchem_plugin = load_entry_point('aiida.tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
 
         calc = FakeObject({
             "out": {"output":

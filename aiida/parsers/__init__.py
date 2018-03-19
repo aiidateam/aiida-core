@@ -8,14 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.parsers.parser import Parser
+from aiida.plugins.factory import BaseFactory
 
 
-
-def ParserFactory(module):
+def ParserFactory(entry_point):
     """
-    Return a suitable Parser subclass.
-    """
-    from aiida.common.pluginloader import BaseFactory
-    from aiida.common.exceptions import MissingPluginError
+    Return the Parser plugin class for a given entry point
 
-    return BaseFactory(module, Parser, 'aiida.parsers')
+    :param entry_point: the entry point name of the Parser plugin
+    """
+    return BaseFactory('aiida.parsers', entry_point)

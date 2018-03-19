@@ -74,6 +74,27 @@ class UniquenessError(AiidaException):
     pass
 
 
+class MissingEntryPointError(AiidaException):
+    """
+    Raised when the requested entry point is not registered with the entry point manager
+    """
+    pass
+
+
+class MultipleEntryPointError(AiidaException):
+    """
+    Raised when the requested entry point cannot uniquely be resolved by the entry point manager
+    """
+    pass
+
+
+class LoadingEntryPointError(AiidaException):
+    """
+    Raised when the class corresponding to requested entry point cannot be loaded
+    """
+    pass
+
+
 class MissingPluginError(AiidaException):
     """
     Raised when the user tries to use a plugin that is not available or does not exist.

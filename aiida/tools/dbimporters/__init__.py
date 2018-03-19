@@ -9,12 +9,10 @@
 ###########################################################################
 
 
-
-def DbImporterFactory(pluginname):
+def DbImporterFactory(entry_point):
     """
-    This function loads the correct DbImporter plugin class
-    """
-    from aiida.common.pluginloader import BaseFactory
-    from aiida.tools.dbimporters.baseclasses import DbImporter
+    Return the DbImporter plugin class for a given entry point
 
-    return BaseFactory(pluginname, DbImporter, "aiida.tools.dbimporters.plugins")
+    :param entry_point: the entry point name of the DbImporter plugin
+    """
+    return BaseFactory('aiida.tools.dbimporters', entry_point)

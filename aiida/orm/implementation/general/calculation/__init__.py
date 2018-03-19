@@ -17,6 +17,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import classproperty
 from aiida.orm.mixins import Sealable
+from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 
 class AbstractCalculation(Sealable):
@@ -156,6 +157,24 @@ class AbstractCalculation(Sealable):
             return UseMethod(node=self, actual_name=actual_name, data=self._use_methods[actual_name])
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, name))
+
+    def _set_process_type(self, process_class):
+        """
+        Set the process type
+
+        :param process_class: the process class using this calculation node as storage
+        """
+        class_module = process_class.__module__
+        class_name = process_class.__name__
+
+        # If the process is a registered plugin the corresponding entry point will be used as process type
+        process_type = get_entry_point_string_from_class(class_module, class_name)
+
+        # If no entry point was found, default to fully qualified path name
+        if process_type is None:
+            self.dbnode.process_type = '{}.{}'.format(class_module, class_name)
+        else:
+            self.dbnode.process_type = process_type
 
     @property
     def process_label(self):

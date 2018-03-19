@@ -67,7 +67,7 @@ db_test_list = {
         'work.work_chain': ['aiida.backends.tests.work.work_chain'],
         'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
         'work.job_processes': ['aiida.backends.tests.work.job_processes'],
-        'pluginloader': ['aiida.backends.tests.test_plugin_loader'],
+        'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'daemon': ['aiida.backends.tests.daemon'],
         'verdi_commands': ['aiida.backends.tests.verdi_commands'],
         'caching_config': ['aiida.backends.tests.test_caching_config'],

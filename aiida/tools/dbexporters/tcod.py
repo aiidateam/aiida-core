@@ -829,14 +829,14 @@ def _collect_tags(node, calc,parameters=None,
             tags['_dft_BZ_integration_grid_shift_Z'] = shift[2]
 
     from aiida.common.exceptions import MultipleObjectsError
-    from aiida.common.pluginloader import all_plugins, get_plugin
+    from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
-    category = 'tools.dbexporters.tcod_plugins'
+    group = 'aiida.tools.dbexporters.tcod_plugins'
     plugins = list()
 
     if calc is not None:
-        for entry_point in all_plugins(category):
-            plugin = get_plugin(category, entry_point)
+        for entry_point in get_entry_point_names(group):
+            plugin = load_entry_point(group, entry_point)
             if calc._plugin_type_string.endswith(plugin._plugin_type_string + '.'):
                 plugins.append(plugin)
 
@@ -988,7 +988,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
             raise ValueError("Supplied parameters are not an "
                              "instance of ParameterData")
     elif calc is not None:
-        params = calc.get_outputs(type=ParameterData, link_type=LinkType.CREATE)
+        params = calc.get_outputs(node_type=ParameterData, link_type=LinkType.CREATE)
         if len(params) == 1:
             parameters = params[0]
         elif len(params) > 0:

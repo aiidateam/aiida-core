@@ -37,14 +37,6 @@ CONFIG_INDENT_SIZE = 4
 
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = 'daemon'
-LOG_SUBDIR = 'daemon/log'
-
-CIRCUS_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.log')
-CIRCUS_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'circus-{}.pid')
-DAEMON_LOG_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.log')
-DAEMON_PID_FILE_TEMPLATE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, 'aiida-{}.pid')
-
 WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
@@ -52,7 +44,6 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 
 # This key will uniquely identify an AiiDA profile
 PROFILE_UUID_KEY = 'PROFILE_UUID'
-CIRCUS_PORT_KEY = 'CIRCUS_PORT'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0o0077
@@ -241,11 +232,12 @@ def create_base_dirs(config_dir=None):
     Create dirs for AiiDA, and install default daemon files.
     """
     import getpass
+    from aiida.common.profile import DAEMON_DIR, DAEMON_LOG_DIR
 
     # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
-    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
-    aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
+    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_DIR)
+    aiida_log_dir = os.path.join(aiida_dir, DAEMON_LOG_DIR)
     local_user = getpass.getuser()
 
     old_umask = os.umask(DEFAULT_UMASK)
@@ -353,7 +345,6 @@ key_explanation = {
     "AIIDADB_USER": "AiiDA Database user",
     DEFAULT_USER_CONFIG_FIELD: "Default user email",
     PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
-    CIRCUS_PORT_KEY: "TCP port for the circus daemon",
 }
 
 
@@ -459,7 +450,6 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
 
     # Generate the profile uuid
     new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
-    new_profile[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
     # finalizing
     write = not dry_run
@@ -478,32 +468,6 @@ def generate_new_profile_uuid():
     :returns: the hexadecimal represenation of a uuid4 UUID
     """
     return uuid.uuid4().hex
-
-
-def generate_new_circus_port(profiles=None):
-    """
-    Return a unique port for the CIRCUS_PORT_KEY of a new profile
-
-    :param profiles: the profiles dictionary of the configuration file
-    :returns: integer for the circus daemon port
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-    port = 6000
-
-    if profiles is None:
-        try:
-            configuration = get_config()
-        except MissingConfigurationError:
-            configuration = {}
-
-        profiles = configuration.get('profiles', {})
-
-    used_ports = [profile.get(CIRCUS_PORT_KEY) for profile in profiles.values()]
-
-    while port in used_ports:
-        port += 3
-
-    return port
 
 
 def create_configuration(profile='default'):
@@ -762,7 +726,6 @@ def create_configuration(profile='default'):
 
         # Add the profile uuid
         this_new_confs[PROFILE_UUID_KEY] = generate_new_profile_uuid()
-        this_new_confs[CIRCUS_PORT_KEY] = generate_new_circus_port()
 
         confs['profiles'][profile] = this_new_confs
 
@@ -818,7 +781,7 @@ _property_table = {
         "when typing 'verdi calculation list'. "
         "Set by passing the projections space separated as a string, for example: "
         "verdi devel setproperty verdishell.calculation_list 'pk time state'",
-        ('pk', 'ctime', 'state', 'sched', 'computer', 'type'),
+        ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'),
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",

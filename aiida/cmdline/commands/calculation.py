@@ -57,9 +57,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        plugins = sorted(all_plugins('calculations'))
+        plugins = get_entry_point_names('aiida.calculations')
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
@@ -186,13 +186,11 @@ class Calculation(VerdiCommandWithSubcommands):
                             help='order the results')
         parser.add_argument('--project',
                             choices=(
-                                    'pk', 'state', 'ctime', 'sched', 'computer',
-                                    'type', 'description', 'label', 'uuid',
-                                    'mtime', 'user'
+                                    'pk', 'state', 'ctime', 'job_state', 'calculation_state', 'scheduler_state',
+                                    'computer', 'type', 'description', 'label', 'uuid', 'mtime', 'user', 'sealed'
                                 ),
                             nargs='+',
-                            default=get_property("verdishell.calculation_list"),
-                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
+                            default=get_property('verdishell.calculation_list'),
                             help="Define the list of properties to show"
                         )
 
@@ -357,7 +355,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -384,7 +382,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(all_plugins('calculations'))
+            plugins = get_entry_point_names('aiida.calculations')
             if plugins:
                 print("## Pass as a further parameter one (or more) "
                       "plugin names to get more details on a given plugin.")
@@ -420,7 +418,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.old_pluginloader import get_class_typestring
+        from aiida.plugins.entry_point import get_entry_from_class
 
         try:
             calc = load_node(parsed_args.calc)
@@ -432,11 +430,10 @@ class Calculation(VerdiCommandWithSubcommands):
         if path is None:
             path = calc._DEFAULT_INPUT_FILE
             if path is None:
-                base_class, plugin_string, class_name = get_class_typestring(
-                    calc._plugin_type_string)
+                group, entry_point = get_entry_point_from_class(calc.__module__, calc.__name__)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                                       "default input file. Please specify a path "
-                                      "explicitly".format(plugin_string))
+                                      "explicitly".format(entry_point.name))
                 sys.exit(1)
 
         try:
@@ -576,7 +573,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.old_pluginloader import get_class_typestring
+        from aiida.plugins.entry_point import get_entry_from_class
 
         try:
             calc = load_node(parsed_args.calc)
@@ -588,11 +585,10 @@ class Calculation(VerdiCommandWithSubcommands):
         if path is None:
             path = calc._DEFAULT_OUTPUT_FILE
             if path is None:
-                base_class, plugin_string, class_name = get_class_typestring(
-                    calc._plugin_type_string)
+                group, entry_point = get_entry_point_from_class(calc.__module__, calc.__name__)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                                       "default output file. Please specify a path "
-                                      "explicitly".format(plugin_string))
+                                      "explicitly".format(entry_point.name))
                 sys.exit(1)
 
         try:

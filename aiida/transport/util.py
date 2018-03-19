@@ -1,16 +1,15 @@
+# -*- coding: utf-8 -*-
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from aiida.transport.transport import Transport
+from aiida.plugins.factory import BaseFactory
 
 
-def TransportFactory(module):
+def TransportFactory(entry_point):
     """
-    Used to return a suitable Transport subclass.
-    :param str module: name of the module containing the Transport subclass
-    :return: the transport subclass located in module 'module'
-    """
-    from aiida.common.pluginloader import BaseFactory
+    Return the Transport plugin class for a given entry point
 
-    return BaseFactory(module, Transport, "aiida.transport.plugins")
+    :param entry_point: the entry point name of the Transport plugin
+    """
+    return BaseFactory('aiida.transports', entry_point)
 
 
 class FileAttribute(FixedFieldsAttributeDict):

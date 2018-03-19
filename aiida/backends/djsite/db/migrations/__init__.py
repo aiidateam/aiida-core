@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0009_base_data_plugin_type_string'
+LATEST_MIGRATION = '0010_process_type'
 
 
 def _update_schema_version(version, apps, schema_editor):

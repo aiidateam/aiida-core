@@ -19,8 +19,7 @@ import aiida.scheduler
 import xml.parsers.expat
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo,
-                                            ParEnvJobResource)
+from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo, ParEnvJobResource)
 """
 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 Jobs Status:
@@ -185,10 +184,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         if email_events:
             lines.append("#$ -m {}".format(email_events))
             if not job_tmpl.email:
-                self.logger.info(
-                    "Email triggers provided to SGE script for job,"
-                    "but no email field set; will send emails to "
-                    "the job owner as set in the scheduler")
+                self.logger.info("Email triggers provided to SGE script for job,"
+                                 "but no email field set; will send emails to "
+                                 "the job owner as set in the scheduler")
         else:
             lines.append("#$ -m n")
 
@@ -221,9 +219,8 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             # 'n' : Standard error and standard output are not merged (default)
             lines.append("#$ -j y")
             if job_tmpl.sched_error_path:
-                self.logger.info(
-                    "sched_join_files is True, but sched_error_path is set in "
-                    "SGE script; ignoring sched_error_path")
+                self.logger.info("sched_join_files is True, but sched_error_path is set in "
+                                 "SGE script; ignoring sched_error_path")
         else:
             if job_tmpl.sched_error_path:
                 lines.append("#$ -e {}".format(job_tmpl.sched_error_path))
@@ -238,9 +235,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("#$ -p {}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError(
-                "Job resources (as the tot_num_mpiprocs) are required "
-                "for the SGE scheduler plugin")
+            raise ValueError("Job resources (as the tot_num_mpiprocs) are required " "for the SGE scheduler plugin")
         #Setting up the parallel environment
         lines.append('#$ -pe {} {}'.\
                      format(str(job_tmpl.job_resource.parallel_env),\
@@ -252,16 +247,14 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    "max_wallclock_seconds must be "
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    "".format((job_tmpl.max_wallclock_seconds)))
+                raise ValueError("max_wallclock_seconds must be "
+                                 "a positive integer (in seconds)! It is instead '{}'"
+                                 "".format((job_tmpl.max_wallclock_seconds)))
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
-            lines.append("#$ -l h_rt={:02d}:{:02d}:{:02d}".format(
-                hours, minutes, seconds))
+            lines.append("#$ -l h_rt={:02d}:{:02d}:{:02d}".format(hours, minutes, seconds))
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
@@ -276,11 +269,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be "
-                                 "a dictionary")
+                raise ValueError("If you provide job_environment, it must be " "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(k.strip(),
-                                                   escape_for_bash(v)))
+                lines.append("export {}={}".format(k.strip(), escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -306,31 +297,24 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         if retval != 0:
             self.logger.error("Error in _parse_joblist_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during joblist retrieval, retval={}".\
                                  format(retval))
 
         if stderr.strip():
             self.logger.warning("in _parse_joblist_output for {}: "
-                                "there was some text in stderr: {}".format(
-                                    str(self.transport), stderr))
+                                "there was some text in stderr: {}".format(str(self.transport), stderr))
 
         if stdout:
             try:
                 xmldata = xml.dom.minidom.parseString(stdout)
             except xml.parsers.expat.ExpatError:
-                self.logger.error("in sge._parse_joblist_output: "
-                                  "xml parsing of stdout failed:"
-                                  "{}".format(stdout))
-                raise SchedulerParsingError("Error during joblist retrieval,"
-                                            "xml parsing of stdout failed")
+                self.logger.error("in sge._parse_joblist_output: " "xml parsing of stdout failed:" "{}".format(stdout))
+                raise SchedulerParsingError("Error during joblist retrieval," "xml parsing of stdout failed")
         else:
             self.logger.error("Error in sge._parse_joblist_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
-            raise SchedulerError("Error during joblist retrieval,"
-                                 "no stdout produced")
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
+            raise SchedulerError("Error during joblist retrieval," "no stdout produced")
 
         try:
             first_child = xmldata.firstChild
@@ -380,14 +364,12 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 self.logger.error("Error in sge._parse_joblist_output:"
                                   "no job id is given, stdout={}"\
                                   .format(stdout))
-                raise SchedulerError("Error in sge._parse_joblist_output:"
-                                     "no job id is given")
+                raise SchedulerError("Error in sge._parse_joblist_output:" "no job id is given")
             except IndexError:
                 self.logger.error("No 'job_number' given for job index {} in "
                                   "job list, stdout={}".format(jobs.index(job)\
                                   ,stdout))
-                raise IndexError("Error in sge._parse_joblist_output:"
-                                 "no job id is given")
+                raise IndexError("Error in sge._parse_joblist_output:" "no job id is given")
 
             try:
                 job_element = job.getElementsByTagName('state').pop(0)
@@ -397,12 +379,10 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     this_job.job_state = _map_status_sge[job_state_string]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
-                                        "id {}".format(job_state_string,
-                                                       this_job.job_id))
+                                        "id {}".format(job_state_string, this_job.job_id))
                     this_job.job_state = job_states.UNDETERMINED
             except IndexError:
-                self.logger.warning("No 'job_state' field for job id {} in"
-                                    "stdout={}".format(this_job.job_id, stdout))
+                self.logger.warning("No 'job_state' field for job id {} in" "stdout={}".format(this_job.job_id, stdout))
                 this_job.job_state = job_states.UNDETERMINED
 
             try:
@@ -410,16 +390,14 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 this_job.job_owner = str(element_child.data).strip()
             except IndexError:
-                self.logger.warning("No 'job_owner' field for job "
-                                    "id {}".format(this_job.job_id))
+                self.logger.warning("No 'job_owner' field for job " "id {}".format(this_job.job_id))
 
             try:
                 job_element = job.getElementsByTagName('JB_name').pop(0)
                 element_child = job_element.childNodes.pop(0)
                 this_job.title = str(element_child.data).strip()
             except IndexError:
-                self.logger.warning("No 'title' field for job "
-                                    "id {}".format(this_job.job_id))
+                self.logger.warning("No 'title' field for job " "id {}".format(this_job.job_id))
 
             try:
                 job_element = job.getElementsByTagName('queue_name').pop(0)
@@ -427,34 +405,27 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 this_job.queue_name = str(element_child.data).strip()
             except IndexError:
                 if this_job.job_state == job_states.RUNNING:
-                    self.logger.warning("No 'queue_name' field for job "
-                                        "id {}".format(this_job.job_id))
+                    self.logger.warning("No 'queue_name' field for job " "id {}".format(this_job.job_id))
 
             try:
-                job_element = job.getElementsByTagName(
-                    'JB_submission_time').pop(0)
+                job_element = job.getElementsByTagName('JB_submission_time').pop(0)
                 element_child = job_element.childNodes.pop(0)
                 time_string = str(element_child.data).strip()
                 try:
-                    this_job.submission_time = self._parse_time_string(
-                        time_string)
+                    this_job.submission_time = self._parse_time_string(time_string)
                 except ValueError:
                     self.logger.warning("Error parsing 'JB_submission_time' "
-                                        "for job id {} ('{}')".format(
-                                            this_job.job_id, time_string))
+                                        "for job id {} ('{}')".format(this_job.job_id, time_string))
             except IndexError:
                 try:
-                    job_element = job.getElementsByTagName(
-                        'JAT_start_time').pop(0)
+                    job_element = job.getElementsByTagName('JAT_start_time').pop(0)
                     element_child = job_element.childNodes.pop(0)
                     time_string = str(element_child.data).strip()
                     try:
-                        this_job.dispatch_time = self._parse_time_string(
-                            time_string)
+                        this_job.dispatch_time = self._parse_time_string(time_string)
                     except ValueError:
                         self.logger.warning("Error parsing 'JAT_start_time'"
-                                            "for job id {} ('{}')".format(
-                                                this_job.job_id, time_string))
+                                            "for job id {} ('{}')".format(this_job.job_id, time_string))
                 except IndexError:
                     self.logger.warning("No 'JB_submission_time' and no "
                                         "'JAT_start_time' field for job "
@@ -467,8 +438,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     element_child = job_element.childNodes.pop(0)
                     this_job.num_mpiprocs = str(element_child.data).strip()
                 except IndexError:
-                    self.logger.warning("No 'slots' field for job "
-                                        "id {}".format(this_job.job_id))
+                    self.logger.warning("No 'slots' field for job " "id {}".format(this_job.job_id))
 
             joblist.append(this_job)
         #self.logger.debug("joblist final: {}".format(joblist))
@@ -487,16 +457,13 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
-                                 "stdout={}\nstderr={}".format(
-                                     retval, stdout, stderr))
+                                 "stdout={}\nstderr={}".format(retval, stdout, stderr))
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "
-                                "there was some text in stderr: {}".format(
-                                    str(self.transport), stderr))
+                                "there was some text in stderr: {}".format(str(self.transport), stderr))
 
         return stdout.strip()
 
@@ -511,8 +478,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as e:
-            self.logger.debug("Unable to parse time string {}, the message "
-                              "was {}".format(string, e.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, e.message))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through
@@ -540,18 +506,15 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         """
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                              "stdout={}; stderr={}".format(
-                                  retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output for {}: "
-                                "there was some text in stderr: {}".format(
-                                    str(self.transport), stderr))
+                                "there was some text in stderr: {}".format(str(self.transport), stderr))
 
         if stdout.strip():
             self.logger.info("in _parse_kill_output for {}: "
-                             "there was some text in stdout: {}".format(
-                                 str(self.transport), stdout))
+                             "there was some text in stdout: {}".format(str(self.transport), stdout))
 
         return True

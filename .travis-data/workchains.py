@@ -51,6 +51,18 @@ class NestedWorkChain(WorkChain):
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
 
+class NestedInputNamespace(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(NestedInputNamespace, cls).define(spec)
+
+        spec.input('foo.bar.baz', valid_type=Int)
+        spec.output('output', valid_type=Int)
+        spec.outline(cls.do_echo)
+
+    def do_echo(self):
+        self.out('output', self.inputs.foo.bar.baz)
+
 class ListEcho(WorkChain):
     @classmethod
     def define(cls, spec):
@@ -63,6 +75,20 @@ class ListEcho(WorkChain):
 
     def do_echo(self):
         self.out('output', self.inputs.list)
+
+class DynamicNonDbInput(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(DynamicNonDbInput, cls).define(spec)
+        spec.input_namespace('namespace', dynamic=True)
+        spec.output('output', valid_type=List)
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        input_list = self.inputs.namespace.input
+        assert isinstance(input_list, tuple)
+        assert not isinstance(input_list, List)
+        self.out('output', List(list=list(input_list)))
 
 class InlineCalcRunnerWorkChain(WorkChain):
     """

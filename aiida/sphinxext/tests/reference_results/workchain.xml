@@ -13,8 +13,7 @@
                 <paragraph>
                         A demo workchain to show how the workchain auto-documentation works.
                         </paragraph>
-                <paragraph><strong>Inputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>x</literal_strong>, <emphasis>Float</emphasis>, required -- First input argument.</paragraph></list_item><list_item><literal_strong>y</literal_strong>, <emphasis>Namespace</emphasis><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Int</emphasis>, required -- Input in a separate namespace.</paragraph></list_item></bullet_list></list_item></bullet_list></paragraph>
-                <paragraph><strong>Inputs not stored in the database:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>description</literal_strong>, <emphasis>basestring</emphasis>, optional</paragraph></list_item><list_item><paragraph><literal_strong>label</literal_strong>, <emphasis>basestring</emphasis>, optional</paragraph></list_item><list_item><paragraph><literal_strong>store_provenance</literal_strong>, <emphasis>bool</emphasis>, optional</paragraph></list_item></bullet_list></paragraph>
+                <paragraph><strong>Inputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>description</literal_strong>, <emphasis>basestring</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>label</literal_strong>, <emphasis>basestring</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>store_provenance</literal_strong>, <emphasis>bool</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>x</literal_strong>, <emphasis>Float</emphasis>, required -- First input argument.</paragraph></list_item><list_item><literal_strong>y</literal_strong>, <emphasis>Namespace</emphasis><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Int</emphasis>, required -- Input in a separate namespace.</paragraph></list_item></bullet_list></list_item></bullet_list></paragraph>
                 <paragraph><strong>Outputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Bool</emphasis>, required -- Output of the demoworkchain.</paragraph></list_item></bullet_list></paragraph>
             </desc_content>
         </desc>
@@ -39,8 +38,7 @@
                 <paragraph>
                         A demo workchain to show how the workchain auto-documentation works.
                         </paragraph>
-                <paragraph><strong>Inputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>x</literal_strong>, <emphasis>Float</emphasis>, required -- First input argument.</paragraph></list_item><list_item><literal_strong>y</literal_strong>, <emphasis>Namespace</emphasis><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Int</emphasis>, required -- Input in a separate namespace.</paragraph></list_item></bullet_list></list_item></bullet_list></paragraph>
-                <paragraph><strong>Inputs not stored in the database:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>description</literal_strong>, <emphasis>basestring</emphasis>, optional</paragraph></list_item><list_item><paragraph><literal_strong>label</literal_strong>, <emphasis>basestring</emphasis>, optional</paragraph></list_item><list_item><paragraph><literal_strong>store_provenance</literal_strong>, <emphasis>bool</emphasis>, optional</paragraph></list_item></bullet_list></paragraph>
+                <paragraph><strong>Inputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>description</literal_strong>, <emphasis>basestring</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>label</literal_strong>, <emphasis>basestring</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>store_provenance</literal_strong>, <emphasis>bool</emphasis>, optional, <emphasis>non_db</emphasis></paragraph></list_item><list_item><paragraph><literal_strong>x</literal_strong>, <emphasis>Float</emphasis>, required -- First input argument.</paragraph></list_item><list_item><literal_strong>y</literal_strong>, <emphasis>Namespace</emphasis><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Int</emphasis>, required -- Input in a separate namespace.</paragraph></list_item></bullet_list></list_item></bullet_list></paragraph>
                 <paragraph><strong>Outputs:</strong><bullet_list bullet="*"><list_item><paragraph><literal_strong>z</literal_strong>, <emphasis>Bool</emphasis>, required -- Output of the demoworkchain.</paragraph></list_item></bullet_list></paragraph>
             </desc_content>
         </desc>
@@ -48,7 +46,7 @@
         <desc desctype="class" domain="py" noindex="False" objtype="class">
             <desc_signature class="" first="False" fullname="NormalClass" ids="demo_workchain.NormalClass" module="demo_workchain" names="demo_workchain.NormalClass"><desc_annotation>class </desc_annotation><desc_addname>demo_workchain.</desc_addname><desc_name>NormalClass</desc_name></desc_signature>
             <desc_content>
-                <paragraph>This is here to check that we didn't break the regular 'autoclass.</paragraph>
+                <paragraph>This is here to check that we didn't break the regular autoclass.</paragraph>
             </desc_content>
         </desc>
     </section>

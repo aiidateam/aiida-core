@@ -16,8 +16,8 @@ from aiida.common.lang import override
 from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
-from aiida.work import utils
-from aiida.work import test_utils
+from aiida.orm.data.parameter import ParameterData
+from aiida.work import test_utils, utils
 
 
 class TestProcessNamespace(AiidaTestCase):
@@ -161,9 +161,63 @@ class TestProcess(AiidaTestCase):
         bundle = work.Bundle(proc)
         proc2 = bundle.unbundle()
 
+    def test_process_type_with_entry_point(self):
+        """
+        For a process with a registered entry point, the process_type will be its formatted entry point string
+        """
+        from aiida.orm import CalculationFactory, Code
+
+        code = Code()
+        code.set_remote_computer_exec((self.computer, '/bin/true'))
+        code.store()
+
+        parameters = ParameterData(dict={})
+        template = ParameterData(dict={})
+        options = {
+            'resources': {
+                'num_machines': 1,
+                'tot_num_mpiprocs': 1
+            },
+            'max_wallclock_seconds': 1,
+        }
+
+        inputs = {
+            'code': code,
+            'parameters': parameters,
+            'template': template,
+            'options': options,
+        }
+
+        entry_point = 'simpleplugins.templatereplacer'
+        calculation = CalculationFactory(entry_point)
+        job_process = calculation.process()
+        process = job_process(inputs=inputs)
+
+        expected_process_type = 'aiida.calculations:{}'.format(entry_point)
+        self.assertEqual(process.calc.process_type, expected_process_type)
+
+        # Verify that load_process_class on the calculation node returns the original entry point class
+        recovered_process = process.calc.load_process_class()
+        self.assertEqual(recovered_process, calculation)
+
+    def test_process_type_without_entry_point(self):
+        """
+        For a process without a registered entry point, the process_type will fall back on the fully
+        qualified class name
+        """
+        process = test_utils.DummyProcess()
+        expected_process_type = '{}.{}'.format(process.__class__.__module__, process.__class__.__name__)
+        self.assertEqual(process.calc.process_type, expected_process_type)
+
+        # Verify that load_process_class on the calculation node returns the original entry point class
+        recovered_process = process.calc.load_process_class()
+        self.assertEqual(recovered_process, process.__class__)
+
 
 class TestFunctionProcess(AiidaTestCase):
+
     def test_fixed_inputs(self):
+
         def wf(a, b, c):
             return {'a': a, 'b': b, 'c': c}
 
@@ -172,6 +226,7 @@ class TestFunctionProcess(AiidaTestCase):
         self.assertEqual(work.launch.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
+
         def wf_with_kwargs(**kwargs):
             return kwargs
 

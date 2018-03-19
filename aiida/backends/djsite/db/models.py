@@ -148,6 +148,7 @@ class DbNode(m.Model):
     # starting with the same string
     # max_length required for index by MySql
     type = m.CharField(max_length=255, db_index=True)
+    process_type = m.CharField(max_length=255, db_index=True, null=True)
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
@@ -183,19 +184,18 @@ class DbNode(m.Model):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm.node import Node
-        from aiida.common.old_pluginloader import from_type_to_pluginclassname
-        from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
+        from aiida.orm.node import Node
+        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
 
         try:
-            pluginclassname = from_type_to_pluginclassname(self.type)
+            plugin_type = get_plugin_type_from_type_string(self.type)
         except DbContentError:
             raise DbContentError("The type name of node with pk= {} is "
                                  "not valid: '{}'".format(self.pk, self.type))
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
+            PluginClass = load_plugin(plugin_type)
         except MissingPluginError:
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
                               "will use base Node class".format(self.type, self.pk))

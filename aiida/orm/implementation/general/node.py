@@ -19,20 +19,20 @@ try:
 except ImportError:
     import pathlib2 as pathlib
 
-from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
-                                     UniquenessError, ValidationError)
-from aiida.common.folders import SandboxFolder
-from aiida.common.utils import abstractclassmethod
-from aiida.common.utils import combomethod
-
+from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.folders import SandboxFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.old_pluginloader import get_query_type_string
-from aiida.backends.utils import validate_attribute_key
+from aiida.common.utils import abstractclassmethod
+from aiida.common.utils import combomethod
+from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
+
 
 _NO_DEFAULT = tuple()
 _HASH_EXTRA_KEY = '_aiida_hash'
+
 
 def clean_value(value):
     """
@@ -98,40 +98,19 @@ class AbstractNode(object):
 
             newcls = ABCMeta.__new__(cls, name, bases, attrs)
 
+            # Configure the logger by inheriting from the aiida logger
             if not attrs['__module__'].startswith('aiida.'):
                 newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
             else:
                 newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
 
-            # Note: the reverse logic (from type_string to name that can
-            # be passed to the plugin loader) is implemented in
-            # aiida.common.old_pluginloader.
-            prefix = "aiida.orm."
-            if attrs['__module__'].startswith(prefix):
-                # Strip aiida.orm.
-                # Append a dot at the end, always
-                newcls._plugin_type_string = "{}.{}.".format(
-                    attrs['__module__'][len(prefix):], name)
+            # Set the plugin type string and query type string
+            plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+            query_type_string = get_query_type_from_type_string(plugin_type_string)
 
-                # Make sure the pugin implementation match the import name.
-                # If you have implementation.django.calculation.job, we remove
-                # the first part to only get calculation.job.
-                if newcls._plugin_type_string.startswith('implementation.'):
-                    newcls._plugin_type_string = \
-                        '.'.join(newcls._plugin_type_string.split('.')[2:])
-                if newcls._plugin_type_string == 'node.Node.':
-                    newcls._plugin_type_string = ''
-                newcls._query_type_string = get_query_type_string(
-                    newcls._plugin_type_string)
-            # Experimental: type string for external plugins
-            else:
-                from aiida.common.pluginloader import entry_point_tpstr_from
-                classname = '.'.join([attrs['__module__'], name])
-                if entry_point_tpstr_from(classname):
-                    newcls._plugin_type_string = entry_point_tpstr_from(
-                        classname)
-                    newcls._query_type_string = get_query_type_string(
-                        newcls._plugin_type_string)
+            newcls._plugin_type_string = plugin_type_string
+            newcls._query_type_string = query_type_string
+
             return newcls
 
     # This will be set by the metaclass call
@@ -690,28 +669,24 @@ class AbstractNode(object):
 
         return new_outputs
 
-    def get_inputs(self,
-                   node_type=None,
-                   also_labels=False,
-                   only_in_db=False,
-                   link_type=None):
+    def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
         :param node_type: If specified, should be a class, and it filters only
             elements of that specific type (or a subclass of 'type')
         :param also_labels: If False (default) only return a list of input nodes.
-                If True, return a list of tuples, where each tuple has the
-                following format: ('label', Node), with 'label' the link label,
-                and Node a Node instance or subclass
+            If True, return a list of tuples, where each tuple has the
+            following format: ('label', Node), with 'label' the link label,
+            and Node a Node instance or subclass
         :param only_in_db: Return only the inputs that are in the database,
-                ignoring those that are in the local cache. Otherwise, return
-                all links.
+            ignoring those that are in the local cache. Otherwise, return
+            all links.
         :param link_type: Only get inputs of this link type, if None then
-                returns all inputs of all link types.
+            returns all inputs of all link types.
         """
         if link_type is not None and not isinstance(link_type, LinkType):
-            raise TypeError("link_type should be a LinkType object")
+            raise TypeError('link_type should be a LinkType object')
 
         inputs_list = self._get_db_input_links(link_type=link_type)
 
@@ -721,19 +696,18 @@ class AbstractNode(object):
 
             for label, v in self._inputlinks_cache.iteritems():
                 src = v[0]
+                input_link_type = v[1]
                 if label in input_list_keys:
-                    raise InternalError(
-                        "There exist a link with the same name "
-                        "'{}' both in the DB and in the internal "
-                        "cache for node pk= {}!".format(label, self.pk))
-                inputs_list.append((label, src))
+                    raise InternalError("There exist a link with the same name '{}' both in the DB "
+                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+
+                if link_type is None or input_link_type is link_type:
+                    inputs_list.append((label, src))
 
         if node_type is None:
             filtered_list = inputs_list
         else:
-            filtered_list = [
-                i for i in inputs_list if isinstance(i[1], node_type)
-            ]
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
 
         if also_labels:
             return list(filtered_list)
@@ -751,33 +725,33 @@ class AbstractNode(object):
         """
         pass
 
-    # pylint: disable=no-else-return
     @override
-    def get_outputs(self, type=None, also_labels=False, link_type=None):
+    def get_outputs(self, node_type=None, also_labels=False, link_type=None):
         """
         Return a list of nodes that exit (directly) from this node
 
-        :param type: if specified, should be a class, and it filters only
-                elements of that specific type (or a subclass of 'type')
+        :param node_type: if specified, should be a class, and it filters only
+            elements of that specific node_type (or a subclass of 'node_type')
         :param also_labels: if False (default) only return a list of input nodes.
-                If True, return a list of tuples, where each tuple has the
-                following format: ('label', Node), with 'label' the link label,
-                and Node a Node instance or subclass
+            If True, return a list of tuples, where each tuple has the
+            following format: ('label', Node), with 'label' the link label,
+            and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
+        if link_type is not None and not isinstance(link_type, LinkType):
+            raise TypeError('link_type should be a LinkType object')
+
         outputs_list = self._get_db_output_links(link_type=link_type)
 
-        if type is None:
-            if also_labels:
-                return list(outputs_list)
-            else:
-                return [i[1] for i in outputs_list]
+        if node_type is None:
+            filtered_list = outputs_list
         else:
-            filtered_list = (i for i in outputs_list if isinstance(i[1], type))
-            if also_labels:
-                return list(filtered_list)
-            else:
-                return [i[1] for i in filtered_list]
+            filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
+
+        if also_labels:
+            return list(filtered_list)
+
+        return [i[1] for i in filtered_list]
 
     @abstractmethod
     def _get_db_output_links(self, link_type):
@@ -1850,6 +1824,25 @@ class AbstractNode(object):
             qb.append(self_or_cls.__class__, filters=filters, **kwargs)
         return qb
 
+    def load_process_class(self):
+        """
+        For nodes that were ran by a Process, the process_type will be set. This can either be an entry point
+        string or a module path, which is the identifier for that Process. This method will attempt to load
+        the Process class and return
+        """
+        from aiida.plugins.entry_point import load_entry_point_from_string, is_valid_entry_point_string
+
+        if self.process_type is None:
+            return None
+
+        if is_valid_entry_point_string(self.process_type):
+            process_class = load_entry_point_from_string(self.process_type)
+        else:
+            class_module, class_name = self.process_type.rsplit('.', 1)
+            module = importlib.import_module(class_module)
+            process_class = getattr(module, class_name)
+
+        return process_class
 
 # pylint: disable=too-few-public-methods
 class NodeOutputManager(object):

@@ -62,8 +62,7 @@ class TestParserGetJobList(unittest.TestCase):
         s = DirectScheduler()
 
         with self.assertRaises(SchedulerError):
-            result = s._parse_joblist_output(
-                retval=0, stdout=wrong_output, stderr="")
+            result = s._parse_joblist_output(retval=0, stdout=wrong_output, stderr="")
 
     def test_parse_mac_joblist_output(self):
         """
@@ -71,8 +70,7 @@ class TestParserGetJobList(unittest.TestCase):
         """
         s = DirectScheduler()
 
-        result = s._parse_joblist_output(
-            retval=0, stdout=mac_ps_output_str, stderr="")
+        result = s._parse_joblist_output(retval=0, stdout=mac_ps_output_str, stderr="")
         self.assertEqual(len(result), 24)
 
         job_ids = [job.job_id for job in result]
@@ -84,8 +82,7 @@ class TestParserGetJobList(unittest.TestCase):
         """
         s = DirectScheduler()
 
-        result = s._parse_joblist_output(
-            retval=0, stdout=linux_ps_output_str, stderr="")
+        result = s._parse_joblist_output(retval=0, stdout=linux_ps_output_str, stderr="")
         self.assertEqual(len(result), 3)
 
         job_ids = [job.job_id for job in result]

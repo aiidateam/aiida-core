@@ -17,6 +17,7 @@ from aiida.orm import Calculation
 from aiida.scheduler import Scheduler, SchedulerFactory
 from aiida.transport import Transport, TransportFactory
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
+from aiida.tools.dbimporters import DbImporter, DbImporterFactory
 from aiida.work import WorkChain
 
 
@@ -113,3 +114,15 @@ class TestExistingPlugins(AiidaTestCase):
             cls = TcodExporterFactory(entry_point.name)
             self.assertTrue(issubclass(cls, BaseTcodtranslator),
                 'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))
+
+    def test_existing_dbimporters(self):
+        """
+        Test listing all preinstalled dbimporter plugins
+        """
+        entry_points = get_entry_points('aiida.tools.dbimporters')
+        self.assertIsInstance(entry_points, list)
+
+        for entry_point in entry_points:
+            cls = DbImporterFactory(entry_point.name)
+            self.assertTrue(issubclass(cls, DbImporter),
+                'DbImporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))

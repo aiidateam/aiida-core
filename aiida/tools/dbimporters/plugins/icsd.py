@@ -666,68 +666,41 @@ class IcsdEntry(CifEntry):
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
             'db_name': kwargs.get('db_name','Icsd'),
-            'db_uri': None,  # Server ?
-            'id': kwargs.get('id',None),
-            'version': kwargs.get('version',None),
+            'db_uri': None,
+            'id': kwargs.get('id', None),
+            'version': kwargs.get('version', None),
             'uri': uri,
-            'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
+            'extras': {'idnum': kwargs.get('extras', {}).get('idnum', None)},
             'license': self._license,
         }
-        self._cif = None
 
     @property
-    def cif(self):
+    def contents(self):
         """
-        :return: cif file of Icsd entry.
+        Returns raw contents of a file as string. This overrides the DbEntry implementation because
+        the ICSD php backend returns the contents of the CIF in ISO-8859-1 encoding. However, the
+        PyCifRW library (and most other sensible applications), expects UTF-8. Therefore, we decode
+        the original CIF data to unicode and encode it in the UTF-8 format
         """
-        if self._cif is None:
-            import urllib2
+        if self._contents is None:
+            from hashlib import md5
+            from urllib2 import urlopen
 
-            self._cif = urllib2.urlopen(self.source["uri"]).read()
-        return self._cif
+            self._contents = urlopen(self.source['uri']).read()
+            self._contents = self._contents.decode('iso-8859-1').encode('utf8')
+            self.source['source_md5'] = md5(self._contents).hexdigest()
 
-    def get_cif_node(self):
-        """
-        Create a CIF node, that can be used in AiiDA workflow.
-
-        :return: :py:class:`aiida.orm.data.cif.CifData` object
-        """
-        from aiida.orm.data.cif import CifData
-        import tempfile
-
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(self.cif)
-            f.flush()
-            return CifData(file=f.name, source=self.source)
-
-    def get_corrected_cif(self):
-        """
-        Add quotes to the lines in the author loop if missing.
-
-        :note: ase raises an AssertionError if the quotes in the
-          author loop are missing.
-        """
-        return correct_cif(self.cif)
+        return self._contents
 
     def get_ase_structure(self):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        from aiida.orm.data.cif import CifData
         import StringIO
+        from aiida.orm.data.cif import CifData
 
-        return CifData.read_cif(StringIO.StringIO(self.get_corrected_cif()))
-
-
-    def get_aiida_structure(self):
-        """
-        :return: AiiDA structure corresponding to the CIF file.
-        """
-        from aiida.orm import DataFactory
-
-        S = DataFactory("structure")
-        aiida_structure = S(ase=self.get_ase_structure())
-        return aiida_structure
+        cif = correct_cif(self.cif)
+        return CifData.read_cif(StringIO.StringIO(cif))
 
 
 def correct_cif(cif):

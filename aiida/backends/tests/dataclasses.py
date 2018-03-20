@@ -2497,61 +2497,60 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (with partial occupancies).
-        Structure initially from ICSD (id: 251993).
         """
         from aiida.orm.data.structure import StructureData
 
-        a = StructureData(cell=[[3.9912, 0.0, 0.0],
-                                [-1.9956, 3.456480591584452, 0.0],
-                                [0.0, 0.0, 16.2958]])
-        a.append_atom(position=(0.0,0.0,13.49455198), symbols='Fe')
-        a.append_atom(position=(0.0,0.0,2.80124802), symbols='Fe')
-        a.append_atom(position=(0.0,0.0,5.34665198), symbols='Fe')
-        a.append_atom(position=(0.0,0.0,10.94914802), symbols='Fe')
-        a.append_atom(position=(1.9956,1.15239062923,12.22185), symbols='Fe',weights=0.9)
-        a.append_atom(position=(0.0,2.30408996235,4.07395), symbols='Fe',weights=0.9)
-        a.append_atom(position=(0.0,2.30408996235,12.22185),symbols='Ge')
-        a.append_atom(position=(1.9956,1.15239062923,4.07395),symbols='Ge')
-        a.append_atom(position=(1.9956,1.15239062923,14.8373259),symbols='Te')
-        a.append_atom(position=(0.0,2.30408996235,1.4584741),symbols='Te')
-        a.append_atom(position=(0.0,2.30408996235,6.6894259),symbols='Te')
-        a.append_atom(position=(1.9956,1.15239062923,9.6063741),symbols='Te')
+        a = StructureData(cell=[[4.0, 0.0, 0.0],
+                                [-2., 3.5, 0.0],
+                                [0.0, 0.0, 16.]])
+        a.append_atom(position=(0.0,0.0,13.5), symbols='Mn')
+        a.append_atom(position=(0.0,0.0,2.6), symbols='Mn')
+        a.append_atom(position=(0.0,0.0,5.5), symbols='Mn')
+        a.append_atom(position=(0.0,0.0,11.), symbols='Mn')
+        a.append_atom(position=(2.,1.,12.), symbols='Mn',weights=0.8)
+        a.append_atom(position=(0.0,2.2,4.), symbols='Mn',weights=0.8)
+        a.append_atom(position=(0.0,2.2,12.),symbols='Si')
+        a.append_atom(position=(2.,1.,4.),symbols='Si')
+        a.append_atom(position=(2.,1.,15.),symbols='N')
+        a.append_atom(position=(0.0,2.2,1.5),symbols='N')
+        a.append_atom(position=(0.0,2.2,7.),symbols='N')
+        a.append_atom(position=(2.,1.,9.5),symbols='N')
         
         # a few checks on the structure kinds and symbols
-        self.assertEquals(a.get_symbols_set(),set(['Fe', 'Ge', 'Te']))
+        self.assertEquals(a.get_symbols_set(),set(['Mn', 'Si', 'N']))
         self.assertEquals(a.get_site_kindnames(),
-                          ['Fe','Fe','Fe','Fe','FeX','FeX','Ge','Ge','Te','Te','Te','Te'])
-        self.assertEquals(a.get_formula(),'Fe4Ge2Te4{Fe0.90X0.10}2')
+                          ['Mn','Mn','Mn','Mn','MnX','MnX','Si','Si','N','N','N','N'])
+        self.assertEquals(a.get_formula(),'Mn4N4Si2{Mn0.80X0.20}2')
         
         b = a.get_pymatgen()
         # check the partial occupancies
         self.assertEquals([s.as_dict() for s in b.species_and_occu],
-                          [{'Fe':1.0},{'Fe':1.0},{'Fe':1.0},{'Fe':1.0},
-                           {'Fe':0.9},{'Fe':0.9},{'Ge':1.0},{'Ge':1.0},
-                           {'Te':1.0},{'Te':1.0},{'Te':1.0},{'Te':1.0}])
+                          [{'Mn':1.0},{'Mn':1.0},{'Mn':1.0},{'Mn':1.0},
+                           {'Mn':0.8},{'Mn':0.8},{'Si':1.0},{'Si':1.0},
+                           {'N':1.0},{'N':1.0},{'N':1.0},{'N':1.0}])
                            
         # back to StructureData
         c = StructureData(pymatgen=b)
-        self.assertEquals(c.cell,[[3.9912, 0.0, 0.0],
-                                  [-1.9956, 3.456480591584452, 0.0],
-                                  [0.0, 0.0, 16.2958]])
-        self.assertEquals(c.get_symbols_set(),set(['Fe', 'Ge', 'Te']))
+        self.assertEquals(c.cell,[[4., 0.0, 0.0],
+                                  [-2., 3.5, 0.0],
+                                  [0.0, 0.0, 16.]])
+        self.assertEquals(c.get_symbols_set(),set(['Mn', 'Si', 'N']))
         self.assertEquals(c.get_site_kindnames(),
-                          ['Fe','Fe','Fe','Fe','FeX','FeX','Ge','Ge','Te','Te','Te','Te'])
-        self.assertEquals(c.get_formula(),'Fe4Ge2Te4{Fe0.90X0.10}2')
+                          ['Mn','Mn','Mn','Mn','MnX','MnX','Si','Si','N','N','N','N'])
+        self.assertEquals(c.get_formula(),'Mn4N4Si2{Mn0.80X0.20}2')
         self.assertEquals([s.position for s in c.sites],
-                          [(0.0, 0.0, 13.49455198),
-                           (0.0, 0.0, 2.80124802),
-                           (0.0, 0.0, 5.34665198),
-                           (0.0, 0.0, 10.94914802),
-                           (1.9956, 1.15239062923, 12.22185),
-                           (0.0, 2.30408996235, 4.07395),
-                           (0.0, 2.30408996235, 12.22185),
-                           (1.9956, 1.15239062923, 4.07395),
-                           (1.9956, 1.15239062923, 14.8373259),
-                           (0.0, 2.30408996235, 1.4584741),
-                           (0.0, 2.30408996235, 6.6894259),
-                           (1.9956, 1.15239062923, 9.6063741)])
+                          [(0.0, 0.0, 13.5),
+                           (0.0, 0.0, 2.6),
+                           (0.0, 0.0, 5.5),
+                           (0.0, 0.0, 11.),
+                           (2., 1., 12.),
+                           (0.0, 2.2, 4.),
+                           (0.0, 2.2, 12.),
+                           (2., 1., 4.),
+                           (2., 1., 15.),
+                           (0.0, 2.2, 1.5),
+                           (0.0, 2.2, 7.),
+                           (2., 1., 9.5)])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
     @unittest.skipIf(has_pymatgen() and

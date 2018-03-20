@@ -391,7 +391,7 @@ Manage workflows, valid subcommands:
   * **list**: list the workflows present in the database
   * **plugins**: show the registered workflow plugins
   * **report**: show the log messages for a workflow
-  * **tree**: shows an ASCII tree for a workflow
+  * **status**: shows an ASCII tree for a workflow showing the status of itself and the calculations it called
 
 
 .. _workflow:

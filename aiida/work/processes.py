@@ -159,6 +159,17 @@ class Process(plumpy.Process):
         else:
             self._pid = self._create_and_setup_db_record()
 
+    def kill(self, msg=None):
+        """
+        Kill the process and all the children calculations it called
+        """
+        result = super(Process, self).kill(msg)
+
+        for child in self.calc.called:
+            self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+
+        return result
+
     @override
     def out(self, output_port, value=None):
         if value is None:

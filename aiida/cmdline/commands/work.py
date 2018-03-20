@@ -333,35 +333,6 @@ def checkpoint(pks):
 
 @work.command('kill', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
-def kill_old(pks):
-    from aiida import try_load_dbenv
-    try_load_dbenv()
-    from aiida.orm import load_node
-    from aiida.orm.calculation.work import WorkCalculation
-
-    nodes = [load_node(pk) for pk in pks]
-    workchain_nodes = [n for n in nodes if isinstance(n, WorkCalculation)]
-    running_workchain_nodes = [n for n in nodes if not n.is_terminated]
-
-    num_workchains = len(running_workchain_nodes)
-    if num_workchains > 0:
-        answer = click.prompt(
-            'Are you sure you want to kill {} workflows and all their children? [y/n]'.format(
-                num_workchains
-            )
-        ).lower()
-        if answer == 'y':
-            click.echo('Killing workflows.')
-            for n in running_workchain_nodes:
-                n.kill()
-        else:
-            click.echo('Abort!')
-    else:
-        click.echo('No pks of valid running workchains given.')
-
-
-@work.command('kill', context_settings=CONTEXT_SETTINGS)
-@click.argument('pks', nargs=-1, type=int)
 def kill(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()

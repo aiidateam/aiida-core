@@ -434,7 +434,6 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(MainWorkChain)
 
-    # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
         """
         This test was created to capture issue #902
@@ -660,7 +659,6 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEquals(process.calc.is_excepted, True)
         self.assertEquals(process.calc.is_killed, False)
 
-    @unittest.skip('Process kill needs to be fixed')
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it by calling kill
@@ -686,12 +684,12 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
+        super(TestWorkChainAbortChildren, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = utils.create_test_runner()
+        self.runner = utils.create_test_runner(with_communicator=True)
 
     def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
+        super(TestWorkChainAbortChildren, self).tearDown()
         work.set_runner(None)
         self.runner.close()
         self.runner = None
@@ -701,13 +699,18 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         @classmethod
         def define(cls, spec):
             super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
+            spec.input('kill', default=Bool(False))
             spec.outline(
                 cls.begin,
                 cls.check
             )
 
         def begin(self):
-            pass
+            """
+            If the Main should be killed, pause the child to give the Main a chance to call kill on its children
+            """
+            if self.inputs.kill:
+                self.pause()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -718,35 +721,20 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(
-                cls.begin,
+                cls.submit_child,
                 cls.check
             )
 
-        def begin(self):
-            self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
-            self.ctx.child.start()
-            if self.inputs.kill:
-                self.kill()
+        def submit_child(self):
+            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-        def on_kill(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_kill(msg)
+        def on_killed(self, msg):
+            super(TestWorkChainAbortChildren.MainWorkChain, self).on_killed(msg)
             if self.inputs.kill:
                 assert self.ctx.child.calc.is_killed == True, 'Child was not killed'
-
-    def setUp(self):
-        super(TestWorkChainAbortChildren, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = utils.create_test_runner()
-
-    def tearDown(self):
-        super(TestWorkChainAbortChildren, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_simple_run(self):
         """
@@ -762,7 +750,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.is_excepted, True)
         self.assertEquals(process.calc.is_killed, False)
 
-    @unittest.skip('This requires children kill support over RMQ #1060')
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it. This should have the
@@ -771,10 +758,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
         with self.assertRaises(plumpy.KilledError):
+            process.execute(True)
+            process.kill()
             process.execute()
-
-        with self.assertRaises(plumpy.KilledError):
-            process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)

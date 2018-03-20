@@ -43,7 +43,7 @@ if __name__ == '__main__':
         packages=find_packages(),
         # Don't forget to install it as well (by adding to the install_requires)
         setup_requires=[
-            'reentry >= 1.0.2',
+            'reentry >= 1.0.3',
         ],
         reentry_register=True,
         entry_points={
@@ -111,14 +111,14 @@ if __name__ == '__main__':
             ],
             'aiida.tests': [],
             'aiida.tools.dbimporters': [
-                'cod = aiida.tools.dbimporters.cod',
-                'icsd = aiida.tools.dbimporters.icsd',
-                'mpod = aiida.tools.dbimporters.mpod',
-                'mpds = aiida.tools.dbimporters.mpds',
-                'nninc = aiida.tools.dbimporters.nninc',
-                'oqmd = aiida.tools.dbimporters.oqmd',
-                'pcod = aiida.tools.dbimporters.pcod',
-                'tcod = aiida.tools.dbimporters.tcod'
+                'cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter',
+                'icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter',
+                'mpod = aiida.tools.dbimporters.plugins.mpod:MpodDbImporter',
+                'mpds = aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter',
+                'nninc = aiida.tools.dbimporters.plugins.nninc:NnincDbImporter',
+                'oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter',
+                'pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter',
+                'tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
             ]
         },
         scripts=['bin/runaiida'],

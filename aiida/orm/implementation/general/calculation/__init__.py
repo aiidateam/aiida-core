@@ -327,7 +327,8 @@ class AbstractCalculation(Sealable):
         """
         Delete the checkpoint bundle set for the Calculation
         """
-        return self._del_attr(self.CHECKPOINT_KEY)
+        if self.checkpoint is not None:
+            self._del_attr(self.CHECKPOINT_KEY)
 
     @property
     def called(self):

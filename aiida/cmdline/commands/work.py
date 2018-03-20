@@ -43,7 +43,6 @@ class Work(VerdiCommandWithSubcommands):
             'play': (self.cli, self.complete_none),
             'report': (self.cli, self.complete_none),
             'status': (self.cli, self.complete_none),
-            'tree': (self.cli, self.complete_none),
             'checkpoint': (self.cli, self.complete_none),
             'kill': (self.cli, self.complete_none),
             'plugins': (self.cli, self.complete_plugins),
@@ -286,26 +285,6 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         )
 
     return
-
-
-@work.command('tree', context_settings=CONTEXT_SETTINGS)
-@click.option('--node-label', default='_process_label', type=str)
-@click.option('--depth', '-d', type=int, default=1)
-@click.argument('pks', nargs=-1, type=int)
-def tree(node_label, depth, pks):
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    from aiida.utils.ascii_vis import build_tree
-    if not is_dbenv_loaded():
-        load_dbenv()
-
-    from aiida.orm import load_node
-    from ete3 import Tree
-
-    for pk in pks:
-        node = load_node(pk=pk)
-        t = Tree("({});".format(build_tree(node, node_label, max_depth=depth)),
-                 format=1)
-        print(t.get_ascii(show_internal=True))
 
 
 @work.command('checkpoint', context_settings=CONTEXT_SETTINGS)

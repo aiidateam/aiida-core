@@ -154,17 +154,20 @@ class ConfigurationError(AiidaException):
     """
     pass
 
+
 class ProfileConfigurationError(ConfigurationError):
     """
     Configuration error raised when a wrong/inexistent profile is requested.
     """
     pass
 
+
 class MissingConfigurationError(ConfigurationError):
     """
     Configuration error raised when the configuration file is missing.
     """
     pass
+
 
 class ConfigurationVersionError(ConfigurationError):
     """
@@ -173,6 +176,7 @@ class ConfigurationVersionError(ConfigurationError):
     """
     pass
 
+
 class DbContentError(AiidaException):
     """
     Raised when the content of the DB is not valid.
@@ -180,6 +184,7 @@ class DbContentError(AiidaException):
     with the DB.
     """
     pass
+
 
 class InputValidationError(ValidationError):
     """
@@ -225,10 +230,18 @@ class LicensingException(AiidaException):
     """
     pass
 
+
 class TestsNotAllowedError(AiidaException):
     """
     Raised when tests are required to be run/loaded, but we are not in a testing environment.
 
     This is to prevent data loss.
+    """
+    pass
+
+
+class UnsupportedSpeciesError(ValueError):
+    """
+    Raised when StructureData operations are fed species that are not supported by AiiDA such as Deuterium
     """
     pass

@@ -25,6 +25,7 @@ DeliveryFailed = plumpy.DeliveryFailed
 _RMQ_URL = 'amqp://127.0.0.1'
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
+_TASK_EXCHANGE = 'tasks'
 
 
 def get_rmq_prefix():
@@ -79,6 +80,15 @@ def get_message_exchange_name(prefix):
     :returns: message exchange name
     """
     return '{}.{}'.format(prefix, _MESSAGE_EXCHANGE)
+
+
+def get_task_exchange_name(prefix):
+    """
+    Return the task exchange name for a given prefix
+
+    :returns: task exchange name
+    """
+    return '{}.{}'.format(prefix, _TASK_EXCHANGE)
 
 
 def encode_response(response):
@@ -172,10 +182,13 @@ class ProcessControlPanel(object):
         self._connector = rmq_connector
 
         message_exchange = get_message_exchange_name(prefix)
+        task_exchange = get_task_exchange_name(prefix)
+
         task_queue = get_launch_queue_name(prefix)
         self._communicator = plumpy.rmq.RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
+            task_exchange=task_exchange,
             task_queue=task_queue,
             encoder=encode_response,
             decoder=decode_response,

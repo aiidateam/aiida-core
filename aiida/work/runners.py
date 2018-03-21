@@ -274,6 +274,10 @@ class Runner(object):
 class DaemonRunner(Runner):
     """ Overwrites some of the behaviour of a runner to be daemon specific"""
 
+    def __init__(self, *args, **kwargs):
+        kwargs['rmq_submit'] = True
+        super(DaemonRunner, self).__init__(*args, **kwargs)
+
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
         super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
 

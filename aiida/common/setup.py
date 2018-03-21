@@ -792,8 +792,8 @@ _property_table = {
         "to the database",
         "REPORT",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.plum_loglevel": (
-        "logging_plum_log_level",
+    "logging.plumpy_loglevel": (
+        "logging_plumpy_log_level",
         "string",
         "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log ",
         "WARNING",

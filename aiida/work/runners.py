@@ -165,6 +165,7 @@ class Runner(object):
         return self._loop.run_sync(lambda: future)
 
     def close(self):
+        self.stop()
         if self._rmq_connector is not None:
             self._rmq_connector.disconnect()
 

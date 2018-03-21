@@ -34,7 +34,6 @@ def start_daemon():
     def shutdown_daemon(num, frame):
         logger.info('Received signal to shut down the daemon runner')
         runner.close()
-        runner.stop()
 
     signal.signal(signal.SIGINT, shutdown_daemon)
     signal.signal(signal.SIGTERM, shutdown_daemon)
@@ -49,7 +48,6 @@ def start_daemon():
     except SystemError as exception:
         logger.info('Received a SystemError: {}'.format(exception))
         runner.close()
-        runner.stop()
 
     logger.info('Daemon runner stopped')
 

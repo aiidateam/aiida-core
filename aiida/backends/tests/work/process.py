@@ -80,14 +80,14 @@ class ProcessStackTest(work.Process):
 
 
 class TestProcess(AiidaTestCase):
+
     def setUp(self):
         super(TestProcess, self).setUp()
-
+        work.runners.set_runner(None)
         self.assertEquals(len(utils.ProcessStack.stack()), 0)
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-
         self.assertEquals(len(utils.ProcessStack.stack()), 0)
 
     def test_process_stack(self):

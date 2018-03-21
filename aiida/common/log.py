@@ -117,7 +117,7 @@ LOGGING = {
         },
         'plumpy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.plum_loglevel'),
+            'level': setup.get_property('logging.plumpy_loglevel'),
             'propagate': False,
         },
         'paramiko': {

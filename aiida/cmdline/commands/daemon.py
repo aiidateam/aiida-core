@@ -245,8 +245,12 @@ def _start_circus(foreground):
     from circus.util import check_future_exception_and_log, configure_logger
 
     client = DaemonClient()
+
     loglevel = client.loglevel
-    logoutput = client.circus_log_file
+    logoutput = '-'
+
+    if not foreground:
+        logoutput = client.circus_log_file
 
     arbiter_config = {
         'controller': client.get_controller_endpoint(),
@@ -264,7 +268,7 @@ def _start_circus(foreground):
             'copy_env': True,
             'stdout_stream': {
                 'class': 'FileStream',
-                'filename': client.daemon_log_file
+                'filename': client.daemon_log_file,
             },
             'env': get_env_with_venv_bin(),
         }]
@@ -272,8 +276,6 @@ def _start_circus(foreground):
 
     if not foreground:
         daemonize()
-    else:
-        logoutput = '-'
 
     arbiter = get_arbiter(**arbiter_config)
     pidfile = Pidfile(arbiter.pidfile)

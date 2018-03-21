@@ -253,7 +253,7 @@ class Runner(object):
         self._communicator = self._rmq._communicator
 
         # Establish RMQ connection
-        self._communicator.init()
+        self._communicator.connect()
 
     def _create_child_runner(self):
         return Runner(**self._kwargs)

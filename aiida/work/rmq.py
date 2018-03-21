@@ -196,7 +196,7 @@ class ProcessControlPanel(object):
         )
 
     def connect(self):
-        return self._communicator.init()
+        return self._communicator.connect()
 
     def pause_process(self, pid):
         return self.execute_action(plumpy.PauseAction(pid))

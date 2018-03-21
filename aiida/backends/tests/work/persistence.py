@@ -22,6 +22,7 @@ class TestProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestProcess, self).setUp()
+        work.runners.set_runner(None)
         self.assertEquals(len(util.ProcessStack.stack()), 0)
 
     def tearDown(self):
@@ -43,6 +44,7 @@ class TestAiiDAPersister(AiidaTestCase):
 
     def setUp(self):
         super(TestAiiDAPersister, self).setUp()
+        work.runners.set_runner(None)
         self.persister = AiiDAPersister()
 
     def test_save_load_checkpoint(self):

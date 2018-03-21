@@ -20,6 +20,7 @@ from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
+from aiida.utils.capturing import Capturing
 from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
@@ -210,8 +211,6 @@ class TestWorkchain(AiidaTestCase):
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_run(self):
@@ -625,8 +624,6 @@ class TestWorkChainAbort(AiidaTestCase):
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
         work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     class AbortableWorkChain(WorkChain):
@@ -651,9 +648,10 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(RuntimeError):
-            process.execute(True)
-            process.execute()
+        with Capturing():
+            with self.assertRaises(RuntimeError):
+                process.execute(True)
+                process.execute()
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -691,8 +689,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
         work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     class SubWorkChain(WorkChain):
@@ -743,8 +739,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
 
-        with self.assertRaises(RuntimeError):
-            process.execute()
+        with Capturing():
+            with self.assertRaises(RuntimeError):
+                process.execute()
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -780,9 +777,11 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
+        work.set_runner(None)
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_immutable_input(self):

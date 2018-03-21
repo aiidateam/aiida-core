@@ -81,7 +81,21 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
-    _updatable_attributes = Sealable._updatable_attributes + ('state',)
+    FINISHED_KEY = '_finished'
+    FAILED_KEY = '_failed'
+
+    _updatable_attributes = Sealable._updatable_attributes + ('state', FINISHED_KEY, FAILED_KEY)
+    _cacheable = False
+
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        return super(AbstractCalculation, cls)._hash_ignored_attributes + [
+            '_sealed',
+            '_finished',
+        ]
+
+    # The link_type might not be correct while the object is being created.
+    _hash_ignored_inputs = ['CALL']
 
     # Nodes that can be added as input using the use_* methods
     @classproperty

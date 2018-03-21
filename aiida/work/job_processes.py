@@ -79,6 +79,12 @@ class UpdateSchedulerState(TransportTask):
     """ A task to update the scheduler state of a job calculation """
 
     def execute(self, transport):
+
+        # We are the only ones to set the calc state to COMPUTED, so if it is set here
+        # it was already completed in a previous task that got shutdown and reactioned
+        if self._calc.get_state() == calc_states.COMPUTED:
+            return True
+
         scheduler = self._calc.get_computer().get_scheduler()
         scheduler.set_transport(transport)
 
@@ -114,6 +120,7 @@ class UpdateSchedulerState(TransportTask):
                     u"a job after it has finished.")
 
             execmanager.update_job_calc_from_detailed_job_info(self._calc, detailed_job_info)
+
             self._calc._set_state(calc_states.COMPUTED)
 
         return job_done

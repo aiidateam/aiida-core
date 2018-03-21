@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import signal
 from functools import partial
 
 from aiida.common.log import aiidalogger
@@ -29,15 +30,26 @@ def start_daemon():
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
     runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
-    set_runner(runner)
 
+    def shutdown_daemon(num, frame):
+        logger.info('Received signal to shut down the daemon runner')
+        runner.close()
+
+    signal.signal(signal.SIGINT, shutdown_daemon)
+    signal.signal(signal.SIGTERM, shutdown_daemon)
+
+    logger.info('Starting a daemon runner')
+
+    set_runner(runner)
     tick_legacy_workflows(runner)
 
     try:
         runner.start()
-    except (SystemError, KeyboardInterrupt):
-        logger.warning('Shutting down daemon')
+    except SystemError as exception:
+        logger.info('Received a SystemError: {}'.format(exception))
         runner.close()
+
+    logger.info('Daemon runner stopped')
 
 
 def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):

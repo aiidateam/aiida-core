@@ -83,7 +83,8 @@ if __name__ == '__main__':
                 'remote = aiida.orm.data.remote:RemoteData',
                 'singlefile = aiida.orm.data.singlefile:SinglefileData',
                 'structure = aiida.orm.data.structure:StructureData',
-                'upf = aiida.orm.data.upf:UpfData'
+                'upf = aiida.orm.data.upf:UpfData',
+                'orbital = aiida.orm.data.orbital:OrbitalData',
             ],
             'aiida.node': [
                 'node = aiida.orm.node:Node'

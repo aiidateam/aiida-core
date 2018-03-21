@@ -82,7 +82,10 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
-    _updatable_attributes = Sealable._updatable_attributes + ('state',)
+    FINISHED_KEY = '_finished'
+    FAILED_KEY = '_failed'
+
+    _updatable_attributes = Sealable._updatable_attributes + ('state', FINISHED_KEY, FAILED_KEY)
     _cacheable = False
 
     @classproperty

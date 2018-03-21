@@ -29,6 +29,7 @@ class _WorkChainSpec(processes.ProcessSpec, plumpy.WorkChainSpec):
     pass
 
 
+@plumpy.auto_persist('_awaitables')
 class WorkChain(processes.Process):
     """
     A WorkChain, the base class for AiiDA workflows.
@@ -78,6 +79,9 @@ class WorkChain(processes.Process):
             self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)
 
         self.set_logger(self._calc.logger)
+
+        if self._awaitables:
+            self.action_awaitables()
 
     def on_run(self):
         super(WorkChain, self).on_run()

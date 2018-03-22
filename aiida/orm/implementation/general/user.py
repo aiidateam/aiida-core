@@ -14,6 +14,10 @@ from aiida.common.utils import abstractclassmethod
 
 
 class AbstractUser(object):
+    """
+    An AiiDA ORM implementation of a user.
+    """
+
     __metaclass__ = ABCMeta
 
     _logger = logging.getLogger(__name__)

@@ -50,7 +50,8 @@ And the following people for general improvements to the code, fixing bugs,
 corrections and improvements to the documentation and useful suggestions:
 
 Ivano E. Castelli, Ian Lee, Gianluca Prandini, Jianxing Huang, Antimo Marrazzo,
-Nicola Varini, Mario Zic, Vladimir Dikan, Michael Atambo, Ole Schütt, Marco Borelli
+Nicola Varini, Mario Zic, Vladimir Dikan, Michael Atambo, Ole Schütt, Marco Borelli,
+Y.-W. Fang
 
 ---
 

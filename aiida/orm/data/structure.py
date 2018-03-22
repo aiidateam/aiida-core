@@ -183,7 +183,21 @@ def _create_weights_tuple(weights):
         weights_tuple = tuple(float(i) for i in weights)
     return weights_tuple
 
+    
+def create_automatic_kind_name(symbols,weights):
+    """
+    Create a string obtained with the symbols appended one
+    after the other, without spaces, in alphabetical order;
+    if the site has a vacancy, a X is appended at the end too.
+    """
+    sorted_symbol_list = list(set(symbols))
+    sorted_symbol_list.sort()  # In-place sort
+    name_string = "".join(sorted_symbol_list)
+    if has_vacancies(weights):
+        name_string += "X"
+    return name_string
 
+            
 def validate_weights_tuple(weights_tuple, threshold):
     """
     Validates the weight of the atomic kinds.
@@ -530,24 +544,9 @@ def get_formula(symbol_list, mode='hill', separator=""):
                          'reduce, count or count_compact')
 
     if mode in ['hill_compact', 'count_compact']:
-
-        def gcd_list(int_list):
-            """
-            Recursive function to get the greatest common divisor of
-            a list of integers
-            """
-            from fractions import gcd
-            if len(int_list) == 1:
-                return int_list[0]
-            elif len(int_list) == 2:
-                return gcd(int_list[0], int_list[1])
-            else:
-                the_int_list = int_list[2:]
-                the_int_list.append(gcd(int_list[0], int_list[1]))
-                return gcd_list(the_int_list)
-
-        the_gcd = gcd_list([e[0] for e in the_symbol_list])
-        the_symbol_list = [[e[0] / the_gcd, e[1]] for e in the_symbol_list]
+        from fractions import gcd
+        the_gcd = reduce(gcd,[e[0] for e in the_symbol_list])
+        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
@@ -831,17 +830,51 @@ class StructureData(Data):
 
         .. note:: periodic boundary conditions are set to True in all
             three directions.
-        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+        .. note:: Requires the pymatgen module (version >= 3.3.5, usage
             of earlier versions may cause errors).
+        
+        :raise ValueError: if there are partial occupancies together with spins.
         """
+        def build_kind_name(species_and_occu):
+            """
+            Build a kind name from a pymatgen Composition, including an
+            additional ordinal if spin is included, e.g. it returns '<element>1'
+            for an atom with spin<0 and '<element>2' for an element with spin>0,
+            ortherwise (no spin) it returns simply '<element>'
+            :param specie: a pymatgen specie
+            :return: a string
+            """
+            has_spin = any([specie.as_dict().get('properties',{}).get('spin',0)!=0
+                            for specie in species_and_occu.keys()])
+                            
+            if has_spin and (len(species_and_occu.items())>1
+                             or any([weight!=1.0 for weight in species_and_occu.values()])):
+                raise ValueError("Cannot set partial occupancies and spins "
+                                     "at the same time")
+            
+            if not has_spin:
+                return Kind(symbols=[x[0].symbol for x in species_and_occu.items()],
+                            weights=[x[1] for x in species_and_occu.items()]).name
+            
+            else:
+                spin = species_and_occu.keys()[0].as_dict().get('properties',{}).get('spin',0)
+                if spin<0:
+                    return specie.symbol+'1'
+                else:
+                    return specie.symbol+'2'
+        
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(
-                symbols=[x[0].symbol for x in site.species_and_occu.items()],
-                weights=[x[1] for x in site.species_and_occu.items()],
-                position=site.coords.tolist())
+            if 'kind_name' in site.properties:
+                kind_name = site.properties['kind_name']
+            else:
+                kind_name = build_kind_name(site.species_and_occu)
+            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
+                         weights=[x[1] for x in site.species_and_occu.items()],
+                         position=site.coords.tolist(),
+                         name=kind_name)
 
     def _validate(self):
         """
@@ -1144,20 +1177,36 @@ class StructureData(Data):
         """
         return self._get_object_ase()
 
-    def get_pymatgen(self):
+    def get_pymatgen(self,**kwargs):
         """
         Get pymatgen object. Returns Structure for structures with
         periodic boundary conditions (in three dimensions) and Molecule
         otherwise.
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        return self._get_object_pymatgen()
+        return self._get_object_pymatgen(**kwargs)
 
-    def get_pymatgen_structure(self):
+    def get_pymatgen_structure(self,**kwargs):
         """
         Get the pymatgen Structure object.
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
@@ -1168,7 +1217,7 @@ class StructureData(Data):
         :raise ValueError: if periodic boundary conditions do not hold
           in at least one dimension of real space.
         """
-        return self._get_object_pymatgen_structure()
+        return self._get_object_pymatgen_structure(**kwargs)
 
     def get_pymatgen_molecule(self):
         """
@@ -1744,7 +1793,7 @@ class StructureData(Data):
             asecell.append(site.get_ase(kinds=_kinds))
         return asecell
 
-    def _get_object_pymatgen(self):
+    def _get_object_pymatgen(self,**kwargs):
         """
         Converts
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
@@ -1757,21 +1806,30 @@ class StructureData(Data):
             of earlier versions may cause errors).
         """
         if self.pbc == (True, True, True):
-            return self._get_object_pymatgen_structure()
+            return self._get_object_pymatgen_structure(**kwargs)
         else:
-            return self._get_object_pymatgen_molecule()
+            return self._get_object_pymatgen_molecule(**kwargs)
 
-    def _get_object_pymatgen_structure(self):
+    def _get_object_pymatgen_structure(self,**kwargs):
         """
         Converts
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
         to pymatgen Structure object
+        :param add_spin: True to add the spins to the pymatgen structure.
+        Default is False (no spin added).
+
+        .. note:: The spins are set according to the following rule:
+            
+            * if the kind name ends with 1 -> spin=+1
+            
+            * if the kind name ends with 2 -> spin=-1
 
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
           object
         :raise ValueError: if periodic boundary conditions does not hold
-          in at least one dimension of real space
+          in at least one dimension of real space; if there are partial occupancies
+          together with spins (defined by kind names ending with '1' or '2').
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
@@ -1783,15 +1841,41 @@ class StructureData(Data):
                              "all three dimensions of real space")
 
         species = []
-        for s in self.sites:
-            k = self.get_kind(s.kind_name)
-            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+        additional_kwargs = {}
+
+        if (kwargs.pop('add_spin',False) and 
+            any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
+            # case when spins are defined -> no partial occupancy allowed
+            from pymatgen.core.structure import Specie
+            oxidation_state = 0 # now I always set the oxidation_state to zero
+            for s in self.sites:
+                k = self.get_kind(s.kind_name)
+                if len(k.symbols)!=1 or (len(k.weights)!=1 or sum(k.weights)<1.):
+                    raise ValueError("Cannot set partial occupancies and spins "
+                                     "at the same time")
+                species.append(Specie(k.symbols[0],oxidation_state,
+                                      properties={'spin': -1 if k.name.endswith('1')
+                                            else 1 if k.name.endswith('2') else 0}))
+        else:
+            # case when no spin are defined
+            for s in self.sites:
+                k = self.get_kind(s.kind_name)
+                species.append({s: w for s, w in zip(k.symbols, k.weights)})
+            if any([create_automatic_kind_name(self.get_kind(name).symbols,self.get_kind(name).weights)!=name
+                    for name in self.get_site_kindnames()]):
+                    # add "kind_name" as a properties to each site, whenever
+                    # the kind_name cannot be automatically obtained from the symbols
+                additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
+        
+        if kwargs:
+            raise ValueError("Unrecognized parameters passed to pymatgen "
+                             "converter: {}".format(kwargs.keys()))
 
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions,
-                         coords_are_cartesian=True)
+                         coords_are_cartesian=True,**additional_kwargs)
 
-    def _get_object_pymatgen_molecule(self):
+    def _get_object_pymatgen_molecule(self,**kwargs):
         """
         Converts
         :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
@@ -1805,6 +1889,10 @@ class StructureData(Data):
             of earlier versions may cause errors)
         """
         from pymatgen.core.structure import Molecule
+
+        if kwargs:
+            raise ValueError("Unrecognized parameters passed to pymatgen "
+                             "converter: {}".format(kwargs.keys()))
 
         species = []
         for s in self.sites:
@@ -2023,11 +2111,7 @@ class Kind(object):
         after the other, without spaces, in alphabetical order;
         if the site has a vacancy, a X is appended at the end too.
         """
-        sorted_symbol_list = list(set(self.symbols))
-        sorted_symbol_list.sort()  # In-place sort
-        name_string = "".join(sorted_symbol_list)
-        if self.has_vacancies():
-            name_string += "X"
+        name_string = create_automatic_kind_name(self.symbols,self.weights)
         if tag is None:
             self.name = name_string
         else:

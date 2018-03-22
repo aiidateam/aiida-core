@@ -1531,6 +1531,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_load_plugin_safe(self):
         from aiida.orm import (JobCalculation, CalculationFactory, DataFactory)
+        from aiida.orm.data import Data
 
         ###### for calculation
         calc_params = {
@@ -1557,7 +1558,6 @@ class TestNodeBasic(AiidaTestCase):
         ####### for data
         KpointsData = DataFactory('array.kpoints')
         kpoint = KpointsData().store()
-        Data = DataFactory("Data")
         data = Data().store()
 
         # compare if plugin exist

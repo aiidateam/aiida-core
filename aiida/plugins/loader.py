@@ -1,29 +1,33 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple, OrderedDict
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 from aiida.plugins.entry_point import load_entry_point, get_entry_point_from_class, entry_point_group_to_module_path_map
 
 
-type_string_to_entry_point_group_map = {
-    'calculation.job.': 'aiida.calculations',
-    'calculation.': 'aiida.calculations',
-    'code.': 'aiida.code',
-    'data.': 'aiida.data',
-    'node.': 'aiida.node',
-}
+EntryPoint = namedtuple('EntryPoint', ['group', 'base_class'])
 
 
-def load_plugin(plugin_type):
+def load_plugin(plugin_type, safe=False):
     """
     Load a plugin class from its plugin type, which is essentially its ORM type string
     minus the trailing period
 
     :param plugin_type: the plugin type string
+    :param safe: when set to True, will always attempt to return the base class closest to the plugin_type if
+        the actual entry point is not recognized
     :return: the plugin class
     :raises MissingPluginError: plugin_type could not be resolved to registered entry point
     :raises LoadingPluginFailed: the entry point matching the plugin_type could not be loaded
     """
+    from aiida.orm.code import Code
+    from aiida.orm.calculation import Calculation
+    from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data import Data
+    from aiida.orm.node import Node
+
+    plugin = None
+    base_class = Node
 
     if plugin_type == 'data.Data':
         return Data
@@ -33,20 +37,34 @@ def load_plugin(plugin_type):
     except ValueError:
         raise MissingPluginError
 
+    type_string_to_entry_point_type_map = OrderedDict({
+        'calculation.job.': EntryPoint('aiida.calculations', JobCalculation),
+        'calculation.': EntryPoint('aiida.calculations', Calculation),
+        'code.': EntryPoint('aiida.code', Code),
+        'data.': EntryPoint('aiida.data', Data),
+        'node.': EntryPoint('aiida.node', Node),
+    })
+
     if base_path.count('.') == 0:
         base_path = '{}.{}'.format(base_path, base_path)
 
-    for prefix, group in type_string_to_entry_point_group_map.iteritems():
+    for prefix, entry_point_type in type_string_to_entry_point_type_map.iteritems():
         if base_path.startswith(prefix):
             entry_point = strip_prefix(base_path, prefix)
             try:
-                plugin = load_entry_point(group, entry_point)
+                plugin = load_entry_point(entry_point_type.group, entry_point)
             except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError):
-                raise MissingPluginError
-            else:
-                return plugin
+                base_class = entry_point_type.base_class
+            finally:
+                break
 
-    raise MissingPluginError
+    if not plugin and safe is False:
+        raise MissingPluginError
+
+    if plugin:
+        return plugin
+    else:
+        return base_class
 
 
 def get_plugin_type_from_type_string(type_string):

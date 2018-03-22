@@ -145,6 +145,7 @@ class RetrieveJob(TransportTask):
 
 
 class KillJob(TransportTask):
+
     def execute(self, transport):
         """
         Kill a calculation on the cluster.
@@ -177,21 +178,21 @@ class KillJob(TransportTask):
         scheduler.set_transport(transport)
 
         # Call the proper kill method for the job ID of this calculation
-        retval = scheduler.kill(job_id)
+        result = scheduler.kill(job_id)
 
         # Raise error if something went wrong
-        if not retval:
+        if not result:
             raise RemoteOperationError(
-                "An error occurred while trying to kill "
-                "calculation {} (jobid {}), see log "
+                "An error occurred while trying to kill calculation {} (jobid {}), see log "
                 "(maybe the calculation already finished?)".format(calc.pk, job_id))
         else:
-            # Do not set the state, but let the parser do its job
+            calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(job_states.DONE)
             calc._logger.warning(
                 "Calculation {} killed by the user "
                 "(it was {})".format(calc.pk, calc_states.WITHSCHEDULER))
 
-        return retval
+        return result
 
 
 class Waiting(plumpy.Waiting):

@@ -611,70 +611,49 @@ class Calculation(VerdiCommandWithSubcommands):
             else:
                 raise
 
-    # def calculation_kill(self, *args):
-    #     """
-    #     Kill a calculation.
-    #
-    #     Pass a list of calculation PKs to kill them.
-    #     If you also pass the -f option, no confirmation will be asked.
-    #     """
-    #     if not is_dbenv_loaded():
-    #         load_dbenv()
-    #
-    #     from aiida.cmdline import wait_for_confirmation
-    #     from aiida.orm.calculation.job import JobCalculation as Calc
-    #     from aiida.common.exceptions import NotExistent, InvalidOperation, \
-    #         RemoteOperationError
-    #
-    #     import argparse
-    #
-    #     parser = argparse.ArgumentParser(
-    #         prog=self.get_full_command_name(),
-    #         description='Kill AiiDA calculations.')
-    #     parser.add_argument('calcs', metavar='PK', type=int, nargs='+',
-    #                         help='The principal key (PK) of the calculations to kill')
-    #     parser.add_argument('-f', '--force',
-    #                         help='Force the kill of calculations',
-    #                         action="store_true")
-    #     args = list(args)
-    #     parsed_args = parser.parse_args(args)
-    #
-    #     if not parsed_args.force:
-    #         sys.stderr.write(
-    #             "Are you sure to kill {} calculation{}? [Y/N] ".format(
-    #                 len(parsed_args.calcs),
-    #                 "" if len(parsed_args.calcs) == 1 else "s"))
-    #         if not wait_for_confirmation():
-    #             sys.exit(0)
-    #
-    #     counter = 0
-    #     for calc_pk in parsed_args.calcs:
-    #         try:
-    #             c = load_node(calc_pk, parent_class=Calc)
-    #
-    #             c.kill()  # Calc.kill(calc_pk)
-    #             counter += 1
-    #         except NotExistent:
-    #             print >> sys.stderr, ("WARNING: calculation {} "
-    #                                   "does not exist.".format(calc_pk))
-    #         except (InvalidOperation, RemoteOperationError) as e:
-    #             print >> sys.stderr, (e.message)
-    #     print >> sys.stderr, "{} calculation{} killed.".format(counter,
-    #                                                            "" if counter == 1 else "s")
 
-    def calculation_kill(self, pk):
+    def calculation_kill(self, *args):
+        import argparse
         from aiida import try_load_dbenv
         try_load_dbenv()
         from aiida import work
+        from aiida.cmdline import wait_for_confirmation
 
-        with work.new_blocking_control_panel() as control_panel:
-            try:
-                if control_panel.kill_process(pk):
-                    print("Killed '{}'".format(pk))
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Kill AiiDA calculations.')
+        parser.add_argument('calcs', metavar='PK', type=int, nargs='+',
+                            help='The principal key (PK) of the calculations to kill')
+        parser.add_argument('-f', '--force',
+                            help='Force the kill of calculations',
+                            action="store_true")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if not parsed_args.force:
+            sys.stderr.write(
+                "Are you sure to kill {} calculation{}? [Y/N] ".format(
+                    len(parsed_args.calcs),
+                    "" if len(parsed_args.calcs) == 1 else "s"))
+            if not wait_for_confirmation():
+                sys.exit(0)
+
+        with work.new_control_panel() as control_panel:
+            futures = []
+            for calc in parsed_args.calcs:
+                try:
+                    future = control_panel.kill_process(calc)
+                    futures.append((calc, future))
+                except (work.RemoteException, work.DeliveryFailed) as e:
+                    print('Calculation<{}> killing failed {}'.format(calc, e.message))
+
+            for future in futures:
+                result = control_panel._communicator.await(future[1])
+                if result:
+                    print('Calculation<{}> successfully killed'.format(future[0]))
                 else:
-                    print("Problem killing '{}'".format(pk))
-            except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to kill '{}': {}".format(pk, e.message))
+                    print('Calculation<{}> killing failed {}'.format(future[0], result))
+
 
     def calculation_cleanworkdir(self, *args):
         """

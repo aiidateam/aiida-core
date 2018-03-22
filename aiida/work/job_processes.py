@@ -188,7 +188,7 @@ class KillJob(TransportTask):
         else:
             calc._set_state(calc_states.FAILED)
             calc._set_scheduler_state(job_states.DONE)
-            calc._logger.warning(
+            calc.logger.warning(
                 "Calculation {} killed by the user "
                 "(it was {})".format(calc.pk, calc_states.WITHSCHEDULER))
 

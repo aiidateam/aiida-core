@@ -8,7 +8,7 @@ import plumpy.rmq
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.class_loader import CLASS_LOADER
 
-__all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
+__all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
 
 
@@ -195,6 +195,15 @@ class ProcessControlPanel(object):
             testing_mode=testing_mode
         )
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        self._communicator.disconnect()
+
     def connect(self):
         return self._communicator.connect()
 
@@ -262,6 +271,18 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self._communicator.disconnect()
 
 
+def new_control_panel():
+    """
+    Create a new control panel based on the current profile configuration
+
+    :return: A new control panel instance
+    :rtype: :class:`ProcessControlPanel`
+    """
+    prefix = get_rmq_prefix()
+    connector = create_rmq_connector()
+    return ProcessControlPanel(prefix, connector)
+
+
 def new_blocking_control_panel():
     """
     Create a new blocking control panel based on the current profile configuration
@@ -275,7 +296,7 @@ def new_blocking_control_panel():
 
 def create_rmq_connector(loop=None):
     if loop is None:
-        loop = events.new_event_loop()
+        loop = plumpy.events.new_event_loop()
     return plumpy.rmq.RmqConnector(amqp_url=_RMQ_URL, loop=loop)
 
 

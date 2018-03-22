@@ -2,7 +2,6 @@
 
 import plumpy
 import uuid
-from tornado.testing import ExpectLog
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation import Calculation
@@ -58,12 +57,11 @@ class TestProcessControl(AiidaTestCase):
             self.runner.submit(test_utils.AddProcess, a=Int(5))
 
     def test_exception_process(self):
-        with ExpectLog('tornado.application', "Future exception was never retrieved: RemoteException: CRASH"):
-            calc_node = self.runner.submit(test_utils.ExceptionProcess)
-            self._wait_for_calc(calc_node)
+        calc_node = self.runner.submit(test_utils.ExceptionProcess)
+        self._wait_for_calc(calc_node)
 
-            self.assertFalse(calc_node.is_finished_ok)
-            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
+        self.assertFalse(calc_node.is_finished_ok)
+        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
 
     def test_pause(self):
         """ Testing sending a pause message to the process """

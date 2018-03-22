@@ -23,10 +23,7 @@ class ServerInfo(Resource):
     def __init__(self, **kwargs):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
-        self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys if k in kwargs
-        }
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in kwargs}
         self.utils = Utils(**self.utils_confs)
 
     def get(self):
@@ -101,10 +98,7 @@ class BaseResource(Resource):
 
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
-        self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys if k in kwargs
-        }
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in kwargs}
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
@@ -122,11 +116,9 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(
-            path, parse_pk_uuid=self.parse_pk_uuid)
-        (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist,
-         _nelist, _downloadformat, _visformat, _filename,
-         _rtype) = self.utils.parse_query_string(query_string)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+        (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,
+         _filename, _rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -154,17 +146,12 @@ class BaseResource(Resource):
 
             ## Pagination (if required)
             if page is not None:
-                (limit, offset, rel_pages) = self.utils.paginate(
-                    page, perpage, total_count)
+                (limit, offset, rel_pages) = self.utils.paginate(page, perpage, total_count)
                 self.trans.set_limit_offset(limit=limit, offset=offset)
-                headers = self.utils.build_headers(
-                    rel_pages=rel_pages,
-                    url=request.url,
-                    total_count=total_count)
+                headers = self.utils.build_headers(rel_pages=rel_pages, url=request.url, total_count=total_count)
             else:
                 self.trans.set_limit_offset(limit=limit, offset=offset)
-                headers = self.utils.build_headers(
-                    url=request.url, total_count=total_count)
+                headers = self.utils.build_headers(url=request.url, total_count=total_count)
 
             ## Retrieve results
             results = self.trans.get_results()
@@ -202,10 +189,7 @@ class Node(Resource):
 
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
-        self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys if k in kwargs
-        }
+        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in kwargs}
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
@@ -224,11 +208,9 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(
-            path, parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
-        (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist,
-         downloadformat, visformat, filename,
+        (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
          rtype) = self.utils.parse_query_string(query_string)
 
         ## Validate request
@@ -251,9 +233,8 @@ class Node(Resource):
 
         ## Treat the statistics
         elif query_type == "statistics":
-            (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist, downloadformat, visformat, filename,
-             rtype) = self.utils.parse_query_string(query_string)
+            (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
+             filename, rtype) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
                 usr = filters["user"]["=="]
@@ -286,17 +267,13 @@ class Node(Resource):
 
             ## Pagination (if required)
             if page is not None:
-                (limit, offset, rel_pages) = self.utils.paginate(
-                    page, perpage, total_count)
+                (limit, offset, rel_pages) = self.utils.paginate(page, perpage, total_count)
                 self.trans.set_limit_offset(limit=limit, offset=offset)
 
                 ## Retrieve results
                 results = self.trans.get_results()
 
-                headers = self.utils.build_headers(
-                    rel_pages=rel_pages,
-                    url=request.url,
-                    total_count=total_count)
+                headers = self.utils.build_headers(rel_pages=rel_pages, url=request.url, total_count=total_count)
             else:
 
                 self.trans.set_limit_offset(limit=limit, offset=offset)
@@ -307,18 +284,15 @@ class Node(Resource):
                     if results["download"]["status"] == 200:
                         data = results["download"]["data"]
                         response = make_response(data)
-                        response.headers[
-                            'content-type'] = 'application/octet-stream'
-                        response.headers[
-                            'Content-Disposition'] = 'attachment; filename="{}"'.format(
-                                results["download"]["filename"])
+                        response.headers['content-type'] = 'application/octet-stream'
+                        response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
+                            results["download"]["filename"])
                         return response
 
                     else:
                         results = results["download"]["data"]
 
-                if query_type in ["retrieved_inputs", "retrieved_outputs"
-                                 ] and results:
+                if query_type in ["retrieved_inputs", "retrieved_outputs"] and results:
                     try:
                         status = results[query_type]["status"]
                     except KeyError:
@@ -329,18 +303,15 @@ class Node(Resource):
                     if status == 200:
                         data = results[query_type]["data"]
                         response = make_response(data)
-                        response.headers[
-                            'content-type'] = 'application/octet-stream'
-                        response.headers[
-                            'Content-Disposition'] = 'attachment; filename="{}"'.format(
-                                results[query_type]["filename"])
+                        response.headers['content-type'] = 'application/octet-stream'
+                        response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
+                            results[query_type]["filename"])
                         return response
 
                     elif status == 500:
                         results = results[query_type]["data"]
 
-                headers = self.utils.build_headers(
-                    url=request.url, total_count=total_count)
+                headers = self.utils.build_headers(url=request.url, total_count=total_count)
 
         ## Build response
         data = dict(

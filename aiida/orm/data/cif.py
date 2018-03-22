@@ -313,8 +313,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
             # create automatically a loop for non-scalar values
-            if isinstance(values[tag],
-                          (tuple, list)) and tag not in loops.keys():
+            if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
                 datablock.CreateLoop([tag])
     return cif
 
@@ -414,8 +413,7 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
-    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file',
-                                                                   'values')]
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
 
@@ -503,8 +501,7 @@ class CifData(SinglefileData):
                 else:
                     raise ValueError("More than one copy of a CIF file "
                                      "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(
-                                         ",".join([str(i.pk) for i in cifs])))
+                                     "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
             else:
                 return cifs[0], False
 
@@ -530,8 +527,7 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        return CifData.read_cif(
-            self._get_folder_pathsubfolder.open(self.filename), **kwargs)
+        return CifData.read_cif(self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
         import tempfile
@@ -558,11 +554,9 @@ class CifData(SinglefileData):
                 import CifFile
                 from CifFile import CifBlock
             except ImportError as e:
-                raise ImportError(
-                    str(e) + '. You need to install the PyCifRW package.')
+                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
 
-            c = CifFile.ReadCif(
-                self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
+            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -701,20 +695,14 @@ class CifData(SinglefileData):
         """
         # note: If spacegroup_numbers are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        spg_tags = [
-            "_space_group.it_number", "_space_group_it_number",
-            "_symmetry_int_tables_number"
-        ]
+        spg_tags = ["_space_group.it_number", "_space_group_it_number", "_symmetry_int_tables_number"]
         spacegroup_numbers = []
         for datablock in self.values.keys():
             spacegroup_number = None
-            correct_tags = [
-                tag for tag in spg_tags if tag in self.values[datablock].keys()
-            ]
+            correct_tags = [tag for tag in spg_tags if tag in self.values[datablock].keys()]
             if correct_tags:
                 try:
-                    spacegroup_number = int(
-                        self.values[datablock][correct_tags[0]])
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
                 except ValueError:
                     pass
             spacegroup_numbers.append(spacegroup_number)
@@ -841,7 +829,7 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
-        import cif
+        import cif  # pylint: disable=import-self
         from aiida.orm.data.parameter import ParameterData
 
         parameters = ParameterData(dict=kwargs)
@@ -910,5 +898,4 @@ class CifData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()
         if attr_md5 != md5:
-            raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
-                                  "parsed instead.".format(attr_md5, md5))
+            raise ValidationError("Attribute 'md5' says '{}' but '{}' was " "parsed instead.".format(attr_md5, md5))

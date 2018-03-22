@@ -1481,51 +1481,9 @@ class AbstractJobCalculation(AbstractCalculation):
         No changes of calculation status are done (they will be done later by
         the calculation manager).
 
-        .. todo: if the status is TOSUBMIT, check with some lock that it is not
-            actually being submitted at the same time in another thread.
+        .. Note: Deprecated
         """
-        # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import (InvalidOperation,
-                                             RemoteOperationError)
-
-        old_state = self.get_state()
-
-        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
-            self._set_state(calc_states.FAILED)
-            self.logger.warning(
-                "Calculation {} killed by the user "
-                "(it was in {} state)".format(self.pk, old_state))
-            return
-
-        if old_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation in {} state"
-                                   .format(old_state))
-
-        # I get the scheduler plugin class and initialize it with the correct
-        # transport
-        computer = self.get_computer()
-        t = self._get_transport()
-        s = computer.get_scheduler()
-        s.set_transport(t)
-
-        # And I call the proper kill method for the job ID of this calculation
-        with t:
-            retval = s.kill(self.get_job_id())
-
-        # Raise error is something went wrong
-        if not retval:
-            raise RemoteOperationError(
-                "An error occurred while trying to kill "
-                "calculation {} (jobid {}), see log "
-                "(maybe the calculation already finished?)"
-                    .format(self.pk, self.get_job_id()))
-        else:
-            # Do not set the state, but let the parser do its job
-            # self._set_state(calc_states.FAILED)
-            self._logger.warning(
-                "Calculation {} killed by the user "
-                "(it was {})".format(self.pk,
-                                     calc_states.WITHSCHEDULER))
+        raise NotImplementedError("deprecated method: to kill a calculation go through 'verdi calculation kill'")
 
     def _presubmit(self, folder, use_unstored_links=False):
         """

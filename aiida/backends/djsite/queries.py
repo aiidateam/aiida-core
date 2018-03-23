@@ -23,8 +23,9 @@ class QueryManagerDjango(AbstractQueryManager):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
+        :type state: str
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.

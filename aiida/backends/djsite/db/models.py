@@ -13,14 +13,14 @@ from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
-    AbstractBaseUser, BaseUserManager, PermissionsMixin)
+    AbstractBaseUser, BaseUserManager, PermissionsMixin )
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
 from aiida.utils import timezone
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
+    ConfigurationError, DbContentError, MissingPluginError )
 
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
@@ -1380,7 +1380,7 @@ class DbComputer(m.Model):
         """
         Return a DbComputer from its name (or from another Computer or DbComputer instance)
         """
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+        from django.core.exceptions import MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
         from aiida.orm.computer import Computer
 
@@ -1604,7 +1604,7 @@ class DbWorkflow(m.Model):
 
     def get_aiida_class(self):
         """
-        Return the corresponding aiida instance of class aiida.worflow
+        Return the corresponding aiida instance of class aiida.workflow
         """
         from aiida.orm.workflow import Workflow
 

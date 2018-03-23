@@ -1267,7 +1267,7 @@ class StructureData(Data):
               until an unique name is found
 
         .. note :: checks of equality of species are done using
-          the :py:meth:`~Kind.compare_with` method.
+          the :py:meth:`~aiida.orm.data.structure.Kind.compare_with` method.
         """
         aseatom = kwargs.pop('ase', None)
         if aseatom is not None:

@@ -115,7 +115,7 @@ def queue_up(process_class, inputs, storage):
 
     :param process_class: The process class to queue up.
     :param inputs: The inputs to the process.
-    :type inputs: Mapping
+    :type inputs: :class:`!collections.Mapping`
     :param storage: The storage engine which will be used to save the process (of type plum.persistence)
     :return: The pid of the queued process.
     """

@@ -384,12 +384,12 @@ class Calculation(VerdiCommandWithSubcommands):
         else:
             plugins = get_entry_point_names('aiida.calculations')
             if plugins:
-                print("## Pass as a further parameter one (or more) "
-                      "plugin names to get more details on a given plugin.")
+                print('Registered calculation entry points:')
                 for plugin in plugins:
-                    print "* {}".format(plugin)
+                    print '* {}'.format(plugin)
+                print("\nPass the entry point as an argument to display detailed information")
             else:
-                print "## No calculation plugins found"
+                print 'No calculation plugins found'
 
     def calculation_inputcat(self, *args):
         """

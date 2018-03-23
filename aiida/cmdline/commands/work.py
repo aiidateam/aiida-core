@@ -426,9 +426,9 @@ def plugins(entry_point):
             click.echo('Registered workflow entry points:')
             for entry_point in entry_points:
                 click.echo("* {}".format(entry_point))
-            click.echo("\nPass the entry point of a workflow as an argument to display detailed information")
+            click.echo("\nPass the entry point as an argument to display detailed information")
         else:
-            click.echo("# No workflows found")
+            click.echo("No workflow plugins found")
 
 
 @work.command('watch', context_settings=CONTEXT_SETTINGS)

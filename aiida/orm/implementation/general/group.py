@@ -243,14 +243,15 @@ class AbstractGroup(object):
               user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups.
-        :note:  By default, query for user-defined groups only (type_string=="").
+
+        :note: By default, query for user-defined groups only (type_string=="") 
           If you want to query for all type of groups, pass type_string=None.
           If you want to query for a specific type of groups, pass a specific
           string as the type_string argument.
 
         :param name: the name of the group
-        :param nodes: a node or list of nodes that belongs to the group (alternatively,
-          you can also pass a DbNode or list of DbNodes)
+        :param nodes: a node or list of nodes that belongs to the group 
+          (alternatively, you can also pass a DbNode or list of DbNodes)
         :param pk: the pk of the group
         :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look
@@ -270,10 +271,10 @@ class AbstractGroup(object):
           value=each of the values of the iterable.
         :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
-          Example: if ``node_attributes = {'elements': ['Ba', 'Ti'],
-             'md5sum': 'xxx'}``, it will find groups that contain the node
-             with md5sum = 'xxx', and moreover contain at least one node for
-             element 'Ba' and one node for element 'Ti'.
+        Example: ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``
+          will find groups that contain the node with md5sum = 'xxx', and
+          moreover contain at least one node for element 'Ba' and one node 
+          for element 'Ti'.
         """
         pass
 

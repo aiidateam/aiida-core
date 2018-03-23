@@ -4,65 +4,64 @@
 REST API for AiiDA
 ===================
 
-AiiDA provides a REST API to access the information of the AiiDA objects stored
-in the database. There are four types of AiiDA objects: *Computer*, *Node*, *User*,
-and *Group*. The *Node* type has three subtypes: *Calculation*, *Data*,
-and *Code*. Different REST urls are provided to get the list of objects, 
-the details of a specific object as well as its inputs/outputs/attributes/extras.
+AiiDA provides a
+`RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer/>`_
+`API <https://en.wikipedia.org/wiki/Application_programming_interface/>`_
+that provides access to the AiiDA objects stored in the database.
 
-The AiiDA REST API is implemented using ``Flask RESTFul`` framework.  For the time being, it only supports GET methods. The response data are always returned in ``JSON`` format.
+The AiiDA REST API is implemented using the ``Flask RESTFul`` framework
+and supports only GET methods (reading) for the time being.
+The response contains the data in ``JSON`` format.
 
-In this document, the paths of the file systems are defined with respect to the AiiDA installation folder. The source files of the API are contained in the folder ``aiida/restapi``. To start the REST server open a terminal and type
+In this document, file paths are given relative to the AiiDA installation folder.
+The source files of the API are contained in the folder ``aiida/restapi``.
+
+Running the REST API
+++++++++++++++++++++
+
+To start the REST server open a terminal and type
 
 .. code-block:: bash
 
     $ verdi restapi
 
-This command will hook up a REST api with the default parameters, namely on port *5000*
-of *localhost*, connecting to the AiiDA default profile and assuming the default folder for the REST configuration files, namely ``common``. For an overview of options accepted by ``verdi restapi`` you can type
+This command will hook up a REST api with the default parameters, namely on port ``5000``
+of ``localhost``,
+connect to the default AiiDA profile and assuming the default folder for the REST configuration files, namely ``common``.
+
+For an overview of options accepted by ``verdi restapi`` you can type
 
 .. code-block:: bash
 
     $ verdi restapi --help
 
 
-As all the ``verdi`` commands the AiiDA profile can be changed by putting the option ``-p PROFILE`` right after ``verdi``.
+Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
 
-The base url for your REST API is be::
+The base url for your REST API is::
 
         http://localhost:5000/api/v2
 
-where the last field identifies the version of the API. This field enables running  multiple versions of the API simultaneously, so that the clients should not be obliged to update immediately the format of their requests when a new version of the API is deployed. The current latest version is ``v2``.
+where the last field identifies the version of the API (currently ``v2``).
+Simply type this URL in your browser or use command-line tools such as ``curl`` or ``wget``.
 
+For the full list of configuration options, see ``aiida/restapi/config.py``.
 
-An alternative way to hook up the Api is to run the script ``run_api.py`` from folder ``aiida/restapi``. Move to the latter and type
-
-.. code-block:: bash
-
-    $ python run_api.py
-
-This script has the same options as the ``verdi command`` (they actually invoke the same function) with the addition of ``--aiida-profile=AIIDA_PROFILE`` to set the AiiDA profile to which the Api should connect.
-
-The default configuration file is  ``config.py``, which by default is looked for in the folder `aiida/restapi``. The path of ``config.py`` can be overwritten by the the option ``--config-dir=CONFIG_DIR`` . All the available configuration options of the REST Api are documented therein.
-
-In order to send requests to the REST API you can simply type the url of the request in the address bar of your browser or you can use command line tools such as ``curl`` or ``wget``.
-
-Let us now introduce the urls supported by the API. 
 
 General form of the urls
 ++++++++++++++++++++++++
 
 A generic url to send requests to the REST API is formed by:
- 
+
     1. the base url. It specifies the host and the version of the API. Example::
-    
+
         http://localhost:5000/api/v2
-        
+
     2. the path. It defines the kind of resource requested by the client and the type of query.
-    3. the query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce query filters, to give instructions for ordering, to set how results have to be paginated, etc.   
+    3. the query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce query filters, to give instructions for ordering, to set how results have to be paginated, etc.
 
 The query string is introduced by the question mark character ``?``. Here are some examples::
- 
+
   http://localhost:5000/api/v2/users/
   http://localhost:5000/api/v2/computers?scheduler_type="slurm"
   http://localhost:5000/api/v2/nodes/?id>45&type=like="%data%"
@@ -84,10 +83,10 @@ The complete set of results is divided in *pages* containing by default 20 resul
     http://localhost:5000/api/v2/computers/page
 
 If no page number is specified, as in the last example, the system redirects the request to page 1. When pagination is used the header of the response contains two more non-empty fields:
-    
+
     - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e.the sum of the results of all pages)
     - ``Links``: links to the first, previous, next, and last page. Suppose you send a request whose results would fill 8 pages. Then the value of the ``Links`` field would look like::
-        
+
             <\http://localhost:5000/.../page/1?... >; rel=first,
             <\http://localhost:5000/.../page/3?...     ;>; rel=prev,
             <\http://localhost:5000/.../page/5?... >; rel=next,
@@ -109,21 +108,44 @@ Example::
 How to build the path
 ---------------------
 
-There are two type of paths: those that request the list of objects of a
-specific resource, namely, the AiiDA object type you are requesting, and those
-that inquire a specific object of a certain resource. In both cases the path
-has to start with the name of the resource. The complete list of resources is:
+The first element of the path is the *Resource* corresponding to the
+AiiDA object(s) you want to request. The following resources are available:
 
-* ``nodes``
-* ``computers``
-* ``codes``
-* ``calculations``,
-* ``data``, ``structures``, ``kpoints``, ``bands``
-* ``users``, ``groups``, 
++--------------------------------------------------------------------------------------------+-------------------+
+| Class                                                                                      | Resource          |
++============================================================================================+===================+
+| :py:class:`Calculation <aiida.orm.implementation.general.calculation.AbstractCalculation>` | ``/calculations`` |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`Computer <aiida.orm.implementation.general.computer.AbstractComputer>`          | ``/computers``    |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`Group <aiida.orm.implementation.general.group.AbstractGroup>`                   | ``/groups``       |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`User <aiida.orm.implementation.general.user.AbstractUser>`                      | ``/users``        |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`                               | ``/bands``        |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`CifData <aiida.orm.data.cif.CifData>`                                           | ``/cifs``         |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`KpointsData <aiida.orm.data.array.kpoints.KpointsData>`                         | ``/kpoints``      |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`StructureData <aiida.orm.data.structure.StructureData>`                         | ``/structures``   |
++--------------------------------------------------------------------------------------------+-------------------+
+| :py:class:`UpfData <aiida.orm.data.upf.UpfData>`                                           | ``/upfs``         |
++--------------------------------------------------------------------------------------------+-------------------+
 
-If no specific endpoint is appended to the name of the resource, the Api will
-return the full list of objects of that resource (the Api default limit applies
-nevertheless to the number of results).  Appending the endpoint ``schema`` to a
+For a **full list** of available endpoints for each resource, simply query the base URL of the REST API.
+
+There are two types of paths: you may either request a list of objects
+or one specific object of a resource.
+
+If no specific endpoint is appended to the name of the resource, the Api
+returns the full list of objects of that resource (default limits apply).
+
+Appending the endpoint ``schema`` to a
 resource will give the list of fields that are normally returned by the Api for
 an object of a specific resource, whereas the endpoint ``statistics`` returns a
 list of statistical facts concerning a resource.
@@ -161,7 +183,7 @@ How to build the query string
 The query string is formed by one or more fields separated by the special character ``&``.
 Each field has the form (``key``)(``operator``)(``value``). The same constraints that apply to the names of python variables determine what are the valid keys, namely, only alphanumeric characters plus ``_`` are allowed and the first character cannot be a number.
 
-Special keys 
+Special keys
 ************
 
 There are several special keys that can be specified only once in a query string. All of them must be followed by the operator ``=``. Here is the complete list:
@@ -175,24 +197,24 @@ There are several special keys that can be specified only once in a query string
     :orderby: This key is used to impose a specific ordering to the results. Two orderings are supported, ascending or descending. The value for the ``orderby`` key must be the name of the property with respect to which to order the results. Additionally, ``+`` or ``-`` can be pre-pended to the value in order to select, respectively, ascending or descending order. Specifying no leading character is equivalent to select ascending order. Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order). Examples:
 
         ::
-    
+
             http://localhost:5000/api/v2/c=+id
             http://localhost:5000/api/v2/computers=+name
             http://localhost:5000/api/v2/computers/orderby=-uuid
-        
-              
-    :alist: This key is used to specify which attributes of a specific object have to be returned. The desired attributes have to be provided as a comma-separated list of values. It requires that the path contains the endpoint ``/content/attributes``. Example:                                  
+
+
+    :alist: This key is used to specify which attributes of a specific object have to be returned. The desired attributes have to be provided as a comma-separated list of values. It requires that the path contains the endpoint ``/content/attributes``. Example:
 
         ::
 
             http://localhost:5000/api/v2/codes/4fb10ef1-1a/content/attributes?
-                                        alist=append_text,prepend_text 
+                                        alist=append_text,prepend_text
 
 
-    :nalist: (incompatible with ``alist``) This key is used to specify which attributes of a specific object should not be returned. The syntax is identical to ``alist``. The system returns all the attributes except those specified in the list of values.  
-    
+    :nalist: (incompatible with ``alist``) This key is used to specify which attributes of a specific object should not be returned. The syntax is identical to ``alist``. The system returns all the attributes except those specified in the list of values.
+
     :elist: Similar to ``alist`` but for extras. It requires that the path contains the endpoint ``/content/extras``.
-    
+
     :nelist: (incompatible with ``elist``) Similar to ``nalist`` but for extras. It requires that the path contains the endpoint ``/content/extras``.
 
 Filters
@@ -200,23 +222,23 @@ Filters
 
 All the other fields composing a query string are filters, that is, conditions that have to be fulfilled by the retrieved objects. When a query string contains multiple filters, those are applied as if they were related by the AND logical clause, that is, the results have to fulfill all the conditions set by the filters (and not any of them). Each filter key is associated to a unique value type. The possible types are:
 
-    :string: Text enclosed in double quotes. If the string contains double quotes those have to be escaped as ``""`` (two double quotes). Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.  
+    :string: Text enclosed in double quotes. If the string contains double quotes those have to be escaped as ``""`` (two double quotes). Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.
 
     :integer: Positive integer numbers.
-    
+
     :datetime: Datetime objects expressed in the format ``(DATE)T(TIME)(SHIFT)`` where ``(SHIFT)`` is the time difference with respect to the UTC time. This is required to avoid any problem arising from comparing datetime values expressed in different time zones. The formats of each field are:
-    
+
         1. ``YYYY-MM-DD`` for ``(DATE)`` (mandatory).
-        2. ``HH:MM:SS`` for ``(TIME)`` (optional). The formats ``HH`` and ``HH:MM`` are supported too.  
-        3. ``+/-HH:MM`` for ``(SHIFT)`` (optional, if present requires ``(TIME)`` to be specified). The format ``+/-HH`` is allowed too. If no shift is specified UTC time is assumed. The shift format follows the general convention that eastern (western) shifts are positive (negative). The API is unaware of daylight saving times so the user is required to adjust the shift to take them into account. 
-        
+        2. ``HH:MM:SS`` for ``(TIME)`` (optional). The formats ``HH`` and ``HH:MM`` are supported too.
+        3. ``+/-HH:MM`` for ``(SHIFT)`` (optional, if present requires ``(TIME)`` to be specified). The format ``+/-HH`` is allowed too. If no shift is specified UTC time is assumed. The shift format follows the general convention that eastern (western) shifts are positive (negative). The API is unaware of daylight saving times so the user is required to adjust the shift to take them into account.
+
         This format is ``ISO-8601`` compliant. Note that date and time fields have to be separated by the character ``T``. Examples:
 
         ::
-        
+
             ctime>2016-04-23T05:45+03:45
-            ctime<2016-04-23T05:45 
-            mtime>=2016-04-23    
+            ctime<2016-04-23T05:45
+            mtime>=2016-04-23
 
 
     :bool: It can be either true or false (lower case).
@@ -276,8 +298,8 @@ The following table reports what is the value type and the supported resources a
 
 \* Key not available via the ``/users/`` endpoint for reasons of privacy.
 
-The operators supported by a specific key are uniquely determined by the value type associated to that key. For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the relational operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``.  
-Please refer to the following table for a comprehensive list. 
+The operators supported by a specific key are uniquely determined by the value type associated to that key. For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the relational operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``.
+Please refer to the following table for a comprehensive list.
 
 +-----------+------------------------+---------------------------------+
 |operator   |meaning                 |accepted value types             |
@@ -305,8 +327,8 @@ The pattern matching operators ``=like=`` and ``=ilike=`` must be followed by th
 
     1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
     2. ``_`` is used to replace one or zero characters.
-    
-Differently from ``=like=``, ``=ilike=`` assumes that two characters that only differ in the case are equal. 
+
+Differently from ``=like=``, ``=ilike=`` assumes that two characters that only differ in the case are equal.
 
 To prevent interpreting special characters as wildcards, these have to be escaped by pre-pending the character ``\``.
 
@@ -326,13 +348,13 @@ Examples:
 | ``uuid=like="cdfd48%"``       | "cdfd48f9-7ed2-4969  |                   |
 |                               |  -ba06-09c752b83d2"  |                   |
 +-------------------------------+----------------------+-------------------+
-| ``description=like="This``    | "This calculation is |                   | 
+| ``description=like="This``    | "This calculation is |                   |
 | ``calculation is %\% useful"``|  100% useful"        |                   |
 +-------------------------------+----------------------+-------------------+
 
 The membership operator ``=in=`` has to be followed by a comma-separated list of values of the same type. The condition is fulfilled if the column value of an object is an element of the list.
 
-Examples:: 
+Examples::
 
     http://localhost:5000/api/v2/nodes?id=in=45,56,78
     http://localhost:5000/api/v2/computers/?
@@ -342,13 +364,13 @@ The relational operators '<', '>', '<=', '>=' assume natural ordering for intege
 
 Examples:
 
-    - ``http://localhost:5000/api/v2/nodes?id>578`` selects the nodes having an id larger than 578.  
-    - ``http://localhost:5000/api/v2/users/?last_login>2014-04-07`` selects only the user that logged in for the last time after April 7th, 2014. 
+    - ``http://localhost:5000/api/v2/nodes?id>578`` selects the nodes having an id larger than 578.
+    - ``http://localhost:5000/api/v2/users/?last_login>2014-04-07`` selects only the user that logged in for the last time after April 7th, 2014.
     - ``http://localhost:5000/api/v2/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
 
 
 .. note:: Object types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot. Examples:
- 
+
     - ``type="data.Data."`` selects only objects of *Data* type
     - ``type="data.remote.RemoteData."`` selects only objects of *RemoteData* type
 
@@ -361,7 +383,7 @@ Examples:
 
     would first search for the outputs of the node with *uuid* starting with "a67fba41-8a" and then select only those objects of type *FolderData*.
 
-       
+
 
 The HTTP response
 +++++++++++++++++
@@ -444,7 +466,7 @@ Computers
 
 1. Get a list of the *Computers* objects.
 
-    REST url:: 
+    REST url::
 
         http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id
 
@@ -455,55 +477,55 @@ Computers
         by ascending values of ``id``.
 
     Response::
-    
+
         {
           "data": {
             "computers": [
               {
-                "description": "Alpha Computer", 
-                "enabled": true, 
-                "hostname": "alpha.aiida.net", 
-                "id": 3, 
-                "name": "Alpha", 
-                "scheduler_type": "slurm", 
-                "transport_params": "{}", 
-                "transport_type": "ssh", 
+                "description": "Alpha Computer",
+                "enabled": true,
+                "hostname": "alpha.aiida.net",
+                "id": 3,
+                "name": "Alpha",
+                "scheduler_type": "slurm",
+                "transport_params": "{}",
+                "transport_type": "ssh",
                 "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
-              }, 
+              },
               {
-                "description": "Beta Computer", 
-                "enabled": true, 
-                "hostname": "beta.aiida.net", 
-                "id": 4, 
-                "name": "Beta", 
-                "scheduler_type": "slurm", 
-                "transport_params": "{}", 
-                "transport_type": "ssh", 
+                "description": "Beta Computer",
+                "enabled": true,
+                "hostname": "beta.aiida.net",
+                "id": 4,
+                "name": "Beta",
+                "scheduler_type": "slurm",
+                "transport_params": "{}",
+                "transport_type": "ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
-              }, 
+              },
               {
-                "description": "Gamma Computer", 
-                "enabled": true, 
-                "hostname": "gamma.aiida.net", 
-                "id": 5, 
-                "name": "Gamma", 
-                "scheduler_type": "slurm", 
-                "transport_params": "{}", 
-                "transport_type": "ssh", 
+                "description": "Gamma Computer",
+                "enabled": true,
+                "hostname": "gamma.aiida.net",
+                "id": 5,
+                "name": "Gamma",
+                "scheduler_type": "slurm",
+                "transport_params": "{}",
+                "transport_type": "ssh",
                 "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
               }
             ]
-          }, 
-          "method": "GET", 
-          "path": "/api/v2/computers", 
-          "pk": null, 
-          "query_string": "limit=3&offset=2&orderby=id", 
-          "resource_type": "computers", 
-          "url": "http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id", 
+          },
+          "method": "GET",
+          "path": "/api/v2/computers",
+          "pk": null,
+          "query_string": "limit=3&offset=2&orderby=id",
+          "resource_type": "computers",
+          "url": "http://localhost:5000/api/v2/computers?limit=3&offset=2&orderby=id",
           "url_root": "http://localhost:5000/"
         }
-        
-   
+
+
 
 2. Get details of a single *Computer* object:
 
@@ -521,33 +543,33 @@ Computers
           "data": {
             "computers": [
               {
-                "description": "Beta Computer", 
-                "enabled": true, 
-                "hostname": "beta.aiida.net", 
-                "id": 4, 
-                "name": "Beta", 
-                "scheduler_type": "slurm", 
-                "transport_params": "{}", 
-                "transport_type": "ssh", 
+                "description": "Beta Computer",
+                "enabled": true,
+                "hostname": "beta.aiida.net",
+                "id": 4,
+                "name": "Beta",
+                "scheduler_type": "slurm",
+                "transport_params": "{}",
+                "transport_type": "ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/computers/5d490d77-638d",
-          "pk": 4, 
-          "query_string": "", 
-          "resource_type": "computers", 
+          "pk": 4,
+          "query_string": "",
+          "resource_type": "computers",
           "url": "http://localhost:5000/api/v2/computers/5d490d77-638d",
           "url_root": "http://localhost:5000/"
         }
-        
+
 
 Nodes
 -----
 
 1.  Get a list of *Node* objects
-  
+
     REST url::
 
         http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id
@@ -564,34 +586,34 @@ Nodes
           "data": {
             "nodes  ": [
               {
-                "ctime": "Fri, 29 Apr 2016 19:24:12 GMT", 
-                "id": 386913, 
-                "label": "", 
-                "mtime": "Fri, 29 Apr 2016 19:24:13 GMT", 
-                "state": null, 
-                "type": "calculation.inline.InlineCalculation.", 
+                "ctime": "Fri, 29 Apr 2016 19:24:12 GMT",
+                "id": 386913,
+                "label": "",
+                "mtime": "Fri, 29 Apr 2016 19:24:13 GMT",
+                "state": null,
+                "type": "calculation.inline.InlineCalculation.",
                 "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
-              }, 
+              },
               {
-                "ctime": "Fri, 29 Apr 2016 19:24:00 GMT", 
-                "id": 386912, 
-                "label": "", 
-                "mtime": "Fri, 29 Apr 2016 19:24:00 GMT", 
-                "state": null, 
-                "type": "data.parameter.ParameterData.", 
+                "ctime": "Fri, 29 Apr 2016 19:24:00 GMT",
+                "id": 386912,
+                "label": "",
+                "mtime": "Fri, 29 Apr 2016 19:24:00 GMT",
+                "state": null,
+                "type": "data.parameter.ParameterData.",
                 "uuid": "a39dc158-fedd-4ea1-888d-d90ec6f86f35"
               }
             ]
-          }, 
-          "method": "GET", 
-          "path": "/api/v2/nodes", 
-          "pk": null, 
-          "query_string": "limit=2&offset=8&orderby=-id", 
-          "resource_type": "nodes", 
-          "url": "http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id", 
+          },
+          "method": "GET",
+          "path": "/api/v2/nodes",
+          "pk": null,
+          "query_string": "limit=2&offset=8&orderby=-id",
+          "resource_type": "nodes",
+          "url": "http://localhost:5000/api/v2/nodes?limit=2&offset=8&orderby=-id",
           "url_root": "http://localhost:5000/"
         }
-           
+
 2. Get the details of a single *Node* object:
 
     REST url::
@@ -608,33 +630,33 @@ Nodes
           "data": {
             "nodes  ": [
               {
-                "ctime": "Fri, 14 Aug 2015 13:18:04 GMT", 
-                "id": 1, 
-                "label": "", 
-                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT", 
-                "state": "IMPORTED", 
-                "type": "data.parameter.ParameterData.", 
+                "ctime": "Fri, 14 Aug 2015 13:18:04 GMT",
+                "id": 1,
+                "label": "",
+                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT",
+                "state": "IMPORTED",
+                "type": "data.parameter.ParameterData.",
                 "uuid": "e30da7cc-af50-40ca-a940-2ac8d89b2e0d"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/nodes/e30da7cc",
-          "pk": 1, 
-          "query_string": "", 
-          "resource_type": "nodes", 
+          "pk": 1,
+          "query_string": "",
+          "resource_type": "nodes",
           "url": "http://localhost:5000/api/v2/nodes/e30da7cc",
           "url_root": "http://localhost:5000/"
         }
-           
+
 3. Get the list of inputs of a specific node.
 
-    REST url:: 
-    
+    REST url::
+
         http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2
 
     Description:
-    
+
         returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
@@ -643,43 +665,43 @@ Nodes
           "data": {
             "inputs": [
               {
-                "ctime": "Fri, 24 Jul 2015 18:49:23 GMT", 
-                "id": 10605, 
-                "label": "", 
-                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
-                "state": "IMPORTED", 
-                "type": "data.remote.RemoteData.", 
+                "ctime": "Fri, 24 Jul 2015 18:49:23 GMT",
+                "id": 10605,
+                "label": "",
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT",
+                "state": "IMPORTED",
+                "type": "data.remote.RemoteData.",
                 "uuid": "16b93b23-8629-4d83-9259-de2a947b43ed"
-              }, 
+              },
               {
-                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT", 
-                "id": 9215, 
-                "label": "", 
-                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
-                "state": "IMPORTED", 
-                "type": "data.array.kpoints.KpointsData.", 
+                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT",
+                "id": 9215,
+                "label": "",
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT",
+                "state": "IMPORTED",
+                "type": "data.array.kpoints.KpointsData.",
                 "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/nodes/de83b1/io/inputs",
-          "pk": 6, 
-          "query_string": "limit=2", 
-          "resource_type": "nodes", 
+          "pk": 6,
+          "query_string": "limit=2",
+          "resource_type": "nodes",
           "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?limit=2",
           "url_root": "http://localhost:5000/"
         }
-        
 
-4. Filter the inputs/outputs of a node by their type. 
 
-    REST url:: 
-    
+4. Filter the inputs/outputs of a node by their type.
+
+    REST url::
+
         http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type="data.array.kpoints.KpointsData."
 
     Description:
-    
+
         returns the list of the `*KpointsData* input nodes of
         the *Node* object with ``uuid="de83b1..."``.
 
@@ -689,31 +711,31 @@ Nodes
           "data": {
             "inputs": [
               {
-                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT", 
-                "id": 9215, 
-                "label": "", 
-                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT", 
-                "state": "IMPORTED", 
-                "type": "data.array.kpoints.KpointsData.", 
+                "ctime": "Fri, 24 Jul 2015 14:33:04 GMT",
+                "id": 9215,
+                "label": "",
+                "mtime": "Mon, 25 Jan 2016 14:35:00 GMT",
+                "state": "IMPORTED",
+                "type": "data.array.kpoints.KpointsData.",
                 "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/nodes/de83b1/io/inputs",
-          "pk": 6, 
-          "query_string": "type=\"data.array.kpoints.KpointsData.\"", 
-          "resource_type": "nodes", 
+          "pk": 6,
+          "query_string": "type=\"data.array.kpoints.KpointsData.\"",
+          "resource_type": "nodes",
           "url": "http://localhost:5000/api/v2/nodes/de83b1/io/inputs?type=\"data.array.kpoints.KpointsData.\"",
           "url_root": "http://localhost:5000/"
         }
-        
+
     REST url::
-    
+
         http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type="data.remote.RemoteData."
-    
+
     Description:
-    
+
         returns the list of the *RemoteData* output nodes of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
@@ -722,35 +744,35 @@ Nodes
           "data": {
             "outputs": [
               {
-                "ctime": "Fri, 24 Jul 2015 20:35:02 GMT", 
-                "id": 2811, 
-                "label": "", 
-                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT", 
-                "state": "IMPORTED", 
-                "type": "data.remote.RemoteData.", 
+                "ctime": "Fri, 24 Jul 2015 20:35:02 GMT",
+                "id": 2811,
+                "label": "",
+                "mtime": "Mon, 25 Jan 2016 14:34:59 GMT",
+                "state": "IMPORTED",
+                "type": "data.remote.RemoteData.",
                 "uuid": "bd48e333-da8a-4b6f-8e1e-6aaa316852eb"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/nodes/de83b1/io/outputs",
-          "pk": 6, 
-          "query_string": "type=\"data.remote.RemoteData.\"", 
-          "resource_type": "nodes", 
+          "pk": 6,
+          "query_string": "type=\"data.remote.RemoteData.\"",
+          "resource_type": "nodes",
           "url": "http://localhost:5000/api/v2/nodes/de83b1/io/outputs?type=\"data.remote.RemoteData.\"",
           "url_root": "http://localhost:5000/"
         }
-            
+
 
 
 5. Getting the list of the attributes/extras of a specific node
 
     REST url::
-    
+
         http://localhost:5000/api/v2/nodes/ffe11/content/attributes
 
     Description:
-    
+
         returns the list of all attributes of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
@@ -758,22 +780,22 @@ Nodes
         {
           "data": {
             "attributes": {
-              "append_text": "", 
-              "input_plugin": "quantumespresso.pw", 
-              "is_local": false, 
-              "prepend_text": "", 
+              "append_text": "",
+              "input_plugin": "quantumespresso.pw",
+              "is_local": false,
+              "prepend_text": "",
               "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/nodes/ffe11/content/attributes",
-          "pk": 1822, 
-          "query_string": "", 
-          "resource_type": "nodes", 
+          "pk": 1822,
+          "query_string": "",
+          "resource_type": "nodes",
           "url": "http://localhost:5000/api/v2/nodes/ffe11/content/attributes",
           "url_root": "http://localhost:5000/"
         }
-      
+
 
 
     REST url::
@@ -781,7 +803,7 @@ Nodes
         http://localhost:5000/api/v2/nodes/ffe11/content/extras
 
     Description:
-    
+
         returns the list of all the extras of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
@@ -789,30 +811,30 @@ Nodes
         {
           "data": {
             "extras": {
-              "trialBool": true, 
-              "trialFloat": 3.0, 
-              "trialInt": 34, 
+              "trialBool": true,
+              "trialFloat": 3.0,
+              "trialInt": 34,
               "trialStr": "trial"
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/codes/ffe11/content/extras",
-          "pk": 1822, 
-          "query_string": "", 
-          "resource_type": "codes", 
+          "pk": 1822,
+          "query_string": "",
+          "resource_type": "codes",
           "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras",
           "url_root": "http://localhost:5000/"
         }
-     
 
-6. Getting a user-defined list of attributes/extras of a specific node 
+
+6. Getting a user-defined list of attributes/extras of a specific node
 
     REST url::
-    
+
          http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local
 
     Description:
-    
+
         returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
@@ -820,27 +842,27 @@ Nodes
         {
           "data": {
             "attributes": {
-              "append_text": "", 
+              "append_text": "",
               "is_local": false
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/codes/ffe11/content/attributes",
-          "pk": 1822, 
-          "query_string": "alist=append_text,is_local", 
-          "resource_type": "codes", 
+          "pk": 1822,
+          "query_string": "alist=append_text,is_local",
+          "resource_type": "codes",
           "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?alist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
-        
+
 
 
     REST url::
-    
+
         http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt
 
     Description:
-    
+
         returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``uuid="ffe11..."``.
 
     Response::
@@ -848,15 +870,15 @@ Nodes
         {
           "data": {
             "extras": {
-              "trialBool": true, 
+              "trialBool": true,
               "trialInt": 34
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/codes/ffe11/content/extras",
-          "pk": 1822, 
-          "query_string": "elist=trialBool,trialInt", 
-          "resource_type": "codes", 
+          "pk": 1822,
+          "query_string": "elist=trialBool,trialInt",
+          "resource_type": "codes",
           "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?elist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
@@ -869,7 +891,7 @@ Nodes
         http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local
 
     Description:
-    
+
         returns all the attributes of the *Node* object with ``uuid="ffe11..."`` except ``append_text`` and ``is_local``.
 
     Response::
@@ -877,16 +899,16 @@ Nodes
         {
           "data": {
             "attributes": {
-              "input_plugin": "quantumespresso.pw", 
-              "prepend_text": "", 
+              "input_plugin": "quantumespresso.pw",
+              "prepend_text": "",
               "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/codes/ffe11/content/attributes",
-          "pk": 1822, 
-          "query_string": "nalist=append_text,is_local", 
-          "resource_type": "codes", 
+          "pk": 1822,
+          "query_string": "nalist=append_text,is_local",
+          "resource_type": "codes",
           "url": "http://localhost:5000/api/v2/codes/ffe11/content/attributes?nalist=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
@@ -897,7 +919,7 @@ Nodes
         http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt
 
     Description:
-    
+
         returns all the extras of the *Node* object with ``uuid="ffe11..."`` except ``trialBool`` and ``trialInt``.
 
     Response::
@@ -905,15 +927,15 @@ Nodes
         {
           "data": {
             "extras": {
-              "trialFloat": 3.0, 
+              "trialFloat": 3.0,
               "trialStr": "trial"
             }
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/codes/ffe11/content/extras",
-          "pk": 1822, 
-          "query_string": "nelist=trialBool,trialInt", 
-          "resource_type": "codes", 
+          "pk": 1822,
+          "query_string": "nelist=trialBool,trialInt",
+          "resource_type": "codes",
           "url": "http://localhost:5000/api/v2/codes/ffe11/content/extras?nelist=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
@@ -927,13 +949,13 @@ Users
 
 1. Getting a list of the users
 
-    REST url:: 
+    REST url::
 
         http://localhost:5000/api/v2/users/
 
     Description:
-    
-        returns a list of all the *User* objects. 
+
+        returns a list of all the *User* objects.
 
     Response::
 
@@ -941,12 +963,12 @@ Users
           "data": {
             "users": [
               {
-                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
-                "first_name": "AiiDA", 
-                "id": 1, 
-                "institution": "", 
+                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT",
+                "first_name": "AiiDA",
+                "id": 1,
+                "institution": "",
                 "last_name": "Daemon"
-              }, 
+              },
               {
                 "date_joined": "Thu, 11 Aug 2016 12:35:32 GMT",
                 "first_name": "Gengis",
@@ -955,24 +977,24 @@ Users
                 "last_name": "Khan"
               }
             ]
-          }, 
-          "method": "GET", 
-          "path": "/api/v2/users/", 
-          "pk": null, 
-          "query_string": "", 
-          "resource_type": "users", 
-          "url": "http://localhost:5000/api/v2/users/", 
+          },
+          "method": "GET",
+          "path": "/api/v2/users/",
+          "pk": null,
+          "query_string": "",
+          "resource_type": "users",
+          "url": "http://localhost:5000/api/v2/users/",
           "url_root": "http://localhost:5000/"
         }
-        
+
 2. Getting a list of users whose first name starts with a given string
 
-    REST url:: 
+    REST url::
 
         http://localhost:5000/api/v2/users/?first_name=ilike="aii%"
 
     Description:
-    
+
         returns a lists of the *User* objects whose first name starts with ``"aii"``, regardless the case of the characters.
 
     Response::
@@ -981,23 +1003,23 @@ Users
           "data": {
             "users": [
               {
-                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT", 
-                "first_name": "AiiDA", 
-                "id": 1, 
-                "institution": "", 
+                "date_joined": "Mon, 25 Jan 2016 14:31:17 GMT",
+                "first_name": "AiiDA",
+                "id": 1,
+                "institution": "",
                 "last_name": "Daemon"
               }
             ]
-          }, 
-          "method": "GET", 
-          "path": "/api/v2/users/", 
-          "pk": null, 
-          "query_string": "first_name=ilike=%22aii%%22", 
-          "resource_type": "users", 
-          "url": "http://localhost:5000/api/v2/users/?first_name=ilike=\"aii%\"", 
+          },
+          "method": "GET",
+          "path": "/api/v2/users/",
+          "pk": null,
+          "query_string": "first_name=ilike=%22aii%%22",
+          "resource_type": "users",
+          "url": "http://localhost:5000/api/v2/users/?first_name=ilike=\"aii%\"",
           "url_root": "http://localhost:5000/"
         }
-        
+
 Groups
 ------
 
@@ -1009,42 +1031,42 @@ Groups
         http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id
 
     Description:
-    
+
         returns the list of ten *Group* objects (``limit=10``) starting from the 1st
         row of the database table (``offset=0``) and the list will be ordered
         by ``user_id`` in descending order.
-        
+
     Response::
 
         {
           "data": {
             "groups": [
               {
-                "description": "", 
-                "id": 104, 
-                "name": "SSSP_new_phonons_0p002", 
-                "type": "", 
-                "user_id": 2, 
+                "description": "",
+                "id": 104,
+                "name": "SSSP_new_phonons_0p002",
+                "type": "",
+                "user_id": 2,
                 "uuid": "7c0e0744-8549-4eea-b1b8-e7207c18de32"
-              }, 
+              },
               {
-                "description": "", 
-                "id": 102, 
-                "name": "SSSP_cubic_old_phonons_0p025", 
-                "type": "", 
-                "user_id": 1, 
+                "description": "",
+                "id": 102,
+                "name": "SSSP_cubic_old_phonons_0p025",
+                "type": "",
+                "user_id": 1,
                 "uuid": "c4e22134-495d-4779-9259-6192fcaec510"
-              }, 
+              },
               ...
-     
+
             ]
-          }, 
-          "method": "GET", 
-          "path": "/api/v2/groups/", 
-          "pk": null, 
-          "query_string": "limit=10&orderby=-user_id", 
-          "resource_type": "groups", 
-          "url": "http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id", 
+          },
+          "method": "GET",
+          "path": "/api/v2/groups/",
+          "pk": null,
+          "query_string": "limit=10&orderby=-user_id",
+          "resource_type": "groups",
+          "url": "http://localhost:5000/api/v2/groups/?limit=10&orderby=-user_id",
           "url_root": "http://localhost:5000/"
         }
 
@@ -1055,7 +1077,7 @@ Groups
         http://localhost:5000/api/v2/groups/a6e5b
 
     Description:
-    
+
         returns the details of the *Group* object with ``uuid="a6e5b..."``.
 
     Response::
@@ -1064,21 +1086,20 @@ Groups
           "data": {
             "groups": [
               {
-                "description": "GBRV US pseudos, version 1.2", 
+                "description": "GBRV US pseudos, version 1.2",
                 "id": 23,
-                "name": "GBRV_1.2", 
-                "type": "data.upf.family", 
-                "user_id": 2, 
+                "name": "GBRV_1.2",
+                "type": "data.upf.family",
+                "user_id": 2,
                 "uuid": "a6e5b6c6-9d47-445b-bfea-024cf8333c55"
               }
             ]
-          }, 
-          "method": "GET", 
+          },
+          "method": "GET",
           "path": "/api/v2/groups/a6e5b",
-          "pk": 23, 
-          "query_string": "", 
-          "resource_type": "groups", 
+          "pk": 23,
+          "query_string": "",
+          "resource_type": "groups",
           "url": "http://localhost:5000/api/v2/groups/a6e5b",
           "url_root": "http://localhost:5000/"
         }
-                

@@ -19,6 +19,7 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
 
 StructureData = DataFactory('structure')
+CifData = DataFactory('cif')
 ParameterData = DataFactory('parameter')
 KpointsData = DataFactory('array.kpoints')
 
@@ -50,6 +51,7 @@ class RESTApiTestCase(AiidaTestCase):
                       LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
 
         cls.app = App(__name__)
+        cls.app.config['TESTING'] = True
         api = AiidaApi(cls.app, **kwargs)
 
         # create test inputs
@@ -57,6 +59,9 @@ class RESTApiTestCase(AiidaTestCase):
         structure = StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
+
+        cif = CifData(ase=structure.get_ase())
+        cif.store()
 
         parameter1 = ParameterData(dict={"a": 1, "b": 2})
         parameter1.store()
@@ -127,11 +132,15 @@ class RESTApiTestCase(AiidaTestCase):
         """
         This functions prepare atomic chunks of typical responses from the
         RESTapi and puts them into class attributes
+
         """
-        computer_projects = ["id", "uuid", "name", "hostname",
+        #TODO: Storing the different nodes as lists and accessing them
+        # by their list index is very fragile and a pain to debug.
+        # Please change this!
+        computer_projections = ["id", "uuid", "name", "hostname",
                                            "transport_type", "scheduler_type"]
         computers = QueryBuilder().append(
-            Computer, tag="comp", project=computer_projects).order_by(
+            Computer, tag="comp", project=computer_projections).order_by(
             {'comp': [{'name': {'order': 'asc'}}]}).dict()
 
         # Cast UUID into a string (e.g. in sqlalchemy it comes as a UUID object)
@@ -139,29 +148,37 @@ class RESTApiTestCase(AiidaTestCase):
         for comp in computers:
             if comp['uuid'] is not None:
                 comp['uuid'] = str(comp['uuid'])
+        cls._dummy_data["computers"] = computers
 
 
-        calculation_projects = ["id", "uuid", "user_id", "type"]
+        calculation_projections = ["id", "uuid", "user_id", "type"]
         calculations = QueryBuilder().append(Calculation, tag="calc",
-                                             project=calculation_projects).order_by(
+                                             project=calculation_projections).order_by(
             {'calc': [{'id': {'order': 'desc'}}]}).dict()
 
         calculations = [_['calc'] for _ in calculations]
         for calc in calculations:
             if calc['uuid'] is not None:
                 calc['uuid'] = str(calc['uuid'])
-
-        data_projects = ["id", "uuid", "user_id", "type"]
-        data = QueryBuilder().append(Data, tag="data", project=data_projects).order_by(
-            {'data': [{'id': {'order': 'desc'}}]}).dict()
-        data = [_['data'] for _ in data]
-        for datum in data:
-            if datum['uuid'] is not None:
-                datum['uuid'] = str(datum['uuid'])
-
-        cls._dummy_data["computers"] = computers
         cls._dummy_data["calculations"] = calculations
-        cls._dummy_data["data"] = data
+
+        data_projections = ["id", "uuid", "user_id", "type"]
+        data_types = {
+                'cifdata': CifData,
+                'parameterdata': ParameterData,
+                'structuredata': StructureData,
+                'data': Data,
+        }
+        for label, dataclass in data_types.iteritems():
+            data = QueryBuilder().append(dataclass, tag="data", project=data_projections).order_by(
+            {'data': [{'id': {'order': 'desc'}}]}).dict()
+            data = [_['data'] for _ in data]
+
+            for datum in data:
+                if datum['uuid'] is not None:
+                    datum['uuid'] = str(datum['uuid'])
+
+            cls._dummy_data[label] = data
 
 
     def split_path(self, url):
@@ -208,7 +225,8 @@ class RESTApiTestCase(AiidaTestCase):
                      expected_errormsg=None, uuid=None, result_node_type=None,
                      result_name=None):
         """
-        Get the full list of nodes from database
+        Check whether response matches expected values.
+
         :param node_type: url requested fot the type of the node
         :param url: web url
         :param full_list: if url is requested to get full list
@@ -224,8 +242,9 @@ class RESTApiTestCase(AiidaTestCase):
         if result_node_type == None and result_name == None:
             result_node_type = node_type
             result_name = node_type
+
         url = self._url_prefix + url
-        self.app.config['TESTING'] = True
+
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
@@ -686,7 +705,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test("calculations", "/calculations/" + str(
             node_uuid) + "/io/inputs?orderby=id",
-                          expected_list_ids=[3, 2], uuid=node_uuid,
+                          expected_list_ids=[4, 2], uuid=node_uuid,
                           result_node_type="data",
                           result_name="inputs")
 
@@ -709,7 +728,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + "/calculations/" + str(
             node_uuid) + "/content/attributes"
-        self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
@@ -726,7 +744,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(
             node_uuid) + '/content/attributes?nalist="attr1"'
-        self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
@@ -742,7 +759,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(
             node_uuid) + '/content/attributes?alist="attr1"'
-        self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
@@ -757,10 +773,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the list of give calculation inputs
         """
         from aiida.backends.tests.dataclasses import simplify
-        node_uuid = self.get_dummy_data()["data"][3]["uuid"]
+        node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(
             node_uuid) + '/content/visualization?visformat=cif'
-        self.app.config['TESTING'] = True
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)
@@ -774,4 +789,20 @@ class RESTApiTestSuite(RESTApiTestCase):
             RESTApiTestCase.compare_extra_response_data(self, "structures",
                                                         url,
                                                         response, uuid=node_uuid)
+
+    def test_cif(self):
+        """
+        Test download of cif file
+        """
+        from aiida.orm import load_node
+
+        node_uuid = self.get_dummy_data()["cifdata"][0]["uuid"]
+        url = self.get_url_prefix() + '/cifs/' + node_uuid + '/content/download'
+
+        with self.app.test_client() as client:
+            rv = client.get(url)
+
+        cif = load_node(node_uuid)._prepare_cif()[0]
+        self.assertEquals(rv.data, cif )
+
 

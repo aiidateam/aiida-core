@@ -17,6 +17,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.common import caching
+from aiida.orm.calculation import Calculation
 from aiida.orm.code import Code
 from aiida.orm.data import Data
 from aiida.orm.node import Node
@@ -129,6 +130,7 @@ class TestNodeHashing(AiidaTestCase):
         hash2 = c.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
+
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
@@ -1526,6 +1528,55 @@ class TestNodeBasic(AiidaTestCase):
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
                 load_node(spec, parent_class=ArrayData)
+
+    def test_load_plugin_safe(self):
+        from aiida.orm import (JobCalculation, CalculationFactory, DataFactory)
+        from aiida.orm.data import Data
+
+        ###### for calculation
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+        }
+
+        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        testcalc = TemplateReplacerCalc(**calc_params).store()
+        jobcalc = JobCalculation(**calc_params).store()
+
+        # compare if plugin exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(testcalc), type(obj))
+
+        # change node type and save in database again
+        testcalc.dbnode.type = "calculation.job.simpleplugins_tmp.templatereplacer.TemplatereplacerCalculation."
+        testcalc.dbnode.save()
+
+        # changed node should return job calc as its plugin is not exist
+        obj = testcalc.dbnode.get_aiida_class()
+        self.assertEqual(type(jobcalc), type(obj))
+
+        ####### for data
+        KpointsData = DataFactory('array.kpoints')
+        kpoint = KpointsData().store()
+        data = Data().store()
+
+        # compare if plugin exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(kpoint), type(obj))
+
+        # change node type and save in database again
+        kpoint.dbnode.type = "data.array.kpoints_tmp.KpointsData."
+        kpoint.dbnode.save()
+
+        # changed node should return data node as its plugin is not exist
+        obj = kpoint.dbnode.get_aiida_class()
+        self.assertEqual(type(data), type(obj))
+
+        ###### for node
+        n1 = Node().store()
+        obj = n1.dbnode.get_aiida_class()
+        self.assertEqual(type(n1), type(obj))
+
 
 
 class TestSubNodesAndLinks(AiidaTestCase):

@@ -161,12 +161,7 @@ class DbNode(Base):
             raise DbContentError("The type name of node with pk= {} is "
                                  "not valid: '{}'".format(self.pk, self.type))
 
-        try:
-            PluginClass = load_plugin(plugin_type)
-        except MissingPluginError:
-            aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
-                              "will use base Node class".format(self.type, self.pk))
-            PluginClass = Node
+        PluginClass = load_plugin(plugin_type, safe=True)
 
         return PluginClass(dbnode=self)
 

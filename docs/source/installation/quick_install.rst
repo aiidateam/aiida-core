@@ -79,7 +79,7 @@ There are additional optional packages that you may want to install, which are g
 
     * ``atomic_tools``: packages that allow importing and manipulating crystal structure from various formats
     * ``ssh_kerberos``: adds support for ssh transport authentication through Kerberos
-    * ``REST``: allows a REST server to be ran locally to serve AiiDA data
+    * ``rest``: allows a REST server to be ran locally to serve AiiDA data
     * ``docs``: tools to build the documentation
     * ``advanced_plotting``: tools for advanced plotting
     * ``notebook``: jupyter notebook - to allow it to import AiiDA modules

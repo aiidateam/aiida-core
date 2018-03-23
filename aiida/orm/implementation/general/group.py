@@ -258,17 +258,10 @@ class AbstractGroup(object):
             value=each of the values of the iterable.
         :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
-<<<<<<< HEAD
-        Example: ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``
-          will find groups that contain the node with md5sum = 'xxx', and
-          moreover contain at least one node for element 'Ba' and one node 
-          for element 'Ti'.
-=======
             Example: if ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``,
                 it will find groups that contain the node with md5sum = 'xxx', and moreover
                 contain at least one node for element 'Ba' and one node for element 'Ti'.
 
->>>>>>> Fix warnings coming from compiling of sphinx autodoc
         """
         pass
 

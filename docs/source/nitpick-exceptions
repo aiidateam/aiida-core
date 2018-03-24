@@ -1,27 +1,3 @@
-# python builtin types
-py:obj str
-py:obj list
-py:obj tuple
-py:obj int
-py:obj float
-py:obj bool
-py:obj basestring
- 
-# python builtins as classes
-py:class  classmethod
-py:class  dict
-py:class  list
-py:class  object
-py:class  unittest.case.TestCase
-py:class  exceptions.Exception
-py:class str
-py:class list
-py:class tuple
-py:class int
-py:class float
-py:class bool
-py:class basestring
- 
 # built-in python exceptions
 py:exc ArithmeticError
 py:exc AssertionError
@@ -72,6 +48,21 @@ py:exc ValueError
 py:exc Warning
 py:exc WindowsError
 py:exc ZeroDivisionError
+ 
+# python builtins
+py:class classmethod
+py:class dict
+py:class list
+py:class object
+py:class unittest.case.TestCase
+py:class exceptions.Exception
+py:class str
+py:class tuple
+py:class int
+py:class float
+py:class bool
+py:class basestring
+ 
 
 # python packages
 # Note: These are needed, if they are provided, e.g.
@@ -134,4 +125,4 @@ py:class  _abcoll.MutableSequence
 py:class  aiida.orm.node.Node
 py:class  aiida.orm.utils.BackendDelegateWithDefault
 # strange class in work/interstep.py
-py:class  Builder
+py:class  aiida.work.interstep.Builder

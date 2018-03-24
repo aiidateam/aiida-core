@@ -12,6 +12,8 @@ SPHINXAPIDOC  = sphinx-apidoc
 APIDOCDIR     = source/apidoc
 PACKAGEDIR    = ../aiida
 ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private --force
+# See https://stackoverflow.com/a/30144019
+AUTOMODULE_OPTIONS = 'members,special-members,private-members,undoc-members,show-inheritance'
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -29,7 +31,7 @@ all: apidoc html
 
 # Added for sphinx-apidoc
 apidoc:
-	$(SPHINXAPIDOC) $(ALLAPIDOCOPTS)
+	SPHINX_APIDOC_OPTIONS=$(AUTOMODULE_OPTIONS) $(SPHINXAPIDOC) $(ALLAPIDOCOPTS)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"

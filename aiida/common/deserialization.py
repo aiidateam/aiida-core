@@ -52,7 +52,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       from the number declared in the ival field).
 
     :return: the deserialized value
-    :raise DeserializationException: if an error occurs
+    :raise aiida.common.deserialization.DeserializationException: if an error occurs
     """
 
 

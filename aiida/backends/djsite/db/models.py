@@ -341,7 +341,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       from the number declared in the ival field).
 
     :return: the deserialized value
-    :raise DeserializationException: if an error occurs
+    :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
     """
     from aiida.utils.timezone import (
         is_naive, make_aware, get_current_timezone)

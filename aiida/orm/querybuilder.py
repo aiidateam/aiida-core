@@ -43,8 +43,7 @@ class QueryBuilder(object):
     """
     The class to query the AiiDA database. 
     
-    Usage:
-    .. code-block:: python
+    Usage::
 
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
@@ -52,6 +51,7 @@ class QueryBuilder(object):
         qb.append(Node)
         # retrieving the results:
         results = qb.all()
+
     """
 
     # This tag defines how edges are tagged (labeled) by the QueryBuilder default

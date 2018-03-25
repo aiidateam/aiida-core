@@ -844,7 +844,7 @@ class BandsData(KpointsData):
         Prepare a python script using matplotlib to plot the bands
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
 
@@ -866,7 +866,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os
@@ -1001,7 +1001,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os
@@ -1057,7 +1057,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os

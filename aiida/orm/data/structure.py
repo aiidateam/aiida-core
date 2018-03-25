@@ -1835,11 +1835,11 @@ class Kind(object):
 
         :param symbols: a single string for the symbol of this site, or a list
                    of symbol strings
-        :param weights (optional): the weights for each atomic species of
+        :param weights: (optional) the weights for each atomic species of
                    this site.
                    If only a single symbol is provided, then this value is
                    optional and the weight is set to 1.
-        :param mass (optional): the mass for this site in atomic mass units.
+        :param mass: (optional) the mass for this site in atomic mass units.
                    If not provided, the mass is set by the
                    self.reset_mass() function.
         :param name: a string that uniquely identifies the kind, and that

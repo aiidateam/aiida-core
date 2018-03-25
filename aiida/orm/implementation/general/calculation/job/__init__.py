@@ -1081,7 +1081,7 @@ class AbstractJobCalculation(AbstractCalculation):
             absolute times will be used.
         :param projections: The projections used in the calculation query
         :type projections: list
-        :type times_since: :class:`datetime.datetime`
+        :type times_since: :class:`!datetime.datetime`
         :return: A list of string with information about the calculation.
         """
         d = copy.deepcopy(res)
@@ -1136,7 +1136,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param str state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.

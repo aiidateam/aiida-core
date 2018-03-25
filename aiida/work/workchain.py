@@ -530,14 +530,17 @@ class _Block(_Instruction):
 class _Conditional(object):
     """
     Object that represents some condition with the corresponding body to be
-    executed if the condition is met e.g.:
-    if(condition):
-      body
+    executed if the condition.
+    
+    E.g. ::
 
-    or
+      if(condition):
+        body
 
-    while(condition):
-      body
+    or::
+
+      while(condition):
+        body
     """
 
     def __init__(self, parent, condition):
@@ -739,6 +742,7 @@ class _ReturnStepper(Stepper):
     def step(self):
         """
         Execute on step of the instructions.
+
         :return: A 2-tuple with entries:
             0. True if the stepper has finished, False otherwise
             1. The return value from the executed step

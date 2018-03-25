@@ -319,10 +319,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :param subitems: must be a dictionary of dictionaries. In the top-level dictionary,
       the key must be the key of the attribute, stripped of all prefixes
       (i.e., if the mainitem has key 'a.b' and we pass subitems
-        'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
-        It must be None if the value is not iterable (int, str,
-        float, ...).
-        It is an empty dictionary if there are no subitems.
+      'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
+      It must be None if the value is not iterable (int, str,
+      float, ...).
+      It is an empty dictionary if there are no subitems.
     :param sep: a string, the separator between subfields (to separate the
       name of a dictionary from the keys it contains, for instance)
     :param original_class: if these elements come from a specific subclass

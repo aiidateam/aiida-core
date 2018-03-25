@@ -130,13 +130,12 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     with name pkgname (must be importable), and prepends to the class name
     the string 'this_basename'.
 
-    If the name of the class complies with the syntax
-    AaaBbb
+    If the name of the class complies with the syntax 'AaaBbb',
     where Aaa is the capitalized name of the containing module (aaa), and
     Bbb is base_class.__name__, then only 'aaa' is returned instead of
-    'aaa.AaaBbb', to have a shorter name that is anyway accepted by the *Factory
-    functions. If suffix is provided, this is used for comparison (the 'Bbb'
-    string) rather than the base class name)
+    'aaa.AaaBbb'. This leads to a shorter name that is anyway accepted by the
+    corresponding Factory functions. If suffix is provided, this is used for
+    comparison (the 'Bbb' string) rather than the base class name.
 
     :param base_class: Identify all subclasses of the base_class
     :param pkgname: The name of the package in which you want to search
@@ -145,8 +144,8 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
     :param suffix: The suffix that is appended to the basename when looking
         for the (sub)class name. If not provided (or None), use the base
         class name.
-    :return: a list of valid strings, acceptable by the *Factory functions.
-       Does not return the class itself.
+    :return: a list of valid strings, acceptable by the corresponding Factory
+        functions. Does *not* return the class itself.
     """
     import inspect
 

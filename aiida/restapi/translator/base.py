@@ -506,18 +506,17 @@ class BaseTranslator(object):
 
     def _check_id_validity(self, id):
         """
-        Checks whether a id full id or id starting pattern) corresponds to
-         an object of the expected type,
+        Checks whether id corresponds to an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
         
-        :param id: id, or id starting pattern
+        :param id: id (or id starting pattern)
         
-        :return: True if id valid (invalid). If True, sets the
-            id filter attribute correctly
+        :return: True if id valid, False if invalid. If True, sets the id
+          filter attribute correctly
             
-        :raise: RestValidationError if No node is found or id pattern does
-        not identify a unique node
+        :raise RestValidationError: if no node is found or id pattern does
+          not identify a unique node
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 

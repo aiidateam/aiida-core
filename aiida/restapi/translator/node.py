@@ -279,12 +279,15 @@ class NodeTranslator(BaseTranslator):
 
     def _get_subclasses(self, parent=None, parent_class=None, recursive=True):
         """
-        Import all submodules of the package containing the present class,
-        including subpackages recursively, if specified.
-        :parent: package/class. If package look for the classes in submodules.
-            If class, it first looks for the package where it is contained
-        :parent_class: class of which to look for subclasses
-        :recursive: True/False (go recursively into submodules)
+        Import all submodules of the package containing the present class.
+        
+        Includes subpackages recursively, if specified.
+
+        :param parent: package/class. 
+            If package looks for the classes in submodules.
+            If class, first lookss for the package where it is contained
+        :param parent_class: class of which to look for subclasses
+        :param recursive: True/False (go recursively into submodules)
         """
 
         import pkgutil

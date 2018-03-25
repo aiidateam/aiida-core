@@ -532,7 +532,8 @@ class TrajectoryData(ArrayData):
             decided not to implement it at all but require it to be set
             explicitly.
 
-        .. usage::
+        Usage:
+        .. code-block:: python
 
             from aiida.orm.data.array.trajectory import TrajectoryData
 

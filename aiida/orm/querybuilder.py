@@ -41,7 +41,10 @@ from aiida.common.links import LinkType
 
 class QueryBuilder(object):
     """
-    QueryBuilder: The class to query the AiiDA database. Usage::
+    The class to query the AiiDA database. 
+    
+    Usage:
+    .. code-block:: python
 
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()

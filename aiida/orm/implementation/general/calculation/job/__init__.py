@@ -81,8 +81,8 @@ class AbstractJobCalculation(AbstractCalculation):
         defined in _init_internal_params.
 
         :note: It is a property because in this way, e.g. the
-        parser_name is taken from the actual subclass of calculation,
-        and not from the parent Calculation class
+          parser_name is taken from the actual subclass of calculation,
+          and not from the parent Calculation class
         """
         parent_dict = super(AbstractJobCalculation, self)._set_defaults
 
@@ -1038,7 +1038,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param since: The timepoint to get the last check time since.
         :return: A string indicating the elapsed period, or an information
-        message.
+          message.
         """
         from aiida.daemon.timestamps import get_last_daemon_timestamp
 
@@ -1416,7 +1416,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
-        Prepares the calculation folder with all inputs, ready to be copied to the cluster
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster.
+
         :param folder: a SandboxFolder, empty in input, that will be filled with
           calculation input files and the scheduling script.
         :param use_unstored_links: if set to True, it will the presubmit will

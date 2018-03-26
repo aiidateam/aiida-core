@@ -142,5 +142,5 @@ wcwidth==0.1.7
 Werkzeug==0.14.1
 wrapt==1.10.11
 yapf==0.19.0
--e git://github.com/muhrin/plumpy.git@349471363eb880d90f888d5dc338734e85871930#egg=plumpy
+-e git://github.com/muhrin/plumpy.git@d83c5365c2c84454b3f9c65a0db184b6a3c056d4#egg=plumpy
 -e git://github.com/muhrin/kiwipy.git@07dbeac1e0a7de41638e3e212823ddd3ab63b7fb#egg=kiwipy

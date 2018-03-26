@@ -7,6 +7,7 @@ import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.class_loader import CLASS_LOADER
+from aiida.work.persistence import AiiDAPersister
 
 __all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
@@ -154,14 +155,29 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
-class ExecuteProcessAction(plumpy.ExecuteProcessAction):
-    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False):
-        """
-        Calls through to the constructor of the plum ExecuteProcessAction while making sure that
-        any unstored nodes in the inputs are first stored and the data is then serialized
-        """
-        init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER, nowait=nowait)
+class ExecuteProcessAction(plumpy.Action):
+
+    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False, persister=None):
+        super(ExecuteProcessAction, self).__init__()
+        self._process_class = process_class
+        self._args = init_args or ()
+        self._kwargs = init_kwargs or {}
+        self._nowait = nowait
+
+        if persister is not None:
+            self._persister = persister
+        else:
+            self._persister = AiiDAPersister()
+
+    def execute(self, publisher):
+        proc = self._process_class(*self._args, **self._kwargs)
+        self._persister.save_checkpoint(proc)
+        proc.close()
+
+        continue_action = plumpy.ContinueProcessAction(proc.calc.pk, play=True)
+        continue_action.execute(publisher)
+
+        self.set_result(proc.calc.pk)
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
@@ -261,7 +277,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
         action.execute(self._communicator)
         self._communicator.await(action)
-        return action.get_launch_future().result()
+        return action.result()
 
     def execute_action(self, action):
         action.execute(self._communicator)

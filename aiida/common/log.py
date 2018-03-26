@@ -83,7 +83,7 @@ LOGGING = {
                       '%(thread)d %(message)s',
         },
         'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
+            'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },

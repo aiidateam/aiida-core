@@ -1,5 +1,5 @@
-aiida.transport documentation
-=============================
+Transport plugins
+=================
 
 .. toctree::
    :maxdepth: 2
@@ -35,7 +35,7 @@ Existing plugins
 Developing a plugin
 -------------------
 
-The transport class is actually almost never used in first person by the user.
+The transport class is actually almost never used directly by the user.
 It is mostly utilized by the ExecutionManager, that use the transport plugin to connect to the remote computer to manage the calculation.
 The ExecutionManager has to be able to use always the same function, or the same interface, regardless of which kind of connection is actually really using. 
 

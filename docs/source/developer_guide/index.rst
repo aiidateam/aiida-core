@@ -14,6 +14,7 @@ Developer's guide
    dev_workflow
    devel_tutorial/parser_warnings_policy
    devel_tutorial/extend_restapi
+   transport
    workflows
    data_cmdline
    tcod_exporter

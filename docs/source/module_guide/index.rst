@@ -9,6 +9,4 @@ Modules (API documentation)
    ../transport/dev
    ../orm/dev
    ../parsers/dev
-   ../import_export/dbimporters/dev
-   ../import_export/dbexporters/dev
    ../developer_guide/control/postgres.rst

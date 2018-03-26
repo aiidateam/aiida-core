@@ -159,10 +159,13 @@ class Process(plumpy.Process):
         else:
             self._pid = self._create_and_setup_db_record()
 
+        self.calc.logger.info('Loaded process<{}> from saved state'.format(self.calc.pk))
+
     def kill(self, msg=None):
         """
         Kill the process and all the children calculations it called
         """
+        self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
         result = super(Process, self).kill(msg)
 
         for child in self.calc.called:
@@ -192,7 +195,7 @@ class Process(plumpy.Process):
         super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
         self.update_node_state(state)
-        if self._enable_persistence and not state.is_terminal():
+        if self._enable_persistence and not state.is_terminal() and not state.label == ProcessState.CREATED:
             self.call_soon(self.runner.persister.save_checkpoint, self)
 
     @override
@@ -212,6 +215,7 @@ class Process(plumpy.Process):
         except exceptions.ModificationNotAllowed:
             pass
 
+    @override
     def on_except(self, exc_info):
         """
         Log the exception by calling the report method with formatted stack trace from exception info object
@@ -226,15 +230,6 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_finish(result, successful)
         self.calc._set_finish_status(result)
-
-    @override
-    def on_fail(self, exc_info):
-        """
-        Format the exception info into a string and log it as an error
-        """
-        super(Process, self).on_fail(exc_info)
-        exception = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error('{} failed:\n{}'.format(self.pid, ''.join(exception)))
 
     @override
     def on_output_emitting(self, output_port, value):

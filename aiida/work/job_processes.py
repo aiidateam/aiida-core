@@ -166,6 +166,7 @@ class KillJob(TransportTask):
 
         if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
             calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(job_states.DONE)
             calc.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(calc.pk, calc_state))
             return True
@@ -188,9 +189,7 @@ class KillJob(TransportTask):
         else:
             calc._set_state(calc_states.FAILED)
             calc._set_scheduler_state(job_states.DONE)
-            calc.logger.warning(
-                "Calculation {} killed by the user "
-                "(it was {})".format(calc.pk, calc_states.WITHSCHEDULER))
+            calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
 
         return result
 

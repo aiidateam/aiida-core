@@ -5,19 +5,10 @@ Modules (API documentation)
    :maxdepth: 3
 
    aiida.common <../common/dev>
-   aiida.control <../developer_guide/control/dev>
    aiida.plugins <../registrytools/dev>
    ../transport/dev
-   ../scheduler/dev
-   ../cmdline/dev
-   ../execmanager/dev
-   ../djsite/dev
-   ../sqlalchemy/dev
    ../orm/dev
    ../parsers/dev
-   ../querying/querybuilder/dev
-   ../work/dev
    ../import_export/dbimporters/dev
    ../import_export/dbexporters/dev
-   ../testing/dev
-   ../tools/dev
+   ../developer_guide/control/postgres.rst

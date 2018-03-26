@@ -67,9 +67,9 @@ API reference
 +++++++++++++
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 5
 
-   API Documentation <apidoc/modules>
+   API Documentation <apidoc/aiida>
 
 
 Indices and tables

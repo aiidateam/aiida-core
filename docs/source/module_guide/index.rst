@@ -5,8 +5,6 @@ Modules (API documentation)
    :maxdepth: 3
 
    aiida.common <../common/dev>
-   aiida.plugins <../registrytools/dev>
    ../transport/dev
    ../orm/dev
-   ../parsers/dev
    ../developer_guide/control/postgres.rst

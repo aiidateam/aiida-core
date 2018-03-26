@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
+Cached information for each plugin.
+
 This module and the RegistryEntry class should be the sole
 location for the (implicit) definition of the registry format.
 """

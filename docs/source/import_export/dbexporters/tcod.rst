@@ -9,7 +9,7 @@ TCOD database exporter is used to export computation results of
 `Theoretical Crystallography Open Database`_ (TCOD).
 
 .. note:: The TCOD also accepts a number of code-specific outputs.
-   The corresponding :py:class:`~aiida.tools.dbexporters.tcod_plugins` live
+   The corresponding :py:mod:`~aiida.tools.dbexporters.tcod_plugins` live
    typically in other repositories, see e.g. the 
    `TCOD pluginf for Quantum ESPRESSO <http://aiida-quantumespresso.readthedocs.io/en/latest/module_guide/tcod_dbexporter.html#pw>`_.
 

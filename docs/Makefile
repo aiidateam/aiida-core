@@ -12,7 +12,7 @@ SPHINXAPIDOC  = sphinx-apidoc
 APIDOCDIR     = source/apidoc
 PACKAGEDIR    = ../aiida
 ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private --force --no-headings
-ALLAPIDOCOPTS += --module-first --no-toc --maxdepth 5
+ALLAPIDOCOPTS += --module-first --no-toc --maxdepth 4
 # See https://stackoverflow.com/a/30144019
 AUTOMODULE_OPTIONS = 'members,special-members,private-members,undoc-members,show-inheritance'
 

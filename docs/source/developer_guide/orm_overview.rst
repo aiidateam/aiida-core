@@ -4,8 +4,6 @@ ORM documentation: generic aiida.orm
 .. toctree::
    :maxdepth: 3
 
-This section describes the aiida object-relational mapping.
-
 Some generic methods of the module aiida.orm.utils
 
 .. automodule:: aiida.orm.utils

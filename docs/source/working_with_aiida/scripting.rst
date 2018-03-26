@@ -24,7 +24,7 @@ modules/classes are already loaded and available::
 
 A further advantage is that bash completion is enabled, allowing to press the 
 ``TAB`` key to see available submethods of a given object (see for instance
-the documentation of the :doc:`ResultManager <../orm/resultmanager>`).
+the documentation of the :doc:`ResultManager <../working_with_aiida/resultmanager>`).
 
 .. _writing_python_scripts_for_aiida:
 

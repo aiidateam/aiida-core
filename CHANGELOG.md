@@ -1,19 +1,22 @@
-# v0.11.3
+## v0.11.3
 
 ### Improvements
-- Documentation: AiiDA now has an automatically generated and complete API documentation (using sphinx-apidoc) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
-- Add json schema for connection of REST API to Materials Cloud Explore interface  [[#1336]](https://github.com/aiidateam/aiida_core/pull/1336)
+- Documentation: AiiDA now has an automatically generated and complete API documentation (using `sphinx-apidoc`) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
+- Add JSON schema for connection of REST API to Materials Cloud Explore interface  [[#1336]](https://github.com/aiidateam/aiida_core/pull/1336)
+
+### Critical bug fixes
+- `FINISHED_KEY` and `FAILED_KEY` variables were not known to `AbstractCalculation` [[#1314]](https://github.com/aiidateam/aiida_core/pull/1314)
 
 ### Minor bug fixes
-- make 'REST' extra lowercase, s.th. one can do `pip install aiida-core[rest]` [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
-- CifData /visualization endpoint was not returning data [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
+- Make 'REST' extra lowercase, such that one can do `pip install aiida-core[rest]` [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
+- `CifData` `/visualization` endpoint was not returning data [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
 
 ### Deprecations
-- QueryTool (was deprecated in favor of QueryBuilder since v0.8.0) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
+- `QueryTool` (was deprecated in favor of `QueryBuilder` since v0.8.0) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
 
 ### Miscellaneous
-- add gource config for video of development history [[#1337]](https://github.com/aiidateam/aiida_core/pull/1337)
-- move `FINISHED_KEY` and `FAILED_KEY` to `AbstractCalculation` [[#1314]](https://github.com/aiidateam/aiida_core/pull/1314)
+- Add `gource` config for generating a video of development history [[#1337]](https://github.com/aiidateam/aiida_core/pull/1337)
+
 
 ## v0.11.2:
 

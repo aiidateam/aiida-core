@@ -264,7 +264,7 @@ class Process(plum.process.Process):
         :param output_port: The output port name the value was emitted on
         :param value: The value emitted
         :param dynamic: Was the output port a dynamic one (i.e. not known
-        beforehand?)
+          beforehand?)
         """
         from aiida.orm import Data
         super(Process, self)._on_output_emitted(output_port, value, dynamic)

@@ -83,7 +83,7 @@ class FixtureManager(object):
     Manage the life cycle of a completely separated and temporary AiiDA environment
 
     * No previously created database of profile is required to run tests using this
-    environment
+      environment
     * Tests using this environment will never pollute the user's work environment
 
     Example::

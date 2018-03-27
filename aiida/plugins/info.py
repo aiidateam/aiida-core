@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-utilities to provide information about available plugins
+Utilities for high-level querying of available plugins.
 
+These tools read information from the cached registry.
 The plugin registry (in cache) is expected to be a dict where
 the keys are base entry point names of plugins (unique for registered plugins)
 

@@ -96,7 +96,7 @@ extras_require = {
     ],
     # Requirements to buiilding documentation
     'docs': [
-        'Sphinx==1.5.2',
+        'Sphinx==1.7.2',
         'Pygments==2.2.0',
         'docutils==0.13.1',
         'Jinja2==2.9.5',

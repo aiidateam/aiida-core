@@ -27,7 +27,7 @@ class Savable(object):
         Create the wait on from a save instance state.
 
         :param saved_state: The saved instance state
-        :type saved_state: :class:`plum.persistence.Bundle`
+        :type saved_state: :class:`!plum.persistence.Bundle`
         :return: The wait on with its state as it was when it was saved
         """
         obj = cls.__new__(cls)
@@ -57,7 +57,7 @@ class Interstep(Savable):
         Called when the last step has finished
 
         :param workchain: The workchain this interstep belongs to
-        :type workchain: :class:`WorkChain`
+        :type workchain: :class:`!aiida.work.WorkChain`
         """
         pass
 
@@ -66,7 +66,7 @@ class Interstep(Savable):
         Called when the next step is about to start
 
         :param workchain: The workchain this interstep belongs to
-        :type workchain: :class:`WorkChain`
+        :type workchain: :class:`!aiida.work.WorkChain`
         """
         pass
 
@@ -163,7 +163,8 @@ class Assign(UpdateContext):
         """
         Assigns the result stored in the action in the key of the workchain context
 
-        :param workchain: instance of WorkChain whose context should be updated
+        :param workchain: WorkChain whose context should be updated
+        :type workchain: :class:`!aiida.work.WorkChain`
         """
         fn = get_object_from_string(self._action.fn)
         key = self._key
@@ -186,7 +187,8 @@ class Append(UpdateContext):
         """
         Appends the result stored in the action in the key of the workchain context
 
-        :param workchain: instance of WorkChain whose context should be updated
+        :param workchain: WorkChain whose context should be updated
+        :type workchain: :class:`!aiida.work.WorkChain`
         """
         fn = get_object_from_string(self._action.fn)
         key = self._key
@@ -285,7 +287,7 @@ def load_with_classloader(bundle):
 
     :param bundle: The saved instance state bundle
     :return: The process instance
-    :rtype: :class:`Process`
+    :rtype: :class:`aiida.work.process.Process`
     """
     # Get the class using the class loader and instantiate it
     class_name = bundle['class_name']

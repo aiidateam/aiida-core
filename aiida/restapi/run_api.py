@@ -26,9 +26,9 @@ def run_api(App, Api, *args, **kwargs):
     App: Class inheriting from Flask app class  
     Api = flask_restful API class to be used to wrap the app
 
-    *args: required by argparse
+    args: required by argparse
 
-    *kwargs:
+    kwargs:
     List of valid parameters:
     prog_name: name of the command before arguments are parsed. Useful when
     api is embedded in a command, such as verdi restapi

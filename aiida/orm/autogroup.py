@@ -166,8 +166,9 @@ class Autogroup(object):
 
     def is_to_be_grouped(self, the_class):
         """
-        :return (bool): Returns True if the_class has to be included in the autogroup,
-        according to which classes are specified in the include/exclude lists
+        Return whether the given class has to be included in the autogroup according to include/exclude list
+
+        :return (bool): True if the_class is to be included in the autogroup
         """
         include = self.get_include()
         include_ws = self.get_include_with_subclasses()

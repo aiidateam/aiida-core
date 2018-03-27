@@ -67,16 +67,17 @@ class PbsJobResource(NodeNumberJobResource):
     def __init__(self, *args, **kwargs):
         """
         It extends the base class init method and calculates the 
-        num_cores_per_machine fields to pass to PBSlike schedulars.
+        num_cores_per_machine fields to pass to PBSlike schedulers.
         
-        * Ckeck: num_cores_per_machine should be a multiple of
+        Checks that num_cores_per_machine is a multiple of
         num_cores_per_mpiproc and/or num_mpiprocs_per_machine 
         
-        * Check sequence:
+        Check sequence 
+
         1. If num_cores_per_mpiproc and num_cores_per_machine both are 
-        specified check whether it satisfies the check
+           specified check whether it satisfies the check
         2. If only num_cores_per_mpiproc is passed, calculate 
-        num_cores_per_machine
+           num_cores_per_machine
         3. If only num_cores_per_machine is passed, use it
         """  
 	super(PbsJobResource, self).__init__(*args, **kwargs)

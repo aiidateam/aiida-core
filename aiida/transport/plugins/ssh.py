@@ -385,14 +385,15 @@ class SshTransport(aiida.transport.Transport):
         Initialize the SshTransport class.
         
         :param machine: the machine to connect to
-        :param load_system_host_keys: (optional, default False): if False, do not
-                load the system host keys
-        :param key_policy: (optional, default = paramiko.RejectPolicy()): the
-                policy to use for unknown keys
+        :param load_system_host_keys: (optional, default False)
+           if False, do not load the system host keys
+        :param key_policy: (optional, default = paramiko.RejectPolicy())
+           the policy to use for unknown keys
+
         Other parameters valid for the ssh connect function (see the 
         self._valid_connect_params list) are passed to the connect
         function (as port, username, password, ...); taken from the
-        accepted paramiko.SSHClient.connect() params)
+        accepted paramiko.SSHClient.connect() params.
         """
         super(SshTransport,self).__init__()
 

@@ -105,7 +105,11 @@ class AiiDAPersister(plumpy.Persister):
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        bundle = Bundle(process, class_loader.CLASS_LOADER)
+        loader = class_loader.CLASS_LOADER
+
+        assert loader is not None, 'the class loader is not defined'
+
+        bundle = Bundle(process, loader)
         calc = process.calc
         calc._set_checkpoint(yaml.dump(bundle))
 

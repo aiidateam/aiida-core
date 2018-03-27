@@ -17,7 +17,7 @@ class TestSerialize(AiidaTestCase):
 
         data = {
             'test': 1,
-            'list': (1, 2, 3, node_a),
+            'list': [1, 2, 3, node_a],
             'dict': {
                 ('Si',): node_b,
                 'foo': 'bar'

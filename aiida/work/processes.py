@@ -132,8 +132,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
-                                 self.inputs.iteritems())
+        return itertools.ifilter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
 
     @override
     def load_instance_state(self, saved_state, load_context):
@@ -145,16 +144,8 @@ class Process(plumpy.Process):
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super(Process, self).load_instance_state(saved_state, load_context)
 
-        is_copy = saved_state.get('COPY', False)
-
         if self.SaveKeys.CALC_ID.value in saved_state:
-            if is_copy:
-                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-                self._calc = old.copy()
-                self._calc.store()
-            else:
-                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-
+            self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -178,9 +169,13 @@ class Process(plumpy.Process):
         if value is None:
             # In this case assume that output_port is the actual value and there
             # is just one return value
-            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
-        else:
-            return super(Process, self).out(output_port, value)
+            value = output_port
+            output_port = self.SINGLE_RETURN_LINKNAME
+
+        if isinstance(value, Node) and not value.is_stored:
+            value.store()
+
+        return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
         """

@@ -418,7 +418,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.plugins.entry_point import get_entry_from_class
+        from aiida.plugins.entry_point import get_entry_point_from_class
 
         try:
             calc = load_node(parsed_args.calc)
@@ -573,7 +573,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.plugins.entry_point import get_entry_from_class
+        from aiida.plugins.entry_point import get_entry_point_from_class
 
         try:
             calc = load_node(parsed_args.calc)

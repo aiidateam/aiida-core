@@ -176,7 +176,7 @@ class LocalTransport(Transport):
         Create a folder (directory) named path.
 
         :param path: name of the folder to create
-        :param ignore_existing: if True, does not give any error if the 
+        :param ignore_existing: if True, does not give any error if the
                 directory already exists
 
         :raise OSError: If the directory already exists.
@@ -362,7 +362,7 @@ class LocalTransport(Transport):
     def rmtree(self, path):
         """
         Remove tree as rm -r would do
-        
+
         :param path: a string to path
         """
         the_path = os.path.join(self.curdir, path)
@@ -593,7 +593,7 @@ class LocalTransport(Transport):
         :param source: path to local file
         :param destination: path to remote file
         :param dereference: follow symbolic links. Default = False
-        
+
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
         """
@@ -692,8 +692,11 @@ class LocalTransport(Transport):
         job to finish, use exec_command_wait.
         Otherwise, to end the process, use the proc.wait() method.
 
+        The subprocess is set to have a different process group than the
+        main process, so that it is shielded from signals sent to the parent.
+
         :param command: the command to execute
-        
+
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
@@ -705,16 +708,18 @@ class LocalTransport(Transport):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=self.getcwd())
+            cwd=self.getcwd(),
+            preexec_fn=os.setpgrp,
+        )
         return proc.stdin, proc.stdout, proc.stderr, proc
 
     def exec_command_wait(self, command, stdin=None):
         """
         Executes the specified command and waits for it to finish.
-        
+
         :param command: the command to execute
 
-        :return: a tuple with (return_value, stdout, stderr) where stdout and 
+        :return: a tuple with (return_value, stdout, stderr) where stdout and
                  stderr are strings.
         """
         local_stdin, local_stdout, local_stderr, local_proc = self._exec_command_internal(command)
@@ -762,7 +767,7 @@ class LocalTransport(Transport):
     def rename(self, src, dst):
         """
         Rename a file or folder from oldpath to newpath.
-        
+
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
@@ -782,9 +787,9 @@ class LocalTransport(Transport):
 
     def symlink(self, remotesource, remotedestination):
         """
-        Create a symbolic link between the remote source and the remote 
+        Create a symbolic link between the remote source and the remote
         destination
-        
+
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """

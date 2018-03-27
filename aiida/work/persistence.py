@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import logging
 import uritools
 import os.path
 import os
@@ -20,6 +21,7 @@ from aiida import orm
 from . import class_loader
 
 Bundle = plumpy.Bundle
+LOGGER = logging.getLogger(__name__)
 
 
 # If portalocker accepts my pull request to have this incorporated into the
@@ -98,10 +100,16 @@ class AiiDAPersister(plumpy.Persister):
     """
 
     def save_checkpoint(self, process, tag=None):
+        LOGGER.info('Persisting process<{}>'.format(process.pid))
+
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        bundle = Bundle(process, class_loader.CLASS_LOADER)
+        loader = class_loader.CLASS_LOADER
+
+        assert loader is not None, 'the class loader is not defined'
+
+        bundle = Bundle(process, loader)
         calc = process.calc
         calc._set_checkpoint(yaml.dump(bundle))
 

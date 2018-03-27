@@ -7,17 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import logging
 import signal
 from functools import partial
 
-from aiida.common.log import aiidalogger
 from aiida.common.log import configure_logging
 from aiida.daemon.client import DaemonClient
 from aiida.work.rmq import get_rmq_config
 from aiida.work import DaemonRunner, set_runner
 
 
-logger = aiidalogger.getChild(__name__)
+logger = logging.getLogger(__name__)
 
 DAEMON_LEGACY_WORKFLOW_INTERVAL = 30
 
@@ -60,7 +60,7 @@ def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):
     :param runner: the DaemonRunner instance to perform the callback
     :param interval: the number of seconds to wait between callbacks
     """
-    logger.info('Ticking the legacy workflows')
+    logger.debug('Ticking the legacy workflows')
     legacy_workflow_stepper()
     runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))
 
@@ -73,7 +73,7 @@ def legacy_workflow_stepper():
     from aiida.daemon.timestamps import set_daemon_timestamp, get_last_daemon_timestamp
     from aiida.daemon.workflowmanager import execute_steps
 
-    logger.info('Checking for workflows to manage')
+    logger.debug('Checking for workflows to manage')
     # RUDIMENTARY way to check if this task is already running (to avoid acting
     # again and again on the same workflow steps)
     try:
@@ -87,8 +87,8 @@ def legacy_workflow_stepper():
     if not stepper_is_running:
         set_daemon_timestamp(task_name='workflow', when='start')
         # The previous wf manager stopped already -> we can run a new one
-        logger.info('Running execute_steps')
+        logger.debug('Running execute_steps')
         execute_steps()
         set_daemon_timestamp(task_name='workflow', when='stop')
     else:
-        logger.info('Execute_steps already running')
+        logger.debug('Execute_steps already running')

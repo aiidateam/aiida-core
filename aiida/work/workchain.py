@@ -165,10 +165,10 @@ class WorkChain(processes.Process):
         """
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.CALCULATION:
-                fn = functools.partial(self.on_calculation_finished, awaitable)
+                fn = functools.partial(self._run_task, self.on_calculation_finished, awaitable)
                 self.runner.call_on_calculation_finish(awaitable.pk, fn)
             elif awaitable.target == AwaitableTarget.WORKFLOW:
-                fn = functools.partial(self.on_legacy_workflow_finished, awaitable)
+                fn = functools.partial(self._run_task, self.on_legacy_workflow_finished, awaitable)
                 self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)

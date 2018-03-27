@@ -203,6 +203,7 @@ class Runner(object):
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
+            process.close()
             self.rmq.continue_process(process.pid)
             return process.calc
         else:

@@ -462,7 +462,7 @@ class SshTransport(aiida.transport.Transport):
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
         if proxystring is not None:
-            proxy = paramiko.ProxyCommand(proxystring)
+            proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = proxy
 
         try:
@@ -1403,3 +1403,16 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
+
+
+class _DetachedProxyCommand(paramiko.ProxyCommand):
+    """
+    Modifies paramiko's ProxyCommand by launching the process in a separate process group.
+    """
+
+    def __init__(self, command_line):
+        from subprocess import Popen, PIPE
+        from shlex import split as shlsplit
+        self.cmd = shlsplit(command_line)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setpgrp)
+        self.timeout = None

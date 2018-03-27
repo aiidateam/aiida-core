@@ -44,6 +44,7 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
                       n_days_ago=None):
     """
     Get a list of workflow.
+
     :param user: A ORM User class if you want to filter by user
     :param pk_list: Limit the results to this list of PKs
     :param all_states: if False, limit results to "active" (e.g., running) wfs

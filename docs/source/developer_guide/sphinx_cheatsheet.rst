@@ -142,8 +142,8 @@ it is done for documents. For example the parser docs can be indexed like this
 .. toctree::
    :maxdepth: 1
 
-   aiida.orm <../orm/dev>
-   ../parsers/dev
+   aiida.orm <../apidoc/aiida.orm>
+   ../apidoc/aiida.utils
 
 
 Automodules Example
@@ -177,17 +177,18 @@ a few extra examples of use would include::
 Changing The Docs
 -----------------
 
-If you are creating a new .rst file, make sure to add it in
-the relevant index.rst tree. This can be done by:
+When creating a new ``.rst`` file, please:
+the relevant ``index.rst`` tree. This can be done by:
 
-* Modifying relevant doc strings or .rst files (be sure to modify them in the /doc/source/ folder and not /doc/build)
+* Modify relevant doc strings or ``.rst`` files in
+  the ``/docs/source/`` folder, not in ``/docs/build`` 
 
-* Making sure that all relevant .rst files are added
-  to the relevant index.rst file
+* Make sure that all relevant ``.rst`` files are added
+  to relevant ``index.rst`` files (table of contents)
 
-* Running `make html` in /aiida/docs/ folder
+* Run ``make all`` in the ``/docs/`` folder
 
-* Be sure to check for any warnings and correct if possible
+* Fix warnings, if any
 
 .. _this-page:
 

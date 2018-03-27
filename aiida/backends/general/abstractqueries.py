@@ -30,22 +30,25 @@ class AbstractQueryManager(object):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
+        :type state: str
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
         :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
-        :param bool only_computer_user_pairs: if False (default) return a queryset
+        :param only_computer_user_pairs: if False (default) return a queryset
                 where each element is a suitable instance of Node (it should
                 be an instance of Calculation, if everything goes right!)
                 If True, return only a list of tuples, where each tuple is
                 in the format
                 ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
-        :param int limit: Limit the number of rows returned
+        :type only_computer_user_pairs: bool
+        :param limit: Limit the number of rows returned
+        :type limit: int
 
         :return: a list of calculation objects matching the filters.
         """

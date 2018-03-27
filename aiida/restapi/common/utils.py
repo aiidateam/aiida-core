@@ -114,8 +114,9 @@ class Utils(object):
     def strip_prefix(self, path):
         """
         Removes the PREFIX from an URL path. PREFIX must be defined in the
-        config.py file.
-        Ex. PREFIX = "/api/v2"
+        config.py file::
+
+            PREFIX = "/api/v2"
             path = "/api/v2/calculations/page/2"
             strip_prefix(path) ==> "/calculations/page/2"
 
@@ -140,17 +141,16 @@ class Utils(object):
     def parse_path(self, path_string, parse_pk_uuid=None):
         """
         Takes the path and parse it checking its validity. Does not parse "io",
-        "content" fields. I do not check the validity of the path, since I
-        assume
+        "content" fields. I do not check the validity of the path, since I assume
         that this is done by the Flask routing methods.
   
         :param path_string: the path string
         :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid 
-        starting pattern) 
-        :return:resource_type (string)
-                page (integer)
-                id (string: uuid starting pattern, int: pk)
-                query_type (string))
+            starting pattern) 
+        :return: resource_type (string)
+            page (integer)
+            id (string: uuid starting pattern, int: pk)
+            query_type (string))
         """
 
         ## Initialization
@@ -333,15 +333,11 @@ class Utils(object):
 
     def build_headers(self, rel_pages=None, url=None, total_count=None):
         """
-        Construct the header dictionary for an HTTP response. It includes
-        related
-         pages, total count of results (before pagination).
-        :param rel_pages: a dictionary defining related pages (first, prev,
-        next,
-        last)
-        :param url: (string) the full url, i.e. the url that the client uses to
-        get Rest resources
-        :return:
+        Construct the header dictionary for an HTTP response. It includes related
+        pages, total count of results (before pagination).
+
+        :param rel_pages: a dictionary defining related pages (first, prev, next, last)
+        :param url: (string) the full url, i.e. the url that the client uses to get Rest resources
         """
 
         ## Type validation
@@ -413,10 +409,11 @@ class Utils(object):
 
     def build_response(self, status=200, headers=None, data=None):
         """
+        Build the response
 
         :param status: status of the response, e.g. 200=OK, 400=bad request
         :param headers: dictionary for additional header k,v pairs,
-        e.g. X-total-count=<number of rows resulting from query>
+            e.g. X-total-count=<number of rows resulting from query>
         :param data: a dictionary with the data returned by the Resource
         :return: a Flask response object
         """
@@ -492,10 +489,8 @@ class Utils(object):
         Takes a list of elements resulting from the parsing the query_string and
         elaborates them in order to provide translator-compliant instructions
 
-        :param field_list: a (nested) list of elements resulting from parsing
-        the
-        query_string
-        :return: the filters in the
+        :param field_list: a (nested) list of elements resulting from parsing the query_string
+        :returns: the filters in the
         """
 
         ## Create void variables

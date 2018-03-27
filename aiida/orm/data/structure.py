@@ -1267,7 +1267,7 @@ class StructureData(Data):
               until an unique name is found
 
         .. note :: checks of equality of species are done using
-          the :py:meth:`~Kind.compare_with` method.
+          the :py:meth:`~aiida.orm.data.structure.Kind.compare_with` method.
         """
         aseatom = kwargs.pop('ase', None)
         if aseatom is not None:
@@ -1835,11 +1835,11 @@ class Kind(object):
 
         :param symbols: a single string for the symbol of this site, or a list
                    of symbol strings
-        :param weights (optional): the weights for each atomic species of
+        :param weights: (optional) the weights for each atomic species of
                    this site.
                    If only a single symbol is provided, then this value is
                    optional and the weight is set to 1.
-        :param mass (optional): the mass for this site in atomic mass units.
+        :param mass: (optional) the mass for this site in atomic mass units.
                    If not provided, the mass is set by the
                    self.reset_mass() function.
         :param name: a string that uniquely identifies the kind, and that

@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-functionality to access / cache the plugin registry
+Utilities for low-level querying of plugins.
+
+Interface for operations that have to connect the 
+registry online and that operate on the cache folder.
 """
 
 

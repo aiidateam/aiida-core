@@ -1,3 +1,8 @@
+# v0.11.3
+
+- Remove QueryTool (was deprecated in favor of QueryBuilder since v0.8.0)
+
+
 ## v0.11.2:
 
 ### Critical bug fixes

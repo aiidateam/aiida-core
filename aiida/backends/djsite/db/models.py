@@ -13,14 +13,14 @@ from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
-    AbstractBaseUser, BaseUserManager, PermissionsMixin)
+    AbstractBaseUser, BaseUserManager, PermissionsMixin )
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
 from aiida.utils import timezone
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
+    ConfigurationError, DbContentError, MissingPluginError )
 
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
@@ -319,10 +319,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :param subitems: must be a dictionary of dictionaries. In the top-level dictionary,
       the key must be the key of the attribute, stripped of all prefixes
       (i.e., if the mainitem has key 'a.b' and we pass subitems
-        'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
-        It must be None if the value is not iterable (int, str,
-        float, ...).
-        It is an empty dictionary if there are no subitems.
+      'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
+      It must be None if the value is not iterable (int, str,
+      float, ...).
+      It is an empty dictionary if there are no subitems.
     :param sep: a string, the separator between subfields (to separate the
       name of a dictionary from the keys it contains, for instance)
     :param original_class: if these elements come from a specific subclass
@@ -341,7 +341,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       from the number declared in the ival field).
 
     :return: the deserialized value
-    :raise DeserializationError: if an error occurs
+    :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
     """
     from aiida.utils.timezone import (
         is_naive, make_aware, get_current_timezone)
@@ -1380,7 +1380,7 @@ class DbComputer(m.Model):
         """
         Return a DbComputer from its name (or from another Computer or DbComputer instance)
         """
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+        from django.core.exceptions import MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
         from aiida.orm.computer import Computer
 
@@ -1604,7 +1604,7 @@ class DbWorkflow(m.Model):
 
     def get_aiida_class(self):
         """
-        Return the corresponding aiida instance of class aiida.worflow
+        Return the corresponding aiida instance of class aiida.workflow
         """
         from aiida.orm.workflow import Workflow
 

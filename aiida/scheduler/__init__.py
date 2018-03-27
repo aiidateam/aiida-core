@@ -378,10 +378,11 @@ stderr:
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
+
         To be implemented by the plugin.
 
         :param str submit_script: the path of the submit script relative to the
-              working directory.
+            working directory.
             IMPORTANT: submit_script should be already escaped.
         :return: the string to execute to submit a given script.
         """

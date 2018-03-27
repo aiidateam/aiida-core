@@ -51,7 +51,7 @@ except NameError:
 # Note: this variable might disappear in the future
 REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
-if settings.IN_DOC_MODE:
+if settings.IN_RT_DOC_MODE:
     pass
 elif REPOSITORY_PROTOCOL == 'file':
     if not os.path.isdir(REPOSITORY_PATH):

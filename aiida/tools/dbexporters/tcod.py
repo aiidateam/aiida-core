@@ -372,15 +372,19 @@ def _inline_to_standalone_script(calc):
     """
     Create executable Python script for execution of inline script.
 
-    .. note:: the output bash script may not always be correct, since it
-        is simply formed from:
-        * contents of the file, which contains the original ``\*_inline``
-          function;
-        * call of the original ``\*_inline`` function with input nodes;
-        * storing of the output nodes.
-        Execution of generated bash script should result in
-        ModificationNotAllowed exception, since the nodes, that are
-        created by the ``\*_inline`` function, are already stored.
+    .. note:: 
+    
+       the output bash script may not always be correct, since it
+       is simply formed from:
+
+       * contents of the file, which contains the original ``\*_inline``
+         function;
+       * call of the original ``\*_inline`` function with input nodes;
+       * storing of the output nodes.
+
+       Execution of generated bash script should result in
+       ModificationNotAllowed exception, since the nodes, that are
+       created by the ``\*_inline`` function, are already stored.
     """
     input_dict = calc.get_inputs_dict()
     args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)

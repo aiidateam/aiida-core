@@ -48,7 +48,8 @@ class _SessionProperty(object):
 class _AiidaQuery(orm.Query):
 
     def __init__(self, *args, **kwargs):
-            super(_AiidaQuery, self).__init__(*args, **kwargs)
+        """Constructor"""
+        super(_AiidaQuery, self).__init__(*args, **kwargs)
 
     def __iter__(self):
         iterator = super(_AiidaQuery, self).__iter__()

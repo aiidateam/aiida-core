@@ -709,7 +709,7 @@ class LocalTransport(Transport):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
-            preexec_fn=os.setpgrp,
+            preexec_fn=os.setsid,
         )
         return proc.stdin, proc.stdout, proc.stderr, proc
 

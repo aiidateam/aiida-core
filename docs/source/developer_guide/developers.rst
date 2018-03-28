@@ -516,11 +516,11 @@ While the AiiDA daemon is running, interrupt signals (``SIGINT`` and ``SIGTERM``
 
     signal.signal(signal.SIGINT, print_foo)
 
-You should be aware of this while developing code which runs in the daemon. In particular, it's important when creating subprocesses. When a signal is sent, the whole process group receives that signal. As a result, the subprocess can be killed even though the Python main process captures the signal. This can be avoided by creating a new process group for the subprocess, meaning that it will not receive the signal. To do this, you need to pass ``preexec_fn=os.setpgrp`` to the ``subprocess`` function:
+You should be aware of this while developing code which runs in the daemon. In particular, it's important when creating subprocesses. When a signal is sent, the whole process group receives that signal. As a result, the subprocess can be killed even though the Python main process captures the signal. This can be avoided by creating a new process group for the subprocess, meaning that it will not receive the signal. To do this, you need to pass ``preexec_fn=os.setsid`` to the ``subprocess`` function:
 
 .. code:: python
 
     import os
     import subprocess
 
-    print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setpgrp))
+    print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setsid))

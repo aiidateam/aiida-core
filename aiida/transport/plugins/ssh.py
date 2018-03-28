@@ -1414,5 +1414,5 @@ class _DetachedProxyCommand(paramiko.ProxyCommand):
         from subprocess import Popen, PIPE
         from shlex import split as shlsplit
         self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setpgrp)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
         self.timeout = None

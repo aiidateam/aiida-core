@@ -323,7 +323,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     from aiida.common.utils import escape_for_bash
     psql_cmd = ['psql {options} -tc {}'.format(escape_for_bash(command), options=options)]
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
-    result = subprocess.check_output(sudo_su_psql, preexec_fn=os.setpgrp, **kwargs)
+    result = subprocess.check_output(sudo_su_psql, preexec_fn=os.setsid, **kwargs)
 
     if isinstance(result, str):
         result = result.strip().split('\n')

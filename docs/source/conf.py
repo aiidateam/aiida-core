@@ -30,6 +30,7 @@ sys.path.append( os.path.join( os.path.split(__file__)[0],
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 import aiida
+from aiida.backends import settings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -119,7 +120,9 @@ html_theme = 'default'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+#html_theme_options = {
+#    "navigation_depth": 5,
+#}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -231,6 +234,8 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# We set that we are in documentation mode - even for local compilation
+settings.IN_DOC_MODE = True
 
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed
 # from docs.readthedocs.org
@@ -252,8 +257,8 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
         load_dbenv()
 else:
     # Back-end settings for readthedocs online documentation.
-    from aiida.backends import settings
-    settings.IN_DOC_MODE = True
+    # from aiida.backends import settings
+    settings.IN_RT_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
 
@@ -340,62 +345,11 @@ epub_copyright = copyright
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
-nitpick_ignore = [
-    ('py:exc', 'ArithmeticError'),
-    ('py:exc', 'AssertionError'),
-    ('py:exc', 'AttributeError'),
-    ('py:exc', 'BaseException'),
-    ('py:exc', 'BufferError'),
-    ('py:exc', 'DeprecationWarning'),
-    ('py:exc', 'EOFError'),
-    ('py:exc', 'EnvironmentError'),
-    ('py:exc', 'Exception'),
-    ('py:exc', 'FloatingPointError'),
-    ('py:exc', 'FutureWarning'),
-    ('py:exc', 'GeneratorExit'),
-    ('py:exc', 'IOError'),
-    ('py:exc', 'ImportError'),
-    ('py:exc', 'ImportWarning'),
-    ('py:exc', 'IndentationError'),
-    ('py:exc', 'IndexError'),
-    ('py:exc', 'KeyError'),
-    ('py:exc', 'KeyboardInterrupt'),
-    ('py:exc', 'LookupError'),
-    ('py:exc', 'MemoryError'),
-    ('py:exc', 'NameError'),
-    ('py:exc', 'NotImplementedError'),
-    ('py:exc', 'OSError'),
-    ('py:exc', 'OverflowError'),
-    ('py:exc', 'PendingDeprecationWarning'),
-    ('py:exc', 'ReferenceError'),
-    ('py:exc', 'RuntimeError'),
-    ('py:exc', 'RuntimeWarning'),
-    ('py:exc', 'StandardError'),
-    ('py:exc', 'StopIteration'),
-    ('py:exc', 'SyntaxError'),
-    ('py:exc', 'SyntaxWarning'),
-    ('py:exc', 'SystemError'),
-    ('py:exc', 'SystemExit'),
-    ('py:exc', 'TabError'),
-    ('py:exc', 'TypeError'),
-    ('py:exc', 'UnboundLocalError'),
-    ('py:exc', 'UnicodeDecodeError'),
-    ('py:exc', 'UnicodeEncodeError'),
-    ('py:exc', 'UnicodeError'),
-    ('py:exc', 'UnicodeTranslateError'),
-    ('py:exc', 'UnicodeWarning'),
-    ('py:exc', 'UserWarning'),
-    ('py:exc', 'VMSError'),
-    ('py:exc', 'ValueError'),
-    ('py:exc', 'Warning'),
-    ('py:exc', 'WindowsError'),
-    ('py:exc', 'ZeroDivisionError'),
-    ('py:obj', 'str'),
-    ('py:obj', 'list'),
-    ('py:obj', 'tuple'),
-    ('py:obj', 'int'),
-    ('py:obj', 'float'),
-    ('py:obj', 'bool'),
-    ('py:obj', 'Mapping'),
-    ('py:obj', 'plum'),
-]
+nitpick_ignore = []
+
+for line in open('nitpick-exceptions'):
+    if line.strip() == "" or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, target))

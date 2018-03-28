@@ -81,7 +81,7 @@ extras_require = {
         'python-gssapi==0.6.4',
     ],
     # Requirements for RESTful API
-    'REST': [
+    'rest': [
         'Flask==0.10.1',
         'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.1',
@@ -98,7 +98,7 @@ extras_require = {
     ],
     # Requirements to buiilding documentation
     'docs': [
-        'Sphinx==1.5.2',
+        'Sphinx==1.7.2',
         'Pygments==2.2.0',
         'docutils==0.13.1',
         'Jinja2==2.9.5',
@@ -150,4 +150,4 @@ extras_require = {
 #    the requirements (and there is no easy way on our side to fix a specific
 #    installation order of dependencies)
 
-extras_require['testing'] += extras_require['REST'] + extras_require['atomic_tools']
+extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools']

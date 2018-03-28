@@ -66,5 +66,4 @@ The API docs are found at the following link: :ref:`aiida-autodocs-plugin-loader
 Registry Tools (aiida/plugins)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The registry tools API is located here: :ref:`aiida-autodocs-plugins`.
-
+See the API documentation in :py:mod:`aiida.plugins`.

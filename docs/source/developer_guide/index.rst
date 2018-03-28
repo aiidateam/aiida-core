@@ -8,8 +8,15 @@ Developer guide
     developers
     internals
     plugins/index
+    devel_tutorial/code_plugin_int_sum
+    devel_tutorial/code_plugin_float_sum
+    devel_tutorial/code_plugin_qe
+    devel_tutorial/cmdline_plugin
+    dev_workflow
     devel_tutorial/parser_warnings_policy
     devel_tutorial/extend_restapi
+    transport
+    workflows
     data_cmdline
     tcod_exporter
     git_cheatsheet
@@ -17,6 +24,5 @@ Developer guide
     aiida_sphinxext
     ../verdi/properties
     database_schema
-    control/index
     caching
     ../restapi/index

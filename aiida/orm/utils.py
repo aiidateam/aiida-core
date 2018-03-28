@@ -259,7 +259,6 @@ class BackendDelegateWithDefault(object):
     delegating functionality (i.e. calling through) to the backend class
     which will do the actual work.
 
-
     [1] https://en.wikipedia.org/wiki/Delegation_pattern
     """
     __metaclass__ = ABCMeta

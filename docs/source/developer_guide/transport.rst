@@ -1,5 +1,5 @@
-aiida.transport documentation
-=============================
+Transport plugins
+=================
 
 .. toctree::
    :maxdepth: 2
@@ -16,23 +16,26 @@ Generic transport class
 
 .. automodule:: aiida.transport
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 Existing plugins
 ----------------
 .. automodule:: aiida.transport.plugins.ssh
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 
 .. automodule:: aiida.transport.plugins.local
    :members:
+   :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 Developing a plugin
 -------------------
 
-The transport class is actually almost never used in first person by the user.
+The transport class is actually almost never used directly by the user.
 It is mostly utilized by the ExecutionManager, that use the transport plugin to connect to the remote computer to manage the calculation.
 The ExecutionManager has to be able to use always the same function, or the same interface, regardless of which kind of connection is actually really using. 
 

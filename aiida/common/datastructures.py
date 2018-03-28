@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-This module defines the main data structures used by the Calculation.
+This module defines the main data structures used by Calculations.
 """
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 

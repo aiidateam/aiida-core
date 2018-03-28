@@ -15,7 +15,7 @@ import aiida
 
 class DataTranslator(NodeTranslator):
     """
-    Translator relative to resource 'data' and aiida class Data
+    Translator relative to resource 'data' and aiida class `~aiida.orm.data.Data`
     """
 
     # A label associated to the present class (coincides with the resource name)

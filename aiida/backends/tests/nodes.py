@@ -2167,12 +2167,13 @@ class AnyValue(object):
         return True
 
 class TestNodeDeletion(AiidaTestCase):
+
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):
         """
         I get 2 lists of uuids
+
         :param list uuids_check_existence: The list of uuids that have to exist
-        :param list uuids_check_deleted:
-            The list of uuids that should not exist,
+        :param list uuids_check_deleted: The list of uuids that should not exist,
             I check that NotExistent is raised.
         """
         from aiida.common.exceptions import NotExistent
@@ -2183,6 +2184,7 @@ class TestNodeDeletion(AiidaTestCase):
             # I check that it raises
             with self.assertRaises(NotExistent):
                 load_node(uuid)
+
     def _create_calls_n_returns_graph(self):
         """
         Creates a complicated graph with a master with 1 inputs,

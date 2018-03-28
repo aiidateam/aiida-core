@@ -45,7 +45,7 @@ def make_aware(value, timezone=None, is_dst=None):
     """
 
     :param value: The datetime to make aware
-    :type value: :class:`datetime.datetime`
+    :type value: :class:`!datetime.datetime`
     :param timezone:
     :param is_dst:
     :return:

@@ -148,8 +148,8 @@ class AbstractJobCalculation(AbstractCalculation):
         defined in _init_internal_params.
 
         :note: It is a property because in this way, e.g. the
-        parser_name is taken from the actual subclass of calculation,
-        and not from the parent Calculation class
+          parser_name is taken from the actual subclass of calculation,
+          and not from the parent Calculation class
         """
         parent_dict = super(AbstractJobCalculation, self)._set_defaults
 
@@ -1124,7 +1124,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param since: The timepoint to get the last check time since.
         :return: A string indicating the elapsed period, or an information
-        message.
+          message.
         """
         from aiida.daemon.timestamps import get_last_daemon_timestamp
 
@@ -1162,12 +1162,11 @@ class AbstractJobCalculation(AbstractCalculation):
         Get a row of information about a calculation.
 
         :param res: Results from the calculations query.
-        :type res: dict
         :param times_since: Times are relative to this timepoint, if None then
             absolute times will be used.
         :param projections: The projections used in the calculation query
         :type projections: list
-        :type times_since: :class:`datetime.datetime`
+        :type times_since: :class:`!datetime.datetime`
         :return: A list of string with information about the calculation.
         """
         d = copy.deepcopy(res)
@@ -1249,7 +1248,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param str state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
@@ -1487,7 +1486,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
-        Prepares the calculation folder with all inputs, ready to be copied to the cluster
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster.
+
         :param folder: a SandboxFolder, empty in input, that will be filled with
           calculation input files and the scheduling script.
         :param use_unstored_links: if set to True, it will the presubmit will

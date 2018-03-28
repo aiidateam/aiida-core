@@ -533,6 +533,17 @@ That works the same for the extras.
 .. note::
     Comparisons in the attributes (extras) are also implicitly done by type.
 
+Filtering or projecting on lists works similar to dictionaries.
+You expand into the list using the dot (.) and afterwards adding the list-index.
+The example below filters KpointsData by the first index in the mesh of KpointsData=instance, and returns that same index in the list::
+
+    qb = QueryBuilder()
+    qb.append(
+        DataFactory('array.kpoints'),
+        project=['attributes.mesh.0'],
+        filters={'attributes.mesh.0':{'>':2}}
+    )
+
 Let's do a last example. You are familiar with the Quantum Espresso PWscf tutorial?
 Great, because this will be our use case here. (If not, you can find it on the
 `documentation of the aiida-quantumespresso package <http://aiida-quantumespresso.readthedocs.io/en/latest/user_guide/get_started/examples/pw_tutorial.html>`_.

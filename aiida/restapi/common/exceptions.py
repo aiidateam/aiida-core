@@ -14,7 +14,8 @@ specificity resides into the fact that they return a message that is embedded
 into the HTTP response.
 
 Example:
-.../api/v1/nodes/ ... (TODO compete this with an actual example)
+
+    .../api/v1/nodes/ ... (TODO compete this with an actual example)
 
 Other errors arising at deeper level, e.g. those raised by the QueryBuilder
 or internal errors, are not embedded into the HTTP response.

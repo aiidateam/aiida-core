@@ -253,9 +253,8 @@ class LsfScheduler(aiida.scheduler.Scheduler):
         """
         The command to report full information on existing jobs.
 
-        I separate the fields with the _field_separator string
-        order: jobnum, state, walltime, queue[=partition],
-               user, numnodes, numcores, title
+        Separates the fields with the _field_separator string order: 
+        jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
         from aiida.common.exceptions import FeatureNotAvailable
         

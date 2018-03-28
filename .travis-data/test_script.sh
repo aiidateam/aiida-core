@@ -5,9 +5,11 @@ set -ev
 
 case "$TEST_TYPE" in
     docs)
-        # Compile the docs (HTML format); -W to convert warnings in errors, 
+        # Compile the docs (HTML format); 
+        # -C change to 'docs' directory before doing anything
         # -n to warn about all missing references
-        SPHINXOPTS="-nW" make -C docs html
+        # -W to convert warnings in errors
+        SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
         # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon

@@ -102,7 +102,7 @@ Calculations
     :maxdepth: 4
 
     ../state/calculation_state
-    ../orm/resultmanager
+    resultmanager
 
 ==========
 Data types

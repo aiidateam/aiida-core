@@ -380,7 +380,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         it returns the no. of rows defined as default perpage option
         from database.
 
-        **** no.of pages = total no. of computers in database / perpage
+        no.of pages = total no. of computers in database / perpage
         "/page" acts as "/page/1?perpage=default_value"
 
         """
@@ -390,7 +390,7 @@ class RESTApiTestSuite(RESTApiTestCase):
 
     def test_computers_list_page_perpage(self):
         """
-        **** no.of pages = total no. of computers in database / perpage
+        no.of pages = total no. of computers in database / perpage
         Using this formula it returns the no. of rows for requested page
         """
         RESTApiTestCase.process_test(self, "computers",
@@ -399,7 +399,7 @@ class RESTApiTestSuite(RESTApiTestCase):
 
     def test_computers_list_page_perpage_exceed(self):
         """
-        **** no.of pages = total no. of computers in database / perpage
+        no.of pages = total no. of computers in database / perpage
 
         If we request the page which exceeds the total no. of pages then
         it would return the error message.
@@ -662,8 +662,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, limit and offset
 
         from aiida.common.exceptions import InputValidationError
-        RESTApiTestCase.node_exception(self, "/computers?aa=bb&id=2",
-                                       InputValidationError)
+        RESTApiTestCase.node_exception(self, "/computers?aa=bb&id=2", InputValidationError)
         """
         pass
 

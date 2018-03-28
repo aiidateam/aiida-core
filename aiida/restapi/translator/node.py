@@ -87,6 +87,7 @@ class NodeTranslator(BaseTranslator):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
+
         :param query_type:(string) the value assigned to either variable.
         """
 
@@ -142,9 +143,8 @@ class NodeTranslator(BaseTranslator):
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
         :param projections: dictionary with the projection. It is discarded
-        if query_type=='attributes'/'extras'
-        :param query_type: (string) specify the result or the content (
-        "attr")
+            if query_type=='attributes'/'extras'
+        :param query_type: (string) specify the result or the content ("attr")
         :param id: (integer) id of a specific node
         """
 
@@ -279,12 +279,15 @@ class NodeTranslator(BaseTranslator):
 
     def _get_subclasses(self, parent=None, parent_class=None, recursive=True):
         """
-        Import all submodules of the package containing the present class,
-        including subpackages recursively, if specified.
-        :parent: package/class. If package look for the classes in submodules.
-            If class, it first looks for the package where it is contained
-        :parent_class: class of which to look for subclasses
-        :recursive: True/False (go recursively into submodules)
+        Import all submodules of the package containing the present class.
+        
+        Includes subpackages recursively, if specified.
+
+        :param parent: package/class. 
+            If package looks for the classes in submodules.
+            If class, first lookss for the package where it is contained
+        :param parent_class: class of which to look for subclasses
+        :param recursive: True/False (go recursively into submodules)
         """
 
         import pkgutil
@@ -465,7 +468,7 @@ class NodeTranslator(BaseTranslator):
         Returns either a list of nodes or details of single node from database
 
         :return: either a list of nodes or the details of single node
-        from the database
+            from the database
         """
         if self._content_type is not None:
             return self._get_content()

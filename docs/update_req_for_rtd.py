@@ -27,7 +27,8 @@ def update_req_for_rtd(pre_commit):
     import setup_requirements
 
     req_for_rtd_lines = list(setup_requirements.extras_require['docs'] +
-                             setup_requirements.extras_require['rest'])
+                             setup_requirements.extras_require['rest'] +
+                             setup_requirements.extras_require['testing'])
 
     required_packages = list(setup_requirements.install_requires)
     for package in required_packages:

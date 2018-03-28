@@ -10,7 +10,7 @@ from aiida.work.class_loader import CLASS_LOADER
 from aiida.work.persistence import AiiDAPersister
 
 __all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
-           'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
+           'RemoteException', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel']
 
 
 RemoteException = plumpy.RemoteException
@@ -292,7 +292,7 @@ def new_control_panel():
     Create a new control panel based on the current profile configuration
 
     :return: A new control panel instance
-    :rtype: :py:class:`ProcessControlPanel`
+    :rtype: :py:class:`aiida.work.rmq.ProcessControlPanel`
     """
     prefix = get_rmq_prefix()
     connector = create_rmq_connector()
@@ -304,7 +304,7 @@ def new_blocking_control_panel():
     Create a new blocking control panel based on the current profile configuration
 
     :return: A new control panel instance
-    :rtype: :py:class:`BlockingProcessControlPanel`
+    :rtype: :py:class:`aiida.work.rmq.BlockingProcessControlPanel`
     """
     prefix = get_rmq_prefix()
     return BlockingProcessControlPanel(prefix)

@@ -80,6 +80,7 @@ py:obj bool
 py:obj float
 py:obj int
 py:obj str
+py:obj string
 py:obj tuple
 py:obj None
 

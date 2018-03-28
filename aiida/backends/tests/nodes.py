@@ -2172,8 +2172,8 @@ class TestNodeDeletion(AiidaTestCase):
         """
         I get 2 lists of uuids
 
-        :param list uuids_check_existence: The list of uuids that have to exist
-        :param list uuids_check_deleted: The list of uuids that should not exist,
+        :param uuids_check_existence: The list of uuids that have to exist
+        :param uuids_check_deleted: The list of uuids that should not exist,
             I check that NotExistent is raised.
         """
         from aiida.common.exceptions import NotExistent

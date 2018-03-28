@@ -28,6 +28,7 @@ class ProcessBuilderInputDefault(ProcessBuilderInput):
         return '{} [default]'.format(self._value.__str__())
 
 class ProcessBuilderInputDict(FixedFieldsAttributeDict):
+    """Input dictionary for process builder."""
 
     def __init__(self, port_namespace):
         self._valid_fields = port_namespace.keys()

@@ -292,7 +292,7 @@ def new_control_panel():
     Create a new control panel based on the current profile configuration
 
     :return: A new control panel instance
-    :rtype: :class:`ProcessControlPanel`
+    :rtype: :py:class:`ProcessControlPanel`
     """
     prefix = get_rmq_prefix()
     connector = create_rmq_connector()
@@ -304,7 +304,7 @@ def new_blocking_control_panel():
     Create a new blocking control panel based on the current profile configuration
 
     :return: A new control panel instance
-    :rtype: :class:`BlockingProcessControlPanel`
+    :rtype: :py:class:`BlockingProcessControlPanel`
     """
     prefix = get_rmq_prefix()
     return BlockingProcessControlPanel(prefix)

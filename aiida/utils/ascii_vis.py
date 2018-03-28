@@ -186,7 +186,8 @@ def calc_info(calc_node):
 
 def print_call_graph(calc_node, info_fn=calc_info):
     """
-    Print a tree like the POSIX tree command for the calculation call graph
+    Print a tree like the POSIX tree command for the calculation call graph.
+
     :param calc_node: The calculation node
     :param info_fn: An optional function that takes the node and returns a string
         of information to be displayed for each node.

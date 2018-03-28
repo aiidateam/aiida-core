@@ -57,6 +57,7 @@ py:class  object
 py:class  unittest.case.TestCase
 py:class  ABCMeta
 py:class  exceptions.Exception
+py:class  exceptions.ValueError
 py:class  exceptions.BaseException
 py:class  str
 py:class  tuple
@@ -66,10 +67,12 @@ py:class  bool
 py:class  basestring
 py:class  None
 py:class  type
+# this is required for metaclasses(?)
 py:class  __builtin__.bool
 py:class  __builtin__.float
 py:class  __builtin__.int
 py:class  __builtin__.str
+py:class  __builtin__.dict
 
 # python builtin objects
 py:obj basestring
@@ -87,6 +90,8 @@ py:class  abc.ABCMeta
 
 py:class  distutils.version.Version
 
+py:class  docutils.parsers.rst.Directive
+
 py:class  enum.Enum
 
 py:class  flask.app.Flask
@@ -99,6 +104,7 @@ py:class  frozenset
 py:class  logging.Filter
 py:class  logging.Handler
 py:class  logging.record
+py:class  logging.Logger
 
 py:class  plum.class_loader.ClassLoader
 py:class  plum.engine.parallel.MultithreadedEngine
@@ -111,6 +117,22 @@ py:class  plum.process_spec.ProcessSpec
 py:class  plum.wait.WaitOn
 py:class  plum.workflow.Workflow
 py:class  plum.workflow.WorkflowSpec
+
+py:class  plumpy.processes.Process
+py:class  plumpy.process_comms.ProcessLauncher
+py:class  plumpy.process_spec.ProcessSpec
+py:class  plumpy.Process
+py:class  plumpy.Communicator
+py:class  plumpy.Bundle
+py:class  plumpy.workchains.WorkChainSpec
+py:class  plumpy.persistence.Persister
+py:class  plumpy.ports.InputPort
+py:class  plumpy.ports.PortNamespace
+py:class  plumpy.utils.AttributesDict
+
+py:class  kiwipy.futures.Future
+
+py:class  tornado.concurrent.Future
 
 py:class  IPython.core.magic.Magics
 
@@ -136,8 +158,11 @@ py:class  sqlalchemy.ext.declarative.api.Base
 py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
+py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  portalocker.utils.Lock
+
+py:class  sphinx.ext.autodoc.ClassDocumenter
 
 py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
@@ -148,5 +173,5 @@ py:class  aiida.orm.utils.BackendDelegateWithDefault
 # strange class in work/interstep.py
 py:class  aiida.work.interstep.Builder
 py:class  Builder
-py:class  Data
+#py:class  Data
 py:meth   aiida.orm.group.Group.get_from_string

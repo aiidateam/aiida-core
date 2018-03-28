@@ -169,10 +169,7 @@ py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
 py:class  _abcoll.MutableSequence
 
+# backend-dependent implementation
 py:class  aiida.orm.node.Node
-py:class  aiida.orm.utils.BackendDelegateWithDefault
-# strange class in work/interstep.py
-py:class  aiida.work.interstep.Builder
-py:class  Builder
-#py:class  Data
+# This comes from ABCMeta
 py:meth   aiida.orm.group.Group.get_from_string

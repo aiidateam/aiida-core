@@ -12,7 +12,8 @@ from aiida.common.exceptions import InputValidationError, MultipleObjectsError, 
 from aiida.plugins.factory import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 
+           'load_node', 'load_workflow', 'BackendDelegateWithDefault']
 
 
 def CalculationFactory(entry_point):

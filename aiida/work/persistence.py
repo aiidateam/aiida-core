@@ -446,7 +446,6 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
 
         :param pks_mapping: The dictionary of node pks.
         :return: A dictionary with the loaded nodes.
-        :rtype: dict
         """
         from aiida.orm import load_node
 

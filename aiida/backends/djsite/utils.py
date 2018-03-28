@@ -206,3 +206,20 @@ def get_db_schema_version():
         return get_global_setting('db|schemaversion')
     except KeyError:
         return None
+
+
+def delete_nodes_and_connections_django(pks_to_delete):
+    """
+    Delete all nodes corresponding to pks in the input.
+    :param pks_to_delete: A list, tuple or set of pks that should be deleted.
+    """
+    from django.db import transaction
+    from django.db.models import Q
+    from aiida.backends.djsite.db import models
+    with transaction.atomic():
+        # Delete all links pointing to or from a given node
+        models.DbLink.objects.filter(
+            Q(input__in=pks_to_delete) |
+            Q(output__in=pks_to_delete)).delete()
+        # now delete nodes
+        models.DbNode.objects.filter(pk__in=pks_to_delete).delete()

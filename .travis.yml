@@ -40,11 +40,11 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
-    - pip install .[rest,docs,atomic_tools,testing,dev_precommit]
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[rest,docs,atomic_tools,testing,dev_precommit]; fi
 
 env:
 ## Build matrix to test both backends, and the docs
-## I still let it create the test backend for django 
+## I still let it create the test backend for django
 ## also when building the docs
 ## because otherwise the code would complain. Also, I need latex.
 - TEST_TYPE="pre-commit"

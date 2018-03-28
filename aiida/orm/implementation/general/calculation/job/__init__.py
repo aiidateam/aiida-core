@@ -17,7 +17,7 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.old_pluginloader import from_type_to_pluginclassname
-from aiida.common.utils import str_timedelta
+from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.utils import timezone
 
@@ -27,7 +27,6 @@ from aiida.utils import timezone
 # 'email_on_terminated',
 # 'rerunnable',
 # 'resourceLimits',
-
 
 _input_subfolder = 'raw_input'
 
@@ -41,6 +40,29 @@ class AbstractJobCalculation(AbstractCalculation):
     _updatable_attributes = AbstractCalculation._updatable_attributes + (
         'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
         'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
+    _cacheable = True
+
+    @classproperty
+    def _hash_ignored_attributes(cls):
+        # _updatable_attributes are ignored automatically.
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+            'queue_name',
+            'priority',
+            'max_wallclock_seconds',
+            'max_memory_kb',
+        ]
+
+    def get_hash(
+        self,
+        ignore_errors=True,
+        ignored_folder_content=('raw_input',),
+        **kwargs
+    ):
+        return super(AbstractJobCalculation, self).get_hash(
+            ignore_errors=ignore_errors,
+            ignored_folder_content=ignored_folder_content,
+            **kwargs
+        )
 
     @classmethod
     def process(cls):
@@ -100,11 +122,20 @@ class AbstractJobCalculation(AbstractCalculation):
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
         # I get here if the calculation was successfully stored.
-        self._set_state(calc_states.NEW)
+        # Set to new only if it is not already FINISHED (due to caching)
+        if not self.get_state() == calc_states.FINISHED:
+            self._set_state(calc_states.NEW)
 
         # Important to return self to allow the one-liner
         # c = Calculation().store()
         return self
+
+    def _add_outputs_from_cache(self, cache_node):
+        self._set_state(calc_states.PARSING)
+        super(AbstractJobCalculation, self)._add_outputs_from_cache(
+            cache_node=cache_node
+        )
+        self._set_state(cache_node.get_state())
 
     def _validate(self):
         """
@@ -625,16 +656,6 @@ class AbstractJobCalculation(AbstractCalculation):
             calc_states.PARSING
         ]
 
-    def has_finished(self):
-        """
-        Determine if the calculation is finished for whatever reason.
-        This may be because it finished successfully or because of a failure.
-
-        :return: True if the job has finished running, False otherwise.
-        :rtype: bool
-        """
-        return self.has_finished_ok() or self.has_failed()
-
     def has_finished_ok(self):
         """
         Get whether the calculation is in the FINISHED status.
@@ -734,7 +755,7 @@ class AbstractJobCalculation(AbstractCalculation):
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or 
+                if (not (isinstance(item[0], basestring)) or
                     not (isinstance(item[1], basestring)) or
                     not (isinstance(item[2], int))):
                     raise ValueError(
@@ -1076,7 +1097,6 @@ class AbstractJobCalculation(AbstractCalculation):
         Get a row of information about a calculation.
 
         :param res: Results from the calculations query.
-        :type res: dict
         :param times_since: Times are relative to this timepoint, if None then
             absolute times will be used.
         :param projections: The projections used in the calculation query

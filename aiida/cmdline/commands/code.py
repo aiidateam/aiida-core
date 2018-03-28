@@ -720,6 +720,7 @@ class Code(VerdiCommandWithSubcommands):
             qb.append(Computer, computer_of="code",
                       project=["name"],
                       filters=qb_computer_filters)
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
         # If there is no filter on computers
@@ -737,6 +738,7 @@ class Code(VerdiCommandWithSubcommands):
                       filters=qb_user_filters)
             qb.append(Computer, computer_of="code",
                       project=["name"])
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
             # Now print all the local codes. To get the local codes we ask
@@ -757,6 +759,7 @@ class Code(VerdiCommandWithSubcommands):
             qb.append(User, creator_of="code",
                       project=["email"],
                       filters=qb_user_filters)
+            qb.order_by({Code: {'id': 'asc'}})
             self.print_list_res(qb, show_owner)
 
     @staticmethod

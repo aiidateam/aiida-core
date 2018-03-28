@@ -415,6 +415,7 @@ class Utils(object):
         :param headers: dictionary for additional header k,v pairs,
             e.g. X-total-count=<number of rows resulting from query>
         :param data: a dictionary with the data returned by the Resource
+
         :return: a Flask response object
         """
 

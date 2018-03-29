@@ -263,6 +263,62 @@ else:
     settings.AIIDADB_PROFILE = "default"
 
 
+def run_apidoc(_):
+    """Runs sphinx-apidoc when building the documentation.
+
+    Needs to be done in conf.py in order to include the APIdoc in the
+    build on readthedocs.
+
+    See also https://github.com/rtfd/readthedocs.org/issues/1139
+    """
+    #add aiida to PATH, perhaps unnecessary
+    #sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+    cwd = os.path.abspath(os.path.dirname(__file__))
+    apidoc_dir = cwd + '/apidoc'
+    package_dir = cwd + '/../../aiida'
+
+    # In #1139, they suggest the route below, but for me this ends up
+    # calling sphinx-build, not sphinx-apidoc
+    #from sphinx.apidoc import main
+    #main([None, '-e', '-o', apidoc_dir, module_dir, '--force'])
+
+    import subprocess
+    cmd_path = 'sphinx-apidoc'
+    if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
+        # If we are, assemble the path manually
+        cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
+
+    options = [
+        '-o', apidoc_dir, package_dir,
+        '--private',
+        '--force',
+        '--no-headings',
+        '--module-first',
+        '--no-toc',
+        '--maxdepth', '4',
+    ]
+
+    env = os.environ.copy()
+    env["SPHINX_APIDOC_OPTIONS"] = 'members,special-members,private-members,undoc-members,show-inheritance'
+    subprocess.check_call([cmd_path] + options, env=env)
+
+def setup(app):
+    app.connect('builder-inited', run_apidoc)
+
+
+
+#    cur_dir = os.path.abspath(os.path.dirname(__file__))
+#
+#
+#    output_path = os.path.join(cur_dir)
+#+    cmd_path = 'sphinx-apidoc'
+#+    if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
+#+        # If we are, assemble the path manually
+#+        cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
+#+    subprocess.check_call([cmd_path, '-e', '-o', output_path, module, '--force'])
+#+
+
 # -- Options for manual page output --------------------------------------------
 
 # One entry per manual page. List of tuples

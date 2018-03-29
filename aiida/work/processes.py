@@ -48,6 +48,7 @@ class Process(plumpy.Process):
     __metaclass__ = abc.ABCMeta
 
     _spec_type = ProcessSpec
+    _calc_class = WorkCalculation
 
     SINGLE_RETURN_LINKNAME = 'return'
 
@@ -77,7 +78,7 @@ class Process(plumpy.Process):
         this process.
         :return: A calculation
         """
-        return WorkCalculation()
+        return cls._calc_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         self._runner = runner if runner is not None else get_runner()
@@ -131,8 +132,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
-                                 self.inputs.iteritems())
+        return itertools.ifilter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
 
     @override
     def load_instance_state(self, saved_state, load_context):
@@ -141,31 +141,41 @@ class Process(plumpy.Process):
         else:
             self._runner = get_runner()
 
-        load_context = load_context.copyextend(loop=self._runner.loop)
+        load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super(Process, self).load_instance_state(saved_state, load_context)
 
-        is_copy = saved_state.get('COPY', False)
-
         if self.SaveKeys.CALC_ID.value in saved_state:
-            if is_copy:
-                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-                self._calc = old.copy()
-                self._calc.store()
-            else:
-                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-
+            self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
+
+        self.calc.logger.info('Loaded process<{}> from saved state'.format(self.calc.pk))
+
+    def kill(self, msg=None):
+        """
+        Kill the process and all the children calculations it called
+        """
+        self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
+        result = super(Process, self).kill(msg)
+
+        for child in self.calc.called:
+            self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+
+        return result
 
     @override
     def out(self, output_port, value=None):
         if value is None:
             # In this case assume that output_port is the actual value and there
             # is just one return value
-            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
-        else:
-            return super(Process, self).out(output_port, value)
+            value = output_port
+            output_port = self.SINGLE_RETURN_LINKNAME
+
+        if isinstance(value, Node) and not value.is_stored:
+            value.store()
+
+        return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
         """
@@ -180,7 +190,7 @@ class Process(plumpy.Process):
         super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
         self.update_node_state(state)
-        if self._enable_persistence and not state.is_terminal():
+        if self._enable_persistence and not state.is_terminal() and not state.label == ProcessState.CREATED:
             self.call_soon(self.runner.persister.save_checkpoint, self)
 
     @override
@@ -200,6 +210,7 @@ class Process(plumpy.Process):
         except exceptions.ModificationNotAllowed:
             pass
 
+    @override
     def on_except(self, exc_info):
         """
         Log the exception by calling the report method with formatted stack trace from exception info object
@@ -214,15 +225,6 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_finish(result, successful)
         self.calc._set_finish_status(result)
-
-    @override
-    def on_fail(self, exc_info):
-        """
-        Format the exception info into a string and log it as an error
-        """
-        super(Process, self).on_fail(exc_info)
-        exception = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error('{} failed:\n{}'.format(self.pid, ''.join(exception)))
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -341,6 +343,7 @@ class Process(plumpy.Process):
         # Save the name of this process
         self.calc._set_process_state(None)
         self.calc._set_process_label(self.__class__.__name__)
+        self.calc._set_process_type(self.__class__)
 
         parent_calc = self.get_parent_calc()
 

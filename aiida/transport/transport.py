@@ -124,9 +124,9 @@ class Transport(object):
         """
         :return: a list of existing plugin names
         """
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        return all_plugins('transports')
+        return get_entry_point_names('aiida.transports')
 
     @classmethod
     def get_valid_auth_params(cls):
@@ -181,7 +181,7 @@ class Transport(object):
 
         :param str path: path to change working directory into.
         :raises: IOError, if the requested path does not exist
-        :rtype: string
+        :rtype: str
         """
         # #TODO: understand if we want this behavior: this is emulated
         # by paramiko, and we should emulate it also for the local

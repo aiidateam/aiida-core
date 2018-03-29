@@ -165,6 +165,7 @@ class Runner(object):
         return self._loop.run_sync(lambda: future)
 
     def close(self):
+        self.stop()
         if self._rmq_connector is not None:
             self._rmq_connector.disconnect()
 
@@ -202,6 +203,7 @@ class Runner(object):
         if self._rmq_submit:
             process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
+            process.close()
             self.rmq.continue_process(process.pid)
             return process.calc
         else:
@@ -253,7 +255,7 @@ class Runner(object):
         self._communicator = self._rmq._communicator
 
         # Establish RMQ connection
-        self._communicator.init()
+        self._communicator.connect()
 
     def _create_child_runner(self):
         return Runner(**self._kwargs)
@@ -273,6 +275,10 @@ class Runner(object):
 
 class DaemonRunner(Runner):
     """ Overwrites some of the behaviour of a runner to be daemon specific"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs['rmq_submit'] = True
+        super(DaemonRunner, self).__init__(*args, **kwargs)
 
     def _setup_rmq(self, url, prefix=None, testing_mode=False):
         super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)

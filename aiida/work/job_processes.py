@@ -17,6 +17,7 @@ from functools import partial
 import plumpy
 from plumpy.ports import PortNamespace
 from aiida.common.datastructures import calc_states
+from aiida.common.exceptions import (InvalidOperation, RemoteOperationError)
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
@@ -34,6 +35,7 @@ __all__ = ['JobProcess']
 SUBMIT_COMMAND = 'submit'
 UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
 RETRIEVE_COMMAND = 'retrieve'
+KILL_COMMAND = 'kill'
 
 
 class TransportTaskException(Exception):
@@ -44,6 +46,7 @@ class TransportTaskException(Exception):
 
 class TransportTask(plumpy.Future):
     """ A general task that requires transport """
+
     def __init__(self, calc_node, transport_queue):
         from aiida.orm.authinfo import AuthInfo
 
@@ -79,6 +82,12 @@ class UpdateSchedulerState(TransportTask):
     """ A task to update the scheduler state of a job calculation """
 
     def execute(self, transport):
+
+        # We are the only ones to set the calc state to COMPUTED, so if it is set here
+        # it was already completed in a previous task that got shutdown and reactioned
+        if self._calc.get_state() == calc_states.COMPUTED:
+            return True
+
         scheduler = self._calc.get_computer().get_scheduler()
         scheduler.set_transport(transport)
 
@@ -114,6 +123,7 @@ class UpdateSchedulerState(TransportTask):
                     u"a job after it has finished.")
 
             execmanager.update_job_calc_from_detailed_job_info(self._calc, detailed_job_info)
+
             self._calc._set_state(calc_states.COMPUTED)
 
         return job_done
@@ -134,32 +144,89 @@ class RetrieveJob(TransportTask):
             raise TransportTaskException(calc_states.RETRIEVALFAILED)
 
 
+class KillJob(TransportTask):
+
+    def execute(self, transport):
+        """
+        Kill a calculation on the cluster.
+
+        Can only be called if the calculation is in status WITHSCHEDULER.
+
+        The command tries to run the kill command as provided by the scheduler,
+        and raises an exception is something goes wrong.
+        No changes of calculation status are done (they will be done later by
+        the calculation manager).
+
+        .. todo: if the status is TOSUBMIT, check with some lock that it is not
+            actually being submitted at the same time in another thread.
+        """
+        calc = self._calc
+        job_id = calc.get_job_id()
+        calc_state = calc.get_state()
+
+        if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
+            calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(job_states.DONE)
+            calc.logger.warning("Calculation {} killed by the user "
+                                "(it was in {} state)".format(calc.pk, calc_state))
+            return True
+
+        if calc_state != calc_states.WITHSCHEDULER:
+            raise InvalidOperation("Cannot kill a calculation in {} state".format(calc_state))
+
+        # Get the scheduler plugin class and initialize it with the correct transport
+        scheduler = self._calc.get_computer().get_scheduler()
+        scheduler.set_transport(transport)
+
+        # Call the proper kill method for the job ID of this calculation
+        result = scheduler.kill(job_id)
+
+        # Raise error if something went wrong
+        if not result:
+            raise RemoteOperationError(
+                "An error occurred while trying to kill calculation {} (jobid {}), see log "
+                "(maybe the calculation already finished?)".format(calc.pk, job_id))
+        else:
+            calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(job_states.DONE)
+            calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
+
+        return result
+
+
 class Waiting(plumpy.Waiting):
     """
     The waiting state for the JobCalculation.
     """
+
     def __init__(self, process, done_callback, msg=None, data=None):
         super(Waiting, self).__init__(process, done_callback, msg, data)
-        self._task = None       # The currently running task
-        self._cancelling_future = None
+        self._task = None  # The currently running task
+        self._kill_future = None
+        self._action_handle = None
 
     def enter(self):
         super(Waiting, self).enter()
-        self.process.call_soon(self.action_command)
+        self._action_handle = self.process.call_soon(self.action_command)
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
         self._task = None
-        self._cancelling_future = None
-        self.process.call_soon(self.action_command)
+        self._kill_future = None
+        self._action_handle = self.process.call_soon(self.action_command)
 
     def exit(self):
         super(Waiting, self).exit()
-        if self._cancelling_future and not self._cancelling_future.done():
-            self._cancelling_future.set_result(False)
+        if self._action_handle and not self._action_handle.cancelled():
+            self._action_handle.cancel()
+        self._action_handle = None
 
     @tornado.gen.coroutine
     def action_command(self):
+        if self._kill_future:
+            yield self._do_kill()
+            return
+
         calc = self.process.calc
         transport_queue = self.process.runner.transport
 
@@ -168,39 +235,45 @@ class Waiting(plumpy.Waiting):
                 self._task = SubmitJob(calc, transport_queue)
                 yield self._task
 
-                # Now get scheduler updates
-                self.scheduler_update()
+                if self._kill_future:
+                    yield self._do_kill()
+                else:
+                    # Now get scheduler updates
+                    self.scheduler_update()
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
-                self._task = UpdateSchedulerState(calc, transport_queue)
-                job_done = yield self._task
+                job_done = False
+                # Keep geting scheduler updates until done
+                while not job_done:
+                    self._task = UpdateSchedulerState(calc, transport_queue)
+                    job_done = yield self._task
+                    if self._kill_future:
+                        yield self._do_kill()
+                        return
 
-                if job_done:
-                    # Done, go on to retrieve
-                    self.retrieve()
-                else:
-                    # Not done yet, keep getting updates
-                    self.scheduler_update()
+                # Done, go on to retrieve
+                self.retrieve()
 
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 retrieved_temporary_folder = tempfile.mkdtemp()
                 self._task = RetrieveJob(calc, transport_queue, retrieved_temporary_folder)
                 yield self._task
-                self.retrieved(retrieved_temporary_folder)
+
+                if self._kill_future:
+                    yield self._do_kill()
+                else:
+                    self.retrieved(retrieved_temporary_folder)
 
             else:
                 raise RuntimeError("Unknown waiting command")
 
         except TransportTaskException as exception:
-            # calc._set_state(exception.calc_state)
             finish_status = JobCalculationFinishStatus[exception.calc_state]
             self.finished(finish_status)
-        except plumpy.KilledError:
-            self.transition_to(processes.ProcessState.KILLED)
-            if self._cancelling_future is not None:
-                self._cancelling_future.set_result(True)
-                self._cancelling_future = None
+        except plumpy.CancelledError:
+            # A task was cancelled because the state (and process) is being killed
+            yield self._do_kill()
         except BaseException:
             exc_info = sys.exc_info()
             self.transition_to(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
@@ -208,6 +281,7 @@ class Waiting(plumpy.Waiting):
             self._task = None
 
     def scheduler_update(self):
+        assert self._kill_future is None, "Currently being killed"
         self.transition_to(
             processes.ProcessState.WAITING,
             None,
@@ -215,6 +289,7 @@ class Waiting(plumpy.Waiting):
             data=UPDATE_SCHEDULER_COMMAND)
 
     def retrieve(self):
+        assert self._kill_future is None, "Currently being killed"
         self.transition_to(
             processes.ProcessState.WAITING,
             None,
@@ -222,31 +297,51 @@ class Waiting(plumpy.Waiting):
             data=RETRIEVE_COMMAND)
 
     def retrieved(self, retrieved_temporary_folder):
+        assert self._kill_future is None, "Currently being killed"
         self.transition_to(
             processes.ProcessState.RUNNING,
             self.process.retrieved,
             retrieved_temporary_folder)
 
+    @tornado.gen.coroutine
+    def _do_kill(self):
+        self._task = KillJob(self.process.calc, self.process.runner.transport)
+        try:
+            killed = yield self._task
+        except (InvalidOperation, RemoteOperationError):
+            pass
+
+        self.transition_to(processes.ProcessState.KILLED, 'Got killed yo')
+        if self._kill_future is not None:
+            self._kill_future.set_result(True)
+            self._kill_future = None
+
     def finished(self, result):
         self.transition_to(processes.ProcessState.FINISHED, result)
 
-    def cancel(self, msg=None):
-        if self._cancelling_future is not None:
-            return self._cancelling_future
-        # Are we currently busy with a task?
-        if self._task is not None:
-            self._cancelling_future = plumpy.Future()
-            self._task.cancel()
-            return self._cancelling_future
+    def kill(self, msg=None):
+        if self._kill_future is not None:
+            return self._kill_future
         else:
-            return super(Waiting, self).cancel(msg)
+            if self.process.calc.get_state() in \
+                    [calc_states.NEW, calc_states.TOSUBMIT, calc_states.WITHSCHEDULER]:
+                self._kill_future = plumpy.Future()
+                # Are we currently busy with a task?
+                if self._task is not None and not self._task.done():
+                    # Cancel the task
+                    self._task.cancel()
+                return self._kill_future
+            else:
+                # Can't be killed
+                return False
 
 
 class JobProcess(processes.Process):
     TRANSPORT_OPERATION = 'TRANSPORT_OPERATION'
     CALC_NODE_LABEL = 'calc_node'
     OPTIONS_INPUT_LABEL = 'options'
-    _CALC_CLASS = None
+
+    _calc_class = None
 
     @classmethod
     def build(cls, calc_class):
@@ -290,14 +385,14 @@ class JobProcess(processes.Process):
             # Outputs
             spec.outputs.valid_type = Data
 
-        class_name = "{}_{}".format(cls.__name__, utils.class_name(calc_class))
+        class_name = '{}_{}'.format(cls.__name__, utils.class_name(calc_class))
 
         # Dynamically create the type for this Process
         return type(
             class_name, (cls,),
             {
                 plumpy.Process.define.__name__: classmethod(define),
-                '_CALC_CLASS': calc_class
+                '_calc_class': calc_class
             }
         )
 
@@ -317,7 +412,7 @@ class JobProcess(processes.Process):
 
     @override
     def get_or_create_db_record(self):
-        return self._CALC_CLASS()
+        return self._calc_class()
 
     @override
     def _setup_db_record(self):
@@ -325,6 +420,8 @@ class JobProcess(processes.Process):
         Link up all the retrospective provenance for this JobCalculation
         """
         from aiida.common.links import LinkType
+
+        self.calc._set_process_type(self._calc_class)
 
         # Set all the attributes using the setter methods
         for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
@@ -341,7 +438,7 @@ class JobProcess(processes.Process):
 
             # Call the 'use' methods to set up the data-calc links
             if isinstance(port, PortNamespace):
-                additional = self._CALC_CLASS._use_methods[name]['additional_parameter']
+                additional = self._calc_class._use_methods[name]['additional_parameter']
 
                 for k, v in input_value.iteritems():
                     try:
@@ -440,3 +537,8 @@ class ContinueJobCalculation(JobProcess):
 
     def get_or_create_db_record(self):
         return self.inputs._calc
+
+    @override
+    def _setup_db_record(self):
+        self._calc_class = self.inputs._calc.__class__
+        super(ContinueJobCalculation, self)._setup_db_record()

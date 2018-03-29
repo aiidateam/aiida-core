@@ -7,17 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from collections import namedtuple
-
-import aiida.orm
+from aiida.orm import load_node
 from . import runners
 from . import rmq
 from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
-
-RunningInfo = namedtuple("RunningInfo", ["type", "pid"])
 
 _persister = None
 
@@ -30,9 +25,8 @@ def submit(process_class, **inputs):
 
     # Use context manager to make sure connection is closed at end
     with rmq.new_blocking_control_panel() as control_panel:
-        pid = control_panel.execute_process_start(
-            process_class, init_kwargs={'inputs': inputs})
-        return aiida.orm.load_node(pid)
+        pid = control_panel.execute_process_start(process_class, init_kwargs={'inputs': inputs})
+        return load_node(pid)
 
 
 def run(process, *args, **inputs):

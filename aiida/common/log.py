@@ -76,14 +76,14 @@ class DBLogHandler(logging.Handler):
 # with the config.dictConfig method of python's logging module
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
                       '%(thread)d %(message)s',
         },
         'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
+            'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
@@ -115,9 +115,14 @@ LOGGING = {
             'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
+        'tornado': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.tornado_loglevel'),
+            'propagate': False,
+        },
         'plumpy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.plum_loglevel'),
+            'level': setup.get_property('logging.plumpy_loglevel'),
             'propagate': False,
         },
         'paramiko': {

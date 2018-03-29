@@ -460,6 +460,10 @@ class Node(AbstractNode):
         return self.dbnode.id
 
     @property
+    def process_type(self):
+        return self.dbnode.process_type
+
+    @property
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode

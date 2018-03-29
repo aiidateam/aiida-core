@@ -1,3 +1,47 @@
+## v0.11.3
+
+### Improvements
+- Documentation: AiiDA now has an automatically generated and complete API documentation (using `sphinx-apidoc`) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
+- Add JSON schema for connection of REST API to Materials Cloud Explore interface  [[#1336]](https://github.com/aiidateam/aiida_core/pull/1336)
+
+### Critical bug fixes
+- `FINISHED_KEY` and `FAILED_KEY` variables were not known to `AbstractCalculation` [[#1314]](https://github.com/aiidateam/aiida_core/pull/1314)
+
+### Minor bug fixes
+- Make 'REST' extra lowercase, such that one can do `pip install aiida-core[rest]` [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
+- `CifData` `/visualization` endpoint was not returning data [[#1328]](https://github.com/aiidateam/aiida_core/pull/1328)
+
+### Deprecations
+- `QueryTool` (was deprecated in favor of `QueryBuilder` since v0.8.0) [[#1330]](https://github.com/aiidateam/aiida_core/pull/1330)
+
+### Miscellaneous
+- Add `gource` config for generating a video of development history [[#1337]](https://github.com/aiidateam/aiida_core/pull/1337)
+
+
+## v0.11.2:
+
+### Critical bug fixes
+- Link types were not respected in `Node.get_inputs` for SqlAlchemy [[#1271]](https://github.com/aiidateam/aiida_core/pull/1271)
+
+
+## v0.11.1:
+
+### Improvements
+- Support visualization of structures and cif files with VESTA [[#1093]](https://github.com/aiidateam/aiida_core/pull/1093)
+- Better fallback when node class is not available [[#1185]](https://github.com/aiidateam/aiida_core/pull/1185)
+- `CifData` now supports faster parsing and lazy loading [[#1190]](https://github.com/aiidateam/aiida_core/pull/1190)
+- REST endpoint for `CifData`, API reports full list of available endpoints [[#1228]](https://github.com/aiidateam/aiida_core/pull/1228)
+- Various smaller improvements [[#1100]](https://github.com/aiidateam/aiida_core/pull/1100) [[#1182]](https://github.com/aiidateam/aiida_core/pull/1182)
+
+### Critical bug fixes
+- Restore attribute immutability in nodes [[#1111]](https://github.com/aiidateam/aiida_core/pull/1111)
+- Fix daemonization issue that could cause aiida daemon to be killed [[#1246]](https://github.com/aiidateam/aiida_core/pull/1246)
+
+### Minor bug fixes
+- Fix type column in `verdi calculation list` [[#960]](https://github.com/aiidateam/aiida_core/pull/960) [[#1053]](https://github.com/aiidateam/aiida_core/pull/1053)
+- Fix `verdi import` from URLs [[#1139]](https://github.com/aiidateam/aiida_core/pull/1139)
+
+
 ## v0.11.0:
 
 ### Improvements
@@ -52,6 +96,7 @@
 ### Minor bug fixes
 - Various bug fixes related to workflows for the SQLAlchemy backend [[#952]](https://github.com/aiidateam/aiida_core/pull/952) [[#960]](https://github.com/aiidateam/aiida_core/pull/960)
 
+
 ## v0.10.0:
 
 ### Major changes
@@ -96,7 +141,6 @@
 - Added a "quickstart" to plugin development in the [documentation](http://aiida-core.readthedocs.io/en/v0.10.0/developer_guide/plugins/quickstart.html),
   structured around the new [plugintemplate](https://github.com/aiidateam/aiida-plugin-template) [[#818]](https://github.com/aiidateam/aiida_core/pull/818)
 - Improved and restructured the developer documentation [[#818]](https://github.com/aiidateam/aiida_core/pull/818)
-
 
 
 ## v0.9.1:
@@ -187,6 +231,7 @@
 ## General
 - Added dependency on six to properly re-raise exceptions
 
+
 ## v0.8.0
 
 ### Installation and setup
@@ -195,7 +240,6 @@ setuptools and pip
 - Verdi install replaced by verdi setup
 - New verdi command `quicksetup` to simplify the setup procedure
 - Significantly updated and improved the installation documentation
-
 
 ### General
 - Significantly increased test coverage and implemented for both backends
@@ -213,11 +257,9 @@ setuptools and pip
 - Migration of verdi cli to use the `QueryBuilder` in order to support both database backends
 - Added option `--project` to `verdi calculation list` to specify which attributes to print
 
-
 ### Documentation
 - Documentation is restructured to improve navigability
 - Added pseudopotential tutorial
-
 
 ### Database
 - Dropped support for MySQL and SQLite to fully support efficient features in Postgres like JSONB  
@@ -226,7 +268,6 @@ fields
 [added indices for daemon queries and node UUID queries]
 - Replace deprecated `commit_on_success` with atomic for Django transactions
 - Change of how SQLAlchemy internally uses the session and the engine to work also with forks (e.g. in celery)
-
 
 ### Workflows
 - Finalized the naming for the new workflow system from `workflows2` to `work`
@@ -254,7 +295,6 @@ fields
 (using e.g. matplotlib, mayavi)
 - Improved the TCODExporter (some fixes to adapt to changes of external libraries, added some  
 additional TCOD CIF tags, various bugfixes)
-
 
 ### Various fixes and improvements
 - Fix for the direct scheduler on Mac OS X
@@ -304,7 +344,6 @@ through the `verdi workflow2` command. The new workflows are easier to write (it
 writing python as possible), there is seamless mixing of short running tasks with long running  
 (remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of  
 workflows has been made easier and it is possible both in-IDE and through logging.
-
 
 ### List of changes:
 - Installation procedure works with SQLAlchemy backend too (SQLAlchemy option is still in beta).
@@ -414,11 +453,9 @@ followed (copied "as is").
 (i.e. directly call executable)
 
 ### verdi
-- Support for profiles added: it allows user to switch between database configurations using the  
-`verdi profile` command
+- Support for profiles added: it allows user to switch between database configurations using the `verdi profile` command
 - Added `verdi data structure import --file file.xyz` for importing XYZ
-- Added a `verdi data upf exportfamily` command (to export an upf pseudopotential family into a  
-folder)
+- Added a `verdi data upf exportfamily` command (to export an upf pseudopotential family into a folder)
 - Added new functionalities to the `verdi group` command (show list of nodes, add and remove nodes  
 from the command line)
 - Allowing verdi export command to take group PKs
@@ -428,9 +465,7 @@ from the command line)
 - Added filters on group name in `verdi group list`
 - Added possibility to load custom modules in the verdi shell (additional property  
 verdishell.modules created; can be set with `verdi devel setproperty verdishell.modules`)
-- Added `verdi data array show` command, using `json_date` serialization to display the contents  
-of `ArrayData`
+- Added `verdi data array show` command, using `json_date` serialization to display the contents of `ArrayData`
 - Added `verdi data trajectory deposit` command line command
 - Added command options `--computer` and `--code` to `verdi data * deposit`
-- Added a command line option `--all-users` for `verdi data * list` to list objects, owned by all  
-users
+- Added a command line option `--all-users` for `verdi data * list` to list objects, owned by all users

@@ -12,19 +12,17 @@ from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
+from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate
 
 
-def SchedulerFactory(module):
+def SchedulerFactory(entry_point):
     """
-    Used to load a suitable Scheduler subclass.
+    Return the Scheduler plugin class for a given entry point
 
-    :param str module: a string with the module name
-    :return: the scheduler subclass contained in module 'module'
+    :param entry_point: the entry point name of the Scheduler plugin
     """
-    from aiida.common.pluginloader import BaseFactory
-
-    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+    return BaseFactory('aiida.schedulers', entry_point)
 
 
 class SchedulerError(AiidaException):
@@ -64,9 +62,9 @@ class Scheduler(object):
 
     @classmethod
     def get_valid_schedulers(cls):
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        return all_plugins('schedulers')
+        return get_entry_point_names('aiida.schedulers')
 
     @classmethod
     def get_short_doc(cls):
@@ -367,10 +365,11 @@ stderr:
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
+
         To be implemented by the plugin.
 
         :param str submit_script: the path of the submit script relative to the
-              working directory.
+            working directory.
             IMPORTANT: submit_script should be already escaped.
         :return: the string to execute to submit a given script.
         """

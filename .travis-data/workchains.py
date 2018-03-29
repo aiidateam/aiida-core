@@ -104,7 +104,7 @@ class DynamicNonDbInput(WorkChain):
 
     def do_test(self):
         input_list = self.inputs.namespace.input
-        assert isinstance(input_list, tuple)
+        assert isinstance(input_list, list)
         assert not isinstance(input_list, List)
         self.out('output', List(list=list(input_list)))
 

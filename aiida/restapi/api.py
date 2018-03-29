@@ -85,13 +85,12 @@ class AiidaApi(Api):
         addition of resources with the parameters required to initialize the
         resource classes.
 
-        Args:
-            **kwargs: parameters to be passed to the resources for
-            configuration and PREFIX
+        :param kwargs: parameters to be passed to the resources for
+          configuration and PREFIX
         """
 
         from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
-            Group, Node, StructureData, KpointsData, BandsData, UpfData, ServerInfo
+            Group, Node, StructureData, KpointsData, BandsData, UpfData, CifData, ServerInfo
 
         self.app = app
 
@@ -286,12 +285,36 @@ class AiidaApi(Api):
                           resource_class_kwargs=kwargs
                           )
 
+
+        self.add_resource(CifData,
+                   '/cifs/',
+                   '/cifs/schema/',
+                   '/cifs/page/',
+                   '/cifs/page/<int:page>',
+                   '/cifs/<id>/',
+                   '/cifs/<id>/io/inputs/',
+                   '/cifs/<id>/io/inputs/page/',
+                   '/cifs/<id>/io/inputs/page/<int:page>/',
+                   '/cifs/<id>/io/outputs/',
+                   '/cifs/<id>/io/outputs/page/',
+                   '/cifs/<id>/io/outputs/page/<int:page>/',
+                   '/cifs/<id>/io/tree/',
+                   '/cifs/<id>/content/attributes/',
+                   '/cifs/<id>/content/extras/',
+                   '/cifs/<id>/content/visualization/',
+                   '/cifs/<id>/content/download/',
+                   endpoint='cifs',
+                   strict_slashes=False,
+                   resource_class_kwargs=kwargs
+                   )
+
         self.add_resource(User,
                           '/users/',
                           '/users/schema/',
                           '/users/page/',
                           '/users/page/<int:page>/',
                           '/users/<id>/',
+                          endpoint='users',
                           strict_slashes=False,
                           resource_class_kwargs=kwargs)
 
@@ -315,20 +338,14 @@ class AiidaApi(Api):
         if isinstance(e, HTTPException):
             if e.code == 404:
 
-                from aiida.restapi.common.config import PREFIX
-                import json
+                from aiida.restapi.common.utils import list_routes
 
                 response = {}
 
                 response["status"] = "404 Not Found"
                 response["message"] = "The requested URL is not found on the server."
-                response["available_endpoints"] = []
-                tmp = []
 
-                for rule in sorted(self.app.url_map.iter_rules()):
-                    if rule.endpoint not in tmp and rule.endpoint != "static":
-                        tmp.append(rule.endpoint)
-                        response["available_endpoints"].append(PREFIX + "/" + rule.endpoint)
+                response["available_endpoints"]  = list_routes()
 
                 return jsonify(response)
 

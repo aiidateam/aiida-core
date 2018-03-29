@@ -385,6 +385,9 @@ class UpfData(SinglefileData):
         from aiida.common.exceptions import ParsingError, ValidationError
         import aiida.common.utils
 
+        if self._to_be_stored is False:
+            return self
+
         upf_abspath = self.get_file_abs_path()
         if not upf_abspath:
             raise ValidationError("No valid UPF was passed!")

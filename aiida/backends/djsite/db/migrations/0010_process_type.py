@@ -7,10 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from flask_cache import Cache
-from aiida.restapi.api import app
-from aiida.restapi.common.config import cache_config
+from __future__ import unicode_literals
 
-#Would be nice to be able to specify here what has to be cached or not!
-#Probably this is not doable because cachced and memoize only work as decorators
-cache = Cache(app, config=cache_config)
+from django.db import models, migrations
+from aiida.backends.djsite.db.migrations import update_schema_version
+
+
+SCHEMA_VERSION = "1.0.10"
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('db', '0009_base_data_plugin_type_string'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='dbnode',
+            name='process_type',
+            field=models.CharField(max_length=255, db_index=True, null=True)
+        ),
+        update_schema_version(SCHEMA_VERSION)
+    ]

@@ -16,9 +16,10 @@ from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
@@ -28,6 +29,11 @@ from aiida.utils import timezone
 # 'rerunnable',
 # 'resourceLimits',
 
+SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+CALCULATION_STATE_KEY = 'state'
+SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
+PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
+FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 
@@ -142,8 +148,8 @@ class AbstractJobCalculation(AbstractCalculation):
         defined in _init_internal_params.
 
         :note: It is a property because in this way, e.g. the
-        parser_name is taken from the actual subclass of calculation,
-        and not from the parent Calculation class
+          parser_name is taken from the actual subclass of calculation,
+          and not from the parent Calculation class
         """
         parent_dict = super(AbstractJobCalculation, self)._set_defaults
 
@@ -911,18 +917,26 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             return None
 
-    projection_to_qb_tag_map = {
+    projection_map = {
         'pk': ('calculation', 'id'),
         'ctime': ('calculation', 'ctime'),
         'mtime': ('calculation', 'mtime'),
-        'sched': ('calculation', 'attributes.scheduler_state'),
-        'state': ('calculation', 'state'),
+        'scheduler_state': ('calculation', SCHEDULER_STATE_KEY),
+        'calculation_state': ('calculation', CALCULATION_STATE_KEY),
+        'process_state': ('calculation', PROCESS_STATE_KEY),
+        'finish_status': ('calculation', FINISH_STATUS_KEY),
+        'sealed': ('calculation', SEALED_KEY),
         'type': ('calculation', 'type'),
         'description': ('calculation', 'description'),
         'label': ('calculation', 'label'),
         'uuid': ('calculation', 'uuid'),
         'user': ('user', 'email'),
         'computer': ('computer', 'name')
+    }
+
+    compound_projection_map = {
+        'state': ('calculation', (PROCESS_STATE_KEY, FINISH_STATUS_KEY)),
+        'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
     }
 
     @classmethod
@@ -967,9 +981,14 @@ class AbstractJobCalculation(AbstractCalculation):
         projection_label_dict = {
             'pk': 'PK',
             'state': 'State',
+            'process_state': 'Process state',
+            'finish_status': 'Finish status',
+            'sealed': 'Sealed',
             'ctime': 'Creation',
             'mtime': 'Modification',
-            'sched': 'Sched. state',
+            'job_state': 'Job state',
+            'calculation_state': 'Calculation state',
+            'scheduler_state': 'Scheduler state',
             'computer': 'Computer',
             'type': 'Type',
             'description': 'Description',
@@ -1041,19 +1060,26 @@ class AbstractJobCalculation(AbstractCalculation):
             tag='calculation'
         )
         if group_filters is not None:
-            qb.append(type="group", filters=group_filters,
-                      group_of="calculation")
-        qb.append(type="computer", computer_of='calculation', tag='computer')
-        qb.append(type="user", creator_of="calculation", tag="user")
-        # The joining is done
-        # Now the projections:
+            qb.append(type='group', filters=group_filters, group_of='calculation')
+
+        qb.append(type='computer', computer_of='calculation', tag='computer')
+        qb.append(type='user', creator_of="calculation", tag="user")
+
+
         projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
-        for k, v in [cls.projection_to_qb_tag_map[p] for p in projections]:
-            projections_dict[k].append(v)
+        # Expand compound projections
+        for compound_projection in ['state', 'job_state']:
+            if compound_projection in projections:
+                field, values = cls.compound_projection_map[compound_projection]
+                for value in values:
+                    projections_dict[field].append(value)
 
-        if 'state' in projections:
-            projections_dict['calculation'].append('attributes.state')
+        for p in projections:
+            if p in cls.projection_map:
+                for k, v in [cls.projection_map[p]]:
+                    projections_dict[k].append(v)
+
         for k, v in projections_dict.iteritems():
             qb.add_projection(k, v)
 
@@ -1073,6 +1099,7 @@ class AbstractJobCalculation(AbstractCalculation):
             try:
                 for i in range(100):
                     res = results_generator.next()
+
                     row = cls._get_calculation_info_row(
                         res, projections, now if relative_ctime else None)
 
@@ -1097,7 +1124,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param since: The timepoint to get the last check time since.
         :return: A string indicating the elapsed period, or an information
-        message.
+          message.
         """
         from aiida.daemon.timestamps import get_last_daemon_timestamp
 
@@ -1135,12 +1162,11 @@ class AbstractJobCalculation(AbstractCalculation):
         Get a row of information about a calculation.
 
         :param res: Results from the calculations query.
-        :type res: dict
         :param times_since: Times are relative to this timepoint, if None then
             absolute times will be used.
         :param projections: The projections used in the calculation query
         :type projections: list
-        :type times_since: :class:`datetime.datetime`
+        :type times_since: :class:`!datetime.datetime`
         :return: A list of string with information about the calculation.
         """
         d = copy.deepcopy(res)
@@ -1148,7 +1174,7 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             prefix = 'calculation.job.'
             calculation_type = d['calculation']['type']
-            calculation_class = from_type_to_pluginclassname(calculation_type)
+            calculation_class = get_plugin_type_from_type_string(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
             # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
@@ -1175,14 +1201,41 @@ class AbstractJobCalculation(AbstractCalculation):
                             1].split('.')[0].rsplit(":", 1)[0]])
             except (KeyError, ValueError):
                 pass
+
+
+        if PROCESS_STATE_KEY in d['calculation']:
+
+            process_state = d['calculation'][PROCESS_STATE_KEY]
+
+            if process_state is None:
+                process_state = 'unknown'
+
+            d['calculation'][PROCESS_STATE_KEY] = process_state.capitalize()
+
+        if SEALED_KEY in d['calculation']:
+            sealed = 'True' if d['calculation'][SEALED_KEY] == 1 else 'False'
+            d['calculation'][SEALED_KEY] = sealed
+
         try:
-            if d['calculation']['state'] == calc_states.IMPORTED:
-                d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"
+            if d['calculation'][CALCULATION_STATE_KEY] == calc_states.IMPORTED:
+                d['calculation'][CALCULATION_STATE_KEY] = d['calculation']['attributes.state'] or "UNKNOWN"
         except KeyError:
             pass
 
-        return [d[cls.projection_to_qb_tag_map[p][0]][cls.projection_to_qb_tag_map[p][1]]
-                for p in projections]
+        result = []
+
+        for projection in projections:
+
+            if projection in cls.compound_projection_map:
+                field, attributes = cls.compound_projection_map[projection]
+                projected_attributes = [str(d[field][attribute]) for attribute in attributes]
+                result.append(' | '.join(projected_attributes))
+            else:
+                field = cls.projection_map[projection][0]
+                attribute = cls.projection_map[projection][1]
+                result.append(d[field][attribute])
+
+        return result
 
     @classmethod
     def _get_all_with_state(
@@ -1195,7 +1248,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param str state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
@@ -1427,55 +1480,14 @@ class AbstractJobCalculation(AbstractCalculation):
         No changes of calculation status are done (they will be done later by
         the calculation manager).
 
-        .. todo: if the status is TOSUBMIT, check with some lock that it is not
-            actually being submitted at the same time in another thread.
+        .. Note: Deprecated
         """
-        # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import (InvalidOperation,
-                                             RemoteOperationError)
-
-        old_state = self.get_state()
-
-        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
-            self._set_state(calc_states.FAILED)
-            self.logger.warning(
-                "Calculation {} killed by the user "
-                "(it was in {} state)".format(self.pk, old_state))
-            return
-
-        if old_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation in {} state"
-                                   .format(old_state))
-
-        # I get the scheduler plugin class and initialize it with the correct
-        # transport
-        computer = self.get_computer()
-        t = self._get_transport()
-        s = computer.get_scheduler()
-        s.set_transport(t)
-
-        # And I call the proper kill method for the job ID of this calculation
-        with t:
-            retval = s.kill(self.get_job_id())
-
-        # Raise error is something went wrong
-        if not retval:
-            raise RemoteOperationError(
-                "An error occurred while trying to kill "
-                "calculation {} (jobid {}), see log "
-                "(maybe the calculation already finished?)"
-                    .format(self.pk, self.get_job_id()))
-        else:
-            # Do not set the state, but let the parser do its job
-            # self._set_state(calc_states.FAILED)
-            self._logger.warning(
-                "Calculation {} killed by the user "
-                "(it was {})".format(self.pk,
-                                     calc_states.WITHSCHEDULER))
+        raise NotImplementedError("deprecated method: to kill a calculation go through 'verdi calculation kill'")
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
-        Prepares the calculation folder with all inputs, ready to be copied to the cluster
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster.
+
         :param folder: a SandboxFolder, empty in input, that will be filled with
           calculation input files and the scheduling script.
         :param use_unstored_links: if set to True, it will the presubmit will

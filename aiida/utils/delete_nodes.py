@@ -4,8 +4,9 @@
 def delete_nodes(pks, follow_calls=False, follow_returns=False, 
         dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
-    :note: The script will also delete
-    all children calculations generated from the specified nodes.
+    Delete nodes by a list of pks
+
+    :note: The script will also delete all children calculations generated from the specified nodes.
 
     :param pks: a list of the PKs of the nodes to delete
     :param bool follow_calls: Follow calls

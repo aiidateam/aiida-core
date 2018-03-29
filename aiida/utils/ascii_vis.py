@@ -155,9 +155,10 @@ def _ctime(node):
 
 
 def calc_info(calc_node):
-    from aiida.orm.calculation.work import WorkCalculation
-    from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.calculation.function import FunctionCalculation
+    from aiida.orm.calculation.inline import InlineCalculation
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.calculation.work import WorkCalculation
 
     if isinstance(calc_node, WorkCalculation):
         plabel = calc_node.process_label
@@ -173,7 +174,7 @@ def calc_info(calc_node):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
         s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
-    elif isinstance(calc_node, FunctionCalculation):
+    elif isinstance(calc_node, (FunctionCalculation, InlineCalculation)):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)
@@ -186,6 +187,7 @@ def calc_info(calc_node):
 def print_call_graph(calc_node, info_fn=calc_info):
     """
     Print a tree like the POSIX tree command for the calculation call graph
+
     :param calc_node: The calculation node
     :param info_fn: An optional function that takes the node and returns a string
         of information to be displayed for each node.

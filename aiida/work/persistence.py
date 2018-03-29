@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import logging
 import uritools
 import os.path
 import os
@@ -20,21 +21,26 @@ from aiida import orm
 from . import class_loader
 
 Bundle = plumpy.Bundle
+LOGGER = logging.getLogger(__name__)
 
 
 # If portalocker accepts my pull request to have this incorporated into the
 # library then this can be removed. https://github.com/WoLpH/portalocker/pull/34
 class RLock(portalocker.Lock):
     """
-    A reentrant lock, functions in a similar way to threading.RLock in that it
-    can be acquired multiple times.  When the corresponding number of release()
-    calls are made the lock will finally release the underlying file lock.
+    reentrant lock.
+    
+    Functions in a similar way to threading.RLock in that it can be acquired
+    multiple times.  When the corresponding number of release() calls are made
+    the lock will finally release the underlying file lock.
     """
 
     def __init__(
             self, filename, mode='a', timeout=portalocker.utils.DEFAULT_TIMEOUT,
             check_interval=portalocker.utils.DEFAULT_CHECK_INTERVAL, fail_when_locked=False,
             flags=portalocker.utils.LOCK_METHOD):
+        """Constructor"""
+
         super(RLock, self).__init__(filename, mode, timeout, check_interval,
                                     fail_when_locked, flags)
         self._acquire_count = 0
@@ -98,10 +104,16 @@ class AiiDAPersister(plumpy.Persister):
     """
 
     def save_checkpoint(self, process, tag=None):
+        LOGGER.info('Persisting process<{}>'.format(process.pid))
+
         if tag is not None:
             raise NotImplementedError("Checkpoint tags not supported yet")
 
-        bundle = Bundle(process, class_loader.CLASS_LOADER)
+        loader = class_loader.CLASS_LOADER
+
+        assert loader is not None, 'the class loader is not defined'
+
+        bundle = Bundle(process, loader)
         calc = process.calc
         calc._set_checkpoint(yaml.dump(bundle))
 

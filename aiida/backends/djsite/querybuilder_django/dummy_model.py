@@ -40,11 +40,6 @@ from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.ext.compiler import compiles
 
-# Aiida Django classes:
-#from aiida.orm.implementation.django.node import Node as DjangoAiidaNode
-
-#from aiida.common.pluginloader import load_plugin
-
 
 # SETTINGS:
 from aiida.common.setup import get_profile_config
@@ -255,6 +250,7 @@ class DbNode(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     type = Column(String(255), index=True)
+    process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True)
     description = Column(Text(), nullable=True)
     ctime = Column(DateTime(timezone=True), default=timezone.now)
@@ -314,11 +310,9 @@ class DbNode(Base):
         # and instantiate an object that has the same attributes as self.
         from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
         dbnode = DjangoSchemaDbNode(
-                id=self.id, type=self.type, uuid=self.uuid, ctime=self.ctime,
-                mtime=self.mtime, label=self.label,
-                description=self.description, dbcomputer_id=self.dbcomputer_id,
-                user_id=self.user_id, public=self.public,
-                nodeversion=self.nodeversion
+            id=self.id, type=self.type, process_type=self.process_type, uuid=self.uuid, ctime=self.ctime,
+            mtime=self.mtime, label=self.label, description=self.description, dbcomputer_id=self.dbcomputer_id,
+            user_id=self.user_id, public=self.public, nodeversion=self.nodeversion
         )
         return dbnode.get_aiida_class()
 

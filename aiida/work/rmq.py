@@ -6,9 +6,10 @@ import plumpy.rmq
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.class_loader import CLASS_LOADER
+from aiida.work.persistence import AiiDAPersister
 
-__all__ = ['new_blocking_control_panel', 'BlockingProcessControlPanel',
-           'RemoteException', 'DeliveryFailed', 'ProcessLauncher']
+__all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
+           'RemoteException', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel']
 
 
 RemoteException = plumpy.RemoteException
@@ -24,6 +25,7 @@ DeliveryFailed = plumpy.DeliveryFailed
 _RMQ_URL = 'amqp://127.0.0.1'
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
+_TASK_EXCHANGE = 'tasks'
 
 
 def get_rmq_prefix():
@@ -78,6 +80,15 @@ def get_message_exchange_name(prefix):
     :returns: message exchange name
     """
     return '{}.{}'.format(prefix, _MESSAGE_EXCHANGE)
+
+
+def get_task_exchange_name(prefix):
+    """
+    Return the task exchange name for a given prefix
+
+    :returns: task exchange name
+    """
+    return '{}.{}'.format(prefix, _TASK_EXCHANGE)
 
 
 def encode_response(response):
@@ -143,14 +154,29 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
-class ExecuteProcessAction(plumpy.ExecuteProcessAction):
-    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False):
-        """
-        Calls through to the constructor of the plum ExecuteProcessAction while making sure that
-        any unstored nodes in the inputs are first stored and the data is then serialized
-        """
-        init_kwargs['inputs'] = store_and_serialize_inputs(init_kwargs['inputs'])
-        super(ExecuteProcessAction, self).__init__(process_class, init_args, init_kwargs, class_loader=CLASS_LOADER, nowait=nowait)
+class ExecuteProcessAction(plumpy.Action):
+
+    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False, persister=None):
+        super(ExecuteProcessAction, self).__init__()
+        self._process_class = process_class
+        self._args = init_args or ()
+        self._kwargs = init_kwargs or {}
+        self._nowait = nowait
+
+        if persister is not None:
+            self._persister = persister
+        else:
+            self._persister = AiiDAPersister()
+
+    def execute(self, publisher):
+        proc = self._process_class(*self._args, **self._kwargs)
+        self._persister.save_checkpoint(proc)
+        proc.close()
+
+        continue_action = plumpy.ContinueProcessAction(proc.calc.pk, play=True)
+        continue_action.execute(publisher)
+
+        self.set_result(proc.calc.pk)
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
@@ -171,18 +197,30 @@ class ProcessControlPanel(object):
         self._connector = rmq_connector
 
         message_exchange = get_message_exchange_name(prefix)
+        task_exchange = get_task_exchange_name(prefix)
+
         task_queue = get_launch_queue_name(prefix)
         self._communicator = plumpy.rmq.RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
+            task_exchange=task_exchange,
             task_queue=task_queue,
             encoder=encode_response,
             decoder=decode_response,
             testing_mode=testing_mode
         )
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        self._communicator.disconnect()
+
     def connect(self):
-        return self._communicator.init()
+        return self._communicator.connect()
 
     def pause_process(self, pid):
         return self.execute_action(plumpy.PauseAction(pid))
@@ -238,7 +276,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
         action.execute(self._communicator)
         self._communicator.await(action)
-        return action.get_launch_future().result()
+        return action.result()
 
     def execute_action(self, action):
         action.execute(self._communicator)
@@ -248,12 +286,24 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self._communicator.disconnect()
 
 
+def new_control_panel():
+    """
+    Create a new control panel based on the current profile configuration
+
+    :return: A new control panel instance
+    :rtype: :py:class:`aiida.work.rmq.ProcessControlPanel`
+    """
+    prefix = get_rmq_prefix()
+    connector = create_rmq_connector()
+    return ProcessControlPanel(prefix, connector)
+
+
 def new_blocking_control_panel():
     """
     Create a new blocking control panel based on the current profile configuration
 
     :return: A new control panel instance
-    :rtype: :class:`BlockingProcessControlPanel`
+    :rtype: :py:class:`aiida.work.rmq.BlockingProcessControlPanel`
     """
     prefix = get_rmq_prefix()
     return BlockingProcessControlPanel(prefix)
@@ -261,7 +311,7 @@ def new_blocking_control_panel():
 
 def create_rmq_connector(loop=None):
     if loop is None:
-        loop = events.new_event_loop()
+        loop = plumpy.events.new_event_loop()
     return plumpy.rmq.RmqConnector(amqp_url=_RMQ_URL, loop=loop)
 
 

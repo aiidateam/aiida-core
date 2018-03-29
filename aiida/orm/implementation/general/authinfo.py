@@ -40,8 +40,8 @@ class AbstractAuthInfo(object):
         :param user: A User or DbUser instance
         :return: a AuthInfo object associated to the given computer and User, if any
         :raise NotExistent: if the user is not configured to use computer
-        :raise  MultipleResultsFound: if the user is configured more than once to use the
-             computer! Should never happen
+        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured 
+             more than once to use the computer! Should never happen
         """
         from aiida.backends.utils import get_dbauthinfo
 

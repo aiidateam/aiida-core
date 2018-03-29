@@ -11,7 +11,7 @@ Design Principles
 
 2. Avoid schema changes whenever reasonably possible;
 
-3. Finding and loading plugins must be as fast as the plugin allows, especially for command-line ("cli") commands. In other words, directly importing a plugin class should not be noticeably faster than using the pluginloader/factory;
+3. Finding and loading plugins must be as fast as the plugin allows, especially for command-line ("cli") commands. In other words, directly importing a plugin class should not be noticeably faster than using the plugin loader/factory;
 
 4. Implement as a drop-in replacement, provide backwards compatibility at first, think about changing interfaces if/when the old system is dropped;
 
@@ -56,15 +56,14 @@ Terms
 Interfaces
 ----------
 
-Pluginloader (aiida/common/pluginloader.py)
+Pluginloader (aiida/plugins/loader.py)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The pluginloader relies on the `reentry PyPI package <https://github.com/dropd/reentry>`_ to find and load entry points. ``reentry`` has been added to setup_requires for AiiDA in order to enable scanning for existing plugins when AiiDA is installed. If for some reason ``reentry`` is uninstalled or is not found, the plugin system will fall back on ``pkg_resources`` from setuptools, which is slower.
+The plugin loader relies on the `reentry PyPI package <https://github.com/dropd/reentry>`_ to find and load entry points. ``reentry`` has been added to setup_requires for AiiDA in order to enable scanning for existing plugins when AiiDA is installed. If for some reason ``reentry`` is uninstalled or is not found, the plugin system will fall back on ``pkg_resources`` from setuptools, which is slower.
 
-The API docs are found at the following link: :ref:`aiida-autodocs-pluginloader`.
+The API docs are found at the following link: :py:mod:`aiida.plugins.loader`.
 
 Registry Tools (aiida/plugins)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The registry tools API is located here: :ref:`aiida-autodocs-plugins`.
-
+See the API documentation in :py:mod:`aiida.plugins`.

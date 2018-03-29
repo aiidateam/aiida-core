@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-utilities to provide information about available plugins
+Utilities for high-level querying of available plugins.
 
+These tools read information from the cached registry.
 The plugin registry (in cache) is expected to be a dict where
 the keys are base entry point names of plugins (unique for registered plugins)
 
@@ -30,6 +31,18 @@ example registry::
     }
 
 """
+
+
+def entry_point_from_tpstr(typestring):
+    if typestring.startswith('calculation.job.'):
+        typestring = typestring.split('.', 2)[-1]
+    elif typestring.startswith('calculation.'):
+        typestring = typestring.split('.', 1)[-1]
+    elif typestring.startswith('data.'):
+        typestring = typestring.split('.', 1)[-1]
+    else:
+        raise ValueError('weird typestring')
+    return typestring.split('.', 1)[0]
 
 
 def plugin_ep_iterator():
@@ -56,7 +69,6 @@ def find_for_typestring(typestring):
     :return: dict with plugin keys if found, None if not found
     """
     from aiida.plugins.registry import load_cached
-    from aiida.common.pluginloader import entry_point_from_tpstr
     plugins = load_cached()
     entry_point = entry_point_from_tpstr(typestring)
     return plugins.get(entry_point, None)

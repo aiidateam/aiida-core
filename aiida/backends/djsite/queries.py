@@ -23,8 +23,9 @@ class QueryManagerDjango(AbstractQueryManager):
 
         Issue a warning if the state is not in the list of valid states.
 
-        :param string state: The state to be used to filter (should be a string among
+        :param state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
+        :type state: str
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
@@ -299,16 +300,17 @@ class QueryManagerDjango(AbstractQueryManager):
 def get_closest_parents(pks,*args,**kwargs):
     """
     Get the closest parents dbnodes of a set of nodes.
+
     :param pks: one pk or an iterable of pks of nodes
     :param chunk_size: we chunk the pks into groups of this size,
         to optimize the speed (default=50)
     :param print_progress: print the the progression if True (default=False).
-    :param args & kwargs: additional query parameters
-    :return: a dictionary of the form:
-        {pk1: pk of closest parent of node with pk1,
-         pk2: pk of closest parent of node with pk2,
-         etc.
-         }
+    :param args: additional query parameters
+    :param kwargs: additional query parameters
+    :returns: a dictionary of the form
+        pk1: pk of closest parent of node with pk1,
+        pk2: pk of closest parent of node with pk2
+
     .. note:: It works also if pks is a list of nodes rather than their pks
 
     .. todo:: find a way to always get a parent (when there is one) from each pk.
@@ -316,6 +318,7 @@ def get_closest_parents(pks,*args,**kwargs):
         one of them is kept. This is a BUG, related to the use of a dictionary
         (children_dict, see below...).
         For now a work around is to use chunk_size=1.
+
     """
     from aiida.orm import Node
     from aiida.backends.djsite.db import models

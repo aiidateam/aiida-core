@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import collections
 from ast import literal_eval
+from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
+
 
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
@@ -52,10 +54,12 @@ def serialize_data(data):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
     elif isinstance(data, Group):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
+    elif isinstance(data, AttributeDict):
+        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
-        return tuple(serialize_data(value) for value in data)
+        return [serialize_data(value) for value in data]
     else:
         return data
 
@@ -69,10 +73,12 @@ def deserialize_data(data):
     :param data: serialized data
     :return: the deserialized data with keys decoded and node instances loaded from UUID's
     """
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, AttributeDict):
+        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+    elif isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
-        return tuple(deserialize_data(value) for value in data)
+        return [deserialize_data(value) for value in data]
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):

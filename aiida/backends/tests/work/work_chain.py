@@ -20,6 +20,7 @@ from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
+from aiida.utils.capturing import Capturing
 from aiida.work.utils import ProcessStack
 from aiida.work.class_loader import CLASS_LOADER
 from aiida.workflows.wf_demo import WorkflowDemo
@@ -211,8 +212,6 @@ class TestWorkchain(AiidaTestCase):
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_run(self):
@@ -435,7 +434,6 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(MainWorkChain)
 
-    # @unittest.skip('This is currently broken after merge')
     def test_if_block_persistence(self):
         """
         This test was created to capture issue #902
@@ -627,8 +625,6 @@ class TestWorkChainAbort(AiidaTestCase):
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
         work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     class AbortableWorkChain(WorkChain):
@@ -653,15 +649,15 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(RuntimeError):
-            process.execute(True)
-            process.execute()
+        with Capturing():
+            with self.assertRaises(RuntimeError):
+                process.execute(True)
+                process.execute()
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
         self.assertEquals(process.calc.is_killed, False)
 
-    @unittest.skip('Process kill needs to be fixed')
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it by calling kill
@@ -686,17 +682,32 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     are also aborted appropriately
     """
 
+    def setUp(self):
+        super(TestWorkChainAbortChildren, self).setUp()
+        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner(with_communicator=True)
+
+    def tearDown(self):
+        super(TestWorkChainAbortChildren, self).tearDown()
+        work.set_runner(None)
+        self.assertEquals(len(ProcessStack.stack()), 0)
+
     class SubWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
             super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
+            spec.input('kill', default=Bool(False))
             spec.outline(
                 cls.begin,
                 cls.check
             )
 
         def begin(self):
-            pass
+            """
+            If the Main should be killed, pause the child to give the Main a chance to call kill on its children
+            """
+            if self.inputs.kill:
+                self.pause()
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -707,35 +718,20 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(
-                cls.begin,
+                cls.submit_child,
                 cls.check
             )
 
-        def begin(self):
-            self.ctx.child = TestWorkChainAbortChildren.SubWorkChain()
-            self.ctx.child.start()
-            if self.inputs.kill:
-                self.kill()
+        def submit_child(self):
+            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-        def on_kill(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_kill(msg)
+        def on_killed(self, msg):
+            super(TestWorkChainAbortChildren.MainWorkChain, self).on_killed(msg)
             if self.inputs.kill:
                 assert self.ctx.child.calc.is_killed == True, 'Child was not killed'
-
-    def setUp(self):
-        super(TestWorkChainAbortChildren, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-        self.runner = utils.create_test_runner()
-
-    def tearDown(self):
-        super(TestWorkChainAbortChildren, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_simple_run(self):
         """
@@ -744,14 +740,14 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
 
-        with self.assertRaises(RuntimeError):
-            process.execute()
+        with Capturing():
+            with self.assertRaises(RuntimeError):
+                process.execute()
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
         self.assertEquals(process.calc.is_killed, False)
 
-    @unittest.skip('This requires children kill support over RMQ #1060')
     def test_simple_kill_through_process(self):
         """
         Run the workchain for one step and then kill it. This should have the
@@ -760,10 +756,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
         with self.assertRaises(plumpy.KilledError):
+            process.execute(True)
+            process.kill()
             process.execute()
-
-        with self.assertRaises(plumpy.KilledError):
-            process.ctx.child.execute()
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -783,9 +778,11 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
         self.assertEquals(len(ProcessStack.stack()), 0)
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
+        work.set_runner(None)
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_immutable_input(self):

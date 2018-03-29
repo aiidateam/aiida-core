@@ -506,7 +506,12 @@ class BandsData(KpointsData):
 
             if len(labels) > 1:
                 for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
-                    plot_info['path'].append([label_from, label_to])
+                    if position_to - position_from > 1:
+                        # Create a new path line only if there are at least two points,
+                        # otherwise it is probably just a discontinuity point in the band
+                        # structure (e.g. Gamma-X|Y-Gamma), where X and Y would be two
+                        # consecutive points, but there is no path between them
+                        plot_info['path'].append([label_from, label_to])
                     path_dict = {'length': position_to - position_from,
                                  'from': label_from,
                                  'to': label_to,
@@ -718,19 +723,20 @@ class BandsData(KpointsData):
                             y_max_lim=None, y_min_lim=None,
                             y_origin=0., prettify_format=None, **kwargs):
         """
-        Prepare the data to send to the python-matplotlib plotting script
+        Prepare the data to send to the python-matplotlib plotting script.
 
         :param comments: if True, print comments (if it makes sense for the given
             format)
         :param plot_info: a dictionary
         :param setnumber_offset: an offset to be applied to all set numbers
-        (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
+            (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
         :param color_number: the color number for lines, symbols, error bars
-        and filling (should be less than the parameter max_num_agr_colors
-        defined below)
+            and filling (should be less than the parameter max_num_agr_colors
+            defined below)
         :param title: the title
         :param legend: the legend (applied only to the first of the set)
-        :param legend2: the legend for second-type spins (applied only to the first of the set)
+        :param legend2: the legend for second-type spins 
+            (applied only to the first of the set)
         :param y_max_lim: the maximum on the y axis (if None, put the
             maximum of the bands)
         :param y_min_lim: the minimum on the y axis (if None, put the
@@ -843,7 +849,7 @@ class BandsData(KpointsData):
         Prepare a python script using matplotlib to plot the bands
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
 
@@ -865,7 +871,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os
@@ -1000,7 +1006,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os
@@ -1056,7 +1062,7 @@ class BandsData(KpointsData):
         returned as an independent file.
 
         For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.data.array.bands.BandData._matplotlib_get_dict`
+        :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import json
         import os
@@ -1121,19 +1127,19 @@ class BandsData(KpointsData):
                      color_number2=2, legend="", title="", y_max_lim=None, y_min_lim=None,
                      y_origin=0., prettify_format=None):
         """
-        Prepare an xmgrace agr file
+        Prepare an xmgrace agr file.
 
-        :param comments: if True, print comments (if it makes sense for the given
-            format)
+        :param comments: if True, print comments 
+            (if it makes sense for the given format)
         :param plot_info: a dictionary
         :param setnumber_offset: an offset to be applied to all set numbers
-        (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
+            (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
         :param color_number: the color number for lines, symbols, error bars
-        and filling (should be less than the parameter max_num_agr_colors
-        defined below)
+            and filling (should be less than the parameter max_num_agr_colors
+            defined below)
         :param color_number2: the color number for lines, symbols, error bars
-        and filling for the second-type spins (should be less than the parameter max_num_agr_colors
-        defined below)
+            and filling for the second-type spins (should be less than the
+            parameter max_num_agr_colors defined below)
         :param legend: the legend (applied only to the first set)
         :param title: the title
         :param y_max_lim: the maximum on the y axis (if None, put the

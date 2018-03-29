@@ -20,12 +20,13 @@ def get_group_list(user, type_string, n_days_ago=None,
 def get_workflow_list(pk_list=tuple(), user=None, all_states=False, 
                       n_days_ago=None):
     """
-    Get a list of workflow.
+    Get a list of workflow
+
     :param user: A ORM User class if you want to filter by user
     :param pk_list: Limit the results to this list of PKs
     :param all_states: if False, limit results to "active" (e.g., running) wfs
     :param n_days_ago: an integer number of days. If specifies, limit results to
-      workflows started up to this number of days ago
+        workflows started up to this number of days ago
     """
     from aiida.orm.workflow import Workflow
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow

@@ -2305,10 +2305,54 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         a = pymatgen.structure.Structure(lattice=[[4,0,0],[0,4,0],[0,0,4]],
                                          species=[Fe1,Fe2],
                                          coords=[[0,0,0],[0.5,0.5,0.5]])
-                
+
         with self.assertRaises(ValueError): 
             StructureData(pymatgen=a)
-        
+
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and StrictVersion(get_pymatgen_version()) != StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_multiple_kinds_partial_occupancies(self):
+        """
+        Tests that a structure with multiple sites with the same element but different
+        partial occupancies, get their own unique kind name
+        """
+        from aiida.orm.data.structure import StructureData
+        import pymatgen
+
+        Mg1 = pymatgen.structure.Composition({'Mg': 0.50})
+        Mg2 = pymatgen.structure.Composition({'Mg': 0.25})
+
+        a = pymatgen.structure.Structure(
+            lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
+            species=[Mg1, Mg2],
+            coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
+        )
+
+        structure = StructureData(pymatgen=a)
+
+    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(has_pymatgen() and StrictVersion(get_pymatgen_version()) != StrictVersion('4.5.3'),
+                     "Mismatch in the version of pymatgen (expected 4.5.3)")
+    def test_multiple_kinds_alloy(self):
+        """
+        Tests that a structure with multiple sites with the same alloy symbols but different
+        weights, get their own unique kind name
+        """
+        from aiida.orm.data.structure import StructureData
+        import pymatgen
+
+        alloy_one = pymatgen.structure.Composition({'Mg': 0.25, 'Al': 0.75})
+        alloy_two = pymatgen.structure.Composition({'Mg': 0.45, 'Al': 0.55})
+
+        a = pymatgen.structure.Structure(
+            lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
+            species=[alloy_one, alloy_two],
+            coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
+        )
+
+        structure = StructureData(pymatgen=a)
+
 
 class TestPymatgenFromStructureData(AiidaTestCase):
     """

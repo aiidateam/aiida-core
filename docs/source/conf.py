@@ -271,17 +271,14 @@ def run_apidoc(_):
 
     See also https://github.com/rtfd/readthedocs.org/issues/1139
     """
-    #add aiida to PATH, perhaps unnecessary
-    #sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-
     cwd = os.path.abspath(os.path.dirname(__file__))
     apidoc_dir = cwd + '/apidoc'
     package_dir = cwd + '/../../aiida'
 
-    # In #1139, they suggest the route below, but for me this ends up
+    # In #1139, they suggest the route below, but for me this ended up
     # calling sphinx-build, not sphinx-apidoc
     #from sphinx.apidoc import main
-    #main([None, '-e', '-o', apidoc_dir, module_dir, '--force'])
+    #main([None, '-e', '-o', apidoc_dir, package_dir, '--force'])
 
     import subprocess
     cmd_path = 'sphinx-apidoc'
@@ -299,6 +296,7 @@ def run_apidoc(_):
         '--maxdepth', '4',
     ]
 
+    # See https://stackoverflow.com/a/30144019
     env = os.environ.copy()
     env["SPHINX_APIDOC_OPTIONS"] = 'members,special-members,private-members,undoc-members,show-inheritance'
     subprocess.check_call([cmd_path] + options, env=env)
@@ -306,18 +304,6 @@ def run_apidoc(_):
 def setup(app):
     app.connect('builder-inited', run_apidoc)
 
-
-
-#    cur_dir = os.path.abspath(os.path.dirname(__file__))
-#
-#
-#    output_path = os.path.join(cur_dir)
-#+    cmd_path = 'sphinx-apidoc'
-#+    if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
-#+        # If we are, assemble the path manually
-#+        cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
-#+    subprocess.check_call([cmd_path, '-e', '-o', output_path, module, '--force'])
-#+
 
 # -- Options for manual page output --------------------------------------------
 

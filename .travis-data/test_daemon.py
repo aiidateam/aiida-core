@@ -264,7 +264,7 @@ def main():
     print "Submitting a workchain with a mixed (db / non-db) dynamic input."
     value_non_db = 3
     value_db = Int(2)
-    pk = submit(DynamicMixedInput, namespace={'input_non_db': value_non_db, 'input_db': value_db}).pk
+    pk = submit(DynamicMixedInput, namespace={'inputs': {'input_non_db': value_non_db, 'input_db': value_db}}).pk
     expected_results_workchains[pk] = value_non_db + value_db
 
     print "Submitting the ListEcho workchain."

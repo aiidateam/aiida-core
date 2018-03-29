@@ -90,7 +90,7 @@ In the case of calculations, the hashes of the inputs are also included. When de
 
 Additionally, there are two methods you can use to disable caching for particular nodes:
 
-* The :meth:`._is_valid_cache` method determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
+* The :meth:`~aiida.orm.implementation.general.node.AbstractNode._is_valid_cache` method determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cacheable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class. This avoids performing queries for the hash altogether.
 
 There are two ways in which the hash match can go wrong: False negatives, where two nodes should have the same hash but do not, or false positives, where two different nodes have the same hash. It is important to understand that false negatives are **highly preferrable**, because they only increase the runtime of your calculations, as if caching was disabled. False positives however can break the logic of your calculations. Be mindful of this when modifying the caching behaviour of your calculation and data classes.

@@ -12,7 +12,8 @@ from aiida.common.exceptions import InputValidationError, MultipleObjectsError, 
 from aiida.plugins.factory import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 
+           'load_node', 'load_workflow', 'BackendDelegateWithDefault']
 
 
 def CalculationFactory(entry_point):
@@ -258,7 +259,6 @@ class BackendDelegateWithDefault(object):
     This class is a helper to implement the delegation pattern [1] by
     delegating functionality (i.e. calling through) to the backend class
     which will do the actual work.
-
 
     [1] https://en.wikipedia.org/wiki/Delegation_pattern
     """

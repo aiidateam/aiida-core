@@ -41,7 +41,9 @@ from aiida.common.links import LinkType
 
 class QueryBuilder(object):
     """
-    QueryBuilder: The class to query the AiiDA database. Usage::
+    The class to query the AiiDA database. 
+    
+    Usage::
 
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
@@ -49,6 +51,7 @@ class QueryBuilder(object):
         qb.append(Node)
         # retrieving the results:
         results = qb.all()
+
     """
 
     # This tag defines how edges are tagged (labeled) by the QueryBuilder default

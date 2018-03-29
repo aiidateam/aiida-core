@@ -61,7 +61,7 @@ class Parser(object):
 
         :param retrieved: dictionary of retrieved nodes
         :returns: exit code, list of tuples ('link_name', output_node)
-        :rtype: int, [(basestring, Data)]
+        :rtype: int, [(basestring, aiida.orm.data.Data)]
         """
         raise NotImplementedError
 
@@ -73,7 +73,7 @@ class Parser(object):
 
         :param retrieved_temporary_folder: optional absolute path to directory with temporary retrieved files
         :returns: exit code, list of tuples ('link_name', output_node)
-        :rtype: int, [(basestring, Data)]
+        :rtype: int, [(basestring, aiida.orm.data.Data)]
         """
         out_folder = self._calc.get_retrieved_node()
         if out_folder is None:

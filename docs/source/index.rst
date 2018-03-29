@@ -90,9 +90,9 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: API documentation
+    :caption: API reference
 
-    module_guide/index
+    apidoc/aiida
 
 
 ******************

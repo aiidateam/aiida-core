@@ -123,8 +123,8 @@ def get_dbauthinfo(computer, aiidauser):
     :param aiidauser: a user, can be a DbUser or a User instance
     :return: a DbAuthInfo instance
     :raise NotExistent: if the user is not configured to use computer
-    :raise  MultipleResultsFound: if the user is configured more than once to use the
-         computer! Should never happen
+    :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured 
+         more than once to use the computer! Should never happen
     """
     from aiida.common.exceptions import InternalError
     if settings.BACKEND == BACKEND_DJANGO:

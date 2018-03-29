@@ -7,7 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Provides an API for postgres database maintenance tasks"""
+"""Provides an API for postgres database maintenance tasks.
+
+This API creates and drops postgres users and databases used by the
+``verdi quicksetup`` commandline tool. It allows convenient access to this
+functionality from within python without knowing details about how postgres is
+installed by default on various systems. If the postgres setup is not the
+default installation, additional information needs to be provided.
+"""
 try:
     import subprocess32 as subprocess
 except ImportError:

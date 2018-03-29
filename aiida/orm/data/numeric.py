@@ -22,7 +22,7 @@ def _right_operator(func):
 
 class NumericType(BaseType):
     """
-    Specific subclass of :py:class:`BaseType` to store numbers,
+    Specific subclass of :py:class:`aiida.orm.data.BaseType` to store numbers,
     overloading common operators (``+``, ``*``, ...)
     """
     @_left_operator

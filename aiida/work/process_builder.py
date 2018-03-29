@@ -5,7 +5,7 @@ from aiida.work.ports import PortNamespace
 from aiida.work.runners import _object_factory
 
 
-__all__ = ['ProcessBuilder']
+__all__ = ['ProcessBuilder', 'ProcessBuilderInputDict']
 
 
 class ProcessBuilderInput(object):
@@ -27,7 +27,9 @@ class ProcessBuilderInputDefault(ProcessBuilderInput):
     def __str__(self):
         return '{} [default]'.format(self._value.__str__())
 
+
 class ProcessBuilderInputDict(FixedFieldsAttributeDict):
+    """Input dictionary for process builder."""
 
     def __init__(self, port_namespace):
         self._valid_fields = port_namespace.keys()
@@ -74,6 +76,7 @@ class ProcessBuilderInputDict(FixedFieldsAttributeDict):
             else:
                 result[name] = value
         return result
+
 
 class ProcessBuilder(ProcessBuilderInputDict):
 

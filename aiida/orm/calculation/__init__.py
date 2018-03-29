@@ -11,4 +11,4 @@
 from aiida.orm.implementation.calculation import Calculation, JobCalculation
 from .inline import *
 
-__all__ = ('Calculation', 'JobCalculation') + inline.__all__
+__all__ = ['Calculation', 'JobCalculation'] + inline.__all__

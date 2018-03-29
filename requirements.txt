@@ -143,4 +143,4 @@ Werkzeug==0.14.1
 wrapt==1.10.11
 yapf==0.19.0
 -e git://github.com/muhrin/plumpy.git@2b628c331c286347fdd7ab12911ae82ad2146033#egg=plumpy
--e git://github.com/muhrin/kiwipy.git@9ccea9b7ab719f042e0529239c47de3dba1cc249#egg=kiwipy
+-e git://github.com/muhrin/kiwipy.git@3ab98fe840d731224571da29df8f155bf6f0d3b8#egg=kiwipy

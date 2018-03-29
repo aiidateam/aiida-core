@@ -115,6 +115,11 @@ LOGGING = {
             'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
+        'tornado': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.tornado_loglevel'),
+            'propagate': False,
+        },
         'plumpy': {
             'handlers': ['console'],
             'level': setup.get_property('logging.plumpy_loglevel'),

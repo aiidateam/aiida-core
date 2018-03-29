@@ -792,10 +792,18 @@ _property_table = {
         "to the database",
         "REPORT",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.tornado_loglevel": (
+        "logging_tornado_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'tornado' loggers",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.plumpy_loglevel": (
         "logging_plumpy_log_level",
         "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log ",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'plumpy' logger",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (

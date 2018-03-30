@@ -271,9 +271,9 @@ def run_apidoc(_):
 
     See also https://github.com/rtfd/readthedocs.org/issues/1139
     """
-    cwd = os.path.abspath(os.path.dirname(__file__))
-    apidoc_dir = cwd + '/apidoc'
-    package_dir = cwd + '/../../aiida'
+    source_dir = os.path.abspath(os.path.dirname(__file__))
+    apidoc_dir = os.path.join(source_dir, 'apidoc')
+    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
 
     # In #1139, they suggest the route below, but for me this ended up
     # calling sphinx-build, not sphinx-apidoc

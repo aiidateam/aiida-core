@@ -30,7 +30,7 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.work.ports import PortNamespace
+from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
@@ -394,28 +394,36 @@ class Process(plumpy.Process):
         :param parent_name: the parent key with which to prefix the keys
         :param separator: character to use for the concatenation of keys
         """
-        items = []
-
-        if isinstance(port_value, collections.Mapping) and isinstance(port, PortNamespace):
-
-            for name, value in port_value.iteritems():
-
+        if (
+            (port is None and isinstance(port_value, Node)) or
+            (isinstance(port, InputPort) and not getattr(port, 'non_db', False))
+        ):
+            return [(parent_name, port_value)]
+        elif (
+            (port is None and isinstance(port_value, collections.Mapping)) or
+            isinstance(port, PortNamespace)
+        ):
+            items = []
+            for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
                     nested_port = port[name]
-                except KeyError:
-                    # For dynamic PortNamespaces, only add Node values.
-                    if isinstance(value, Node):
-                        items.append((prefixed_key, value))
-                else:
-                    sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
-                    items.extend(sub_items)
-        else:
-            if not getattr(port, 'non_db', False):
-                items.append((parent_name, port_value))
+                except (KeyError, TypeError):
+                    nested_port = None
 
-        return items
+                sub_items = self._flatten_inputs(
+                    port=nested_port,
+                    port_value=value,
+                    parent_name=prefixed_key,
+                    separator=separator
+                )
+                items.extend(sub_items)
+            return items
+
+        else:
+            assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+            return []
 
     def _use_cache_enabled(self):
         # First priority: inputs

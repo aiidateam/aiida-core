@@ -90,6 +90,35 @@ class DynamicNonDbInput(WorkChain):
         assert not isinstance(input_list, List)
         self.out('output', List(list=list(input_list)))
 
+class DynamicDbInput(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(DynamicDbInput, cls).define(spec)
+        spec.input_namespace('namespace', dynamic=True)
+        spec.output('output', valid_type=Int)
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        input_value = self.inputs.namespace.input
+        assert isinstance(input_value, Int)
+        self.out('output', input_value)
+
+class DynamicMixedInput(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(DynamicMixedInput, cls).define(spec)
+        spec.input_namespace('namespace', dynamic=True)
+        spec.output('output', valid_type=Int)
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        input_non_db = self.inputs.namespace.inputs['input_non_db']
+        input_db = self.inputs.namespace.inputs['input_db']
+        assert isinstance(input_non_db, int)
+        assert not isinstance(input_non_db, Int)
+        assert isinstance(input_db, Int)
+        self.out('output', input_db + input_non_db)
+
 class InlineCalcRunnerWorkChain(WorkChain):
     """
     WorkChain which calls an InlineCalculation in its step.

@@ -395,8 +395,8 @@ class Process(plumpy.Process):
         :param separator: character to use for the concatenation of keys
         """
         if (
-            port is None and isinstance(port_value, Node)) or
-            (isinstance(port, InputPort) and not getattr(port, 'non_db', False)
+            (port is None and isinstance(port_value, Node)) or
+            (isinstance(port, InputPort) and not getattr(port, 'non_db', False))
         ):
             return [(parent_name, port_value)]
         elif (

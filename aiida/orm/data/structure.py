@@ -844,24 +844,22 @@ class StructureData(Data):
             :param specie: a pymatgen specie
             :return: a string
             """
-            has_spin = any([specie.as_dict().get('properties',{}).get('spin',0)!=0
+            has_spin = any([specie.as_dict().get('properties', {}).get('spin', 0) != 0
                             for specie in species_and_occu.keys()])
-                            
-            if has_spin and (len(species_and_occu.items())>1
-                             or any([weight!=1.0 for weight in species_and_occu.values()])):
-                raise ValueError("Cannot set partial occupancies and spins "
-                                     "at the same time")
-            
+
+            if has_spin and (len(species_and_occu.items()) > 1
+                             or any([weight != 1.0 for weight in species_and_occu.values()])):
+                raise ValueError('Cannot set partial occupancies and spins at the same time')
+
             if not has_spin:
-                return Kind(symbols=[x[0].symbol for x in species_and_occu.items()],
-                            weights=[x[1] for x in species_and_occu.items()]).name
-            
+                return None
+
+            spin = species_and_occu.keys()[0].as_dict().get('properties', {}).get('spin', 0)
+
+            if spin < 0:
+                return specie.symbol + '1'
             else:
-                spin = species_and_occu.keys()[0].as_dict().get('properties',{}).get('spin',0)
-                if spin<0:
-                    return specie.symbol+'1'
-                else:
-                    return specie.symbol+'2'
+                return specie.symbol + '2'
         
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
@@ -871,10 +869,17 @@ class StructureData(Data):
                 kind_name = site.properties['kind_name']
             else:
                 kind_name = build_kind_name(site.species_and_occu)
-            self.append_atom(symbols=[x[0].symbol for x in site.species_and_occu.items()],
-                         weights=[x[1] for x in site.species_and_occu.items()],
-                         position=site.coords.tolist(),
-                         name=kind_name)
+
+            inputs = {
+                'symbols': [x[0].symbol for x in site.species_and_occu.items()],
+                'weights': [x[1] for x in site.species_and_occu.items()],
+                'position': site.coords.tolist()
+            }
+
+            if kind_name is not None:
+                inputs['name'] = kind_name
+
+            self.append_atom(**inputs)
 
     def _validate(self):
         """
@@ -1317,7 +1322,7 @@ class StructureData(Data):
               until an unique name is found
 
         .. note :: checks of equality of species are done using
-          the :py:meth:`~Kind.compare_with` method.
+          the :py:meth:`~aiida.orm.data.structure.Kind.compare_with` method.
         """
         aseatom = kwargs.pop('ase', None)
         if aseatom is not None:
@@ -1924,11 +1929,11 @@ class Kind(object):
 
         :param symbols: a single string for the symbol of this site, or a list
                    of symbol strings
-        :param weights (optional): the weights for each atomic species of
+        :param weights: (optional) the weights for each atomic species of
                    this site.
                    If only a single symbol is provided, then this value is
                    optional and the weight is set to 1.
-        :param mass (optional): the mass for this site in atomic mass units.
+        :param mass: (optional) the mass for this site in atomic mass units.
                    If not provided, the mass is set by the
                    self.reset_mass() function.
         :param name: a string that uniquely identifies the kind, and that

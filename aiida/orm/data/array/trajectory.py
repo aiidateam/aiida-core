@@ -534,7 +534,7 @@ class TrajectoryData(ArrayData):
             decided not to implement it at all but require it to be set
             explicitly.
 
-        .. usage::
+        Usage::
 
             from aiida.orm.data.array.trajectory import TrajectoryData
 
@@ -574,7 +574,7 @@ class TrajectoryData(ArrayData):
 
         .. note:: The steps and symbols must be set manually before calling this
             import function as a consistency measure. See also comment for
-            :py:meth:`._import_xy_pos`
+            :py:meth:`._parse_xyz_pos`
         """
 
         from aiida.common.exceptions import ValidationError

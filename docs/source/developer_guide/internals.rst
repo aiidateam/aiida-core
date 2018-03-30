@@ -383,3 +383,14 @@ However, for a ``Calculation`` to be runnable it needs to be stored, but that wo
 To solve this issue the :py:class:`~aiida.orm.mixins.Sealable` mixin is introduced. This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.
 The mixin defines the ``_updatable_attributes`` tuple, which defines the attributes that are considered to be mutable even when the node is stored.
 It also allows the node to be *sealed*, after which even the updatable attributes become immutable.
+
+ORM overview
+++++++++++++
+
+Below you find an overview of the main classes in the AiiDA object-relational mapping.
+For the **complete** API documentation see :py:mod:`aiida.orm`.
+
+.. toctree::
+    :maxdepth: 2
+
+    orm_overview

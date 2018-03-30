@@ -20,6 +20,10 @@ TEST_REPOSITORY = None
 
 # This is used (and should be set to true) for the correct compilation
 # of the documentation on readthedocs
+IN_RT_DOC_MODE = False
+
+# This is same as the trigger above, but is switched on for RTD documentation
+# compilation but also for local documentation compilation.
 IN_DOC_MODE = False
 
 # The following is a dummy config.json configuration that it is used for the

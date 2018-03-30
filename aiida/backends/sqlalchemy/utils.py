@@ -386,6 +386,13 @@ def check_schema_version(force_migration=False, alembic_cfg=None):
     import sys
     from aiida.common.utils import query_yes_no
     from aiida.backends import sqlalchemy as sa
+    from aiida.backends.settings import IN_DOC_MODE
+
+    # Early exit if we compile the documentation since the schema
+    # check is not needed and it creates problems with the sqlalchemy
+    # migrations
+    if IN_DOC_MODE:
+        return
 
     # If an alembic configuration file is given then use that one.
     if alembic_cfg is None:
@@ -434,6 +441,9 @@ def get_db_schema_version(config):
     :param config: The alembic configuration.
     :return: The version of the database.
     """
+    if config is None:
+        return None
+
     script = ScriptDirectory.from_config(config)
 
     def get_db_version(rev, _):

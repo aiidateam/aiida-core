@@ -10,6 +10,8 @@
 import os
 import sys
 
+from plumpy import ProcessState
+
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
@@ -170,6 +172,12 @@ class Calculation(VerdiCommandWithSubcommands):
                             dest='all_states', action='store_true',
                             help="Overwrite manual set of states if present, and look for calculations in every possible state")
         parser.set_defaults(all_states=False)
+        parser.add_argument('-S', '--process-state', choices=([e.value for e in ProcessState]),
+                            help='Only include entries with this process state')
+        parser.add_argument('-f', '--finish-status', type=int,
+                            help='Only include entries with this finish status')
+        parser.add_argument('-n', '--failed', dest='failed', action='store_true',
+                            help='Only include entries that are failed, i.e. whose finish status is non-zero')
         parser.add_argument('-A', '--all-users',
                             dest='all_users', action='store_true',
                             help="Show calculations for all users, rather than only for the current user")
@@ -203,6 +211,25 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
+        PROCESS_STATE_KEY = 'attributes.{}'.format(C.PROCESS_STATE_KEY)
+        FINISH_STATUS_KEY = 'attributes.{}'.format(C.FINISH_STATUS_KEY)
+
+        filters = {}
+
+        if parsed_args.process_state:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': parsed_args.process_state}
+
+        if parsed_args.failed:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+            filters[FINISH_STATUS_KEY] = {'!==': 0}
+
+        if parsed_args.finish_status:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+            filters[FINISH_STATUS_KEY] = {'==': parsed_args.finish_status}
+
         C._list_calculations(
             states=parsed_args.states,
             past_days=parsed_args.past_days,
@@ -214,6 +241,7 @@ class Calculation(VerdiCommandWithSubcommands):
             # with_scheduler_state=parsed_args.with_scheduler_state,
             order_by=parsed_args.order_by,
             limit=parsed_args.limit,
+            filters=filters,
             projections=parsed_args.project,
         )
 
@@ -384,12 +412,12 @@ class Calculation(VerdiCommandWithSubcommands):
         else:
             plugins = get_entry_point_names('aiida.calculations')
             if plugins:
-                print("## Pass as a further parameter one (or more) "
-                      "plugin names to get more details on a given plugin.")
+                print('Registered calculation entry points:')
                 for plugin in plugins:
-                    print "* {}".format(plugin)
+                    print '* {}'.format(plugin)
+                print("\nPass the entry point as an argument to display detailed information")
             else:
-                print "## No calculation plugins found"
+                print 'No calculation plugins found'
 
     def calculation_inputcat(self, *args):
         """

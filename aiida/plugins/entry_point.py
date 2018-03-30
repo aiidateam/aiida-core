@@ -68,7 +68,7 @@ def get_entry_point_names(group, sort=True):
     entry_point_names = [ep.name for ep in get_entry_points(group)]
 
     if sort is True:
-        sorted(entry_point_names)
+        entry_point_names.sort()
 
     return entry_point_names
 

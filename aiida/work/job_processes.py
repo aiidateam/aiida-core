@@ -166,6 +166,7 @@ class KillJob(TransportTask):
 
         if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
             calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(job_states.DONE)
             calc.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(calc.pk, calc_state))
             return True
@@ -188,9 +189,7 @@ class KillJob(TransportTask):
         else:
             calc._set_state(calc_states.FAILED)
             calc._set_scheduler_state(job_states.DONE)
-            calc.logger.warning(
-                "Calculation {} killed by the user "
-                "(it was {})".format(calc.pk, calc_states.WITHSCHEDULER))
+            calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
 
         return result
 
@@ -243,18 +242,17 @@ class Waiting(plumpy.Waiting):
                     self.scheduler_update()
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
-                self._task = UpdateSchedulerState(calc, transport_queue)
-                job_done = yield self._task
+                job_done = False
+                # Keep geting scheduler updates until done
+                while not job_done:
+                    self._task = UpdateSchedulerState(calc, transport_queue)
+                    job_done = yield self._task
+                    if self._kill_future:
+                        yield self._do_kill()
+                        return
 
-                if self._kill_future:
-                    yield self._do_kill()
-                else:
-                    if job_done:
-                        # Done, go on to retrieve
-                        self.retrieve()
-                    else:
-                        # Not done yet, keep getting updates
-                        self.scheduler_update()
+                # Done, go on to retrieve
+                self.retrieve()
 
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing

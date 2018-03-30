@@ -21,8 +21,8 @@ Computers:
     http://localhost:5000/computers?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)?(ORDERBY)
     http://localhost:5000/computers/1
 
-NODES / CALCULATIONS / DATAS / CODES :
-(replace nodes with calculations/datas/codes)
+NODES / CALCULATIONS / DATAS / CODES:
+    (replace nodes with calculations/datas/codes)
     http://localhost:5000/nodes?(COLUMN_FILTERS)&(LIMIT)&(OFFSET)&(SORT)
 
     OR

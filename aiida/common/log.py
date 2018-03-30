@@ -83,7 +83,7 @@ LOGGING = {
                       '%(thread)d %(message)s',
         },
         'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
+            'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
@@ -113,6 +113,11 @@ LOGGING = {
         'aiida': {
             'handlers': ['console', 'dblogger'],
             'level': setup.get_property('logging.aiida_loglevel'),
+            'propagate': False,
+        },
+        'tornado': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.tornado_loglevel'),
             'propagate': False,
         },
         'plumpy': {

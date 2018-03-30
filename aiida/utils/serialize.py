@@ -59,7 +59,7 @@ def serialize_data(data):
     elif isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
-        return tuple(serialize_data(value) for value in data)
+        return [serialize_data(value) for value in data]
     else:
         return data
 
@@ -78,7 +78,7 @@ def deserialize_data(data):
     elif isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
-        return tuple(deserialize_data(value) for value in data)
+        return [deserialize_data(value) for value in data]
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):

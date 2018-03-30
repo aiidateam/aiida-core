@@ -82,11 +82,14 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
     def test_migrations_forward_backward(self):
         """
         This is a very broad test that checks that the migration mechanism
-        works. More specifically, it checks that:
-        - Alembic database migrations to specific versions work (upgrade &
-          downgrade)
-        - The methods that are checking the database schema version and perform
-          the migration procedure to the last version work correctly.
+        works. More specifically, it checks that::
+
+            - Alembic database migrations to specific versions work (upgrade &
+              downgrade)
+
+            - The methods that are checking the database schema version and perform
+              the migration procedure to the last version work correctly.
+
         """
         from aiida.backends.sqlalchemy.tests.migration_test import versions
         from aiida.backends.sqlalchemy.utils import check_schema_version

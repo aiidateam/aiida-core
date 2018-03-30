@@ -30,7 +30,7 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.work.ports import PortNamespace
+from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
@@ -132,8 +132,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return itertools.ifilter(lambda kv: not kv[0].startswith('_'),
-                                 self.inputs.iteritems())
+        return itertools.ifilter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
 
     @override
     def load_instance_state(self, saved_state, load_context):
@@ -145,24 +144,19 @@ class Process(plumpy.Process):
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super(Process, self).load_instance_state(saved_state, load_context)
 
-        is_copy = saved_state.get('COPY', False)
-
         if self.SaveKeys.CALC_ID.value in saved_state:
-            if is_copy:
-                old = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-                self._calc = old.copy()
-                self._calc.store()
-            else:
-                self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
-
+            self._calc = load_node(saved_state[self.SaveKeys.CALC_ID.value])
             self._pid = self.calc.pk
         else:
             self._pid = self._create_and_setup_db_record()
+
+        self.calc.logger.info('Loaded process<{}> from saved state'.format(self.calc.pk))
 
     def kill(self, msg=None):
         """
         Kill the process and all the children calculations it called
         """
+        self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
         result = super(Process, self).kill(msg)
 
         for child in self.calc.called:
@@ -175,9 +169,13 @@ class Process(plumpy.Process):
         if value is None:
             # In this case assume that output_port is the actual value and there
             # is just one return value
-            return super(Process, self).out(self.SINGLE_RETURN_LINKNAME, output_port)
-        else:
-            return super(Process, self).out(output_port, value)
+            value = output_port
+            output_port = self.SINGLE_RETURN_LINKNAME
+
+        if isinstance(value, Node) and not value.is_stored:
+            value.store()
+
+        return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
         """
@@ -192,7 +190,7 @@ class Process(plumpy.Process):
         super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
         self.update_node_state(state)
-        if self._enable_persistence and not state.is_terminal():
+        if self._enable_persistence and not state.is_terminal() and not state.label == ProcessState.CREATED:
             self.call_soon(self.runner.persister.save_checkpoint, self)
 
     @override
@@ -212,6 +210,7 @@ class Process(plumpy.Process):
         except exceptions.ModificationNotAllowed:
             pass
 
+    @override
     def on_except(self, exc_info):
         """
         Log the exception by calling the report method with formatted stack trace from exception info object
@@ -226,15 +225,6 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_finish(result, successful)
         self.calc._set_finish_status(result)
-
-    @override
-    def on_fail(self, exc_info):
-        """
-        Format the exception info into a string and log it as an error
-        """
-        super(Process, self).on_fail(exc_info)
-        exception = traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])
-        self.logger.error('{} failed:\n{}'.format(self.pid, ''.join(exception)))
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -404,28 +394,36 @@ class Process(plumpy.Process):
         :param parent_name: the parent key with which to prefix the keys
         :param separator: character to use for the concatenation of keys
         """
-        items = []
-
-        if isinstance(port_value, collections.Mapping) and isinstance(port, PortNamespace):
-
-            for name, value in port_value.iteritems():
-
+        if (
+            (port is None and isinstance(port_value, Node)) or
+            (isinstance(port, InputPort) and not getattr(port, 'non_db', False))
+        ):
+            return [(parent_name, port_value)]
+        elif (
+            (port is None and isinstance(port_value, collections.Mapping)) or
+            isinstance(port, PortNamespace)
+        ):
+            items = []
+            for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
                     nested_port = port[name]
-                except KeyError:
-                    # For dynamic PortNamespaces, only add Node values.
-                    if isinstance(value, Node):
-                        items.append((prefixed_key, value))
-                else:
-                    sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
-                    items.extend(sub_items)
-        else:
-            if not getattr(port, 'non_db', False):
-                items.append((parent_name, port_value))
+                except (KeyError, TypeError):
+                    nested_port = None
 
-        return items
+                sub_items = self._flatten_inputs(
+                    port=nested_port,
+                    port_value=value,
+                    parent_name=prefixed_key,
+                    separator=separator
+                )
+                items.extend(sub_items)
+            return items
+
+        else:
+            assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+            return []
 
     def _use_cache_enabled(self):
         # First priority: inputs

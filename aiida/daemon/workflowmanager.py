@@ -38,7 +38,7 @@ def execute_steps():
     from aiida.orm import JobCalculation
     from aiida.orm.implementation import get_all_running_steps
  
-    logger.info("Querying the worflow DB")
+    logger.debug("Querying the worflow DB")
     
     running_steps = get_all_running_steps()
 

@@ -109,14 +109,15 @@ class SlurmJobResource(NodeNumberJobResource):
         It extends the base class init method and calculates the 
         num_cores_per_mpiproc fields to pass to Slurm schedulers.
         
-        * Check: num_cores_per_machine should be a multiple of
+        Checks that num_cores_per_machine should be a multiple of
         num_cores_per_mpiproc and/or num_mpiprocs_per_machine 
         
-        * Check sequence:
+        Check sequence 
+
         1. If num_cores_per_mpiproc and num_cores_per_machine both are 
-        specified check whether it satisfies the check
+           specified check whether it satisfies the check
         2. If only num_cores_per_machine is passed, calculate 
-        num_cores_per_mpiproc which should always be an integer value
+           num_cores_per_mpiproc which should always be an integer value
         3. If only num_cores_per_mpiproc is passed, use it
         """
         super(SlurmJobResource, self).__init__(*args, **kwargs)
@@ -181,9 +182,8 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         """
         The command to report full information on existing jobs.
 
-        I separate the fields with the _field_separator string
-        order: jobnum, state, walltime, queue[=partition],
-               user, numnodes, numcores, title
+        Separate the fields with the _field_separator string order: 
+        jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
         from aiida.common.exceptions import FeatureNotAvailable
 

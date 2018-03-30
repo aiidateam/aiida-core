@@ -11,7 +11,7 @@ from abc import ABCMeta, abstractmethod
 from aiida.common.pluginloader import BaseFactory
 from aiida.common.utils import abstractclassmethod
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_node', 'load_workflow']
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 'load_node', 'load_workflow']
 
 
 def CalculationFactory(module, from_abstract=False):
@@ -136,6 +136,42 @@ def create_node_id_qb(node_id=None, pk=None, uuid=None,
         qb.add_filter('node',{'uuid': {'like': "{}%".format(start_uuid)}})
 
     return qb
+
+
+def load_group(group_id=None, pk=None, uuid=None, query_with_dashes=True):
+    """
+    Load a group by its pk or uuid
+
+    :param group_id: pk (integer) or uuid (string) of a group
+    :param pk: pk of a group
+    :param uuid: uuid of a group, or the beginning of the uuid
+    :param bool query_with_dashes: allow to query for a uuid with dashes (default=True)
+    :returns: the requested group if existing and unique
+    :raise InputValidationError: if none or more than one of the arguments are supplied
+    :raise TypeError: if the wrong types are provided
+    :raise NotExistent: if no matching Node is found.
+    :raise MultipleObjectsError: if more than one Node was found
+    """
+    from aiida.orm import Group
+
+    kwargs = {
+        'node_id': group_id,
+        'pk': pk,
+        'uuid': uuid,
+        'parent_class': Group,
+        'query_with_dashes': query_with_dashes
+    }
+
+    qb = create_node_id_qb(**kwargs)
+    qb.add_projection('node', '*')
+    qb.limit(2)
+
+    try:
+        return qb.one()[0]
+    except MultipleObjectsError:
+        raise MultipleObjectsError('More than one group found. Provide longer starting pattern for uuid.')
+    except NotExistent:
+        raise NotExistent('No group was found')
 
 
 def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):

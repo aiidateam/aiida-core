@@ -33,11 +33,11 @@ from aiida.backends.settings import BACKEND, AIIDADB_PROFILE
 
 class BackupSetup(object):
     """
-    This class setups the main backup script related information & files like:
-    -    the backup parameter file. It also allows the user to set it up by
-         answering questions.
-    -    the backup folders.
-    -    the script that initiates the backup.
+    This class setups the main backup script related information & files like::
+
+        - the backup parameter file. It also allows the user to set it up by answering questions.
+        - the backup folders.
+        - the script that initiates the backup.
     """
 
     def __init__(self):

@@ -9,10 +9,7 @@
 ###########################################################################
 from __future__ import with_statement
 from alembic import context
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
+from aiida.backends.settings import IN_DOC_MODE
 
 # The available SQLAlchemy tables
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
@@ -53,6 +50,12 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    # This is the Alembic Config object, which provides
+    # access to the values within the .ini file in use.
+    # It is initialized by alembic and we enrich it here
+    # to point to the right database configuration.
+    config = context.config
+
     connectable = config.attributes.get('connection', None)
 
     if connectable is None:
@@ -69,7 +72,8 @@ def run_migrations_online():
         with context.begin_transaction():
             context.run_migrations()
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+if not IN_DOC_MODE:
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        run_migrations_online()

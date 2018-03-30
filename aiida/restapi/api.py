@@ -85,9 +85,8 @@ class AiidaApi(Api):
         addition of resources with the parameters required to initialize the
         resource classes.
 
-        Args:
-            **kwargs: parameters to be passed to the resources for
-            configuration and PREFIX
+        :param kwargs: parameters to be passed to the resources for
+          configuration and PREFIX
         """
 
         from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \

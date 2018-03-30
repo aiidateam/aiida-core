@@ -119,12 +119,12 @@ class RealhydrogenOrbital(Orbital):
         Helper function, checks that value is indeed a integer, or None
         (in which case it returns None) and that the value falls within
         the input range. Returns the value if it passes and will raise
-        an Exception otherwise
+        an Exception otherwise.
 
         :param value: the value to be validated
         :param value_string: the label of the value
         :param value_range: range of values the value may fall
-        :return value the validated number
+        :return value: the validated number
         """
         if value is None:
             return None
@@ -144,7 +144,7 @@ class RealhydrogenOrbital(Orbital):
         valiation or if it contains any unsupported keywords.
 
         :param input_dict: the dictionary of keys to be validated
-        :return validated_dict a validated dictionary
+        :return validated_dict: a validated dictionary
         """
         validated_dict = super(RealhydrogenOrbital,
                                self)._validate_keys(input_dict)

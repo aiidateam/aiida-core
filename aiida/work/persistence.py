@@ -28,15 +28,19 @@ LOGGER = logging.getLogger(__name__)
 # library then this can be removed. https://github.com/WoLpH/portalocker/pull/34
 class RLock(portalocker.Lock):
     """
-    A reentrant lock, functions in a similar way to threading.RLock in that it
-    can be acquired multiple times.  When the corresponding number of release()
-    calls are made the lock will finally release the underlying file lock.
+    reentrant lock.
+    
+    Functions in a similar way to threading.RLock in that it can be acquired
+    multiple times.  When the corresponding number of release() calls are made
+    the lock will finally release the underlying file lock.
     """
 
     def __init__(
             self, filename, mode='a', timeout=portalocker.utils.DEFAULT_TIMEOUT,
             check_interval=portalocker.utils.DEFAULT_CHECK_INTERVAL, fail_when_locked=False,
             flags=portalocker.utils.LOCK_METHOD):
+        """Constructor"""
+
         super(RLock, self).__init__(filename, mode, timeout, check_interval,
                                     fail_when_locked, flags)
         self._acquire_count = 0

@@ -416,7 +416,7 @@ class Process(plumpy.Process):
                 )
                 items.extend(sub_items)
         else:
-            if isinstance(port_value, Node):
+            if port is not None or isinstance(port_value, Node):
                 items.append((parent_name, port_value))
 
         return items

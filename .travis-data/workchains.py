@@ -112,8 +112,8 @@ class DynamicMixedInput(WorkChain):
         spec.outline(cls.do_test)
 
     def do_test(self):
-        input_non_db = self.inputs.namespace.inputs.input_non_db
-        input_db = self.inputs.namespace.inputs.input_db
+        input_non_db = self.inputs.namespace.inputs['input_non_db']
+        input_db = self.inputs.namespace.inputs['input_db']
         assert isinstance(input_non_db, int)
         assert not isinstance(input_non_db, Int)
         assert isinstance(input_db, Int)

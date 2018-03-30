@@ -396,23 +396,27 @@ class Process(plumpy.Process):
         """
         items = []
 
-        if isinstance(port_value, collections.Mapping) and isinstance(port, PortNamespace):
+        if getattr(port, 'non_db', False):
+            return items
 
-            for name, value in port_value.iteritems():
-
+        if isinstance(port_value, collections.Mapping):
+            for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
                     nested_port = port[name]
-                except KeyError:
-                    # For dynamic PortNamespaces, only add Node values.
-                    if isinstance(value, Node):
-                        items.append((prefixed_key, value))
-                else:
-                    sub_items = self._flatten_inputs(nested_port, value, prefixed_key, separator)
-                    items.extend(sub_items)
+                except (KeyError, TypeError):
+                    nested_port = None
+
+                sub_items = self._flatten_inputs(
+                    port=nested_port,
+                    port_value=value,
+                    parent_name=prefixed_key,
+                    separator=separator
+                )
+                items.extend(sub_items)
         else:
-            if not getattr(port, 'non_db', False):
+            if isinstance(port_value, Node):
                 items.append((parent_name, port_value))
 
         return items

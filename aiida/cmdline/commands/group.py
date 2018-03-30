@@ -491,6 +491,8 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-d', '--with-description',
                             dest='with_description', action='store_true',
                             help="Show also the group description")
+        parser.add_argument('-C', '--count', action='store_true',
+                            help="Show also the number of nodes in the group")
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only groups created in the past N days",
                             action='store', type=int)
@@ -551,25 +553,33 @@ class Group(VerdiCommandWithSubcommands):
             except NotExistent as e:
                 print >> sys.stderr, "Error: {}.".format(e.message)
                 sys.exit(1)
-            res = Group.query(user=user, type_string=type_string, nodes=node,
+            result = Group.query(user=user, type_string=type_string, nodes=node,
                               past_days=n_days_ago, name_filters=name_filters)
         else:
-            res = Group.query(user=user, type_string=type_string,
+            result = Group.query(user=user, type_string=type_string,
                               past_days=n_days_ago, name_filters=name_filters)
 
-        groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
-                         g.description) for g in res])
-
+        projection_lambdas = {
+            'pk': lambda group: str(group.pk),
+            'name': lambda group: group.name,
+            'count': lambda group: len(group.nodes),
+            'user': lambda group: group.user.email.strip(),
+            'description': lambda group: group.description
+        }
 
         table = []
-        if parsed_args.with_description:
-            table_header = \
-                ["PK", "GroupName", "NumNodes", "User", "Description"]
-            for pk, nam, nod, usr, desc in groups:
-                table.append([pk, nam, nod, usr, desc])
+        projection_header = ['PK', 'Name', 'User']
+        projection_fields = ['pk', 'name', 'user']
 
-        else:
-            table_header = ["PK", "GroupName", "NumNodes", "User"]
-            for pk, nam, nod, usr, _ in groups:
-                table.append([pk, nam, nod, usr])
-        print(tabulate(table, headers=table_header))
+        if parsed_args.with_description:
+            projection_header.append('Description')
+            projection_fields.append('description')
+
+        if parsed_args.count:
+            projection_header.append('Node count')
+            projection_fields.append('count')
+
+        for group in result:
+            table.append([projection_lambdas[field](group) for field in projection_fields])
+
+        print(tabulate(table, headers=projection_header))

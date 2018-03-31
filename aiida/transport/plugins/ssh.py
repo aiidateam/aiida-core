@@ -20,6 +20,8 @@ from aiida.common.utils import escape_for_bash
 from aiida.transport.util import FileAttribute
 from aiida.common import aiidalogger
 
+__all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
+
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
@@ -405,7 +407,7 @@ class SshTransport(aiida.transport.Transport):
         :param key_policy: (optional, default = paramiko.RejectPolicy())
            the policy to use for unknown keys
 
-        Other parameters valid for the ssh connect function (see the 
+        Other parameters valid for the ssh connect function (see the
         self._valid_connect_params list) are passed to the connect
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.

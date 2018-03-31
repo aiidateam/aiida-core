@@ -20,8 +20,8 @@ try:
 except ImportError:
     import subprocess
 
-import click
 import os
+import click
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'

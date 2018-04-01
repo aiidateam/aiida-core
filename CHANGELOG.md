@@ -1,3 +1,32 @@
+## v0.12.0
+
+### Improvements
+- Hashing, caching and fast-forwarding [[#652]](https://github.com/aiidateam/aiida_core/pull/652)
+- PyCifRW upgraded to 4.2.1 [[#1073]](https://github.com/aiidateam/aiida_core/pull/1073)
+- Calculation no longer stores full source file [[#1082]](https://github.com/aiidateam/aiida_core/pull/1082)
+- Delete nodes via `verdi node delete` [[#1083]](https://github.com/aiidateam/aiida_core/pull/1083)
+- Import structures using ASE [[#1085]](https://github.com/aiidateam/aiida_core/pull/1085)
+- `StructureData` - `pymatgen` - `StructureData` roundtrip works for arbitrary kind names [[#1285]](https://github.com/aiidateam/aiida_core/pull/1285) [[#1306]](https://github.com/aiidateam/aiida_core/pull/1306) [[#1357]](https://github.com/aiidateam/aiida_core/pull/1357)
+
+### Critical bug fixes
+- Add `parser_name` `JobProcess` options [[#1118]](https://github.com/aiidateam/aiida_core/pull/1118)
+- Serialize `WorkChain` context before persisting [[#1354]](https://github.com/aiidateam/aiida_core/pull/1354)
+
+### Minor bug fixes
+- Cell vectors not printed correctly [[#1087]](https://github.com/aiidateam/aiida_core/pull/1087)
+- Fix read-the-docs issues [[#1120]](https://github.com/aiidateam/aiida_core/pull/1120) [[#1143]](https://github.com/aiidateam/aiida_core/pull/1143)
+- Fix structure/band visualization in REST API [[#1167]](https://github.com/aiidateam/aiida_core/pull/1167) [[#1182]](https://github.com/aiidateam/aiida_core/pull/1182)
+- Fix `verdi work list` test [[#1286]](https://github.com/aiidateam/aiida_core/pull/1286)
+- Fix `_inline_to_standalone_script` in `TCODExporter` [[#1351]](https://github.com/aiidateam/aiida_core/pull/1351)
+
+### Miscellaneous
+- Bump `qe-tools` version [[#1090]](https://github.com/aiidateam/aiida_core/pull/1090)
+- Document link types [[#1174]](https://github.com/aiidateam/aiida_core/pull/1174)
+- Switch to trusty + postgres 9.5 on Travis [[#1180]](https://github.com/aiidateam/aiida_core/pull/1180)
+- Use raw SQL in sqlalchemy migration of `Code` [[#1291]](https://github.com/aiidateam/aiida_core/pull/1291)
+- Document querying of list attributes [[#1326]](https://github.com/aiidateam/aiida_core/pull/1326)
+- Cookbook: how to check the number of queued/running jobs in the scheduler [[#1349]](https://github.com/aiidateam/aiida_core/pull/1349)
+
 ## v0.11.3
 
 ### Improvements

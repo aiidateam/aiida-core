@@ -107,7 +107,7 @@ class AiiDAPersister(plumpy.Persister):
         LOGGER.info('Persisting process<{}>'.format(process.pid))
 
         if tag is not None:
-            raise NotImplementedError("Checkpoint tags not supported yet")
+            raise NotImplementedError('Checkpoint tags not supported yet')
 
         loader = class_loader.CLASS_LOADER
 
@@ -121,14 +121,16 @@ class AiiDAPersister(plumpy.Persister):
 
     def load_checkpoint(self, pid, tag=None):
         if tag is not None:
-            raise NotImplementedError("Checkpoint tags not supported yet")
+            raise NotImplementedError('Checkpoint tags not supported yet')
 
-        calc = orm.load_node(pid)
-        try:
-            bundle = yaml.load(calc.checkpoint)
-            return bundle
-        except ValueError:
-            raise PersistenceError("Calculation node '{}' does not have a saved checkpoint")
+        calculation = orm.load_node(pid)
+        checkpoint = calculation.checkpoint
+
+        if checkpoint is None:
+            raise PersistenceError('Calculation<{}> does not have a saved checkpoint'.format(calculation.pk))
+
+        bundle = yaml.load(checkpoint)
+        return bundle
 
     def get_checkpoints(self):
         """

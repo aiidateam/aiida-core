@@ -11,24 +11,19 @@ import click
 import logging
 from functools import partial
 from tabulate import tabulate
+from plumpy import ProcessState
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import work, verdi
+from aiida.common.log import LOG_LEVELS
 from aiida.utils.ascii_vis import print_tree_descending
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-LIST_CMDLINE_PROJECT_CHOICES = ['pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description']
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
-
-LOG_LEVEL_MAPPING = {
-    levelname: i for levelname, i in [
-    (logging.getLevelName(i), i) for i in range(logging.CRITICAL + 1)
-]
-    if not levelname.startswith('Level')
-}
-LOG_LEVELS = LOG_LEVEL_MAPPING.keys()
+LIST_CMDLINE_PROCESS_STATE_CHOICES = ([e.value for e in ProcessState])
 
 
 class Work(VerdiCommandWithSubcommands):
@@ -70,24 +65,36 @@ class Work(VerdiCommandWithSubcommands):
 
 @work.command('list', context_settings=CONTEXT_SETTINGS)
 @click.option(
-    '-p', '--past-days', type=int, default=1,
-    help='add a filter to show only work calculations created in the past N days'
+    '-p', '--past-days', type=int, default=1, metavar='N',
+    help='Only include entries created in the past N days'
 )
 @click.option(
     '-a', '--all-states', 'all_states', is_flag=True,
-    help='return all work calculations regardless of their process state'
+    help='Include all entries, regardless of process state'
+)
+@click.option(
+    '-S', '--process-state', type=click.Choice(LIST_CMDLINE_PROCESS_STATE_CHOICES),
+    help='Only include entries with this process state'
+)
+@click.option(
+    '-f', '--finish_status', type=click.INT,
+    help='Only include entries with this finish status'
+)
+@click.option(
+    '-n', '--failed', is_flag=True,
+    help='Only include entries that are failed, i.e. whose finish status is non-zero'
 )
 @click.option(
     '-l', '--limit', type=int, default=None,
-    help='limit the final result set to this size'
+    help='Limit the number of entries to display'
 )
 @click.option(
     '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT,
-    multiple=True, help='define the list of properties to show'
+    multiple=True, help='Define the list of properties to show'
 )
-def do_list(past_days, all_states, limit, project):
+def do_list(past_days, all_states, process_state, finish_status, failed, limit, project):
     """
-    Return a list of running workflows on screen
+    Return a list of work calculations that are still running
     """
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
@@ -97,7 +104,6 @@ def do_list(past_days, all_states, limit, project):
     from aiida.orm.mixins import Sealable
     from aiida.orm.calculation import Calculation
     from aiida.utils import timezone
-    from aiida.work.processes import ProcessState
 
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
@@ -139,7 +145,7 @@ def do_list(past_days, all_states, limit, project):
         'uuid': lambda value: value['uuid'],
         'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
         'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
-        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize(), value[FINISH_STATUS_KEY]),
+        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[FINISH_STATUS_KEY]),
         'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
         'finish_status': lambda value: value[FINISH_STATUS_KEY],
         'sealed': lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
@@ -153,6 +159,17 @@ def do_list(past_days, all_states, limit, project):
 
     if not all_states:
         filters[PROCESS_STATE_KEY] = {'!in': TERMINAL_STATES}
+
+    if process_state:
+        filters[PROCESS_STATE_KEY] = {'==': process_state}
+
+    if failed:
+        filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+        filters[FINISH_STATUS_KEY] = {'!==': 0}
+
+    if finish_status:
+        filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+        filters[FINISH_STATUS_KEY] = {'==': finish_status}
 
     query = _build_query(
         limit=limit,
@@ -179,6 +196,7 @@ def do_list(past_days, all_states, limit, project):
     tabulated = tabulate(table, headers=projection_labels)
 
     click.echo(tabulated)
+    click.echo('\nTotal results: {}\n'.format(len(table)))
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
@@ -190,7 +208,7 @@ def do_list(past_days, all_states, limit, project):
     help='Set the number of spaces to indent each level by'
 )
 @click.option(
-    '-l', '--levelname', type=click.Choice(LOG_LEVELS), default='REPORT',
+    '-l', '--levelname', type=click.Choice(LOG_LEVELS.keys()), default='REPORT',
     help='Filter the results by name of the log level'
 )
 @click.option(
@@ -223,7 +241,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         entries = backend.log.find(filter_by=filters)
         entries = [
             entry for entry in entries
-            if LOG_LEVEL_MAPPING[entry.levelname] >= LOG_LEVEL_MAPPING[levelname]
+            if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]
         ]
         return [(_, depth) for _ in entries]
 
@@ -426,9 +444,9 @@ def plugins(entry_point):
             click.echo('Registered workflow entry points:')
             for entry_point in entry_points:
                 click.echo("* {}".format(entry_point))
-            click.echo("\nPass the entry point of a workflow as an argument to display detailed information")
+            click.echo("\nPass the entry point as an argument to display detailed information")
         else:
-            click.echo("# No workflows found")
+            click.echo("No workflow plugins found")
 
 
 @work.command('watch', context_settings=CONTEXT_SETTINGS)

@@ -41,7 +41,7 @@ install_requires = [
     'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'plumpy==0.7.10',
+    'plumpy==0.7.12',
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
@@ -113,11 +113,9 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==3.6.2.1',
+        'PyCifRW==4.2.1',
         'seekpath==1.8.0',
         'qe-tools==1.0',
-        # support for the AiiDA CifData class. Update to version 4 does
-        # break tests
     ],
     # Requirements for jupyter notebook
     'notebook': [

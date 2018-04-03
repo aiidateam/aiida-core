@@ -1,3 +1,13 @@
+## v0.11.4
+
+### Improvements
+- PyCifRW upgraded to 4.2.1 [[#1073]](https://github.com/aiidateam/aiida_core/pull/1073)
+
+### Critical bug fixes
+- Persist and load parsed workchain inputs and do not recreate to avoid creating duplicates for default inputs [[#1362]](https://github.com/aiidateam/aiida_core/pull/1362)
+- Serialize `WorkChain` context before persisting [[#1354]](https://github.com/aiidateam/aiida_core/pull/1354)
+
+
 ## v0.11.3
 
 ### Improvements

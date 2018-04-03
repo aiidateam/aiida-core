@@ -6,15 +6,9 @@
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
-
+ 
 # Added for sphinx-apidoc
-SPHINXAPIDOC  = sphinx-apidoc
 APIDOCDIR     = source/apidoc
-PACKAGEDIR    = ../aiida
-ALLAPIDOCOPTS = -o $(APIDOCDIR) $(PACKAGEDIR) --private --force --no-headings
-ALLAPIDOCOPTS += --module-first --no-toc --maxdepth 4
-# See https://stackoverflow.com/a/30144019
-AUTOMODULE_OPTIONS = 'members,special-members,private-members,undoc-members,show-inheritance'
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -25,18 +19,13 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext all default
 
-default: apidoc
+default:
 	$(SPHINXBUILD) -b html -nW $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
-all: apidoc html
-
-# Added for sphinx-apidoc
-apidoc:
-	SPHINX_APIDOC_OPTIONS=$(AUTOMODULE_OPTIONS) $(SPHINXAPIDOC) $(ALLAPIDOCOPTS)
+all: html
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
-	@echo "  apidoc     to auto-generate .rst files for API documentation"
 	@echo "  html       to make standalone HTML files"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
 	@echo "  singlehtml to make a single large HTML file"

@@ -132,8 +132,11 @@ def store_config(confs):
 
     :param confs: the dictionary to store.
     """
-    import json
+    from aiida.backends.settings import IN_RT_DOC_MODE
+    if IN_RT_DOC_MODE:
+        return
 
+    import json
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)

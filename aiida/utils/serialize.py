@@ -9,7 +9,7 @@
 ###########################################################################
 import collections
 from ast import literal_eval
-from plumpy.util import AttributesFrozendict
+from plum.util import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 

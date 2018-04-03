@@ -262,10 +262,6 @@ else:
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
 
-    # home directory is not writeable (warning for aiida.settings documentation)
-    import tempfile
-    os.environ["AIIDA_PATH"] = tempfile.gettempdir()
-
 
 def run_apidoc(_):
     """Runs sphinx-apidoc when building the documentation.

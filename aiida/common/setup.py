@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-from .additions.config_migrations import check_and_migrate_config, add_config_version
+from .additions.config_migrations import theck_and_migrate_config, add_config_version
 
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 
@@ -132,8 +132,11 @@ def store_config(confs):
 
     :param confs: the dictionary to store.
     """
-    import json
+    from aiida.backends.settings import IN_RT_DOC_MODE
+    if IN_RT_DOC_MODE:
+        return
 
+    import json
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)

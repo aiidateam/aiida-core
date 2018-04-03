@@ -71,7 +71,7 @@ install_requires = [
 
 extras_require = {
     # Requirements for Python 2 only
-    ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
+    ':python_version < "3"': ['chainmap', 'singledispatch >= 3.4.0.3'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.

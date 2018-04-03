@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import collections
 from ast import literal_eval
+from plumpy.util import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
@@ -56,6 +57,8 @@ def serialize_data(data):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
     elif isinstance(data, AttributeDict):
         return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+    elif isinstance(data, AttributesFrozendict):
+        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
@@ -75,6 +78,8 @@ def deserialize_data(data):
     """
     if isinstance(data, AttributeDict):
         return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+    elif isinstance(data, AttributesFrozendict):
+        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):

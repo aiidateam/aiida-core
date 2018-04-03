@@ -16,7 +16,7 @@ import json
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
-from .additions.config_migrations import theck_and_migrate_config, add_config_version
+from .additions.config_migrations import check_and_migrate_config, add_config_version
 
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 

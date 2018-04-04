@@ -77,7 +77,7 @@ class Work(VerdiCommandWithSubcommands):
     help='Only include entries with this process state'
 )
 @click.option(
-    '-f', '--finish_status', type=click.INT,
+    '-f', '--finish-status', type=click.INT,
     help='Only include entries with this finish status'
 )
 @click.option(
@@ -167,7 +167,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
         filters[FINISH_STATUS_KEY] = {'!==': 0}
 
-    if finish_status:
+    if finish_status is not None:
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
         filters[FINISH_STATUS_KEY] = {'==': finish_status}
 

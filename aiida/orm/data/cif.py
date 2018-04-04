@@ -516,7 +516,6 @@ class CifData(SinglefileData):
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
-
         return self._values
 
     def set_values(self, values):

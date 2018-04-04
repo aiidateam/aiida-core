@@ -2,7 +2,6 @@
 
 ### Improvements
 - Hashing, caching and fast-forwarding [[#652]](https://github.com/aiidateam/aiida_core/pull/652)
-- PyCifRW upgraded to 4.2.1 [[#1073]](https://github.com/aiidateam/aiida_core/pull/1073)
 - Calculation no longer stores full source file [[#1082]](https://github.com/aiidateam/aiida_core/pull/1082)
 - Delete nodes via `verdi node delete` [[#1083]](https://github.com/aiidateam/aiida_core/pull/1083)
 - Import structures using ASE [[#1085]](https://github.com/aiidateam/aiida_core/pull/1085)
@@ -10,7 +9,6 @@
 
 ### Critical bug fixes
 - Add `parser_name` `JobProcess` options [[#1118]](https://github.com/aiidateam/aiida_core/pull/1118)
-- Serialize `WorkChain` context before persisting [[#1354]](https://github.com/aiidateam/aiida_core/pull/1354)
 
 ### Minor bug fixes
 - Cell vectors not printed correctly [[#1087]](https://github.com/aiidateam/aiida_core/pull/1087)
@@ -26,6 +24,17 @@
 - Use raw SQL in sqlalchemy migration of `Code` [[#1291]](https://github.com/aiidateam/aiida_core/pull/1291)
 - Document querying of list attributes [[#1326]](https://github.com/aiidateam/aiida_core/pull/1326)
 - Cookbook: how to check the number of queued/running jobs in the scheduler [[#1349]](https://github.com/aiidateam/aiida_core/pull/1349)
+
+
+## v0.11.4
+
+### Improvements
+- PyCifRW upgraded to 4.2.1 [[#1073]](https://github.com/aiidateam/aiida_core/pull/1073)
+
+### Critical bug fixes
+- Persist and load parsed workchain inputs and do not recreate to avoid creating duplicates for default inputs [[#1362]](https://github.com/aiidateam/aiida_core/pull/1362)
+- Serialize `WorkChain` context before persisting [[#1354]](https://github.com/aiidateam/aiida_core/pull/1354)
+
 
 ## v0.11.3
 

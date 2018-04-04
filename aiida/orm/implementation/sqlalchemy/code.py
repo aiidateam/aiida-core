@@ -72,7 +72,7 @@ class Code(AbstractCode):
         It also deletes the flags related to the local case (if any)
         """
         self._set_attr('is_local', True)
-        self.dbnode.dbcomputer = None
+        self._dbnode.dbcomputer = None
         try:
             self._del_attr('remote_exec_path')
         except AttributeError:

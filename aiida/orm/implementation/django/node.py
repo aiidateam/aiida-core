@@ -22,6 +22,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
+from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
 # from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
@@ -42,7 +43,6 @@ class Node(AbstractNode):
 
     @staticmethod
     def get_db_columns():
-        # from aiida.backends.djsite.db.models import DbNode
         from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
         return get_db_columns(DbNode)
 
@@ -144,6 +144,10 @@ class Node(AbstractNode):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @property
+    def type(self):
+        return self._dbnode.type
 
     @property
     def ctime(self):
@@ -275,7 +279,15 @@ class Node(AbstractNode):
                 DbLink.objects.filter(**link_filter).distinct())
 
     def get_computer(self):
-        return self._dbnode.dbcomputer
+        """
+        Get the computer associated to the node.
+
+        :return: the Computer object or None.
+        """
+        if self._dbnode.dbcomputer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self._dbnode.dbcomputer)
 
     def _set_db_computer(self, computer):
         from aiida.backends.djsite.db.models import DbComputer

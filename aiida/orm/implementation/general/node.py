@@ -153,8 +153,7 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's
-        properties.
+        Returns a string with infos retrieved from a node's properties.
         This method is actually overwritten by the inheriting classes
 
         :return: a description string
@@ -261,8 +260,7 @@ class AbstractNode(object):
 
     def _init_internal_params(self):
         """
-        Set here the default values for this class; this method
-        is automatically called by the init.
+        Set the default values for this class; this method is automatically called by the init.
 
         :note: if you inherit this function, ALWAYS remember to
           call super()._init_internal_params() as the first thing
@@ -368,6 +366,15 @@ class AbstractNode(object):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
+
+    @abstractproperty
+    def type(self):
+        """
+        Get the type of the node.
+
+        :return: a string.
+        """
+        pass
 
     @property
     def label(self):

@@ -38,7 +38,7 @@ class CalcStateChanges(AiidaTestCase):
             job = JobCalculation(**calc_params)
             job.store()
             # Now save the errant state
-            DbCalcState(dbnode=job.dbnode, state=state).save()
+            DbCalcState(dbnode=job._dbnode, state=state).save()
 
             time_before_fix = timezone.now()
 

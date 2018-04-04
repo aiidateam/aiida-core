@@ -127,14 +127,6 @@ class DbNode(Base):
         passive_deletes=True
     )
 
-    @property
-    def outputs(self):
-        return self.outputs_q.all()
-
-    @property
-    def inputs(self):
-        return self.inputs_q.all()
-
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
 
@@ -143,6 +135,14 @@ class DbNode(Base):
 
         if self.extras is None:
             self.extras = dict()
+
+    @property
+    def outputs(self):
+        return self.outputs_q.all()
+
+    @property
+    def inputs(self):
+        return self.inputs_q.all()
 
     # XXX repetition between django/sqlalchemy here.
     def get_aiida_class(self):

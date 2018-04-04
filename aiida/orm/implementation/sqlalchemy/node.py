@@ -153,6 +153,11 @@ class Node(AbstractNode):
                                   "SQLAlchemy. Please use QueryBuilder.")
 
     @property
+    def type(self):
+        # Type is immutable so no need to ensure the model is up to date
+        return self._dbnode.type
+
+    @property
     def ctime(self):
         """
         Return the creation time of the node.

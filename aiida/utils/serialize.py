@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 import collections
 from ast import literal_eval
+from plum.util import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
@@ -56,6 +65,8 @@ def serialize_data(data):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
     elif isinstance(data, AttributeDict):
         return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+    elif isinstance(data, AttributesFrozendict):
+        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
@@ -75,6 +86,8 @@ def deserialize_data(data):
     """
     if isinstance(data, AttributeDict):
         return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+    elif isinstance(data, AttributesFrozendict):
+        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):

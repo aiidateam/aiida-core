@@ -216,7 +216,7 @@ def submit_calc(calc, authinfo, transport=None):
                     # Note: this will possibly overwrite files
                     for f in code.get_folder_list():
                         t.put(code.get_abs_path(f), f)
-                    t.chmod(code.get_local_executable(), 0755)  # rwxr-xr-x
+                    t.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
             # copy all files, recursively with folders
             for f in folder.get_content_list():
@@ -312,17 +312,19 @@ def submit_calc(calc, authinfo, transport=None):
     except Exception as e:
         import traceback
 
+        execlogger.error(
+            "Submission of calc {} failed, check also the log file! Traceback: {}".format(
+                calc.pk, traceback.format_exc()
+            ),
+            extra=logger_extra
+        )
+
         try:
             calc._set_state(calc_states.SUBMISSIONFAILED)
             return True
         except ModificationNotAllowed:
             return False
 
-        execlogger.error("Submission of calc {} failed, check also the "
-                         "log file! Traceback: {}".format(calc.pk,
-                                                          traceback.format_exc()),
-                         extra=logger_extra)
-        raise
     finally:
         # close the transport, but only if it was opened within this function
         if must_open_t:

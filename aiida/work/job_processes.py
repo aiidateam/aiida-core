@@ -72,6 +72,7 @@ class SubmitJob(TransportTask):
     """ A task to submit a job calculation """
 
     def execute(self, transport):
+        self._calc.logger.info('Submitting calculation<{}>'.format(self._calc.pk))
         try:
             execmanager.submit_calc(self._calc, self._authinfo, transport)
         except Exception as exception:
@@ -82,6 +83,7 @@ class UpdateSchedulerState(TransportTask):
     """ A task to update the scheduler state of a job calculation """
 
     def execute(self, transport):
+        self._calc.logger.info('Updating scheduler state calculation<{}>'.format(self._calc.pk))
 
         # We are the only ones to set the calc state to COMPUTED, so if it is set here
         # it was already completed in a previous task that got shutdown and reactioned
@@ -138,6 +140,7 @@ class RetrieveJob(TransportTask):
 
     def execute(self, transport):
         """ This returns the retrieved temporary folder """
+        self._calc.logger.info('Retrieving completed calculation<{}>'.format(self._calc.pk))
         try:
             return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
         except Exception as exception:
@@ -229,6 +232,7 @@ class Waiting(plumpy.Waiting):
 
         calc = self.process.calc
         transport_queue = self.process.runner.transport
+        calc.logger.info('Waiting for calculation<{}> on {}'.format(calc.pk, self.data))
 
         try:
             if self.data == SUBMIT_COMMAND:
@@ -499,7 +503,13 @@ class JobProcess(processes.Process):
             raise
         finally:
             # Delete the temporary folder
-            shutil.rmtree(retrieved_temporary_folder)
+            try:
+                shutil.rmtree(retrieved_temporary_folder)
+            except OSError as exception:
+                if exception.errno == 2:
+                    pass
+                else:
+                    raise
 
         # Finally link up the outputs and we're done
         for label, node in self.calc.get_outputs_dict().iteritems():

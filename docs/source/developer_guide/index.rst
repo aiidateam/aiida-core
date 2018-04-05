@@ -26,3 +26,4 @@ Developer guide
     database_schema
     caching
     ../restapi/index
+    cookbook

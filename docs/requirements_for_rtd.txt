@@ -17,6 +17,7 @@ aldjemy==0.6.0
 alembic==0.9.6
 anyjson==0.3.3
 ase==3.12.0
+chainmap
 circus>=0.14.0
 click-plugins
 click-spinner
@@ -37,7 +38,7 @@ mock==2.0.0
 numpy==1.12.0
 paramiko==2.4.0
 passlib==1.7.1
-pathlib2==2.3.0
+pathlib2
 pgtest==1.1.0
 pika==0.11.2
 pip==9.0.1
@@ -57,6 +58,7 @@ reentry>=1.0.3
 scipy<1.0.0
 seekpath==1.8.0
 setuptools==36.6.0
+singledispatch >= 3.4.0.3
 six==1.11.0
 spglib==1.9.10.1
 sphinx-rtd-theme==0.2.5b2

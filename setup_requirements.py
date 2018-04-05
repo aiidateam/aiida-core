@@ -22,7 +22,6 @@ install_requires = [
     'pyyaml',
     'six==1.11.0',
     'future==0.16.0',
-    'pathlib2==2.3.0',
     'anyjson==0.3.3',
     'psutil==5.4.0',
     'meld3==1.0.0',
@@ -105,7 +104,7 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==4.2.1', # support for the AiiDA CifData class
+        'PyCifRW==4.2.1',
         'seekpath==1.8.0',
         'qe-tools==1.1.0',
     ],

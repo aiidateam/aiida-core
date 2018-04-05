@@ -9,16 +9,17 @@
 ###########################################################################
 
 
-
 try:
     import ultrajson as json
     from functools import partial
+
     # double_precision = 15, to replicate what PostgreSQL numerical type is
     # using
     json_dumps = partial(json.dumps, double_precision=15)
     json_loads = partial(json.loads, precise_float=True)
 except ImportError:
     import json
+
     json_dumps = json.dumps
     json_loads = json.loads
 
@@ -94,6 +95,7 @@ def _load_dbenv_noschemacheck(profile=None, connection=None):
     config = get_profile_config(settings.AIIDADB_PROFILE)
     reset_session(config)
 
+
 _aiida_autouser_cache = None
 
 
@@ -133,6 +135,7 @@ def dumps_json(d):
 
     return json_dumps(f(d))
 
+
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
 
@@ -162,7 +165,6 @@ def loads_json(s):
         return d
 
     return f(ret)
-
 
 
 # XXX the code here isn't different from the one use in Django. We may be able
@@ -455,9 +457,9 @@ def get_db_schema_version(config):
         return []
 
     with EnvironmentContext(
-        config,
-        script,
-        fn=get_db_version
+            config,
+            script,
+            fn=get_db_version
     ):
         script.run_env()
         return config.attributes['rev']

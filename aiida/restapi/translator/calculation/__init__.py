@@ -63,7 +63,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved input files for job calculation
         """
 
-        if node.dbnode.type.startswith("calculation.job."):
+        if node.type.startswith("calculation.job."):
 
             input_folder = node._raw_input_folder
 
@@ -85,7 +85,7 @@ class CalculationTranslator(NodeTranslator):
                     response["filename"] = filename.replace("/", "_")
 
                 else:
-                    raise RestInputValidationError ("rtype is not supported")
+                    raise RestInputValidationError("rtype is not supported")
 
                 return response
 
@@ -103,7 +103,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved output files for job calculation
         """
 
-        if node.dbnode.type.startswith("calculation.job."):
+        if node.type.startswith("calculation.job."):
 
             retrieved_folder = node.out.retrieved
             response = {}

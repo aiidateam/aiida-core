@@ -531,7 +531,7 @@ class Node(AbstractNode):
                 raise
 
     def _increment_version_number_db(self):
-        self._dbnode.nodeversion = DbNode.nodeversion + 1
+        self._dbnode.nodeversion = self.nodeversion + 1
         try:
             self._dbnode.save()
         except:
@@ -567,6 +567,16 @@ class Node(AbstractNode):
     def dbnode(self):
         self._ensure_model_uptodate()
         return self._dbnode
+
+    @property
+    def nodeversion(self):
+        self._ensure_model_uptodate(attribute_names=['nodeversion'])
+        return self._dbnode.nodeversion
+
+    @property
+    def public(self):
+        self._ensure_model_uptodate(attribute_names=['public'])
+        return self._dbnode.public
 
     def _db_store_all(self, with_transaction=True, use_cache=None):
         """

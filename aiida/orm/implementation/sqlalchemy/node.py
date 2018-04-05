@@ -568,7 +568,7 @@ class Node(AbstractNode):
 
     @property
     def pk(self):
-        return self.dbnode.id
+        return self._dbnode.id
 
     @property
     def id(self):

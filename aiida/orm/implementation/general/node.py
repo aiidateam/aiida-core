@@ -14,6 +14,7 @@ import types
 import logging
 import importlib
 import collections
+
 try:
     import pathlib
 except ImportError:
@@ -139,8 +140,7 @@ class AbstractNode(object):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a node's
-        properties.
+        Returns a string with infos retrieved from a node's properties.
         This method is actually overwritten by the inheriting classes
 
         :return: a description string
@@ -192,20 +192,6 @@ class AbstractNode(object):
         """
         pass
 
-    @property
-    def ctime(self):
-        """
-        Return the creation time of the node.
-        """
-        return self.dbnode.ctime
-
-    @property
-    def mtime(self):
-        """
-        Return the modification time of the node.
-        """
-        return self.dbnode.mtime
-
     def __int__(self):
         if self._to_be_stored:
             return None
@@ -236,6 +222,20 @@ class AbstractNode(object):
         """
         return not self._to_be_stored
 
+    @abstractproperty
+    def ctime(self):
+        """
+        Return the creation time of the node.
+        """
+        pass
+
+    @abstractproperty
+    def mtime(self):
+        """
+        Return the modification time of the node.
+        """
+        pass
+
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
@@ -246,8 +246,7 @@ class AbstractNode(object):
 
     def _init_internal_params(self):
         """
-        Set here the default values for this class; this method
-        is automatically called by the init.
+        Set the default values for this class; this method is automatically called by the init.
 
         :note: if you inherit this function, ALWAYS remember to
           call super()._init_internal_params() as the first thing
@@ -335,7 +334,7 @@ class AbstractNode(object):
                     raise ValueError("Cannot set {} directly when creating "
                                      "the node or using the .set() method; "
                                      "use the specific method instead.".format(
-                                         incomp[0]))
+                        incomp[0]))
                 else:
                     raise ValueError("Cannot set {} at the same time".format(
                         " and ".join(incomp)))
@@ -354,6 +353,15 @@ class AbstractNode(object):
                                  "callable!".format(k))
             method(v)
 
+    @abstractproperty
+    def type(self):
+        """
+        Get the type of the node.
+
+        :return: a string.
+        """
+        pass
+
     @property
     def label(self):
         """
@@ -361,7 +369,7 @@ class AbstractNode(object):
 
         :return: a string.
         """
-        return self.dbnode.label
+        return self._get_db_label_field()
 
     @label.setter
     def label(self, label):
@@ -373,9 +381,18 @@ class AbstractNode(object):
         self._update_db_label_field(label)
 
     @abstractmethod
+    def _get_db_label_field(self):
+        """
+        Get the label field acting directly on the DB
+
+        :return: a string.
+        """
+        pass
+
+    @abstractmethod
     def _update_db_label_field(self, field_value):
         """
-        Update the label field acting directly on the DB
+        Set the label field acting directly on the DB
         """
         pass
 
@@ -385,8 +402,9 @@ class AbstractNode(object):
         Get the description of the node.
 
         :return: a string
+        :rtype: str
         """
-        return self.dbnode.description
+        return self._get_db_description_field()
 
     @description.setter
     def description(self, desc):
@@ -396,6 +414,13 @@ class AbstractNode(object):
         :param desc: a string
         """
         self._update_db_description_field(desc)
+
+    @abstractmethod
+    def _get_db_description_field(self):
+        """
+        Get the description of this node, acting directly at the DB level
+        """
+        pass
 
     @abstractmethod
     def _update_db_description_field(self, field_value):
@@ -419,13 +444,14 @@ class AbstractNode(object):
         """
         return True
 
+    @abstractmethod
     def get_user(self):
         """
         Get the user.
 
-        :return: a Django DbUser model object
+        :return: a DbUser model object
         """
-        return self.dbnode.user
+        pass
 
     def _has_cached_links(self):
         """
@@ -699,7 +725,7 @@ class AbstractNode(object):
                 input_link_type = v[1]
                 if label in input_list_keys:
                     raise InternalError("There exist a link with the same name '{}' both in the DB "
-                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
 
                 if link_type is None or input_link_type is link_type:
                     inputs_list.append((label, src))
@@ -764,17 +790,14 @@ class AbstractNode(object):
         """
         pass
 
+    @abstractmethod
     def get_computer(self):
         """
         Get the computer associated to the node.
 
         :return: the Computer object or None.
         """
-        from aiida.orm.computer import Computer
-        if self.dbnode.dbcomputer is None:
-            return None
-        else:
-            return Computer(dbcomputer=self.dbnode.dbcomputer)
+        pass
 
     def set_computer(self, computer):
         """
@@ -1146,7 +1169,7 @@ class AbstractNode(object):
             # added (in particular, we do not even have an ID to use!)
             # Return without value, meaning that this is an empty generator
             return
-            yield # Needed after return to convert it to a generator
+            yield  # Needed after return to convert it to a generator
         for extra in self._db_iterextras():
             yield extra
 
@@ -1443,7 +1466,7 @@ class AbstractNode(object):
             raise ValueError("The path in get_abs_path must be relative")
         return self.folder.get_subfolder(
             section, reset_limit=True).get_abs_path(
-                path, check_existence=True)
+            path, check_existence=True)
 
     def store_all(self, with_transaction=True, use_cache=None):
         """
@@ -1646,7 +1669,6 @@ class AbstractNode(object):
         """
         pass
 
-
     def __del__(self):
         """
         Called only upon real object destruction from memory
@@ -1655,7 +1677,6 @@ class AbstractNode(object):
         """
         if getattr(self, '_temp_folder', None) is not None:
             self._temp_folder.erase()
-
 
     def get_hash(self, ignore_errors=True, **kwargs):
         """
@@ -1683,7 +1704,7 @@ class AbstractNode(object):
                 key: val for key, val in self.get_attrs().items()
                 if (
                     key not in self._hash_ignored_attributes and
-                    key not in self._updatable_attributes
+                    key not in getattr(self, '_updatable_attributes', tuple())
                 )
             },
             self.folder,
@@ -1766,7 +1787,6 @@ class AbstractNode(object):
         """
         return NodeInputManager(self)
 
-
     @property
     def has_children(self):
         """
@@ -1776,10 +1796,9 @@ class AbstractNode(object):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         first_desc = QueryBuilder().append(
-            Node, filters={'id':self.pk}, tag='self').append(
+            Node, filters={'id': self.pk}, tag='self').append(
             Node, descendant_of='self', project='id').first()
         return bool(first_desc)
-
 
     @property
     def has_parents(self):
@@ -1790,7 +1809,7 @@ class AbstractNode(object):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         first_ancestor = QueryBuilder().append(
-            Node, filters={'id':self.pk}, tag='self').append(
+            Node, filters={'id': self.pk}, tag='self').append(
             Node, ancestor_of='self', project='id').first()
         return bool(first_ancestor)
 

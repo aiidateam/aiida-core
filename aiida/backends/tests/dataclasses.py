@@ -1843,7 +1843,7 @@ class TestStructureDataReload(AiidaTestCase):
 
         a.store()
 
-        b = StructureData(dbnode=a.dbnode)
+        b = load_node(uuid=a.uuid)
 
         for i in range(3):
             for j in range(3):
@@ -2704,7 +2704,7 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(second.shape, n.get_shape('second'))
 
         # Same checks, after reloading
-        n2 = ArrayData(dbnode=n.dbnode)
+        n2 = load_node(uuid=n.uuid)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)

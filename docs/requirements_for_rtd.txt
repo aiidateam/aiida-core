@@ -39,7 +39,6 @@ numpy==1.12.0
 paramiko==2.4.0
 passlib==1.7.1
 pathlib2
-pathlib2==2.3.0
 pgtest==1.1.0
 pika==0.11.2
 pip==9.0.1

@@ -22,7 +22,6 @@ install_requires = [
     'pyyaml',
     'six==1.11.0',
     'future==0.16.0',
-    'pathlib2==2.3.0',
     'anyjson==0.3.3',
     'psutil==5.4.0',
     'meld3==1.0.0',

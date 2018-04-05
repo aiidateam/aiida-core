@@ -228,6 +228,13 @@ class TestSessionSqla(AiidaTestCase):
         wf.add_attribute('a', n_reloaded)
 
     def test_node_access_with_sessions(self):
+        """
+        This checks that changes to a node from a different session (e.g. different interpreter,
+        or the daemon) are immediately reflected on the AiiDA node when read directly e.g. a change
+        to node.description will immediately be seen.
+
+        Tests for bug #1372
+        """
         from aiida.utils import timezone
         from aiida.orm.node import Node
         import aiida.backends.sqlalchemy as sa
@@ -278,6 +285,9 @@ class TestSessionSqla(AiidaTestCase):
         do_value_checks('nodeversion', 1, 2)
         do_value_checks('public', True, False)
 
+        for str_attr in ['ctime', 'mtime']:
+            do_value_checks(str_attr, timezone.now(), timezone.now())
+
         # Attributes
         self.assertDictEqual(node._attributes(), dbnode_reloaded.attributes)
         dbnode_reloaded.attributes['test_attrs'] = 'Boo!'
@@ -289,5 +299,3 @@ class TestSessionSqla(AiidaTestCase):
         dbnode_reloaded.extras['test_extras'] = 'Boo!'
         custom_session.commit()
         self.assertDictEqual(node._attributes(), dbnode_reloaded.attributes)
-
-

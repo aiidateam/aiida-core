@@ -11,51 +11,28 @@
 from aiida.backends.djsite.db.models import DbUser
 from aiida.common.lang import override
 from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
-from aiida.utils.email import normalize_email
+from aiida.common.utils import type_check
 from aiida.orm.implementation.general.utils import get_db_columns
 
 
 class User(AbstractUser):
+    @classmethod
+    def from_dbmodel(cls, dbuser):
+        if not isinstance(dbuser, DbUser):
+            raise ValueError("Expected a DbUser. Object of a different"
+                             "class was given as argument.")
 
-    def __init__(self, **kwargs):
+        user = cls.__new__(cls)
+        user._dbuser = dbuser
+        return user
+
+    def __init__(self, email):
         super(User, self).__init__()
-
-        # If no arguments are passed, then create a new DbUser
-        if not kwargs:
-            raise ValueError("User can not be instantiated without arguments")
-
-        # If a DbUser is passed as argument. Just use it and
-        # wrap it with a User object
-        elif 'dbuser' in kwargs:
-            # When a dbuser is passed as argument, then no other arguments
-            # should be passed.
-            if len(kwargs) > 1:
-                raise ValueError("When a DbUser is passed as argument, no"
-                                 "further arguments are accepted.")
-            dbuser = kwargs.pop('dbuser')
-            if not isinstance(dbuser, DbUser):
-                raise ValueError("Expected a DbUser. Object of a different"
-                                 "class was given as argument.")
-            self._dbuser = dbuser
-
-        # If the email of a users is given then create a new User object with
-        # this email.
-        elif 'email' in kwargs:
-            # When a dbuser is passed as argument, then no other arguments
-            # should be passed.
-            if len(kwargs) > 1:
-                raise ValueError("When an email is passed as argument, no"
-                                 "further arguments are accepted.")
-            email = normalize_email(kwargs.pop('email'))
-            self._dbuser = DbUser(email=email)
-
-        else:
-            raise ValueError("Only dbuser & email are accepted as arguments")
+        self._dbuser = DbUser(email=email)
 
     @staticmethod
     def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import \
-            DbUser as DbU
+        from aiida.backends.djsite.querybuilder_django.dummy_model import DbUser as DbU
         return get_db_columns(DbU)
 
     @property
@@ -200,7 +177,7 @@ class User(AbstractUser):
             dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
         users = []
         for dbuser in dbusers:
-            users.append(cls(dbuser=dbuser))
+            users.append(User.from_dbmodel(dbuser))
         return users
 
 
@@ -212,3 +189,20 @@ class Util(UserUtil):
         :param pk: The user pk.
         """
         DbUser.objecs.filter(pk=pk).delete()
+
+
+def _get_db_user(user):
+    """
+    Take an AiiDA User and return the dbuser model if compatible, otherwise
+    raise TypeError
+
+    :param user: The AiiDA user object
+    :return: The SQLA dbuser model
+    """
+    import aiida.orm as orm
+
+    type_check(user, orm.User)
+    backend_user = user._impl
+    type_check(backend_user, User)
+
+    return backend_user._dbuser

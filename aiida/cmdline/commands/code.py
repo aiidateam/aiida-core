@@ -678,12 +678,11 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.code import Code
         from aiida.orm.computer import Computer
-        from aiida.orm.user import User
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.user import User, get_automatic_user
 
         qb_user_filters = dict()
         if not all_users:
-            user = User(dbuser=get_automatic_user())
+            user = get_automatic_user()
             qb_user_filters['email'] = user.email
 
         qb_computer_filters = dict()

@@ -25,7 +25,6 @@ from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
-
 logger = aiidalogger.getChild('Workflow')
 
 
@@ -75,7 +74,7 @@ class Workflow(AbstractWorkflow):
             stack = inspect.stack()
 
             # cur_fr  = inspect.currentframe()
-            #call_fr = inspect.getouterframes(cur_fr, 2)
+            # call_fr = inspect.getouterframes(cur_fr, 2)
 
             # Get all the caller data
             caller_frame = stack[1][0]
@@ -224,6 +223,7 @@ class Workflow(AbstractWorkflow):
         # Note: I have to reload the ojbect. I don't do it here because it is done at every call
         # to self.dbnode
         # self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
+
     @classmethod
     def query(cls, *args, **kwargs):
         """
@@ -236,7 +236,7 @@ class Workflow(AbstractWorkflow):
         return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
 
     # @property
-    #def logger(self):
+    # def logger(self):
     #    """
     #    Get the logger of the Workflow object.
     #
@@ -499,7 +499,7 @@ class Workflow(AbstractWorkflow):
         :return: a list of DbWorkflowStep objects.
         """
         if state is None:
-            return self.dbworkflowinstance.steps.all().order_by('time')  #.values_list('name',flat=True)
+            return self.dbworkflowinstance.steps.all().order_by('time')  # .values_list('name',flat=True)
         else:
             return self.dbworkflowinstance.steps.filter(state=state).order_by('time')
 
@@ -545,7 +545,7 @@ class Workflow(AbstractWorkflow):
 
         for elem_name, elem in wf_mod.__dict__.iteritems():
 
-            if module_class == elem_name:  #and issubclass(elem, Workflow):
+            if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)
 
     @classmethod
@@ -569,6 +569,7 @@ class Workflow(AbstractWorkflow):
         except ObjectDoesNotExist:
             raise NotExistent("No entry with the UUID {} found".format(uuid))
 
+
 def kill_all():
     from aiida.backends.djsite.db.models import DbWorkflow
     q_object = Q(user=get_automatic_user())
@@ -578,9 +579,11 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+
 def get_all_running_steps():
     from aiida.backends.djsite.db.models import DbWorkflowStep
     return DbWorkflowStep.objects.filter(state=wf_states.RUNNING)
+
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
@@ -646,20 +649,19 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                             'state': state,
                                             'subwf_pks': [],
                                             'calc_pks': [],
-                }
+                                            }
             if subwf_pk:
                 subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-
         # get all subworkflows for all steps
-        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  #.order_by('ctime')
+        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into workflows
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 

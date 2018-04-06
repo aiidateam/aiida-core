@@ -30,10 +30,10 @@ class TestDaemonBasic(AiidaTestCase):
         head_wf.start()
 
         # Get the user
-        dbuser = User.search_for_users(email=self.user_email)[0]
-        wfl = get_workflow_list(user=dbuser)
+        user = User.search_for_users(email=self.user_email)[0]
+        wfl = get_workflow_list(user=user)
         running_no = 0
-        for w in get_workflow_list(user=dbuser, all_states=True):
+        for w in get_workflow_list(user=user, all_states=True):
             if w.get_aiida_class().get_state() == wf_states.RUNNING:
                 running_no += 1
         self.assertEquals(running_no, 3,
@@ -45,7 +45,7 @@ class TestDaemonBasic(AiidaTestCase):
 
         # At this point no running workflow should be found
         running_no = 0
-        for w in get_workflow_list(user=dbuser, all_states=True):
+        for w in get_workflow_list(user=user, all_states=True):
             if w.get_aiida_class().get_state() == wf_states.RUNNING:
                 running_no += 1
         self.assertEquals(running_no, 0,
@@ -62,7 +62,7 @@ class TestDaemonBasic(AiidaTestCase):
         self.assertEquals(len(list(get_all_running_steps())), 0,
                           "At this point there should be no running steps.")
         running_no = 0
-        for w in get_workflow_list(user=dbuser, all_states=True):
+        for w in get_workflow_list(user=user, all_states=True):
             if w.get_aiida_class().get_state() == wf_states.RUNNING:
                 running_no += 1
         self.assertEquals(running_no, 0,
@@ -77,7 +77,7 @@ class TestDaemonBasic(AiidaTestCase):
         self.assertEquals(len(list(get_all_running_steps())), 0,
                           "At this point there should be no running steps.")
         running_no = 0
-        for w in get_workflow_list(user=dbuser, all_states=True):
+        for w in get_workflow_list(user=user, all_states=True):
             if w.get_aiida_class().get_state() == wf_states.RUNNING:
                 running_no += 1
         self.assertEquals(running_no, 0,

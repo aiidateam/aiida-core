@@ -215,6 +215,15 @@ class AbstractNode(object):
         self._temp_folder = None
         self._repo_folder = None
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+
+    def __str__(self):
+        if not self.is_stored:
+            return "uuid: {} (unstored)".format(self.uuid)
+
+        return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+
     @property
     def is_stored(self):
         """
@@ -235,14 +244,6 @@ class AbstractNode(object):
         Return the modification time of the node.
         """
         pass
-
-    def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
-
-    def __str__(self):
-        if not self.is_stored:
-            return "uuid: {} (unstored)".format(self.uuid)
-        return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -362,6 +363,15 @@ class AbstractNode(object):
         """
         pass
 
+    @abstractproperty
+    def nodeversion(self):
+        """
+        Return the version of the node
+
+        :return: A version integer
+        """
+        pass
+
     @property
     def label(self):
         """
@@ -449,7 +459,16 @@ class AbstractNode(object):
         """
         Get the user.
 
-        :return: a DbUser model object
+        :return: a User model object
+        """
+        pass
+
+    @abstractmethod
+    def set_user(self, user):
+        """
+        Set the user
+
+        :param user: The new user
         """
         pass
 
@@ -518,7 +537,7 @@ class AbstractNode(object):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
-        
+
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
 
@@ -562,30 +581,6 @@ class AbstractNode(object):
         # If both are stored, remove also from the DB
         if self.is_stored:
             self._remove_dblink_from(label)
-
-    def _remove_link_from(self, label, src_uuid):
-        """
-        Remove from the DB the input link with the given label.
-
-        :note: In subclasses, change only this. Moreover, remember to call
-            the super() method in order to properly use the caching logic!
-
-        :note: No error is raised if the link does not exist.
-
-        :param str label: the name of the label to set the link from src.
-        :param link_type: The type of link, must be one of the enum values form
-          :class:`~aiida.common.links.LinkType`
-        """
-        link_key = LinkKey(label, src_uuid)
-        # Try to remove from the local cache, no problem if none is present
-        try:
-            del self._inputlinks_cache[link_key]
-        except KeyError:
-            pass
-
-        # If both are stored, remove also from the DB
-        if self.is_stored:
-            self._remove_dblink_from(link_key)
 
     @abstractmethod
     def _replace_dblink_from(self, src, label, link_type):
@@ -1341,10 +1336,6 @@ class AbstractNode(object):
         """
         :return: the corresponding DbNode object.
         """
-        # I also update the internal _dbnode variable, if it was saved
-        # from aiida.backends.djsite.db.models import DbNode
-        #        if self.is_stored:
-        #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         pass
 
     @property

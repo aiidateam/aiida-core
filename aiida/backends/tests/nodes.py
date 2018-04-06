@@ -1222,29 +1222,29 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a._dbnode.nodeversion, 1)
-        self.assertEquals(a.dbnode.nodeversion, 1)
-        self.assertEquals(a._dbnode.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
 
         a.label = "label1"
         a.label = "label2"
-        self.assertEquals(a._dbnode.nodeversion, 3)
-        self.assertEquals(a.dbnode.nodeversion, 3)
-        self.assertEquals(a._dbnode.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
 
         a.description = "desc1"
         a.description = "desc2"
         a.description = "desc3"
-        self.assertEquals(a._dbnode.nodeversion, 6)
-        self.assertEquals(a.dbnode.nodeversion, 6)
-        self.assertEquals(a._dbnode.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.user import get_automatic_user
         import time
 
         a = Node()

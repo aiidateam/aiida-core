@@ -1357,8 +1357,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return AuthInfo.get(computer=computer._dbcomputer,
-                            user=self.dbnode.user)
+        return AuthInfo.get(computer=computer._dbcomputer, aiidauser=self.get_user())
 
     def _get_transport(self):
         """
@@ -1972,6 +1971,7 @@ class AbstractJobCalculation(AbstractCalculation):
         properties.
         """
         return self.get_state(from_attribute=True)
+
 
 class CalculationResultManager(object):
     """

@@ -93,11 +93,10 @@ class TestSpecificImport(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(StructureData, project=["*"])
         self.assertEquals(qb.count(), 7, "The number of StructureData is not "
-                                          "the expected one.")
+                                         "the expected one.")
         for [struct] in qb.all():
             self.assertEquals(struct.label, "3D_with_2D_substructure",
                               "A label is not correct")
-
 
         # TO BE SEEN WITH MOUNET
         # print "<================= ParameterData attributes.energy ====================>"
@@ -127,7 +126,7 @@ class TestSpecificImport(AiidaTestCase):
         qb.append(StructureData, project=["attributes.cell"], filters={
             'uuid': {"==": "45670237-dc1e-4300-8e0b-4d3639dc77cf"}})
         for [cell] in qb.all():
-            #print cell
+            # print cell
             self.assertEquals(cell,
                               [[8.34, 0.0, 0.0], [0.298041701839357,
                                                   8.53479766274308, 0.0],
@@ -215,7 +214,7 @@ class TestSimple(AiidaTestCase):
         temp_folder = tempfile.mkdtemp()
         try:
             # producing values for each base type
-            values = ("Hello", 6, -1.2399834e12, False) #, ["Bla", 1, 1e-10])
+            values = ("Hello", 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
             filename = os.path.join(temp_folder, "export.tar.gz")
 
             # producing nodes:
@@ -487,14 +486,14 @@ class TestSimple(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.dbnode.user = user._dbuser
+            sd1.set_user(user)
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
             jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.dbnode.user = user._dbuser
+            jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_link_from(sd1)
@@ -502,10 +501,10 @@ class TestSimple(AiidaTestCase):
 
             # Create some nodes from a different user
             sd2 = StructureData()
-            sd2.dbnode.user = user._dbuser
+            sd2.set_user(user)
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE) # I assume jc1 CREATED sd2
+            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)  # I assume jc1 CREATED sd2
 
             jc2 = JobCalculation()
             jc2.set_computer(self.computer)
@@ -571,14 +570,14 @@ class TestSimple(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.dbnode.user = user._dbuser
+            sd1.set_user(user)
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
             jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.dbnode.user = user._dbuser
+            jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_link_from(sd1)
@@ -586,7 +585,7 @@ class TestSimple(AiidaTestCase):
 
             # Create some nodes from a different user
             sd2 = StructureData()
-            sd2.dbnode.user = user._dbuser
+            sd2.set_user(user)
             sd2.label = 'sd2'
             sd2.store()
             sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)
@@ -677,14 +676,14 @@ class TestSimple(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.dbnode.user = user._dbuser
+            sd1.set_user(user)
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
             jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.dbnode.user = user._dbuser
+            jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_link_from(sd1)
@@ -719,7 +718,7 @@ class TestSimple(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
     def test_workfunction_1(self):
-        import shutil,  os, tempfile
+        import shutil, os, tempfile
 
         from aiida.work.workfunctions import workfunction
         from aiida.orm.data.float import Float
@@ -731,20 +730,22 @@ class TestSimple(AiidaTestCase):
         @workfunction
         def add(a, b):
             """Add 2 numbers"""
-            return {'res':Float(a+b)}
+            return {'res': Float(a + b)}
+
         def max_(**kwargs):
             """select the max value"""
             max_val = max([(v.value, v) for v in kwargs.values()])
             return {'res': max_val[1]}
+
         try:
             # I'm creating a bunch of nuimbers
             a, b, c, d, e = (Float(i) for i in range(5))
             # this adds the maximum number between bcde to a.
-            res = add(a=a,b=max_(b=b,c=c,d=d, e=e)['res'])['res']
+            res = add(a=a, b=max_(b=b, c=c, d=d, e=e)['res'])['res']
             # These are the uuids that would be exported as well (as parents) if I wanted the final result
             uuids_values = [(a.uuid, a.value), (e.uuid, e.value), (res.uuid, res.value)]
             # These are the uuids that shouldn't be exported since it's a selection.
-            not_wanted_uuids = [v.uuid for v in (b,c,d)]
+            not_wanted_uuids = [v.uuid for v in (b, c, d)]
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
             export([res.dbnode], outfile=filename1, silent=True)
@@ -775,7 +776,6 @@ class TestSimple(AiidaTestCase):
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
 
-
         try:
             master = WorkCalculation().store()
             slave = WorkCalculation().store()
@@ -789,9 +789,9 @@ class TestSimple(AiidaTestCase):
             slave.add_link_from(input_2, 'input_2', link_type=LinkType.INPUT)
             output_1.add_link_from(master, 'CREATE', link_type=LinkType.CREATE)
 
-            uuids_values = [(v.uuid, v.value) for v in (output_1, )]
+            uuids_values = [(v.uuid, v.value) for v in (output_1,)]
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([output_1.dbnode], outfile=filename1,silent=True)
+            export([output_1.dbnode], outfile=filename1, silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -802,7 +802,6 @@ class TestSimple(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
-
 
     def test_reexport(self):
         """
@@ -818,7 +817,7 @@ class TestSimple(AiidaTestCase):
         import os, shutil, tempfile, numpy as np, string, random
         from datetime import datetime
 
-        from aiida.orm import  Calculation, load_node, Group
+        from aiida.orm import Calculation, load_node, Group
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.querybuilder import QueryBuilder
@@ -828,53 +827,54 @@ class TestSimple(AiidaTestCase):
         def get_hash_from_db_content(groupname):
             qb = QueryBuilder()
             qb.append(ParameterData, tag='p', project='*')
-            qb.append(Calculation,tag='c',project='*', edge_tag='p2c', edge_project=('label', 'type'))
-            qb.append(ArrayData, tag='a',project='*', edge_tag='c2a', edge_project=('label', 'type'))
-            qb.append(Group, filters={'name':groupname}, project='*', tag='g', group_of='a')
+            qb.append(Calculation, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
+            qb.append(ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
+            qb.append(Group, filters={'name': groupname}, project='*', tag='g', group_of='a')
             # I want the query to contain something!
             self.assertTrue(qb.count() > 0)
             # The hash is given from the preservable entries in an export-import cycle,
             # uuids, attributes, labels, descriptions, arrays, link-labels, link-types:
             hash_ = make_hash([(
-                    item['p']['*'].get_attrs(),
-                    item['p']['*'].uuid,
-                    item['p']['*'].label,
-                    item['p']['*'].description,
-                    item['c']['*'].uuid,
-                    item['c']['*'].get_attrs(),
-                    item['a']['*'].get_attrs(),
-                    [item['a']['*'].get_array(name) for name in item['a']['*'].get_arraynames()],
-                    item['a']['*'].uuid,
-                    item['g']['*'].uuid,
-                    item['g']['*'].name,
-                    item['p2c']['label'],
-                    item['p2c']['type'],
-                    item['c2a']['label'],
-                    item['c2a']['type'],
-                    item['g']['*'].name,
-                    ) for item in qb.dict()])
+                item['p']['*'].get_attrs(),
+                item['p']['*'].uuid,
+                item['p']['*'].label,
+                item['p']['*'].description,
+                item['c']['*'].uuid,
+                item['c']['*'].get_attrs(),
+                item['a']['*'].get_attrs(),
+                [item['a']['*'].get_array(name) for name in item['a']['*'].get_arraynames()],
+                item['a']['*'].uuid,
+                item['g']['*'].uuid,
+                item['g']['*'].name,
+                item['p2c']['label'],
+                item['p2c']['type'],
+                item['c2a']['label'],
+                item['c2a']['type'],
+                item['g']['*'].name,
+            ) for item in qb.dict()])
             return hash_
+
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
-        chars=string.ascii_uppercase + string.digits
-        size=10
-        groupname='test-group'
+        chars = string.ascii_uppercase + string.digits
+        size = 10
+        groupname = 'test-group'
         try:
-            nparr = np.random.random((4,3,2))
+            nparr = np.random.random((4, 3, 2))
             trial_dict = {}
             # give some integers:
-            trial_dict.update({str(k):np.random.randint(100) for k in range(10)})
+            trial_dict.update({str(k): np.random.randint(100) for k in range(10)})
             # give some floats:
-            trial_dict.update({str(k):np.random.random() for k in range(10,20)})
+            trial_dict.update({str(k): np.random.random() for k in range(10, 20)})
             # give some booleans:
-            trial_dict.update({str(k):bool(np.random.randint(1)) for k in range(20,30)})
+            trial_dict.update({str(k): bool(np.random.randint(1)) for k in range(20, 30)})
             # give some datetime:
-            trial_dict.update({str(k):datetime(
-                    year=2017,
-                    month=np.random.randint(1,12),
-                    day=np.random.randint(1,28)) for k in range(30,40)})
+            trial_dict.update({str(k): datetime(
+                year=2017,
+                month=np.random.randint(1, 12),
+                day=np.random.randint(1, 28)) for k in range(30, 40)})
             # give some text:
-            trial_dict.update({str(k):''.join(random.choice(chars) for _ in range(size)) for k in range(20,30)})
+            trial_dict.update({str(k): ''.join(random.choice(chars) for _ in range(size)) for k in range(20, 30)})
 
             p = ParameterData(dict=trial_dict)
             p.label = str(datetime.now())
@@ -882,7 +882,7 @@ class TestSimple(AiidaTestCase):
             p.store()
             c = Calculation()
             # setting also trial dict as attributes, but randomizing the keys)
-            (c._set_attr(str(int(k)+np.random.randint(10)),v) for k,v in trial_dict.items())
+            (c._set_attr(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
             c.store()
             a = ArrayData()
             a.set_array('array', nparr)
@@ -906,7 +906,7 @@ class TestSimple(AiidaTestCase):
                 g = Group.get_from_string(groupname)
                 # exporting based on all members of the group
                 # this also checks if group memberships are preserved!
-                export([g.dbgroup]+[n.dbnode for n in g.nodes], outfile=filename, silent=True)
+                export([g.dbgroup] + [n.dbnode for n in g.nodes], outfile=filename, silent=True)
                 # cleaning the DB!
                 self.clean_db()
                 # reimporting the data from the file
@@ -1487,6 +1487,7 @@ class TestComputer(AiidaTestCase):
                              comp1_metadata,
                              "Not the expected metadata were found")
 
+
 class TestLinks(AiidaTestCase):
 
     def setUp(self):
@@ -1589,14 +1590,14 @@ class TestLinks(AiidaTestCase):
             node_output.add_link_from(node_calc, 'output', link_type=LinkType.CREATE)
 
             export_links = QueryBuilder().append(
-                    Data, project='uuid').append(
-                    InlineCalculation, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.INPUT.value, )}}
-                ).all() + QueryBuilder().append(
-                    InlineCalculation, project='uuid').append(
-                    Data, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.CREATE.value, )}}
-                ).all()
+                Data, project='uuid').append(
+                InlineCalculation, project='uuid', edge_project=['label', 'type'],
+                edge_filters={'type': {'in': (LinkType.INPUT.value,)}}
+            ).all() + QueryBuilder().append(
+                InlineCalculation, project='uuid').append(
+                Data, project='uuid', edge_project=['label', 'type'],
+                edge_filters={'type': {'in': (LinkType.CREATE.value,)}}
+            ).all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([node_output.dbnode], outfile=export_file, silent=True)
@@ -1606,7 +1607,6 @@ class TestLinks(AiidaTestCase):
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
-
 
             export_set = [tuple(_) for _ in export_links]
             import_set = [tuple(_) for _ in import_links]
@@ -1656,7 +1656,7 @@ class TestLinks(AiidaTestCase):
             o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
             o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
 
-            uuids_wanted = set(_.uuid for _ in (w1,o1,i1))
+            uuids_wanted = set(_.uuid for _ in (w1, o1, i1))
             links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
 
             export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
@@ -1670,7 +1670,6 @@ class TestLinks(AiidaTestCase):
             import_data(export_file_1, silent=True)
             links_in_db = self.get_all_node_links()
             self.assertEquals(sorted(links_wanted), sorted(links_in_db))
-
 
             self.clean_db()
             self.insert_data()

@@ -22,8 +22,6 @@ class AbstractUser(object):
 
     _logger = logging.getLogger(__name__)
 
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
     @abstractmethod
     def __init__(self, **kwargs):
         pass
@@ -73,7 +71,7 @@ class AbstractUser(object):
         pass
 
     @abstractmethod
-    def _set_password(self):
+    def _set_password(self, new_pass):
         pass
 
     @abstractproperty

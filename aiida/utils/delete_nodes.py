@@ -1,8 +1,5 @@
-
-
-
-def delete_nodes(pks, follow_calls=False, follow_returns=False, 
-        dry_run=False, force=False, disable_checks=False, verbosity=0):
+def delete_nodes(pks, follow_calls=False, follow_returns=False,
+                 dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
     Delete nodes by a list of pks
 
@@ -29,10 +26,9 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.orm.calculation import Calculation
     from aiida.orm.data import Data
     from aiida.orm import load_node
+    from aiida.orm.user import get_automatic_user
     from aiida.backends.utils import delete_nodes_and_connections
-    from aiida.backends.utils import get_automatic_user
     user_email = get_automatic_user().email
-
 
     if not pks:
         # If I was passed an empty list, I don't to anything
@@ -51,17 +47,17 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     if follow_returns:
         link_types_to_follow.append(LinkType.RETURN.value)
 
-    edge_filters={'type':{'in':link_types_to_follow}}
+    edge_filters = {'type': {'in': link_types_to_follow}}
 
     # Operational set always includes the recently (in the last iteration added) nodes.
-    operational_set = set().union(set(pks)) # Union to copy the set!
+    operational_set = set().union(set(pks))  # Union to copy the set!
     pks_set_to_delete = set().union(set(pks))
     while operational_set:
         # new_pks_set are the the pks of all nodes that are connected to the operational node set
         # with the links specified.
         new_pks_set = set([i for i, in QueryBuilder().append(
-                Node, filters={'id':{'in':operational_set}}).append(
-                Node,project='id', edge_filters=edge_filters).iterall()])
+            Node, filters={'id': {'in': operational_set}}).append(
+            Node, project='id', edge_filters=edge_filters).iterall()])
         # The operational set is only those pks that haven't been yet put into the pks_set_to_delete.
         operational_set = new_pks_set.difference(pks_set_to_delete)
 
@@ -70,11 +66,12 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
     if verbosity > 0:
         print "I {} delete {} node{}".format(
-                'would' if dry_run else 'will',
-                 len(pks_set_to_delete),
-                 's' if len(pks_set_to_delete)> 1 else '')
+            'would' if dry_run else 'will',
+            len(pks_set_to_delete),
+            's' if len(pks_set_to_delete) > 1 else '')
         if verbosity > 1:
-            qb = QueryBuilder().append(Node, filters={'id':{'in':pks_set_to_delete}}, project=('uuid', 'id', 'type', 'label'))
+            qb = QueryBuilder().append(Node, filters={'id': {'in': pks_set_to_delete}},
+                                       project=('uuid', 'id', 'type', 'label'))
             print "The nodes I {} delete:".format('would' if dry_run else 'will')
             for uuid, pk, type_string, label in qb.iterall():
                 try:
@@ -90,17 +87,17 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
     if not disable_checks:
         called_qb = QueryBuilder()
-        called_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+        called_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         called_qb.append(Calculation, project='type', edge_project='label',
-                filters={'id':{'in':pks_set_to_delete}},
-                edge_filters={'type':{'==': LinkType.CALL.value}})
+                         filters={'id': {'in': pks_set_to_delete}},
+                         edge_filters={'type': {'==': LinkType.CALL.value}})
         caller_to_called2delete = called_qb.all()
 
         if verbosity > 0 and caller_to_called2delete:
             calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
             print "\n{} calculation{} {} lose at least one called instance".format(
                     len(calculation_pks_losing_called),
-                    's' if len(calculation_pks_losing_called) > 1 else '',
+                    's' if len(calculation_pks_losing_created) > 1 else '',
                     'would' if dry_run else 'will')
             if verbosity > 1:
                 print "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will')
@@ -108,20 +105,21 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
                     print '  ', load_node(calc_losing_called_pk)
 
         created_qb = QueryBuilder()
-        created_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+        created_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         created_qb.append(Data, project='type', edge_project='label',
-                filters={'id':{'in':pks_set_to_delete}},
-                edge_filters={'type':{'==':LinkType.CREATE.value}})
+                          filters={'id': {'in': pks_set_to_delete}},
+                          edge_filters={'type': {'==': LinkType.CREATE.value}})
 
         creator_to_created2delete = created_qb.all()
         if verbosity > 0 and creator_to_created2delete:
             calculation_pks_losing_created = set(zip(*creator_to_created2delete)[0])
             print "\n{} calculation{} {} lose at least one created data-instance".format(
-                    len(calculation_pks_losing_created),
-                    's' if len(calculation_pks_losing_created) > 1 else '',
-                    'would' if dry_run else 'will')
+                len(calculation_pks_losing_created),
+                's' if len(calculation_pks_losing_created) > 1 else '',
+                'would' if dry_run else 'will')
             if verbosity > 1:
-                print "These are the calculations that {} lose a created data-instance:".format('would' if dry_run else 'will')
+                print "These are the calculations that {} lose a created data-instance:".format(
+                    'would' if dry_run else 'will')
                 for calc_losing_created_pk in calculation_pks_losing_created:
                     print '  ', load_node(calc_losing_created_pk)
 
@@ -129,8 +127,6 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         if verbosity > 0:
             print "\nThis was a dry run, exiting without deleting anything"
         return
-
-
 
     # Asking for user confirmation here
     if force:
@@ -147,7 +143,6 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     # the DB, I don't delete the folders
     folders = [load_node(_).folder for _ in pks_set_to_delete]
 
-
     delete_nodes_and_connections(pks_set_to_delete)
 
     if not disable_checks:
@@ -155,18 +150,18 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         for calc_pk, calc_type_string, link_label in caller_to_called2delete:
             calc = load_node(calc_pk)
             calc.logger.warning("User {} deleted "
-                "an instance of type {} "
-                "called with the label {} "
-                "by this calculation".format(
-                    user_email, calc_type_string, link_label))
+                                "an instance of type {} "
+                                "called with the label {} "
+                                "by this calculation".format(
+                user_email, calc_type_string, link_label))
 
-        for calc_pk, data_type_string, link_label  in creator_to_created2delete:
+        for calc_pk, data_type_string, link_label in creator_to_created2delete:
             calc = load_node(calc_pk)
             calc.logger.warning("User {} deleted "
-                "an instance of type {} "
-                "created with the label {} "
-                "by this calculation".format(
-                    user_email, data_type_string, link_label))
+                                "an instance of type {} "
+                                "created with the label {} "
+                                "by this calculation".format(
+                user_email, data_type_string, link_label))
 
     # If we are here, we managed to delete the entries from the DB.
     # I can now delete the folders

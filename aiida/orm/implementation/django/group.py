@@ -9,22 +9,18 @@
 ###########################################################################
 
 import collections
+from django.db import transaction, IntegrityError
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
-
 from aiida.orm.implementation.django.node import Node
-
-
-from aiida.backends.djsite.utils import get_automatic_user
-
-from django.db import transaction, IntegrityError
-from django.db.models import Q
-from django.core.exceptions import ObjectDoesNotExist
-
 from aiida.orm.implementation.general.utils import get_db_columns
+
+from . import user as users
 
 
 class Group(AbstractGroup):
@@ -48,12 +44,18 @@ class Group(AbstractGroup):
 
             self._dbgroup = dbgroup
         else:
+            from aiida.orm import get_automatic_user
+
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string',
-                                    "")  # By default, an user group
+
+            group_type = kwargs.pop('type_string', "")  # By default, a user group
+
+            # Get the user and extract dbuser instance
             user = kwargs.pop('user', get_automatic_user())
+            user = users._get_db_user(user)
+
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
                                     user=user, type=group_type)
@@ -108,7 +110,18 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return self.dbgroup.user
+        return users.User.from_dbmodel(self._dbgroup.user)
+
+    @user.setter
+    def user(self, new_user):
+        import aiida.orm as orm
+
+        if not isinstance(new_user, orm.User):
+            raise TypeError("Expecting User, got '{}'".format(type(new_user)))
+        backend_user = new_user._impl
+        if not isinstance(backend_user, users.User):
+            raise TypeError("Expected Django user, got '{}'".format(new_user))
+        self._dbgroup.user = backend_user._dbuser
 
     @property
     def dbgroup(self):
@@ -281,7 +294,7 @@ class Group(AbstractGroup):
             if isinstance(user, basestring):
                 queryobject &= Q(user__email=user)
             else:
-                queryobject &= Q(user=user)
+                queryobject &= Q(user=user.id)
 
         if name_filters is not None:
             name_filters_list = {"name__" + k: v for (k, v)

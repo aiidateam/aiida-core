@@ -84,11 +84,9 @@ class Comment(VerdiCommandWithSubcommands):
         Show the comments of a node
         """
         import argparse
-        from aiida.backends.utils import get_automatic_user
 
         if not is_dbenv_loaded():
             load_dbenv()
-        user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

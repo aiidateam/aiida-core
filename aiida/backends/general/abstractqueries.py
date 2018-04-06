@@ -204,17 +204,15 @@ class AbstractQueryManager(object):
         import datetime
         from aiida.utils import timezone
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.backends.utils import get_automatic_user
-        from aiida.orm.implementation import User
         from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
+        from aiida.orm.user import User, get_automatic_user
 
         qb = QueryBuilder()
         if args.all_users is False:
-            au = get_automatic_user()
-            user = User(dbuser=au)
+            user = get_automatic_user()
             qb.append(User, tag="creator", filters={"email": user.email})
         else:
             qb.append(User, tag="creator")

@@ -74,7 +74,7 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser.objects.create_user(email='test@email.xx', password='')
+        newuser = DbUser.objects.create_user(email='test@email.xx', password='').get_aiida_class()
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -114,7 +114,6 @@ class TestGroupsDjango(AiidaTestCase):
         # Final cleanup
         g1.delete()
         g2.delete()
-        newuser.delete()
 
     def test_rename_existing(self):
         """

@@ -375,7 +375,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         tjn3 = TrajectoryData()
         tjn3.set_trajectory(
             stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities)
-        tjn3.dbnode.user = new_user._dbuser
+        tjn3.set_user(new_user)
         tjn3.store()
 
         # Put it is to the right map
@@ -428,7 +428,7 @@ class TestVerdiDataCommands(AiidaTestCase):
 
             # Create a Cif node belonging to another user
             c3 = CifData(file=f.name)
-            c3.dbnode.user = new_user._dbuser
+            c3.set_user(new_user)
             c3.store()
 
             # Put it is to the right map
@@ -446,12 +446,12 @@ class TestVerdiDataCommands(AiidaTestCase):
         s = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
         s.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'], weights=(1., 0.), name='mytype')
         if user is not None:
-            s.dbnode.user = user._dbuser
+            s.set_user(user)
         s.store()
 
         c = JobCalculation(computer=cls.computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         if user is not None:
-            c.dbnode.user = user._dbuser
+            c.set_user(user)
         c.store()
         c.add_link_from(s, "S1", LinkType.INPUT)
         c._set_state(calc_states.RETRIEVING)
@@ -468,7 +468,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         k.set_cell(cell)
         k.set_kpoints_path()
         if user is not None:
-            k.dbnode.user = user._dbuser
+            k.set_user(user)
         k.store()
 
         b = BandsData()
@@ -476,7 +476,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         input_bands = numpy.array([numpy.ones(4) * i for i in range(k.get_kpoints().shape[0])])
         b.set_bands(input_bands, units='eV')
         if user is not None:
-            b.dbnode.user = user._dbuser
+            b.set_user(user)
         b.store()
 
         b.add_link_from(c, link_type=LinkType.CREATE)

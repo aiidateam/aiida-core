@@ -55,7 +55,7 @@ class TestWorkflowBasic(AiidaTestCase):
         workflows or workflows with errors).
         """
         # Assuming there is only one user
-        dbuser = User.search_for_users(email=self.user_email)[0]
+        user = User.search_for_users(email=self.user_email)[0]
         # Creating a workflow & storing it
         a = WFTestEmpty()
         a.store()
@@ -65,14 +65,14 @@ class TestWorkflowBasic(AiidaTestCase):
 
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
-        wfqs = get_workflow_list(all_states=True, user=dbuser)
+        wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get one workflow.
-        wfqs = get_workflow_list(all_states=True, user=dbuser)
+        wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
@@ -83,21 +83,21 @@ class TestWorkflowBasic(AiidaTestCase):
 
         # Getting all the available workflows of the current user
         # and checking if we got the right one.
-        wfqs = get_workflow_list(all_states=True, user=dbuser)
+        wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
                                                "one")
 
         # We ask all the running workflows. We should get zero results.
-        wfqs = get_workflow_list(all_states=False, user=dbuser)
+        wfqs = get_workflow_list(all_states=False, user=user)
         self.assertTrue(len(wfqs) == 0, "We expect zero workflows")
 
         # We change the state of the workflow to INITIALIZED.
         a.set_state(wf_states.INITIALIZED)
 
         # We ask all the running workflows. We should get one workflow.
-        wfqs = get_workflow_list(all_states=True, user=dbuser)
+        wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
         a_prime = wfqs[0].get_aiida_class()
         self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
@@ -107,7 +107,7 @@ class TestWorkflowBasic(AiidaTestCase):
         a.set_state(wf_states.ERROR)
 
         # We ask all the running workflows. We should get zero results.
-        wfqs = get_workflow_list(all_states=False, user=dbuser)
+        wfqs = get_workflow_list(all_states=False, user=user)
         self.assertTrue(len(wfqs) == 0, "We expect zero workflows")
 
     def test_workflow_info(self):
@@ -117,14 +117,14 @@ class TestWorkflowBasic(AiidaTestCase):
         :return:
         """
         # Assuming there is only one user
-        dbuser = User.search_for_users(email=self.user_email)[0]
+        user = User.search_for_users(email=self.user_email)[0]
 
         # Creating a simple workflow & storing it
         a = WFTestEmpty()
         a.store()
 
         # Emulate the workflow list
-        for w in get_workflow_list(all_states=True, user=dbuser):
+        for w in get_workflow_list(all_states=True, user=user):
             if not w.is_subworkflow():
                 get_workflow_info(w)
 
@@ -133,13 +133,13 @@ class TestWorkflowBasic(AiidaTestCase):
         b.store()
 
         # Emulate the workflow list
-        for w in get_workflow_list(all_states=True, user=dbuser):
+        for w in get_workflow_list(all_states=True, user=user):
             if not w.is_subworkflow():
                 get_workflow_info(w)
 
         # Start the first workflow and perform a workflow list
         b.start()
-        for w in get_workflow_list(all_states=True, user=dbuser):
+        for w in get_workflow_list(all_states=True, user=user):
             if not w.is_subworkflow():
                 get_workflow_info(w)
 

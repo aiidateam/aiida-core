@@ -641,11 +641,22 @@ class Calculation(VerdiCommandWithSubcommands):
 
 
     def calculation_kill(self, *args):
+        """
+        Kill a calculation.
+
+        Pass a list of calculation PKs to kill them.
+        If you also pass the -f option, no confirmation will be asked.
+        """
         import argparse
         from aiida import try_load_dbenv
         try_load_dbenv()
         from aiida import work
         from aiida.cmdline import wait_for_confirmation
+        from aiida.orm.calculation.job import JobCalculation as Calc
+        from aiida.common.exceptions import NotExistent, InvalidOperation, \
+            RemoteOperationError
+
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -753,7 +764,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 return
 
         qb_user_filters = dict()
-        user = OrmUser(dbuser=get_automatic_user())
+        user = orm.get_automatic_user()
         qb_user_filters["email"] = user.email
 
         qb_computer_filters = dict()

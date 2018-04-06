@@ -21,6 +21,7 @@ from aiida.orm.user import User
 from aiida.orm.authinfo import AuthInfo
 from aiida.orm.group import Group
 
-__all__ = [
-    'JobCalculation', 'WorkCalculation', 'Code', 'Computer', 'QueryBuilder', 'Workflow',
-    'User', 'AuthInfo', 'Group', 'delete_computer'] + calculation.__all__ + utils.__all__
+__all__ = (['JobCalculation', 'WorkCalculation', 'Code', 'Computer',
+           'CalculationFactory', 'DataFactory', 'WorkflowFactory',
+           'QueryBuilder', 'Workflow', 'User', 'Group', 'delete_computer', 'AuthInfo'] +
+           calculation.__all__ + utils.__all__ + user.__all__)

@@ -141,7 +141,7 @@ def get_dbauthinfo(computer, aiidauser):
                 # converts from name, Computer or DbComputer instance to
                 # a DbComputer instance
                 dbcomputer=DbComputer.get_dbcomputer(computer),
-                aiidauser=aiidauser) # works also with User instances thanks to __int__
+                aiidauser=aiidauser.id)
         except ObjectDoesNotExist:
             raise NotExistent(
                 "The aiida user {} is not configured to use computer {}".format(
@@ -259,7 +259,6 @@ def get_current_profile():
 
 
 def delete_nodes_and_connections(pks):
-
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import delete_nodes_and_connections_django as delete_nodes_backend
     elif settings.BACKEND == BACKEND_SQLA:

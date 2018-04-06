@@ -19,14 +19,14 @@ from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
-from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.utils import get_new_uuid
+from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
-# from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
+
+from . import user as users
 
 
 class Node(AbstractNode):
@@ -146,9 +146,36 @@ class Node(AbstractNode):
             # stop
             self._set_with_defaults(**kwargs)
 
+    @classmethod
+    def query(cls, *args, **kwargs):
+        from aiida.backends.djsite.db.models import DbNode
+        if cls._plugin_type_string:
+            if not cls._plugin_type_string.endswith('.'):
+                raise InternalError("The plugin type string does not "
+                                    "finish with a dot??")
+
+            # If it is 'calculation.Calculation.', we want to filter
+            # for things that start with 'calculation.' and so on
+            plug_type = cls._plugin_type_string
+
+            # Remove the implementation.django or sqla part.
+            if plug_type.startswith('implementation.'):
+                plug_type = '.'.join(plug_type.split('.')[2:])
+            pre, sep, _ = plug_type[:-1].rpartition('.')
+            superclass_string = "".join([pre, sep])
+            return DbNode.aiidaobjects.filter(
+                *args, type__startswith=superclass_string, **kwargs)
+        else:
+            # Base Node class, with empty string
+            return DbNode.aiidaobjects.filter(*args, **kwargs)
+
     @property
     def type(self):
         return self._dbnode.type
+
+    @property
+    def nodeversion(self):
+        return self._dbnode.nodeversion
 
     @property
     def ctime(self):
@@ -376,7 +403,7 @@ class Node(AbstractNode):
                                          "storing the node")
 
         DbComment.objects.create(dbnode=self._dbnode,
-                                 user=user,
+                                 user=users._get_db_user(user),
                                  content=content)
 
     def get_comment_obj(self, id=None, user=None):
@@ -491,7 +518,7 @@ class Node(AbstractNode):
 
     @property
     def process_type(self):
-        return self.dbnode.process_type
+        return self._dbnode.process_type
 
     @property
     def dbnode(self):
@@ -528,7 +555,10 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._dbnode.user
+        return self._dbnode.user.get_aiida_class()
+
+    def set_user(self, user):
+        self._dbnode.user = users._get_db_user(user)
 
     def _store_cached_input_links(self, with_transaction=True):
         """

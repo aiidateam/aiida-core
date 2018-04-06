@@ -147,11 +147,12 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
 
         user.force_save()
         click.echo(">> User {} {} saved. <<".format(user.first_name,
-                                               user.last_name))
+                                                    user.last_name))
         if not user.has_usable_password():
             click.echo("** NOTE: no password set for this user, ")
             click.echo("         so he/she will not be able to login")
             click.echo("         via the REST API and the Web Interface.")
+
 
 @user.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('email', type=str)
@@ -162,8 +163,9 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
 @click.option('--force-reconfigure', is_flag=True)
 def configure(email, first_name, last_name, institution, no_password, force_reconfigure):
     do_configure(email=email, first_name=first_name,
-            last_name=last_name, institution=institution,
-            no_password=no_password, force_reconfigure=force_reconfigure)
+                 last_name=last_name, institution=institution,
+                 no_password=no_password, force_reconfigure=force_reconfigure)
+
 
 @user.command()
 @click.option('--color', is_flag=True, help='Show results with colors', default=False)
@@ -171,9 +173,8 @@ def list(color):
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.orm.implementation import User
+    from aiida.orm import User
     from aiida.common.utils import get_configured_user_email
-
     from aiida.common.exceptions import ConfigurationError
 
     try:
@@ -196,8 +197,7 @@ def list(color):
         if full_name:
             full_name = " {}".format(full_name)
 
-        institution_str = " ({})".format(
-            user.institution) if user.institution else ""
+        institution_str = " ({})".format(user.institution) if user.institution else ""
 
         color_id = 39  # Default foreground color
         permissions_list = []
@@ -235,5 +235,3 @@ def list(color):
             start_color, symbol,
             bold_sequence, user.email, nobold_sequence,
             full_name, institution_str, permissions_str, end_color))
-
-

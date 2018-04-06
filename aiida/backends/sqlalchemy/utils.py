@@ -113,8 +113,7 @@ def get_automatic_user():
     _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
 
     if not _aiida_autouser_cache:
-        raise ConfigurationError("No aiida user with email {}".format(
-            email))
+        raise ConfigurationError("No aiida user with email {}".format(email))
     return _aiida_autouser_cache
 
 

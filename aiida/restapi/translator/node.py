@@ -419,7 +419,7 @@ class NodeTranslator(BaseTranslator):
         :returns: list of calc inputls command
         """
 
-        if node.dbnode.type.startswith("calculation"):
+        if node.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
             return CalculationTranslator.get_retrieved_inputs(node, filename=filename, rtype=rtype)
         return []
@@ -435,7 +435,7 @@ class NodeTranslator(BaseTranslator):
         :returns: list of calc outputls command
         """
 
-        if node.dbnode.type.startswith("calculation"):
+        if node.type.startswith("calculation"):
             from aiida.restapi.translator.calculation import CalculationTranslator
             return CalculationTranslator.get_retrieved_outputs(node, filename=filename, rtype=rtype)
         return []
@@ -514,11 +514,11 @@ class NodeTranslator(BaseTranslator):
             mainNode = qb.first()[0]
             pk = mainNode.pk
             uuid = mainNode.uuid
-            nodetype = mainNode.dbnode.type
+            nodetype = mainNode.type
             display_type = nodetype.split('.')[-2]
             description = mainNode.get_desc()
             if description == '':
-                description = mainNode.dbnode.type.split('.')[-2]
+                description = mainNode.type.split('.')[-2]
 
             nodes.append({
                 "id": nodeCount,
@@ -545,11 +545,11 @@ class NodeTranslator(BaseTranslator):
                 linktype = input['main--in']['label']
                 pk = node.pk
                 uuid = node.uuid
-                nodetype = node.dbnode.type
+                nodetype = node.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
                 if description == '':
-                    description = node.dbnode.type.split('.')[-2]
+                    description = node.type.split('.')[-2]
 
                 nodes.append({
                     "id": nodeCount,
@@ -583,11 +583,11 @@ class NodeTranslator(BaseTranslator):
                 linktype = output['main--out']['label']
                 pk = node.pk
                 uuid = node.uuid
-                nodetype = node.dbnode.type
+                nodetype = node.type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_desc()
                 if description == '':
-                    description = node.dbnode.type.split('.')[-2]
+                    description = node.type.split('.')[-2]
 
                 nodes.append({
                     "id": nodeCount,

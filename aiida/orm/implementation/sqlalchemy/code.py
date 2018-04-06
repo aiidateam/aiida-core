@@ -10,14 +10,12 @@
 
 import os
 
-
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 
 from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
 
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
-
 
 
 class Code(AbstractCode):
@@ -48,7 +46,7 @@ class Code(AbstractCode):
         """
 
         if (not isinstance(remote_computer_exec, (list, tuple))
-            or len(remote_computer_exec) != 2):
+                or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
                              "of length 2, with machine and executable "
                              "name")
@@ -58,15 +56,11 @@ class Code(AbstractCode):
         if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        remote_dbcomputer = computer
-        if isinstance(remote_dbcomputer, Computer):
-            remote_dbcomputer = remote_dbcomputer.dbcomputer
-        if not (isinstance(remote_dbcomputer, DbComputer)):
-            raise TypeError("computer must be either a Computer or DbComputer object")
+        if not isinstance(computer, Computer):
+            raise TypeError("Computer must be of type Computer, got '{}'".format(type(computer)))
 
         self._set_remote()
-
-        self.dbnode.dbcomputer = remote_dbcomputer
+        self.set_computer(computer)
         self._set_attr('remote_exec_path', remote_exec_path)
 
     def _set_local(self):
@@ -78,7 +72,7 @@ class Code(AbstractCode):
         It also deletes the flags related to the local case (if any)
         """
         self._set_attr('is_local', True)
-        self.dbnode.dbcomputer = None
+        self._dbnode.dbcomputer = None
         try:
             self._del_attr('remote_exec_path')
         except AttributeError:

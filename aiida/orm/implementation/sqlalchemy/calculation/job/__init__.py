@@ -72,9 +72,9 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                                              "to {}".format(old_state, state))
 
         try:
-            new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
+            new_state = DbCalcState(dbnode=self._dbnode, state=state).save()
         except SQLAlchemyError:
-            self.dbnode.session.rollback()
+            self._dbnode.session.rollback()
             raise ModificationNotAllowed("Calculation pk= {} already transited through "
                                          "the state {}".format(self.pk, state))
 
@@ -103,7 +103,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                 state_to_return = calc_states.NEW
             else:
                 # In the sqlalchemy model, the state
-                most_recent_state = self.dbnode.state
+                most_recent_state = self._dbnode.state
                 if most_recent_state:
                     state_to_return = most_recent_state.value
                 else:

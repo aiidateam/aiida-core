@@ -10,7 +10,6 @@
 
 import logging
 import uritools
-import os.path
 import os
 import plumpy
 import portalocker

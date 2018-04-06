@@ -30,6 +30,7 @@ def load_dbenv(process=None, profile=None):
 def _load_dbenv_noschemacheck(process, profile):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
+
     :param process: the process that is calling this command ('verdi', or
         'daemon')
     :param profile: the string with the profile to use. If not specified,

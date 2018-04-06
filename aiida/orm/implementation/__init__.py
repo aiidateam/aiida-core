@@ -20,7 +20,6 @@ if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.computer import Computer
     from aiida.orm.implementation.sqlalchemy.group import Group
     from aiida.orm.implementation.sqlalchemy.lock import Lock, LockManager
-    # from aiida.orm.implementation.sqlalchemy.querytool import QueryTool
     from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.comment import Comment
@@ -31,7 +30,6 @@ elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.computer import Computer
     from aiida.orm.implementation.django.group import Group
     from aiida.orm.implementation.django.lock import Lock, LockManager
-    from aiida.orm.implementation.django.querytool import QueryTool
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.comment import Comment

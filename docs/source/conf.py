@@ -30,6 +30,7 @@ sys.path.append( os.path.join( os.path.split(__file__)[0],
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 import aiida
+from aiida.backends import settings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -119,7 +120,9 @@ html_theme = 'default'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+#html_theme_options = {
+#    "navigation_depth": 5,
+#}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -231,6 +234,8 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# We set that we are in documentation mode - even for local compilation
+settings.IN_DOC_MODE = True
 
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed
 # from docs.readthedocs.org
@@ -252,10 +257,52 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
         load_dbenv()
 else:
     # Back-end settings for readthedocs online documentation.
-    from aiida.backends import settings
-    settings.IN_DOC_MODE = True
+    # from aiida.backends import settings
+    settings.IN_RT_DOC_MODE = True
     settings.BACKEND = "django"
     settings.AIIDADB_PROFILE = "default"
+
+
+def run_apidoc(_):
+    """Runs sphinx-apidoc when building the documentation.
+
+    Needs to be done in conf.py in order to include the APIdoc in the
+    build on readthedocs.
+
+    See also https://github.com/rtfd/readthedocs.org/issues/1139
+    """
+    source_dir = os.path.abspath(os.path.dirname(__file__))
+    apidoc_dir = os.path.join(source_dir, 'apidoc')
+    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
+
+    # In #1139, they suggest the route below, but for me this ended up
+    # calling sphinx-build, not sphinx-apidoc
+    #from sphinx.apidoc import main
+    #main([None, '-e', '-o', apidoc_dir, package_dir, '--force'])
+
+    import subprocess
+    cmd_path = 'sphinx-apidoc'
+    if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
+        # If we are, assemble the path manually
+        cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
+
+    options = [
+        '-o', apidoc_dir, package_dir,
+        '--private',
+        '--force',
+        '--no-headings',
+        '--module-first',
+        '--no-toc',
+        '--maxdepth', '4',
+    ]
+
+    # See https://stackoverflow.com/a/30144019
+    env = os.environ.copy()
+    env["SPHINX_APIDOC_OPTIONS"] = 'members,special-members,private-members,undoc-members,show-inheritance'
+    subprocess.check_call([cmd_path] + options, env=env)
+
+def setup(app):
+    app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for manual page output --------------------------------------------
@@ -340,62 +387,11 @@ epub_copyright = copyright
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
-nitpick_ignore = [
-    ('py:exc', 'ArithmeticError'),
-    ('py:exc', 'AssertionError'),
-    ('py:exc', 'AttributeError'),
-    ('py:exc', 'BaseException'),
-    ('py:exc', 'BufferError'),
-    ('py:exc', 'DeprecationWarning'),
-    ('py:exc', 'EOFError'),
-    ('py:exc', 'EnvironmentError'),
-    ('py:exc', 'Exception'),
-    ('py:exc', 'FloatingPointError'),
-    ('py:exc', 'FutureWarning'),
-    ('py:exc', 'GeneratorExit'),
-    ('py:exc', 'IOError'),
-    ('py:exc', 'ImportError'),
-    ('py:exc', 'ImportWarning'),
-    ('py:exc', 'IndentationError'),
-    ('py:exc', 'IndexError'),
-    ('py:exc', 'KeyError'),
-    ('py:exc', 'KeyboardInterrupt'),
-    ('py:exc', 'LookupError'),
-    ('py:exc', 'MemoryError'),
-    ('py:exc', 'NameError'),
-    ('py:exc', 'NotImplementedError'),
-    ('py:exc', 'OSError'),
-    ('py:exc', 'OverflowError'),
-    ('py:exc', 'PendingDeprecationWarning'),
-    ('py:exc', 'ReferenceError'),
-    ('py:exc', 'RuntimeError'),
-    ('py:exc', 'RuntimeWarning'),
-    ('py:exc', 'StandardError'),
-    ('py:exc', 'StopIteration'),
-    ('py:exc', 'SyntaxError'),
-    ('py:exc', 'SyntaxWarning'),
-    ('py:exc', 'SystemError'),
-    ('py:exc', 'SystemExit'),
-    ('py:exc', 'TabError'),
-    ('py:exc', 'TypeError'),
-    ('py:exc', 'UnboundLocalError'),
-    ('py:exc', 'UnicodeDecodeError'),
-    ('py:exc', 'UnicodeEncodeError'),
-    ('py:exc', 'UnicodeError'),
-    ('py:exc', 'UnicodeTranslateError'),
-    ('py:exc', 'UnicodeWarning'),
-    ('py:exc', 'UserWarning'),
-    ('py:exc', 'VMSError'),
-    ('py:exc', 'ValueError'),
-    ('py:exc', 'Warning'),
-    ('py:exc', 'WindowsError'),
-    ('py:exc', 'ZeroDivisionError'),
-    ('py:obj', 'str'),
-    ('py:obj', 'list'),
-    ('py:obj', 'tuple'),
-    ('py:obj', 'int'),
-    ('py:obj', 'float'),
-    ('py:obj', 'bool'),
-    ('py:obj', 'Mapping'),
-    ('py:obj', 'plum'),
-]
+nitpick_ignore = []
+
+for line in open('nitpick-exceptions'):
+    if line.strip() == "" or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, target))

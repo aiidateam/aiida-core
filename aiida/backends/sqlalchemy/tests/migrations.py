@@ -14,11 +14,6 @@ import unittest
 import os
 from alembic import command
 from alembic.config import Config
-from sqlalchemydiff import compare
-from sqlalchemydiff.util import (
-    destroy_database,
-    get_temporary_uri,
-)
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import utils
@@ -82,11 +77,14 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
     def test_migrations_forward_backward(self):
         """
         This is a very broad test that checks that the migration mechanism
-        works. More specifically, it checks that:
-        - Alembic database migrations to specific versions work (upgrade &
-          downgrade)
-        - The methods that are checking the database schema version and perform
-          the migration procedure to the last version work correctly.
+        works. More specifically, it checks that::
+
+            - Alembic database migrations to specific versions work (upgrade &
+              downgrade)
+
+            - The methods that are checking the database schema version and perform
+              the migration procedure to the last version work correctly.
+
         """
         from aiida.backends.sqlalchemy.tests.migration_test import versions
         from aiida.backends.sqlalchemy.utils import check_schema_version
@@ -180,6 +178,7 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
 
     def setUp(self):
         # from aiida.backends.sqlalchemy.tests.migration_test import versions
+        from sqlalchemydiff.util import get_temporary_uri
         from aiida.backends.sqlalchemy.migrations import versions
 
         self.migr_method_dir_path = os.path.dirname(
@@ -218,6 +217,7 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         new_database(self.db_url_right)
 
     def tearDown(self):
+        from sqlalchemydiff.util import destroy_database
         destroy_database(self.db_url_left)
         destroy_database(self.db_url_right)
 
@@ -229,6 +229,7 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         results to help debug differences.
         """
         from sqlalchemy.engine import create_engine
+        from sqlalchemydiff import compare
 
         with create_engine(self.db_url_left).begin() as connection:
             self.alembic_cfg_left.attributes['connection'] = connection

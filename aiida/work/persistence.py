@@ -16,6 +16,7 @@ import os.path
 import plum.persistence.pickle_persistence
 from plum.process import Process
 from aiida.common.lang import override
+from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.defaults import class_loader
 
 import glob
@@ -41,15 +42,19 @@ _FAILED_DIRECTORY = path.join(_RUNNING_DIRECTORY, "failed")
 # library then this can be removed. https://github.com/WoLpH/portalocker/pull/34
 class RLock(portalocker.Lock):
     """
-    A reentrant lock, functions in a similar way to threading.RLock in that it
-    can be acquired multiple times.  When the corresponding number of release()
-    calls are made the lock will finally release the underlying file lock.
+    reentrant lock.
+    
+    Functions in a similar way to threading.RLock in that it can be acquired
+    multiple times.  When the corresponding number of release() calls are made
+    the lock will finally release the underlying file lock.
     """
 
     def __init__(
             self, filename, mode='a', timeout=portalocker.utils.DEFAULT_TIMEOUT,
             check_interval=portalocker.utils.DEFAULT_CHECK_INTERVAL, fail_when_locked=False,
             flags=portalocker.utils.LOCK_METHOD):
+        """Constructor"""
+
         super(RLock, self).__init__(filename, mode, timeout, check_interval,
                                     fail_when_locked, flags)
         self._acquire_count = 0
@@ -393,9 +398,13 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def load_checkpoint_from_file_object(self, file_object):
         cp = pickle.load(file_object)
 
-        inputs = cp[Process.BundleKeys.INPUTS.value]
+        inputs = cp[Process.BundleKeys.INPUTS_RAW.value]
         if inputs:
-            cp[Process.BundleKeys.INPUTS.value] = self._load_nodes_from(inputs)
+            cp[Process.BundleKeys.INPUTS_RAW.value] = deserialize_data(inputs)
+
+        inputs = cp[Process.BundleKeys.INPUTS_PARSED.value]
+        if inputs:
+            cp[Process.BundleKeys.INPUTS_PARSED.value] = deserialize_data(inputs)
 
         cp.set_class_loader(class_loader)
         return cp
@@ -408,51 +417,15 @@ class Persistence(plum.persistence.pickle_persistence.PicklePersistence):
     def create_bundle(self, process):
         bundle = Bundle()
         process.save_instance_state(bundle)
-        inputs = bundle[Process.BundleKeys.INPUTS.value]
+        inputs = bundle[Process.BundleKeys.INPUTS_RAW.value]
         if inputs:
-            bundle[Process.BundleKeys.INPUTS.value] = self._convert_to_ids(inputs)
+            bundle[Process.BundleKeys.INPUTS_RAW.value] = serialize_data(inputs)
+
+        inputs = bundle[Process.BundleKeys.INPUTS_PARSED.value]
+        if inputs:
+            bundle[Process.BundleKeys.INPUTS_PARSED.value] = serialize_data(inputs)
 
         return bundle
-
-    def _convert_to_ids(self, nodes):
-        from aiida.orm import Node
-
-        input_ids = {}
-        for label, node in nodes.iteritems():
-            if node is None:
-                continue
-            elif isinstance(node, Node):
-                if node.is_stored:
-                    input_ids[label] = node.pk
-                else:
-                    # Try using the UUID, but there's probably no chance of
-                    # being abel to recover the node from this if not stored
-                    # (for the time being)
-                    input_ids[label] = node.uuid
-            elif isinstance(node, collections.Mapping):
-                input_ids[label] = self._convert_to_ids(node)
-
-        return input_ids
-
-    def _load_nodes_from(self, pks_mapping):
-        """
-        Take a dictionary of of {label: pk} or nested dictionary i.e.
-        {label: {label: pk}} and convert to the equivalent dictionary but
-        with nodes instead of the ids.
-
-        :param pks_mapping: The dictionary of node pks.
-        :return: A dictionary with the loaded nodes.
-        :rtype: dict
-        """
-        from aiida.orm import load_node
-
-        nodes = {}
-        for label, pk in pks_mapping.iteritems():
-            if isinstance(pk, collections.Mapping):
-                nodes[label] = self._load_nodes_from(pk)
-            else:
-                nodes[label] = load_node(pk=pk)
-        return nodes
 
     def _clear(self, fileobj):
         """

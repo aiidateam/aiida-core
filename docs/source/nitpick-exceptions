@@ -1,0 +1,152 @@
+# built-in python exceptions
+py:exc  ArithmeticError
+py:exc  AssertionError
+py:exc  AttributeError
+py:exc  BaseException
+py:exc  BufferError
+py:exc  DeprecationWarning
+py:exc  EOFError
+py:exc  EnvironmentError
+py:exc  Exception
+py:exc  FloatingPointError
+py:exc  FutureWarning
+py:exc  GeneratorExit
+py:exc  IOError
+py:exc  ImportError
+py:exc  ImportWarning
+py:exc  IndentationError
+py:exc  IndexError
+py:exc  KeyError
+py:exc  KeyboardInterrupt
+py:exc  LookupError
+py:exc  MemoryError
+py:exc  NameError
+py:exc  NotImplementedError
+py:exc  OSError
+py:exc  OverflowError
+py:exc  PendingDeprecationWarning
+py:exc  ReferenceError
+py:exc  RuntimeError
+py:exc  RuntimeWarning
+py:exc  StandardError
+py:exc  StopIteration
+py:exc  SyntaxError
+py:exc  SyntaxWarning
+py:exc  SystemError
+py:exc  SystemExit
+py:exc  TabError
+py:exc  TypeError
+py:exc  UnboundLocalError
+py:exc  UnicodeDecodeError
+py:exc  UnicodeEncodeError
+py:exc  UnicodeError
+py:exc  UnicodeTranslateError
+py:exc  UnicodeWarning
+py:exc  UserWarning
+py:exc  VMSError
+py:exc  ValueError
+py:exc  Warning
+py:exc  WindowsError
+py:exc  ZeroDivisionError
+
+# python builtins
+py:class  classmethod
+py:class  dict
+py:class  list
+py:class  object
+py:class  unittest.case.TestCase
+py:class  ABCMeta
+py:class  exceptions.Exception
+py:class  exceptions.BaseException
+py:class  str
+py:class  tuple
+py:class  int
+py:class  float
+py:class  bool
+py:class  basestring
+py:class  None
+py:class  type
+py:class  __builtin__.bool
+py:class  __builtin__.float
+py:class  __builtin__.int
+py:class  __builtin__.str
+
+# python builtin objects
+py:obj basestring
+py:obj bool
+py:obj float
+py:obj int
+py:obj str
+py:obj tuple
+py:obj None
+
+# python packages
+# Note: These are needed, if they are provided, e.g.
+# as types or rtypes without actually being imported
+py:class  abc.ABCMeta
+
+py:class  distutils.version.Version
+
+py:class  enum.Enum
+
+py:class  flask.app.Flask
+py:class  flask.json.JSONEncoder
+py:class  flask_restful.Api
+py:class  flask_restful.Resource
+
+py:class  frozenset
+
+py:class  logging.Filter
+py:class  logging.Handler
+py:class  logging.record
+
+py:class  plum.class_loader.ClassLoader
+py:class  plum.engine.parallel.MultithreadedEngine
+py:class  plum.knowledge_provider.KnowledgeProvider
+py:class  plum.persistence.Bundle
+py:class  plum.persistence.pickle_persistence.PicklePersistence
+py:class  plum.process.Process
+py:class  plum.process_monitor.ProcessMonitorListener
+py:class  plum.process_spec.ProcessSpec
+py:class  plum.wait.WaitOn
+py:class  plum.workflow.Workflow
+py:class  plum.workflow.WorkflowSpec
+
+py:class  IPython.core.magic.Magics
+
+#py:class  json.json
+
+py:class  HTMLParser.HTMLParser
+
+py:class  tuple
+
+py:class  staticmethod
+
+py:class  django.contrib.auth.models.AbstractBaseUser
+py:class  django.contrib.auth.models.BaseUserManager
+py:class  django.contrib.auth.models.PermissionsMixin
+py:class  django.core.exceptions.MultipleObjectsReturned
+py:class  django.core.exceptions.ObjectDoesNotExist
+py:class  django.db.models.base.Model
+py:class  django.db.models.manager.Manager
+py:class  django.db.models.query.QuerySet
+py:class  django.db.migrations.migration.Migration
+
+py:class  sqlalchemy.ext.declarative.api.Base
+py:class  sqlalchemy.ext.declarative.api.Model
+py:class  sqlalchemy.sql.functions.FunctionElement
+py:class  sqlalchemy.orm.query.Query
+
+py:class  portalocker.utils.Lock
+
+py:class  _abcoll.Mapping
+py:class  _abcoll.MutableMapping
+py:class  _abcoll.MutableSequence
+
+py:class  aiida.orm.node.Node
+py:class  aiida.orm.utils.BackendDelegateWithDefault
+# strange class in work/interstep.py
+py:class  aiida.work.interstep.Builder
+py:class  Builder
+py:class  Data
+py:meth   aiida.orm.group.Group.get_from_string

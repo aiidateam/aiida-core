@@ -18,7 +18,8 @@ from aiida.work.legacy.wait_on import WaitOnWorkflow
 from aiida.common.lang import override
 from aiida.common.utils import get_class_string, get_object_string, \
     get_object_from_string
-from aiida.orm import load_node, load_workflow
+from aiida.orm import load_node, load_workflow, Node
+from aiida.utils.serialize import serialize_data, deserialize_data
 from plum.wait_ons import Checkpoint, WaitOnAll, WaitOnProcess
 from plum.wait import WaitOn
 from plum.persistence.bundle import Bundle
@@ -124,7 +125,9 @@ class WorkChain(Process):
 
         def save_instance_state(self, out_state):
             for k, v in self._content.iteritems():
-                out_state[k] = v
+                if isinstance(v, Node) and not v.is_stored:
+                    v.store()
+                out_state[k] = serialize_data(v)
 
     def __init__(self):
         super(WorkChain, self).__init__()
@@ -283,7 +286,7 @@ class WorkChain(Process):
             self._context = self.Context()
         else:
             # Recreate the context
-            self._context = self.Context(saved_state[self._CONTEXT])
+            self._context = self.Context(deserialize_data(saved_state[self._CONTEXT]))
 
             # Recreate the stepper
             if self._STEPPER_STATE in saved_state:
@@ -390,7 +393,8 @@ class Stepper(object):
     def step(self):
         """
         Execute on step of the instructions.
-        :return: A 2-tuple with entries:
+
+        :return: A 2-tuple with entries
             0. True if the stepper has finished, False otherwise
             1. The return value from the executed step
         :rtype: tuple
@@ -529,14 +533,17 @@ class _Block(_Instruction):
 class _Conditional(object):
     """
     Object that represents some condition with the corresponding body to be
-    executed if the condition is met e.g.:
-    if(condition):
-      body
+    executed if the condition.
+    
+    E.g. ::
 
-    or
+      if(condition):
+        body
 
-    while(condition):
-      body
+    or::
+
+      while(condition):
+        body
     """
 
     def __init__(self, parent, condition):
@@ -738,6 +745,7 @@ class _ReturnStepper(Stepper):
     def step(self):
         """
         Execute on step of the instructions.
+
         :return: A 2-tuple with entries:
             0. True if the stepper has finished, False otherwise
             1. The return value from the executed step

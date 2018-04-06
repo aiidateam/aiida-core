@@ -10,7 +10,7 @@
 
 # The next two serve as 'global' variables, set in the load_dbenv
 # call. They are properly reset upon forking.
-engine =  None
+engine = None
 scopedsessionclass = None
 
 
@@ -28,4 +28,3 @@ def get_scoped_session():
         s = scopedsessionclass()
 
     return s
-

@@ -92,7 +92,7 @@ Originally, the ``legacy`` implementation was implemented directly into the
 In order to implement more than one method, and
 to simplify the :py:class:`~aiida.orm.data.array.kpoints.KpointsData` class,
 and to decouple the underlying logic from AiiDA, we have deprecated those methods, factored out the logic into
-the :ref:`legacy module<KpointsLegacyModuleDocs>`. The methods are currently still available
+the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available
 but will be removed in future versions of AiiDA; plese use directly the wrappers
 :py:func:`aiida.tools.data.array.kpoints.get_kpoints_path`
 and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path` instead, passing as option ``method='legacy'``.

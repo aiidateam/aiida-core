@@ -11,7 +11,7 @@
 Tests for IcsdDbImporter
 """
 from django.utils import unittest
-from aiida.djsite.db.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaTestCase
 
 import aiida.tools.dbimporters.plugins.icsd
 

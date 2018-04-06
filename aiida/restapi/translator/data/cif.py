@@ -46,6 +46,9 @@ class CifDataTranslator(DataTranslator):
         response = {}
         response["str_viz_info"] = {}
 
+        if format is None:
+            format = 'cif'
+
         if format in node.get_export_formats():
             try:
                 response["str_viz_info"]["data"] = node._exportstring(format)[0]

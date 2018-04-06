@@ -101,11 +101,11 @@ class BaseTranslator(object):
     def __repr__(self):
         """
         This function is required for the caching system to be able to compare
-        two NodeTranslator objects. Comparison is done on the value returned by
-        __repr__
+        two NodeTranslator objects. Comparison is done on the value returned by __repr__
+
         :return: representation of NodeTranslator objects. Returns nothing
-        because the inputs of self.get_nodes are sufficient to determine the
-        identity of two queries.
+            because the inputs of self.get_nodes are sufficient to determine the
+            identity of two queries.
         """
         return ""
 
@@ -238,7 +238,8 @@ class BaseTranslator(object):
 
     def get_total_count(self):
         """
-        Returns the number of rows of the query
+        Returns the number of rows of the query.
+
         :return: total_count
         """
         ## Count the results if needed
@@ -252,10 +253,15 @@ class BaseTranslator(object):
         Add filters in query_help.
 
         :param filters: it is a dictionary where keys are the tag names
-          given in the path in query_help and their values are the dictionary
-          of filters want to add for that tag name. Format for the Filters
-          dictionary:
-          filters = { "tag1" : {k1:v1, k2:v2}, "tag2" : {k1:v1, k2:v2}, }
+            given in the path in query_help and their values are the dictionary
+            of filters want to add for that tag name. Format for the Filters
+            dictionary::
+
+                filters = {
+                    "tag1" : {k1:v1, k2:v2},
+                    "tag2" : {k1:v1, k2:v2},
+                }
+
         :return: query_help dict including filters if any.
         """
         if isinstance(filters, dict):
@@ -358,6 +364,7 @@ class BaseTranslator(object):
         :param orders: dictionary with the order for each tag
         :param orders: dictionary with the projections
         :param id: id of a specific node
+        :type id: int
         """
 
         tagged_filters = {}
@@ -452,9 +459,11 @@ class BaseTranslator(object):
 
     def get_formatted_result(self, label):
         """
-        Runs the query and retrieves results tagged as "label"
-        :param label (string): the tag of the results to be extracted out of
-        the query rows.
+        Runs the query and retrieves results tagged as "label".
+
+        :param label: the tag of the results to be extracted out of
+          the query rows.
+        :type label: str
         :return: a list of the query results
         """
 
@@ -476,10 +485,9 @@ class BaseTranslator(object):
 
     def get_results(self):
         """
-        Returns either list of nodes or details of single node from database
+        Returns either list of nodes or details of single node from database.
 
-        :return: either list of nodes or details of single node
-          from database
+        :return: either list of nodes or details of single node from database
         """
 
         ## Check whether the querybuilder object has been initialized
@@ -498,18 +506,17 @@ class BaseTranslator(object):
 
     def _check_id_validity(self, id):
         """
-        Checks whether a id full id or id starting pattern) corresponds to
-         an object of the expected type,
+        Checks whether id corresponds to an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
         
-        :param id: id, or id starting pattern
+        :param id: id (or id starting pattern)
         
-        :return: True if id valid (invalid). If True, sets the
-            id filter attribute correctly
+        :return: True if id valid, False if invalid. If True, sets the id
+          filter attribute correctly
             
-        :raise: RestValidationError if No node is found or id pattern does
-        not identify a unique node
+        :raise RestValidationError: if no node is found or id pattern does
+          not identify a unique node
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 

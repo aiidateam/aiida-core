@@ -6,6 +6,9 @@
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
+ 
+# Added for sphinx-apidoc
+APIDOCDIR     = source/apidoc
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -44,10 +47,11 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
 clean:
-	-rm -r $(BUILDDIR)
+	-rm -rf $(BUILDDIR)
+	-rm -rf $(APIDOCDIR)
 
 html:
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -b html -n $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

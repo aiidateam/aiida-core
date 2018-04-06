@@ -29,7 +29,6 @@ from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 
-
 logger = aiidalogger.getChild('Workflow')
 
 
@@ -76,7 +75,7 @@ class Workflow(AbstractWorkflow):
             stack = inspect.stack()
 
             # cur_fr  = inspect.currentframe()
-            #call_fr = inspect.getouterframes(cur_fr, 2)
+            # call_fr = inspect.getouterframes(cur_fr, 2)
 
             # Get all the caller data
             caller_frame = stack[1][0]
@@ -195,7 +194,6 @@ class Workflow(AbstractWorkflow):
             self._dbworkflowinstance.save(commit=False)
             self._increment_version_number_db()
 
-
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
@@ -207,8 +205,6 @@ class Workflow(AbstractWorkflow):
         # dbnode.nodeversion  = F('nodeversion') + 1
         # will do weird stuff, returning Django Objects instead of numbers, and incrementing at
         # every save; moreover in this way I should do the right thing for concurrent writings
-        # I use self._dbnode because this will not do a query to update the node; here I only
-        # need to get its pk
         session = sa.get_scoped_session()
 
         self.dbworkflowinstance.nodeversion = DbWorkflow.nodeversion + 1
@@ -249,7 +245,7 @@ class Workflow(AbstractWorkflow):
             if hasattr(self, '_params'):
                 self.dbworkflowinstance.add_parameters(self._params, force=False)
 
-            self._repo_folder =\
+            self._repo_folder = \
                 RepositoryFolder(section=self._section_name, uuid=self.uuid)
             self.repo_folder.replace_with_folder(
                 self.get_temp_folder().abspath, move=True, overwrite=True)
@@ -466,7 +462,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         step_list = self.dbworkflowinstance.steps
-        step = [ _ for _ in step_list if _.name==step_method_name and _.user==get_automatic_user() ]
+        step = [_ for _ in step_list if _.name == step_method_name and _.user == get_automatic_user()]
         try:
             return step[0]
         except IndexError:
@@ -481,8 +477,8 @@ class Workflow(AbstractWorkflow):
         """
         step_list = self.dbworkflowinstance.steps
         if state is not None:
-            step_list = [ _ for _ in step_list if _.state==state ]
-        steps_and_times = [ [_.time,_] for _ in step_list ]
+            step_list = [_ for _ in step_list if _.state == state]
+        steps_and_times = [[_.time, _] for _ in step_list]
         steps_and_times = sorted(steps_and_times)
         steps = [_[1] for _ in steps_and_times]
         return steps
@@ -529,7 +525,7 @@ class Workflow(AbstractWorkflow):
 
         for elem_name in wf_mod.__dict__.iterkeys():
 
-            if module_class == elem_name:  #and issubclass(elem, Workflow):
+            if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)
 
     @classmethod
@@ -549,7 +545,6 @@ class Workflow(AbstractWorkflow):
             raise NotExistent("No entry with pk= {} found".format(pk))
 
         return cls.get_subclass_from_dbnode(dbworkflowinstance)
-
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
@@ -607,10 +602,10 @@ class Workflow(AbstractWorkflow):
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
             if cls.has_step(wrapped_method) and \
                     not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                     cls.get_step(wrapped_method).state == wf_states.SLEEP or \
-                                     cls.get_step(wrapped_method).nextcall == wf_default_call or \
-                                     cls.get_step(wrapped_method).nextcall == wrapped_method \
-                         #cls.has_step(wrapped_method) \
+                         cls.get_step(wrapped_method).state == wf_states.SLEEP or \
+                         cls.get_step(wrapped_method).nextcall == wf_default_call or \
+                         cls.get_step(wrapped_method).nextcall == wrapped_method \
+                            # cls.has_step(wrapped_method) \
                     ):
                 raise AiidaException(
                     "The step {0} has already been initialized, cannot change this outside the parent workflow !".format(
@@ -618,8 +613,8 @@ class Workflow(AbstractWorkflow):
 
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
             if cls.has_step(wrapped_method) and \
-                    ( cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                  cls.get_step(wrapped_method).state == wf_states.SLEEP ):
+                    (cls.get_step(wrapped_method).state == wf_states.ERROR or \
+                     cls.get_step(wrapped_method).state == wf_states.SLEEP):
 
                 for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
                 cls.get_step(wrapped_method).remove_sub_workflows()
@@ -627,7 +622,7 @@ class Workflow(AbstractWorkflow):
                 for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
                 cls.get_step(wrapped_method).remove_calculations()
 
-                #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
+                # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
             method_step, created = cls.dbworkflowinstance._get_or_create_step(name=wrapped_method,
                                                                               user=get_automatic_user())
@@ -678,7 +673,7 @@ class Workflow(AbstractWorkflow):
         # developing a workflow without rendering most of the trial run
         # unaccessible. I comment these lines for this moment.
 
-        #if md5 != md5_file(script_path):
+        # if md5 != md5_file(script_path):
         #    raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
 
         # ATTENTION: Do not move this code outside or encapsulate it in a function
@@ -722,11 +717,12 @@ class Workflow(AbstractWorkflow):
         else:
             next_method_name = wf_exit_call
 
-        #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
+        # logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
         #
         self.dbworkflowinstance.set_state(wf_states.RUNNING)
         method_step.set_state(wf_states.RUNNING)
+
 
 def kill_all():
     w_list = DbWorkflow.query.filter(
@@ -737,10 +733,12 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+
 def get_all_running_steps():
     from aiida.common.datastructures import wf_states
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflowStep
     return DbWorkflowStep.query.filter_by(state=wf_states.RUNNING).all()
+
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
@@ -788,21 +786,21 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        step_list = sorted([ [_.time,_] for _ in w.steps ])
-        step_list = [ _[1] for _ in step_list ]
-        
+        step_list = sorted([[_.time, _] for _ in w.steps])
+        step_list = [_[1] for _ in step_list]
+
         steps_and_subwf_pks = []
         for step in step_list:
             wf_id = None
             calc_id = None
             if step.calculations:
                 for calc in step.calculations:
-                    steps_and_subwf_pks.append( [step.id, wf_id, calc.id, step.name, step.nextcall, step.state])
+                    steps_and_subwf_pks.append([step.id, wf_id, calc.id, step.name, step.nextcall, step.state])
             if step.sub_workflows:
                 for www in step.sub_workflows:
-                    steps_and_subwf_pks.append( [step.id, www.id, calc_id, step.name, step.nextcall, step.state])
-            if (not step.calculations) and (not step.sub_workflows): 
-                steps_and_subwf_pks.append( [step.id, wf_id, calc_id, step.name, step.nextcall, step.state])
+                    steps_and_subwf_pks.append([step.id, www.id, calc_id, step.name, step.nextcall, step.state])
+            if (not step.calculations) and (not step.sub_workflows):
+                steps_and_subwf_pks.append([step.id, wf_id, calc_id, step.name, step.nextcall, step.state])
 
         # get the list of step pks (distinct), preserving the order
         steps_pk = []
@@ -825,38 +823,38 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-    # TODO: replace the database access using SQLAlchemy
-    
+        # TODO: replace the database access using SQLAlchemy
+
         # get all subworkflows for all steps
-        #wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
+        # wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
         # although the line above is equivalent to the following, has a bug of sqlalchemy.
-      #  import warnings
-       # from sqlalchemy import exc as sa_exc
-       # with warnings.catch_warnings():
-       #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-       #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
-        
+        #  import warnings
+        # from sqlalchemy import exc as sa_exc
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+        #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
+
         wflows = DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()
 
         # dictionary mapping pks into workflows
         workflow_mapping = {_.id: _ for _ in wflows}
-        
+
         # get all calculations for all steps
-        #calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
-        calcs_ids = [ _[2] for _ in  steps_and_subwf_pks if _[2] is not None] # extremely inefficient!
-        calcs = [ load_node(_) for _ in calcs_ids ]
+        # calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs_ids = [_[2] for _ in steps_and_subwf_pks if _[2] is not None]  # extremely inefficient!
+        calcs = [load_node(_) for _ in calcs_ids]
         # dictionary mapping pks into calculations
         calc_mapping = {_.id: _ for _ in calcs}
-    
+
         for step_pk in steps_pk:
             lines.append(pre_string + "|" + '-' * (tab_size - 1) +
                          "* Step: {0} [->{1}] is {2}".format(
                              subwfs_of_steps[step_pk]['name'],
                              subwfs_of_steps[step_pk]['nextcall'],
                              subwfs_of_steps[step_pk]['state']))
-    
+
             calc_pks = subwfs_of_steps[step_pk]['calc_pks']
-    
+
             # print calculations only if it is not short
             if short:
                 lines.append(pre_string + "|" + " " * (tab_size - 1) +
@@ -869,7 +867,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                         labelstring = "'{}', ".format(c.label)
                     else:
                         labelstring = ""
-    
+
                     if calc_state == calc_states.WITHSCHEDULER:
                         sched_state = c.get_scheduler_state()
                         if sched_state is None:
@@ -891,7 +889,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                     lines.append(pre_string + "|" + " " * (tab_size - 1) +
                                  "| Calculation ({}pk: {}) is {}{}".format(
                                      labelstring, calc_pk, calc_state, remote_state))
-    
+
             ## SubWorkflows
             for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
                 subwf = workflow_mapping[subwf_pk]
@@ -899,7 +897,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                                short=short, tab_size=tab_size,
                                                pre_string=pre_string + "|" + " " * (tab_size - 1),
                                                depth=depth - 1))
-    
+
             lines.append(pre_string + "|")
-    
+
     return lines

@@ -16,7 +16,6 @@ from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
-from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -27,8 +26,7 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.links import LinkType
-from aiida.common.lang import override
-
+from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
@@ -36,6 +34,8 @@ from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
     get_attr
 from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.orm.mixins import Sealable
+
+from . import user as users
 
 import aiida.backends.sqlalchemy
 
@@ -55,8 +55,7 @@ class Node(AbstractNode):
         self._init_internal_params()
 
         if dbnode is not None:
-            if not isinstance(dbnode, DbNode):
-                raise TypeError("dbnode is not a DbNode instance")
+            type_check(dbnode, DbNode)
             if dbnode.id is None:
                 raise ValueError("If cannot load an aiida.orm.Node instance "
                                  "from an unsaved DbNode object.")
@@ -74,8 +73,10 @@ class Node(AbstractNode):
                                                  uuid=self.uuid)
 
         else:
+            from aiida.orm import get_automatic_user
+
             # TODO: allow to get the user from the parameters
-            user = get_automatic_user()
+            user = users._get_db_user(get_automatic_user())
 
             self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
@@ -184,10 +185,28 @@ class Node(AbstractNode):
         """
         Get the user.
 
-        :return: a Django DbUser model object
+        :return: an aiida user model object
+        """
+        from aiida.orm import User
+        return User.load(self._get_user())
+
+    def _get_user(self):
+        """
+        Get the user.
+
+        :return: a SQLA user model object
         """
         self._ensure_model_uptodate(attribute_names=['user'])
-        return self._dbnode.user
+        return users.User.from_dbmodel(self._dbnode.user)
+
+    def set_user(self, user):
+        from aiida.orm import User
+        type_check(user, User)
+        self._set_user(user._impl)
+
+    def _set_user(self, user):
+        type_check(user, users.User)
+        self._dbnode.user = user._dbuser
 
     def get_computer(self):
         """
@@ -264,8 +283,7 @@ class Node(AbstractNode):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
-        if not isinstance(src, Node):
-            raise ValueError("src must be a Node instance")
+        type_check(src, Node)
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
@@ -442,13 +460,14 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida import orm
         session = get_scoped_session()
 
-        if not self.is_stored:
+        if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        comment = DbComment(dbnode=self._dbnode, user=user, content=content)
+        comment = DbComment(dbnode=self._dbnode, user=users._get_db_user(user), content=content)
         session.add(comment)
         try:
             session.commit()
@@ -576,7 +595,7 @@ class Node(AbstractNode):
 
     @property
     def process_type(self):
-        return self.dbnode.process_type
+        return self._dbnode.process_type
 
     @property
     def dbnode(self):

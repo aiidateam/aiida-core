@@ -12,6 +12,7 @@ This module manages the UPF pseudopotentials in the local repository.
 """
 import re
 
+import aiida.orm.user
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
 
@@ -133,7 +134,7 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.common import aiidalogger
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.backends.utils import get_automatic_user
+    from aiida.orm import get_automatic_user
     from aiida.orm.querybuilder import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
@@ -151,11 +152,10 @@ def upload_upf_family(folder, group_name, group_description,
         group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False
     except NotExistent:
-        group = Group(name=group_name, type_string=UPFGROUP_TYPE,
-                      user=get_automatic_user())
+        group = Group(name=group_name, type_string=UPFGROUP_TYPE, user=get_automatic_user())
         group_created = True
 
-    if group.user != get_automatic_user():
+    if group.user != aiida.orm.user.get_automatic_user():
         raise UniquenessError("There is already a UpfFamily group with name {}"
                               ", but it belongs to user {}, therefore you "
                               "cannot modify it".format(group_name,

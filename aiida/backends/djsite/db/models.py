@@ -96,7 +96,6 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     date_joined = m.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     objects = DbUserManager()
 
@@ -116,7 +115,8 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     def get_aiida_class(self):
         from aiida.orm.user import User
-        return User(dbuser=self)
+        from aiida.orm.implementation.django.user import User as DjangoUser
+        return User.load(DjangoUser.from_dbmodel(self))
 
 
 @python_2_unicode_compatible

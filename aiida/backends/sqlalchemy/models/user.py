@@ -15,8 +15,6 @@ from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
 
-
-
 class DbUser(Base):
     __tablename__ = "db_dbuser"
 
@@ -64,5 +62,5 @@ class DbUser(Base):
 
     def get_aiida_class(self):
         from aiida.orm.user import User
-        return User(dbuser=self)
-
+        from aiida.orm.implementation.sqlalchemy.user import User as SqlaUser
+        return User.load(SqlaUser.from_dbmodel(self))

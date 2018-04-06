@@ -8,48 +8,25 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common.lang import override
 from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
-from aiida.utils.email import normalize_email
-
 
 
 class User(AbstractUser):
+    @classmethod
+    def from_dbmodel(cls, dbuser):
+        if not isinstance(dbuser, DbUser):
+            raise ValueError("Expected a DbUser. Object of a different"
+                             "class was given as argument.")
 
-    def __init__(self, **kwargs):
+        user = cls.__new__(cls)
+        user._dbuser = dbuser
+        return user
+
+    def __init__(self, email):
         super(User, self).__init__()
-
-        # If no arguments are passed, then create a new DbUser
-        if not kwargs:
-            raise ValueError("User can not be instantiated without arguments")
-
-        # If a DbUser is passed as argument. Just use it and
-        # wrap it with a User object
-        elif 'dbuser' in kwargs:
-            # When a dbuser is passed as argument, then no other arguments
-            # should be passed.
-            if len(kwargs) > 1:
-                raise ValueError("When a DbUser is passed as argument, no"
-                                 "further arguments are accepted.")
-            dbuser = kwargs.pop('dbuser')
-            if not isinstance(dbuser, DbUser):
-                raise ValueError("Expected a DbUser. Object of a different"
-                                 "class was given as argument.")
-            self._dbuser = dbuser
-
-        # If the email of a users is given then create a new User object with
-        # this email.
-        elif 'email' in kwargs:
-            # When a dbuser is passed as argument, then no other arguments
-            # should be passed.
-            if len(kwargs) > 1:
-                raise ValueError("When an email is passed as argument, no"
-                                 "further arguments are accepted.")
-            email = normalize_email(kwargs.pop('email'))
-            self._dbuser = DbUser(email=email)
-
-        else:
-            raise ValueError("Only dbuser & email are accepted as arguments")
+        self._dbuser = DbUser(email=email)
 
     @staticmethod
     def get_db_columns():
@@ -77,6 +54,7 @@ class User(AbstractUser):
 
     @property
     def email(self):
+        self._ensure_model_uptodate(attribute_names=['email'])
         return self._dbuser.email
 
     @email.setter
@@ -94,6 +72,7 @@ class User(AbstractUser):
 
     @property
     def is_superuser(self):
+        self._ensure_model_uptodate(attribute_names=['is_superuser'])
         return self._dbuser.is_superuser
 
     @is_superuser.setter
@@ -103,6 +82,7 @@ class User(AbstractUser):
 
     @property
     def first_name(self):
+        self._ensure_model_uptodate(attribute_names=['first_name'])
         return self._dbuser.first_name
 
     @first_name.setter
@@ -112,6 +92,7 @@ class User(AbstractUser):
 
     @property
     def last_name(self):
+        self._ensure_model_uptodate(attribute_names=['last_name'])
         return self._dbuser.last_name
 
     @last_name.setter
@@ -121,6 +102,7 @@ class User(AbstractUser):
 
     @property
     def institution(self):
+        self._ensure_model_uptodate(attribute_names=['institution'])
         return self._dbuser.institution
 
     @institution.setter
@@ -130,6 +112,7 @@ class User(AbstractUser):
 
     @property
     def is_staff(self):
+        self._ensure_model_uptodate(attribute_names=['is_staff'])
         return self._dbuser.is_staff
 
     @is_staff.setter
@@ -139,6 +122,7 @@ class User(AbstractUser):
 
     @property
     def is_active(self):
+        self._ensure_model_uptodate(attribute_names=['is_active'])
         return self._dbuser.is_active
 
     @is_active.setter
@@ -148,6 +132,7 @@ class User(AbstractUser):
 
     @property
     def last_login(self):
+        self._ensure_model_uptodate(attribute_names=['last_login'])
         return self._dbuser.last_login
 
     @last_login.setter
@@ -157,6 +142,7 @@ class User(AbstractUser):
 
     @property
     def date_joined(self):
+        self._ensure_model_uptodate(attribute_names=['date_joined'])
         return self._dbuser.date_joined
 
     @date_joined.setter
@@ -186,8 +172,12 @@ class User(AbstractUser):
         dbusers = dbuser_query.all()
         users = []
         for dbuser in dbusers:
-            users.append(cls(dbuser=dbuser))
+            users.append(User.from_dbmodel(dbuser))
         return users
+
+    def _ensure_model_uptodate(self, attribute_names=None):
+        if not self.to_be_stored:
+            self._dbuser.session.expire(self._dbuser, attribute_names=attribute_names)
 
 
 class Util(UserUtil):
@@ -198,3 +188,23 @@ class Util(UserUtil):
         :param pk: The user pk.
         """
         DbUser.query.filter_by(id=pk).delete()
+
+
+def _get_db_user(user):
+    """
+    Take an AiiDA User and return the SQLA dbuser model if compatible, otherwise
+    raise TypeError
+
+    :param user: The AiiDA user object
+    :return: The SQLA dbuser model
+    """
+    import aiida.orm as orm
+
+    if not isinstance(user, orm.User):
+        raise TypeError("Expecting User, got '{}'".format(type(user)))
+    backend_user = user._impl
+
+    if not isinstance(backend_user, User):
+        raise TypeError("Expected SQLA user, got '{}'".format(user))
+
+    return backend_user._dbuser

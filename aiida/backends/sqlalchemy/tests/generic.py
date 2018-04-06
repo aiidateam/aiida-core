@@ -69,10 +69,12 @@ class TestGroupsSqla(AiidaTestCase):
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.user import get_automatic_user
 
         g1 = Group(name='testquery1').store()
+        self.addCleanup(g1.delete)
         g2 = Group(name='testquery2').store()
+        self.addCleanup(g2.delete)
 
         n1 = Node().store()
         n2 = Node().store()
@@ -82,7 +84,7 @@ class TestGroupsSqla(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser(email='test@email.xx', password='')
+        newuser = DbUser(email='test@email.xx', password='').get_aiida_class()
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -119,11 +121,6 @@ class TestGroupsSqla(AiidaTestCase):
         res = Group.query(user=get_automatic_user())
 
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
-
-        # Final cleanup
-        g1.delete()
-        g2.delete()
-        newuser.delete()
 
     def test_rename_existing(self):
         """
@@ -175,7 +172,6 @@ class TestDbExtrasSqla(AiidaTestCase):
      """
 
     def test_replacement_1(self):
-
         n1 = Node().store()
         n2 = Node().store()
 

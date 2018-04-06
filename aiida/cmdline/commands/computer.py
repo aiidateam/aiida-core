@@ -389,6 +389,7 @@ class Computer(VerdiCommandWithSubcommands):
         print "---------------------------------------"
 
         # get the new computer name
+        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
         input_txt = raw_input("=> Computer name: ")
         if input_txt.strip() == '?':
             print "HELP:", "The computer name"
@@ -651,8 +652,8 @@ class Computer(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.user import User
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.user import User, get_automatic_user
+        from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -686,7 +687,7 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if user_email is None:
-            user = User(dbuser=get_automatic_user())
+            user = get_automatic_user()
         else:
             user_list = User.search_for_users(email=user_email)
             # If no user is found

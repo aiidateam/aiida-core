@@ -110,7 +110,6 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
-            'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
             'run_daemon': (self.run_daemon, self.complete_none)
@@ -404,24 +403,6 @@ class Devel(VerdiCommandWithSubcommands):
                     print "{} = {}".format(prop, val)
             except KeyError:
                 pass
-
-    def run_listislands(self, *args):
-        """
-        List all AiiDA nodes, that have no parents and children.
-        """
-        load_dbenv()
-        from django.db.models import Q
-        from aiida.orm.node import Node
-        from aiida.backends.utils import get_automatic_user
-
-        q_object = Q(user=get_automatic_user())
-        q_object.add(Q(parents__isnull=True), Q.AND)
-        q_object.add(Q(children__isnull=True), Q.AND)
-
-        node_list = Node.query(q_object).distinct().order_by('ctime')
-        print "ID\tclass"
-        for node in node_list:
-            print "{}\t{}".format(node.pk, node.__class__.__name__)
 
     def run_getproperty(self, *args):
         """

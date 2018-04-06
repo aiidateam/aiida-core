@@ -135,8 +135,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
     @property
     def AiidaUser(self):
-        import aiida.orm.implementation.sqlalchemy.user
-        return aiida.orm.implementation.sqlalchemy.user.User
+        import aiida.orm.user
+        return aiida.orm.user.User
 
     @property
     def AiidaComputer(self):

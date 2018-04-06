@@ -61,7 +61,6 @@ def get_db_columns(db_class):
     column_property_types = [None] * len(property_keys)
     hybrid_property_types = [None] * len(hybrid_property_keys)
 
-
     foreign_keys = [get_foreign_key_infos(foreign_key) for foreign_key in
                     table.foreign_keys]
 

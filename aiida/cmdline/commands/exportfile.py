@@ -143,7 +143,8 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
 @click.argument('file_output', type=click.Path())
 @click.option('-f', '--force', is_flag=True, default=False, help='overwrite output file if it already exists')
 @click.option('-s', '--silent', is_flag=True, default=False, help='suppress output')
-def migrate(file_input, file_output, force, silent):
+@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
+def migrate(file_input, file_output, force, silent, archive_format):
     """
     An entry point to migrate existing AiiDA export archives between version numbers
     """
@@ -159,10 +160,8 @@ def migrate(file_input, file_output, force, silent):
     with SandboxFolder(sandbox_in_repo=False) as folder:
 
         if zipfile.is_zipfile(file_input):
-            archive_format = 'zip'
             extract_zip(file_input, folder, silent=silent)
         elif tarfile.is_tarfile(file_input):
-            archive_format = 'tar.gz'
             extract_tar(file_input, folder, silent=silent)
         else:
             print >> sys.stderr, 'Error: invalid file format, expected either a zip archive or gzipped tarball'
@@ -202,8 +201,9 @@ def migrate(file_input, file_output, force, silent):
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
             json.dump(metadata, f)
 
-        if archive_format == 'zip':
-            with zipfile.ZipFile(file_output, mode='w', compression=zipfile.ZIP_DEFLATED) as archive:
+        if archive_format == 'zip' or archive_format == 'zip-uncompressed':
+            compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
+            with zipfile.ZipFile(file_output, mode='w', compression=compression) as archive:
                 src = folder.abspath
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)

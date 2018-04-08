@@ -8,6 +8,7 @@ Workflows are a central concept in AiiDA that allow you to string together multi
 In this section, we explain what workflows are, how they can be used and run.
 Finally, we will detail some best practices when designing workflows.
 
+.. _workchains_workfunctions:
 
 Workchains and workfunctions
 ============================
@@ -140,14 +141,85 @@ The automatic checkpointing, which guarantess that work between steps is saved, 
 The workchain offers a lot more features than checkpointing that may make it more preferable over the workfunction, which you can read about in the :ref:`workflow development <workflow_development>` section.
 
 
+.. _running_workflows:
 
 Running workflows
 =================
 
-Workfunctions can be run directly, workchains need to be run through a ``runner``.
-The easiest way is to use the ``ProcessBuilder`` (see :ref:`this section <process_builder>`).
+Run
+---
+Without realizing it, in the :ref:`introductory section on workfunctions and workchains <workchains_workfunctions>`, we already saw how a workfunction can be ran.
+We can run a workfunction in exactly the same manner as you would run any other python function.
+Simply call the function with the desired inputs and it will be executed, while AiiDA makes sure to store the provenance automatically in the background.
+You can run workfunctions from anywhere, also inside an outline step of a workchain.
 
-ISSUE#1128
+Running a ``WorkChain`` on the other hand, is slightly different.
+Since it is a class, it cannot be 'run' directly like a function.
+Instead, we have to 'launch' it.
+This is done by passing it to the ``run`` function:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_keyword.py
+    :code: python
+
+As you can see, the ``run`` function can be imported from ``aiida.work.launch``.
+To launch the workchain (in this example we use the ``AddAndMultiplyWorkChain`` from the previous section), we simply call the ``run`` function with the workchain as the first argument, followed by the inputs as keyword arguments.
+Note that the keys used for each input have to correspond to the name of the inputs defined in the spec of the workchain.
+One can also define the inputs in a dictionary and then use the standard python expansion method to automatically unwrap the dictionary into keyword arguments, as is shown here:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_expand.py
+    :code: python
+
+After the workchain's execution is finished, the result is returned, which is a dictionary of its outputs.
+In this example the variable ``result`` will therefore be equal to ``{'result': 9}``.
+If you would also like to get a reference of the node that represents the ``WorkChain`` in the database, one can use the ``run_get_node`` or ``run_get_pid`` functions: 
+
+.. include:: include/snippets/workflows/workchains/run_workchain_get_node_pid.py
+    :code: python
+
+For the former, the ``node`` will be the ``WorkCalculation`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
+
+Submit
+------
+The launch functions, ``run``, ``run_get_node`` and ``run_get_pid``, described in the previous section, will execute the process in a blocking manner.
+That is to say that the interpreter in which you launch the process will be blocked until that process is completed.
+This might not necessarily be what you want.
+Imagine for example that you are launching a workchain that will take a long time to complete.
+The interpreter will be blocked the whole time and cannot do anything else.
+To circumvent this problem, you can also ``submit`` a process, for example a workchain:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit.py
+    :code: python
+
+The ``submit`` function will launch the process and send it to the daemon, who will take care of running it to the end.
+This way the interpreter is freed and regains control immediately.
+The return value of the ``submit`` call is the node that represents the process in the database.
+Note that besides the change in behavior, the syntax for passing the inputs to ``submit`` is exactly the same as for the ``run`` launch function and its siblings.
+
+There is one limitation to the use of the ``run`` and ``submit`` launchers.
+They cannot be used within the steps of a ``WorkChain`` itself.
+Instead, the ``WorkChain`` class has its own ``submit`` method that should be used.
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_internal.py
+    :code: python
+
+In this example, we launch another instance of the ``AddAndMultiplyWorkChain`` from within the ``AddAndMultiplyWorkChain`` itself.
+Note that the only difference is that instead of using the free function ``submit``, we use the class instance method ``self.submit``.
+
+.. _running_workflows_process_builder:
+
+Process builder
+---------------
+There is one final way of launching a process, whether it be a ``WorkChain`` or a ``JobCalculation``.
+Each process has a method called ``get_builder`` which will return an instance of the ``ProcessBuilder`` customised for that particular ``Process`` class.
+The builder knows exactly which inputs the process takes and expects and is therefore ideal for interactive usage.
+For details on how to instantiate and populate a ``ProcessBuilder`` instance please refer to :ref:`the process builder section<process_builder>`.
+
+One you have constructed your builder and inserted all the inputs, you can pass it to the launch functions like we did in the previous two sections:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_internal.py
+    :code: python
+
+Note that you are free to use this method of launching processes in normal scripts, but the builder really is designed for use in an interactive shell.
 
 
 Monitoring workflows

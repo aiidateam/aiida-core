@@ -57,13 +57,6 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: Tutorials
-
-    tutorial/index
-
-
-.. toctree::
-    :maxdepth: 1
     :caption: Concepts
 
     concepts/calculations
@@ -72,6 +65,13 @@ For advanced users and developers we point you to the developers section :doc:`d
     concepts/provenance
     concepts/caching
     import_export/index
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Tutorials
+
+    tutorial/index
 
 
 .. toctree::

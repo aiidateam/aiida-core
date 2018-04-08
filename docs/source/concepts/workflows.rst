@@ -16,6 +16,7 @@ Workchains and workfunctions
 At the core of a workflow, is the logic that defines the sequence of calculations that need to be executed to get from the initial inputs to the desired final answer.
 The way to encode this workflow logic in AiiDA, are workchains and workfunctions.
 By chaining workchains and workfunctions together, that each can run calculations within them, we can define a workflow.
+For simplicity, from here on out, we will use the terms, workflows, workchains and workfunctions interchangeably, as a 'pars pro toto' and 'totum pro parte'.
 
 Workfunctions
 -------------
@@ -216,7 +217,7 @@ For details on how to instantiate and populate a ``ProcessBuilder`` instance ple
 
 One you have constructed your builder and inserted all the inputs, you can pass it to the launch functions like we did in the previous two sections:
 
-.. include:: include/snippets/workflows/workchains/run_workchain_submit_internal.py
+.. include:: include/snippets/workflows/workchains/run_workchain_builder.py
     :code: python
 
 Note that you are free to use this method of launching processes in normal scripts, but the builder really is designed for use in an interactive shell.
@@ -225,7 +226,158 @@ Note that you are free to use this method of launching processes in normal scrip
 Monitoring workflows
 ====================
 
-ISSUE#1129
+When you have launched workflows, be it workfunctions or workchains, you may want to investigate their status, progression and the results.
+
+verdi work list
+---------------
+Your first point of entry will be the ``verdi`` command ``verdi work list``.
+This command will print a list of all active ``WorkCalculation`` nodes, which are the database objects used by ``WorkChains`` and ``workfunctions`` to store the details of their execution in the database.
+A typical example may look something like the following:
+
+.. code-block:: bash
+
+      PK  Creation    State           Process label
+    ----  ----------  ------------    ----------------------
+     151  3h ago      Running | None  AddAnMultiplyWorkChain
+     156  1s ago      Created | None  AddAnMultiplyWorkChain
+
+
+    Total results: 2
+
+The 'State' column is a concatenation of the ``process_state`` and the ``finish_status`` of the ``WorkCalculation``.
+By default, the command will only show active items, i.e. ``WorkCalculations`` that have not yet reached a terminal state.
+If you want to also show the nodes in a terminal states, you can use the ``-a`` flag and call ``verdi work list -a``:
+
+.. code-block:: bash
+
+      PK  Creation    State           Process label
+    ----  ----------  ------------    ----------------------
+     143  3h ago      Finished | 0    add
+     146  3h ago      Finished | 0    multiply
+     151  3h ago      Running | None  AddAnMultiplyWorkChain
+     156  1s ago      Created | None  AddAnMultiplyWorkChain
+
+
+    Total results: 4
+
+For more information on the meaning of the 'state' column, please refer to the documentation of the :ref:`process state <process_state>`.
+The ``-s`` flag let's you query for specific process states, i.e. issuing ``verdi work list -s created`` will return:
+
+.. code-block:: bash
+
+      PK  Creation    State           Process label
+    ----  ----------  ------------    ----------------------
+     156  1s ago      Created | None  AddAnMultiplyWorkChain
+
+
+    Total results: 1
+
+To query for a specific finish status, one can use ``verdi work list -f 0``:
+
+.. code-block:: bash
+
+      PK  Creation    State           Process label
+    ----  ----------  ------------    ----------------------
+     143  3h ago      Finished | 0    add
+     146  3h ago      Finished | 0    multiply
+
+
+    Total results: 2
+
+This simple tool should give you a good idea of the current status of running workflows and the status of terminated ones.
+If you are looking for information about a specific workflow node, the following three commands are at your disposal:
+
+ * ``verdi work report`` gives a list of the log messages attached to the workflow
+ * ``verdi work status`` print the call hierarchy of the workflow and status of all its nodes
+ * ``verdi calculation show`` print details about the status, inputs, outputs, callers and callees of the workflow
+
+In the following sections, we will explain briefly how the commands work.
+For the purpose of example, we will show the output of the commands for a completed ``PwBaseWorkChain`` from the ``aiida-quantumespresso`` plugin, which simply calls a ``PwCalculation``.
+
+verdi work report
+-----------------
+The developer of a ``WorkChain`` can attach log messages to the workchain at any place within the function body of one of the outline steps through the ``self.report()`` method.
+The ``verdi work report`` command will display all the log messages in chronological order:
+
+.. code-block:: bash
+
+    2018-04-08 21:18:51 [164 | REPORT]: [164|PwBaseWorkChain|run_calculation]: launching PwCalculation<167> iteration #1
+    2018-04-08 21:18:55 [164 | REPORT]: [164|PwBaseWorkChain|inspect_calculation]: PwCalculation<167> completed successfully
+    2018-04-08 21:18:56 [164 | REPORT]: [164|PwBaseWorkChain|results]: workchain completed after 1 iterations
+    2018-04-08 21:18:56 [164 | REPORT]: [164|PwBaseWorkChain|on_terminated]: remote folders will not be cleaned
+
+The log message will include a timestamp followed by the level of the log, which is always ``REPORT``.
+The second block has the format ``pk|class name|step function name`` detailing information about the workchain itself and the step in which the message was fired.
+Finally, the message itself is displayed.
+Of course how many messages are logged and how useful they are is up to the workchain development.
+In general they can be very useful for a user to understand what has happened during the execution of the workchain, however, one has to realize that each entry is stored in the database, so overuse can unnecessarily bloat the database.
+
+
+verdi work status
+-----------------
+One of the more powerful aspect of workchains, is that they can call ``JobCalculations`` and other ``WorkChains`` to create a nested call hierarchy.
+If you want to inspect the status of a workchain and all the children that it called, ``verdi work status`` is the go-to tool.
+An example output is the following:
+
+.. code-block:: bash
+
+    PwBaseWorkChain <pk=164> [ProcessState.FINISHED] [4:results]
+        └── PwCalculation <pk=167> [FINISHED]
+
+The command prints a tree representation of the hierarchical call structure, that recurses all the way down.
+In this example, there is just a single ``PwBaseWorkChain`` which called a ``PwCalculation``, which is indicated by it being indented one level.
+In addition to the call tree, each node also shows its current process state and for workchains at which step in the outline it is.
+This tool can be very useful to inspect while a workchain is running at which step in the outline it currently is, as well as the status of all the children calculations it called.
+
+
+verdi calculation show
+----------------------
+Finally, there is a command that displays detailed information about the ``WorkCalculation``, such as its inputs, outputs and the calculations it called and was called by.
+Since the ``WorkCalculation`` is a sub class of the ``Calculation`` class, we can use the same command ``verdi calculation show`` that one would use to inspect the details of a ``JobCalculation``.
+An example output for a ``PwBaseWorkChain`` would look like the following:
+
+.. code-block:: bash
+
+    Property       Value
+    -------------  ------------------------------------
+    type           WorkCalculation
+    pk             164
+    uuid           08bc5a3c-da7d-44e0-a91c-dda9ddcb638b
+    label
+    description
+    ctime          2018-04-08 21:18:50.850361+02:00
+    mtime          2018-04-08 21:18:50.850372+02:00
+    process state  ProcessState.FINISHED
+    finish status  0
+    code           pw-v6.1
+
+    Inputs            PK  Type
+    --------------  ----  -------------
+    parameters       158  ParameterData
+    structure        140  StructureData
+    kpoints          159  KpointsData
+    pseudo_family    161  Str
+    max_iterations   163  Int
+    clean_workdir    160  Bool
+    options          162  ParameterData
+
+    Outputs              PK  Type
+    -----------------  ----  -------------
+    output_band         170  BandsData
+    remote_folder       168  RemoteData
+    output_parameters   171  ParameterData
+    output_array        172  ArrayData
+
+    Called      PK  Type
+    --------  ----  -------------
+    CALL       167  PwCalculation
+
+    Log messages
+    ---------------------------------------------
+    There are 4 log messages for this calculation
+    Run 'verdi work report 164' to see them
+
+This overview should give you all the information if you want to inspect a workchains inputs and outputs in closer detail as it provides you with their pk's.
 
 
 .. _workflow_development:

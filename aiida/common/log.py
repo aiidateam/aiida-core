@@ -23,6 +23,7 @@ logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {
+    logging.getLevelName(logging.NOTSET): logging.NOTSET,
     logging.getLevelName(logging.DEBUG): logging.DEBUG,
     logging.getLevelName(logging.INFO): logging.INFO,
     logging.getLevelName(LOG_LEVEL_REPORT): LOG_LEVEL_REPORT,

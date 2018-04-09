@@ -238,14 +238,15 @@ class Runner(object):
         finally:
             runner.close()
 
-    def _setup_rmq(self, url, prefix=None, testing_mode=False):
+    def _setup_rmq(self, url, prefix=None, task_prefetch_count=None, testing_mode=False):
         self._rmq_connector = plumpy.rmq.RmqConnector(amqp_url=url, loop=self._loop)
 
         self._rmq_communicator = plumpy.rmq.RmqCommunicator(
             self._rmq_connector,
             exchange_name=rmq.get_message_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
-            testing_mode=testing_mode
+            testing_mode=testing_mode,
+            task_prefetch_count=task_prefetch_count
         )
 
         self._rmq = rmq.ProcessControlPanel(
@@ -280,8 +281,8 @@ class DaemonRunner(Runner):
         kwargs['rmq_submit'] = True
         super(DaemonRunner, self).__init__(*args, **kwargs)
 
-    def _setup_rmq(self, url, prefix=None, testing_mode=False):
-        super(DaemonRunner, self)._setup_rmq(url, prefix, testing_mode)
+    def _setup_rmq(self, url, prefix=None, task_prefetch_count=None, testing_mode=False):
+        super(DaemonRunner, self)._setup_rmq(url, prefix, task_prefetch_count, testing_mode)
 
         # Create a context for loading new processes
         load_context = plumpy.LoadContext(runner=self)

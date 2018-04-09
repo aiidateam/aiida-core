@@ -311,7 +311,7 @@ class AbstractCalculation(Sealable):
         """
         Return the checkpoint bundle set for the Calculation
 
-        :returns: checkpoint bundle
+        :returns: checkpoint bundle if it exists, None otherwise
         """
         return self.get_attr(self.CHECKPOINT_KEY, None)
 

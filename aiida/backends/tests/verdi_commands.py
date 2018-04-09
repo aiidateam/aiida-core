@@ -541,7 +541,6 @@ class TestVerdiDataCommands(AiidaTestCase):
         """
         super(TestVerdiDataCommands, cls).setUpClass()
 
-        from aiida.orm.user import User
         from aiida.orm.group import Group
 
         # Create a secondary user

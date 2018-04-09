@@ -55,7 +55,7 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.orm import User as UserModel
+    from aiida.orm import User
     import readline
     import getpass
 
@@ -87,7 +87,7 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
         if not non_interactive:
             try:
                 attributes = {}
-                for field in UserModel.REQUIRED_FIELDS:
+                for field in User.REQUIRED_FIELDS:
                     verbose_name = field.capitalize()
                     readline.set_startup_hook(lambda: readline.insert_text(
                         getattr(user, field)))

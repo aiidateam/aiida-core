@@ -10,6 +10,7 @@
 from aiida.restapi.translator.base import BaseTranslator
 from aiida.restapi.common.config import custom_schema
 
+
 class UserTranslator(BaseTranslator):
     """
     Translator relative to resource 'users' and aiida class User
@@ -37,11 +38,9 @@ class UserTranslator(BaseTranslator):
         # send only white listed keys in default response for user for security reasons
         _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
 
-
     def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
         super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
-

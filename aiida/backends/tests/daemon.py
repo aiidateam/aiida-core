@@ -12,7 +12,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
 from aiida.daemon.runner import legacy_workflow_stepper
-from aiida.orm import User
 from aiida.orm.implementation import get_all_running_steps
 from aiida.workflows.test import WFTestSimpleWithSubWF
 

@@ -19,6 +19,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
 from aiida.orm.implementation.django.node import Node
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.common.utils import type_check
 
 from . import user as users
 
@@ -116,14 +117,8 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
-        import aiida.orm as orm
-
-        if not isinstance(new_user, orm.User):
-            raise TypeError("Expecting User, got '{}'".format(type(new_user)))
-        backend_user = new_user._impl
-        if not isinstance(backend_user, users.User):
-            raise TypeError("Expected Django user, got '{}'".format(new_user))
-        self._dbgroup.user = backend_user._dbuser
+        type_check(new_user, users.DjangoUser)
+        self._dbgroup.user = user._dbuser
 
     @property
     def dbgroup(self):

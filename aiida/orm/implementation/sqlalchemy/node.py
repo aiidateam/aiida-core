@@ -188,7 +188,7 @@ class Node(AbstractNode):
         return users.SqlaUser.from_dbmodel(self._dbnode.user)
 
     def set_user(self, user):
-        type_check(user, users.User)
+        type_check(user, users.SqlaUser)
         self._dbnode.user = user._dbuser
 
     def get_computer(self):

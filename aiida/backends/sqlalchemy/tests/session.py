@@ -58,7 +58,6 @@ class TestSessionSqla(AiidaTestCase):
         """
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         self.set_connection(expire_on_commit=True)
 
@@ -92,7 +91,6 @@ class TestSessionSqla(AiidaTestCase):
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
@@ -123,7 +121,6 @@ class TestSessionSqla(AiidaTestCase):
         """
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         self.set_connection(expire_on_commit=False)
 
@@ -158,7 +155,6 @@ class TestSessionSqla(AiidaTestCase):
 
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 

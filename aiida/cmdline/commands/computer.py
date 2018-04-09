@@ -953,7 +953,6 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

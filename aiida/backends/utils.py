@@ -116,7 +116,6 @@ def get_dbauthinfo(computer, aiidauser):
     from aiida.common.exceptions import InternalError
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo, DbUser
-        from aiida.orm.implementation.django.user import User
         from django.core.exceptions import (ObjectDoesNotExist,
                                             MultipleObjectsReturned)
 
@@ -136,8 +135,6 @@ def get_dbauthinfo(computer, aiidauser):
                 "computer {}! Only one configuration is allowed".format(
                     aiidauser.email, computer.name))
     elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
         from aiida.backends.sqlalchemy import get_scoped_session

@@ -4,20 +4,96 @@
 Processes
 *********
 
-Anything that runs in AiiDA is an instance of :py:class:`~aiida.work.processes.Process`.
+Anything that runs in AiiDA is an instance of the :py:class:`~aiida.work.processes.Process` class.
+The ``Process`` class contains all the information and logic to tell, whoever is handling it, how to run it to completion.
+Typically the one responsible for running the processes is an instance of a :py:class:`~aiida.work.runners.Runner`.
+This can be a local runner or the :py:class:`~aiida.work.runners.DaemonRunner` in case of the daemon running the process.
 
-ISSUE#1131
+A good example of a process is the :py:class:`~aiida.work.workchain.WorkChain` class, which is in fact a sub class of the :py:class:`~aiida.work.processes.Process` class.
+In the :ref:`workflows and workchains section <workchains_workfunctions>` you can see how the ``WorkChain`` defines how it needs to be run.
+In addition to those run instructions, the ``WorkChain`` needs some sort of record in the database to store what happened during its execution.
+For example it needs to record what its exact inputs were, the log messages that were reported and what the final outputs were.
+For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.calculation.Calculation` class.
+This ``Calculation`` class is a sub class of :py:class:`~aiida.orm.node.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
+
+It is very important to understand this division of labor.
+A ``Process`` describes how something should be run, and the ``Calculation`` node serves as a mere record in the database of what actually happened during execution.
+A good thing to remember is that while it is running, we are dealing with the ``Process`` and when it is finished we interact with the ``Calculation`` node.
+
+The ``WorkChain`` is not the only process in AiiDA and each process uses a different node class as its database record.
+The following table describes which processes exist in AiiDA and what node type they use as a database record. 
+
+===================   =======================   =====================
+Process               Database record           Used for
+===================   =======================   =====================
+``WorkChain``         ``WorkCalculation``       Workchain
+``JobProcess``        ``JobCalculation``        Calculation
+``FunctionProcess``   ``FunctionCalculation``   Workfunction
+``FunctionProcess``   ``InlineCalculation``     Inline calculation
+===================   =======================   =====================
+
+.. note::
+    The concept of the ``Process`` is a later addition to AiiDA and in the beginning this division of 'how to run something` and 'serving as a record of what happened', did not exist.
+    For example, historically speaking, the ``JobCalculation`` class fulfilled both of those tasks.
+    To not break the functionality of the historic ``JobCalculation`` and ``InlineCalculation``, their implementation was kept and ``Process`` wrappers were developed in the form of the ``JobProcess`` and the ``FunctionProcess``, respectively.
+    When a function, decorated with the ``make_inline`` decorator, is run, it is automatically wrapped into a ``FunctionProcess`` to make sure that is a process and gets all the necessary methods for the ``Runner`` to run it.
+    Similarly, the ``process()`` class method was implemented for the ``JobCalculation`` class, in order to automatically create a process wrapper for the calculation.
+
+The good thing about this unification is that everything that is run in AiiDA has the same attributes concerning its running state.
+The most important attribute is the process state.
+In the next section, we will explain what the process state is, what values it can take and what they mean.
 
 .. _process_state:
 
 The process state
 =================
+Each ``Process`` has a process state.
+This property tells you about the current status of the process.
+It is stored in the instance of the ``Process`` itself and the workflow engine, the ``plumpy`` library, operates only on that value.
+However, the ``Process`` instance 'dies' as soon as its is terminated, so therefore we also write the process state to the calculation node that the process uses as its database record, under the ``process_state`` attribute.
+The process can be in one of six states:
 
+ * Created
+ * Running
+ * Waiting
+ * Killed
+ * Excepted
+ * Finished
+
+The first three states are 'active' states, whereas the final three are 'terminal' states.
+Once a process reaches a terminal state, it will never leave it, its execution is permanently terminated.
+When a process is first created, it is put in the ``Created`` state.
+As soon as it is picked up by a runner and it is active, it will be in the ``Running`` state.
+If the process is waiting for another process, that it called, to be finished, it will be in the ``Waiting`` state.
+A process that is in the ``Killed`` state, means that the user issued a command to kill it, or its parent process was killed.
+The ``Excepted`` state indicates that during execution an exception occurred that was not caught and the process was unexpectedly terminated.
+The final option is the ``Finished`` state, which means that the process was successfully executed, and the execution was nominal.
+Note that this does not automatically mean that the result of the process can also considered to be successful, it just executed without any problems.
+
+To distinghuis between a successful and a failed execution, we have introduced the 'finish status'.
+This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
+A zero means that the result of the process was successful, and a non-zero value indicates a failure.
+All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation`, which defines handy properties to query the process state and finish status
+
+===================   ============================================================================================
+Method                Explanation
+===================   ============================================================================================
+``process_state``     Returns the current process state
+``finish_status``     Returns the finish status, or None if not set
+``is_terminated``     Returns ``True`` if the process was either ``Killed``, ``Excepted`` or ``Finished``
+``is_killed``         Returns ``True`` if the process is ``Killed``
+``is_excepted``       Returns ``True`` if the process is ``Excepted``
+``is_finished``       Returns ``True`` if the process is ``Finished``
+``is_finished_ok``    Returns ``True`` if the process is ``Finished`` and the ``finish_status`` is equal to zero
+``is_failed``         Returns ``True`` if the process is ``Finished`` and the ``finish_status`` is non-zero
+===================   ============================================================================================
+
+When you load a calculation node from the database, you can use these property methods to inquire about its state and finish status.
 
 
 .. _process_builder:
 
-The Process Builder
+The process builder
 ===================
 The process builder is essentially a tool that helps you build the object that you want to run.
 To get a *builder* for a ``Calculation`` or a ``Workflow`` all you need is the ``Calculation`` or ``WorkChain`` class itself, which can be loaded through the ``CalculationFactory`` and ``WorkflowFactory``, respectively.

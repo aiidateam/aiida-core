@@ -13,14 +13,14 @@ from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
-    AbstractBaseUser, BaseUserManager, PermissionsMixin )
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
 from aiida.utils import timezone
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError )
+    ConfigurationError, DbContentError, MissingPluginError)
 
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
@@ -114,9 +114,8 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     def get_aiida_class(self):
-        from aiida.orm.user import User
-        from aiida.orm.implementation.django.user import User as DjangoUser
-        return User.load(DjangoUser.from_dbmodel(self))
+        from aiida.orm.implementation.django.user import DjangoUser
+        return DjangoUser.from_dbmodel(self)
 
 
 @python_2_unicode_compatible
@@ -287,7 +286,6 @@ class DbLink(m.Model):
             self.output.pk, )
 
 
-
 attrdatatype_choice = (
     ('float', 'float'),
     ('int', 'int'),
@@ -417,7 +415,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                 mainitem['key'], expected_set, received_set))
         if expected_set != received_set:
             if (original_class is not None and
-                        original_class._subspecifier_field_name is not None):
+                    original_class._subspecifier_field_name is not None):
                 subspecifier_string = "{}={} and ".format(
                     original_class._subspecifier_field_name,
                     original_pk)
@@ -461,7 +459,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
         if len(firstlevelsubdict) != mainitem['ival']:
             if (original_class is not None and
-                        original_class._subspecifier_field_name is not None):
+                    original_class._subspecifier_field_name is not None):
                 subspecifier_string = "{}={} and ".format(
                     original_class._subspecifier_field_name,
                     original_pk)
@@ -953,7 +951,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                     "bval": _[5],
                     "dval": _[6],
                 } for _ in dballsubvalues
-                        }
+                }
                 # for _ in dballsubvalues}
                 # Append also the item itself
                 data["attr"] = {
@@ -1118,7 +1116,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             "bval": _[5],
             "dval": _[6],
         } for _ in dballsubvalues
-                }
+        }
         try:
             return deserialize_attributes(data, sep=cls._sep,
                                           original_class=cls,
@@ -1417,7 +1415,6 @@ class DbComputer(m.Model):
         from aiida.orm.computer import Computer
         return Computer(dbcomputer=self)
 
-
     def _get_val_from_metadata(self, key):
         import json
 
@@ -1429,7 +1426,7 @@ class DbComputer(m.Model):
         try:
             return metadata[key]
         except KeyError:
-            raise ConfigurationError('No {} found for DbComputer {} '.format(key,self.name))
+            raise ConfigurationError('No {} found for DbComputer {} '.format(key, self.name))
 
     def get_workdir(self):
         return self._get_val_from_metadata('workdir')

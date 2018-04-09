@@ -37,6 +37,18 @@ class VerdiCommand(object):
     # name, but from a given string
     _custom_command_name = None
 
+    def __init__(self):
+        self._backend = None
+
+    @property
+    def backend(self):
+        # Lazily construct the backend so we don't rely on a backend being set
+        # at construction of this class
+        if self._backend is None:
+            from aiida.orm.backend import construct_backend
+            self._backend = construct_backend()
+        return self._backend
+
     def get_full_command_name(self, with_exec_name=True):
         """
         Return the current command name. Also tries to get the subcommand name.
@@ -170,7 +182,7 @@ class VerdiCommandRouter(VerdiCommand):
                     import sys
                     from aiida.cmdline.commands import click_subcmd_complete
 
-                    for i in sys.argv[4:len(sys.argv)-1]:
+                    for i in sys.argv[4:len(sys.argv) - 1]:
                         cmd_or_class = cmd_or_class.commands.get(i, cmd_or_class)
                     complete_function = click_subcmd_complete(cmd_or_class)
                 else:

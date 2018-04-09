@@ -15,7 +15,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 
 from aiida.backends.djsite.db.models import DbLink
-from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
@@ -84,7 +83,11 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
+        from aiida.orm.backend import construct_backend
+
         super(Node, self).__init__()
+
+        backend = construct_backend()
 
         self._temp_folder = None
 
@@ -126,8 +129,8 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = get_automatic_user()
-            self._dbnode = DbNode(user=user,
+            user = backend.users.get_automatic_user()
+            self._dbnode = DbNode(user=user._dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -398,12 +401,14 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
+        from . import user as users
+
         if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
         DbComment.objects.create(dbnode=self._dbnode,
-                                 user=users._get_db_user(user),
+                                 user=user._dbuser,
                                  content=content)
 
     def get_comment_obj(self, id=None, user=None):
@@ -558,7 +563,7 @@ class Node(AbstractNode):
         return self._dbnode.user.get_aiida_class()
 
     def set_user(self, user):
-        self._dbnode.user = users._get_db_user(user)
+        self._dbnode.user = user._dbuser
 
     def _store_cached_input_links(self, with_transaction=True):
         """

@@ -8,17 +8,91 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.orm.utils import BackendDelegateWithDefault
+import abc
+
 from aiida.common.hashing import is_password_usable
-from aiida.utils.email import normalize_email
+from aiida.common import exceptions
 
-from . import querybuilder
+__all__ = ['User', 'Users']
 
-__all__ = ['User', 'Util', 'get_automatic_user']
+
+class Users(object):
+    """
+    The collection of users stored in a backend
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def create(self, email):
+        """
+        Create a user with the provided email address
+
+        :param email: An email address for the user
+        :return: A new user object
+        :rtype: :class:`User`
+        """
+        pass
+
+    def find(self, email=None, id=None):
+        """
+        Final all users matching the given criteria
+        :param email:
+        :return: A collection of users matching the criteria
+        """
+        from .querybuilder import QueryBuilder
+
+        qb = QueryBuilder()
+        qb.append(User, filters={'email': {'==': email}})
+        res = [_[0] for _ in qb.all()]
+        if res is None:
+            return []
+
+        return res
+
+    def get(self, email):
+        results = self.find(email=email)
+        if not results:
+            raise exceptions.NotExistent()
+        else:
+            if len(results) > 1:
+                raise exceptions.MultipleObjectsError()
+            else:
+                return results[0]
+
+    def get_automatic_user(self):
+        from aiida.common.utils import get_configured_user_email
+
+        email = get_configured_user_email()
+        if not email:
+            return None
+
+        try:
+            return self.get(email)
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+            return None
+
+    def all(self):
+        """
+        Final all users matching the given criteria
+        :param email:
+        :return: A collection of users matching the criteria
+        """
+        from .querybuilder import QueryBuilder
+
+        qb = QueryBuilder()
+        qb.append(User)
+        return [_[0] for _ in qb.all()]
 
 
 class User(object):
+    """
+    This is the base class for User information in AiiDA.  An implementing
+    backend needs to provide a concrete version.
+    """
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
+
+    __metaclass__ = abc.ABCMeta
 
     @classmethod
     def load(cls, impl):
@@ -26,36 +100,34 @@ class User(object):
         obj._impl = impl
         return obj
 
-    def __init__(self, email):
-        import aiida.orm.implementation as backend
-        email = normalize_email(email)
-        self._impl = backend.User(email=email)
-
-    @property
+    @abc.abstractproperty
     def pk(self):
-        return self._impl.pk
+        pass
 
-    @property
+    @abc.abstractproperty
     def id(self):
-        return self.pk
+        pass
 
+    @abc.abstractmethod
     def save(self):
-        return self._impl.save()
+        pass
 
+    @abc.abstractmethod
     def force_save(self):
-        return self._impl.force_save()
+        pass
 
-    @property
+    @abc.abstractproperty
     def email(self):
-        return self._impl.email
+        pass
 
+    @abc.abstractmethod
     @email.setter
     def email(self, val):
-        self._impl.email = val
+        pass
 
     @property
     def password(self):
-        return self._impl._get_password()
+        return self._get_password()
 
     @password.setter
     def password(self, val):
@@ -66,114 +138,94 @@ class User(object):
         else:
             pass_hash = pwd_context.encrypt(val)
 
-        self._impl._set_password(pass_hash)
+        self._set_password(pass_hash)
 
-    @property
+    @abc.abstractmethod
+    def _get_password(self):
+        pass
+
+    @abc.abstractmethod
+    def _set_password(self, new_pass):
+        pass
+
+    @abc.abstractproperty
     def is_superuser(self):
-        return self._impl.is_superuser
+        pass
 
+    @abc.abstractmethod
     @is_superuser.setter
     def is_superuser(self, val):
-        self._impl.is_superuser = val
+        pass
 
-    @property
+    @abc.abstractproperty
     def first_name(self):
-        return self._impl.first_name
+        pass
 
+    @abc.abstractmethod
     @first_name.setter
     def first_name(self, val):
-        self._impl.first_name = val
+        pass
 
-    @property
+    @abc.abstractproperty
     def last_name(self):
-        return self._impl.last_name
+        pass
 
+    @abc.abstractmethod
     @last_name.setter
     def last_name(self, val):
-        self._impl.last_name = val
+        pass
 
-    @property
+    @abc.abstractproperty
     def institution(self):
-        return self._impl.institution
+        pass
 
+    @abc.abstractmethod
     @institution.setter
     def institution(self, val):
-        self._impl.institution = val
+        pass
 
-    @property
-    def is_staff(self):
-        return self._impl.is_staff
-
-    @is_staff.setter
-    def is_staff(self, val):
-        self._impl.is_staff = val
-
-    @property
+    @abc.abstractproperty
     def is_active(self):
-        return self._impl.is_active
+        pass
 
+    @abc.abstractmethod
     @is_active.setter
     def is_active(self, val):
-        self._impl.is_active = val
+        pass
 
-    @property
+    @abc.abstractproperty
     def last_login(self):
-        return self._impl.last_login
+        pass
 
+    @abc.abstractmethod
     @last_login.setter
     def last_login(self, val):
-        self._impl.last_login = val
+        pass
 
-    @property
+    @abc.abstractproperty
     def date_joined(self):
-        return self._impl.date_joined
+        pass
 
+    @abc.abstractmethod
     @date_joined.setter
     def date_joined(self, val):
-        self._impl.date_joined = val
+        pass
 
     def has_usable_password(self):
-        return is_password_usable(self.password)
+        return is_password_usable(self._get_password())
 
-    @classmethod
-    def get_all_users(cls):
-        return cls.search_for_users()
-
-    @classmethod
-    def search_for_users(cls, **kwargs):
+    def get_full_name(self):
         """
-        Search for a user the passed keys.
+        Return the user full name
 
-        :param kwargs: The keys to search for the user with.
-        :return: A list of users matching the search criteria.
+        :return: the user full name
         """
-        from aiida.orm.implementation import User as BackendUser
-        return [User.load(delegate) for delegate in BackendUser.search_for_users(**kwargs)]
+        return self._dbuser.get_full_name()
 
+    def get_short_name(self):
+        """
+        Return the user short name (typically, this returns the email)
 
-class Util(BackendDelegateWithDefault):
-    @classmethod
-    def create_default(cls):
-        # Fall back to Django
-        from aiida.orm.implementation.django.user import Util as UserUtil
-        return Util(UserUtil())
-
-    def delete_user(self, pk):
-        return self._backend.delete_user(pk)
-
-
-def get_automatic_user():
-    import aiida.orm.implementation as backend
-    from aiida.common.utils import get_configured_user_email
-
-    email = get_configured_user_email()
-    if not email:
-        return None
-
-    qb = querybuilder.QueryBuilder()
-    qb.append(User, filters={'email': {'==': email}})
-    result = qb.first()
-    if result:
-        return result[0]
-    else:
-        return None
+        :return: The short name
+        """
+        return self._dbuser.get_short_name()

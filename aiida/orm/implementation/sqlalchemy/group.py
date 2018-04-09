@@ -27,6 +27,10 @@ from . import user as users
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         given_dbgroup = kwargs.pop('dbgroup', None)
 
         if given_dbgroup is not None:
@@ -47,8 +51,6 @@ class Group(AbstractGroup):
 
 
         else:
-            from aiida.orm import get_automatic_user
-
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
@@ -56,8 +58,8 @@ class Group(AbstractGroup):
                                     "")  # By default, an user group
 
             # Get the user and extract the dbuser instance
-            user = kwargs.pop('user', get_automatic_user())
-            user = users._get_db_user(user)
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = user._dbuser
 
             description = kwargs.pop('description', "")
 
@@ -117,7 +119,7 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
-        self._dbgroup.user = users._get_db_user(new_user)
+        self._dbgroup.user = new_user._dbuser
 
     @property
     def dbgroup(self):
@@ -305,7 +307,7 @@ class Group(AbstractGroup):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
-                filters.append(DbGroup.user == users._get_db_user(user))
+                filters.append(DbGroup.user == user._dbuser)
 
         if name_filters:
             for (k, v) in name_filters.iteritems():

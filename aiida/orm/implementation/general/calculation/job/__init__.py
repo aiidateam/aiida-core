@@ -12,7 +12,6 @@ import copy
 import datetime
 import enum
 
-from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
@@ -978,6 +977,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
+        from aiida.orm.backend import construct_backend
 
         projection_label_dict = {
             'pk': 'PK',
@@ -999,6 +999,8 @@ class AbstractJobCalculation(AbstractCalculation):
         }
 
         now = timezone.now()
+
+        backend = construct_backend()
 
         # Let's check the states:
         if states:
@@ -1040,7 +1042,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = get_automatic_user().id
+                user_id = backend.users.get_automatic_user().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:

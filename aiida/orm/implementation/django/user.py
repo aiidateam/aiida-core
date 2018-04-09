@@ -10,12 +10,47 @@
 
 from aiida.backends.djsite.db.models import DbUser
 from aiida.common.lang import override
-from aiida.orm.implementation.general.user import AbstractUser, Util as UserUtil
-from aiida.common.utils import type_check
+from aiida.orm.user import User, Users
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.utils.email import normalize_email
 
 
-class User(AbstractUser):
+class DjangoUsers(Users):
+    def create(self, email):
+        """
+        Create a user with the provided email address
+
+        :param email: An email address for the user
+        :return: A new user object
+        :rtype: :class:`User`
+        """
+        return DjangoUser(email)
+
+    def find(self, email=None, id=None):
+        # Constructing the default query
+        import operator
+        from django.db.models import Q
+        query_list = []
+
+        # If an id is specified then we add it to the query
+        if id is not None:
+            query_list.append(Q(pk=id))
+
+        # If an email is specified then we add it to the query
+        if email is not None:
+            query_list.append(Q(email=email))
+
+        if not query_list:
+            dbusers = DbUser.objects.all()
+        else:
+            dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
+        users = []
+        for dbuser in dbusers:
+            users.append(User.from_dbmodel(dbuser))
+        return users
+
+
+class DjangoUser(User):
     @classmethod
     def from_dbmodel(cls, dbuser):
         if not isinstance(dbuser, DbUser):
@@ -115,15 +150,6 @@ class User(AbstractUser):
         self.save()
 
     @property
-    def is_staff(self):
-        return self._dbuser.is_staff
-
-    @is_staff.setter
-    def is_staff(self, val):
-        self._dbuser.is_staff = val
-        self.save()
-
-    @property
     def is_active(self):
         return self._dbuser.is_active
 
@@ -149,60 +175,3 @@ class User(AbstractUser):
     def date_joined(self, val):
         self._dbuser.date_joined = val
         self.save()
-
-    @classmethod
-    def search_for_users(cls, **kwargs):
-
-        id = kwargs.pop('id', None)
-        if id is None:
-            id = kwargs.pop('pk', None)
-        email = kwargs.pop('email', None)
-
-        # Constructing the default query
-        import operator
-        from django.db.models import Q
-        query_list = []
-
-        # If an id is specified then we add it to the query
-        if id is not None:
-            query_list.append(Q(pk=id))
-
-        # If an email is specified then we add it to the query
-        if email is not None:
-            query_list.append(Q(email=email))
-
-        if not query_list:
-            dbusers = DbUser.objects.all()
-        else:
-            dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
-        users = []
-        for dbuser in dbusers:
-            users.append(User.from_dbmodel(dbuser))
-        return users
-
-
-class Util(UserUtil):
-    @override
-    def delete_user(self, pk):
-        """
-        Delete the user with the given pk.
-        :param pk: The user pk.
-        """
-        DbUser.objecs.filter(pk=pk).delete()
-
-
-def _get_db_user(user):
-    """
-    Take an AiiDA User and return the dbuser model if compatible, otherwise
-    raise TypeError
-
-    :param user: The AiiDA user object
-    :return: The SQLA dbuser model
-    """
-    import aiida.orm as orm
-
-    type_check(user, orm.User)
-    backend_user = user._impl
-    type_check(backend_user, User)
-
-    return backend_user._dbuser

@@ -24,7 +24,6 @@ if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.comment import Comment
-    from aiida.orm.implementation.sqlalchemy.user import User
     from aiida.backends.sqlalchemy import models
 elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
@@ -35,7 +34,6 @@ elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.comment import Comment
-    from aiida.orm.implementation.django.user import User
     from aiida.backends.djsite.db import models
 elif BACKEND is None:
     raise ConfigurationError("settings.BACKEND has not been set.\n"

@@ -174,14 +174,16 @@ class QueryManagerDjango(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.orm.user import get_automatic_user
+        from aiida.orm.backend import construct_backend
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
+
+        backend = construct_backend()
 
         query_group_size = 100
         q_object = None
         if args.all_users is False:
-            q_object = Q(user__id=get_automatic_user().id)
+            q_object = Q(user__id=backend.users.get_automatic_user().id)
         else:
             q_object = Q()
 

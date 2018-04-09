@@ -134,10 +134,12 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.common import aiidalogger
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.orm import get_automatic_user
+    from aiida.orm.backend import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
+
+    backend = construct_backend()
 
     # only files, and only those ending with .upf or .UPF;
     # go to the real file if it is a symlink
@@ -148,14 +150,15 @@ def upload_upf_family(folder, group_name, group_description,
 
     nfiles = len(files)
 
+    automatic_user = backend.users.get_automatic_user()
     try:
         group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False
     except NotExistent:
-        group = Group(name=group_name, type_string=UPFGROUP_TYPE, user=get_automatic_user())
+        group = Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
         group_created = True
 
-    if group.user != aiida.orm.user.get_automatic_user():
+    if group.user != automatic_user:
         raise UniquenessError("There is already a UpfFamily group with name {}"
                               ", but it belongs to user {}, therefore you "
                               "cannot modify it".format(group_name,

@@ -14,8 +14,8 @@ from aiida.backends import settings
 from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
 from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
 
-
 AIIDA_ATTRIBUTE_SEP = '.'
+
 
 def validate_attribute_key(key):
     """
@@ -76,19 +76,6 @@ def load_dbenv(profile=None, *args, **kwargs):
             settings.BACKEND))
 
 
-def get_automatic_user():
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.utils import (
-            get_automatic_user as get_automatic_user_sqla)
-        return get_automatic_user_sqla()
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.utils import (
-            get_automatic_user as get_automatic_user_dj)
-        return get_automatic_user_dj()
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.cmdline import (
@@ -133,9 +120,6 @@ def get_dbauthinfo(computer, aiidauser):
         from django.core.exceptions import (ObjectDoesNotExist,
                                             MultipleObjectsReturned)
 
-        if not isinstance(aiidauser, DbUser) and not isinstance(aiidauser, User):
-            raise TypeError("aiidauser must be a DbUser or User instance")
-
         try:
             authinfo = DbAuthInfo.objects.get(
                 # converts from name, Computer or DbComputer instance to
@@ -159,9 +143,6 @@ def get_dbauthinfo(computer, aiidauser):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-        if not isinstance(aiidauser, DbUser) and not isinstance(aiidauser, User):
-            raise TypeError("aiidauser must be a DbUser or User instance")
 
         try:
             authinfo = session.query(DbAuthInfo).filter_by(

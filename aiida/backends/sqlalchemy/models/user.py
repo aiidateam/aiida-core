@@ -61,6 +61,5 @@ class DbUser(Base):
         return self.email
 
     def get_aiida_class(self):
-        from aiida.orm.user import User
-        from aiida.orm.implementation.sqlalchemy.user import User as SqlaUser
-        return User.load(SqlaUser.from_dbmodel(self))
+        from aiida.orm.implementation.sqlalchemy.user import SqlaUser
+        return SqlaUser.from_dbmodel(self)

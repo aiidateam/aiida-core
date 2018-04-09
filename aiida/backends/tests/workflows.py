@@ -11,7 +11,7 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
-from aiida.orm import User
+from aiida.orm.backend import construct_backend
 from aiida.workflows.test import WFTestEmpty
 from aiida.orm.implementation import get_workflow_info
 from aiida.workflows.test import WFTestSimpleWithSubWF
@@ -54,8 +54,10 @@ class TestWorkflowBasic(AiidaTestCase):
         (Listing initialized & running workflows and not listing finished
         workflows or workflows with errors).
         """
+        backend = construct_backend()
+
         # Assuming there is only one user
-        user = User.search_for_users(email=self.user_email)[0]
+        user = backend.users.find(email=self.user_email)[0]
         # Creating a workflow & storing it
         a = WFTestEmpty()
         a.store()
@@ -116,8 +118,10 @@ class TestWorkflowBasic(AiidaTestCase):
         exceptions
         :return:
         """
+        backend = construct_backend()
+
         # Assuming there is only one user
-        user = User.search_for_users(email=self.user_email)[0]
+        user = backend.users.find(email=self.user_email)[0]
 
         # Creating a simple workflow & storing it
         a = WFTestEmpty()

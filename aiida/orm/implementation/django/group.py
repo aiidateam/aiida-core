@@ -26,6 +26,10 @@ from . import user as users
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
@@ -44,8 +48,6 @@ class Group(AbstractGroup):
 
             self._dbgroup = dbgroup
         else:
-            from aiida.orm import get_automatic_user
-
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
@@ -53,8 +55,8 @@ class Group(AbstractGroup):
             group_type = kwargs.pop('type_string', "")  # By default, a user group
 
             # Get the user and extract dbuser instance
-            user = kwargs.pop('user', get_automatic_user())
-            user = users._get_db_user(user)
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = user._dbuser
 
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,

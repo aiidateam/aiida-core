@@ -1244,18 +1244,20 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
-        from aiida.orm.user import get_automatic_user
+        from aiida.orm.backend import construct_backend
         import time
+
+        backend = construct_backend()
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text', user=get_automatic_user())
+            a.add_comment('text', user=backend.users.get_automatic_user())
         a.store()
         self.assertEquals(a.get_comments(), [])
         before = timezone.now()
         time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text', user=get_automatic_user())
-        a.add_comment('text2', user=get_automatic_user())
+        a.add_comment('text', user=backend.users.get_automatic_user())
+        a.add_comment('text2', user=backend.users.get_automatic_user())
         time.sleep(1)
         after = timezone.now()
 

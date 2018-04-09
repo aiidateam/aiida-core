@@ -21,6 +21,9 @@ class TestDaemonBasic(AiidaTestCase):
 
     def test_workflow_fast_kill(self):
         from aiida.cmdline.commands.workflow import Workflow as WfCmd
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         params = dict()
         params['nmachine'] = 2
@@ -30,14 +33,13 @@ class TestDaemonBasic(AiidaTestCase):
         head_wf.start()
 
         # Get the user
-        user = User.search_for_users(email=self.user_email)[0]
+        user = backend.users.find(email=self.user_email)[0]
         wfl = get_workflow_list(user=user)
         running_no = 0
         for w in get_workflow_list(user=user, all_states=True):
             if w.get_aiida_class().get_state() == wf_states.RUNNING:
                 running_no += 1
-        self.assertEquals(running_no, 3,
-                          "Only 3 running workflows should be found")
+        self.assertEquals(running_no, 3)
 
         # Killing the head workflow
         wf_cmd = WfCmd()

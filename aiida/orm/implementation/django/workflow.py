@@ -13,7 +13,6 @@ from collections import Mapping
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
-from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
@@ -45,10 +44,11 @@ class Workflow(AbstractWorkflow):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
-
         from aiida.backends.djsite.db.models import DbWorkflow
-        self._to_be_stored = True
+        from aiida.orm.backend import construct_backend
 
+        self._backend = construct_backend()
+        self._to_be_stored = True
         self._logger = logger.getChild(self.__class__.__name__)
 
         uuid = kwargs.pop('uuid', None)
@@ -116,7 +116,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
+            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_automatic_user()._dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -486,7 +486,8 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         try:
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=get_automatic_user())
+            user = self._backend.users.get_automatic_user()
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user._dbuser)
             return step
         except ObjectDoesNotExist:
             return None
@@ -572,7 +573,10 @@ class Workflow(AbstractWorkflow):
 
 def kill_all():
     from aiida.backends.djsite.db.models import DbWorkflow
-    q_object = Q(user=get_automatic_user())
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+
+    q_object = Q(user=backend.users.get_automatic_user().id)
     q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
 

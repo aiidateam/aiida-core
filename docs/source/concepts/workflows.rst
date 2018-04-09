@@ -98,7 +98,7 @@ Input validation is just one of the advantages of the ``WorkChain`` over the wor
 The outputs are defined in a similar manner, calling `spec.output()` you can declare a particular output that the workchain will or is expected to have.
 Be wary that if you define an output, but do not actually add it during the exection, at the end of the workchain, the validation will fail as by default all defined outputs are assumed to be required.
 If you want to specify an output that is optional, you can pass the keyword argument ``required=False``.
-
++
 The final part of the spec definition is the ``outline``.
 This is where you specify the 'logic' of the workchain.
 Since this example is rather contrived, in this case it is just a list of three functions calls ``add``, ``multiply`` and ``results``.
@@ -205,6 +205,12 @@ Instead, the ``WorkChain`` class has its own ``submit`` method that should be us
 
 In this example, we launch another instance of the ``AddAndMultiplyWorkChain`` from within the ``AddAndMultiplyWorkChain`` itself.
 Note that the only difference is that instead of using the free function ``submit``, we use the class instance method ``self.submit``.
+
+.. note::
+    When you submit a ``WorkChain`` or any other process over the daemon, you need to make sure that the daemon can find the class when it needs to load it.
+    Registering your class through the plugin system with a designated entry point is one way to make sure that the daemon will be able to find it.
+    If, however, you simply have a test class and do not want to go through the effort of creating an entry point for it, you should make sure that the module where you define the class is in the python path.
+
 
 .. _running_workflows_process_builder:
 

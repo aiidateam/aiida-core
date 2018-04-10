@@ -128,8 +128,6 @@ class FixtureManager(object):
     """
 
     def __init__(self):
-        from aiida.orm.backend import construct_backend
-
         self.db_params = {}
         self.fs_env = {'repo': 'test_repo', 'config': '.aiida'}
         self.profile_info = {
@@ -149,7 +147,14 @@ class FixtureManager(object):
         self._backup = {}
         self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = backend_settings.AIIDADB_PROFILE
-        self._backend = construct_backend()
+        self._backend = None
+
+    def _backend(self):
+        if self._backend is None:
+            # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
+            from aiida.orm.backend import construct_backend
+            self._backend = construct_backend()
+        return self._backend
 
     def create_db_cluster(self):
         if not self.pg_cluster:

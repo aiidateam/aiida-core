@@ -7,9 +7,42 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.implementation.general.authinfo import AbstractAuthInfo
-
+from aiida.orm.authinfo import AbstractAuthInfoCollection, AbstractAuthInfo
+from aiida.common.exceptions import ConfigurationError, NotExistent
 from . import user as users
+
+
+class SqlaAlchemyAuthInfoCollection(AbstractAuthInfoCollection):
+    def get(self, computer, user):
+        """
+        Return a AuthInfo given a computer and a user
+
+        :param computer: A Computer or DbComputer instance
+        :param user: A User or DbUser instance
+        :return: a AuthInfo object associated to the given computer and User, if any
+        :raise NotExistent: if the user is not configured to use computer
+        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
+             more than once to use the computer! Should never happen
+        """
+        from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+        from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
+        try:
+            authinfo = session.query(DbAuthInfo).filter_by(
+                dbcomputer_id=computer.id,
+                aiidauser_id=user.id,
+            ).one()
+        except NoResultFound:
+            raise NotExistent(
+                "The aiida user {} is not configured to use computer {}".format(
+                    user.email, computer.name))
+        except MultipleResultsFound:
+            raise ConfigurationError(
+                "The aiida user {} is configured more than once to use "
+                "computer {}! Only one configuration is allowed".format(
+                    user.email, computer.name))
 
 
 class AuthInfo(AbstractAuthInfo):

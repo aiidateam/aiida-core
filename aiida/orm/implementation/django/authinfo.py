@@ -7,10 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.implementation.general.authinfo import AbstractAuthInfo
 from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
 from aiida.orm.authinfo import AbstractAuthInfo, AbstractAuthInfoCollection
-from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
+from aiida.common.exceptions import ConfigurationError, NotExistent
 from aiida.common.utils import type_check
 
 from . import user as users

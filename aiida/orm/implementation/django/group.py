@@ -57,11 +57,10 @@ class Group(AbstractGroup):
 
             # Get the user and extract dbuser instance
             user = kwargs.pop('user', self._backend.users.get_automatic_user())
-            user = user._dbuser
 
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+                                    user=user._dbuser, type=group_type)
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(

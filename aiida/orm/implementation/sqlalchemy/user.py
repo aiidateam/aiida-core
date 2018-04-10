@@ -57,8 +57,8 @@ class SqlaUser(AbstractUser):
         user._dbuser = dbuser
         return user
 
-    def __init__(self, email):
-        super(SqlaUser, self).__init__()
+    def __init__(self, backend, email):
+        super(SqlaUser, self).__init__(backend)
         self._dbuser = DbUser(email=email)
 
     @staticmethod

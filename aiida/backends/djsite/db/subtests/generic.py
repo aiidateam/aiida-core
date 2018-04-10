@@ -14,7 +14,6 @@ Generic tests that need the use of the DB
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import UniquenessError
 from aiida.orm.node import Node
-from aiida.orm.backend import construct_backend
 
 
 class TestComputer(AiidaTestCase):
@@ -61,12 +60,11 @@ class TestGroupsDjango(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.backends.djsite.db.models import DbUser
-
-        backend = construct_backend()
 
         g1 = Group(name='testquery1').store()
+        self.addCleanup(g1.delete)
         g2 = Group(name='testquery2').store()
+        self.addCleanup(g2.delete)
 
         n1 = Node().store()
         n2 = Node().store()
@@ -110,12 +108,8 @@ class TestGroupsDjango(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=backend.users.get_automatic_user())
+        res = Group.query(user=self.backend.users.get_automatic_user())
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
-
-        # Final cleanup
-        g1.delete()
-        g2.delete()
 
     def test_rename_existing(self):
         """

@@ -16,6 +16,7 @@ import itertools
 import plumpy
 import uuid
 import traceback
+from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState
 from aiida.common import exceptions
@@ -160,7 +161,10 @@ class Process(plumpy.Process):
         result = super(Process, self).kill(msg)
 
         for child in self.calc.called:
-            self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+            try:
+                self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+            except ConnectionClosed:
+                self.logger.info('no connection available to kill child<{}>'.format(child.pk))
 
         return result
 

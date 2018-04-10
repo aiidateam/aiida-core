@@ -24,9 +24,29 @@ DeliveryFailed = plumpy.DeliveryFailed
 # know how to avoid warnings. For more info see
 # https://github.com/aiidateam/aiida_core/issues/1142
 _RMQ_URL = 'amqp://127.0.0.1'
+_RMQ_TASK_PREFETCH_COUNT = 20
+_RMQ_HEARTBEAT_TIMEOUT = 600
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'
+
+
+def get_rmq_url(heartbeat_timeout=None):
+    """
+    Get the URL to connect to RabbitMQ
+
+    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout
+    :returns: the connection URL string
+    """
+    url = _RMQ_URL
+
+    if heartbeat_timeout is None:
+        heartbeat_timeout = _RMQ_HEARTBEAT_TIMEOUT
+
+    if heartbeat_timeout is not None:
+        url += '?heartbeat={}'.format(heartbeat_timeout)
+
+    return url
 
 
 def get_rmq_prefix():
@@ -55,8 +75,9 @@ def get_rmq_config(prefix=None):
         prefix = get_rmq_prefix()
 
     rmq_config = {
-        'url': _RMQ_URL,
+        'url': get_rmq_url(),
         'prefix': prefix,
+        'task_prefetch_count': _RMQ_TASK_PREFETCH_COUNT
     }
 
     return rmq_config
@@ -94,9 +115,8 @@ def get_task_exchange_name(prefix):
 
 def encode_response(response):
     """
-    Used by kiwipy to encode a message for sending.  Because we can have nodes
-    we have to convert these to PIDs before sending (we can't just send the live
-    instance)
+    Used by kiwipy to encode a message for sending.  Because we can have nodes, we have
+    to convert these to PIDs before sending (we can't just send the live instance)
 
     :param response: The message to encode
     :return: The encoded message
@@ -131,6 +151,7 @@ def store_and_serialize_inputs(inputs):
     """
     _store_inputs(inputs)
     return serialize_data(inputs)
+
 
 def _store_inputs(inputs):
     """
@@ -208,7 +229,8 @@ class ProcessControlPanel(object):
             task_queue=task_queue,
             encoder=encode_response,
             decoder=decode_response,
-            testing_mode=testing_mode
+            testing_mode=testing_mode,
+            task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT
         )
 
     def __enter__(self):
@@ -313,7 +335,7 @@ def new_blocking_control_panel():
 def create_rmq_connector(loop=None):
     if loop is None:
         loop = plumpy.events.new_event_loop()
-    return plumpy.rmq.RmqConnector(amqp_url=_RMQ_URL, loop=loop)
+    return plumpy.rmq.RmqConnector(amqp_url=get_rmq_url(), loop=loop)
 
 
 def create_communicator(loop=None, prefix=None, testing_mode=False):
@@ -328,5 +350,6 @@ def create_communicator(loop=None, prefix=None, testing_mode=False):
         connector,
         exchange_name=message_exchange,
         task_queue=task_queue,
-        testing_mode=testing_mode
+        testing_mode=testing_mode,
+        task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT
     )

@@ -94,11 +94,12 @@ class AbstractUser(object):
 
     __metaclass__ = abc.ABCMeta
 
-    @classmethod
-    def load(cls, impl):
-        obj = cls.__new__(cls)
-        obj._impl = impl
-        return obj
+    def __init__(self, backend):
+        self._backend = backend
+
+    @property
+    def backend(self):
+        return self._backend
 
     @abc.abstractproperty
     def pk(self):

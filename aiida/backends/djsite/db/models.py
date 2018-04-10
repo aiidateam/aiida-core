@@ -101,7 +101,8 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.user import DjangoUser
-        return DjangoUser.from_dbmodel(self)
+        from aiida.orm.backend import construct_backend
+        return DjangoUser._from_dbmodel(construct_backend(), self)
 
 
 @python_2_unicode_compatible

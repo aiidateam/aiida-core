@@ -14,13 +14,13 @@ import aiida.backends.sqlalchemy
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast, ColumnClause
-
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast, Label
 from sqlalchemy_utils.types.choice import Choice
+from sqlalchemy.sql.elements import Cast
+from sqlalchemy.sql.expression import FunctionElement
+from sqlalchemy.ext.compiler import compiles
 
 from aiida.common.exceptions import (
     InputValidationError, DbContentError,
@@ -29,11 +29,6 @@ from aiida.common.exceptions import (
 from aiida.common.exceptions import InputValidationError
 from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
-from sqlalchemy.sql.elements import Cast
-
-from sqlalchemy.sql.expression import FunctionElement
-
-from sqlalchemy.ext.compiler import compiles
 
 
 class jsonb_array_length(FunctionElement):

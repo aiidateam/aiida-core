@@ -10,7 +10,6 @@
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime
-from sqlalchemy.orm import relationship
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
@@ -48,4 +47,5 @@ class DbUser(Base):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.sqlalchemy.user import SqlaUser
-        return SqlaUser.from_dbmodel(self)
+        from aiida.orm.backend import construct_backend
+        return SqlaUser._from_dbmodel(construct_backend(), self)

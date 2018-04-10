@@ -9,7 +9,6 @@
 ###########################################################################
 
 from aiida.backends.djsite.db.models import DbUser
-from aiida.common.lang import override
 from aiida.orm.user import AbstractUser, AbstractUsersCollection
 from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.utils.email import normalize_email
@@ -24,7 +23,10 @@ class DjangoUsers(AbstractUsersCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.AbstractUser`
         """
-        return DjangoUser(email)
+        return DjangoUser(self, email=normalize_email(email))
+
+    def _from_dbmodel(self, dbuser):
+        return DjangoUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
         # Constructing the default query
@@ -46,23 +48,24 @@ class DjangoUsers(AbstractUsersCollection):
             dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
         users = []
         for dbuser in dbusers:
-            users.append(DjangoUser.from_dbmodel(dbuser))
+            users.append(self._from_dbmodel(dbuser))
         return users
 
 
 class DjangoUser(AbstractUser):
     @classmethod
-    def from_dbmodel(cls, dbuser):
+    def _from_dbmodel(cls, backend, dbuser):
         if not isinstance(dbuser, DbUser):
             raise ValueError("Expected a DbUser. Object of a different"
                              "class was given as argument.")
 
         user = cls.__new__(cls)
+        super(DjangoUser, user).__init__(backend)
         user._dbuser = dbuser
         return user
 
-    def __init__(self, email):
-        super(AbstractUser, self).__init__()
+    def __init__(self, backend, email):
+        super(DjangoUser, self).__init__(backend)
         self._dbuser = DbUser(email=email)
 
     @staticmethod

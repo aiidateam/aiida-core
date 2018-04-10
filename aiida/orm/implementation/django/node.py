@@ -87,7 +87,7 @@ class Node(AbstractNode):
 
         super(Node, self).__init__()
 
-        backend = construct_backend()
+        self._backend = construct_backend()
 
         self._temp_folder = None
 
@@ -129,7 +129,7 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = backend.users.get_automatic_user()
+            user = self._backend.users.get_automatic_user()
             self._dbnode = DbNode(user=user._dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -560,9 +560,10 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._dbnode.user.get_aiida_class()
+        return self._backend.users._from_dbmodel(self._dbnode)
 
     def set_user(self, user):
+        type_check(user, users.DjangoUser)
         self._dbnode.user = user._dbuser
 
     def _store_cached_input_links(self, with_transaction=True):

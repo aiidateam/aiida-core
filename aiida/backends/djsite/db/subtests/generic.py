@@ -76,7 +76,7 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser.objects.create_user(email='test@email.xx', password='').get_aiida_class()
+        newuser = self.backend.users.create(email='test@email.xx')
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it

@@ -21,7 +21,10 @@ class SqlaUsers(AbstractUsersCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.AbstractUser`
         """
-        return SqlaUser(email)
+        return SqlaUser(normalize_email(email))
+
+    def _from_dbmodel(self, dbuser):
+        return SqlaUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
         # Constructing the default query
@@ -38,24 +41,25 @@ class SqlaUsers(AbstractUsersCollection):
         dbusers = dbuser_query.all()
         users = []
         for dbuser in dbusers:
-            users.append(SqlaUser.from_dbmodel(dbuser))
+            users.append(self._from_dbmodel(dbuser))
         return users
 
 
 class SqlaUser(AbstractUser):
     @classmethod
-    def from_dbmodel(cls, dbuser):
+    def _from_dbmodel(cls, backend, dbuser):
         if not isinstance(dbuser, DbUser):
             raise ValueError("Expected a DbUser. Object of a different"
                              "class was given as argument.")
 
         user = cls.__new__(cls)
+        super(SqlaUser, user).__init__(backend)
         user._dbuser = dbuser
         return user
 
     def __init__(self, email):
         super(SqlaUser, self).__init__()
-        self._dbuser = DbUser(email=normalize_email(email))
+        self._dbuser = DbUser(email=email)
 
     @staticmethod
     def get_db_columns():

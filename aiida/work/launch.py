@@ -15,7 +15,7 @@ from . import utils
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
 
-def submit(process_class, **inputs):
+def submit(process, **inputs):
     """
     Submit the process with the supplied inputs to the daemon runner immediately returning control to
     the interpreter. The return value will be the calculation node of the submitted process
@@ -24,11 +24,11 @@ def submit(process_class, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
-    assert not utils.is_workfunction(process_class), 'Cannot submit a workfunction'
+    assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
 
     # Use a context manager to make sure connection is closed at end
     with rmq.new_blocking_control_panel() as control_panel:
-        pid = control_panel.execute_process_start(process_class, init_kwargs={'inputs': inputs})
+        pid = control_panel.execute_process_start(process, init_kwargs={'inputs': inputs})
         return load_node(pid)
 
 

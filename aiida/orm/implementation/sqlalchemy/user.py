@@ -8,18 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.orm.user import User, Users
+from aiida.orm.user import AbstractUser, AbstractUsersCollection
 from aiida.utils.email import normalize_email
 
 
-class SqlaUsers(Users):
+class SqlaUsers(AbstractUsersCollection):
     def create(self, email):
         """
         Create a user with the provided email address
 
         :param email: An email address for the user
         :return: A new user object
-        :rtype: :class:`User`
+        :rtype: :class:`aiida.orm.AbstractUser`
         """
         return SqlaUser(email)
 
@@ -42,7 +42,7 @@ class SqlaUsers(Users):
         return users
 
 
-class SqlaUser(User):
+class SqlaUser(AbstractUser):
     @classmethod
     def from_dbmodel(cls, dbuser):
         if not isinstance(dbuser, DbUser):

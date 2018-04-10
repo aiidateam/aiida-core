@@ -110,7 +110,7 @@ class Listable(object):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.implementation import Group
-        from aiida.orm.user import User
+        from aiida.orm.user import AbstractUser
         from aiida.orm.backend import construct_backend
 
         backend = construct_backend()
@@ -118,9 +118,9 @@ class Listable(object):
         qb = QueryBuilder()
         if args.all_users is False:
             user = backend.users.get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         data_filters = dict()
         self.query_past_days(data_filters, args)
@@ -1106,14 +1106,14 @@ class _Structure(VerdiCommandWithSubcommands,
         from aiida.orm.data.structure import StructureData
         from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.user import User
+        from aiida.orm.user import AbstractUser
 
         qb = QueryBuilder()
         if args.all_users is False:
             user = self.backend.users.get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         st_data_filters = {}
         self.query_past_days(st_data_filters, args)
@@ -1608,14 +1608,14 @@ class _Cif(VerdiCommandWithSubcommands,
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.implementation import Group
-        from aiida.orm.user import User
+        from aiida.orm.user import AbstractUser
 
         qb = QueryBuilder()
         if args.all_users is False:
             user = self.backend.users.get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         st_data_filters = {}
         self.query_past_days(st_data_filters, args)

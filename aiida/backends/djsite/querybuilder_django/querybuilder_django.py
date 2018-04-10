@@ -91,7 +91,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
     @property
     def AiidaUser(self):
         import aiida.orm.user
-        return aiida.orm.User
+        return aiida.orm.AbstractUser
 
     @property
     def AiidaComputer(self):

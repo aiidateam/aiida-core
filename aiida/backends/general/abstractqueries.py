@@ -132,7 +132,7 @@ class AbstractQueryManager(object):
             an integer with the number of nodes created that day.
         """
         from aiida.orm.querybuilder import QueryBuilder as QB
-        from aiida.orm import User, Node
+        from aiida.orm import AbstractUser, Node
         from collections import Counter
         import datetime
 
@@ -178,7 +178,7 @@ class AbstractQueryManager(object):
         q = QB()
         q.append(Node, project=['id', 'ctime', 'type'], tag='node')
         if user_email is not None:
-            q.append(User, creator_of='node', project='email', filters={'email': user_email})
+            q.append(AbstractUser, creator_of='node', project='email', filters={'email': user_email})
         qb_res = q.all()
 
         # total count
@@ -204,7 +204,7 @@ class AbstractQueryManager(object):
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
-        from aiida.orm.user import User
+        from aiida.orm.user import AbstractUser
         from aiida.orm.backend import construct_backend
 
         backend = construct_backend()
@@ -212,9 +212,9 @@ class AbstractQueryManager(object):
         qb = QueryBuilder()
         if args.all_users is False:
             user = backend.users.get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         bdata_filters = {}
         if args.past_days is not None:

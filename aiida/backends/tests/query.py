@@ -22,7 +22,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
-        from aiida.orm import Group, User, Node, Computer, Data, Calculation
+        from aiida.orm import Group, AbstractUser, Node, Computer, Data, Calculation
         from aiida.common.exceptions import InputValidationError
 
         qb = QueryBuilder()
@@ -61,7 +61,7 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(query_type_string, None)
 
         for cls, clstype, query_type_string in (
-                qb._get_ormclass(User, None),
+                qb._get_ormclass(AbstractUser, None),
                 qb._get_ormclass(None, "user"),
                 qb._get_ormclass(None, "User"),
         ):
@@ -645,7 +645,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             ).count(), number_students)
 
     def test_joins3_user_group(self):
-        from aiida.orm.user import User
+        from aiida.orm.user import AbstractUser
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.backend import construct_backend
 
@@ -664,7 +664,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # Search for the group of the user
         qb = QueryBuilder()
-        qb.append(User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(AbstractUser, tag='user', filters={'id': {'==': user.id}})
         qb.append(Group, belongs_to='user',
                   filters={'id': {'==': group.id}})
         self.assertEquals(qb.count(), 1, "The expected group that belongs to "
@@ -673,7 +673,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # Search for the user that owns a group
         qb = QueryBuilder()
         qb.append(Group, tag='group', filters={'id': {'==': group.id}})
-        qb.append(User, owner_of='group', filters={'id': {'==': user.id}})
+        qb.append(AbstractUser, owner_of='group', filters={'id': {'==': user.id}})
 
         self.assertEquals(qb.count(), 1, "The expected user that owns the "
                                          "selected group was not found.")

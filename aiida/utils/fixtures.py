@@ -151,6 +151,9 @@ class FixtureManager(object):
 
     @property
     def _backend(self):
+        """
+        Get the backend
+        """
         if self.__backend is None:
             # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
             from aiida.orm.backend import construct_backend

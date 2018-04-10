@@ -113,7 +113,7 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return users.User.from_dbmodel(self._dbgroup.user)
+        return users.AbstractUser.from_dbmodel(self._dbgroup.user)
 
     @user.setter
     def user(self, new_user):

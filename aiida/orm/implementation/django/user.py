@@ -10,19 +10,19 @@
 
 from aiida.backends.djsite.db.models import DbUser
 from aiida.common.lang import override
-from aiida.orm.user import User, Users
+from aiida.orm.user import AbstractUser, AbstractUsersCollection
 from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.utils.email import normalize_email
 
 
-class DjangoUsers(Users):
+class DjangoUsers(AbstractUsersCollection):
     def create(self, email):
         """
         Create a user with the provided email address
 
         :param email: An email address for the user
         :return: A new user object
-        :rtype: :class:`User`
+        :rtype: :class:`aiida.orm.AbstractUser`
         """
         return DjangoUser(email)
 
@@ -50,7 +50,7 @@ class DjangoUsers(Users):
         return users
 
 
-class DjangoUser(User):
+class DjangoUser(AbstractUser):
     @classmethod
     def from_dbmodel(cls, dbuser):
         if not isinstance(dbuser, DbUser):
@@ -62,7 +62,7 @@ class DjangoUser(User):
         return user
 
     def __init__(self, email):
-        super(User, self).__init__()
+        super(AbstractUser, self).__init__()
         self._dbuser = DbUser(email=email)
 
     @staticmethod

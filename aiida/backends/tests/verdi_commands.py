@@ -188,7 +188,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list(*['-a'])
         out_str_2 = ''.join(output)
         self.assertEqual(out_str_1, out_str_2, "verdi code list & verdi code list -a should provide "
-                                               "the same output in this experiment.")
+                         "the same output in this experiment.")
 
         # Run a verdi code list -c, capture the output and check the result
         with Capturing() as output:
@@ -271,7 +271,7 @@ class TestVerdiWorkCommands(AiidaTestCase):
 # pylint: disable=no-self-use
 class TestVerdiUserCommands(AiidaTestCase):
 
-    def setUp(self, *args, **kwargs):
+    def setUp(self):
         """
         Create a user
         """
@@ -584,7 +584,7 @@ class TestVerdiDataCommands(AiidaTestCase):
                               "were not found. "
                               .format(sub_cmd,
                                       str(self.cmd_to_nodeid_map[sub_cmd][0]), str(
-                            self.cmd_to_nodeid_map[sub_cmd][1])) + "The output was {}".format(out_str))
+                                          self.cmd_to_nodeid_map[sub_cmd][1])) + "The output was {}".format(out_str))
 
     def test_trajectory_all_user_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -787,9 +787,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         super(TestVerdiComputerCommands, cls).setUpClass()
 
-        backend = construct_backend(
-
-        )
+        backend = construct_backend()
         cls.computer_name = 'test_computer'
         cls.new_comp = Computer(
             name=cls.computer_name,

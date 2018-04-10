@@ -117,8 +117,8 @@ class AbstractAuthInfo(object):
     @property
     def user(self):
         # TODO: @mu FIX THIS!
-        from aiida.orm.user import User
-        return User.get(email=self.dbauthinfo.aiidauser.email)
+        from aiida.orm.user import AbstractUser
+        return AbstractUser.get(email=self.dbauthinfo.aiidauser.email)
 
     @abstractproperty
     def to_be_stored(self):

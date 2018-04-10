@@ -175,39 +175,41 @@ class CompletionCommand(VerdiCommand):
           and then, no substitution is suggested.
         """
 
-        print r"""
-function _aiida_verdi_completion
-{
-    OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
-    OUTPUT=${OUTPUT%x}
-    if [ -z "$OUTPUT" ]
-    then
-    # Only newline is a valid separator
-        local IFS=$'\n'
-
-        COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
-    # Add either a slash or a space, depending on whether it is a folder
-    # or a file. printf %q escapes the filename if there are spaces.
-        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-            [ -d "${COMPREPLY[$i]}" ] && \
-               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
-               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
-        done
-
-    else
-        COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
-        # Always add a space after each command
-        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-            COMPREPLY[$i]="${COMPREPLY[$i]} "
-        done
-    fi
-}
-complete -o nospace -F _aiida_verdi_completion verdi
-"""
+        print
+        r"""
+       function _aiida_verdi_completion
+       {
+           OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
+           OUTPUT=${OUTPUT%x}
+           if [ -z "$OUTPUT" ]
+           then
+           # Only newline is a valid separator
+               local IFS=$'\n'
+       
+               COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
+           # Add either a slash or a space, depending on whether it is a folder
+           # or a file. printf %q escapes the filename if there are spaces.
+               for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                   [ -d "${COMPREPLY[$i]}" ] && \
+                      COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
+                      COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
+               done
+       
+           else
+               COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+               # Always add a space after each command
+               for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                   COMPREPLY[$i]="${COMPREPLY[$i]} "
+               done
+           fi
+       }
+       complete -o nospace -F _aiida_verdi_completion verdi
+       """
 
     def complete(self, subargs_idx, subargs):
         # disable further completion
-        print ""
+        print
+        ""
 
 
 class Completion(VerdiCommand):
@@ -242,7 +244,8 @@ class Completion(VerdiCommand):
             cword_offset = command_position - 1
 
         if cword == 1 + cword_offset:
-            print " ".join(sorted(short_doc.keys()))
+            print
+            " ".join(sorted(short_doc.keys()))
             return
         else:
             try:
@@ -270,7 +273,8 @@ class ListParams(VerdiCommand):
     """
 
     def run(self, *args):
-        print get_listparams()
+        print
+        get_listparams()
 
 
 class Help(VerdiCommand):
@@ -284,23 +288,30 @@ class Help(VerdiCommand):
         try:
             command = args[0]
         except IndexError:
-            print get_listparams()
-            print ""
-            print (
+            print
+            get_listparams()
+            print
+            ""
+            print(
                 "Before each command you can specify the AiiDA profile to use,"
                 " with 'verdi -p <profile> <command>' or "
                 "'verdi --profile=<profile> <command>'")
-            print ""
-            print ("Use '{} help <command>' for more information "
-                   "on a specific command.".format(execname))
+            print
+            ""
+            print("Use '{} help <command>' for more information "
+                  "on a specific command.".format(execname))
             sys.exit(1)
 
         if command in short_doc:
-            print "Description for '%s %s'" % (execname, command)
-            print ""
-            print "**", short_doc[command]
+            print
+            "Description for '%s %s'" % (execname, command)
+            print
+            ""
+            print
+            "**", short_doc[command]
             if command in long_doc:
-                print long_doc[command]
+                print
+                long_doc[command]
         else:
             print >> sys.stderr, (
                 "{}: '{}' is not a valid command. "
@@ -311,9 +322,11 @@ class Help(VerdiCommand):
 
     def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:
-            print " ".join(sorted(short_doc.keys()))
+            print
+            " ".join(sorted(short_doc.keys()))
         else:
-            print ""
+            print
+            ""
 
 
 class Install(VerdiCommand):
@@ -336,7 +349,8 @@ class Install(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
+        print
+        ""
 
 
 class Setup(VerdiCommand):
@@ -362,7 +376,8 @@ class Setup(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
+        print
+        ""
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -501,10 +516,11 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         set_default_profile(gprofile, force_rewrite=False)
 
     if only_user_config:
-        print ("Only user configuration requested, "
-               "skipping the migrate command")
+        print("Only user configuration requested, "
+              "skipping the migrate command")
     else:
-        print "Executing now a migrate command..."
+        print
+        "Executing now a migrate command..."
 
         backend_choice = created_conf['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
@@ -556,10 +572,12 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         else:
             raise InvalidOperation("Not supported backend selected.")
 
-    print "Database was created successfully"
+    print
+    "Database was created successfully"
 
     # I create here the default user
-    print "Loading new environment..."
+    print
+    "Loading new environment..."
     if only_user_config:
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
         # db environment has not been loaded in this case
@@ -581,11 +599,14 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
     from aiida.common.utils import get_configured_user_email
     email = get_configured_user_email()
-    print "Starting user configuration for {}...".format(email)
+    print
+    "Starting user configuration for {}...".format(email)
     if email == DEFAULT_AIIDA_USER:
-        print "You set up AiiDA using the default Daemon email ({}),".format(
+        print
+        "You set up AiiDA using the default Daemon email ({}),".format(
             email)
-        print "therefore no further user configuration will be asked."
+        print
+        "therefore no further user configuration will be asked."
     else:
         # Ask to configure the new user
         if not non_interactive:
@@ -599,10 +620,10 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 institution=kwargs.get('institution'),
                 no_password=True,
                 non_interactive=non_interactive,
-                force=True
+                force_reconfigure=True
             )
 
-    print "Setup finished."
+    print("Setup finished.")
 
 
 class Quicksetup(VerdiCommand):
@@ -680,7 +701,8 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     for v in profs.itervalues():
         if v.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
             dbpass = v.get('AIIDADB_PASS')
-            print 'using found password for {}'.format(dbuser)
+            print
+            'using found password for {}'.format(dbuser)
             break
 
     try:
@@ -871,7 +893,7 @@ class Run(VerdiCommand):
                     # Add local folder to sys.path
                     sys.path.insert(0, os.path.abspath(os.curdir))
                     # Pass only globals_dict
-                    exec (f, globals_dict)
+                    exec(f, globals_dict)
                     # print sys.argv
             except SystemExit as e:
                 ## Script called sys.exit()

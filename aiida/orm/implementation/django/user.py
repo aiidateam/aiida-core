@@ -86,12 +86,10 @@ class DjangoUser(User):
     def to_be_stored(self):
         return self._dbuser.pk is None
 
-    @override
     def save(self):
         if not self.to_be_stored:
             self._dbuser.save()
 
-    @override
     def force_save(self):
         self._dbuser.save()
 
@@ -104,12 +102,10 @@ class DjangoUser(User):
         self._dbuser.email = val
         self.save()
 
-    @override
     def _set_password(self, val):
         self._dbuser.password = val
         self.save()
 
-    @override
     def _get_password(self):
         return self._dbuser.password
 

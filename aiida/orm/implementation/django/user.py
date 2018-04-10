@@ -12,6 +12,7 @@ from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.user import AbstractUser, AbstractUsersCollection
 from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.utils.email import normalize_email
+from aiida.common.utils import type_check
 
 
 class DjangoUsers(AbstractUsersCollection):
@@ -55,10 +56,7 @@ class DjangoUsers(AbstractUsersCollection):
 class DjangoUser(AbstractUser):
     @classmethod
     def _from_dbmodel(cls, backend, dbuser):
-        if not isinstance(dbuser, DbUser):
-            raise ValueError("Expected a DbUser. Object of a different"
-                             "class was given as argument.")
-
+        type_check(dbuser, DbUser)
         user = cls.__new__(cls)
         super(DjangoUser, user).__init__(backend)
         user._dbuser = dbuser

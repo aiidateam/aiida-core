@@ -560,7 +560,7 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._backend.users._from_dbmodel(self._dbnode)
+        return self._backend.users._from_dbmodel(self._dbnode.user)
 
     def set_user(self, user):
         type_check(user, users.DjangoUser)

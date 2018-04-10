@@ -21,7 +21,7 @@ class SqlaUsers(AbstractUsersCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.AbstractUser`
         """
-        return SqlaUser(normalize_email(email))
+        return SqlaUser(self, normalize_email(email))
 
     def _from_dbmodel(self, dbuser):
         return SqlaUser._from_dbmodel(self, dbuser)

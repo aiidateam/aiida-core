@@ -124,7 +124,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`User <aiida.orm.implementation.general.user.AbstractUser>`                      | ``/users``        |
+| :py:class:`User <aiida.orm.user.User>`                                                     | ``/users``        |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`                               | ``/bands``        |
 +--------------------------------------------------------------------------------------------+-------------------+

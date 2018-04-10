@@ -147,14 +147,15 @@ class FixtureManager(object):
         self._backup = {}
         self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = backend_settings.AIIDADB_PROFILE
-        self._backend = None
+        self.__backend = None
 
+    @property
     def _backend(self):
-        if self._backend is None:
+        if self.__backend is None:
             # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
             from aiida.orm.backend import construct_backend
-            self._backend = construct_backend()
-        return self._backend
+            self.__backend = construct_backend()
+        return self.__backend
 
     def create_db_cluster(self):
         if not self.pg_cluster:

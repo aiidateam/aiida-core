@@ -220,7 +220,15 @@ class User(object):
 
         :return: the user full name
         """
-        return self._dbuser.get_full_name()
+        if self.first_name and self.last_name:
+            return "{} {} ({})".format(self.first_name, self.last_name,
+                                       self.email)
+        elif self.first_name:
+            return "{} ({})".format(self.first_name, self.email)
+        elif self.last_name:
+            return "{} ({})".format(self.last_name, self.email)
+        else:
+            return "{}".format(self.email)
 
     def get_short_name(self):
         """
@@ -228,4 +236,4 @@ class User(object):
 
         :return: The short name
         """
-        return self._dbuser.get_short_name()
+        return self.email

@@ -118,7 +118,7 @@ class Group(AbstractGroup):
     @user.setter
     def user(self, new_user):
         type_check(new_user, users.DjangoUser)
-        self._dbgroup.user = user._dbuser
+        self._dbgroup.user = new_user._dbuser
 
     @property
     def dbgroup(self):

@@ -99,20 +99,6 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     objects = DbUserManager()
 
-    def get_full_name(self):
-        if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name,
-                                       self.email)
-        elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)
-        elif self.last_name:
-            return "{} ({})".format(self.last_name, self.email)
-        else:
-            return "{}".format(self.email)
-
-    def get_short_name(self):
-        return self.email
-
     def get_aiida_class(self):
         from aiida.orm.implementation.django.user import DjangoUser
         return DjangoUser.from_dbmodel(self)

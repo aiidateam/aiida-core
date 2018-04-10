@@ -288,30 +288,23 @@ class Help(VerdiCommand):
         try:
             command = args[0]
         except IndexError:
-            print
-            get_listparams()
-            print
-            ""
+            print(get_listparams())
+            print("")
             print(
                 "Before each command you can specify the AiiDA profile to use,"
                 " with 'verdi -p <profile> <command>' or "
                 "'verdi --profile=<profile> <command>'")
-            print
-            ""
+            print("")
             print("Use '{} help <command>' for more information "
                   "on a specific command.".format(execname))
             sys.exit(1)
 
         if command in short_doc:
-            print
-            "Description for '%s %s'" % (execname, command)
-            print
-            ""
-            print
-            "**", short_doc[command]
+            print("Description for '{} {}'".format(execname, command))
+            print("")
+            print("**{}".format(short_doc[command]))
             if command in long_doc:
-                print
-                long_doc[command]
+                print(long_doc[command])
         else:
             print >> sys.stderr, (
                 "{}: '{}' is not a valid command. "
@@ -325,8 +318,7 @@ class Help(VerdiCommand):
             print
             " ".join(sorted(short_doc.keys()))
         else:
-            print
-            ""
+            print("")
 
 
 class Install(VerdiCommand):
@@ -614,6 +606,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         else:
             # or don't ask
             aiida.cmdline.commands.user.do_configure(
+                backend,
                 email=kwargs['email'],
                 first_name=kwargs.get('first_name'),
                 last_name=kwargs.get('last_name'),
@@ -893,7 +886,7 @@ class Run(VerdiCommand):
                     # Add local folder to sys.path
                     sys.path.insert(0, os.path.abspath(os.curdir))
                     # Pass only globals_dict
-                    exec(f, globals_dict)
+                    exec (f, globals_dict)
                     # print sys.argv
             except SystemExit as e:
                 ## Script called sys.exit()

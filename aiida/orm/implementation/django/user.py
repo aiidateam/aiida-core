@@ -46,7 +46,7 @@ class DjangoUsers(Users):
             dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
         users = []
         for dbuser in dbusers:
-            users.append(User.from_dbmodel(dbuser))
+            users.append(DjangoUser.from_dbmodel(dbuser))
         return users
 
 

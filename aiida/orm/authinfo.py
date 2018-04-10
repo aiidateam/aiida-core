@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.implementation import AuthInfo
+from aiida.orm.implementation import DjangoAuthInfo
 import abc
 
 from aiida.transport import TransportFactory
@@ -39,6 +39,13 @@ class AbstractAuthInfo(object):
     how often to check on a given computer etc.)
     """
     __metaclass__ = abc.ABCMeta
+
+    def __init__(self, backend):
+        self._backend = backend
+
+    @property
+    def backend(self):
+        return self._backend
 
     @abc.abstractproperty
     def pk(self):

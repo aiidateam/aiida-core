@@ -68,3 +68,12 @@ class Backend(object):
         :rtype: :class:`aiida.orm.user.AbstractUsersCollection`
         """
         pass
+
+    def authinfos(self):
+        """
+        Get the collection of authorisation information
+
+        :return: The authinfo collection
+        :rtype: :class:`aiida.orm.authinfo.AbstractAuthInfoCollection`
+        """
+        pass

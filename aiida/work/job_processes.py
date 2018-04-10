@@ -21,7 +21,7 @@ from aiida.common.exceptions import (InvalidOperation, RemoteOperationError)
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
-from aiida.orm.authinfo import AuthInfo
+from aiida.orm.authinfo import DjangoAuthInfo
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
@@ -48,11 +48,11 @@ class TransportTask(plumpy.Future):
     """ A general task that requires transport """
 
     def __init__(self, calc_node, transport_queue):
-        from aiida.orm.authinfo import AuthInfo
+        from aiida.orm.authinfo import DjangoAuthInfo
 
         super(TransportTask, self).__init__()
         self._calc = calc_node
-        self._authinfo = AuthInfo.get(
+        self._authinfo = DjangoAuthInfo.get(
             computer=calc_node.get_computer(),
             user=calc_node.get_user())
         transport_queue.call_me_with_transport(self._authinfo, self._execute)

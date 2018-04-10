@@ -739,7 +739,7 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.orm.authinfo import AuthInfo
+        from aiida.orm.authinfo import DjangoAuthInfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
         from aiida.orm.user import AbstractUser as OrmUser
@@ -816,7 +816,7 @@ class Calculation(VerdiCommandWithSubcommands):
         remotes = {}
         for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': AuthInfo.get(
+            remotes[computer.name] = {'transport': DjangoAuthInfo.get(
                 computer=computer, user=user).get_transport(),
                                       'computer': computer,
             }

@@ -481,7 +481,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (NotExistent, ValidationError, MultipleObjectsError)
         from aiida.common.utils import get_configured_user_email
-        from aiida.orm.authinfo import AuthInfo
+        from aiida.orm.authinfo import DjangoAuthInfo
         from aiida.orm.backend import construct_backend
 
         import argparse
@@ -519,9 +519,9 @@ class Computer(VerdiCommandWithSubcommands):
                 sys.exit(1)
 
         try:
-            authinfo = AuthInfo.get(computer=computer, user=user)
+            authinfo = DjangoAuthInfo.get(computer=computer, user=user)
         except NotExistent:
-            authinfo = AuthInfo(computer=computer, user=user)
+            authinfo = DjangoAuthInfo(computer=computer, user=user)
         old_authparams = authinfo.get_auth_params()
 
         Transport = computer.get_transport_class()

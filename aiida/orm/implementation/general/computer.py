@@ -766,9 +766,9 @@ class AbstractComputer(object):
         :raise NotExistent: if the computer is not configured for the given
             user.
         """
-        from aiida.orm.authinfo import AuthInfo
+        from aiida.orm.authinfo import DjangoAuthInfo
 
-        return AuthInfo.get(computer=self, user=user)
+        return DjangoAuthInfo.get(computer=self, user=user)
 
     def is_user_configured(self, user):
         try:

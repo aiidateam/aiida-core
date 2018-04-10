@@ -16,6 +16,7 @@ class DjangoBackend(Backend):
     def __init__(self):
         self._log = DjangoLog()
         self._users = DjangoUsers()
+        self._authinfo = DjangoAuthInfos()
 
     @property
     def log(self):
@@ -24,3 +25,7 @@ class DjangoBackend(Backend):
     @property
     def users(self):
         return self._users
+
+    @property
+    def authinfos(self):
+        return self._authinfos

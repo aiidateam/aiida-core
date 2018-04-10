@@ -318,8 +318,8 @@ class Process(plumpy.Process):
         return deserialize_data(encoded)
 
     def update_node_state(self, state):
-        self.calc._set_process_state(state.LABEL)
         self.update_outputs()
+        self.calc._set_process_state(state.LABEL)
 
     def update_outputs(self):
         # Link up any new outputs

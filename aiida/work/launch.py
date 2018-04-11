@@ -14,13 +14,19 @@ from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
-_persister = None
-
 
 def submit(process_class, **inputs):
-    assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
+    """
+    Submit the process with the supplied inputs to the daemon runner immediately returning control to
+    the interpreter. The return value will be the calculation node of the submitted process
 
-    # Use context manager to make sure connection is closed at end
+    :param process: the process class to submit
+    :param inputs: the inputs to be passed to the process
+    :return: the calculation node of the process
+    """
+    assert not utils.is_workfunction(process_class), 'Cannot submit a workfunction'
+
+    # Use a context manager to make sure connection is closed at end
     with rmq.new_blocking_control_panel() as control_panel:
         pid = control_panel.execute_process_start(process_class, init_kwargs={'inputs': inputs})
         return load_node(pid)
@@ -28,28 +34,38 @@ def submit(process_class, **inputs):
 
 def run(process, *args, **inputs):
     """
-    Run a workfunction or process and return the result.
+    Run the process with the supplied inputs in a local runner that will block until the process is completed.
+    The return value will be the results of the completed process
 
-    :param process: The process class, instance or workfunction
-    :param args: Positional arguments for a workfunction
-    :param inputs: The list of keyword inputs
-    :return: The result of the process
+    :param process: the process class or workfunction to run
+    :param inputs: the inputs to be passed to the process
+    :return: the outputs of the process
     """
-    if utils.is_workfunction(process):
-        return process(*args, **inputs)
-    else:
-        runner = runners.get_runner()
-        return runner.run(process, *args, **inputs)
+    runner = runners.get_runner()
+    return runner.run(process, *args, **inputs)
 
 
 def run_get_node(process, *args, **inputs):
-    if utils.is_workfunction(process):
-        return process.run_get_node(*args, **inputs)
-    else:
-        runner = runners.get_runner()
-        return runner.run_get_node(process, *args, **inputs)
+    """
+    Run the process with the supplied inputs in a local runner that will block until the process is completed.
+    The return value will be the results of the completed process
+
+    :param process: the process class or workfunction to run
+    :param inputs: the inputs to be passed to the process
+    :return: tuple of the outputs of the process and the calculation node
+    """
+    runner = runners.get_runner()
+    return runner.run_get_node(process, *args, **inputs)
 
 
 def run_get_pid(process, *args, **inputs):
-    result, calc = run_get_node(process, *args, **inputs)
-    return runners.ResultAndPid(result, calc.pk)
+    """
+    Run the process with the supplied inputs in a local runner that will block until the process is completed.
+    The return value will be the results of the completed process
+
+    :param process: the process class or workfunction to run
+    :param inputs: the inputs to be passed to the process
+    :return: tuple of the outputs of the process and process pid
+    """
+    runner = runners.get_runner()
+    return runner.run_get_pid(process, *args, **inputs)

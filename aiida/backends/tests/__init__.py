@@ -57,6 +57,7 @@ db_test_list = {
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],
         'work.futures': ['aiida.backends.tests.work.test_futures'],
+        'work.launch': ['aiida.backends.tests.work.test_launch'],
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],
         'work.process_builder': ['aiida.backends.tests.work.test_process_builder'],

@@ -13,12 +13,11 @@ from . import rmq
 from . import transports
 from . import utils
 
-__all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner',
-           'set_runner', 'get_runner']
+__all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner', 'set_runner', 'get_runner']
 
 _LOGGER = logging.getLogger(__name__)
 
-ResultAndCalcNode = namedtuple('ResultAndCalcNode', ['result', 'calc'])
+ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 _runner = None
@@ -169,48 +168,84 @@ class Runner(object):
         if self._rmq_connector is not None:
             self._rmq_connector.disconnect()
 
-    def run(self, process, *args, **inputs):
-        """
-        This method blocks and runs the given process with the supplied inputs.
-        It returns the outputs as produced by the process.
-
-        :param process: The process class or workfunction to run
-        :param inputs: Workfunction positional arguments
-        :return: The process outputs
-        """
-        process, inputs = _expand_builder(process, inputs)
-        if utils.is_workfunction(process):
-            return process(*args, **inputs)
-        else:
-            with self.child_runner() as runner:
-                process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
-                return process.execute()
-
-    def run_get_node(self, process, *args, **inputs):
-        if utils.is_workfunction(process):
-            return process.run_get_node(*args, **inputs)
-        with self.child_runner() as runner:
-            process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
-            return ResultAndCalcNode(process.execute(), process.calc)
-
-    def run_get_pid(self, process, *args, **inputs):
-        result, node = self.run_get_node(process, *args, **inputs)
-        return ResultAndPid(result, node.pid)
-
     def submit(self, process_class, *args, **inputs):
+        """
+        Submit the process with the supplied inputs to this runner immediately returning control to
+        the interpreter. The return value will be the calculation node of the submitted process
+
+        :param process: the process class to submit
+        :param inputs: the inputs to be passed to the process
+        :return: the calculation node of the process
+        """
+        assert not utils.is_workfunction(process_class), 'Cannot submit a workfunction'
+
         process_class, inputs = _expand_builder(process_class, inputs)
-        assert not utils.is_workfunction(process_class), "Cannot submit a workfunction"
+        process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
+
         if self._rmq_submit:
-            process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             self.persister.save_checkpoint(process)
             process.close()
             self.rmq.continue_process(process.pid)
-            return process.calc
         else:
             # Run in this runner
-            process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
             process.start()
-            return process.calc
+
+        return process.calc
+
+    def _run(self, process, *args, **inputs):
+        """
+        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        The return value will be the results of the completed process
+
+        :param process: the process class or workfunction to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and the calculation node
+        """
+        process, inputs = _expand_builder(process, inputs)
+
+        if utils.is_workfunction(process):
+            result, node = process.run_get_node(*args, **inputs)
+            return result, node
+        else:
+            with self.child_runner() as runner:
+                process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
+                return process.execute(), process.calc
+
+    def run(self, process, *args, **inputs):
+        """
+        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        The return value will be the results of the completed process
+
+        :param process: the process class or workfunction to run
+        :param inputs: the inputs to be passed to the process
+        :return: the outputs of the process 
+        """
+        result, node = self._run(process, *args, **inputs)
+        return result
+
+    def run_get_node(self, process, *args, **inputs):
+        """
+        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        The return value will be the results of the completed process
+
+        :param process: the process class or workfunction to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and the calculation node
+        """
+        result, node = self._run(process, *args, **inputs)
+        return ResultAndNode(result, node)
+
+    def run_get_pid(self, process, *args, **inputs):
+        """
+        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        The return value will be the results of the completed process
+
+        :param process: the process class or workfunction to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and process pid
+        """
+        result, node = self._run(process, *args, **inputs)
+        return ResultAndPid(result, node.pk)
 
     def call_on_legacy_workflow_finish(self, pk, callback):
         legacy_wf = aiida.orm.load_workflow(pk=pk)
@@ -297,7 +332,7 @@ class DaemonRunner(Runner):
         self.communicator.add_task_subscriber(task_receiver)
 
 def _expand_builder(process_class_or_builder, inputs):
-    from aiida.work.process_builder import ProcessBuilder, ProcessBuilderInput
+    from aiida.work.process_builder import ProcessBuilder
     if not isinstance(process_class_or_builder, ProcessBuilder):
         return process_class_or_builder, inputs
     else:

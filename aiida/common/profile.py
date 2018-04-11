@@ -15,9 +15,9 @@ CIRCUS_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'circus-{}.l
 DAEMON_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'aiida-{}.log')
 CIRCUS_PORT_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.port')
 CIRCUS_SOCKET_FILE_TEMPATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.sockets')
-CIRCUS_CONTROLLER_SOCKET_TEMPLATE = 'circus-{}.controller.sock'
-CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus-{}.pubsub.sock'
-CIRCUS_STATS_SOCKET_TEMPLATE = 'circus-{}.stats.sock'
+CIRCUS_CONTROLLER_SOCKET_TEMPLATE = 'circus.c.sock'
+CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
+CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
 def get_current_profile_name():
@@ -71,9 +71,9 @@ class ProfileConfig(object):
                 'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
                 'socket': {
                     'file': CIRCUS_SOCKET_FILE_TEMPATE.format(self.profile_name),
-                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
-                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
-                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
+                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE,
+                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE,
+                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE,
                 }
             },
             'daemon': {

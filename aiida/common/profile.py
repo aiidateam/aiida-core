@@ -14,9 +14,10 @@ DAEMON_PID_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'aiida-{}.pid')
 CIRCUS_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'circus-{}.log')
 DAEMON_LOG_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_LOG_DIR, 'aiida-{}.log')
 CIRCUS_PORT_FILE_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.port')
-CIRCUS_CONTROLLER_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.controller.socket')
-CIRCUS_PUBSUB_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.pubsub.socket')
-CIRCUS_STATS_SOCKET_TEMPLATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.stats.socket') 
+CIRCUS_SOCKET_FILE_TEMPATE = os.path.join(CONFIG_DIR, DAEMON_DIR, 'circus-{}.sockets')
+CIRCUS_CONTROLLER_SOCKET_TEMPLATE = 'circus-{}.controller.sock'
+CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus-{}.pubsub.sock'
+CIRCUS_STATS_SOCKET_TEMPLATE = 'circus-{}.stats.sock'
 
 
 def get_current_profile_name():
@@ -54,9 +55,12 @@ class ProfileConfig(object):
             self.profile_config = setup.get_profile_config(profile_name)
 
     @property
+    def profile_uuid(self):
+        return self.profile_config[setup.PROFILE_UUID_KEY]
+
+    @property
     def rmq_prefix(self):
-    	profile_uuid = self.profile_config[setup.PROFILE_UUID_KEY]
-        return self._RMQ_PREFIX.format(uuid=profile_uuid)
+        return self._RMQ_PREFIX.format(uuid=self.profile_uuid)
 
     @property
     def filepaths(self):
@@ -66,9 +70,10 @@ class ProfileConfig(object):
                 'pid': CIRCUS_PID_FILE_TEMPLATE.format(self.profile_name),
                 'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
                 'socket': {
-                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_name),
-                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_name),
-                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_name),
+                    'file': CIRCUS_SOCKET_FILE_TEMPATE.format(self.profile_name),
+                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
+                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
+                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE.format(self.profile_uuid[:16]),
                 }
             },
             'daemon': {

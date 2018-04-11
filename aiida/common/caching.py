@@ -106,7 +106,8 @@ def _reset_config():
 @contextmanager
 def enable_caching(node_class=None):
     """
-    Context manager to enable caching, either for a specific node class, or globally. Note that this does not affect the behavior of the daemon, only the local Python instance.
+    Context manager to enable caching, either for a specific node class, or globally.
+    Note that this does not affect the behavior of the daemon, only the local Python instance.
 
     :param node_class: Node class for which caching should be enabled.
     """
@@ -124,7 +125,8 @@ def enable_caching(node_class=None):
 @contextmanager
 def disable_caching(node_class=None):
     """
-    Context manager to disable caching, either for a specific node class, or globally. Note that this does not affect the behavior of the daemon, only the local Python instance.
+    Context manager to disable caching, either for a specific node class, or globally.
+    Note that this does not affect the behavior of the daemon, only the local Python instance.
 
     :param node_class: Node class for which caching should be disabled.
     """

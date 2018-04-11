@@ -321,7 +321,7 @@ class Waiting(plumpy.Waiting):
             self._kill_future = None
 
     def finished(self, result):
-        self.transition_to(processes.ProcessState.FINISHED, result)
+        self.transition_to(processes.ProcessState.FINISHED, result, result is 0)
 
     def kill(self, msg=None):
         if self._kill_future is not None:

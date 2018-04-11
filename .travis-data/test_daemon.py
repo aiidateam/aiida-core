@@ -203,7 +203,7 @@ def run_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     result, calc = run_get_node(process, **inputs)
-    print "[{}] ran calculation {}, pk={}".format(counter, node.uuid, node.pk)
+    print "[{}] ran calculation {}, pk={}".format(counter, calc.uuid, calc.pk)
     return calc, expected_result
 
 def create_calculation_process(code, inputval):

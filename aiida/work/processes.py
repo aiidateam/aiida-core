@@ -277,7 +277,7 @@ class Process(plumpy.Process):
         self._setup_db_record()
         if self.inputs.store_provenance:
             try:
-                self.calc.store_all(use_cache=self._use_cache_enabled())
+                self.calc.store_all()
                 if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
@@ -428,17 +428,6 @@ class Process(plumpy.Process):
         else:
             assert (port is None) or (isinstance(port, InputPort) and port.non_db)
             return []
-
-    def _use_cache_enabled(self):
-        # First priority: inputs
-        try:
-            return self._parsed_inputs['_use_cache']
-        # Second priority: config
-        except KeyError:
-            return (
-                caching.get_use_cache(type(self)) or
-                caching.get_use_cache(type(self._calc))
-            )
 
 
     def exposed_inputs(self, process_class, namespace=None, agglomerate=True):

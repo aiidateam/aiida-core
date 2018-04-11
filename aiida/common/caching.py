@@ -115,6 +115,10 @@ def enable_caching(node_class=None):
             _CONFIG[config_keys.default] = True
         else:
             _CONFIG[config_keys.enabled].append(node_class)
+            try:
+                _CONFIG[config_keys.disabled].remove(node_class)
+            except ValueError:
+                pass
         yield
 
 @contextmanager
@@ -129,4 +133,8 @@ def disable_caching(node_class=None):
             _CONFIG[config_keys.default] = False
         else:
             _CONFIG[config_keys.disabled].append(node_class)
+            try:
+                _CONFIG[config_keys.enabled].remove(node_class)
+            except ValueError:
+                pass
         yield

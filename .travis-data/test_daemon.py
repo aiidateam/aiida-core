@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 from aiida.common.exceptions import NotExistent
+from aiida.common.caching import enable_caching
 from aiida.daemon.client import DaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
@@ -191,6 +192,24 @@ def launch_calculation(code, counter, inputval):
     """
     Launch calculations to the daemon through the Process layer
     """
+    process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
+    calc = submit(process, **inputs)
+    print "[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.dbnode.pk)
+    return calc, expected_result
+
+def run_calculation(code, counter, inputval):
+    """
+    Run a calculation through the Process layer.
+    """
+    process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
+    result, calc = run_get_node(process, **inputs)
+    print "[{}] ran calculation {}, pk={}".format(counter, node.uuid, node.pk)
+    return calc, expected_result
+
+def create_calculation_process(code, inputval):
+    """
+    Create the process and inputs for a submitting / running a calculation.
+    """
     TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
     process = TemplatereplacerCalculation.process()
 
@@ -230,10 +249,7 @@ def launch_calculation(code, counter, inputval):
         'template': template,
         'options': options,
     }
-
-    calc = submit(process, **inputs)
-    print "[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.dbnode.pk)
-    return calc, expected_result
+    return process, inputs, expected_result
 
 def create_cache_calc(code, counter, inputval):
     calc, expected_result = create_calculation(
@@ -365,12 +381,18 @@ def main():
         # create cached calculations -- these should be FINISHED immediately
         cached_calcs = []
         for counter in range(1, number_calculations + 1):
-            inputval = counter
             calc, expected_result = create_cache_calc(
-                code=code, counter=counter, inputval=inputval
+                code=code, counter=counter, inputval=counter
             )
             cached_calcs.append(calc)
             expected_results_calculations[calc.pk] = expected_result
+        # new style cached calculations, with 'run'
+        with enable_caching():
+            for counter in range(1, number_calculations + 1):
+                calc, expected_result = run_calculation(code=code, counter=counter, inputval=counter)
+                cached_calcs.append(calc)
+                expected_results_calculations[calc.pk] = expected_result
+
         if (validate_calculations(expected_results_calculations)
                 and validate_workchains(expected_results_workchains)
                 and validate_cached(cached_calcs)):

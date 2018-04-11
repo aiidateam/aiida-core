@@ -91,7 +91,7 @@ class DaemonClient(ProfileConfig):
 
     def get_circus_port(self):
         """
-        Retrieve the port for the circus controller, which should be written to the circus port file. If the 
+        Retrieve the port for the circus controller, which should be written to the circus port file. If the
         daemon is running, the port file should exist and contain the port to which the controller is connected.
         If it cannot be read, a RuntimeError will be thrown. If the daemon is not running, an available port
         will be requested from the operating system, written to the port file and returned
@@ -279,7 +279,7 @@ class DaemonClient(ProfileConfig):
 
         :return: CircucClient instance
         """
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=3.)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=20.)
 
     def call_client(self, command):
         """

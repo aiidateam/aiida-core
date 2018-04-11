@@ -14,6 +14,7 @@ import yaml
 
 from aiida.backends.utils import get_current_profile
 from aiida.common.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.orm.data.bool import Bool
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
 class CacheConfigTest(unittest.TestCase):
@@ -27,8 +28,8 @@ class CacheConfigTest(unittest.TestCase):
         self.config_reference = {
             get_current_profile(): {
                 'default': True,
-                'enabled': [],
-                'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation']
+                'enabled': ['aiida.orm.data.bool.Bool'],
+                'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
             }
         }
         with tempfile.NamedTemporaryFile() as tf, open(tf.name, 'w') as of:
@@ -45,8 +46,7 @@ class CacheConfigTest(unittest.TestCase):
         self.assertFalse(get_use_cache(TemplatereplacerCalculation))
 
     def test_invalid_config(self):
-        with enable_caching(TemplatereplacerCalculation):
-            self.assertRaises(ValueError, get_use_cache, TemplatereplacerCalculation)
+        self.assertRaises(ValueError, get_use_cache, Bool)
 
     def test_disable_caching(self):
         from aiida.orm.data.float import Float

@@ -647,14 +647,11 @@ class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins3_user_group(self):
         from aiida.orm.user import AbstractUser
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.backend import construct_backend
-
-        backend = construct_backend()
 
         # Create another user
         new_email = "newuser@new.n"
-        user = backend.users.create(email=new_email)
-        user.force_save()
+        user = self.backend.users.create(email=new_email)
+        user.store()
 
         # Create a group that belongs to that user
         from aiida.orm.group import Group

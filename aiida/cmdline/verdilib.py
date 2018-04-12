@@ -586,8 +586,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         nuser.first_name = "AiiDA"
         nuser.last_name = "Daemon"
         nuser.is_active = True
-        nuser.is_superuser = True
-        nuser.force_save()
+        nuser.store()
 
     from aiida.common.utils import get_configured_user_email
     email = get_configured_user_email()

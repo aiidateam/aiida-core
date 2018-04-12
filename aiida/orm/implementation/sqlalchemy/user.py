@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.orm.user import AbstractUser, AbstractUsersCollection
+from aiida.orm.user import AbstractUser, AbstractUserCollection
 from aiida.utils.email import normalize_email
 
 
-class SqlaUsers(AbstractUsersCollection):
+class SqlaUserCollection(AbstractUserCollection):
     def create(self, email):
         """
         Create a user with the provided email address
@@ -75,106 +75,98 @@ class SqlaUser(AbstractUser):
         return self._dbuser.id
 
     @property
-    def to_be_stored(self):
-        return self._dbuser.id is None
+    def is_stored(self):
+        return self._dbuser.id is not None
 
-    def save(self):
-        if not self.to_be_stored:
-            self._dbuser.save()
-
-    def force_save(self):
+    def store(self):
         self._dbuser.save()
-        # Commit the session so the user is actually saved to the database
         self._dbuser.session.commit()
 
     @property
     def email(self):
-        self._ensure_model_uptodate(attribute_names=['email'])
+        self._ensure_model_uptodate(fields=('email',))
         return self._dbuser.email
 
     @email.setter
     def email(self, val):
         self._dbuser.email = val
-        if not self.to_be_stored:
-            self._dbuser.save()
+        self._flush(fields=('email',))
 
     def _set_password(self, val):
         self._dbuser.password = val
-        self.save()
+        self._flush(fields=('password',))
 
     def _get_password(self):
+        self._ensure_model_uptodate(fields=('password',))
         return self._dbuser.password
 
     @property
-    def is_superuser(self):
-        self._ensure_model_uptodate(attribute_names=['is_superuser'])
-        return self._dbuser.is_superuser
-
-    @is_superuser.setter
-    def is_superuser(self, val):
-        self._dbuser.is_superuser = val
-        self.save()
-
-    @property
     def first_name(self):
-        self._ensure_model_uptodate(attribute_names=['first_name'])
+        self._ensure_model_uptodate(fields=('first_name',))
         return self._dbuser.first_name
 
     @first_name.setter
     def first_name(self, val):
         self._dbuser.first_name = val
-        self.save()
+        self._flush(fields=('first_name',))
 
     @property
     def last_name(self):
-        self._ensure_model_uptodate(attribute_names=['last_name'])
+        self._ensure_model_uptodate(fields=('last_name',))
         return self._dbuser.last_name
 
     @last_name.setter
     def last_name(self, val):
         self._dbuser.last_name = val
-        self.save()
+        self._flush(fields=('last_name',))
 
     @property
     def institution(self):
-        self._ensure_model_uptodate(attribute_names=['institution'])
+        self._ensure_model_uptodate(fields=('institution',))
         return self._dbuser.institution
 
     @institution.setter
     def institution(self, val):
         self._dbuser.institution = val
-        self.save()
+        self._flush(fields=('institution',))
 
     @property
     def is_active(self):
-        self._ensure_model_uptodate(attribute_names=['is_active'])
+        self._ensure_model_uptodate(fields=('is_active',))
         return self._dbuser.is_active
 
     @is_active.setter
     def is_active(self, val):
         self._dbuser.is_active = val
-        self.save()
+        self._flush(fields=('is_active',))
 
     @property
     def last_login(self):
-        self._ensure_model_uptodate(attribute_names=['last_login'])
+        self._ensure_model_uptodate(fields=('last_login',))
         return self._dbuser.last_login
 
     @last_login.setter
     def last_login(self, val):
         self._dbuser.last_login = val
-        self.save()
+        self._flush(fields=('last_login',))
 
     @property
     def date_joined(self):
-        self._ensure_model_uptodate(attribute_names=['date_joined'])
+        self._ensure_model_uptodate(fields=('date_joined',))
         return self._dbuser.date_joined
 
     @date_joined.setter
     def date_joined(self, val):
         self._dbuser.date_joined = val
-        self.save()
+        self._flush(fields=('date_joined',))
 
-    def _ensure_model_uptodate(self, attribute_names=None):
-        if not self.to_be_stored:
-            self._dbuser.session.expire(self._dbuser, attribute_names=attribute_names)
+    def _flush(self, fields=None):
+        """ If the user is stored then save the current value """
+        if self.is_stored:
+            # We can't selectively update certain fields only so just
+            # restore the whole thing
+            self.store()
+
+    def _ensure_model_uptodate(self, fields=None):
+        if self.is_stored:
+            self._dbuser.session.expire(self._dbuser, attribute_names=fields)

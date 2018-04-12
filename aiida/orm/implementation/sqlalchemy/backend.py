@@ -15,7 +15,7 @@ from aiida.orm.implementation.sqlalchemy.user import SqlaUsers
 class SqlaBackend(Backend):
     def __init__(self):
         self._log = SqlaLog()
-        self._users = SqlaUsers()
+        self._users = SqlaUserCollection()
 
     @property
     def log(self):

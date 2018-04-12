@@ -112,7 +112,7 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        self._backend.users._from_dbmodel(self._dbgroup.user)
+        return self._backend.users._from_dbmodel(self._dbgroup.user)
 
     @user.setter
     def user(self, new_user):
@@ -149,11 +149,17 @@ class Group(AbstractGroup):
         if not self.is_stored:
             try:
                 with transaction.atomic():
+                    if self.user is not None and not self.user.is_stored:
+                        self.user.store()
+                        # We now have to reset the model's user entry because
+                        # django will have assigned the user an ID but this
+                        # is not automatically propagated to us
+                        self.dbgroup.user = self.user._dbuser
                     self.dbgroup.save()
             except IntegrityError:
-                raise UniquenessError("A group with the same name (and of the "
-                                      "same type) already "
-                                      "exists, unable to store")
+                raise UniquenessError(
+                    "A group with the same name (and of the "
+                    "same type) already exists, unable to store")
 
         # To allow to do directly g = Group(...).store()
         return self

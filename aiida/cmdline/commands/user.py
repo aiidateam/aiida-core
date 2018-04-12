@@ -153,7 +153,7 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
             else:
                 user.password = None
 
-        user.force_save()
+        user.store()
         click.echo(">> User {} {} saved. <<".format(user.first_name,
                                                     user.last_name))
         if not user.has_usable_password():
@@ -217,8 +217,6 @@ def list(color):
 
         color_id = 39  # Default foreground color
         permissions_list = []
-        if user.is_superuser:
-            permissions_list.append("SUPERUSER")
         if not user.has_usable_password():
             permissions_list.append("NO_PWD")
             color_id = 90  # Dark gray

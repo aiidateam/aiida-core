@@ -13,10 +13,10 @@ import abc
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
 
-__all__ = ['AbstractUser', 'AbstractUsersCollection']
+__all__ = ['AbstractUser', 'AbstractUserCollection']
 
 
-class AbstractUsersCollection(object):
+class AbstractUserCollection(object):
     """
     The collection of users stored in a backend
     """
@@ -37,7 +37,7 @@ class AbstractUsersCollection(object):
     def find(self, email=None, id=None):
         """
         Final all users matching the given criteria
-        :param email:
+        :param email: An email address to search for
         :return: A collection of users matching the criteria
         """
         from .querybuilder import QueryBuilder
@@ -109,12 +109,18 @@ class AbstractUser(object):
     def id(self):
         pass
 
-    @abc.abstractmethod
-    def save(self):
+    @abc.abstractproperty
+    def is_stored(self):
+        """
+        Is the user stored
+
+        :return: True if stored, False otherwise
+        :rtype: bool
+        """
         pass
 
     @abc.abstractmethod
-    def force_save(self):
+    def store(self):
         pass
 
     @abc.abstractproperty
@@ -147,15 +153,6 @@ class AbstractUser(object):
 
     @abc.abstractmethod
     def _set_password(self, new_pass):
-        pass
-
-    @abc.abstractproperty
-    def is_superuser(self):
-        pass
-
-    @abc.abstractmethod
-    @is_superuser.setter
-    def is_superuser(self, val):
         pass
 
     @abc.abstractproperty

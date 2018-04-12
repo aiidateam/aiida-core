@@ -546,7 +546,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Create a secondary user
         new_email = "newuser@new.n"
         new_user = cls.backend.users.create(email=new_email)
-        new_user.force_save()
+        new_user.store()
 
         # Create a group to add specific data inside
         g1 = Group(name=cls.group_name)

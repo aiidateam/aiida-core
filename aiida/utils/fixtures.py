@@ -396,7 +396,7 @@ class FixtureManager(object):
         sqla_testcase.clean_db()
 
         # that deleted our user, we need to recreate it
-        new_user.force_save()
+        new_user.store()
 
     def has_profile_open(self):
         return self.__is_running_on_test_profile

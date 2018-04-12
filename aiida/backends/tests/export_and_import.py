@@ -481,7 +481,7 @@ class TestSimple(AiidaTestCase):
             # Create another user
             new_email = "newuser@new.n"
             user = self.backend.users.create(email=new_email)
-            user.force_save()
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -564,7 +564,7 @@ class TestSimple(AiidaTestCase):
             # Create another user
             new_email = "newuser@new.n"
             user = self.backend.users.create(email=new_email)
-            user.force_save()
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -668,7 +668,7 @@ class TestSimple(AiidaTestCase):
             # Create another user
             new_email = "newuser@new.n"
             user = self.backend.users.create(email=new_email)
-            user.force_save()
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()

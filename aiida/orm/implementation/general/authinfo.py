@@ -53,7 +53,8 @@ class AbstractAuthInfo(object):
         """
         The init needs to define the self.dbauthinfo object
         """
-        pass
+        from aiida.orm.backend import construct_backend
+        self._backend = construct_backend()
 
     @property
     def dbauthinfo(self):
@@ -116,9 +117,7 @@ class AbstractAuthInfo(object):
 
     @property
     def user(self):
-        # TODO: @mu FIX THIS!
-        from aiida.orm.user import AbstractUser
-        return AbstractUser.get(email=self.dbauthinfo.aiidauser.email)
+        return self._backend.users._from_dbmodel(self.dbauthinfo.aiidauser)
 
     @abstractproperty
     def to_be_stored(self):

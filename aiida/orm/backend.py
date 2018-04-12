@@ -65,7 +65,7 @@ class Backend(object):
         Get the collection of all users for this backend
 
         :return: The users collection
-        :rtype: :class:`aiida.orm.user.AbstractUsersCollection`
+        :rtype: :class:`aiida.orm.user.AbstractUserCollection`
         """
         pass
 

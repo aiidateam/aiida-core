@@ -185,7 +185,7 @@ class Node(AbstractNode):
         :return: an aiida user model object
         """
         self._ensure_model_uptodate(attribute_names=['user'])
-        self._backend.users.from_dbmode(self._dbnode.user)
+        return self._backend.users._from_dbmodel(self._dbnode.user)
 
     def set_user(self, user):
         type_check(user, users.SqlaUser)

@@ -739,7 +739,7 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.orm.authinfo import DjangoAuthInfo
+        from aiida.orm.authinfo import AuthInfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
         from aiida.orm.user import AbstractUser as OrmUser
@@ -763,6 +763,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 return
 
         qb_user_filters = dict()
+	# TODO: @mu fix this, can't get automatic user this way anymore
         user = orm.get_automatic_user()
         qb_user_filters["email"] = user.email
 
@@ -816,7 +817,7 @@ class Calculation(VerdiCommandWithSubcommands):
         remotes = {}
         for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': DjangoAuthInfo.get(
+            remotes[computer.name] = {'transport': AuthInfo.get(
                 computer=computer, user=user).get_transport(),
                                       'computer': computer,
             }

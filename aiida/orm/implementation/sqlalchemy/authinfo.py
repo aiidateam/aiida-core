@@ -45,6 +45,9 @@ class SqlaAlchemyAuthInfoCollection(AbstractAuthInfoCollection):
                     user.email, computer.name))
 
 
+from . import user as users
+
+
 class AuthInfo(AbstractAuthInfo):
     """
     AuthInfo implementation for SQLAlchemy

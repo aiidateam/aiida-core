@@ -1,6 +1,5 @@
 [run]
 source = aiida
-data_file = coverage/.coverage
 omit = *test*,*/migrations/*
 
 [html]

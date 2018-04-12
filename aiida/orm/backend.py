@@ -10,9 +10,10 @@
 from abc import abstractproperty, ABCMeta
 
 _DJANGO_BACKEND = None
-_SQLA_BACKEND   = None
+_SQLA_BACKEND = None
 
-def construct(backend_type=None):
+
+def construct_backend(backend_type=None):
     """
     Construct a concrete backend instance based on the backend_type
     or use the global backend value if not specified.
@@ -55,5 +56,15 @@ class Backend(object):
 
         :return: An concrete log utils object
         :rtype: :class:`aiida.orm.log.Log`
+        """
+        pass
+
+    @abstractproperty
+    def users(self):
+        """
+        Get the collection of all users for this backend
+
+        :return: The users collection
+        :rtype: :class:`aiida.orm.user.AbstractUserCollection`
         """
         pass

@@ -22,7 +22,6 @@ from dateutil.parser import parse
 from aiida.common.exceptions import ConfigurationError
 
 
-
 class classproperty(object):
     """
     A class that, when used as a decorator, works as if the
@@ -213,14 +212,14 @@ def validate_list_of_string_tuples(val, tuple_length):
         raise ValidationError(err_msg)
     for f in val:
         if (not isinstance(f, (list, tuple)) or
-                    len(f) != tuple_length or
+                len(f) != tuple_length or
                 not all(isinstance(s, basestring) for s in f)):
             raise ValidationError(err_msg)
 
     return True
 
 
-def conv_to_fortran(val,quote_strings=True):
+def conv_to_fortran(val, quote_strings=True):
     """
     :param val: the value to be read and converted to a Fortran-friendly string.
     """
@@ -241,12 +240,14 @@ def conv_to_fortran(val,quote_strings=True):
         else:
             val_str = "{!s}".format(val)
     else:
-        raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val, type(val)))
+        raise ValueError(
+            "Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(val,
+                                                                                                          type(val)))
 
     return val_str
 
 
-def conv_to_fortran_withlists(val,quote_strings=True):
+def conv_to_fortran_withlists(val, quote_strings=True):
     """
     Same as conv_to_fortran but with extra logic to handle lists
     :param val: the value to be read and converted to a Fortran-friendly string.
@@ -256,7 +257,7 @@ def conv_to_fortran_withlists(val,quote_strings=True):
     if (isinstance(val, (list, tuple))):
         out_list = []
         for thing in val:
-            out_list.append(conv_to_fortran(thing,quote_strings=quote_strings))
+            out_list.append(conv_to_fortran(thing, quote_strings=quote_strings))
         val_str = ", ".join(out_list)
         return val_str
     if (isinstance(val, bool)):
@@ -927,7 +928,7 @@ def are_dir_trees_equal(dir1, dir2):
     """
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if (len(dirs_cmp.left_only) > 0 or len(dirs_cmp.right_only) > 0 or
-                len(dirs_cmp.funny_files) > 0):
+            len(dirs_cmp.funny_files) > 0):
         return False
     (_, mismatch, errors) = filecmp.cmpfiles(
         dir1, dir2, dirs_cmp.common_files, shallow=False)
@@ -968,7 +969,7 @@ class Prettifier(object):
     """
 
     @classmethod
-    def _prettify_label_pass(cls,label):
+    def _prettify_label_pass(cls, label):
         """
         No-op prettifier, simply returns  the same label
 
@@ -977,7 +978,7 @@ class Prettifier(object):
         return label
 
     @classmethod
-    def _prettify_label_agr(cls,label):
+    def _prettify_label_agr(cls, label):
         """
         Prettifier for XMGrace
 
@@ -995,7 +996,7 @@ class Prettifier(object):
         return newlabel
 
     @classmethod
-    def _prettify_label_agr_simple(cls,label):
+    def _prettify_label_agr_simple(cls, label):
         """
         Prettifier for XMGrace (for old label names)
 
@@ -1013,7 +1014,7 @@ class Prettifier(object):
             return newlabel
 
     @classmethod
-    def _prettify_label_gnuplot(cls,label):
+    def _prettify_label_gnuplot(cls, label):
         """
         Prettifier for Gnuplot
 
@@ -1033,7 +1034,7 @@ class Prettifier(object):
         return newlabel
 
     @classmethod
-    def _prettify_label_gnuplot_simple(cls,label):
+    def _prettify_label_gnuplot_simple(cls, label):
         """
         Prettifier for Gnuplot (for old label names)
 
@@ -1052,9 +1053,8 @@ class Prettifier(object):
         else:
             return newlabel
 
-
     @classmethod
-    def _prettify_label_latex(cls,label):
+    def _prettify_label_latex(cls, label):
         """
         Prettifier for matplotlib, using LaTeX syntax
 
@@ -1069,12 +1069,12 @@ class Prettifier(object):
         newlabel = newlabel.replace('SIGMA', r'$\Sigma$')
         newlabel = re.sub('_(.{0,1})', r'$_{\1}$', newlabel)
 
-        #newlabel = newlabel + r"$_{\vphantom{0}}$"
+        # newlabel = newlabel + r"$_{\vphantom{0}}$"
 
         return newlabel
 
     @classmethod
-    def _prettify_label_latex_simple(cls,label):
+    def _prettify_label_latex_simple(cls, label):
         """
         Prettifier for matplotlib, using LaTeX syntax (for old label names)
 
@@ -1099,14 +1099,14 @@ class Prettifier(object):
         :return: a dictionary where keys are strings and values are functions
         """
         return {
-        'agr_seekpath': cls._prettify_label_agr,
-        'agr_simple': cls._prettify_label_agr_simple,
-        'latex_simple': cls._prettify_label_latex_simple,
-        'latex_seekpath': cls._prettify_label_latex,
-        'gnuplot_simple': cls._prettify_label_gnuplot_simple,
-        'gnuplot_seekpath': cls._prettify_label_gnuplot,
-        'pass': cls._prettify_label_pass,
-    }
+            'agr_seekpath': cls._prettify_label_agr,
+            'agr_simple': cls._prettify_label_agr_simple,
+            'latex_simple': cls._prettify_label_latex_simple,
+            'latex_seekpath': cls._prettify_label_latex,
+            'gnuplot_simple': cls._prettify_label_gnuplot_simple,
+            'gnuplot_seekpath': cls._prettify_label_gnuplot,
+            'pass': cls._prettify_label_pass,
+        }
 
     @classmethod
     def get_prettifiers(cls):
@@ -1133,7 +1133,7 @@ class Prettifier(object):
                              "valid formats: {}".format(
                 format,
                 ", ".join(self.get_prettifiers())
-                ))
+            ))
 
     def prettify(self, label):
         """
@@ -1188,6 +1188,7 @@ def join_labels(labels, join_symbol="|", threshold=1.e-6):
         new_labels = []
 
     return new_labels
+
 
 def get_mode_string(mode):
     """
@@ -1254,7 +1255,6 @@ def get_mode_string(mode):
          (S_IXOTH, "x"))
     )
 
-
     perm = []
     for table in _filemode_table:
         for bit, char in table:
@@ -1274,7 +1274,7 @@ class HiddenPrints:
     with HiddenPrints():
         print("I won't print this")
     """
-    
+
     def __enter__(self):
         from os import devnull
         self._original_stdout = sys.stdout
@@ -1283,3 +1283,7 @@ class HiddenPrints:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self._original_stdout
 
+
+def type_check(what, of_type):
+    if not isinstance(what, of_type):
+        raise TypeError("Got object of type '{}', expecting '{}'".format(type(what), of_type))

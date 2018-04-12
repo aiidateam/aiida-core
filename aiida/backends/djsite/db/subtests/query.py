@@ -10,9 +10,7 @@
 from aiida.backends.testbase import AiidaTestCase
 
 
-
 class TestQueryBuilderDjango(AiidaTestCase):
-
 
     def test_clsf_django(self):
         """
@@ -23,13 +21,11 @@ class TestQueryBuilderDjango(AiidaTestCase):
             DbGroup,
         )
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
-        from aiida.orm.implementation.django.node import Node
-        from aiida.orm import Group, User, Node, Computer, Data, Calculation
+        from aiida.orm import Group, Node, Computer, Data, Calculation
         from aiida.common.exceptions import InputValidationError
         qb = QueryBuilder()
-        
+
         with self.assertRaises(InputValidationError):
             qb._get_ormclass(None, 'data')
         with self.assertRaises(InputValidationError):
@@ -93,4 +89,3 @@ class TestQueryBuilderDjango(AiidaTestCase):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
             self.assertTrue(issubclass(cls, DbNode))
-

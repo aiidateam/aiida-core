@@ -18,18 +18,19 @@ from sqlalchemy.orm.session import make_transient
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.backends.utils import get_automatic_user
-
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
-                                     NotExistent)
-
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError, NotExistent)
 from aiida.orm.implementation.general.group import AbstractGroup
-
 from aiida.orm.implementation.general.utils import get_db_columns
+
+from . import user as users
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         given_dbgroup = kwargs.pop('dbgroup', None)
 
         if given_dbgroup is not None:
@@ -55,7 +56,11 @@ class Group(AbstractGroup):
                 raise ValueError("You have to specify a group name")
             group_type = kwargs.pop('type_string',
                                     "")  # By default, an user group
-            user = kwargs.pop('user', get_automatic_user())
+
+            # Get the user and extract the dbuser instance
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = user._dbuser
+
             description = kwargs.pop('description', "")
 
             if kwargs:
@@ -110,7 +115,11 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return self._dbgroup.user
+        return self._dbgroup.user.get_aiida_class()
+
+    @user.setter
+    def user(self, new_user):
+        self._dbgroup.user = new_user._dbuser
 
     @property
     def dbgroup(self):
@@ -298,7 +307,7 @@ class Group(AbstractGroup):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
-                filters.append(DbGroup.user == user)
+                filters.append(DbGroup.user == user._dbuser)
 
         if name_filters:
             for (k, v) in name_filters.iteritems():
@@ -333,3 +342,4 @@ class Group(AbstractGroup):
             make_transient(new_group)
             new_group.id = None
             self._dbgroup = new_group
+

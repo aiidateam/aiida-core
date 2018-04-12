@@ -9,12 +9,18 @@
 ###########################################################################
 from aiida.orm.backend import Backend
 from aiida.orm.implementation.sqlalchemy.log import SqlaLog
+from aiida.orm.implementation.sqlalchemy.user import SqlaUserCollection
 
 
 class SqlaBackend(Backend):
     def __init__(self):
         self._log = SqlaLog()
+        self._users = SqlaUserCollection()
 
     @property
     def log(self):
         return self._log
+
+    @property
+    def users(self):
+        return self._users

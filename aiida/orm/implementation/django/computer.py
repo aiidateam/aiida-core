@@ -146,7 +146,7 @@ class Computer(AbstractComputer):
         newdbcomputer = DbComputer.objects.get(pk=self.pk)
         newdbcomputer.pk = None
 
-        newobject = self.__class__(newdbcomputer)
+        newobject = self.__class__(dbcomputer=newdbcomputer)
 
         return newobject
 

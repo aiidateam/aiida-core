@@ -44,9 +44,8 @@ class Workflow(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.backends.utils import get_workflow_list, get_automatic_user
+        from aiida.backends.utils import get_workflow_list
         from aiida.orm.workflow import get_workflow_info
-        from aiida.orm import User
 
         import argparse
 
@@ -83,7 +82,7 @@ class Workflow(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         workflows = get_workflow_list(parsed_args.pks,
-                                      user=User(dbuser=get_automatic_user()),
+                                      user=self.backend.users.get_automatic_user(),
                                       all_states=parsed_args.all_states,
                                       n_days_ago=parsed_args.past_days)
 

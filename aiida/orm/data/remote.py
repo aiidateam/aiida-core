@@ -135,8 +135,7 @@ class RemoteData(Data):
         """
         from aiida.orm.authinfo import AuthInfo
 
-        authinfo = AuthInfo.get(computer=self.get_computer(),
-                            user=self.get_user())
+        authinfo = AuthInfo.get(computer=self.get_computer(), user=self.get_user())
         t = authinfo.get_transport()
 
         with t:

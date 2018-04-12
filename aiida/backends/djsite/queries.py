@@ -44,7 +44,7 @@ class QueryManagerDjango(AbstractQueryManager):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm import Computer,User
+        from aiida.orm import Computer
         from aiida.common.exceptions import InputValidationError
         from aiida.orm.implementation.django.calculation.job import JobCalculation
         from aiida.common.datastructures import calc_states
@@ -52,9 +52,7 @@ class QueryManagerDjango(AbstractQueryManager):
 
         if state not in calc_states:
             raise InputValidationError("querying for calculation state='{}', but it "
-                                "is not a valid calculation state".format(state))
-
-
+                                       "is not a valid calculation state".format(state))
 
         kwargs = {}
         if computer is not None:
@@ -67,7 +65,6 @@ class QueryManagerDjango(AbstractQueryManager):
         if only_enabled:
             kwargs['dbcomputer__enabled'] = True
 
-
         queryresults = JobCalculation.query(
             dbattributes__key='state',
             dbattributes__tval=state,
@@ -77,7 +74,7 @@ class QueryManagerDjango(AbstractQueryManager):
             computer_users_ids = queryresults.values_list(
                 'dbcomputer__id', 'user__id').distinct()
             computer_users = []
-            for computer_id,  user_id in computer_users_ids: #return cls(dbcomputer=DbComputer.get_dbcomputer(computer))DbNode.objects.get(pk=pk).get_aiida_class()
+            for computer_id, user_id in computer_users_ids:  # return cls(dbcomputer=DbComputer.get_dbcomputer(computer))DbNode.objects.get(pk=pk).get_aiida_class()
                 computer_users.append((Computer.get(computer_id), DbUser.objects.get(pk=user_id).get_aiida_class()))
             return computer_users
 
@@ -123,7 +120,7 @@ class QueryManagerDjango(AbstractQueryManager):
 
         # Nodes per type
         retdict["types"] = dict(s.query(dummy_model.DbNode.type.label('typestring'),
-            sa.func.count(dummy_model.DbNode.id)).group_by('typestring').all())
+                                        sa.func.count(dummy_model.DbNode.id)).group_by('typestring').all())
 
         # Nodes created per day
         stat = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
@@ -134,9 +131,10 @@ class QueryManagerDjango(AbstractQueryManager):
 
         return retdict
         # Still not containing all dates
-            # temporary fix only for DJANGO backend
-            # Will be useless when the _join_ancestors method of the QueryBuilder
-            # will be re-implemented without using the DbPath
+        # temporary fix only for DJANGO backend
+        # Will be useless when the _join_ancestors method of the QueryBuilder
+        # will be re-implemented without using the DbPath
+
     def query_past_days(self, q_object, args):
         """
         Subselect to filter data nodes by their age.
@@ -151,7 +149,6 @@ class QueryManagerDjango(AbstractQueryManager):
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
 
     def query_group(self, q_object, args):
         """
@@ -174,15 +171,16 @@ class QueryManagerDjango(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.backends.utils import get_automatic_user
-
+        from aiida.orm.backend import construct_backend
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
+
+        backend = construct_backend()
 
         query_group_size = 100
         q_object = None
         if args.all_users is False:
-            q_object = Q(user=get_automatic_user())
+            q_object = Q(user__id=backend.users.get_automatic_user().id)
         else:
             q_object = Q()
 
@@ -205,7 +203,7 @@ class QueryManagerDjango(AbstractQueryManager):
 
             # get the closest structures (WITHOUT DbPath)
             q_object = Q(type='data.structure.StructureData.')
-            structure_dict = get_closest_parents(pks,q_object, chunk_size=1)
+            structure_dict = get_closest_parents(pks, q_object, chunk_size=1)
 
             struc_pks = [structure_dict[pk] for pk in pks]
 
@@ -284,8 +282,8 @@ class QueryManagerDjango(AbstractQueryManager):
 
         parents = models.DbNode.objects.none()
         q_inputs = models.DbNode.aiidaobjects.filter(
-                outputs__pk__in=the_node_pks,
-                output_links__type__in=(LinkType.CREATE.value, LinkType.INPUT.value)).distinct()
+            outputs__pk__in=the_node_pks,
+            output_links__type__in=(LinkType.CREATE.value, LinkType.INPUT.value)).distinct()
 
         while q_inputs.count() > 0:
             inputs = list(q_inputs)
@@ -297,7 +295,7 @@ class QueryManagerDjango(AbstractQueryManager):
         return parents.values_list(*return_values)
 
 
-def get_closest_parents(pks,*args,**kwargs):
+def get_closest_parents(pks, *args, **kwargs):
     """
     Get the closest parents dbnodes of a set of nodes.
 
@@ -329,40 +327,39 @@ def get_closest_parents(pks,*args,**kwargs):
     except TypeError:
         the_pks = list(set([pks]))
 
-    chunk_size = kwargs.pop('chunk_size',50)
-    print_progress = kwargs.pop('print_progress',False)
+    chunk_size = kwargs.pop('chunk_size', 50)
+    print_progress = kwargs.pop('print_progress', False)
 
     result_dict = {}
-    all_chunk_pks = grouper(chunk_size,the_pks)
+    all_chunk_pks = grouper(chunk_size, the_pks)
     if print_progress:
-        print "Chunk size:",chunk_size
+        print "Chunk size:", chunk_size
 
-    for i,chunk_pks in enumerate(all_chunk_pks):
+    for i, chunk_pks in enumerate(all_chunk_pks):
         if print_progress:
-            print "Dealing with chunk #",i
+            print "Dealing with chunk #", i
         result_chunk_dict = {}
-        q_pks = Node.query(pk__in=chunk_pks).values_list('pk',flat=True)
+        q_pks = Node.query(pk__in=chunk_pks).values_list('pk', flat=True)
         # Now I am looking for parents (depth=0) of the nodes in the chunk:
         q_inputs = models.DbNode.objects.filter(outputs__pk__in=q_pks).distinct()
-        depth = -1 # to be consistent with the DbPath depth (=0 for direct inputs)
-        children_dict = dict([(k,v) for k,v in q_inputs.values_list('pk','outputs__pk')
-                             if v in q_pks])
+        depth = -1  # to be consistent with the DbPath depth (=0 for direct inputs)
+        children_dict = dict([(k, v) for k, v in q_inputs.values_list('pk', 'outputs__pk')
+                              if v in q_pks])
         # While I haven't found a closest ancestor for every member of chunk_pks:
-        while q_inputs.count() > 0 and len(result_chunk_dict)<len(chunk_pks):
+        while q_inputs.count() > 0 and len(result_chunk_dict) < len(chunk_pks):
             depth += 1
             q = q_inputs.filter(*args, **kwargs)
             if q.count() > 0:
-                result_chunk_dict.update(dict([(children_dict[k],k)
-                                         for k in q.values_list('pk',flat=True)
-                                         if children_dict[k] not in result_chunk_dict]))
-            inputs = list(q_inputs.values_list('pk',flat=True))
+                result_chunk_dict.update(dict([(children_dict[k], k)
+                                               for k in q.values_list('pk', flat=True)
+                                               if children_dict[k] not in result_chunk_dict]))
+            inputs = list(q_inputs.values_list('pk', flat=True))
             q_inputs = models.DbNode.objects.filter(outputs__pk__in=inputs).distinct()
-            q_inputs_dict = dict([(k,children_dict[v])
-                                   for k,v in q_inputs.values_list('pk','outputs__pk')
-                                   if v in inputs])
+            q_inputs_dict = dict([(k, children_dict[v])
+                                  for k, v in q_inputs.values_list('pk', 'outputs__pk')
+                                  if v in inputs])
             children_dict = deepcopy(q_inputs_dict)
 
         result_dict.update(result_chunk_dict)
 
     return result_dict
-

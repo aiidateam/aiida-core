@@ -9,27 +9,28 @@
 ###########################################################################
 
 import collections
+from django.db import transaction, IntegrityError
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
-
 from aiida.orm.implementation.django.node import Node
-
-
-from aiida.backends.djsite.utils import get_automatic_user
-
-from django.db import transaction, IntegrityError
-from django.db.models import Q
-from django.core.exceptions import ObjectDoesNotExist
-
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.common.utils import type_check
+
+from . import user as users
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
@@ -51,12 +52,15 @@ class Group(AbstractGroup):
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string',
-                                    "")  # By default, an user group
-            user = kwargs.pop('user', get_automatic_user())
+
+            group_type = kwargs.pop('type_string', "")  # By default, a user group
+
+            # Get the user and extract dbuser instance
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+                                    user=user._dbuser, type=group_type)
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
@@ -108,7 +112,12 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return self.dbgroup.user
+        return self._backend.users._from_dbmodel(self._dbgroup.user)
+
+    @user.setter
+    def user(self, new_user):
+        type_check(new_user, users.DjangoUser)
+        self._dbgroup.user = new_user._dbuser
 
     @property
     def dbgroup(self):
@@ -140,11 +149,17 @@ class Group(AbstractGroup):
         if not self.is_stored:
             try:
                 with transaction.atomic():
+                    if self.user is not None and not self.user.is_stored:
+                        self.user.store()
+                        # We now have to reset the model's user entry because
+                        # django will have assigned the user an ID but this
+                        # is not automatically propagated to us
+                        self.dbgroup.user = self.user._dbuser
                     self.dbgroup.save()
-            except IntegrityError:
-                raise UniquenessError("A group with the same name (and of the "
-                                      "same type) already "
-                                      "exists, unable to store")
+            except IntegrityError as e:
+                raise UniquenessError(
+                    "A group with the same name (and of the "
+                    "same type) already exists, unable to store")
 
         # To allow to do directly g = Group(...).store()
         return self
@@ -281,7 +296,7 @@ class Group(AbstractGroup):
             if isinstance(user, basestring):
                 queryobject &= Q(user__email=user)
             else:
-                queryobject &= Q(user=user)
+                queryobject &= Q(user=user.id)
 
         if name_filters is not None:
             name_filters_list = {"name__" + k: v for (k, v)

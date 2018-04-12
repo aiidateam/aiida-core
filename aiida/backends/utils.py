@@ -14,8 +14,8 @@ from aiida.backends import settings
 from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
 from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
 
-
 AIIDA_ATTRIBUTE_SEP = '.'
+
 
 def validate_attribute_key(key):
     """
@@ -76,19 +76,6 @@ def load_dbenv(profile=None, *args, **kwargs):
             settings.BACKEND))
 
 
-def get_automatic_user():
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.utils import (
-            get_automatic_user as get_automatic_user_sqla)
-        return get_automatic_user_sqla()
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.utils import (
-            get_automatic_user as get_automatic_user_dj)
-        return get_automatic_user_dj()
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.cmdline import (
@@ -129,19 +116,15 @@ def get_dbauthinfo(computer, aiidauser):
     from aiida.common.exceptions import InternalError
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo, DbUser
-        from aiida.orm.implementation.django.user import User
         from django.core.exceptions import (ObjectDoesNotExist,
                                             MultipleObjectsReturned)
-
-        if not isinstance(aiidauser, DbUser) and not isinstance(aiidauser, User):
-            raise TypeError("aiidauser must be a DbUser or User instance")
 
         try:
             authinfo = DbAuthInfo.objects.get(
                 # converts from name, Computer or DbComputer instance to
                 # a DbComputer instance
                 dbcomputer=DbComputer.get_dbcomputer(computer),
-                aiidauser=aiidauser) # works also with User instances thanks to __int__
+                aiidauser=aiidauser.id)
         except ObjectDoesNotExist:
             raise NotExistent(
                 "The aiida user {} is not configured to use computer {}".format(
@@ -152,16 +135,11 @@ def get_dbauthinfo(computer, aiidauser):
                 "computer {}! Only one configuration is allowed".format(
                     aiidauser.email, computer.name))
     elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
         from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-        if not isinstance(aiidauser, DbUser) and not isinstance(aiidauser, User):
-            raise TypeError("aiidauser must be a DbUser or User instance")
 
         try:
             authinfo = session.query(DbAuthInfo).filter_by(
@@ -259,7 +237,6 @@ def get_current_profile():
 
 
 def delete_nodes_and_connections(pks):
-
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import delete_nodes_and_connections_django as delete_nodes_backend
     elif settings.BACKEND == BACKEND_SQLA:

@@ -13,7 +13,8 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-__all__ = ['Node', 'Computer', 'Group', 'Lock', 'LockManager', 'Workflow', 'kill_all', 'get_all_running_steps', 'get_workflow_info', 'Code', 'delete_code', 'Comment', 'User', 'AuthInfo']
+__all__ = ['Node', 'Computer', 'Group', 'Lock', 'LockManager', 'Workflow', 'kill_all', 'get_all_running_steps',
+           'get_workflow_info', 'Code', 'delete_code', 'Comment', 'AuthInfo']
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node
@@ -21,10 +22,10 @@ if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.authinfo import AuthInfo
     from aiida.orm.implementation.sqlalchemy.group import Group
     from aiida.orm.implementation.sqlalchemy.lock import Lock, LockManager
-    from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
+    from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, \
+        get_all_running_steps
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.comment import Comment
-    from aiida.orm.implementation.sqlalchemy.user import User
     from aiida.backends.sqlalchemy import models
 elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
@@ -35,7 +36,6 @@ elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.django.code import Code, delete_code
     from aiida.orm.implementation.django.comment import Comment
-    from aiida.orm.implementation.django.user import User
     from aiida.backends.djsite.db import models
 elif BACKEND is None:
     raise ConfigurationError("settings.BACKEND has not been set.\n"

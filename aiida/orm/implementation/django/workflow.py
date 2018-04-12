@@ -13,7 +13,6 @@ from collections import Mapping
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
-from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
@@ -24,7 +23,6 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
-
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -46,10 +44,11 @@ class Workflow(AbstractWorkflow):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
-
         from aiida.backends.djsite.db.models import DbWorkflow
-        self._to_be_stored = True
+        from aiida.orm.backend import construct_backend
 
+        self._backend = construct_backend()
+        self._to_be_stored = True
         self._logger = logger.getChild(self.__class__.__name__)
 
         uuid = kwargs.pop('uuid', None)
@@ -75,7 +74,7 @@ class Workflow(AbstractWorkflow):
             stack = inspect.stack()
 
             # cur_fr  = inspect.currentframe()
-            #call_fr = inspect.getouterframes(cur_fr, 2)
+            # call_fr = inspect.getouterframes(cur_fr, 2)
 
             # Get all the caller data
             caller_frame = stack[1][0]
@@ -117,7 +116,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
+            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_automatic_user()._dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -224,6 +223,7 @@ class Workflow(AbstractWorkflow):
         # Note: I have to reload the ojbect. I don't do it here because it is done at every call
         # to self.dbnode
         # self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
+
     @classmethod
     def query(cls, *args, **kwargs):
         """
@@ -236,7 +236,7 @@ class Workflow(AbstractWorkflow):
         return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
 
     # @property
-    #def logger(self):
+    # def logger(self):
     #    """
     #    Get the logger of the Workflow object.
     #
@@ -486,7 +486,8 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         try:
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=get_automatic_user())
+            user = self._backend.users.get_automatic_user()
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user._dbuser)
             return step
         except ObjectDoesNotExist:
             return None
@@ -499,7 +500,7 @@ class Workflow(AbstractWorkflow):
         :return: a list of DbWorkflowStep objects.
         """
         if state is None:
-            return self.dbworkflowinstance.steps.all().order_by('time')  #.values_list('name',flat=True)
+            return self.dbworkflowinstance.steps.all().order_by('time')  # .values_list('name',flat=True)
         else:
             return self.dbworkflowinstance.steps.filter(state=state).order_by('time')
 
@@ -545,7 +546,7 @@ class Workflow(AbstractWorkflow):
 
         for elem_name, elem in wf_mod.__dict__.iteritems():
 
-            if module_class == elem_name:  #and issubclass(elem, Workflow):
+            if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)
 
     @classmethod
@@ -569,18 +570,24 @@ class Workflow(AbstractWorkflow):
         except ObjectDoesNotExist:
             raise NotExistent("No entry with the UUID {} found".format(uuid))
 
+
 def kill_all():
     from aiida.backends.djsite.db.models import DbWorkflow
-    q_object = Q(user=get_automatic_user())
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+
+    q_object = Q(user=backend.users.get_automatic_user().id)
     q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
 
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid).kill()
 
+
 def get_all_running_steps():
     from aiida.backends.djsite.db.models import DbWorkflowStep
     return DbWorkflowStep.objects.filter(state=wf_states.RUNNING)
+
 
 def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                       depth=16):
@@ -646,20 +653,19 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                             'state': state,
                                             'subwf_pks': [],
                                             'calc_pks': [],
-                }
+                                            }
             if subwf_pk:
                 subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-
         # get all subworkflows for all steps
-        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  #.order_by('ctime')
+        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into workflows
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
+        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 

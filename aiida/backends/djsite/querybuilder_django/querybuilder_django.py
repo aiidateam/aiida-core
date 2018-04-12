@@ -13,13 +13,12 @@ import datetime
 from datetime import datetime
 from json import loads as json_loads
 
-#~ import aiida.backends.djsite.querybuilder_django.dummy_model as dummy_model
+# ~ import aiida.backends.djsite.querybuilder_django.dummy_model as dummy_model
 import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
-
 from sqlalchemy import and_, or_, not_, exists, select, exists, case
-from sqlalchemy.types import Float,  String
+from sqlalchemy.types import Float, String
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
@@ -29,31 +28,31 @@ from aiida.common.exceptions import InputValidationError
 from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
 from aiida.backends.utils import _get_column
 from aiida.common.exceptions import (
-        InputValidationError, DbContentError,
-        MissingPluginError, ConfigurationError
-    )
+    InputValidationError, DbContentError,
+    MissingPluginError, ConfigurationError
+)
+
 
 class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def __init__(self, *args, **kwargs):
-        #~ from aiida.orm.implementation.django.node import Node as AiidaNode
-        #~ from aiida.orm.implementation.django.group import Group as AiidaGroup
-        #~ from aiida.orm.implementation.django.computer import Computer as AiidaComputer
-        #~ from aiida.orm.implementation.django.user import User as AiidaUser
+        # ~ from aiida.orm.implementation.django.node import Node as AiidaNode
+        # ~ from aiida.orm.implementation.django.group import Group as AiidaGroup
+        # ~ from aiida.orm.implementation.django.computer import Computer as AiidaComputer
+        # ~ from aiida.orm.implementation.django.user import User as AiidaUser
 
-        #~ self.Link               = dummy_model.DbLink
-        #~ self.Node               = dummy_model.DbNode
-        #~ self.Computer           = dummy_model.DbComputer
-        #~ self.User               = dummy_model.DbUser
-        #~ self.Group              = dummy_model.DbGroup
-        #~ self.table_groups_nodes = dummy_model.table_groups_nodes
-        #~ self.AiidaNode          = AiidaNode
-        #~ self.AiidaGroup         = AiidaGroup
-        #~ self.AiidaComputer      = AiidaComputer
-        #~ self.AiidaUser          = AiidaUser
+        # ~ self.Link               = dummy_model.DbLink
+        # ~ self.Node               = dummy_model.DbNode
+        # ~ self.Computer           = dummy_model.DbComputer
+        # ~ self.User               = dummy_model.DbUser
+        # ~ self.Group              = dummy_model.DbGroup
+        # ~ self.table_groups_nodes = dummy_model.table_groups_nodes
+        # ~ self.AiidaNode          = AiidaNode
+        # ~ self.AiidaGroup         = AiidaGroup
+        # ~ self.AiidaComputer      = AiidaComputer
+        # ~ self.AiidaUser          = AiidaUser
 
         super(QueryBuilderImplDjango, self).__init__(*args, **kwargs)
-
 
     @property
     def Node(self):
@@ -91,14 +90,13 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     @property
     def AiidaUser(self):
-        import aiida.orm.implementation.django.user
-        return aiida.orm.implementation.django.user.User
+        import aiida.orm.user
+        return aiida.orm.AbstractUser
 
     @property
     def AiidaComputer(self):
         import aiida.orm.implementation.django.computer
         return aiida.orm.implementation.django.computer.Computer
-
 
     def get_filter_expr_from_column(self, operator, value, column):
 
@@ -133,11 +131,10 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             )
         return expr
 
-
     def get_filter_expr(
             self, operator, value, attr_key, is_attribute,
             alias=None, column=None, column_name=None
-        ):
+    ):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -213,7 +210,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             } # id is not 2
         """
 
-
         expr = None
         if operator.startswith('~'):
             negation = True
@@ -239,35 +235,35 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:
                 raise InputValidationError(
-                        '{}  contains more than one type'.format(value)
-                    )
+                    '{}  contains more than one type'.format(value)
+                )
             elif len(value_type_set) == 0:
                 raise InputValidationError(
-                        '{}  contains is an empty list'.format(value)
-                    )
+                    '{}  contains is an empty list'.format(value)
+                )
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
                     expressions_for_this_path.append(
-                            self.get_filter_expr(
-                                    newoperator, newvalue,
-                                    attr_key=attr_key, is_attribute=is_attribute,
-                                    alias=alias, column=column,
-                                    column_name=column_name
-                                )
+                        self.get_filter_expr(
+                            newoperator, newvalue,
+                            attr_key=attr_key, is_attribute=is_attribute,
+                            alias=alias, column=column,
+                            column_name=column_name
                         )
+                    )
             if operator == 'and':
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
-                 expr = or_(*expressions_for_this_path)
+                expr = or_(*expressions_for_this_path)
 
         if expr is None:
             if is_attribute:
                 expr = self.get_filter_expr_from_attributes(
-                        operator, value, attr_key,
-                        column=column, column_name=column_name, alias=alias
-                    )
+                    operator, value, attr_key,
+                    column=column, column_name=column_name, alias=alias
+                )
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
@@ -281,11 +277,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             return not_(expr)
         return expr
 
-
     def get_session(self):
         return dummy_model.get_aldjemy_session()
         # return dummy_model.session
-
 
     def modify_expansions(self, alias, expansions):
         """
@@ -315,13 +309,13 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 mapped_entity = mapped_class.tval
             elif dtype == 'b':
                 mapped_entity = mapped_class.bval
-                #~ mapped_entity = cast(mapped_class.value_str, Boolean)
+                # ~ mapped_entity = cast(mapped_class.value_str, Boolean)
             elif dtype == 'f':
                 mapped_entity = mapped_class.fval
-                #~ mapped_entity = cast(mapped_class.value_str, Float)
+                # ~ mapped_entity = cast(mapped_class.value_str, Float)
             elif dtype == 'i':
                 mapped_entity = mapped_class.ival
-                #~ mapped_entity = cast(mapped_class.value_str, Integer)
+                # ~ mapped_entity = cast(mapped_class.value_str, Integer)
             elif dtype == 'd':
                 mapped_entity = mapped_class.dval
             else:
@@ -334,6 +328,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 mapped_entity = cast(mapped_entity, Float)
 
             return mapped_entity
+
         if column:
             mapped_class = column.prop.mapper.class_
         else:
@@ -352,17 +347,16 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         #   (which db_column in the dbattribtues)
         # If the user specified in what to cast, he wants an operation to
         #   be performed to cast the value to a different type
-        if  isinstance(value, (list, tuple)):
+        if isinstance(value, (list, tuple)):
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:
-                raise InputValidationError( '{}  contains more than one type'.format(value))
+                raise InputValidationError('{}  contains more than one type'.format(value))
             elif len(value_type_set) == 0:
                 raise InputValidationError('Given list is empty, cannot determine type')
             else:
                 value_to_consider = value[0]
         else:
             value_to_consider = value
-
 
         # First cases, I maybe need not do anything but just count the
         # number of entries
@@ -371,7 +365,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 "Filtering by lengths of arrays or lists is not implemented\n"
                 "in the Django-Backend"
             )
-        elif operator  == 'of_type':
+        elif operator == 'of_type':
             raise NotImplementedError(
                 "Filtering by type is not implemented\n"
                 "in the Django-Backend"
@@ -382,11 +376,11 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             )
 
 
-        elif operator=='has_key':
+        elif operator == 'has_key':
             if issubclass(mapped_class, dummy_model.DbAttribute):
-                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key+[value]))
+                expr = alias.attributes.any(mapped_class.key == '.'.join(attr_key + [value]))
             elif issubclass(mapped_class, dummy_model.DbExtra):
-                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key+[value]))
+                expr = alias.extras.any(mapped_class.key == '.'.join(attr_key + [value]))
             else:
                 raise Exception("I was given {} as an attribute base class".format(mapped_class))
 
@@ -417,16 +411,16 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
             actual_attr_key = '.'.join(attr_key)
             expr = column.any(and_(
-                    mapped_class.key == actual_attr_key,
-                    or_(*expressions)
-                )
+                mapped_class.key == actual_attr_key,
+                or_(*expressions)
+            )
             )
         return expr
 
     def get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs
-        ):
+    ):
         if cast is not None:
             raise NotImplementedError(
                 "Casting is not implemented in the Django backend"
@@ -439,14 +433,14 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 entity = alias.id
             else:
                 raise NotImplementedError(
-                        "Whatever you asked for "
-                        "({}) is not implemented"
-                        "".format(column_name)
-                    )
+                    "Whatever you asked for "
+                    "({}) is not implemented"
+                    "".format(column_name)
+                )
         else:
             aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
-            if not issubclass(alias._aliased_insp.class_,self.Node):
+            if not issubclass(alias._aliased_insp.class_, self.Node):
                 NotImplementedError(
                     "Other classes than Nodes are not implemented yet"
                 )
@@ -454,18 +448,18 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             attrkey = '.'.join(attrpath)
 
             exists_stmt = exists(select([1], correlate=True).select_from(
-                    aliased_attributes
-                ).where(and_(
-                    aliased_attributes.key==attrkey,
-                    aliased_attributes.dbnode_id==alias.id
-                )))
+                aliased_attributes
+            ).where(and_(
+                aliased_attributes.key == attrkey,
+                aliased_attributes.dbnode_id == alias.id
+            )))
 
             select_stmt = select(
-                    [aliased_attributes.id], correlate=True
-                ).select_from(aliased_attributes).where(and_(
-                    aliased_attributes.key==attrkey,
-                    aliased_attributes.dbnode_id==alias.id
-                )).label('miao')
+                [aliased_attributes.id], correlate=True
+            ).select_from(aliased_attributes).where(and_(
+                aliased_attributes.key == attrkey,
+                aliased_attributes.dbnode_id == alias.id
+            )).label('miao')
 
             entity = case([(exists_stmt, select_stmt), ], else_=None)
 
@@ -508,11 +502,10 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
-            returnval =  res.get_aiida_class()
+            returnval = res.get_aiida_class()
         else:
             returnval = res
         return returnval
-
 
     def get_ormclass(self, cls, ormclasstype):
         """
@@ -563,10 +556,10 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 ormclass = self.User
             else:
                 raise InputValidationError(
-                        "\n\n\n"
-                        "I do not know what to do with {}"
-                        "\n\n\n".format(cls)
-                    )
+                    "\n\n\n"
+                    "I do not know what to do with {}"
+                    "\n\n\n".format(cls)
+                )
         # If it is not a class
         else:
             if ormclasstype.lower() == 'group':
@@ -606,12 +599,10 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                         "{}".format(ormclasstype, e)
                     )
 
-
                 ormclasstype = PluginClass._plugin_type_string
                 query_type_string = PluginClass._query_type_string
 
         return ormclass, ormclasstype, query_type_string
-
 
     def yield_per(self, query, batch_size):
         """
@@ -624,7 +615,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         from django.db import transaction
         with transaction.atomic():
             return query.yield_per(batch_size)
-
 
     def count(self, query):
 
@@ -668,7 +658,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             else:
                 raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
 
-
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         from django.db import transaction
         # Wrapping everything in an atomic transaction:
@@ -679,10 +668,10 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             if nr_items > 1:
                 for this_result in results:
                     yield {
-                        tag:{
-                            attrkey:self.get_aiida_res(
-                                    attrkey, this_result[index_in_sql_result]
-                                )
+                        tag: {
+                            attrkey: self.get_aiida_res(
+                                attrkey, this_result[index_in_sql_result]
+                            )
                             for attrkey, index_in_sql_result
                             in projected_entities_dict.items()
                         }
@@ -692,11 +681,11 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             elif nr_items == 1:
                 # I this case, sql returns a  list, where each listitem is the result
                 # for one row. Here I am converting it to a list of lists (of length 1)
-                if [ v for entityd in tag_to_projected_entity_dict.values() for v in entityd.keys()] == ['*']:
+                if [v for entityd in tag_to_projected_entity_dict.values() for v in entityd.keys()] == ['*']:
                     for this_result in results:
                         yield {
-                            tag:{
-                                attrkey : self.get_aiida_res(attrkey, this_result)
+                            tag: {
+                                attrkey: self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
@@ -704,14 +693,11 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 else:
                     for this_result, in results:
                         yield {
-                            tag:{
-                                attrkey : self.get_aiida_res(attrkey, this_result)
+                            tag: {
+                                attrkey: self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
             else:
                 raise Exception("Got an empty dictionary")
-
-
-

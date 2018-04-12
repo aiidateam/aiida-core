@@ -11,9 +11,7 @@ import fastentrypoints
 import re
 from os import path
 from setuptools import setup, find_packages
-from setup_requirements import install_requires, extras_require
-
-
+from setup_requirements import install_requires, extras_require, REENTRY_PINNED
 
 
 if __name__ == '__main__':
@@ -43,7 +41,7 @@ if __name__ == '__main__':
         packages=find_packages(),
         # Don't forget to install it as well (by adding to the install_requires)
         setup_requires=[
-            'reentry >= 1.0.2',
+            REENTRY_PINNED,
         ],
         reentry_register=True,
         entry_points={

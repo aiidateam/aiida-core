@@ -107,7 +107,7 @@ python-mimeparse==0.1.4
 pytz==2014.10
 PyYAML==3.12
 qe-tools==1.0.0
-reentry==1.0.3
+reentry==1.1.2
 requests==2.18.4
 requirements-detector==0.5.2
 scandir==1.6

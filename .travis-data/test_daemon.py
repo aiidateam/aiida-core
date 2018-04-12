@@ -288,6 +288,13 @@ def main():
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
 
+    print "Submitting a workchain with 'submit'."
+    builder = NestedWorkChain.get_builder()
+    input_val = 4
+    builder.inp = Int(input_val)
+    proc = submit(builder)
+    expected_results_workchains[proc.pk] = input_val
+
     print "Submitting a workchain with a nested input namespace."
     value = Int(-12)
     pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk

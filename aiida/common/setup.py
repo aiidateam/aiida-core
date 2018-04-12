@@ -58,6 +58,9 @@ aiidadb_backend_value_django = 'django'
 # differentiate them from non-testing ones.
 TEST_KEYWORD = 'test_'
 
+# Default timeout in seconds for circus client calls
+DEFAULT_DAEMON_TIMEOUT = 20
+
 
 def get_aiida_dir():
     return os.path.expanduser(AIIDA_CONFIG_FOLDER)
@@ -767,6 +770,12 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
+    "daemon.timeout": (
+        "daemon_timeout",
+        "int",
+        "The timeout in seconds for calls to the circus client",
+        DEFAULT_DAEMON_TIMEOUT,
+        None),
     "verdishell.modules": (
         "modules_for_verdi_shell",
         "string",

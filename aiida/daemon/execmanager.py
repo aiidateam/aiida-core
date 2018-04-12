@@ -287,8 +287,7 @@ def submit_calc(calc, authinfo, transport=None):
                                       "calculation {}".format(calc.pk))
 
             remotedata = RemoteData(computer=computer, remote_path=workdir)
-            remotedata.add_link_from(calc, label='remote_folder',
-                                     link_type=LinkType.CREATE)
+            remotedata.add_link_from(calc, label='remote_folder', link_type=LinkType.CREATE)
             remotedata.store()
 
             job_id = s.submit_from_script(t.getcwd(), script_filename)
@@ -297,13 +296,6 @@ def submit_calc(calc, authinfo, transport=None):
             # the only ones submitting this calculations,
             # so I do not check the ModificationNotAllowed
             calc._set_state(calc_states.WITHSCHEDULER)
-            ## I do not set the state to queued; in this way, if the
-            ## daemon is down, the user sees '(unknown)' as last state
-            ## and understands that the daemon is not running.
-            # if job_tmpl.submit_as_hold:
-            #    calc._set_scheduler_state(job_states.QUEUED_HELD)
-            # else:
-            #    calc._set_scheduler_state(job_states.QUEUED)
 
             execlogger.debug("submitted calculation {} on {} with "
                              "jobid {}".format(calc.pk, computer.name, job_id),
@@ -312,18 +304,17 @@ def submit_calc(calc, authinfo, transport=None):
     except Exception as e:
         import traceback
 
-        execlogger.error(
-            "Submission of calc {} failed, check also the log file! Traceback: {}".format(
-                calc.pk, traceback.format_exc()
-            ),
-            extra=logger_extra
-        )
+        execlogger.error('Submission of calc {} failed, check also the log file! Traceback: {}'.format(
+            calc.pk, traceback.format_exc()), extra=logger_extra)
 
         try:
             calc._set_state(calc_states.SUBMISSIONFAILED)
-            return True
         except ModificationNotAllowed:
-            return False
+            execlogger.debug('failed to set state of calculation<{}> to SUBMISSIONFAILED'.format(
+                calc.pk, calc_states.SUBMISSIONFAILED), extra=logger_extra)
+            pass
+
+        raise
 
     finally:
         # close the transport, but only if it was opened within this function

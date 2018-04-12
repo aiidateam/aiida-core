@@ -21,7 +21,7 @@ from aiida.utils.ascii_vis import print_tree_descending
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description')
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 LIST_CMDLINE_PROCESS_STATE_CHOICES = ([e.value for e in ProcessState])
 
@@ -118,6 +118,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': 'UUID',
         'ctime': 'Creation',
         'mtime': 'Modification',
+        'type': 'Type',
         'state': 'State',
         'process_state': 'Process state',
         'finish_status': 'Finish status',
@@ -132,6 +133,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': 'uuid',
         'ctime': 'ctime',
         'mtime': 'mtime',
+        'type': 'type',
         'process_state': PROCESS_STATE_KEY,
         'finish_status': FINISH_STATUS_KEY,
         'sealed': SEALED_KEY,
@@ -145,6 +147,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': lambda value: value['uuid'],
         'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
         'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
+        'type': lambda value: value['type'],
         'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[FINISH_STATUS_KEY]),
         'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
         'finish_status': lambda value: value[FINISH_STATUS_KEY],
@@ -474,13 +477,22 @@ def _print(body, sender, subject, correlation_id):
 
 def _build_query(projections=None, filters=None, order_by=None, limit=None, past_days=None):
     import datetime
-    from aiida.utils import timezone
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.calculation import Calculation
+    from aiida.orm.calculation.function import FunctionCalculation
     from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.utils import timezone
 
     # Define filters
     if filters is None:
         filters = {}
+
+    # Until the QueryBuilder supports passing a tuple of classes in the append method, we have to query
+    # for the base Calculation class and match the type to get all WorkCalculation AND FunctionCalculation nodes
+    filters['or'] = [
+        {'type': WorkCalculation._plugin_type_string},
+        {'type': FunctionCalculation._plugin_type_string}
+    ]
 
     if past_days is not None:
         n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
@@ -489,7 +501,7 @@ def _build_query(projections=None, filters=None, order_by=None, limit=None, past
     # Build the query
     qb = QueryBuilder()
     qb.append(
-        cls=WorkCalculation,
+        cls=Calculation,
         filters=filters,
         project=projections,
         tag='calculation'

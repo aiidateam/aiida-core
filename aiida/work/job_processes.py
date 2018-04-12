@@ -321,7 +321,7 @@ class Waiting(plumpy.Waiting):
             self._kill_future = None
 
     def finished(self, result):
-        self.transition_to(processes.ProcessState.FINISHED, result)
+        self.transition_to(processes.ProcessState.FINISHED, result, result is 0)
 
     def kill(self, msg=None):
         if self._kill_future is not None:
@@ -477,7 +477,9 @@ class JobProcess(processes.Process):
         """
         calc_state = self.calc.get_state()
 
-        if calc_state != calc_states.NEW:
+        if calc_state == calc_states.FINISHED:
+            return 0
+        elif calc_state != calc_states.NEW:
             raise exceptions.InvalidOperation(
                 'Cannot submit a calculation not in {} state (the current state is {})'.format(
                     calc_states.NEW, calc_state

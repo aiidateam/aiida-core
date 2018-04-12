@@ -22,11 +22,11 @@ case "$TEST_TYPE" in
         coverage run -a ${DATA_DIR}/test_plugin_testcase.py
 
         # Run verdi devel tests
-        verdi_path=`which verdi`
-        coverage run -a $verdi_path -p test_${TEST_AIIDA_BACKEND} devel tests
+        VERDI=`which verdi`
+        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests
 
         # Run the daemon tests using docker
-        coverage run -a ${DATA_DIR}/test_daemon.py
+        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} run ${DATA_DIR}/test_daemon.py
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

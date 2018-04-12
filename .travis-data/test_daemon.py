@@ -11,9 +11,6 @@ import os
 import subprocess
 import sys
 import time
-from aiida import load_dbenv
-profile = 'test_' + os.environ['TEST_AIIDA_BACKEND']
-load_dbenv(profile=profile)
 
 from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory, Code, load_node

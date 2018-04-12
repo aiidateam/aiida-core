@@ -142,7 +142,7 @@ def store_config(confs):
     old_umask = os.umask(DEFAULT_UMASK)
     try:
         with open(conf_file, "w") as json_file:
-            json.dump(confs, json_file)
+            json.dump(confs, json_file, indent=2)
     finally:
         os.umask(old_umask)
 

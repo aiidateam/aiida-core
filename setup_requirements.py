@@ -11,7 +11,7 @@
 install_requires = [
     'pip==9.0.1',
     'setuptools==36.6.0',
-    'reentry==1.0.2',
+    'reentry==1.1.1',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',

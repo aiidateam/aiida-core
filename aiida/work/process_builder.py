@@ -2,7 +2,6 @@
 from aiida.common.extendeddicts import AttributeDict, FixedFieldsAttributeDict
 from aiida.work.launch import run, submit
 from aiida.work.ports import PortNamespace
-from aiida.work.runners import _object_factory
 
 
 __all__ = ['ProcessBuilder', 'ProcessBuilderInputDict']

@@ -3,9 +3,8 @@ from contextlib import contextmanager
 import inspect
 import logging
 import plumpy
-import plumpy.rmq
 
-import aiida.orm
+from aiida.orm import load_node, load_workflow
 from . import class_loader
 from . import futures
 from . import persistence
@@ -13,9 +12,7 @@ from . import rmq
 from . import transports
 from . import utils
 
-__all__ = ['Runner', 'DaemonRunner', 'new_daemon_runner', 'new_runner', 'set_runner', 'get_runner']
-
-_LOGGER = logging.getLogger(__name__)
+__all__ = ['Runner', 'DaemonRunner', 'new_runner', 'set_runner', 'get_runner']
 
 ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
@@ -23,7 +20,25 @@ ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 _runner = None
 
 
+def new_runner(**kwargs):
+    """
+    Create a default runner optionally passing keyword arguments
+
+    :param kwargs: arguments to be passed to Runner constructor
+    :return: a new runner instance 
+    """
+    if 'rmq_config' not in kwargs:
+        kwargs['rmq_config'] = rmq.get_rmq_config()
+
+    return Runner(**kwargs)
+
+
 def get_runner():
+    """
+    Get the global runner instance
+
+    :returns: the global runner
+    """
     global _runner
     if _runner is None:
         _runner = new_runner()
@@ -31,71 +46,58 @@ def get_runner():
 
 
 def set_runner(runner):
+    """
+    Set the global runner instance
+
+    :param runner: the runner instance to set as the global runner
+    """
     global _runner
     _runner = runner
 
 
-def new_runner(**kwargs):
-    """ Create a default runner optionally passing keyword arguments """
-    if 'rmq_config' not in kwargs:
-        kwargs['rmq_config'] = rmq.get_rmq_config()
-    return Runner(**kwargs)
-
-
-def new_daemon_runner(rmq_prefix='aiida', rmq_create_connection=None):
-    """ Create a daemon runner """
-    runner = Runner({}, rmq_submit=False, enable_persistence=True)
-    return runner
-
-
-def convert_to_inputs(workfunction, *args, **kwargs):
+def instantiate_process(runner, process, *args, **inputs):
     """
+    Return an instance of the process with the given runner and inputs. The function can deal with various types
+    of the `process`:
+
+        * Process instance: will simply return the instance
+        * JobCalculation class: will construct the JobProcess and instantiate it
+        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
+        * Process class: will instantiate with the specified inputs
+
+    If anything else is passed, a ValueError will be raised
+
+    :param runner: instance of a Runner
+    :param process: Process instance or class, JobCalculation class or ProcessBuilder instance
+    :param inputs: the inputs for the process to be instantiated with
     """
-    arg_labels, varargs, keywords, defaults = inspect.getargspec(workfunction)
-
-    inputs = {}
-    inputs.update(kwargs)
-    inputs.update(dict(zip(arg_labels, args)))
-
-    return inputs
-
-
-def _object_factory(process_class, *args, **kwargs):
-    return process_class(*args, **kwargs)
-
-
-def _ensure_process(process, runner, input_args, input_kwargs, *args, **kwargs):
-    """
-    Take a process class, a process instance or a workfunction along with
-    arguments and return a process instance
-    """
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.work.process_builder import ProcessBuilder
     from aiida.work.processes import Process
+
     if isinstance(process, Process):
-        assert len(input_args) == 0
-        assert len(input_kwargs) == 0
+        assert len(args) == 0
+        assert len(inputs) == 0
         return process
 
-    return _create_process(process, runner, input_args, input_kwargs, *args, **kwargs)
-
-
-def _create_process(process, runner, input_args=(), input_kwargs={}, *args, **kwargs):
-    """ Create a process instance from a process class or workfunction """
-    inputs = _create_inputs_dictionary(process, *input_args, **input_kwargs)
-    return _object_factory(process, runner=runner, inputs=inputs, *args, **kwargs)
-
-
-def _create_inputs_dictionary(process, *args, **kwargs):
-    """ Create an inputs dictionary for a process or workfunction """
-    if utils.is_workfunction(process):
-        inputs = convert_to_inputs(process, *args, **kwargs)
+    if isinstance(process, ProcessBuilder):
+        builder = process
+        process_class = builder._process_class
+        inputs.update(builder._todict())
+    elif issubclass(process, JobCalculation):
+        process_class = process.process()
+    elif issubclass(process, Process):
+        process_class = process
     else:
-        inputs = kwargs
-        assert len(args) == 0, "Processes do not take positional arguments"
+        raise ValueError('invalid process {}, needs to be Process, JobCalculation or ProcessBuilder'.format(type(process)))
 
-    return inputs
+    process = process_class(runner=runner, inputs=inputs)
+
+    return process
 
 
 class Runner(object):
+
     _persister = None
     _rmq_connector = None
     _communicator = None
@@ -104,17 +106,17 @@ class Runner(object):
                  rmq_submit=False, enable_persistence=True, persister=None):
         self._loop = loop if loop is not None else plumpy.new_event_loop()
         self._poll_interval = poll_interval
-
+        self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
 
         if enable_persistence:
             self._persister = persister if persister is not None else persistence.AiiDAPersister()
 
-        self._rmq_submit = rmq_submit
         if rmq_config is not None:
             self._setup_rmq(**rmq_config)
         elif self._rmq_submit:
-            _LOGGER.warning('Disabling rmq submission, no RMQ config provided')
+            logger = logging.getLogger(__name__)
+            logger.warning('Disabling rmq submission, no RMQ config provided')
             self._rmq_submit = False
 
         # Save kwargs for creating child runners
@@ -168,7 +170,7 @@ class Runner(object):
         if self._rmq_connector is not None:
             self._rmq_connector.disconnect()
 
-    def submit(self, process_class, *args, **inputs):
+    def submit(self, process, *args, **inputs):
         """
         Submit the process with the supplied inputs to this runner immediately returning control to
         the interpreter. The return value will be the calculation node of the submitted process
@@ -177,10 +179,9 @@ class Runner(object):
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_workfunction(process_class), 'Cannot submit a workfunction'
+        assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
 
-        process_class, inputs = _expand_builder(process_class, inputs)
-        process = _create_process(process_class, self, input_args=args, input_kwargs=inputs)
+        process = instantiate_process(self, process, *args, **inputs)
 
         if self._rmq_submit:
             self.persister.save_checkpoint(process)
@@ -201,15 +202,14 @@ class Runner(object):
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and the calculation node
         """
-        process, inputs = _expand_builder(process, inputs)
-
         if utils.is_workfunction(process):
             result, node = process.run_get_node(*args, **inputs)
             return result, node
-        else:
-            with self.child_runner() as runner:
-                process = _ensure_process(process, runner, input_args=args, input_kwargs=inputs)
-                return process.execute(), process.calc
+
+
+        with self.child_runner() as runner:
+            process = instantiate_process(runner, process, *args, **inputs)
+            return process.execute(), process.calc
 
     def run(self, process, *args, **inputs):
         """
@@ -248,11 +248,11 @@ class Runner(object):
         return ResultAndPid(result, node.pk)
 
     def call_on_legacy_workflow_finish(self, pk, callback):
-        legacy_wf = aiida.orm.load_workflow(pk=pk)
+        legacy_wf = load_workflow(pk=pk)
         self._poll_legacy_wf(legacy_wf, callback)
 
     def call_on_calculation_finish(self, pk, callback):
-        calc_node = aiida.orm.load_node(pk=pk)
+        calc_node = load_node(pk=pk)
         self._poll_calculation(calc_node, callback)
 
     def get_calculation_future(self, pk):
@@ -310,7 +310,9 @@ class Runner(object):
 
 
 class DaemonRunner(Runner):
-    """ Overwrites some of the behaviour of a runner to be daemon specific"""
+    """
+    A sub class of Runner suited for a daemon runner
+    """
 
     def __init__(self, *args, **kwargs):
         kwargs['rmq_submit'] = True
@@ -330,13 +332,3 @@ class DaemonRunner(Runner):
             class_loader=class_loader.CLASS_LOADER
         )
         self.communicator.add_task_subscriber(task_receiver)
-
-def _expand_builder(process_class_or_builder, inputs):
-    from aiida.work.process_builder import ProcessBuilder
-    if not isinstance(process_class_or_builder, ProcessBuilder):
-        return process_class_or_builder, inputs
-    else:
-        builder = process_class_or_builder
-        process_class = builder._process_class
-        inputs.update(builder._todict())
-        return process_class, inputs

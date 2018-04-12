@@ -67,9 +67,10 @@ class TestGroupsSqla(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.user import get_automatic_user
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         g1 = Group(name='testquery1').store()
         self.addCleanup(g1.delete)
@@ -118,7 +119,7 @@ class TestGroupsSqla(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=get_automatic_user())
+        res = Group.query(user=backend.users.get_automatic_user())
 
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 

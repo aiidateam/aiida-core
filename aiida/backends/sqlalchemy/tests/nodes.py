@@ -289,12 +289,11 @@ class TestNodeBasicSQLA(AiidaTestCase):
         """
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.common.utils import get_new_uuid
-        from aiida.orm import get_automatic_user
         from aiida.orm.implementation.sqlalchemy import user as users
         import aiida.backends.sqlalchemy
 
         # Get the automatic user
-        dbuser = users._get_db_user(get_automatic_user())
+        dbuser = self.backend.users.get_automatic_user()._dbuser
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, type=None)
@@ -317,7 +316,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
                                       "UUID in the session/DB.")
 
         # Get the automatic user
-        dbuser = users._get_db_user(get_automatic_user())
+        dbuser = self.backend.users.get_automatic_user()._dbuser
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=dbuser, uuid=node_uuid, type=None)

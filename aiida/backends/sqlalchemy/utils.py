@@ -99,25 +99,6 @@ def _load_dbenv_noschemacheck(profile=None, connection=None):
 _aiida_autouser_cache = None
 
 
-def get_automatic_user():
-    # global _aiida_autouser_cache
-
-    # if _aiida_autouser_cache is not None:
-    #     return _aiida_autouser_cache
-
-    from aiida.backends.sqlalchemy.models.user import DbUser
-    from aiida.common.utils import get_configured_user_email
-
-    email = get_configured_user_email()
-
-    _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
-
-    if not _aiida_autouser_cache:
-        raise ConfigurationError("No aiida user with email {}".format(email))
-    return _aiida_autouser_cache
-
-
-
 def dumps_json(d):
     """
     Transforms all datetime object into isoformat and then returns the JSON

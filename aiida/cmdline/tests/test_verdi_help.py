@@ -19,6 +19,7 @@ class VerdiHelpTest(unittest.TestCase):
     """Make sure fixed bugs stay fixed"""
 
     def setUp(self):
+        super(VerdiHelpTest, self).setUp()
         self.help_cmd = Help()
 
     def test_verdi_help_full_string(self):
@@ -29,7 +30,7 @@ class VerdiHelpTest(unittest.TestCase):
         of non-click commands
         """
         self.assertFalse(hasattr(Import, '_ctx'), 'This test must use a non-click verdi subcommand')
-        fail_msg = ('Has the docstring for ``verdi import`` changed? ' 'If not, this is a regression of #700')
+        fail_msg = 'Has the docstring for ``verdi import`` changed? ' 'If not, this is a regression of #700'
         with captured_output() as (out, _):
             try:
                 self.help_cmd.run()

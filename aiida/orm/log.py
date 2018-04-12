@@ -18,6 +18,11 @@ OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 
 class Log(object):
+    """
+    This class represents the collection of logs and can be used to create
+    and retrieve logs.
+    """
+
     __metaclass__ = ABCMeta
 
     @abstractmethod

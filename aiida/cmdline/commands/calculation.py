@@ -739,11 +739,10 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.backends.utils import get_automatic_user
         from aiida.orm.authinfo import AuthInfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
-        from aiida.orm.user import User as OrmUser
+        from aiida.orm.user import AbstractUser as OrmUser
         from aiida.orm.calculation import Calculation as OrmCalculation
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.utils import timezone

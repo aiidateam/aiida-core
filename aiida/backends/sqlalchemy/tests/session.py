@@ -58,13 +58,12 @@ class TestSessionSqla(AiidaTestCase):
         """
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         self.set_connection(expire_on_commit=True)
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = User(email=get_configured_user_email())
+        user = self.backend.users.create(email=get_configured_user_email())
         session.add(user._dbuser)
         session.commit()
 
@@ -92,13 +91,12 @@ class TestSessionSqla(AiidaTestCase):
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         self.set_connection(expire_on_commit=True)
 
-        user = User(email=get_configured_user_email())
+        user = self.backend.users.create(email=get_configured_user_email())
         session.add(user._dbuser)
         session.commit()
 
@@ -123,13 +121,12 @@ class TestSessionSqla(AiidaTestCase):
         """
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         self.set_connection(expire_on_commit=False)
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = User(email=get_configured_user_email())
+        user = self.backend.users.create(email=get_configured_user_email())
         session.add(user._dbuser)
         session.commit()
 
@@ -158,11 +155,10 @@ class TestSessionSqla(AiidaTestCase):
 
         from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
-        from aiida.orm.implementation.sqlalchemy.user import User
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = User(email=get_configured_user_email())
+        user = self.backend.users.create(email=get_configured_user_email())
         session.add(user._dbuser)
         session.commit()
 

@@ -19,6 +19,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
 from aiida.orm.implementation.django.node import Node
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.common.utils import type_check
 
 from . import user as users
 
@@ -26,6 +27,10 @@ from . import user as users
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
@@ -44,8 +49,6 @@ class Group(AbstractGroup):
 
             self._dbgroup = dbgroup
         else:
-            from aiida.orm import get_automatic_user
-
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
@@ -53,12 +56,11 @@ class Group(AbstractGroup):
             group_type = kwargs.pop('type_string', "")  # By default, a user group
 
             # Get the user and extract dbuser instance
-            user = kwargs.pop('user', get_automatic_user())
-            user = users._get_db_user(user)
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
 
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+                                    user=user._dbuser, type=group_type)
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
@@ -110,18 +112,12 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return users.User.from_dbmodel(self._dbgroup.user)
+        return self._backend.users._from_dbmodel(self._dbgroup.user)
 
     @user.setter
     def user(self, new_user):
-        import aiida.orm as orm
-
-        if not isinstance(new_user, orm.User):
-            raise TypeError("Expecting User, got '{}'".format(type(new_user)))
-        backend_user = new_user._impl
-        if not isinstance(backend_user, users.User):
-            raise TypeError("Expected Django user, got '{}'".format(new_user))
-        self._dbgroup.user = backend_user._dbuser
+        type_check(new_user, users.DjangoUser)
+        self._dbgroup.user = new_user._dbuser
 
     @property
     def dbgroup(self):
@@ -153,11 +149,17 @@ class Group(AbstractGroup):
         if not self.is_stored:
             try:
                 with transaction.atomic():
+                    if self.user is not None and not self.user.is_stored:
+                        self.user.store()
+                        # We now have to reset the model's user entry because
+                        # django will have assigned the user an ID but this
+                        # is not automatically propagated to us
+                        self.dbgroup.user = self.user._dbuser
                     self.dbgroup.save()
-            except IntegrityError:
-                raise UniquenessError("A group with the same name (and of the "
-                                      "same type) already "
-                                      "exists, unable to store")
+            except IntegrityError as e:
+                raise UniquenessError(
+                    "A group with the same name (and of the "
+                    "same type) already exists, unable to store")
 
         # To allow to do directly g = Group(...).store()
         return self

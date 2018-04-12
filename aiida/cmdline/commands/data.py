@@ -110,14 +110,17 @@ class Listable(object):
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.implementation import Group
-        from aiida.orm.user import get_automatic_user, User
+        from aiida.orm.user import AbstractUser
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         qb = QueryBuilder()
         if args.all_users is False:
-            user = get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            user = backend.users.get_automatic_user()
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         data_filters = dict()
         self.query_past_days(data_filters, args)
@@ -1081,6 +1084,8 @@ class _Structure(VerdiCommandWithSubcommands,
             load_dbenv()
         from aiida.orm.data.structure import StructureData
 
+        super(_Structure, self).__init__()
+        
         self.dataclass = StructureData
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
@@ -1101,14 +1106,14 @@ class _Structure(VerdiCommandWithSubcommands,
         from aiida.orm.data.structure import StructureData
         from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.user import User, get_automatic_user
+        from aiida.orm.user import AbstractUser
 
         qb = QueryBuilder()
         if args.all_users is False:
-            user = get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            user = self.backend.users.get_automatic_user()
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         st_data_filters = {}
         self.query_past_days(st_data_filters, args)
@@ -1528,6 +1533,7 @@ class _Cif(VerdiCommandWithSubcommands,
         if not is_dbenv_loaded():
             load_dbenv()
         from aiida.orm.data.cif import CifData
+        super(_Cif, self).__init__()
 
         self.dataclass = CifData
         self.valid_subcommands = {
@@ -1602,14 +1608,14 @@ class _Cif(VerdiCommandWithSubcommands,
 
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.implementation import Group
-        from aiida.orm.user import User, get_automatic_user
+        from aiida.orm.user import AbstractUser
 
         qb = QueryBuilder()
         if args.all_users is False:
-            user = get_automatic_user()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            user = self.backend.users.get_automatic_user()
+            qb.append(AbstractUser, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(AbstractUser, tag="creator")
 
         st_data_filters = {}
         self.query_past_days(st_data_filters, args)

@@ -60,11 +60,11 @@ class TestGroupsDjango(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_automatic_user
 
         g1 = Group(name='testquery1').store()
+        self.addCleanup(g1.delete)
         g2 = Group(name='testquery2').store()
+        self.addCleanup(g2.delete)
 
         n1 = Node().store()
         n2 = Node().store()
@@ -74,7 +74,7 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser.objects.create_user(email='test@email.xx', password='').get_aiida_class()
+        newuser = self.backend.users.create(email='test@email.xx')
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -108,12 +108,8 @@ class TestGroupsDjango(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=get_automatic_user())
+        res = Group.query(user=self.backend.users.get_automatic_user())
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
-
-        # Final cleanup
-        g1.delete()
-        g2.delete()
 
     def test_rename_existing(self):
         """

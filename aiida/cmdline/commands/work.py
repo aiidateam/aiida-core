@@ -231,12 +231,12 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         load_dbenv()
 
     import itertools
-    from aiida.orm.backend import construct
+    from aiida.orm.backend import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 
     def get_report_messages(pk, depth, levelname):
-        backend = construct()
+        backend = construct_backend()
         filters = {
             'objpk': pk,
         }

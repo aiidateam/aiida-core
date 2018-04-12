@@ -10,7 +10,6 @@
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime
-from sqlalchemy.orm import relationship
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
@@ -43,24 +42,10 @@ class DbUser(Base):
         self.institution = institution
         super(DbUser, self).__init__(**kwargs)
 
-    def get_full_name(self):
-        if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name,
-                                       self.email)
-        elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)
-        elif self.last_name:
-            return "{} ({})".format(self.last_name, self.email)
-        else:
-            return "{}".format(self.email)
-
-    def get_short_name(self):
-        return self.email
-
     def __str__(self):
         return self.email
 
     def get_aiida_class(self):
-        from aiida.orm.user import User
-        from aiida.orm.implementation.sqlalchemy.user import User as SqlaUser
-        return User.load(SqlaUser.from_dbmodel(self))
+        from aiida.orm.implementation.sqlalchemy.user import SqlaUser
+        from aiida.orm.backend import construct_backend
+        return SqlaUser._from_dbmodel(construct_backend(), self)

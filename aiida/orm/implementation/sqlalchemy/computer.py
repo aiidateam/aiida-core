@@ -159,7 +159,7 @@ class Computer(AbstractComputer):
         make_transient(newdbcomputer)
         session.add(newdbcomputer)
 
-        newobject = self.__class__(newdbcomputer)
+        newobject = self.__class__(dbcomputer=newdbcomputer)
 
         return newobject
 

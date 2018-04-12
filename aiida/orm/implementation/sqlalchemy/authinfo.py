@@ -9,6 +9,9 @@
 ###########################################################################
 from aiida.orm.implementation.general.authinfo import AbstractAuthInfo
 
+from . import user as users
+
+
 class AuthInfo(AbstractAuthInfo):
     """
     AuthInfo implementation for SQLAlchemy
@@ -22,13 +25,15 @@ class AuthInfo(AbstractAuthInfo):
         """
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
         from aiida.orm.computer import Computer
-        from aiida.orm.user import User
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
 
         try:
             self._dbauthinfo = kwargs.pop('dbauthinfo')
             if not isinstance(self._dbauthinfo, DbAuthInfo):
                 raise TypeError("Expected a DbAuthInfo. Object of a different"
-                                 "class was given as argument.")
+                                "class was given as argument.")
             if kwargs:
                 raise ValueError("If you pass a dbauthinfo parameter, "
                                  "you cannot pass any further parameter")
@@ -48,8 +53,7 @@ class AuthInfo(AbstractAuthInfo):
             # Takes care of always getting a Computer instance from a DbComputer, Computer or string
             dbcomputer = Computer.get(computer).dbcomputer
             # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
-            dbuser = User.get(email=user.email).dbuser
-
+            dbuser = self._backend.users.get(email=user.email)._dbuser
             self._dbauthinfo = DbAuthInfo(dbcomputer=dbcomputer, aiidauser=dbuser)
 
     @property

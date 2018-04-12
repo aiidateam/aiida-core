@@ -473,7 +473,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
-        from aiida.orm.user import User
         from aiida.common.utils import get_configured_user_email
 
         # Creating a folder for the import/export files
@@ -481,8 +480,8 @@ class TestSimple(AiidaTestCase):
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = User(email=new_email)
-            user.force_save()
+            user = self.backend.users.create(email=new_email)
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -558,15 +557,14 @@ class TestSimple(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
         from aiida.common.utils import get_configured_user_email
-        from aiida.orm.user import User
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = User(email=new_email)
-            user.force_save()
+            user = self.backend.users.create(email=new_email)
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -662,8 +660,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
-        from aiida.orm.user import User
-        from aiida.orm.node import Node
         from aiida.orm.querybuilder import QueryBuilder
 
         # Creating a folder for the import/export files
@@ -671,8 +667,8 @@ class TestSimple(AiidaTestCase):
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = User(email=new_email)
-            user.force_save()
+            user = self.backend.users.create(email=new_email)
+            user.store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -727,6 +723,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.exceptions import NotExistent
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
+
         @workfunction
         def add(a, b):
             """Add 2 numbers"""

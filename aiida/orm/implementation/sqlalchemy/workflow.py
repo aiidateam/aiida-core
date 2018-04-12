@@ -13,9 +13,7 @@ import inspect
 import logging
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
-from aiida.backends.utils import get_automatic_user
 from aiida.common import aiidalogger
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call)
@@ -49,6 +47,9 @@ class Workflow(AbstractWorkflow):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
 
         self._to_be_stored = True
 
@@ -115,9 +116,11 @@ class Workflow(AbstractWorkflow):
                 if isinstance(params, dict):
                     self.set_params(params)
 
+            user = self._backend.users.get_automatic_user()
+
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
+            self._dbworkflowinstance = DbWorkflow(user=user._dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -462,7 +465,8 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         step_list = self.dbworkflowinstance.steps
-        step = [_ for _ in step_list if _.name == step_method_name and _.user == get_automatic_user()]
+        automatic_user = self._backend.users.get_automatic_user()
+        step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user._dbuser]
         try:
             return step[0]
         except IndexError:
@@ -591,20 +595,20 @@ class Workflow(AbstractWorkflow):
         # This function gets called only if the method is launched with the execution brackets ()
         # Otherwise, when the method is addressed in a next() call this never gets called and only the
         # attributes are added
-        def wrapper(cls, *args, **kwargs):
+        def wrapper(self, *args, **kwargs):
             # Store the workflow at the first step executed
-            if cls._to_be_stored:
-                cls.store()
+            if self._to_be_stored:
+                self.store()
 
             if len(args) > 0:
                 raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
 
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
-            if cls.has_step(wrapped_method) and \
-                    not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                         cls.get_step(wrapped_method).state == wf_states.SLEEP or \
-                         cls.get_step(wrapped_method).nextcall == wf_default_call or \
-                         cls.get_step(wrapped_method).nextcall == wrapped_method \
+            if self.has_step(wrapped_method) and \
+                    not (self.get_step(wrapped_method).state == wf_states.ERROR or \
+                         self.get_step(wrapped_method).state == wf_states.SLEEP or \
+                         self.get_step(wrapped_method).nextcall == wf_default_call or \
+                         self.get_step(wrapped_method).nextcall == wrapped_method \
                             # cls.has_step(wrapped_method) \
                     ):
                 raise AiidaException(
@@ -612,31 +616,32 @@ class Workflow(AbstractWorkflow):
                         wrapped_method))
 
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
-            if cls.has_step(wrapped_method) and \
-                    (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                     cls.get_step(wrapped_method).state == wf_states.SLEEP):
+            if self.has_step(wrapped_method) and \
+                    (self.get_step(wrapped_method).state == wf_states.ERROR or \
+                     self.get_step(wrapped_method).state == wf_states.SLEEP):
 
-                for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
-                cls.get_step(wrapped_method).remove_sub_workflows()
+                for w in self.get_step(wrapped_method).get_sub_workflows(): w.kill()
+                self.get_step(wrapped_method).remove_sub_workflows()
 
-                for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
-                cls.get_step(wrapped_method).remove_calculations()
+                for c in self.get_step(wrapped_method).get_calculations(): c.kill()
+                self.get_step(wrapped_method).remove_calculations()
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            method_step, created = cls.dbworkflowinstance._get_or_create_step(name=wrapped_method,
-                                                                              user=get_automatic_user())
+            user = self._backend.users.get_automatic_user()
+            method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
+                                                                               user=user._dbuser)
 
             try:
-                fun(cls)
+                fun(self)
             except:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                cls.append_to_report(
+                self.append_to_report(
                     "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
                         wrapped_method))
-                cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
+                self.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
-                cls.set_state(wf_states.ERROR)
+                self.set_state(wf_states.ERROR)
             return None
 
         out = wrapper
@@ -698,8 +703,10 @@ class Workflow(AbstractWorkflow):
         # with particular filters, in order to avoid repetition of all the code
         # arround
 
+        automatic_user = self._backend.users.get_automatic_user()
+
         # Retrieve the caller method
-        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=get_automatic_user())
+        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user._dbuser)
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -725,8 +732,11 @@ class Workflow(AbstractWorkflow):
 
 
 def kill_all():
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+    automatic_user = backend.users.get_automatic_user()
     w_list = DbWorkflow.query.filter(
-        DbWorkflow.user == get_automatic_user(),
+        DbWorkflow.user == automatic_user._dbuser,
         DbWorkflow.state != wf_states.FINISHED
     ).all()
 

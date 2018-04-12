@@ -271,12 +271,11 @@ class TestVerdiWorkCommands(AiidaTestCase):
 # pylint: disable=no-self-use
 class TestVerdiUserCommands(AiidaTestCase):
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUp(self):
         """
         Create a user
         """
-        super(TestVerdiUserCommands, cls).setUpClass()
+        super(TestVerdiUserCommands, self).setUp()
 
         # Setup user #1
         from aiida.cmdline.commands.user import do_configure
@@ -284,11 +283,13 @@ class TestVerdiUserCommands(AiidaTestCase):
         with mock.patch('__builtin__.raw_input', side_effect=computer_setup_input_1):
             with Capturing():
                 do_configure(
+                    self.backend,
                     user_1['email'],
                     user_1['first_name'],
                     user_1['last_name'],
                     user_1['institution'],
                     no_password=True,
+                    non_interactive=True,
                     force_reconfigure=True)
 
     def test_user_list(self):
@@ -324,7 +325,6 @@ class TestVerdiUserCommands(AiidaTestCase):
 
 
 class TestVerdiDataCommands(AiidaTestCase):
-
     cmd_to_nodeid_map = dict()
     cmd_to_nodeid_map_for_groups = dict()
     cmd_to_nodeid_map_for_nuser = dict()
@@ -528,7 +528,7 @@ class TestVerdiDataCommands(AiidaTestCase):
         # Create a StructureData node belonging to another user
         s3 = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
         s3.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'], weights=(1., 0.), name='mytype')
-        s3.dbnode.user = new_user._dbuser
+        s3.set_user(new_user)
         s3.store()
 
         # Put it is to the right map
@@ -541,13 +541,12 @@ class TestVerdiDataCommands(AiidaTestCase):
         """
         super(TestVerdiDataCommands, cls).setUpClass()
 
-        from aiida.orm.user import User
         from aiida.orm.group import Group
 
         # Create a secondary user
         new_email = "newuser@new.n"
-        new_user = User(email=new_email)
-        new_user.force_save()
+        new_user = cls.backend.users.create(email=new_email)
+        new_user.store()
 
         # Create a group to add specific data inside
         g1 = Group(name=cls.group_name)
@@ -687,9 +686,11 @@ class TestVerdiDataRemoteCommands(AiidaTestCase):
         """
         from aiida.orm import Computer
         from aiida.cmdline.commands.computer import Computer as ComputerCmd
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
         super(TestVerdiDataRemoteCommands, cls).setUpClass()
+
+        backend = construct_backend()
 
         cls.computer_name = 'test_remote_ls'
         cls.new_comp = Computer(
@@ -706,7 +707,7 @@ class TestVerdiDataRemoteCommands(AiidaTestCase):
             ComputerCmd().run('configure', cls.computer_name)
 
         assert cls.new_comp.is_user_configured(
-            get_automatic_user()), "There was a problem configuring the test computer"
+            backend.users.get_automatic_user()), "There was a problem configuring the test computer"
 
     def test_remote_ls(self):
         """
@@ -718,7 +719,6 @@ class TestVerdiDataRemoteCommands(AiidaTestCase):
         from aiida.common.folders import SandboxFolder
 
         with SandboxFolder() as folder:
-
             files = {'test1.txt': 'the_content_1', 'test2.txt': 'the_content_2'}
             for fname, content in files.items():
                 with open(os.path.join(folder.abspath, fname), 'w') as f:
@@ -783,10 +783,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         from aiida.orm import Computer
         from aiida.cmdline.commands.computer import Computer as ComputerCmd
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
         super(TestVerdiComputerCommands, cls).setUpClass()
 
+        backend = construct_backend()
         cls.computer_name = 'test_computer'
         cls.new_comp = Computer(
             name=cls.computer_name,
@@ -802,7 +803,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
             ComputerCmd().run('configure', cls.computer_name)
 
         assert cls.new_comp.is_user_configured(
-            get_automatic_user()), "There was a problem configuring the test computer"
+            backend.users.get_automatic_user()), "There was a problem configuring the test computer"
 
     def test_computer_test(self):
         """
@@ -826,9 +827,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         Check if the computer enable/disable works
         """
         from aiida.cmdline.commands.computer import Computer as ComputerCmd
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
-        user = get_automatic_user()
+        backend = construct_backend()
+
+        user = backend.users.get_automatic_user()
         self.assertTrue(self.new_comp.is_enabled())
         self.assertTrue(self.new_comp.is_user_enabled(user))
 

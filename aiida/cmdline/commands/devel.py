@@ -98,6 +98,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends.tests import get_db_test_names
         from aiida.backends import settings
 
+        load_dbenv()
         db_test_list = get_db_test_names()
 
         super(Devel, self).__init__(*args, **kwargs)

@@ -8,10 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
+REENTRY_PINNED = 'reentry == 1.1.2'
+
 install_requires = [
     'pip==9.0.1',
     'setuptools==36.6.0',
-    'reentry==1.0.2',
+    REENTRY_PINNED,
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
@@ -71,7 +73,7 @@ install_requires = [
 
 extras_require = {
     # Requirements for Python 2 only
-    ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
+    ':python_version < "3"': ['chainmap', 'singledispatch >= 3.4.0.3'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
@@ -115,7 +117,7 @@ extras_require = {
         'pymatgen==4.5.3',  # support for NWChem I/O
         'ase==3.12.0',  # support for crystal structure manipulation
         'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==4.2.1', # support for the AiiDA CifData class
+        'PyCifRW==4.2.1',
         'seekpath==1.8.0',
         'qe-tools==1.1.0',
     ],

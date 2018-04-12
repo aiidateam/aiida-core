@@ -220,11 +220,8 @@ class Group(VerdiCommandWithSubcommands):
                 if parsed_args.uuid:
                     row.append(n.uuid)
                 row.append(n.pk)
-                row.append(from_type_to_pluginclassname(n.dbnode.type).
-                           rsplit(".", 1)[1])
-
-                row.append(str_timedelta(now - n.ctime, short=True,
-                                         negative_to_zero=True))
+                row.append(from_type_to_pluginclassname(n.type).rsplit(".", 1)[1])
+                row.append(str_timedelta(now - n.ctime, short=True, negative_to_zero=True))
                 table.append(row)
             print(tabulate(table, headers=header))
 

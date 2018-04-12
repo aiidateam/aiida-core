@@ -52,7 +52,7 @@ class KpointsData(ArrayData):
             try:
                 return '(Path of {} kpts)'.format(len(self.get_kpoints()))
             except OSError:
-                return self.dbnode.type
+                return self.type
 
     @property
     def cell(self):

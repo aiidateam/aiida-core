@@ -249,7 +249,7 @@ class DbWorkflowData(Base):
                     raise ValueError("Cannot add an unstored node as an "
                                      "attribute of a Workflow!")
                 sess = get_scoped_session()
-                self.aiida_obj = sess.merge(arg.dbnode, load=True)
+                self.aiida_obj = sess.merge(arg._dbnode, load=True)
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()
             else:
@@ -325,7 +325,7 @@ class DbWorkflowStep(Base):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
-            self.calculations.append(step_calculation.dbnode)
+            self.calculations.append(step_calculation._dbnode)
         except:
             raise ValueError("Error adding calculation to step")
 

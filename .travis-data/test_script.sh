@@ -12,18 +12,22 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
+        DATA_DIR=${TRAVIS_BUILD_DIR}/.travis-data
         # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
-        export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data
+        export PYTHONPATH=${PYTHONPATH}:${DATA_DIR}
 
-        # Run the AiiDA tests
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_setup.py
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_fixtures.py
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_plugin_testcase.py
+        # Run preliminary tests
+        coverage run -a ${DATA_DIR}/test_setup.py
+        coverage run -a ${DATA_DIR}/test_fixtures.py
+        coverage run -a ${DATA_DIR}/test_plugin_testcase.py
 
-        verdi -p test_$TEST_AIIDA_BACKEND devel tests
+        # Run verdi devel tests
+        VERDI=`which verdi`
+        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests
 
         # Run the daemon tests using docker
-        verdi -p $TEST_AIIDA_BACKEND run ${TRAVIS_BUILD_DIR}/.travis-data/test_daemon.py
+        # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run ${DATA_DIR}/test_daemon.py
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

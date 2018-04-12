@@ -7,15 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.implementation import DjangoAuthInfo
 import abc
 
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
 
+__all__ = ['AuthInfo', 'AuthInfoCollection']
 
-class AbstractAuthInfoCollection(object):
+
+class AuthInfoCollection(object):
     __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def create(self, computer, user):
+        """
+        Create a AuthInfo given a computer and a user
+
+        :param computer: A Computer or DbComputer instance
+        :param user: A User or DbUser instance
+        :return: a AuthInfo object associated to the given computer and User
+        """
+        pass
 
     @abc.abstractmethod
     def get(self, computer, user):
@@ -32,7 +44,7 @@ class AbstractAuthInfoCollection(object):
         pass
 
 
-class AbstractAuthInfo(object):
+class AuthInfo(object):
     """
     Base class to map a DbAuthInfo, that contains computer configuration
     specific to a given user (authorization info and other metadata, like
@@ -47,7 +59,6 @@ class AbstractAuthInfo(object):
     def backend(self):
         return self._backend
 
-    @abc.abstractproperty
     def pk(self):
         """
         Return the principal key in the DB.
@@ -124,20 +135,24 @@ class AbstractAuthInfo(object):
         pass
 
     @abc.abstractmethod
+    def set_metadata(self, metadata):
+        """
+        Replace the metadata dictionary in the DB with the provided dictionary
+        """
+        pass
+
     def get_workdir(self):
         """
         Get the workdir; defaults to the value of the corresponding computer, if not explicitly set
 
         :return: a string
         """
-        pass
+        metadata = self.get_metadata()
 
-    @abc.abstractmethod
-    def set_metadata(self, metadata):
-        """
-        Replace the metadata dictionary in the DB with the provided dictionary
-        """
-        pass
+        try:
+            return metadata['workdir']
+        except KeyError:
+            return self.computer.get_workdir()
 
     def __str__(self):
         if self.enabled:

@@ -50,35 +50,6 @@ class DbAuthInfo(Base):
         self.auth_params = dict()
         super(DbAuthInfo, self).__init__(*args, **kwargs)
 
-    def get_auth_params(self):
-        return self.auth_params
-
-    def set_auth_params(self, auth_params):
-        flag_modified(self, "auth_params")
-        self.auth_params = auth_params
-
-    def get_metadata(self):
-        """
-        Get the metadata dictionary from the DB
-
-        :return: a dictionary
-        """
-        return self._metadata
-
-    def set_metadata(self, metadata):
-        """
-        Replace the metadata dictionary in the DB with the provided dictionary
-        """
-        self._metadata = metadata
-        flag_modified(self, "_metadata")
-
-    def get_workdir(self):
-        try:
-            return self._metadata['workdir']
-        except KeyError:
-            return self.dbcomputer.get_workdir()
-
-
     def __str__(self):
         if self.enabled:
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)

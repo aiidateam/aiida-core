@@ -8,14 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.backend import Backend
-from aiida.orm.implementation.django.log import DjangoLog
-from aiida.orm.implementation.django.user import DjangoUserCollection
+
+from . import authinfo
+from . import log
+from . import user
 
 
 class DjangoBackend(Backend):
     def __init__(self):
-        self._log = DjangoLog()
-        self._users = DjangoUserCollection()
+        self._log = log.DjangoLog()
+        self._users = user.DjangoUserCollection()
+        self._authinfos = authinfo.DjangoAuthInfoCollection()
 
     @property
     def log(self):
@@ -24,3 +27,7 @@ class DjangoBackend(Backend):
     @property
     def users(self):
         return self._users
+
+    @property
+    def authinfos(self):
+        return self._authinfos

@@ -60,7 +60,7 @@ class Group(AbstractGroup):
 
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user._dbuser, type=group_type)
+                                    user=user.dbuser, type=group_type)
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
@@ -117,7 +117,7 @@ class Group(AbstractGroup):
     @user.setter
     def user(self, new_user):
         type_check(new_user, users.DjangoUser)
-        self._dbgroup.user = new_user._dbuser
+        self._dbgroup.user = new_user.dbuser
 
     @property
     def dbgroup(self):
@@ -154,7 +154,7 @@ class Group(AbstractGroup):
                         # We now have to reset the model's user entry because
                         # django will have assigned the user an ID but this
                         # is not automatically propagated to us
-                        self.dbgroup.user = self.user._dbuser
+                        self.dbgroup.user = self.user.dbuser
                     self.dbgroup.save()
             except IntegrityError:
                 raise UniquenessError(

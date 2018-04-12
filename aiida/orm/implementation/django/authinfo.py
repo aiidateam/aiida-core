@@ -7,15 +7,29 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import json
+
 from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
-from aiida.orm.authinfo import AbstractAuthInfo, AbstractAuthInfoCollection
-from aiida.common.exceptions import ConfigurationError, NotExistent
+from aiida.orm.authinfo import AuthInfo, AuthInfoCollection
+from aiida.common import exceptions
 from aiida.common.utils import type_check
 
+from . import computer as computers
 from . import user as users
+from . import utils
 
 
-class DjangoAuthInfoCollection(AbstractAuthInfoCollection):
+class DjangoAuthInfoCollection(AuthInfoCollection):
+
+    def create(self, computer, user):
+        """
+        Create a AuthInfo given a computer and a user
+
+        :param computer: A Computer or DbComputer instance
+        :param user: A User or DbUser instance
+        :return: a AuthInfo object associated to the given computer and User
+        """
+        return DjangoAuthInfo(self, computer, user)
 
     def get(self, computer, user):
         """
@@ -40,37 +54,36 @@ class DjangoAuthInfoCollection(AbstractAuthInfoCollection):
 
             return self._from_dbmodel(authinfo)
         except ObjectDoesNotExist:
-            raise NotExistent(
+            raise exceptions.NotExistent(
                 "The aiida user {} is not configured to use computer {}".format(
                     user.email, computer.name))
         except MultipleObjectsReturned:
-            raise ConfigurationError(
+            raise exceptions.ConfigurationError(
                 "The aiida user {} is configured more than once to use "
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
 
     def _from_dbmodel(self, dbmodel):
-        type_check(dbmodel, DbAuthInfo)
         return DjangoAuthInfo._from_dbmodel(self, dbmodel)
 
 
-class DjangoAuthInfo(AbstractAuthInfo):
+class DjangoAuthInfo(AuthInfo):
     """
     AuthInfo implementation for Django
     """
 
     @classmethod
     def _from_dbmodel(cls, backend, dbmodel):
-        authinfo = cls.__new__()
-        super(DjangoAuthInfo, authinfo)._from_dbmodel(backend)
-        authinfo._dbauthinfo = dbmodel
+        type_check(dbmodel, DbAuthInfo)
+        authinfo = cls.__new__(cls)
+        super(DjangoAuthInfo, authinfo).__init__(backend)
+        authinfo._dbauthinfo = utils.ModelWrapper(dbmodel)
         return authinfo
 
     def __init__(self, backend, computer, user):
         """
-        Set the dbauthinfo Db Instance
+        Construct a DjangoAuthInfo
 
-        :param dbauthinfo:
         """
         from aiida.orm.computer import Computer
 
@@ -79,17 +92,87 @@ class DjangoAuthInfo(AbstractAuthInfo):
 
         # Takes care of always getting a Computer instance from a DbComputer, Computer or string
         dbcomputer = Computer.get(computer).dbcomputer
-        # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
-        self._dbauthinfo = DbAuthInfo(dbcomputer=dbcomputer, aiidauser=user._dbuser)
+
+        self._dbauthinfo = utils.ModelWrapper(
+            DbAuthInfo(dbcomputer=dbcomputer, aiidauser=user.dbuser))
 
     @property
-    def to_be_stored(self):
+    def dbauthinfo(self):
+        return self._dbauthinfo._model
+
+    @property
+    def is_stored(self):
         """
         Is it already stored or not?
 
         :return: Boolean
         """
-        return (self._dbauthinfo.pk is None)
+        return self._dbauthinfo.is_saved()
+
+    @property
+    def id(self):
+        return self._dbauthinfo.id
+
+    @property
+    def enabled(self):
+        return self._dbauthinfo.enabled
+
+    @enabled.setter
+    def enabled(self, value):
+        self._dbauthinfo.enabled = value
+
+    @property
+    def computer(self):
+        return computers.Computer.get(self._dbauthinfo.dbcomputer)
+
+    @property
+    def user(self):
+        return self._backend.users._from_dbmodel(self._dbauthinfo.aiidauser)
+
+    def get_auth_params(self):
+        """
+        Get the auth_params dictionary from the DB
+
+        :return: a dictionary
+        """
+        try:
+            return json.loads(self._dbauthinfo.auth_params)
+        except ValueError:
+            email = self._dbauthinfo.aiidauser.email
+            hostname = self._dbauthinfo.dbcomputer.hostname
+            raise exceptions.DbContentError(
+                "Error while reading auth_params for dbauthinfo, aiidauser={}, computer={}".format(email, hostname))
+
+    def set_auth_params(self, auth_params):
+        """
+        Replace the auth_params dictionary in the DB with the provided dictionary
+        """
+        import json
+
+        # Raises ValueError if data is not JSON-serializable
+        self._dbauthinfo.auth_params = json.dumps(auth_params)
+
+    def get_metadata(self):
+        """
+        Get the metadata dictionary from the DB
+
+        :return: a dictionary
+        """
+        import json
+
+        try:
+            return json.loads(self._dbauthinfo.metadata)
+        except ValueError:
+            raise exceptions.DbContentError(
+                "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
+                    self.aiidauser.email, self.dbcomputer.hostname))
+
+    def set_metadata(self, metadata):
+        """
+        Replace the metadata dictionary in the DB with the provided dictionary
+        """
+        # Raises ValueError if data is not JSON-serializable
+        self._dbauthinfo.metadata = json.dumps(metadata)
 
     def store(self):
         """
@@ -97,17 +180,5 @@ class DjangoAuthInfo(AbstractAuthInfo):
 
         :return: the AuthInfo instance
         """
-        from django.db import IntegrityError, transaction
-
-        try:
-            # transactions are needed here for Postgresql:
-            # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-            sid = transaction.savepoint()
-            self._dbauthinfo.save()
-            transaction.savepoint_commit(sid)
-        except IntegrityError:
-            transaction.savepoint_rollback(sid)
-            raise ValueError(
-                "Integrity error while storing the DbAuthInfo")
-
+        self._dbauthinfo.save()
         return self

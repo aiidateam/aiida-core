@@ -15,7 +15,7 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
-from aiida.orm.user import AbstractUser
+from aiida.orm.user import User
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -63,7 +63,7 @@ entity_names_to_entities = {
     NODE_ENTITY_NAME: Node,
     GROUP_ENTITY_NAME: Group,
     COMPUTER_ENTITY_NAME: Computer,
-    USER_ENTITY_NAME: AbstractUser
+    USER_ENTITY_NAME: User
 }
 
 

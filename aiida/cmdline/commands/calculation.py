@@ -739,10 +739,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.orm.authinfo import AuthInfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
-        from aiida.orm.user import AbstractUser as OrmUser
+        from aiida.orm.user import User as OrmUser
         from aiida.orm.calculation import Calculation as OrmCalculation
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.utils import timezone
@@ -817,9 +816,9 @@ class Calculation(VerdiCommandWithSubcommands):
         remotes = {}
         for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': AuthInfo.get(
-                computer=computer, user=user).get_transport(),
-                                      'computer': computer,
+            remotes[computer.name] = {
+                'transport': self.backend.authinfos.get(computer, user).get_transport(),
+                'computer': computer,
             }
 
             # select the calc pks done on this computer

@@ -83,11 +83,8 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
-        from aiida.orm.backend import construct_backend
 
         super(Node, self).__init__()
-
-        self._backend = construct_backend()
 
         self._temp_folder = None
 
@@ -130,7 +127,7 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = self._backend.users.get_automatic_user()
-            self._dbnode = DbNode(user=user._dbuser,
+            self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -408,7 +405,7 @@ class Node(AbstractNode):
                                          "storing the node")
 
         DbComment.objects.create(dbnode=self._dbnode,
-                                 user=user._dbuser,
+                                 user=user.dbuser,
                                  content=content)
 
     def get_comment_obj(self, id=None, user=None):
@@ -564,7 +561,7 @@ class Node(AbstractNode):
 
     def set_user(self, user):
         type_check(user, users.DjangoUser)
-        self._dbnode.user = user._dbuser
+        self._dbnode.user = user.dbuser
 
     def _store_cached_input_links(self, with_transaction=True):
         """

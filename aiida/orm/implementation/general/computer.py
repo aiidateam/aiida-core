@@ -175,9 +175,14 @@ class AbstractComputer(object):
         """
         pass
 
-    @abstractmethod
     def __init__(self, **kwargs):
-        pass
+        from aiida.orm.backend import construct_backend
+        super(AbstractComputer, self).__init__()
+        self._backend = construct_backend()
+
+    @property
+    def backend(self):
+        return self._backend
 
     @abstractmethod
     def set(self, **kwargs):
@@ -457,7 +462,6 @@ class AbstractComputer(object):
         """
         self._workdir_validator(string)
         self.set_workdir(string)
-
 
     def _get_shebang_string(self):
         return self.get_shebang()
@@ -754,7 +758,6 @@ class AbstractComputer(object):
     def is_enabled(self):
         pass
 
-
     def get_authinfo(self, user):
         """
         Return the aiida.orm.authinfo.AuthInfo instance for the
@@ -766,9 +769,7 @@ class AbstractComputer(object):
         :raise NotExistent: if the computer is not configured for the given
             user.
         """
-        from aiida.orm.authinfo import DjangoAuthInfo
-
-        return DjangoAuthInfo.get(computer=self, user=user)
+        return self.backend.authinfos.get(computer=self, user=user)
 
     def is_user_configured(self, user):
         try:

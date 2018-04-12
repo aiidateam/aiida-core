@@ -10,6 +10,7 @@ from circus.client import CircusClient
 from circus.exc import CallError
 
 from aiida.common.profile import ProfileConfig
+from aiida.common.setup import get_property
 
 
 VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
@@ -37,7 +38,12 @@ class DaemonClient(ProfileConfig):
     _DAEMON_NAME = 'aiida-{name}'
     _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
-    _SOCKET_DIRECTORY = None
+
+
+    def __init__(self, profile_name=None):
+        super(DaemonClient, self).__init__(profile_name)
+        self._SOCKET_DIRECTORY = None
+        self._DAEMON_TIMEOUT = get_property('daemon.timeout')
 
     @property
     def daemon_name(self):
@@ -279,7 +285,7 @@ class DaemonClient(ProfileConfig):
 
         :return: CircucClient instance
         """
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=3.)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
 
     def call_client(self, command):
         """

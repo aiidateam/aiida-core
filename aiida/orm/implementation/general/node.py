@@ -30,7 +30,6 @@ from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 
-
 _NO_DEFAULT = tuple()
 _HASH_EXTRA_KEY = '_aiida_hash'
 
@@ -207,6 +206,8 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
+        from aiida.orm.backend import construct_backend
+
         self._to_be_stored = True
         # Empty cache of input links in any case
         self._attrs_cache = {}
@@ -214,6 +215,8 @@ class AbstractNode(object):
 
         self._temp_folder = None
         self._repo_folder = None
+
+        self._backend = construct_backend()
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -223,6 +226,10 @@ class AbstractNode(object):
             return "uuid: {} (unstored)".format(self.uuid)
 
         return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+
+    @property
+    def backend(self):
+        return self._backend
 
     @property
     def is_stored(self):
@@ -1696,7 +1703,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-                )
+            )
             },
             self.folder,
             computer.uuid if computer is not None else None
@@ -1853,6 +1860,7 @@ class AbstractNode(object):
             process_class = getattr(module, class_name)
 
         return process_class
+
 
 # pylint: disable=too-few-public-methods
 class NodeOutputManager(object):

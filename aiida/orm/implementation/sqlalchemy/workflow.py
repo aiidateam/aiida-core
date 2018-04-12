@@ -120,7 +120,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=user._dbuser,
+            self._dbworkflowinstance = DbWorkflow(user=user.dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -466,7 +466,7 @@ class Workflow(AbstractWorkflow):
 
         step_list = self.dbworkflowinstance.steps
         automatic_user = self._backend.users.get_automatic_user()
-        step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user._dbuser]
+        step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbuser]
         try:
             return step[0]
         except IndexError:
@@ -630,7 +630,7 @@ class Workflow(AbstractWorkflow):
 
             user = self._backend.users.get_automatic_user()
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
-                                                                               user=user._dbuser)
+                                                                               user=user.dbuser)
 
             try:
                 fun(self)
@@ -706,7 +706,7 @@ class Workflow(AbstractWorkflow):
         automatic_user = self._backend.users.get_automatic_user()
 
         # Retrieve the caller method
-        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user._dbuser)
+        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbuser)
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -736,7 +736,7 @@ def kill_all():
     backend = construct_backend()
     automatic_user = backend.users.get_automatic_user()
     w_list = DbWorkflow.query.filter(
-        DbWorkflow.user == automatic_user._dbuser,
+        DbWorkflow.user == automatic_user.dbuser,
         DbWorkflow.state != wf_states.FINISHED
     ).all()
 

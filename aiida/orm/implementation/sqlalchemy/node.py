@@ -39,10 +39,8 @@ import aiida.orm.autogroup
 
 class Node(AbstractNode):
     def __init__(self, **kwargs):
-        from aiida.orm.backend import construct_backend
         super(Node, self).__init__()
 
-        self._backend = construct_backend()
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
@@ -75,7 +73,7 @@ class Node(AbstractNode):
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
-            self._dbnode = DbNode(user=user._dbuser,
+            self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -189,7 +187,7 @@ class Node(AbstractNode):
 
     def set_user(self, user):
         type_check(user, users.SqlaUser)
-        self._dbnode.user = user._dbuser
+        self._dbnode.user = user.dbuser
 
     def get_computer(self):
         """
@@ -449,7 +447,7 @@ class Node(AbstractNode):
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        comment = DbComment(dbnode=self._dbnode, user=user._dbuser, content=content)
+        comment = DbComment(dbnode=self._dbnode, user=user.dbuser, content=content)
         session.add(comment)
         try:
             session.commit()

@@ -64,7 +64,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user._dbuser)
+        session.add(user.dbuser)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -97,7 +97,7 @@ class TestSessionSqla(AiidaTestCase):
         self.set_connection(expire_on_commit=True)
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user._dbuser)
+        session.add(user.dbuser)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -127,7 +127,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user._dbuser)
+        session.add(user.dbuser)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -159,7 +159,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user._dbuser)
+        session.add(user.dbuser)
         session.commit()
 
         defaults = dict(name='localhost',

@@ -8,14 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.orm.backend import Backend
-from aiida.orm.implementation.sqlalchemy.log import SqlaLog
-from aiida.orm.implementation.sqlalchemy.user import SqlaUserCollection
+
+from . import authinfo
+from . import log
+from . import user
 
 
 class SqlaBackend(Backend):
     def __init__(self):
-        self._log = SqlaLog()
-        self._users = SqlaUserCollection()
+        self._log = log.SqlaLog()
+        self._users = user.SqlaUserCollection()
+        self._authinfos = authinfo.SqlaAuthInfoCollection()
 
     @property
     def log(self):
@@ -24,3 +27,7 @@ class SqlaBackend(Backend):
     @property
     def users(self):
         return self._users
+
+    @property
+    def authinfos(self):
+        return self._authinfos

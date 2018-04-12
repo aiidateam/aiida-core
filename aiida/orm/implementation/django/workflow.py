@@ -116,7 +116,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_automatic_user()._dbuser,
+            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_automatic_user().dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -487,7 +487,7 @@ class Workflow(AbstractWorkflow):
 
         try:
             user = self._backend.users.get_automatic_user()
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user._dbuser)
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbuser)
             return step
         except ObjectDoesNotExist:
             return None

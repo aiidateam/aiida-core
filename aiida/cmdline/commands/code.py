@@ -679,7 +679,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.code import Code
         from aiida.orm.computer import Computer
-        from aiida.orm.user import AbstractUser
+        from aiida.orm.user import User
 
         qb_user_filters = dict()
         if not all_users:
@@ -710,7 +710,7 @@ class Code(VerdiCommandWithSubcommands):
                       project=["id", "label"])
             # We have a user assigned to the code so we can ask for the
             # presence of a user even if there is no user filter
-            qb.append(AbstractUser, creator_of="code",
+            qb.append(User, creator_of="code",
                       project=["email"],
                       filters=qb_user_filters)
             # We also add the filter on computer. This will automatically
@@ -733,7 +733,7 @@ class Code(VerdiCommandWithSubcommands):
                       project=["id", "label"])
             # We have a user assigned to the code so we can ask for the
             # presence of a user even if there is no user filter
-            qb.append(AbstractUser, creator_of="code",
+            qb.append(User, creator_of="code",
                       project=["email"],
                       filters=qb_user_filters)
             qb.append(Computer, computer_of="code",
@@ -756,7 +756,7 @@ class Code(VerdiCommandWithSubcommands):
                       project=["id", "label"])
             # We have a user assigned to the code so we can ask for the
             # presence of a user even if there is no user filter
-            qb.append(AbstractUser, creator_of="code",
+            qb.append(User, creator_of="code",
                       project=["email"],
                       filters=qb_user_filters)
             qb.order_by({Code: {'id': 'asc'}})

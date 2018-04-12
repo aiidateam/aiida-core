@@ -65,6 +65,16 @@ class Backend(object):
         Get the collection of all users for this backend
 
         :return: The users collection
-        :rtype: :class:`aiida.orm.user.AbstractUserCollection`
+        :rtype: :class:`aiida.orm.user.UserCollection`
+        """
+        pass
+
+    @abstractproperty
+    def authinfos(self):
+        """
+        Get the collection of authorisation information
+
+        :return: The authinfo collection
+        :rtype: :class:`aiida.orm.authinfo.AuthInfoCollection`
         """
         pass

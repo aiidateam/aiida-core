@@ -583,7 +583,7 @@ class AbstractWorkflow(object):
 
             automatic_user = self._backend.users.get_automatic_user()
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
-                name=wrapped_method, user=automatic_user._dbuser)
+                name=wrapped_method, user=automatic_user.dbuser)
             try:
                 fun(self)
             except:

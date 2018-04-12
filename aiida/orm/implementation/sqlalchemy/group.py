@@ -19,6 +19,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError, NotExistent)
+from aiida.common.utils import type_check
 from aiida.orm.implementation.general.group import AbstractGroup
 from aiida.orm.implementation.general.utils import get_db_columns
 
@@ -59,7 +60,7 @@ class Group(AbstractGroup):
 
             # Get the user and extract the dbuser instance
             user = kwargs.pop('user', self._backend.users.get_automatic_user())
-            user = user._dbuser
+            user = user.dbuser
 
             description = kwargs.pop('description', "")
 
@@ -119,7 +120,8 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
-        self._dbgroup.user = new_user._dbuser
+        type_check(new_user, users.SqlaUser)
+        self._dbgroup.user = new_user.dbuser
 
     @property
     def dbgroup(self):
@@ -307,7 +309,7 @@ class Group(AbstractGroup):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
-                filters.append(DbGroup.user == user._dbuser)
+                filters.append(DbGroup.user == user.dbuser)
 
         if name_filters:
             for (k, v) in name_filters.iteritems():
@@ -342,4 +344,3 @@ class Group(AbstractGroup):
             make_transient(new_group)
             new_group.id = None
             self._dbgroup = new_group
-

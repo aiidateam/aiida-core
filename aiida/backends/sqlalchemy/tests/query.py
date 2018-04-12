@@ -12,7 +12,7 @@ from aiida.backends.testbase import AiidaTestCase
 
 class TestQueryBuilderSQLA(AiidaTestCase):
     def test_clsf_sqla(self):
-        from aiida.orm import Group, AbstractUser, Computer, Node, Data, Calculation
+        from aiida.orm import Group, User, Computer, Node, Data, Calculation
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.user import DbUser
@@ -22,7 +22,7 @@ class TestQueryBuilderSQLA(AiidaTestCase):
 
         qb = QueryBuilder()
         for AiidaCls, ORMCls, typestr in zip(
-                (Group, AbstractUser, Computer, Node, Data, Calculation),
+                (Group, User, Computer, Node, Data, Calculation),
                 (DbGroup, DbUser, DbComputer, DbNode, DbNode, DbNode),
                 (None, None, None, Node._query_type_string, Data._query_type_string, Calculation._query_type_string)):
             cls, clstype, query_type_string = qb._get_ormclass(AiidaCls, None)

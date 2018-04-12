@@ -13,10 +13,10 @@ import abc
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
 
-__all__ = ['AbstractUser', 'AbstractUserCollection']
+__all__ = ['User', 'UserCollection']
 
 
-class AbstractUserCollection(object):
+class UserCollection(object):
     """
     The collection of users stored in a backend
     """
@@ -30,7 +30,7 @@ class AbstractUserCollection(object):
 
         :param email: An email address for the user
         :return: A new user object
-        :rtype: :class:`AbstractUser`
+        :rtype: :class:`User`
         """
         pass
 
@@ -43,7 +43,7 @@ class AbstractUserCollection(object):
         from .querybuilder import QueryBuilder
 
         qb = QueryBuilder()
-        qb.append(AbstractUser, filters={'email': {'==': email}})
+        qb.append(User, filters={'email': {'==': email}})
         res = [_[0] for _ in qb.all()]
         if res is None:
             return []
@@ -81,11 +81,11 @@ class AbstractUserCollection(object):
         from .querybuilder import QueryBuilder
 
         qb = QueryBuilder()
-        qb.append(AbstractUser)
+        qb.append(User)
         return [_[0] for _ in qb.all()]
 
 
-class AbstractUser(object):
+class User(object):
     """
     This is the base class for User information in AiiDA.  An implementing
     backend needs to provide a concrete version.

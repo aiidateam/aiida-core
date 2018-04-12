@@ -16,7 +16,7 @@ from aiida.common.exceptions import ValidationError
 
 def prompt_for_computer_configuration(computer):
     import inspect, readline
-    from aiida.orm.computer import Computer as Computer
+    from aiida.orm.computer import Computer
     from aiida.common.exceptions import ValidationError
 
     for internal_name, name, desc, multiline in (
@@ -165,7 +165,6 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
-        from aiida.orm.backend import construct_backend
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -191,8 +190,6 @@ class Computer(VerdiCommandWithSubcommands):
         only_usable = parsed_args.only_usable
         parsable = parsed_args.parsable
         all_comps = parsed_args.all
-
-        backend = construct_backend()
 
         computer_names = self.get_computer_names()
 
@@ -221,8 +218,8 @@ class Computer(VerdiCommandWithSubcommands):
                 # color_id = 90 # Dark gray
                 # color_id = 34 # Blue
 
-                is_configured = computer.is_user_configured(backend.users.get_automatic_user())
-                is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
+                is_configured = computer.is_user_configured(self.backend.users.get_automatic_user())
+                is_user_enabled = computer.is_user_enabled(self.backend.users.get_automatic_user())
 
                 is_usable = False  # True if both enabled and configured
 
@@ -318,7 +315,6 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        # from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
@@ -481,8 +477,6 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (NotExistent, ValidationError, MultipleObjectsError)
         from aiida.common.utils import get_configured_user_email
-        from aiida.orm.authinfo import AuthInfo
-        from aiida.orm.backend import construct_backend
 
         import argparse
 
@@ -501,8 +495,6 @@ class Computer(VerdiCommandWithSubcommands):
         user_email = parsed_args.user
         computername = parsed_args.computer
 
-        backend = construct_backend()
-
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
@@ -510,18 +502,18 @@ class Computer(VerdiCommandWithSubcommands):
                 computername)
             sys.exit(1)
         if user_email is None:
-            user = backend.users.get_automatic_user()
+            user = self.backend.users.get_automatic_user()
         else:
             try:
-                user = backend.users.get(email=user_email)
+                user = self.backend.users.get(email=user_email)
             except (NotExistent, MultipleObjectsError) as e:
                 print >> sys.stderr, ("{}".format(e))
                 sys.exit(1)
 
         try:
-            authinfo = AuthInfo.get(computer=computer, user=user)
+            authinfo = self.backend.authinfos.get(computer=computer, user=user)
         except NotExistent:
-            authinfo = AuthInfo(computer=computer, user=user)
+            authinfo = self.backend.authinfos.create(computer=computer, user=user)
         old_authparams = authinfo.get_auth_params()
 
         Transport = computer.get_transport_class()
@@ -655,7 +647,6 @@ class Computer(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.backend import construct_backend
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -681,8 +672,6 @@ class Computer(VerdiCommandWithSubcommands):
         computername = parsed_args.computer
         print_traceback = parsed_args.traceback
 
-        backend = construct_backend()
-
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
@@ -691,9 +680,9 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if user_email is None:
-            user = backend.users.get_automatic_user()
+            user = self.backend.users.get_automatic_user()
         else:
-            user_list = backend.users.find(email=user_email)
+            user_list = self.backend.users.find(email=user_email)
             # If no user is found
             if not user_list:
                 print >> sys.stderr, ("No user with email '{}' in the "
@@ -881,7 +870,6 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.backend import construct_backend
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -902,8 +890,6 @@ class Computer(VerdiCommandWithSubcommands):
         user_email = parsed_args.user_email
         computername = parsed_args.computer
 
-        backend = construct_backend()
-
         try:
             computer = self.get_computer(name=computername)
         except NotExistent:
@@ -918,7 +904,7 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(True)
                 print "Computer '{}' enabled.".format(computername)
         else:
-            user_list = backend.users.find(email=user_email)
+            user_list = self.backend.users.find(email=user_email)
             if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))

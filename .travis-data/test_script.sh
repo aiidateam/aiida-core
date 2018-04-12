@@ -26,7 +26,8 @@ case "$TEST_TYPE" in
         coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests
 
         # Run the daemon tests using docker
-        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} run ${DATA_DIR}/test_daemon.py
+        # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run ${DATA_DIR}/test_daemon.py
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

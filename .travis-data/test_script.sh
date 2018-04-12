@@ -23,7 +23,7 @@ case "$TEST_TYPE" in
 
         # Run verdi devel tests
         verdi_path=`which verdi`
-        coverage run -a $verdi_path -p test_${AIIDA_BACKEND} devel tests
+        coverage run -a $verdi_path -p test_${TEST_AIIDA_BACKEND} devel tests
 
         # Run the daemon tests using docker
         coverage run -a ${DATA_DIR}/test_daemon.py

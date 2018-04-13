@@ -7,10 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm import load_node
 from . import runners
-from . import rmq
-from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
 
@@ -24,12 +21,8 @@ def submit(process, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
-    assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
-
-    # Use a context manager to make sure connection is closed at end
-    with rmq.new_blocking_control_panel() as control_panel:
-        pid = control_panel.execute_process_start(process, init_kwargs={'inputs': inputs})
-        return load_node(pid)
+    runner = runners.new_runner(rmq_submit=True)
+    return runner.submit(process, **inputs)
 
 
 def run(process, *args, **inputs):

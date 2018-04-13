@@ -1,5 +1,6 @@
 *.pyc
 *~
+*.swp
 *.project
 *.pydevproject
 .settings
@@ -14,6 +15,5 @@
 *.egg-info
 .eggs
 
-# files created by coverage
-*\,cover
-coverage/
+# produced by coverage.py
+.coverage

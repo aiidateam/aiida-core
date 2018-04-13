@@ -129,7 +129,9 @@ extras_require = {
     'testing': [
         'mock==2.0.0',
         'pgtest==1.1.0',
-        'sqlalchemy-diff==0.1.3'
+        'sqlalchemy-diff==0.1.3',
+        'coverage==4.5.1',
+        'codecov'
     ],
     'dev_precommit': [
         'pre-commit==1.3.0',

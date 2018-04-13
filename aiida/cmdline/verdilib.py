@@ -175,41 +175,41 @@ class CompletionCommand(VerdiCommand):
           and then, no substitution is suggested.
         """
 
-        print
-        r"""
-       function _aiida_verdi_completion
-       {
-           OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
-           OUTPUT=${OUTPUT%x}
-           if [ -z "$OUTPUT" ]
-           then
-           # Only newline is a valid separator
-               local IFS=$'\n'
-       
-               COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
-           # Add either a slash or a space, depending on whether it is a folder
-           # or a file. printf %q escapes the filename if there are spaces.
-               for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-                   [ -d "${COMPREPLY[$i]}" ] && \
-                      COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
-                      COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
-               done
-       
-           else
-               COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
-               # Always add a space after each command
-               for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-                   COMPREPLY[$i]="${COMPREPLY[$i]} "
-               done
-           fi
-       }
-       complete -o nospace -F _aiida_verdi_completion verdi
-       """
+        print(
+            r"""
+            function _aiida_verdi_completion
+            {
+                OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
+                OUTPUT=${OUTPUT%x}
+                if [ -z "$OUTPUT" ]
+                then
+                # Only newline is a valid separator
+                    local IFS=$'\n'
+
+                    COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
+                # Add either a slash or a space, depending on whether it is a folder
+                # or a file. printf %q escapes the filename if there are spaces.
+                    for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                        [ -d "${COMPREPLY[$i]}" ] && \
+                           COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
+                           COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
+                    done
+
+                else
+                    COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+                    # Always add a space after each command
+                    for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                        COMPREPLY[$i]="${COMPREPLY[$i]} "
+                    done
+                fi
+            }
+            complete -o nospace -F _aiida_verdi_completion verdi
+            """
+            )
 
     def complete(self, subargs_idx, subargs):
         # disable further completion
-        print
-        ""
+        print("")
 
 
 class Completion(VerdiCommand):
@@ -244,8 +244,7 @@ class Completion(VerdiCommand):
             cword_offset = command_position - 1
 
         if cword == 1 + cword_offset:
-            print
-            " ".join(sorted(short_doc.keys()))
+            print(" ".join(sorted(short_doc.keys())))
             return
         else:
             try:
@@ -273,8 +272,7 @@ class ListParams(VerdiCommand):
     """
 
     def run(self, *args):
-        print
-        get_listparams()
+        print(get_listparams())
 
 
 class Help(VerdiCommand):

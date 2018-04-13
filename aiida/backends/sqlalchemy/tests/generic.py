@@ -13,8 +13,8 @@ Generic tests that need the be specific to sqlalchemy
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import UniquenessError
 from aiida.orm.node import Node
+from aiida.common import exceptions
 
 
 class TestComputer(AiidaTestCase):
@@ -143,10 +143,10 @@ class TestGroupsSqla(AiidaTestCase):
 
         session = get_scoped_session()
 
-        # Storing for duplicate group name should trigger UniquenessError
+        # Storing for duplicate group name should trigger Integrity
         try:
             session.begin_nested()
-            with self.assertRaises(UniquenessError):
+            with self.assertRaises(exceptions.IntegrityError):
                 group_b.store()
         finally:
             session.rollback()
@@ -161,7 +161,7 @@ class TestGroupsSqla(AiidaTestCase):
         # After storing name change to existing should raise
         try:
             session.begin_nested()
-            with self.assertRaises(UniquenessError):
+            with self.assertRaises(exceptions.IntegrityError):
                 group_c.name = name_group_a
         finally:
             session.rollback()
@@ -182,7 +182,8 @@ class TestDbExtrasSqla(AiidaTestCase):
 
         n2.set_extra("pippo2", [3, 4, u'b'])
 
-        self.assertEqual(n1.get_extras(),{'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
+        self.assertEqual(n1.get_extras(),
+                         {'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
 
         self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 

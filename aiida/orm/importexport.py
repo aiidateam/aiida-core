@@ -10,6 +10,7 @@
 import HTMLParser
 import sys
 
+from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 from aiida.orm.computer import Computer
@@ -67,7 +68,6 @@ entity_names_to_entities = {
 }
 
 
-
 def schema_to_entity_names(class_string):
     """
     Mapping from classes path to entity names (used by the SQLA import/export)
@@ -76,26 +76,27 @@ def schema_to_entity_names(class_string):
     """
     if class_string is None or len(class_string) == 0:
         return
-    if(class_string == "aiida.backends.djsite.db.models.DbNode" or
-               class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
+    if (class_string == "aiida.backends.djsite.db.models.DbNode" or
+            class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
         return NODE_ENTITY_NAME
 
-    if(class_string == "aiida.backends.djsite.db.models.DbLink" or
-               class_string == "aiida.backends.sqlalchemy.models.node.DbLink"):
+    if (class_string == "aiida.backends.djsite.db.models.DbLink" or
+            class_string == "aiida.backends.sqlalchemy.models.node.DbLink"):
         return LINK_ENTITY_NAME
 
-    if(class_string == "aiida.backends.djsite.db.models.DbGroup" or
-               class_string ==
-               "aiida.backends.sqlalchemy.models.group.DbGroup"):
+    if (class_string == "aiida.backends.djsite.db.models.DbGroup" or
+            class_string ==
+            "aiida.backends.sqlalchemy.models.group.DbGroup"):
         return GROUP_ENTITY_NAME
 
-    if(class_string == "aiida.backends.djsite.db.models.DbComputer" or
-               class_string ==
-               "aiida.backends.sqlalchemy.models.computer.DbComputer"):
+    if (class_string == "aiida.backends.djsite.db.models.DbComputer" or
+            class_string ==
+            "aiida.backends.sqlalchemy.models.computer.DbComputer"):
         return COMPUTER_ENTITY_NAME
     if (class_string == "aiida.backends.djsite.db.models.DbUser" or
             class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
         return USER_ENTITY_NAME
+
 
 # Mapping of entity names to SQLA class paths
 entity_names_to_sqla_schema = {
@@ -132,7 +133,7 @@ model_fields_to_file_fields = {
         "user_id": "user"
     },
     COMPUTER_ENTITY_NAME: {
-        "_metadata" : "metadata"},
+        "_metadata": "metadata"},
     USER_ENTITY_NAME: {}
 }
 
@@ -157,84 +158,84 @@ def get_all_fields_info():
 
     all_fields_info = dict()
     all_fields_info[USER_ENTITY_NAME] = {
-             "last_name": {},
-             "first_name": {},
-             "institution": {},
-             "email": {}
-        }
+        "last_name": {},
+        "first_name": {},
+        "institution": {},
+        "email": {}
+    }
     all_fields_info[COMPUTER_ENTITY_NAME] = {
-             "transport_type": {},
-             "transport_params": {},
-             "hostname": {},
-             "description": {},
-             "scheduler_type": {},
-             "metadata": {},
-             "enabled": {},
-             "uuid": {},
-             "name": {}
-        }
+        "transport_type": {},
+        "transport_params": {},
+        "hostname": {},
+        "description": {},
+        "scheduler_type": {},
+        "metadata": {},
+        "enabled": {},
+        "uuid": {},
+        "name": {}
+    }
     all_fields_info[LINK_ENTITY_NAME] = {
-            "input": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "output_links"
-            },
-            "type": {},
-            "output": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "input_links"
-            },
-            "label": {}
-        }
+        "input": {
+            "requires": NODE_ENTITY_NAME,
+            "related_name": "output_links"
+        },
+        "type": {},
+        "output": {
+            "requires": NODE_ENTITY_NAME,
+            "related_name": "input_links"
+        },
+        "label": {}
+    }
     all_fields_info[NODE_ENTITY_NAME] = {
-             "ctime": {
-                "convert_type" : "date"
-             },
-             "uuid": {},
-             "public": {},
-             "mtime": {
-                "convert_type": "date"
-             },
-             "type": {},
-             "label": {},
-             "nodeversion": {},
-             "user": {
-                "requires" : USER_ENTITY_NAME,
-                "related_name": "dbnodes"
-             },
-             "dbcomputer": {
-                "requires" : COMPUTER_ENTITY_NAME,
-                "related_name": "dbnodes"
-             },
-             "description": {}
-        }
+        "ctime": {
+            "convert_type": "date"
+        },
+        "uuid": {},
+        "public": {},
+        "mtime": {
+            "convert_type": "date"
+        },
+        "type": {},
+        "label": {},
+        "nodeversion": {},
+        "user": {
+            "requires": USER_ENTITY_NAME,
+            "related_name": "dbnodes"
+        },
+        "dbcomputer": {
+            "requires": COMPUTER_ENTITY_NAME,
+            "related_name": "dbnodes"
+        },
+        "description": {}
+    }
     all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
-             "dbnode": {
-                "requires": NODE_ENTITY_NAME,
-                "related_name": "dbattributes"
-             },
-             "key": {},
-             "tval": {},
-             "fval": {},
-             "bval": {},
-             "datatype": {},
-             "dval": {
-                "convert_type": "date"
-             },
-             "ival": {}
-        }
+        "dbnode": {
+            "requires": NODE_ENTITY_NAME,
+            "related_name": "dbattributes"
+        },
+        "key": {},
+        "tval": {},
+        "fval": {},
+        "bval": {},
+        "datatype": {},
+        "dval": {
+            "convert_type": "date"
+        },
+        "ival": {}
+    }
     all_fields_info[GROUP_ENTITY_NAME] = {
-             "description": {},
-             "user": {
-                "related_name": "dbgroups",
-                "requires": USER_ENTITY_NAME
-             },
-             "time": {
-                "convert_type" : "date"
-             },
-             "type": {},
-             "uuid": {},
-             "name": {}
-        }
+        "description": {},
+        "user": {
+            "related_name": "dbgroups",
+            "requires": USER_ENTITY_NAME
+        },
+        "time": {
+            "convert_type": "date"
+        },
+        "type": {},
+        "uuid": {},
+        "name": {}
+    }
     return all_fields_info, unique_identifiers
 
 
@@ -305,25 +306,24 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
 
 
-def import_data(in_path,ignore_unknown_nodes=False,
+def import_data(in_path, ignore_unknown_nodes=False,
                 silent=False):
-
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
         return import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
-                         silent=silent)
+                                silent=silent)
     elif BACKEND == BACKEND_DJANGO:
         return import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
-                       silent=silent)
+                              silent=silent)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
             BACKEND))
 
 
-def import_data_dj(in_path,ignore_unknown_nodes=False,
-                silent=False):
+def import_data_dj(in_path, ignore_unknown_nodes=False,
+                   silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
@@ -365,16 +365,16 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path,folder,silent=silent)
+            extract_tree(in_path, folder, silent=silent)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path,folder,silent=silent,
+                extract_tar(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path,folder,silent=silent,
+                extract_zip(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path,folder,silent=silent,
+                extract_cif(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
@@ -416,8 +416,8 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                           uuid__in=group)})
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
-        #~ dbnode_model = get_class_string(models.DbNode)
-        #~ print dbnode_model
+        # ~ dbnode_model = get_class_string(models.DbNode)
+        # ~ print dbnode_model
         import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
@@ -442,7 +442,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME)
         # Models that do appear in the import file, but whose import is
         # managed manually
-        model_manual  = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
+        model_manual = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
 
         all_known_models = model_order + model_manual
 
@@ -537,7 +537,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
                     if model_name not in ret_dict:
-                        ret_dict[model_name] = { 'new': [], 'existing': [] }
+                        ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_id,
                                                              existing_entry_id))
                     if not silent:
@@ -571,12 +571,12 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                         while dupl:
                             # Rename the new computer
                             import_data['name'] = (
-                                orig_name +
-                                COMP_DUPL_SUFFIX.format(dupl_counter))
+                                    orig_name +
+                                    COMP_DUPL_SUFFIX.format(dupl_counter))
                             dupl_counter += 1
                             dupl = (
-                                Model.objects.filter(name=import_data['name'])
-                                or import_data['name'] in imported_comp_names)
+                                    Model.objects.filter(name=import_data['name'])
+                                    or import_data['name'] in imported_comp_names)
 
                         # The following is done for compatibility reasons
                         # In case the export file was generate with the SQLA
@@ -643,7 +643,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
-                        ret_dict[model_name] = { 'new': [], 'existing': [] }
+                        ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['new'].append((import_entry_id,
                                                         new_pk))
 
@@ -691,9 +691,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            #~ print foreign_ids_reverse_mappings
+            # ~ print foreign_ids_reverse_mappings
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
-                #~ get_class_string(models.DbNode)]
+            # ~ get_class_string(models.DbNode)]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -731,10 +731,10 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
-                            input_id=in_id,output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
+                            input_id=in_id, output_id=out_id, label=link['label'], type=LinkType(link['type']).value))
                         if LINK_ENTITY_NAME not in ret_dict:
-                            ret_dict[LINK_ENTITY_NAME] = { 'new': [] }
-                        ret_dict[LINK_ENTITY_NAME]['new'].append((in_id,out_id))
+                            ret_dict[LINK_ENTITY_NAME] = {'new': []}
+                        ret_dict[LINK_ENTITY_NAME]['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:
@@ -786,10 +786,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                     else:
                         group_name = "{}_{}".format(basename, counter)
                     try:
-                        group = Group(name=group_name,
-                                      type_string=IMPORTGROUP_TYPE).store()
+                        group = Group(name=group_name, type_string=IMPORTGROUP_TYPE).store()
                         created = True
-                    except UniquenessError:
+                    except (exceptions.UniquenessError, exceptions.IntegrityError):
                         counter += 1
 
                 # Add all the nodes to the new group
@@ -870,16 +869,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path,folder, silent=silent)
+            extract_tree(in_path, folder, silent=silent)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path,folder, silent=silent,
+                extract_tar(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path,folder, silent=silent,
+                extract_zip(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path,folder, silent=silent,
+                extract_cif(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
@@ -953,19 +952,19 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # It is a list of strings, e.g.:
         # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
-                        for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                  NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
+                            for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
+                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
         entity_sig_manual = [entity_names_to_signatures[m]
-                         for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
+                             for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
 
         all_known_entity_sigs = entity_sig_order + entity_sig_manual
 
         #  I make a new list that contains the entity names:
         # eg: ['User', 'Computer', 'Node', 'Group', 'Link', 'Attribute']
         all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in all_known_entity_sigs]
-        for import_field_name in metadata['all_fields_info']:    
+        for import_field_name in metadata['all_fields_info']:
             if import_field_name not in all_entity_names:
                 raise NotImplementedError("Apparently, you are importing a "
                                           "file with a model '{}', but this "
@@ -1029,11 +1028,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
                 # so, new_entries. Also,since v0.3 it makes more sense to used the entity_name
-                #~ new_entries[entity_sig] = {}
+                # ~ new_entries[entity_sig] = {}
                 new_entries[entity_name] = {}
                 # existing_entries[entity_sig] = {}
                 existing_entries[entity_name] = {}
-                #~ foreign_ids_reverse_mappings[entity_sig] = {}
+                # ~ foreign_ids_reverse_mappings[entity_sig] = {}
                 foreign_ids_reverse_mappings[entity_name] = {}
 
                 # Not necessarily all models are exported
@@ -1073,7 +1072,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                                 if ((type(v['transport_params']) is str) or
                                         (type(v['transport_params']) is
-                                             unicode)):
+                                         unicode)):
                                     v['transport_params'] = json.loads(
                                         v['transport_params'])
 
@@ -1090,9 +1089,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 while dupl:
                                     # Rename the new computer
                                     v["name"] = (
-                                        orig_name +
-                                        COMP_DUPL_SUFFIX.format(
-                                            dupl_counter))
+                                            orig_name +
+                                            COMP_DUPL_SUFFIX.format(
+                                                dupl_counter))
                                     dupl_counter += 1
                                     qb = QueryBuilder()
                                     qb.append(entity,
@@ -1127,7 +1126,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
                     if entity_name not in ret_dict:
-                        ret_dict[entity_name] = { 'new': [], 'existing': [] }
+                        ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
                     if not silent:
                         print "existing %s: %s (%s->%s)" % (entity_sig,
@@ -1264,7 +1263,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['new'].append((import_entry_id,
-                                                        new_pk))
+                                                         new_pk))
 
                     if not silent:
                         print "NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
@@ -1385,7 +1384,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                   type_string=IMPORTGROUP_TYPE)
                     from aiida.backends.sqlalchemy.models.group import DbGroup
                     if session.query(DbGroup).filter(
-                        DbGroup.name == group._dbgroup.name).count() == 0:
+                            DbGroup.name == group._dbgroup.name).count() == 0:
                         session.add(group._dbgroup)
                         created = True
                     else:
@@ -1418,6 +1417,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         print "DONE."
 
     return ret_dict
+
 
 class HTMLGetLinksParser(HTMLParser.HTMLParser):
     def __init__(self, filter_extension=None):
@@ -1501,7 +1501,7 @@ def serialize_field(data, track_conversion=False):
         else:
             ret_data = [serialize_field(
                 data=value, track_conversion=track_conversion)
-                        for value in data]
+                for value in data]
     elif isinstance(data, datetime.datetime):
         # Note: requires timezone-aware objects!
         ret_data = data.astimezone(pytz.utc).strftime(
@@ -1573,6 +1573,7 @@ fields_to_export = {
          'ctime', 'dbcomputer', 'label', 'type'],
 }
 
+
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
     """
@@ -1620,7 +1621,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     current_entity_mod = entity_names_to_entities[current_entity_str]
 
     rel_string = relationship_dic[current_entity_str][originating_entity_str]
-    mydict= {rel_string: entity_separator.join(tag_suffixes)}
+    mydict = {rel_string: entity_separator.join(tag_suffixes)}
 
     partial_query.append(current_entity_mod,
                          tag=entity_separator.join(tag_suffixes) +
@@ -1642,8 +1643,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 
 def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
-                     allowed_licenses=None, forbidden_licenses=None,
-                     silent=False, use_querybuilder_ancestors=False):
+                allowed_licenses=None, forbidden_licenses=None,
+                silent=False, use_querybuilder_ancestors=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -1675,7 +1676,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.backends.utils import QueryFactory
     if not silent:
-        print "STARTING EXPORT..."
+        print("STARTING EXPORT...")
 
     EXPORT_VERSION = '0.3'
 
@@ -1717,7 +1718,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     if also_calc_outputs:
         if given_node_entry_ids:
             # Add all (direct) outputs of a calculation object that was already
-             # selected
+            # selected
             qb = QueryBuilder()
             # Only looking at calculations and subclasses that are in my entries:
             qb.append(Calculation, tag='high_node',
@@ -1725,7 +1726,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             # Only looking at the output that was created by a calculation.
             # From the OPM we know it has to be Data, linked by CREATE.
             qb.append(Data, output_of='high_node', project=['id'],
-                edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
+                      edge_filters={'type': {'==': LinkType.CREATE.value}})  # and the outputs
             additional_ids = [_ for [_] in qb.all()]
             given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
@@ -1748,8 +1749,8 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         for prop in entity_prop:
             # nprop contains the list of projections
             nprop = (file_fields_to_model_fields[given_entity][prop]
-                    if file_fields_to_model_fields[given_entity].has_key(prop)
-                    else prop)
+                     if file_fields_to_model_fields[given_entity].has_key(prop)
+                     else prop)
             project_cols.append(nprop)
 
         # Getting the ids that correspond to the right entity
@@ -1771,7 +1772,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         qb.append(Node, project=["id", "attributes.source.license"],
                   filters={"id": {"in": given_node_entry_ids}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
-        node_licenses = list((a,b) for [a,b] in qb.all() if b is not None)
+        node_licenses = list((a, b) for [a, b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
 
     ############################################################
@@ -1864,7 +1865,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         links_qb.append(Node,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type':{'in':(LinkType.CREATE.value, LinkType.INPUT.value)}},
+                        edge_filters={'type': {'in': (LinkType.CREATE.value, LinkType.INPUT.value)}},
                         edge_project=['label', 'type'], output_of='input')
 
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
@@ -1872,7 +1873,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
-                'type':str(link_type)
+                'type': str(link_type)
             })
 
     if not silent:
@@ -1897,7 +1898,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     # Now I store
     ######################################
     # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder('nodes',create=True,
+    nodesubfolder = folder.get_subfolder('nodes', create=True,
                                          reset_limit=True)
 
     # Add the proper signatures to the exported data
@@ -1910,12 +1911,12 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     with folder.open('data.json', 'w') as f:
         json.dump({
-                'node_attributes': node_attributes,
-                'node_attributes_conversion': node_attributes_conversion,
-                'export_data': export_data,
-                'links_uuid': links_uuid,
-                'groups_uuid': groups_uuid,
-                }, f)
+            'node_attributes': node_attributes,
+            'node_attributes_conversion': node_attributes_conversion,
+            'export_data': export_data,
+            'links_uuid': links_uuid,
+            'groups_uuid': groups_uuid,
+        }, f)
 
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
@@ -1925,7 +1926,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         'export_version': EXPORT_VERSION,
         'all_fields_info': all_fields_info,
         'unique_identifiers': unique_identifiers,
-        }
+    }
 
     with folder.open('metadata.json', 'w') as f:
         json.dump(metadata, f)
@@ -2004,24 +2005,23 @@ def get_all_parents_dj(node_pks):
     :return: a list of aiida objects with all the parents of the nodes
     """
     from aiida.backends.djsite.db import models
-    
+
     try:
         the_node_pks = list(node_pks)
     except TypeError:
         the_node_pks = [node_pks]
-        
+
     parents = models.DbNode.objects.none()
     q_inputs = models.DbNode.aiidaobjects.filter(outputs__pk__in=the_node_pks).distinct()
     while q_inputs.count() > 0:
         inputs = list(q_inputs)
         parents = q_inputs | parents.all()
-        q_inputs = models.DbNode.aiidaobjects.filter(outputs__in=inputs).distinct()        
+        q_inputs = models.DbNode.aiidaobjects.filter(outputs__in=inputs).distinct()
     return parents
 
 
 class MyWritingZipFile(object):
     def __init__(self, zipfile, fname):
-
         self._zipfile = zipfile
         self._fname = fname
         self._buffer = None
@@ -2055,8 +2055,9 @@ class ZipFolder(object):
     (e.g. add explicit open method, rename open to openfile,
     set _zipfile to None, ...)
     """
+
     def __init__(self, zipfolder_or_fname, mode=None, subfolder='.',
-                  use_compression=True):
+                 use_compression=True):
         """
         :param zipfolder_or_fname: either another ZipFolder instance,
           of which you want to get a subfolder, or a filename to create.
@@ -2144,23 +2145,23 @@ class ZipFolder(object):
                 exists = False
             if exists:
                 raise IOError("destination already exists: {}".format(
-                        filename))
+                    filename))
 
-        #print src, filename
+        # print src, filename
         if os.path.isdir(src):
             for dirpath, dirnames, filenames in os.walk(src):
                 relpath = os.path.relpath(dirpath, src)
                 for fn in dirnames + filenames:
-                    real_src = os.path.join(dirpath,fn)
-                    real_dest = os.path.join(base_filename,relpath,fn)
+                    real_src = os.path.join(dirpath, fn)
+                    real_dest = os.path.join(base_filename, relpath, fn)
                     self._zipfile.write(real_src,
                                         real_dest)
         else:
             self._zipfile.write(src, base_filename)
 
 
-def export_zip(what, outfile = 'testzip', overwrite = False,
-              silent = False, use_compression = True, **kwargs):
+def export_zip(what, outfile='testzip', overwrite=False,
+               silent=False, use_compression=True, **kwargs):
     import os
 
     if not overwrite and os.path.exists(outfile):
@@ -2169,7 +2170,7 @@ def export_zip(what, outfile = 'testzip', overwrite = False,
 
     import time
     t = time.time()
-    with ZipFolder(outfile, mode='w', use_compression = use_compression) as folder:
+    with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
         print "File written in {:10.3g} s.".format(time.time() - t)
@@ -2227,13 +2228,13 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     t4 = time.time()
 
     if not silent:
-        filecr_time = t2-t1
-        filecomp_time = t4-t3
-        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time, filecr_time + filecomp_time)
+        filecr_time = t2 - t1
+        filecomp_time = t4 - t3
+        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time,
+                                                                                      filecr_time + filecomp_time)
 
     if not silent:
         print "DONE."
-
 
 # Following code: to serialize the date directly when dumping into JSON.
 # In our case, it is better to have a finer control on how to parse fields.
@@ -2245,7 +2246,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
 #        return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 #
 #    raise TypeError(repr(data) + " is not JSON serializable")
-#with open('testout.json', 'w') as f:
+# with open('testout.json', 'w') as f:
 #    json.dump({
 #            'entries': serialized_entries,
 #        },

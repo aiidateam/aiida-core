@@ -10,13 +10,16 @@
 from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
+import sqlalchemy.exc
+
+from aiida.common import exceptions
 
 __all__ = ['django_filter', 'get_attr']
 
 
 class ModelWrapper(object):
     """
-    This wraps a Django model delegating all get/set attributes to the
+    This wraps a SQLA model delegating all get/set attributes to the
     underlying model class, BUT it will make sure that if the model is
     stored then:
     * before every read it has the latest value from the database, and,
@@ -44,8 +47,12 @@ class ModelWrapper(object):
 
     def save(self):
         """ Store the model (possibly updating values if changed) """
-        self._model.save()
-        self._model.session.commit()
+        try:
+            self._model.save()
+            self._model.session.commit()
+        except sqlalchemy.exc.IntegrityError as e:
+            self._model.session.rollback()
+            raise exceptions.IntegrityError(str(e))
 
     def _is_model_field(self, name):
         return inspect(self._model.__class__).has_property(name)

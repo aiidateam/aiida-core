@@ -12,7 +12,7 @@ Generic tests that need the use of the DB
 """
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import UniquenessError
+from aiida.common import exceptions
 from aiida.orm.node import Node
 
 
@@ -129,7 +129,7 @@ class TestGroupsDjango(AiidaTestCase):
         group_c = Group(name=name_group_c, description='They will try to rename me')
 
         # Storing for duplicate group name should trigger UniquenessError
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(exceptions.IntegrityError):
             group_b.store()
 
         # Before storing everything should be fine
@@ -140,7 +140,7 @@ class TestGroupsDjango(AiidaTestCase):
         group_c.store()
 
         # After storing name change to existing should raise
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(exceptions.IntegrityError):
             group_c.name = name_group_a
 
 

@@ -19,8 +19,6 @@ from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
-
-
 table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
     Base.metadata,
@@ -46,8 +44,7 @@ class DbGroup(Base):
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially="DEFERRED"))
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
-    dbnodes = relationship('DbNode', secondary=table_groups_nodes,
-                           backref="dbgroups", lazy='dynamic')
+    dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
 
     __table_args__ = (
         UniqueConstraint('name', 'type'),

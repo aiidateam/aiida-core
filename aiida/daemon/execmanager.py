@@ -394,6 +394,7 @@ def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
     job._set_state(calc_states.PARSING)
 
     Parser = job.get_parserclass()
+    exit_code = None
 
     if Parser is not None:
 

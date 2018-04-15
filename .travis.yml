@@ -42,6 +42,8 @@ install:
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt && pip install -e git://github.com/muhrin/plumpy.git@2b628c331c286347fdd7ab12911ae82ad2146033#egg=plumpy; else pip install .[rest,docs,atomic_tools,testing,dev_precommit] && pip install -r requirements.txt; fi
+    # Current version of reentry does not seem to properly update registry after installation so we have to call it manually
+    - reentry scan
 
 env:
 ## Build matrix to test both backends, and the docs

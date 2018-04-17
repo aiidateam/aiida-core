@@ -41,7 +41,6 @@ passlib==1.7.1
 pathlib2
 pgtest==1.1.0
 pika==0.11.2
-pip==9.0.1
 plumpy>=0.10.0.dev8
 portalocker==1.1.0
 psutil==5.4.0
@@ -57,7 +56,6 @@ qe-tools==1.1.0
 reentry==1.1.2
 scipy<1.0.0
 seekpath==1.8.0
-setuptools==36.6.0
 singledispatch >= 3.4.0.3
 six==1.11.0
 spglib==1.9.10.1
@@ -71,4 +69,3 @@ ujson==1.35
 uritools==1.0.2
 validate-email==1.3
 voluptuous==0.8.11
-wheel==0.29.0

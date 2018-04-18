@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
-REENTRY_PINNED = 'reentry==1.1.2'
+REENTRY_PINNED = 'reentry==1.2.0a9'
 
 install_requires = [
     REENTRY_PINNED,

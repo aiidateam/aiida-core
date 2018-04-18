@@ -8,12 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
-REENTRY_PINNED = 'reentry == 1.1.2'
 
 install_requires = [
     'pip==9.0.1',
     'setuptools==36.6.0',
-    REENTRY_PINNED,
+    'reentry == 1.1.2a9',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',

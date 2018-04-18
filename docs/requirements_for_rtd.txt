@@ -57,7 +57,7 @@ python-mimeparse==0.1.4
 pytz==2014.10
 pyyaml
 qe-tools==1.1.0
-reentry == 1.1.2a9
+reentry == 1.2.0a9
 scipy<1.0.0
 seekpath==1.8.0
 setuptools==36.6.0

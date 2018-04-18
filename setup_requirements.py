@@ -12,7 +12,7 @@
 install_requires = [
     'pip==9.0.1',
     'setuptools==36.6.0',
-    'reentry == 1.1.2a9',
+    'reentry == 1.2.0a9',
     'wheel==0.29.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',

@@ -3,20 +3,21 @@
 import click
 import os
 import sys
+import toml
 
 @click.command()
 def validate_pyproject():
     """
     Ensure that the version of reentry in setup_requirements.py and pyproject.toml are identical
     """
-    import setup_requirements
-    import toml
-
     filename_pyproject = 'pyproject.toml'
     filename_requirements = 'setup_requirements.py'
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     toml_file = os.path.join(dir_path, os.pardir, filename_pyproject)
+    sys.path.append(os.path.join(dir_path, os.pardir))
+
+    import setup_requirements
 
     reentry_requirement = None
 

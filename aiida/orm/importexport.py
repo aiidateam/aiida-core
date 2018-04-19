@@ -103,8 +103,7 @@ entity_names_to_sqla_schema = {
     NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
     LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
-    COMPUTER_ENTITY_NAME:
-        "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
     USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
 }
 
@@ -1684,6 +1683,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     given_node_entry_ids = set()
     given_group_entry_ids = set()
+    given_computer_entry_ids = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1696,6 +1696,8 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             given_group_entry_ids.add(entry.pk)
         elif entry_entity_name == NODE_ENTITY_NAME:
             given_node_entry_ids.add(entry.pk)
+        elif entry_entity_name == COMPUTER_ENTITY_NAME:
+            given_computer_entry_ids.add(entry.pk)
         else:
             raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
 
@@ -1737,6 +1739,8 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         given_entities.append(GROUP_ENTITY_NAME)
     if len(given_node_entry_ids) > 0:
         given_entities.append(NODE_ENTITY_NAME)
+    if len(given_computer_entry_ids) > 0:
+        given_entities.append(COMPUTER_ENTITY_NAME)
 
     entries_to_add = dict()
     for given_entity in given_entities:
@@ -1754,9 +1758,12 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             project_cols.append(nprop)
 
         # Getting the ids that correspond to the right entity
-        entry_ids_to_add = (given_node_entry_ids
-                            if (given_entity == NODE_ENTITY_NAME)
-                            else given_group_entry_ids)
+        if given_entity == GROUP_ENTITY_NAME:
+            entry_ids_to_add = given_group_entry_ids
+        elif given_entity == NODE_ENTITY_NAME:
+            entry_ids_to_add = given_node_entry_ids
+        elif given_entity == COMPUTER_ENTITY_NAME:
+            entry_ids_to_add = given_computer_entry_ids
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[given_entity],

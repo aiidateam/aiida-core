@@ -64,8 +64,8 @@ class AbstractGroup(object):
         """
         pass
 
-    @name.setter
     @abstractproperty
+    @name.setter
     def name(self, name):
         """
         Attempt to change the name of the group instance. If the group is already stored

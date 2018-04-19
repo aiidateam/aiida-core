@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.common.exceptions import DbContentError
+import django.db
 from django.db.models.fields import FieldDoesNotExist
+from aiida.common import exceptions
 
 
 class ModelWrapper(object):
@@ -41,18 +42,17 @@ class ModelWrapper(object):
         return self._model.pk is not None
 
     def save(self):
-        """ Store the model (possibly updating values if changed) """
-        from django.db import IntegrityError, transaction
+        """ Save the model (possibly updating values if changed) """
+        from django.db import transaction
 
-        sid = transaction.savepoint()
-        try:
-            # transactions are needed here for Postgresql:
-            # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-            self._model.save()
-            transaction.savepoint_commit(sid)
-        except IntegrityError:
-            transaction.savepoint_rollback(sid)
-            raise ValueError("Integrity error while storing the DbAuthInfo")
+        # transactions are needed here for Postgresql:
+        # https://docs.djangoproject.com/en/1.7/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+        with transaction.atomic():
+            try:
+                self._model.save()
+            except django.db.IntegrityError as e:
+                # Convert to one of our exceptions
+                raise exceptions.IntegrityError(str(e))
 
     def _is_model_field(self, name):
         try:
@@ -65,7 +65,11 @@ class ModelWrapper(object):
     def _flush(self, fields=None):
         """ If the user is stored then save the current value """
         if self.is_saved():
-            self._model.save(update_fields=fields)
+            try:
+                self._model.save(update_fields=fields)
+            except django.db.IntegrityError as e:
+                # Convert to one of our exceptions
+                raise exceptions.IntegrityError(str(e))
 
     def _ensure_model_uptodate(self, fields=None):
         if self.is_saved():
@@ -123,11 +127,9 @@ def get_db_columns(db_class):
             # relation is a tuple with the related table and the related field
             relation = column.resolve_related_fields()
             if len(relation) == 0:
-                raise DbContentError(' "{}" field has no foreign '
-                                     'relationship')
+                raise exceptions.DbContentError(' "{}" field has no foreign relationship')
             elif len(relation) > 1:
-                raise DbContentError(' "{}" field has not a unique foreign '
-                                     'relationship')
+                raise exceptions.DbContentError(' "{}" field has not a unique foreign relationship')
             else:
                 # Collect infos of the foreing key
                 foreign_keys.append((name, relation[0][0], relation[0][1]))

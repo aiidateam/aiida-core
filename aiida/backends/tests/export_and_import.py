@@ -690,6 +690,7 @@ class TestSimple(AiidaTestCase):
             g1 = Group(name="node_group")
             g1.store()
             g1.add_nodes([sd1, jc1])
+            g1_uuid = g1.uuid
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
@@ -707,7 +708,7 @@ class TestSimple(AiidaTestCase):
 
             # Check that the exported group is imported correctly
             qb = QueryBuilder()
-            qb.append(Group, filters={'uuid': {'==': g1.uuid}})
+            qb.append(Group, filters={'uuid': {'==': g1_uuid}})
             self.assertEquals(qb.count(), 1, "The group was not found.")
         finally:
             # Deleting the created temporary folder

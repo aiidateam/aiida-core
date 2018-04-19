@@ -22,6 +22,8 @@ circus>=0.14.0
 click-plugins
 click-spinner
 click==6.7
+codecov
+coverage==4.5.1
 django-extensions==1.5.0
 django==1.7.11
 docutils==0.13.1
@@ -53,7 +55,7 @@ python-mimeparse==0.1.4
 pytz==2014.10
 pyyaml
 qe-tools==1.1.0
-reentry==1.2.0a9
+reentry==1.2.0
 scipy<1.0.0
 seekpath==1.8.0
 singledispatch >= 3.4.0.3

@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 class RLock(portalocker.Lock):
     """
     reentrant lock.
-    
+
     Functions in a similar way to threading.RLock in that it can be acquired
     multiple times.  When the corresponding number of release() calls are made
     the lock will finally release the underlying file lock.
@@ -68,7 +68,7 @@ Persistence = plumpy.PicklePersister
 _GLOBAL_PERSISTENCE = None
 
 
-class PersistenceError(BaseException):
+class PersistenceError(Exception):
     pass
 
 

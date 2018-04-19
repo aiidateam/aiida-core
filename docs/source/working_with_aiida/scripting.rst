@@ -104,3 +104,50 @@ executable that is run using AiiDA. A simple example could be::
 
   import aiida
   print "AiiDA version is: {}".format(aiida.get_version())
+
+Daemon as system service
+------------------------
+If you would like the AiiDA daemon to run at startup of your linux system,
+you can set up a 
+`systemd service <https://www.freedesktop.org/software/systemd/man/systemd.service.html>`_
+for it.
+
+Create a file ``aiida-daemon.service`` using the template below, replacing
+``{{ venv_dir }}``, ``{{ home_dir }}`` and  ``{{ user }}`` by appropriate
+values::
+
+  [Unit]
+  Description=AiiDA daemon service
+  After=network.target
+  
+  [Service]
+  Type=forking
+  ExecStart={{ venv_dir }}/bin/verdi daemon start
+  PIDFile={{ home_dir }}/.aiida/daemon/log/celery.pid
+  # 2s delay to prevent read error on PID file
+  ExecStartPost=/bin/sleep 2
+  
+  ExecStop={{ venv_dir }}/bin/verdi daemon stop
+  ExecReload={{ venv_dir }}/bin/verdi daemon restart
+  
+  User={{ user }}
+  Group={{ user }}
+  Restart=on-failure
+  RestartSec=60       # Restart daemon after 1 min if crashes
+  StandardOutput=syslog
+  StandardError=syslog
+  SyslogIdentifier=aiida-daemon
+  
+  [Install]
+  WantedBy=multi-user.target
+
+Enable the service like so::
+
+  sudo cp aiida-daemon.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl start aiida-daemon.service
+
+After this, the AiiDA daemon should start together with your system. 
+To remove the service again::
+
+  sudo systemctl disable aiida-daemon.service

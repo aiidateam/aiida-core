@@ -63,5 +63,9 @@ before_script:
 
 script: .travis-data/test_script.sh
 
+after_success:
+  # upload coverage report to codecov.io
+  - if [ "$TEST_TYPE" == "tests" ]; then codecov; fi
+
 git:
   depth: 3

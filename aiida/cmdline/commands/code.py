@@ -14,7 +14,12 @@ TODO: think if we want to allow to change path and prepend/append text.
 """
 import sys
 
+import click
+import tabulate
+
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import verdi, code_cmd
+from aiida.cmdline.utils import decorators
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -576,7 +581,7 @@ class Code(VerdiCommandWithSubcommands):
 
         self.valid_subcommands = {
             'list': (self.code_list, self.complete_none),
-            'show': (self.code_show, self.complete_code_names_and_pks),
+            'show': (self.cli, self.complete_code_names_and_pks),
             'setup': (self.code_setup, self.complete_code_pks),
             'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
@@ -584,6 +589,9 @@ class Code(VerdiCommandWithSubcommands):
             'hide': (self.code_hide, self.complete_code_pks),
             'reveal': (self.code_reveal, self.complete_code_pks),
         }
+
+    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+        verdi.main()
 
     def complete_code_names(self, subargs_idx, subargs):
         code_names = [c[1] for c in self.get_code_data()]
@@ -806,7 +814,8 @@ class Code(VerdiCommandWithSubcommands):
 
         return sorted(qb.all())
 
-    def get_code(self, code_id):
+    @classmethod
+    def get_code(cls, code_id):
         """
         Get a Computer object with given identifier, that can either be
         the numeric ID (pk), or the label (if unique).
@@ -835,18 +844,6 @@ class Code(VerdiCommandWithSubcommands):
             except (NotExistent, MultipleObjectsError) as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
-
-    def code_show(self, *args):
-        """
-        Show information on a given code
-        """
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'code show' there should be one "
-                                  "argument only, being the code id.")
-            sys.exit(1)
-
-        code = self.get_code(args[0])
-        print code.full_text_info
 
     def code_setup(self, *args):
         from aiida.common.exceptions import ValidationError
@@ -1040,3 +1037,15 @@ class Code(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         print "Code '{}' deleted.".format(pk)
+
+
+@code_cmd.command()
+@click.argument('code_id', metavar='CODE_ID', nargs=1, type=click.STRING)
+@click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
+@decorators.with_dbenv()
+def show(code_id, verbose):
+    """
+    Display information about a Code object identified by CODE_ID which can be the pk or label
+    """
+    code = Code.get_code(code_id)
+    click.echo(tabulate.tabulate(code.full_text_info(verbose)))

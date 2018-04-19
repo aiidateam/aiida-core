@@ -8,13 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
-REENTRY_PINNED = 'reentry == 1.1.2'
 
 install_requires = [
-    'pip==9.0.1',
-    'setuptools==36.6.0',
-    REENTRY_PINNED,
-    'wheel==0.29.0',
+    'reentry==1.2.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
     'django==1.7.11',  # upgrade to Django 1.9 does prevent AiiDA functioning
@@ -129,13 +125,16 @@ extras_require = {
     'testing': [
         'mock==2.0.0',
         'pgtest==1.1.0',
-        'sqlalchemy-diff==0.1.3'
+        'sqlalchemy-diff==0.1.3',
+        'coverage==4.5.1',
+        'codecov'
     ],
     'dev_precommit': [
         'pre-commit==1.3.0',
         'yapf==0.19.0',
         'prospector==0.12.7',
-        'pylint==1.7.4'
+        'pylint==1.7.4',
+        'toml'
     ]
 }
 

@@ -24,6 +24,8 @@ chainmap
 click-plugins
 click-spinner
 click==6.7
+codecov
+coverage==4.5.1
 django-extensions==1.5.0
 django==1.7.11
 docutils==0.13.1
@@ -42,7 +44,6 @@ paramiko==2.4.0
 passlib==1.7.1
 pathlib2==2.3.0
 pgtest==1.1.0
-pip==9.0.1
 plumpy==0.7.12
 portalocker==1.1.0
 psutil==5.4.0
@@ -55,10 +56,9 @@ python-mimeparse==0.1.4
 pytz==2014.10
 pyyaml
 qe-tools==1.1.0
-reentry == 1.1.2
+reentry==1.2.0
 scipy<1.0.0
 seekpath==1.8.0
-setuptools==36.6.0
 singledispatch >= 3.4.0.3
 six==1.11.0
 spglib==1.9.10.1
@@ -71,4 +71,3 @@ ujson==1.35
 uritools==1.0.2
 validate-email==1.3
 voluptuous==0.8.11
-wheel==0.29.0

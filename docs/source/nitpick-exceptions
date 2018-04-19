@@ -89,6 +89,9 @@ py:obj None
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
+py:class  click.core.Option
+py:class  click.types.ParamType
+
 py:class  distutils.version.Version
 
 py:class  docutils.parsers.rst.Directive

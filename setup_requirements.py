@@ -133,7 +133,8 @@ extras_require = {
         'pre-commit==1.3.0',
         'yapf==0.19.0',
         'prospector==0.12.7',
-        'pylint==1.7.4'
+        'pylint==1.7.4',
+        'toml'
     ]
 }
 

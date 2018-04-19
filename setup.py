@@ -11,7 +11,7 @@ import fastentrypoints
 import re
 from os import path
 from setuptools import setup, find_packages
-from setup_requirements import install_requires, extras_require, REENTRY_PINNED
+from setup_requirements import install_requires, extras_require
 
 
 if __name__ == '__main__':
@@ -39,10 +39,7 @@ if __name__ == '__main__':
         install_requires=install_requires,
         extras_require=extras_require,
         packages=find_packages(),
-        # Don't forget to install it as well (by adding to the install_requires)
-        setup_requires=[
-            REENTRY_PINNED,
-        ],
+        # Don't forget to install it as well (by adding to the install_requires
         reentry_register=True,
         entry_points={
             'console_scripts': [

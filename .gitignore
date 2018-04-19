@@ -1,5 +1,6 @@
 *.pyc
 *~
+*.swp
 *.project
 *.pydevproject
 .settings
@@ -18,3 +19,4 @@
 *\,cover
 coverage/
 .cache
+.coverage

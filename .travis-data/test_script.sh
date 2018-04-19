@@ -5,7 +5,7 @@ set -ev
 
 case "$TEST_TYPE" in
     docs)
-        # Compile the docs (HTML format); 
+        # Compile the docs (HTML format);
         # -C change to 'docs' directory before doing anything
         # -n to warn about all missing references
         # -W to convert warnings in errors
@@ -28,11 +28,11 @@ case "$TEST_TYPE" in
         # Run the daemon tests using docker
         # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
         coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run ${DATA_DIR}/test_daemon.py
+
+        # run the sphinxext tests
+        pytest --cov aiida --cov-append -vv aiida/sphinxext/tests
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
-        ;;
-    sphinxext)
-        py.test -vv aiida/sphinxext/tests
         ;;
 esac

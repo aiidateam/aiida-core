@@ -10,12 +10,15 @@
 import click
 from aiida.cmdline.commands import verdi, export
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.utils.cli.options import MultipleValueOption
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 class DanglingLinkError(Exception):
     pass
+
 
 class Export(VerdiCommandWithSubcommands):
     """
@@ -33,13 +36,13 @@ class Export(VerdiCommandWithSubcommands):
 
 @export.command('create', context_settings=CONTEXT_SETTINGS)
 @click.argument('outfile', type=click.Path())
-@click.option('-n', '--nodes', multiple=True, type=int,
+@click.option('-n', '--nodes', cls=MultipleValueOption, type=int,
     help='Export the given nodes by pk')
-@click.option('-c', '--computers', multiple=True, type=int,
+@click.option('-c', '--computers', cls=MultipleValueOption, type=int,
     help='Export the given computers by pk')
-@click.option('-G', '--groups', multiple=True, type=int,
+@click.option('-G', '--groups', cls=MultipleValueOption, type=int,
     help='Export the given groups by pk')
-@click.option('-g', '--group_names', multiple=True, type=str,
+@click.option('-g', '--group_names', cls=MultipleValueOption, type=str,
     help='Export the given groups by group name')
 @click.option('-P', '--no-parents', is_flag=True, default=False,
     help='Store only the nodes that are explicitly given, without exporting the parents')
@@ -59,7 +62,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.importexport import export, export_zip
 
-    node_id_set = set(nodes)
+    node_id_set = set(nodes or [])
     group_dict = dict()
 
     if group_names:

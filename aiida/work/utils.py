@@ -7,19 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import contextlib
 from threading import local
-
-import plumpy
+import tornado.ioloop
 
 from aiida.common.links import LinkType
 from aiida.orm.calculation import Calculation
 from aiida.orm.data.frozendict import FrozenDict
-from aiida.work.class_loader import CLASS_LOADER
 
 __all__ = ['ProcessStack']
-
-load_object = plumpy.utils.load_object
-load_class = load_object
 
 
 class ProcessStack(object):
@@ -106,10 +102,6 @@ class ProcessStack(object):
         raise NotImplementedError("Can't instantiate the ProcessStack")
 
 
-def class_name(identifier, verify=True):
-    return plumpy.utils.class_name(identifier, CLASS_LOADER, verify)
-
-
 def is_workfunction(func):
     try:
         return func._is_workfunction
@@ -131,3 +123,20 @@ def get_or_create_output_group(calculation):
     d.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
 
     return FrozenDict(dict=d)
+
+
+@contextlib.contextmanager
+def loop_scope(loop):
+    """
+    Make an event loop current for the scope of the context
+
+    :param loop: The event loop to make current for the duration of the scope
+    :type loop: :class:`tornado.ioloop.IOLoop`
+    """
+
+    current = tornado.ioloop.IOLoop.current()
+    try:
+        loop.make_current()
+        yield
+    finally:
+        current.make_current()

@@ -110,18 +110,6 @@ py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
 
-py:class  plum.class_loader.ClassLoader
-py:class  plum.engine.parallel.MultithreadedEngine
-py:class  plum.knowledge_provider.KnowledgeProvider
-py:class  plum.persistence.Bundle
-py:class  plum.persistence.pickle_persistence.PicklePersistence
-py:class  plum.process.Process
-py:class  plum.process_monitor.ProcessMonitorListener
-py:class  plum.process_spec.ProcessSpec
-py:class  plum.wait.WaitOn
-py:class  plum.workflow.Workflow
-py:class  plum.workflow.WorkflowSpec
-
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec
@@ -133,6 +121,8 @@ py:class  plumpy.persistence.Persister
 py:class  plumpy.ports.InputPort
 py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict
+py:class  plumpy.loaders.DefaultObjectLoader
+py:class  plumpy.ObjectLoader
 
 py:class  kiwipy.futures.Future
 

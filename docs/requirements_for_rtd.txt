@@ -44,7 +44,6 @@ pathlib2
 pgtest==1.1.0
 pika==0.11.2
 plumpy>=0.10.0.dev8
-portalocker==1.1.0
 psutil==5.4.0
 pycrypto==2.6.1
 pymatgen==4.5.3

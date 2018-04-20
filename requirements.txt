@@ -90,7 +90,7 @@ PyDispatcher==2.0.5
 pydocstyle==2.1.1
 pyflakes==1.6.0
 Pygments==2.2.0
-pylint==1.7.4
+pylint>=1.8.2
 pylint-celery==0.3
 pylint-common==0.2.5
 pylint-django==0.9.0
@@ -107,7 +107,7 @@ python-mimeparse==0.1.4
 pytz==2014.10
 PyYAML==3.12
 qe-tools==1.0.0
-reentry==1.2.0a9
+reentry==1.2.0
 requests==2.18.4
 requirements-detector==0.5.2
 scandir==1.6
@@ -142,5 +142,5 @@ wcwidth==0.1.7
 Werkzeug==0.14.1
 wrapt==1.10.11
 yapf==0.19.0
--e git://github.com/muhrin/plumpy.git@4a4b3a49520e3450d49e29b74cc2eb18782c5dd4#egg=plumpy
+-e git://github.com/muhrin/plumpy.git@a07b8db1dd3f28ea427a0ca4b66886553f9d463b#egg=plumpy
 -e git://github.com/muhrin/kiwipy.git@561d0a8b97b2a8923e9d85b4cd1c39f0dbe9d182#egg=kiwipy

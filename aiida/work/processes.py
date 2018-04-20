@@ -124,8 +124,8 @@ class Process(plumpy.Process):
         return self._calc
 
     @override
-    def save_instance_state(self, out_state):
-        super(Process, self).save_instance_state(out_state)
+    def save_instance_state(self, out_state, save_context):
+        super(Process, self).save_instance_state(out_state, save_context)
 
         if self.inputs.store_provenance:
             assert self.calc.is_stored
@@ -246,6 +246,10 @@ class Process(plumpy.Process):
             )
 
     # end region
+
+    def run_process(self, process, *args, **inputs):
+        with self.runner.child_runner() as runner:
+            return runner.run(process, *args, **inputs)
 
     def submit(self, process, *args, **kwargs):
         return self.runner.submit(process, *args, **kwargs)
@@ -620,8 +624,8 @@ class FunctionProcess(Process):
         super(FunctionProcess, self).__init__(
             enable_persistence=False, *args, **kwargs)
 
-    def execute(self, return_on_idle=False):
-        result = super(FunctionProcess, self).execute(return_on_idle)
+    def execute(self):
+        result = super(FunctionProcess, self).execute()
         # Create a special case for Process functions: They can return
         # a single value in which case you get this a not a dict
         if len(result) == 1 and self.SINGLE_RETURN_LINKNAME in result:

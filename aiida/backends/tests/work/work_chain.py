@@ -37,8 +37,8 @@ def run_and_check_success(process_class, **kwargs):
     :returns: instance of process
     """
     process = process_class(inputs=kwargs)
-    process.execute()
-    assert process.calc.is_finished_ok == True
+    work.run(process)
+    assert process.calc.is_finished_ok is True
 
     return process
 
@@ -117,7 +117,6 @@ class Wf(work.WorkChain):
 
 
 class ReturnWorkChain(WorkChain):
-
     FAILURE_STATUS = 1
 
     @classmethod
@@ -140,14 +139,14 @@ class ReturnWorkChain(WorkChain):
 class TestFinishStatus(AiidaTestCase):
 
     def test_failing_workchain(self):
-        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(False))
+        result, node = work.run_get_node(ReturnWorkChain, success=Bool(False))
         self.assertEquals(node.finish_status, ReturnWorkChain.FAILURE_STATUS)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
 
     def test_successful_workchain(self):
-        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(True))
+        result, node = work.run_get_node(ReturnWorkChain, success=Bool(True))
         self.assertEquals(node.finish_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
@@ -220,7 +219,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        work.launch.run(Wf, value=A, n=three)
+        work.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -228,7 +227,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = work.launch.run(Wf, value=B, n=three)
+        finished_steps = work.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -236,7 +235,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = work.launch.run(Wf, value=C, n=three)
+        finished_steps = work.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -332,8 +331,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -341,8 +339,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -350,8 +347,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -437,19 +433,19 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
-        wc = IfTest()
-        wc.execute(True)
-        self.assertTrue(wc.ctx.s1)
-        self.assertFalse(wc.ctx.s2)
+        if_test_wc = IfTest()
+        work.run(if_test_wc)
+        self.assertTrue(if_test_wc.ctx.s1)
+        self.assertFalse(if_test_wc.ctx.s2)
 
         # Now bundle the thing
-        bundle = plumpy.Bundle(wc)
+        bundle = plumpy.Bundle(if_test_wc)
 
         # Load from saved tate
         wc2 = bundle.unbundle()
         self.assertTrue(wc2.ctx.s1)
         self.assertFalse(wc2.ctx.s2)
-        wc2.execute()
+        work.run(wc2)
         self.assertTrue(wc2.ctx.s1)
         self.assertTrue(wc2.ctx.s2)
 
@@ -510,13 +506,7 @@ class TestWorkchain(AiidaTestCase):
         persister = plumpy.test_utils.TestPersister()
         runner = work.new_runner(persister=persister)
         workchain = Wf(runner=runner)
-        workchain.execute()
-
-    def _run_with_checkpoints(self, wf_class, inputs=None):
-        if inputs is None:
-            inputs = {}
-        proc = run_and_check_success(wf_class, **inputs)
-        return proc.finished_steps
+        work.run(workchain)
 
     def test_namespace_nondb_mapping(self):
         """
@@ -555,6 +545,11 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(TestWorkChain, namespace={'value': value})
 
+    def _run_with_checkpoints(self, wf_class, inputs=None):
+        if inputs is None:
+            inputs = {}
+        proc = run_and_check_success(wf_class, **inputs)
+        return proc.finished_steps
 
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
@@ -650,8 +645,8 @@ class TestWorkChainAbort(AiidaTestCase):
 
         with Capturing():
             with self.assertRaises(RuntimeError):
-                process.execute(True)
-                process.execute()
+                work.run(process)
+                work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -666,9 +661,9 @@ class TestWorkChainAbort(AiidaTestCase):
         process = TestWorkChainAbort.AbortableWorkChain()
 
         with self.assertRaises(plumpy.KilledError):
-            process.execute(True)
+            work.run(process)
             process.kill()
-            process.execute()
+            work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
@@ -722,7 +717,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             )
 
         def submit_child(self):
-            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
+            return ToContext(
+                child=self.submit(
+                    TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -741,7 +738,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         with Capturing():
             with self.assertRaises(RuntimeError):
-                process.execute()
+                work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -753,11 +750,16 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         workchain and its children end up in the KILLED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        process.add_on_waiting_callback(lambda _: process.pause())
 
         with self.assertRaises(plumpy.KilledError):
-            process.execute(True)
+            work.run(process)
             process.kill()
-            process.execute()
+            work.run(process)
+
+        # Tick the loop once to allow the kill signal of the child to be
+        # picked up over RMQ
+        process.loop().run_sync(lambda: None)
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -767,7 +769,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
         self.assertEquals(process.calc.is_killed, True)
-
+#
 
 class TestImmutableInputWorkchain(AiidaTestCase):
     """
@@ -855,6 +857,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         y = Int(2)
         run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
 
+
 class GrandParentExposeWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -879,6 +882,7 @@ class GrandParentExposeWorkChain(work.WorkChain):
                 namespace='sub.sub'
             )
         )
+
 
 class ParentExposeWorkChain(work.WorkChain):
     @classmethod
@@ -954,6 +958,7 @@ class ParentExposeWorkChain(work.WorkChain):
         )
         self.out_many(exposed_2)
 
+
 class ChildExposeWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -974,6 +979,7 @@ class ChildExposeWorkChain(work.WorkChain):
         self.out('b', self.inputs.b)
         self.out('c', self.inputs.c)
 
+
 class TestWorkChainExpose(AiidaTestCase):
     """
     Test the expose inputs / outputs functionality
@@ -992,7 +998,7 @@ class TestWorkChainExpose(AiidaTestCase):
         self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_expose(self):
-        res = work.launch.run(
+        res = work.run(
             ParentExposeWorkChain,
             a=Int(1),
             sub_1={'b': Float(2.3), 'c': Bool(True)},
@@ -1008,7 +1014,7 @@ class TestWorkChainExpose(AiidaTestCase):
         )
 
     def test_nested_expose(self):
-        res = work.launch.run(
+        res = work.run(
             GrandParentExposeWorkChain,
             sub=dict(
                 sub=dict(

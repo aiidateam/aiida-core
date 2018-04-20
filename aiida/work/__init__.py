@@ -10,10 +10,10 @@
 
 from plumpy import Bundle
 from plumpy import ProcessState
-from .class_loader import *
 from .futures import *
-from .job_processes import *
 from .launch import *
+from .job_processes import *
+from .persistence import *
 from .processes import *
 from .rmq import *
 from .runners import *
@@ -23,5 +23,5 @@ from .workchain import *
 
 __all__ = (processes.__all__ + runners.__all__ + utils.__all__ +
            workchain.__all__ + launch.__all__ + workfunctions.__all__ +
-           ['ProcessState'] + class_loader.__all__ + job_processes.__all__ +
-           rmq.__all__ + futures.__all__)
+           ['ProcessState'] + job_processes.__all__ +
+           rmq.__all__ + futures.__all__ + persistence.__all__)

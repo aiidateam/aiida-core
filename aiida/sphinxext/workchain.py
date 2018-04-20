@@ -9,12 +9,14 @@ from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 
 import aiida
+from aiida.common.utils import get_object_from_string
 from plumpy.ports import OutputPort
 
 
 def setup_aiida_workchain(app):
     app.add_directive_to_domain('py', 'aiida-workchain', AiidaWorkchainDirective)
     app.add_autodocumenter(WorkChainDocumenter)
+
 
 class WorkChainDocumenter(ClassDocumenter):
     directivetype = 'aiida-workchain'
@@ -30,6 +32,7 @@ class WorkChainDocumenter(ClassDocumenter):
             return issubclass(member, WorkChain)
         except:
             return False
+
 
 class AiidaWorkchainDirective(Directive):
     """
@@ -50,12 +53,11 @@ class AiidaWorkchainDirective(Directive):
         """Loads the workchain and sets up additional attributes."""
         # pylint: disable=attribute-defined-outside-init
         aiida.try_load_dbenv()
-        from aiida.work import CLASS_LOADER
 
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
         self.workchain_name = self.module_name + '.' + self.class_name
-        self.workchain = CLASS_LOADER.load_class(self.workchain_name)
+        self.workchain = get_object_from_string(self.workchain_name)
         self.workchain_spec = self.workchain.spec()
 
     def build_node_tree(self):
@@ -159,6 +161,7 @@ class AiidaWorkchainDirective(Directive):
                 return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
             except (AttributeError, TypeError):
                 return str(valid_type)
+
 
 def _is_non_db(port):
     return getattr(port, 'non_db', False)

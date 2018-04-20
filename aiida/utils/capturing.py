@@ -31,6 +31,7 @@ class Capturing(object):
     :param capture_stderr: if True, also captures sys.stderr. To access the
         lines, use obj.stderr_lines. If False, obj.stderr_lines is None.
     """
+
     def __init__(self, capture_stderr=False):
         self.stdout_lines = list()
         super(Capturing, self).__init__()
@@ -54,7 +55,7 @@ class Capturing(object):
     def __exit__(self, *args):
         self.stdout_lines.extend(self._stringioout.getvalue().splitlines())
         sys.stdout = self._stdout
-        del self._stringioout    # free up some memory
+        del self._stringioout  # free up some memory
         if self._capture_stderr:
             self.stderr_lines.extend(self._stringioerr.getvalue().splitlines())
             sys.stderr = self._stderr

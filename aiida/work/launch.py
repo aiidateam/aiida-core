@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from . import processes
 from . import runners
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
@@ -34,7 +35,10 @@ def run(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
-    runner = runners.get_runner()
+    if isinstance(process, processes.Process):
+        runner = process.runner
+    else:
+        runner = runners.get_runner()
     return runner.run(process, *args, **inputs)
 
 
@@ -47,7 +51,10 @@ def run_get_node(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and the calculation node
     """
-    runner = runners.get_runner()
+    if isinstance(process, processes.Process):
+        runner = process.runner
+    else:
+        runner = runners.get_runner()
     return runner.run_get_node(process, *args, **inputs)
 
 
@@ -60,5 +67,8 @@ def run_get_pid(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process pid
     """
-    runner = runners.get_runner()
+    if isinstance(process, processes.Process):
+        runner = process.runner
+    else:
+        runner = runners.get_runner()
     return runner.run_get_pid(process, *args, **inputs)

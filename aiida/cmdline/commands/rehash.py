@@ -2,9 +2,6 @@ import sys
 
 import click
 
-from plumpy.utils import load_object as load_class
-from plumpy.exceptions import ClassNotFoundException
-
 from aiida import try_load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand
 
@@ -13,6 +10,7 @@ class Rehash(VerdiCommand):
     """
     Re-hash all nodes.
     """
+
     def run(self, *args):
         ctx = _rehash_cmd.make_context('rehash', list(args))
         with ctx:
@@ -24,18 +22,21 @@ class Rehash(VerdiCommand):
         """
         print ""
 
+
 @click.command('rehash')
 @click.option('--all', '-a', is_flag=True, help='Rehash all nodes of the given Node class.')
-@click.option('--class-name', type=str, default='aiida.orm.node.Node', help='Restrict nodes which are re-hashed to instances of this class.')
+@click.option('--class-name', type=str, default='aiida.orm.node.Node',
+              help='Restrict nodes which are re-hashed to instances of this class.')
 @click.argument('pks', type=int, nargs=-1)
 def _rehash_cmd(all, class_name, pks):
     try_load_dbenv()
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.common.utils import get_object_from_string
 
     # Get the Node class to match
     try:
-        node_class = load_class(class_name)
-    except ClassNotFoundException:
+        node_class = get_object_from_string(class_name)
+    except ValueError:
         click.echo("Could not load class '{}'.\nAborted!".format(class_name))
         sys.exit(1)
 

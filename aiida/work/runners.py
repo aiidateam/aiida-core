@@ -1,11 +1,10 @@
 from collections import namedtuple
 from contextlib import contextmanager
-import inspect
 import logging
 import plumpy
+import tornado.ioloop
 
 from aiida.orm import load_node, load_workflow
-from . import class_loader
 from . import futures
 from . import persistence
 from . import rmq
@@ -40,7 +39,7 @@ def get_runner():
     :returns: the global runner
     """
     global _runner
-    if _runner is None:
+    if _runner is None or _runner.is_closed():
         _runner = new_runner()
     return _runner
 
@@ -55,56 +54,16 @@ def set_runner(runner):
     _runner = runner
 
 
-def instantiate_process(runner, process, *args, **inputs):
-    """
-    Return an instance of the process with the given runner and inputs. The function can deal with various types
-    of the `process`:
-
-        * Process instance: will simply return the instance
-        * JobCalculation class: will construct the JobProcess and instantiate it
-        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
-        * Process class: will instantiate with the specified inputs
-
-    If anything else is passed, a ValueError will be raised
-
-    :param runner: instance of a Runner
-    :param process: Process instance or class, JobCalculation class or ProcessBuilder instance
-    :param inputs: the inputs for the process to be instantiated with
-    """
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.work.process_builder import ProcessBuilder
-    from aiida.work.processes import Process
-
-    if isinstance(process, Process):
-        assert len(args) == 0
-        assert len(inputs) == 0
-        return process
-
-    if isinstance(process, ProcessBuilder):
-        builder = process
-        process_class = builder._process_class
-        inputs.update(builder._todict())
-    elif issubclass(process, JobCalculation):
-        process_class = process.process()
-    elif issubclass(process, Process):
-        process_class = process
-    else:
-        raise ValueError('invalid process {}, needs to be Process, JobCalculation or ProcessBuilder'.format(type(process)))
-
-    process = process_class(runner=runner, inputs=inputs)
-
-    return process
-
-
 class Runner(object):
 
     _persister = None
     _rmq_connector = None
     _communicator = None
+    _closed = False
 
-    def __init__(self, rmq_config=None, loop=None, poll_interval=0.,
+    def __init__(self, rmq_config=None, poll_interval=0., loop=None,
                  rmq_submit=False, enable_persistence=True, persister=None):
-        self._loop = loop if loop is not None else plumpy.new_event_loop()
+        self._loop = loop if loop is not None else tornado.ioloop.IOLoop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -153,6 +112,9 @@ class Runner(object):
     def communicator(self):
         return self._communicator
 
+    def is_closed(self):
+        return self._closed
+
     def start(self):
         """ Start the internal event loop """
         self._loop.start()
@@ -163,12 +125,58 @@ class Runner(object):
 
     def run_until_complete(self, future):
         """ Run the loop until the future has finished and return the result """
-        return self._loop.run_sync(lambda: future)
+        with utils.loop_scope(self._loop):
+            return self._loop.run_sync(lambda: future)
 
     def close(self):
+        assert not self._closed
+
         self.stop()
         if self._rmq_connector is not None:
             self._rmq_connector.disconnect()
+        self._closed = True
+
+    def instantiate_process(self, process, *args, **inputs):
+        """
+        Return an instance of the process with the given runner and inputs. The function can deal with various types
+        of the `process`:
+
+            * Process instance: will simply return the instance
+            * JobCalculation class: will construct the JobProcess and instantiate it
+            * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
+            * Process class: will instantiate with the specified inputs
+
+        If anything else is passed, a ValueError will be raised
+
+        :param self: instance of a Runner
+        :param process: Process instance or class, JobCalculation class or ProcessBuilder instance
+        :param inputs: the inputs for the process to be instantiated with
+        """
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.work.process_builder import ProcessBuilder
+        from aiida.work.processes import Process
+
+        if isinstance(process, Process):
+            assert len(args) == 0
+            assert len(inputs) == 0
+            assert self is process.runner
+            return process
+
+        if isinstance(process, ProcessBuilder):
+            builder = process
+            process_class = builder._process_class
+            inputs.update(builder._todict())
+        elif issubclass(process, JobCalculation):
+            process_class = process.process()
+        elif issubclass(process, Process):
+            process_class = process
+        else:
+            raise ValueError(
+                'invalid process {}, needs to be Process, JobCalculation or ProcessBuilder'.format(type(process)))
+
+        process = process_class(runner=self, inputs=inputs)
+
+        return process
 
     def submit(self, process, *args, **inputs):
         """
@@ -180,9 +188,9 @@ class Runner(object):
         :return: the calculation node of the process
         """
         assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+        assert not self._closed
 
-        process = instantiate_process(self, process, *args, **inputs)
-
+        process = self.instantiate_process(process, *args, **inputs)
         if self._rmq_submit:
             self.persister.save_checkpoint(process)
             process.close()
@@ -202,14 +210,16 @@ class Runner(object):
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and the calculation node
         """
+        assert not self._closed
+
         if utils.is_workfunction(process):
             result, node = process.run_get_node(*args, **inputs)
             return result, node
 
-
-        with self.child_runner() as runner:
-            process = instantiate_process(runner, process, *args, **inputs)
-            return process.execute(), process.calc
+        with utils.loop_scope(self.loop):
+            process = self.instantiate_process(process, *args, **inputs)
+            process.execute()
+            return process.outputs, process.calc
 
     def run(self, process, *args, **inputs):
         """
@@ -322,13 +332,13 @@ class DaemonRunner(Runner):
         super(DaemonRunner, self)._setup_rmq(url, prefix, task_prefetch_count, testing_mode)
 
         # Create a context for loading new processes
-        load_context = plumpy.LoadContext(runner=self)
+        load_context = plumpy.LoadSaveContext(runner=self)
 
         # Listen for incoming launch requests
         task_receiver = rmq.ProcessLauncher(
             loop=self.loop,
             persister=self.persister,
             load_context=load_context,
-            class_loader=class_loader.CLASS_LOADER
+            loader=persistence.get_object_loader()
         )
         self.communicator.add_task_subscriber(task_receiver)

@@ -26,8 +26,8 @@ from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_spec import DictSchema
 
+from . import persistence
 from . import processes
-from . import utils
 
 __all__ = ['JobProcess']
 
@@ -384,7 +384,8 @@ class JobProcess(processes.Process):
             # Outputs
             spec.outputs.valid_type = Data
 
-        class_name = '{}_{}'.format(cls.__name__, utils.class_name(calc_class))
+        dynamic_class_name = persistence.get_object_loader().identify_object(calc_class)
+        class_name = '{}_{}'.format(cls.__name__, dynamic_class_name)
 
         # Dynamically create the type for this Process
         return type(

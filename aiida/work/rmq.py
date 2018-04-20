@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 import json
 import collections
-
 import plumpy
 import plumpy.rmq
+import tornado.ioloop
 
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.work.class_loader import CLASS_LOADER
 from aiida.work.persistence import AiiDAPersister
+
+from . import persistence
+from . import utils
 
 __all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
            'RemoteException', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel']
 
-
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
-
 
 # GP: Using here 127.0.0.1 instead of localhost because on some computers
 # localhost resolves first to IPv6 with address ::1 and if RMQ is not
@@ -172,7 +172,7 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
         any unstored nodes in the inputs are first stored and the data is then serialized
         """
         kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
-        kwargs['class_loader'] = CLASS_LOADER
+        kwargs['class_loader'] = persistence.get_object_loader()
         super(LaunchProcessAction, self).__init__(*args, **kwargs)
 
 
@@ -283,7 +283,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     """
 
     def __init__(self, prefix, testing_mode=False):
-        self._loop = plumpy.new_event_loop()
+        self._loop = tornado.ioloop.IOLoop()
         connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
@@ -293,6 +293,7 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._loop.close()
         self.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
@@ -302,8 +303,9 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         return action.result()
 
     def execute_action(self, action):
-        action.execute(self._communicator)
-        return self._communicator.await(action)
+        with utils.loop_scope(self._loop):
+            action.execute(self._communicator)
+            return self._communicator.await(action)
 
     def close(self):
         self._communicator.disconnect()
@@ -334,7 +336,7 @@ def new_blocking_control_panel():
 
 def create_rmq_connector(loop=None):
     if loop is None:
-        loop = plumpy.events.new_event_loop()
+        loop = tornado.ioloop.IOLoop.current()
     return plumpy.rmq.RmqConnector(amqp_url=get_rmq_url(), loop=loop)
 
 

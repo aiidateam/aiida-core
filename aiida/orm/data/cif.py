@@ -440,7 +440,7 @@ class CifData(SinglefileData):
         """
         from ase.io import read
 
-        #the read function returns a list as a cif file might contain multiple
+        # the read function returns a list as a cif file might contain multiple
         # structures
         struct_list = read(fileobj, index=':', format='cif', **kwargs)
 
@@ -530,6 +530,11 @@ class CifData(SinglefileData):
         return CifData.read_cif(self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
+        """
+        Set the cif data from an ase atoms object.
+
+        :param aseatoms: The ase atoms object to use
+        """
         import tempfile
         cif = cif_from_ase(aseatoms)
         with tempfile.NamedTemporaryFile() as f:
@@ -595,7 +600,7 @@ class CifData(SinglefileData):
         self._ase = None
 
         if not self.is_stored and 'file' in kwargs \
-           and self.get_attr('parse_policy') == 'eager':
+                and self.get_attr('parse_policy') == 'eager':
             self.parse()
 
     def parse(self, scan_type=None):
@@ -632,8 +637,8 @@ class CifData(SinglefileData):
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
-                        self.source.get('source_md5', None) is not None and \
-                        self.source['source_md5'] != md5sum:
+                self.source.get('source_md5', None) is not None and \
+                self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
 
@@ -842,7 +847,7 @@ class CifData(SinglefileData):
 
         return result['structure']
 
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     def _prepare_cif(self, main_file_name=""):
         """
         Return CIF string of CifData object.
@@ -859,7 +864,7 @@ class CifData(SinglefileData):
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read(), {}
 
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given CIF to a string of format TCOD CIF.

@@ -11,7 +11,7 @@
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.persistence import Persistence, AiiDAPersister
+from aiida.work.persistence import AiiDAPersister
 import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
 from aiida import work

@@ -57,8 +57,8 @@ class WorkChain(processes.Process):
         return self._context
 
     @override
-    def save_instance_state(self, out_state):
-        super(WorkChain, self).save_instance_state(out_state)
+    def save_instance_state(self, out_state, save_context):
+        super(WorkChain, self).save_instance_state(out_state, save_context)
         # Save the context
         out_state[self._CONTEXT] = serialize_data(self.ctx)
 

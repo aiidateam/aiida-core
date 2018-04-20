@@ -9,91 +9,18 @@
 ###########################################################################
 
 import logging
-import uritools
-import os
 import plumpy
-import portalocker
-import portalocker.utils
 import yaml
 
 from aiida import orm
-from . import class_loader
 
-Bundle = plumpy.Bundle
+__all__ = ['ObjectLoader', 'get_object_loader']
+
 LOGGER = logging.getLogger(__name__)
-
-
-# If portalocker accepts my pull request to have this incorporated into the
-# library then this can be removed. https://github.com/WoLpH/portalocker/pull/34
-class RLock(portalocker.Lock):
-    """
-    reentrant lock.
-
-    Functions in a similar way to threading.RLock in that it can be acquired
-    multiple times.  When the corresponding number of release() calls are made
-    the lock will finally release the underlying file lock.
-    """
-
-    def __init__(
-            self, filename, mode='a', timeout=portalocker.utils.DEFAULT_TIMEOUT,
-            check_interval=portalocker.utils.DEFAULT_CHECK_INTERVAL, fail_when_locked=False,
-            flags=portalocker.utils.LOCK_METHOD):
-        """Constructor"""
-
-        super(RLock, self).__init__(filename, mode, timeout, check_interval,
-                                    fail_when_locked, flags)
-        self._acquire_count = 0
-
-    def acquire(
-            self, timeout=None, check_interval=None, fail_when_locked=None):
-        if self._acquire_count >= 1:
-            fh = self.fh
-        else:
-            fh = super(RLock, self).acquire(timeout, check_interval,
-                                            fail_when_locked)
-        self._acquire_count += 1
-        return fh
-
-    def release(self):
-        if self._acquire_count == 0:
-            raise portalocker.LockException(
-                "Cannot release more times than acquired")
-
-        if self._acquire_count == 1:
-            super(RLock, self).release()
-        self._acquire_count -= 1
-
-
-Persistence = plumpy.PicklePersister
-_GLOBAL_PERSISTENCE = None
 
 
 class PersistenceError(Exception):
     pass
-
-
-def get_global_persistence():
-    global _GLOBAL_PERSISTENCE
-
-    if _GLOBAL_PERSISTENCE is None:
-        _create_storage()
-
-    return _GLOBAL_PERSISTENCE
-
-
-def _create_storage():
-    import aiida.common.setup as setup
-    import aiida.settings as settings
-    global _GLOBAL_PERSISTENCE
-
-    parts = uritools.urisplit(settings.REPOSITORY_URI)
-    if parts.scheme == u'file':
-        WORKFLOWS_DIR = os.path.expanduser(
-            os.path.join(parts.path, setup.WORKFLOWS_SUBDIR))
-
-        _GLOBAL_PERSISTENCE = Persistence(
-            pickle_directory=WORKFLOWS_DIR
-        )
 
 
 class AiiDAPersister(plumpy.Persister):
@@ -108,11 +35,7 @@ class AiiDAPersister(plumpy.Persister):
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
 
-        loader = class_loader.CLASS_LOADER
-
-        assert loader is not None, 'the class loader is not defined'
-
-        bundle = Bundle(process, loader)
+        bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
         calc = process.calc
         calc._set_checkpoint(yaml.dump(bundle))
 
@@ -162,3 +85,48 @@ class AiiDAPersister(plumpy.Persister):
         :param pid: the process id of the :class:`aiida.work.processes.Process`
         """
         pass
+
+
+class ObjectLoader(plumpy.DefaultObjectLoader):
+    """
+    The AiiDA specific object loader.
+    """
+
+    @staticmethod
+    def is_wrapped_job_calculation(name):
+        from aiida.work.job_processes import JobProcess
+        return name.find(JobProcess.__name__) != -1
+
+    def load_object(self, identifier):
+        """
+        Given an identifier load an object.
+
+        Throws a ValueError if the object cannot be loaded.
+
+        :param identifier: The identifier
+        :return: The loaded object
+        """
+        from aiida.work.job_processes import JobProcess
+
+        if self.is_wrapped_job_calculation(identifier):
+            idx = identifier.find(JobProcess.__name__)
+            wrapped_class = identifier[idx + len(JobProcess.__name__) + 1:]
+            # Recreate the class
+            return JobProcess.build(super(ObjectLoader, self).load_object(wrapped_class))
+        else:
+            return super(ObjectLoader, self).load_object(identifier)
+
+
+_object_loader = None
+
+
+def get_object_loader():
+    """
+    Get the global AiiDA object loader
+    :return: The global object loader
+    :rtype: :class:`plumpy.ObjectLoader`
+    """
+    global _object_loader
+    if _object_loader is None:
+        _object_loader = ObjectLoader()
+    return _object_loader

@@ -223,7 +223,7 @@ class TestFunctionProcess(AiidaTestCase):
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         function_process_class = work.FunctionProcess.build(wf)
-        self.assertEqual(work.launch.run(function_process_class, **inputs), inputs)
+        self.assertEqual(work.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
 

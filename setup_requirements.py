@@ -24,7 +24,6 @@ install_requires = [
     'psutil==5.4.0',
     'meld3==1.0.0',
     'numpy==1.12.0',
-    'portalocker==1.1.0',
     'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.6',
@@ -122,7 +121,7 @@ extras_require = {
         'pre-commit==1.3.0',
         'yapf==0.19.0',
         'prospector==0.12.7',
-        'pylint==1.7.4',
+        'pylint>=1.8.2',
         'toml'
     ],
     'dev_sphinxext': [

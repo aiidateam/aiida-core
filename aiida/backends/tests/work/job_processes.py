@@ -13,7 +13,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import classproperty
 from aiida.orm.data.int import Int
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from aiida.work.class_loader import ClassLoader
+from aiida.work.persistence import ObjectLoader
 from aiida.work.job_processes import JobProcess
 
 from . import utils
@@ -66,7 +66,7 @@ class TestJobProcess(AiidaTestCase):
         work.set_runner(None)
 
     def test_class_loader(self):
-        cl = ClassLoader()
+        cl = ObjectLoader()
         TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
 
     def test_job_process_set_label_and_description(self):
@@ -126,7 +126,7 @@ class TestAdditionalParameterJobProcess(AiidaTestCase):
         work.set_runner(None)
 
     def test_class_loader(self):
-        cl = ClassLoader()
+        cl = ObjectLoader()
         AdditionalParameterProcess = JobProcess.build(AdditionalParameterCalculation)
 
     def test_job_process_with_additional_parameter(self):

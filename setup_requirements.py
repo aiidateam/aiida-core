@@ -126,7 +126,8 @@ extras_require = {
         'toml'
     ],
     'dev_sphinxext': [
-        'pytest'
+        'pytest',
+        'pytest-cov',
     ]
 }
 
@@ -145,4 +146,4 @@ extras_require['dev_sphinxext'] += extras_require['docs']
 #    the requirements (and there is no easy way on our side to fix a specific
 #    installation order of dependencies)
 
-extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools']
+extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools'] + extras_require['dev_sphinxext']

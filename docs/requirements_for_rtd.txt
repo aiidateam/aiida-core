@@ -49,6 +49,8 @@ psutil==5.4.0
 pycrypto==2.6.1
 pymatgen==4.5.3
 pyparsing==2.1.10
+pytest
+pytest-cov
 python-dateutil==2.6.0
 python-memcached==1.58
 python-mimeparse==0.1.4

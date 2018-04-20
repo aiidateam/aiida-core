@@ -1778,18 +1778,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def submit_test(self, folder=None, subfolder_name=None):
         """
-        Test submission, creating the files in a local folder.
+        Run a test submission by creating the files that would be generated for the real calculation in a local folder,
+        without actually storing the calculation nor the input nodes. This functionality therefore also does not
+        require any of the inputs nodes to be stored yet.
 
-        :note: this submit_test function does not require any node
-            (neither the calculation nor the input links) to be stored yet.
-
-        :param folder: A Folder object, within which each calculation files
-            are created; if not passed, a subfolder 'submit_test' of the current
-            folder is used.
-        :param subfolder_name: the name of the subfolder to use for this
-            calculation (within Folder). If not passed, a unique string
-            starting with the date and time in the format ``yymmdd-HHMMSS-``
-            is used.
+        :param folder: a Folder object, within which to create the calculation files. By default a folder
+            will be created in the current working directory
+        :param subfolder_name: the name of the subfolder to use within the directory of the ``folder`` object. By
+            default a unique string will be generated based on the current datetime with the format ``yymmdd-``
+            followed by an auto incrementing index
         """
         import os
         import errno

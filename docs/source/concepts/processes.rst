@@ -170,3 +170,14 @@ Launching the process
 When all the inputs have been defined for the builder, it can be used to actually launch the ``Process``.
 The ``ProcessBuilder`` can be launched by passing it to the free functions ``run`` and ``submit`` from the ``aiida.work.launch`` module, just as you would do a normal process.
 For more details please refer to the :ref:`process builder section <running_workflows_process_builder>` in the section of the documentation on :ref:`running workflows <running_workflows>`.
+
+Submit test
+-----------
+The ``ProcessBuilder`` of a ``JobCalculation`` has one additional feature.
+It has the method :py:meth:`~aiida.work.process_builder.JobProcessBuilder.submit_test()`.
+When this method is called, provided that the inputs are valid, a directory will be created locally with all the inputs files and scripts that would be created if the builder were to be submitted for real.
+This gives you a chance to inspect the generated files before actually sending them to the remote computer.
+This action also will not create an actual calculation node in the database, nor do the input nodes have to be stored, allowing you to check that everything is correct without polluting the database.
+
+By default the method will create a folder ``submit_test`` in the current working directory and within it a directory with an automatically generated unique name, each time the method is called.
+The method takes two optional arguments ``folder`` and ``subfolder_name``, to change the base folder and the name of the test directory, respectively.

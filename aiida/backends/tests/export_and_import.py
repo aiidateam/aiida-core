@@ -1634,13 +1634,13 @@ class TestLinks(AiidaTestCase):
         # and the final set of nodes that are exported in each case, following
         # predecessor/successor links.
         export_list = [
-            # (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
+            (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
             (wc2, [d1, d3, d4, pw1, wc2]),
-            (d3, [d1, d3, d4, pw1, wc2]),
-            (d4, [d1, d3, d4, pw1, wc2]),
-            (d5, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
-            (d6, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
-            (pw2, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+            (d3, [d1, d3, d4, pw1]),
+            (d4, [d1, d3, d4, pw1]),
+            (d5, [d1, d3, d4, d5, d6, pw1, pw2]),
+            (d6, [d1, d3, d4, d5, d6, pw1, pw2]),
+            (pw2, [d1, d3, d4, d5, d6, pw1, pw2]),
             (d1, [d1]),
             (d2, [d2])
         ]

@@ -68,6 +68,7 @@ if __name__ == '__main__':
                 'inline = aiida.orm.calculation.inline:InlineCalculation',
                 'job = aiida.orm.calculation.job:JobCalculation',
                 'work = aiida.orm.calculation.work:WorkCalculation',
+                'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
             ],
             'aiida.code': [
@@ -101,6 +102,7 @@ if __name__ == '__main__':
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [
+                'simpleplugins.arithmetic.add = aiida.parsers.simpleplugins.arithmetic.add:ArithmeticAddParser',
                 'simpleplugins.templatereplacer.doubler = aiida.parsers.simpleplugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
             ],
             'aiida.schedulers': [

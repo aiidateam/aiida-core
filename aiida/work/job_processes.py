@@ -24,6 +24,7 @@ from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
+from aiida.work.process_builder import JobProcessBuilder
 from aiida.work.process_spec import DictSchema
 
 from . import persistence
@@ -341,6 +342,10 @@ class JobProcess(processes.Process):
     OPTIONS_INPUT_LABEL = 'options'
 
     _calc_class = None
+
+    @classmethod
+    def get_builder(cls):
+        return JobProcessBuilder(cls)
 
     @classmethod
     def build(cls, calc_class):

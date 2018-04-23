@@ -1948,6 +1948,56 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     if not silent:
         print "STORING NODE LINKS..."
+
+    links_uuid = list()
+    if len(all_nodes_pk) > 0:
+        links_qb = QueryBuilder()
+        links_qb.append(Data, project=['uuid', '*'], tag='input')
+        links_qb.append(Calculation,
+                        project=['uuid', '*'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type':{'==':LinkType.INPUT.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        print "============> Printing links INPUT (Data, Calculation)"
+        print links_qb.all()
+        print "<============"
+
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation, project=['uuid', '*'], tag='input')
+        links_qb.append(Data,
+                        project=['uuid', '*'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type': {'==': LinkType.CREATE.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        print "============> Printing links CREATE (Calculation, Data)"
+        print links_qb.all()
+        print "<============"
+
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation, project=['uuid', '*'], tag='input')
+        links_qb.append(Data,
+                        project=['uuid', '*'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type': {'==': LinkType.RETURN.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        print "============> Printing links RETURN (Calculation, Data)"
+        print links_qb.all()
+        print "<============"
+
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation, project=['uuid', '*'], tag='input')
+        links_qb.append(Calculation,
+                        project=['uuid', '*'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type': {'==': LinkType.CALL.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        print "============> Printing links CALL (Calculation [caller], Calculation [called])"
+        print links_qb.all()
+        print "<============"
+
+    # OLD CODE
+
+
     ## All 'parent' links (in this way, I can automatically export a node
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)

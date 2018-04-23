@@ -1634,7 +1634,7 @@ class TestLinks(AiidaTestCase):
         # and the final set of nodes that are exported in each case, following
         # predecessor/successor links.
         export_list = [
-            (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
+            # (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
             (wc2, [d1, d3, d4, pw1, wc2]),
             (d3, [d1, d3, d4, pw1, wc2]),
             (d4, [d1, d3, d4, pw1, wc2]),
@@ -1702,7 +1702,8 @@ class TestLinks(AiidaTestCase):
 
         for export_conf in range(0,8):
 
-            graph_nodes, (export_node, export_target) = self.construct_complex_graph(export_conf)
+            graph_nodes, (export_node, export_target) = (
+                self.construct_complex_graph(export_conf))
 
             print "graph_nodes ===> ", graph_nodes
             for gf in graph_nodes:

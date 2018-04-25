@@ -125,7 +125,8 @@ class AiidaWorkchainDirective(Directive):
                 item += nodes.Text(', ')
                 item += nodes.emphasis(text='Namespace')
                 if port.help is not None:
-                    item += nodes.Text(' -- ' + port.help)
+                    item += nodes.Text(' -- ')
+                    item.extend(publish_doctree(port.help)[0].children)
                 item += self.build_portnamespace_doctree(port)
             else:
                 raise NotImplementedError

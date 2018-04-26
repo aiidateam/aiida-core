@@ -125,11 +125,14 @@ pipeline {
         stage('Final') {
             steps {
                 // create the XML coverage info
+                // Note: we do it from a script to make sure that .bashrc
+                // is loaded, to set properly the PATH. Otherwise, 'coverage'
+                // is not found.
                 sh '.jenkins-data/create_coverage_info.sh'
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'coverage.xml', fingerprint: true
+                    junit 'coverage.xml'
                 }
             }
         }
@@ -155,7 +158,7 @@ pipeline {
         // Note that I had problems with email, I don't know if it is a configuration problem
         // or a missing plugin.
         changed {
-            echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.result}!"
+            echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.currentResult}!"
         } 
     } 
 }

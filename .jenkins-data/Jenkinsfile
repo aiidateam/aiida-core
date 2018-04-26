@@ -125,7 +125,7 @@ pipeline {
         stage('Final') {
             steps {
                 // create the XML coverage info
-                sh 'coverge xml -o coverage.xml'
+                sh 'coverage xml -o coverage.xml'
             }
             post {
                 always {

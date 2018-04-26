@@ -41,6 +41,13 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
+
+    #####
+    ## NOTE: when the specific reference to plumpy is removed (or,
+    ## equivalently, the pip install -r requirements.txt: see #1204), please
+    ## remove also the corresponding line in .jenkins-data/Jenkinsfile
+    #####
+
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt && pip install -e git://github.com/muhrin/plumpy.git@a07b8db1dd3f28ea427a0ca4b66886553f9d463b#egg=plumpy; else pip install .[rest,docs,atomic_tools,testing,dev_precommit] && pip install -r requirements.txt; fi
 
 env:

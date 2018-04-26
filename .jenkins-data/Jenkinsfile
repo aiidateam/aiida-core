@@ -56,6 +56,8 @@ pipeline {
         stage('Build') {
             steps {
                 sh 'pip install --user .[rest,docs,atomic_tools,testing,dev_precommit]'
+                // This is needed while fixing #1204
+                sh 'pip install -r requirements.txt'
                 // To be able to do ssh localhost
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
                 sh 'cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys'

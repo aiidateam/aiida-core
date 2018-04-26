@@ -104,6 +104,7 @@ def validate_calculations(expected_results):
 def validate_workchains(expected_results):
     valid = True
     for pk, expected_value in expected_results.iteritems():
+        this_valid = True
         try:
             calc = load_node(pk)
             actual_value = calc.out.output
@@ -111,17 +112,23 @@ def validate_workchains(expected_results):
             print "* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}".format(
                 pk, expected_value, type(exception), exception)
             valid = False
+            this_valid = False
+            actual_value = None
 
-        if not calc.is_finished_ok:
+        # I check only if this_valid, otherwise calc could not exist
+        if this_valid and not calc.is_finished_ok:
             print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
                 pk, calc.process_state, calc.finish_status)
             print_logshow(pk)
             valid = False
+            this_valid = False
 
-        if actual_value != expected_value:
+        # I check only if this_valid, otherwise actual_value could be unset
+        if this_valid and actual_value != expected_value:
             print "* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}".format(
                 actual_value, type(actual_value), pk, expected_value, type(expected_value))
             valid = False
+            this_valid = False
 
     return valid
 

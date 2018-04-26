@@ -1,0 +1,147 @@
+pipeline {
+    /* The tutorial was setting here agent none, and setting the 
+       agent in each stage, using therefore different agents in each
+       stage. I think that for what we are trying to achieve, having
+       a single agent and running all in the same docker image is better,
+       but we need to check this for more advanced usages. */
+    // agent none
+    agent {
+        // To use a precompiled image
+        /* docker {
+            image 'python:2-alpine'
+        } */
+        // Documentation: https://jenkins.io/doc/book/pipeline/syntax/#agent
+        // Note: it is possible that flags of the docker
+        // agent might work, e.g. 
+        //   args '-u aiida'
+        // However it will not work because the file permissions are checked
+        // out by Jenkins as root.
+
+        // TODO: we might want to reuse the pip cache, by
+        // mounting a local folder - from the output: "Stored in directory: /root/.cache/pip/"
+        dockerfile {
+            filename 'Dockerfile'
+            dir '.jenkins-data'
+            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/'
+            // args '-u jenkins'
+        }
+    }
+    environment {
+        // I define some environment variables that are used
+        // internally by the travis scripts that I call
+        TEST_TYPE="tests"
+        // To mock what TRAVIS WOULD USE
+        TRAVIS_BUILD_DIR="."
+        COMPUTER_SETUP_TYPE="jenkins"
+        // The following two variables allow to run selectively tests only for one backend
+        RUN_ALSO_DJANGO="true"
+        RUN_ALSO_SQLALCHEMY="true"
+    }
+    stages {
+        stage('Pre-build') {
+            steps {
+                sh 'sudo /etc/init.d/ssh restart'
+                sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
+                // (re)start postgres (both to start it or to reload the configuration)
+                sh 'sudo /etc/init.d/postgresql restart'
+
+                // Debug: check that I can connect without password
+                sh 'echo "SELECT datname FROM pg_database" | psql -h localhost -U postgres -w'
+
+                // We skip for now the creation of a docker image
+                // to ssh into, that is done in travis. This can 
+                // probably be done differently in Jenkins, to investigate.
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'pip install --user .[rest,docs,atomic_tools,testing,dev_precommit]'
+                // To be able to do ssh localhost
+                sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
+                sh 'cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys'
+                sh 'ssh-keyscan -H localhost >> ~/.ssh/known_hosts'
+                // Add the line to the .bashrc, but before it stops when non-interactive
+                // So it can find the location of 'verdi'
+                sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
+                // Add path needed by the daemon to find the workchains
+                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.travis-data/' ~/.bashrc"
+                sh "cat ~/.bashrc"
+            }
+            post {
+                always {
+                    sh 'pip freeze > pip-freeze.txt'
+                    archiveArtifacts artifacts: 'pip-freeze.txt', fingerprint: true
+                }
+            }
+        }
+        stage('Test') {
+            failFast false // It is the default, but I still put it for future reference
+                           // failFast would stop as soon as there is a failing test
+            parallel {
+                stage('Test-Django') {
+                    environment {
+                        TEST_AIIDA_BACKEND="django"
+                    }
+                    when {
+                        // This allows to selectively run only one backend
+                        environment name: 'RUN_ALSO_DJANGO', value: 'true'
+                    }
+                    steps {
+                        sh '.travis-data/setup_profiles.sh'
+                        sh '.travis-data/before_script.sh'
+                        sh '.travis-data/test_script.sh'
+                    }
+                }
+                stage('Test-SQLAlchemy') {
+                    environment {
+                        TEST_AIIDA_BACKEND="sqlalchemy"
+                    }
+                    when {
+                        // This allows to selectively run only one backend
+                        environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
+                    }
+                    steps {
+                        sh '.travis-data/setup_profiles.sh'
+                        sh '.travis-data/before_script.sh'
+                        sh '.travis-data/test_script.sh'
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            // Some debug stuff
+            sh 'whoami ; pwd; echo $TEST_AIIDA_BACKEND'
+        }
+        success {
+            echo 'The run finished successfully!'
+        }
+        unstable {
+            echo 'This run is unstable...'
+        }
+        failure {
+            echo "This run failed..."
+        }
+        //  You can trigger actions when the status change (e.g. it starts failing,
+        // or it starts working again - e.g. sending emails or similar)
+        // possible variables: see e.g. https://qa.nuxeo.org/jenkins/pipeline-syntax/globals
+        // Other valid names: fixed, regression (opposite of fixed), aborted (by user, typically)
+        // Note that I had problems with email, I don't know if it is a configuration problem
+        // or a missing plugin.
+        changed {
+            echo "The state changed from ${previousBuild.result} to ${currentBuild.result}!"
+        } 
+    } 
+}
+
+
+// Other things to add possibly:
+// global options (or per-stage options) with timeout: https://jenkins.io/doc/book/pipeline/syntax/#options-example
+// retry-on-failure for some specific tasks: https://jenkins.io/doc/book/pipeline/syntax/#available-stage-options
+// parameters: https://jenkins.io/doc/book/pipeline/syntax/#parameters
+// input: interesting for user input before continuing: https://jenkins.io/doc/book/pipeline/syntax/#input
+// when conditions, e.g. to depending on details on the commit (e.g. only when specific 
+//     files are changed, where there is a string in the commit log, for a specific branch,
+//     for a Pull Request,for a specific environment variable, ...): 
+//     https://jenkins.io/doc/book/pipeline/syntax/#when

@@ -53,6 +53,13 @@ pipeline {
                 // We skip the creation of a docker image
                 // to ssh into, as it is done in travis. Here, in Jenkins,
                 // we instead ssh to localhost to investigate.
+
+                // Add the line to the .bashrc, but before it stops when non-interactive
+                // So it can find the location of 'verdi'
+                sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
+                // Add path needed by the daemon to find the workchains
+                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.travis-data/' ~/.bashrc"
+                sh "cat ~/.bashrc"
             }
         }
         stage('Build') {
@@ -64,12 +71,6 @@ pipeline {
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
                 sh 'cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys'
                 sh 'ssh-keyscan -H localhost >> ~/.ssh/known_hosts'
-                // Add the line to the .bashrc, but before it stops when non-interactive
-                // So it can find the location of 'verdi'
-                sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
-                // Add path needed by the daemon to find the workchains
-                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.travis-data/' ~/.bashrc"
-                sh "cat ~/.bashrc"
             }
             post {
                 always {
@@ -96,7 +97,7 @@ pipeline {
                     }
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
-                        sk 'mkdir -p /tmp/aiida-django-folder/.aiida'
+                        sh 'mkdir -p /tmp/aiida-django-folder/.aiida'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
@@ -113,7 +114,7 @@ pipeline {
                     }
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
-                        sk 'mkdir -p /tmp/aiida-sqla-folder/.aiida'
+                        sh 'mkdir -p /tmp/aiida-sqla-folder/.aiida'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'

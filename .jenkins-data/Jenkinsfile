@@ -85,12 +85,18 @@ pipeline {
                 stage('Test-Django') {
                     environment {
                         TEST_AIIDA_BACKEND="django"
+                        // I run the two tests in two different folders, otherwise 
+                        // they might get at the point of writing the config.json at the 
+                        // same time and one of the two would crash
+                        AIIDA_PATH="/tmp/aiida-django-folder"
                     }
                     when {
                         // This allows to selectively run only one backend
                         environment name: 'RUN_ALSO_DJANGO', value: 'true'
                     }
                     steps {
+                        // An empty .aiida folder must be present in the AIIDA_PATH
+                        sk 'mkdir -p /tmp/aiida-django-folder/.aiida'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
@@ -99,12 +105,15 @@ pipeline {
                 stage('Test-SQLAlchemy') {
                     environment {
                         TEST_AIIDA_BACKEND="sqlalchemy"
+                        AIIDA_PATH="/tmp/aiida-sqla-folder"
                     }
                     when {
                         // This allows to selectively run only one backend
                         environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
                     }
                     steps {
+                        // An empty .aiida folder must be present in the AIIDA_PATH
+                        sk 'mkdir -p /tmp/aiida-sqla-folder/.aiida'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'

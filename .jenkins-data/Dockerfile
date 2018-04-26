@@ -55,13 +55,16 @@ RUN cp /etc/postgresql/9.5/main/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
 # install sudo otherwise tests for quicksetup fail,
 # see #1382. I think this part should be removed in the
 # future and AiiDA should work also without sudo.
-## Also install openssh-server needed for AiiDA tests.
+## Also install openssh-server needed for AiiDA tests,
+## and openmpi-bin to have 'mpirun',
+## and rabbitmq-server needed by AiiDA as the event queue
 RUN apt-get update \
     && apt-get -y install \
     sudo \
     locate \
     openssh-server \
     openmpi-bin \
+    rabbitmq-server \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean all
 

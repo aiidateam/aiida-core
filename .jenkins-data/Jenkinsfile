@@ -42,15 +42,17 @@ pipeline {
             steps {
                 sh 'sudo /etc/init.d/ssh restart'
                 sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
+                // (re)start rabbitmq (both to start it or to reload the configuration)
+                sh 'sudo /etc/init.d/rabbitmq-server restart'
                 // (re)start postgres (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/postgresql restart'
 
                 // Debug: check that I can connect without password
                 sh 'echo "SELECT datname FROM pg_database" | psql -h localhost -U postgres -w'
 
-                // We skip for now the creation of a docker image
-                // to ssh into, that is done in travis. This can 
-                // probably be done differently in Jenkins, to investigate.
+                // We skip the creation of a docker image
+                // to ssh into, as it is done in travis. Here, in Jenkins,
+                // we instead ssh to localhost to investigate.
             }
         }
         stage('Build') {

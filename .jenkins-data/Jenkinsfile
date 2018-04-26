@@ -122,6 +122,17 @@ pipeline {
                 }
             }
         }
+        stage('Final') {
+            steps {
+                // create the XML coverage info
+                sh 'coverge xml -o coverage.xml'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'coverage.xml', fingerprint: true
+                }
+            }
+        }
     }
     post {
         always {

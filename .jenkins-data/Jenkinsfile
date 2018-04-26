@@ -125,7 +125,7 @@ pipeline {
         stage('Final') {
             steps {
                 // create the XML coverage info
-                sh 'coverage xml -o coverage.xml'
+                sh '.jenkins-data/create_coverage_info.sh'
             }
             post {
                 always {

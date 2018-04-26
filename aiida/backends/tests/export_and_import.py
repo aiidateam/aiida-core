@@ -16,6 +16,7 @@ from aiida.orm.importexport import import_data
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 class TestSpecificImport(AiidaTestCase):
 =======
@@ -26,6 +27,10 @@ class TestSpecificImport(AiidaTestCase):
 # class TestSpecificImport(AiidaTestCase):
 class TestSpecificImport():
 >>>>>>> 6c6caa3... Adding the new graph traversal logic to the export function
+=======
+class TestSpecificImport(AiidaTestCase):
+# class TestSpecificImport():
+>>>>>>> 1017295... All tests pass
 
     def test_simple_import(self):
         """
@@ -1522,9 +1527,14 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
         qb.append(Node, project='uuid', tag='input')
-        qb.append(Node, project='uuid', tag='output', edge_project=['label', 'type'], output_of='input')
+        qb.append(Node, project='uuid', tag='output',
+                  edge_project=['label', 'type'], output_of='input')
         return qb.all()
 
+<<<<<<< HEAD
+=======
+    # @unittest.skip("")
+>>>>>>> 1017295... All tests pass
     def test_input_and_create_links(self):
         """
         Simple test that will verify that INPUT and CREATE links are properly exported and
@@ -1647,7 +1657,7 @@ class TestLinks(AiidaTestCase):
 
         return graph_nodes, export_list[export_combination]
 
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_complex_workflow_graph_links(self):
         """
         This test checks that all the needed links are correctly exported and
@@ -1705,17 +1715,11 @@ class TestLinks(AiidaTestCase):
             graph_nodes, (export_node, export_target) = (
                 self.construct_complex_graph(export_conf))
 
-            print "graph_nodes ===> ", graph_nodes
-            for gf in graph_nodes:
-                print gf.pk, gf.uuid, gf.dbnode.type
-
-            print "export_node ==>", export_node
-            print "export_target ==>", export_target
-
             tmp_folder = tempfile.mkdtemp()
             try:
                 export_file = os.path.join(tmp_folder, 'export.tar.gz')
                 export([export_node], outfile=export_file, silent=True)
+                export_node_str = str(export_node)
 
                 self.clean_db()
                 self.insert_data()
@@ -1729,17 +1733,12 @@ class TestLinks(AiidaTestCase):
 
                 export_target_uuids = set(str(_.uuid) for _ in export_target)
 
-                print "imported_node_uuids => " + str(imported_node_uuids)
-                print "export_target_uuids => " + str(export_target_uuids)
-
-                # Check that you have imported the right nodes (and only
-                # these nodes).
                 from aiida.orm.utils import load_node
                 self.assertEquals(
                     export_target_uuids,
                     imported_node_uuids,
                     "Problem in comparison of export node: " +
-                    str(export_node) + "\n"
+                    str(export_node_str) + "\n" +
                     "Expected set: " + str(export_target_uuids)  + "\n" +
                     "Imported set: " + str(imported_node_uuids)  + "\n" +
                     "Difference: " + str([load_node(_) for _ in
@@ -1748,12 +1747,11 @@ class TestLinks(AiidaTestCase):
                 )
 
             finally:
-                pass
-                # shutil.rmtree(tmp_folder, ignore_errors=True)
+                shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    @unittest.skip("")
     def test_recursive_export_input_and_create_links_proper(self):
         """
+<<<<<<< HEAD
         Check that CALL links are not followed in the export procedure with
         dangling links as a consequence::
 
@@ -1769,11 +1767,31 @@ class TestLinks(AiidaTestCase):
                       | o1 |
                       |____|
 
+=======
+        Check that CALL, RETURN and CREATE links are followed recursively.
+
+                NI1 -------
+                 |        |
+                 |In      | In
+                 |        |
+                 |  ------Ret------->  NO2
+                 | |       |  -Cr-->
+                 v |       v |
+        WC2 -Ca-> WC1 -Ca-> C1 -Cr--> NO1
+                  ^       ^
+                  |       |
+                  |In     | In
+                  NI2 ----
+>>>>>>> 1017295... All tests pass
         """
         import os, shutil, tempfile
 
         from aiida.orm.data.base import Int
+<<<<<<< HEAD
         from aiida.orm import Node, Data
+=======
+        from aiida.orm import Node
+>>>>>>> 1017295... All tests pass
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation
@@ -1836,14 +1854,6 @@ class TestLinks(AiidaTestCase):
                                               LinkType.CALL.value)}})
             export_links = qb.all()
 
-            # Adding the input links
-            qb = QueryBuilder()
-            qb.append(Node, project='uuid')
-            qb.append(Node, project='uuid',
-                edge_project=['label', 'type'],
-                edge_filters={'type': {'in': (LinkType.INPUT.value,)}})
-            export_links.appen.all()
-
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([wc2], outfile=export_file, silent=True)
 
@@ -1880,8 +1890,7 @@ class TestLinks(AiidaTestCase):
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.base import Int
-        from aiida.orm import Node, Data
+        from aiida.orm.data.int import Int
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation
@@ -1903,7 +1912,14 @@ class TestLinks(AiidaTestCase):
             o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
 
             uuids_wanted = set(_.uuid for _ in (w1,o1,i1))
-            links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
+            # links_wanted = [l for l in self.get_all_node_links() if l[3] in
+            #                 ('createlink', 'inputlink', 'returnlink', 'calllink')]
+            # links_wanted = self.get_all_node_links()
+
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in
+                            (LinkType.CREATE.value,
+                             LinkType.INPUT.value,
+                             LinkType.RETURN.value)]
 
             export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
             export_file_2 = os.path.join(tmp_folder, 'export-2.tar.gz')
@@ -1915,8 +1931,8 @@ class TestLinks(AiidaTestCase):
 
             import_data(export_file_1, silent=True)
             links_in_db = self.get_all_node_links()
-            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
             self.clean_db()
             self.insert_data()

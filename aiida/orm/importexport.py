@@ -1949,7 +1949,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     if not silent:
         print "STORING NODE LINKS..."
 
-    links_uuid = list()
+    links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
         # INPUT (Data, Calculation) - Backward, by the Calculation node
         links_qb = QueryBuilder()
@@ -1961,12 +1961,13 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                         edge_filters={'type':{'==':LinkType.INPUT.value}},
                         edge_project=['label', 'type'], output_of='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
 
         # CREATE (Calculation, Data) - Forward, by the Calculation node
         links_qb = QueryBuilder()
@@ -1978,12 +1979,13 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                         edge_filters={'type': {'==': LinkType.CREATE.value}},
                         edge_project=['label', 'type'], output_of='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
 
         # CREATE (Calculation, Data) - Backward, by the Data node
         links_qb = QueryBuilder()
@@ -1995,12 +1997,13 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                         edge_filters={'type': {'==': LinkType.CREATE.value}},
                         edge_project=['label', 'type'], output_of='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
 
         # RETURN (Calculation [caller], Calculation [called]) - Forward, by the Calculation node
         links_qb = QueryBuilder()
@@ -2012,12 +2015,13 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                         edge_filters={'type': {'==': LinkType.RETURN.value}},
                         edge_project=['label', 'type'], output_of='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
 
         # CALL (Calculation, Data) - Forward, by the Calculation node
         links_qb = QueryBuilder()
@@ -2029,13 +2033,16 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                         edge_filters={'type': {'==': LinkType.CALL.value}},
                         edge_project=['label', 'type'], output_of='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
 
+    links_uuid = links_uuid_dict.values()
+    # print "WWWWWWWWWWWWWWWWWWW", links_uuid_dict
     # OLD CODE
 
 

@@ -97,6 +97,8 @@ class Data(Node):
 
         if link_type is LinkType.CREATE and \
                         len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+            for l in self.get_inputs(link_type=LinkType.CREATE):
+                print "=====> ", l, l.dbnode
             raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, Calculation):

@@ -11,11 +11,11 @@ from circus.exc import CallError
 
 from aiida.common.profile import ProfileConfig
 from aiida.common.setup import get_property
+from aiida.utils.which import which
 
-
-VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
-VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
-
+VERDI_BIN = which('verdi')
+# Recent versions of virtualenv create the environment variable VIRTUAL_ENV
+VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 class ControllerProtocol(enum.Enum):
     """
@@ -57,6 +57,10 @@ class DaemonClient(ProfileConfig):
         """
         Return the command string to start the AiiDA daemon
         """
+        from aiida.common.exceptions import ConfigurationError
+        if VERDI_BIN is None:
+            raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
+                "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
 
     @property

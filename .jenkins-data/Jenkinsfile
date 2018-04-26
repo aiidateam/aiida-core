@@ -97,7 +97,7 @@ pipeline {
                     }
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
-                        sh 'mkdir -p /tmp/aiida-django-folder/.aiida'
+                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
@@ -114,7 +114,7 @@ pipeline {
                     }
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
-                        sh 'mkdir -p /tmp/aiida-sqla-folder/.aiida'
+                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'

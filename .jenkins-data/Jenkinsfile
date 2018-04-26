@@ -134,7 +134,10 @@ pipeline {
             }
             post {
                 always {
-                    junit 'coverage.xml'
+                    // note: junit does not like the XML output, it says
+                    // 'None of the test reports contained any result'
+                    // (maybe because it's coverage and not testing?)
+                    archiveArtifacts artifacts: 'coverage/html/coverage.html', fingerprint: true
                 }
             }
         }

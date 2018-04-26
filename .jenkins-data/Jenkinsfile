@@ -36,6 +36,8 @@ pipeline {
         // The following two variables allow to run selectively tests only for one backend
         RUN_ALSO_DJANGO="true"
         RUN_ALSO_SQLALCHEMY="true"
+        // To avoid that different pipes (stderr, stdout, different processes) get in the wrong order
+        PYTHONUNBUFFERED="yes"
     }
     stages {
         stage('Pre-build') {

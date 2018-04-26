@@ -155,7 +155,7 @@ pipeline {
         // Note that I had problems with email, I don't know if it is a configuration problem
         // or a missing plugin.
         changed {
-            echo "The state changed from ${previousBuild.result} to ${currentBuild.result}!"
+            echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.result}!"
         } 
     } 
 }

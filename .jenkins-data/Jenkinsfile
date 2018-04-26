@@ -130,16 +130,20 @@ pipeline {
                 // Note: we do it from a script to make sure that .bashrc
                 // is loaded, to set properly the PATH. Otherwise, 'coverage'
                 // is not found.
-                sh '.jenkins-data/create_coverage_info.sh'
+                // sh '.jenkins-data/create_coverage_info.sh'
+		echo 'pass'
             }
-            post {
-                always {
-                    // note: junit does not like the XML output, it says
-                    // 'None of the test reports contained any result'
-                    // (maybe because it's coverage and not testing?)
-                    archiveArtifacts artifacts: 'coverage/html/coverage.html', fingerprint: true
-                }
-            }
+            // post {
+            //    always {
+            //        // note: junit does not like the XML output, it says
+            //        // 'None of the test reports contained any result'
+            //        // (maybe because it's coverage and not testing?)
+	    //        // For now I'm not doing it as it's ~3 MB every time
+	    //	      // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
+	    //        // coverage folder, first
+            //        archiveArtifacts artifacts: 'coverage/html.zip', fingerprint: true
+            //    }
+            // }
         }
     }
     post {

@@ -1,6 +1,6 @@
 [run]
 source = aiida
-omit = *test*,*/migrations/*
+omit = */test*.py,*/migrations/*.py,*/migrations/versions/*.py
 
 [html]
 directory = coverage/html

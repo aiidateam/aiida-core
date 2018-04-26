@@ -100,8 +100,10 @@ class Process(plumpy.Process):
     def on_create(self):
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
-        if self._parent_pid is None and not plumpy.stack.is_empty():
-            self._parent_pid = plumpy.stack.top().pid
+        if self._parent_pid is None and Process.current():
+            current = Process.current()
+            if isinstance(current, Process):
+                self._parent_pid = current._pid
         self._pid = self._create_and_setup_db_record()
 
     def init(self):
@@ -160,11 +162,24 @@ class Process(plumpy.Process):
         self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
         result = super(Process, self).kill(msg)
 
-        for child in self.calc.called:
-            try:
-                self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
-            except ConnectionClosed:
-                self.logger.info('no connection available to kill child<{}>'.format(child.pk))
+        # Only kill children if we could be killed ourselves
+        if result is not False:
+            killing = []
+            for child in self.calc.called:
+                try:
+                    result = self.runner.rmq.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+                    if isinstance(result, plumpy.Future):
+                        killing.append(result)
+                except ConnectionClosed:
+                    self.logger.info('no connection available to kill child<{}>'.format(child.pk))
+
+            if isinstance(result, plumpy.Future):
+                # We ourselves are waiting to be killed so add it to the list
+                killing.append(result)
+
+            if killing:
+                # We are waiting for things to be killed, so return the 'gathered' future
+                result = plumpy.gather(result)
 
         return result
 
@@ -193,8 +208,11 @@ class Process(plumpy.Process):
     def on_entering(self, state):
         super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
-        self.update_node_state(state)
-        if self._enable_persistence and not state.is_terminal() and not state.label == ProcessState.CREATED:
+        
+    def on_entered(self, from_state):
+        super(Process, self).on_entered(from_state)
+        self.update_node_state(self._state)
+        if self._enable_persistence and not self._state.is_terminal() and not self._state.label == ProcessState.CREATED:
             self.call_soon(self.runner.persister.save_checkpoint, self)
 
     @override

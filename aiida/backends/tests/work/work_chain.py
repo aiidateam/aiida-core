@@ -726,11 +726,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         def check(self):
             raise RuntimeError('should have been aborted by now')
 
-        def on_killed(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_killed(msg)
-            if self.inputs.kill:
-                assert self.ctx.child.calc.is_killed == True, 'Child was not killed'
-
     def test_simple_run(self):
         """
         Run the workchain which should hit the exception and therefore end
@@ -756,12 +751,11 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         with self.assertRaises(plumpy.KilledError):
             work.run(process)
-            process.kill()
+            result = process.kill()
+            if isinstance(result, plumpy.Future):
+                # Run the loop until all the killing is done
+                self.runner.loop.run_sync(lambda: result)
             work.run(process)
-
-        # Tick the loop once to allow the kill signal of the child to be
-        # picked up over RMQ
-        process.loop().run_sync(lambda: None)
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -771,6 +765,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
         self.assertEquals(process.calc.is_killed, True)
+
+
 #
 
 class TestImmutableInputWorkchain(AiidaTestCase):

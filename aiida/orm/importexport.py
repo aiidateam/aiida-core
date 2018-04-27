@@ -1960,6 +1960,25 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
+        # INPUT (Data, Calculation) - Forward, by the Calculation node
+        if input_forward:
+            links_qb = QueryBuilder()
+            links_qb.append(Data,
+                            project=['uuid'], tag='input',
+                            filters = {'id': {'in': all_nodes_pk}})
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type':{'==':LinkType.INPUT.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+
         # INPUT (Data, Calculation) - Backward, by the Calculation node
         links_qb = QueryBuilder()
         links_qb.append(Data,
@@ -1997,24 +2016,26 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             links_uuid_dict[frozenset(val.items())] = val
 
         # CREATE (Calculation, Data) - Backward, by the Data node
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Data,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
+        if create_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input',
+                            filters={'id': {'in': all_nodes_pk}})
+            links_qb.append(Data,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type': {'==': LinkType.CREATE.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
 
-        # RETURN (Calculation [caller], Calculation [called]) - Forward, by the Calculation node
+        # RETURN (Calculation [caller], Calculation [called]) - Forward, by
+        # the Calculation node
         links_qb = QueryBuilder()
         links_qb.append(Calculation,
                         project=['uuid'], tag='input',
@@ -2031,6 +2052,26 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'type':str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
+
+        # RETURN (Calculation [caller], Calculation [called]) - Backward,
+        # by the Calculation [called]node
+        if return_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input')
+            links_qb.append(Data,
+                            project=['uuid'], tag='output',
+                            filters={'id': {'in': all_nodes_pk}},
+                            edge_filters={'type': {'==': LinkType.RETURN.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
 
         # CALL (Calculation, Data) - Forward, by the Calculation node
         links_qb = QueryBuilder()
@@ -2049,6 +2090,25 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'type':str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
+
+        # CALL (Calculation, Data) - Backward, by the Data node
+        if call_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input')
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='output',
+                            filters={'id': {'in': all_nodes_pk}},
+                            edge_filters={'type': {'==': LinkType.CALL.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
 
     links_uuid = links_uuid_dict.values()
     # print "WWWWWWWWWWWWWWWWWWW", links_uuid_dict

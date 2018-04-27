@@ -1641,9 +1641,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                       new_tag_suffixes)
 
 
-def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
-                     allowed_licenses=None, forbidden_licenses=None,
-                     silent=False, use_querybuilder_ancestors=False):
+def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
+                silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -1791,38 +1790,6 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             # to_be_exported.update(res)
 
     given_node_entry_ids.update(to_be_exported)
-
-
-    # if also_parents:
-    #     if given_node_entry_ids:
-    #         # Also add the parents (to any level) to the query
-    #         # This is done via the ancestor relationship.
-    #         if use_querybuilder_ancestors:
-    #             qb = QueryBuilder()
-    #             qb.append(Node, tag='low_node',
-    #                       filters={'id': {'in': given_node_entry_ids}})
-    #             qb.append(Node, ancestor_of='low_node', project=['id'])
-    #             additional_ids = [_ for _, in qb.all()]
-    #         else:
-    #             q = QueryFactory()()
-    #             additional_ids = [_ for _, in q.get_all_parents(given_node_entry_ids, return_values=['id'])]
-    #
-    #         given_node_entry_ids = given_node_entry_ids.union(additional_ids)
-    #
-    # if also_calc_outputs:
-    #     if given_node_entry_ids:
-    #         # Add all (direct) outputs of a calculation object that was already
-    #          # selected
-    #         qb = QueryBuilder()
-    #         # Only looking at calculations and subclasses that are in my entries:
-    #         qb.append(Calculation, tag='high_node',
-    #                   filters={'id': {'in': given_node_entry_ids}})
-    #         # Only looking at the output that was created by a calculation.
-    #         # From the OPM we know it has to be Data, linked by CREATE.
-    #         qb.append(Data, output_of='high_node', project=['id'],
-    #             edge_filters={'type': {'==': LinkType.CREATE.value}}) # and the outputs
-    #         additional_ids = [_ for [_] in qb.all()]
-    #         given_node_entry_ids = given_node_entry_ids.union(additional_ids)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract

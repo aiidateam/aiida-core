@@ -1672,7 +1672,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.backends.utils import QueryFactory
     if not silent:
         print "STARTING EXPORT..."
 

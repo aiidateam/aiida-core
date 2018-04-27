@@ -1720,39 +1720,20 @@ class TestLinks(AiidaTestCase):
 
     def test_recursive_export_input_and_create_links_proper(self):
         """
-        Check that CALL, RETURN and CREATE links are followed recursively.
-
-                NI1 -------
-                 |        |
-                 |In      | In
-                 |        |
-                 |  ------Ret------->  NO2
-                 | |       |  -Cr-->
-                 v |       v |
-        WC2 -Ca-> WC1 -Ca-> C1 -Cr--> NO1
-                  ^       ^
-                  |       |
-                  |In     | In
-                  NI2 ----
+        Check that CALL, INPUT, RETURN and CREATE links are followed
+        recursively.
         """
         import os, shutil, tempfile
         from aiida.orm import Node
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            node_calc = InlineCalculation().store()
-            node_work = WorkCalculation().store()
-            node_input = Int(1).store()
-            node_output = Int(2).store()
-
             wc2 = WorkCalculation().store()
             wc1 = WorkCalculation().store()
             c1 = InlineCalculation().store()

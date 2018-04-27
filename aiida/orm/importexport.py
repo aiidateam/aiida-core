@@ -1642,7 +1642,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 
 def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
-                silent=False):
+                silent=False, input_forward=False, create_reversed=True,
+                return_reversed=False, call_reversed=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -1723,7 +1724,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             else:
                 to_be_exported.add(curr_node_id)
 
-            # Case 1:
             # INPUT(Data, Calculation) - Reversed
             qb = QueryBuilder()
             qb.append(Data, tag='predecessor', project=['id'])
@@ -1734,9 +1734,19 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.INPUT.value}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
-            # to_be_exported.update(res)
 
-            # Case 2 & 3:
+            # INPUT(Data, Calculation) - Forward
+            if input_forward:
+                qb = QueryBuilder()
+                qb.append(Data, tag='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
             # CREATE/RETURN(Calculation, Data) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
@@ -1748,9 +1758,31 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                      LinkType.RETURN.value]}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
-            # to_be_exported.update(res)
 
-            # Case 4:
+            # CREATE(Calculation, Data) - Reversed
+            if create_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Data, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.CREATE.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
+            # RETURN(Calculation, Data) - Reversed
+            if return_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Data, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
             # CALL(Calculation, Calculation) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
@@ -1761,7 +1793,18 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.CALL.value}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Calculation].update(res - to_be_exported)
-            # to_be_exported.update(res)
+
+            # CALL(Calculation, Calculation) - Reversed
+            if call_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Calculation, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CALL.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
 
 
         # If it is a Data node

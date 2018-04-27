@@ -14,23 +14,7 @@ Tests for the export and import routines.
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
 class TestSpecificImport(AiidaTestCase):
-=======
-class TestSpecificImport(AiidaTestCase):
-# class TestSpecificImport():
->>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
-=======
-# class TestSpecificImport(AiidaTestCase):
-class TestSpecificImport():
->>>>>>> 6c6caa3... Adding the new graph traversal logic to the export function
-=======
-class TestSpecificImport(AiidaTestCase):
-# class TestSpecificImport():
->>>>>>> 1017295... All tests pass
 
     def test_simple_import(self):
         """
@@ -202,18 +186,7 @@ class TestSpecificImport(AiidaTestCase):
         self.assertGreater(len(qb.all()), 0, "There should be results for the"
                                              "query.")
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
 class TestSimple(AiidaTestCase):
-=======
-class TestSimple(AiidaTestCase):
-# class TestSimple():
->>>>>>> 1057d20... Changing the export to accept AiiDA objects instead of Db objects
-=======
-# class TestSimple(AiidaTestCase):
-class TestSimple():
->>>>>>> 6c6caa3... Adding the new graph traversal logic to the export function
 
     def setUp(self):
         self.clean_db()
@@ -1531,10 +1504,6 @@ class TestLinks(AiidaTestCase):
                   edge_project=['label', 'type'], output_of='input')
         return qb.all()
 
-<<<<<<< HEAD
-=======
-    # @unittest.skip("")
->>>>>>> 1017295... All tests pass
     def test_input_and_create_links(self):
         """
         Simple test that will verify that INPUT and CREATE links are properly exported and
@@ -1751,23 +1720,6 @@ class TestLinks(AiidaTestCase):
 
     def test_recursive_export_input_and_create_links_proper(self):
         """
-<<<<<<< HEAD
-        Check that CALL links are not followed in the export procedure with
-        dangling links as a consequence::
-
-               ---------->---------
-            __|_       ___        _|_
-           |    | INP |   | CALL |   |
-           | i1 | --> | C | <--  | W |
-           |____|     |___|      |___|
-                        |
-                        v  CREATE
-                       ____ 
-                      |    |
-                      | o1 |
-                      |____|
-
-=======
         Check that CALL, RETURN and CREATE links are followed recursively.
 
                 NI1 -------
@@ -1782,16 +1734,10 @@ class TestLinks(AiidaTestCase):
                   |       |
                   |In     | In
                   NI2 ----
->>>>>>> 1017295... All tests pass
         """
         import os, shutil, tempfile
-
-        from aiida.orm.data.base import Int
-<<<<<<< HEAD
-        from aiida.orm import Node, Data
-=======
         from aiida.orm import Node
->>>>>>> 1017295... All tests pass
+        from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation
@@ -1890,7 +1836,7 @@ class TestLinks(AiidaTestCase):
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.int import Int
+        from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
         from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation

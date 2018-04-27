@@ -942,11 +942,11 @@ class TestSimple():
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-class TestComputer():
-# class TestComplex(AiidaTestCase):
+# class TestComputer():
+class TestComplex(AiidaTestCase):
     import unittest
 
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly

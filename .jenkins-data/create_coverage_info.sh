@@ -7,7 +7,7 @@ if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
 # Collect all coverage files of different backends, see
 # http://coverage.readthedocs.io/en/latest/cmd.html#combining-data-files
-coverage collect
+coverage combine
 
 # Create XML file
 # coverage xml -o coverage.xml

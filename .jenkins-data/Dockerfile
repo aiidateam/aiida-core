@@ -1,10 +1,10 @@
 FROM ubuntu:16.04
 MAINTAINER AiiDA Team <info@aiida.net>
 
-## Set correct locale
-#ENV LANG C.UTF-8
-## Note this, however, has a problem because postgres uses non-UTF8
+ARG uid=1000
+ARG gid=1000
 
+## Set correct locale
 ## For something more complex, as reported by https://hub.docker.com/_/ubuntu/
 ## and taken from postgres:
 # make the "en_US.UTF-8" locale so postgres will be utf-8 enabled by default
@@ -80,7 +80,7 @@ RUN pip install pip==10.0.1 setuptools==39.0.1
 COPY doubler.sh /usr/local/bin/
 
 # add USER (no password); 1000 is the uid of the user in the jenkins docker
-RUN useradd -m -s /bin/bash -u 1000 jenkins
+RUN groupadd -g ${gid} jenkins && useradd -m -s /bin/bash -u ${uid} -g ${gid} jenkins
 
 # add to sudoers and don't ask password
 RUN adduser jenkins sudo && adduser jenkins adm

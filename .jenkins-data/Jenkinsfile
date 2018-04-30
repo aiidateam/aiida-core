@@ -1,3 +1,14 @@
+// Note: this part might happen on a different node than
+// the one that will run the pipeline below, see
+// https://stackoverflow.com/questions/44805076
+// but it should be ok for us as we only have one node
+def user_id
+def group_id
+node {
+  user_id = sh(returnStdout: true, script: 'id -u').trim()
+  group_id = sh(returnStdout: true, script: 'id -g').trim()
+}
+
 pipeline {
     /* The tutorial was setting here agent none, and setting the 
        agent in each stage, using therefore different agents in each
@@ -6,24 +17,13 @@ pipeline {
        but we need to check this for more advanced usages. */
     // agent none
     agent {
-        // To use a precompiled image
-        /* docker {
-            image 'python:2-alpine'
-        } */
         // Documentation: https://jenkins.io/doc/book/pipeline/syntax/#agent
-        // Note: it is possible that flags of the docker
-        // agent might work, e.g. 
-        //   args '-u aiida'
-        // However it will not work because the file permissions are checked
-        // out by Jenkins as root.
-
-        // TODO: we might want to reuse the pip cache, by
-        // mounting a local folder - from the output: "Stored in directory: /root/.cache/pip/"
+        // Note: we reuse the pip cache for speed
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins-data'
             args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/'
-            // args '-u jenkins'
+	    additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }
     environment {

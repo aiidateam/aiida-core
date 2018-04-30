@@ -92,6 +92,9 @@ pipeline {
                         // they might get at the point of writing the config.json at the 
                         // same time and one of the two would crash
                         AIIDA_PATH="/tmp/aiida-django-folder"
+                        // To collect coverage info for each backend in a different file
+                        // and avoiding potential problems
+                        COVERAGE_FILE=".coverage.django"
                     }
                     when {
                         // This allows to selectively run only one backend
@@ -109,6 +112,7 @@ pipeline {
                     environment {
                         TEST_AIIDA_BACKEND="sqlalchemy"
                         AIIDA_PATH="/tmp/aiida-sqla-folder"
+                        COVERAGE_FILE=".coverage.sqlalchemy"
                     }
                     when {
                         // This allows to selectively run only one backend
@@ -126,12 +130,8 @@ pipeline {
         }
         stage('Final') {
             steps {
-                // create the XML coverage info
-                // Note: we do it from a script to make sure that .bashrc
-                // is loaded, to set properly the PATH. Otherwise, 'coverage'
-                // is not found.
-                // sh '.jenkins-data/create_coverage_info.sh'
-		echo 'pass'
+                // create the final coverage info, summed over the various backends
+                sh '.jenkins-data/create_coverage_info.sh'
             }
             // post {
             //    always {

@@ -1,10 +1,20 @@
 #!/bin/bash
 
-set -ev
+set -e
 
 # Needed on Jenkins
 if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
-coverage xml -o coverage.xml
+# Collect all coverage files of different backends, see
+# http://coverage.readthedocs.io/en/latest/cmd.html#combining-data-files
+coverage collect
+
+# Create XML file
+# coverage xml -o coverage.xml
+
+# Create HTML file(s)
 # location set in the .coveragerc config file
-coverage html
+# coverage html
+
+# Create text report
+coverage report

@@ -22,6 +22,9 @@ case "$TEST_TYPE" in
 	echo "DATA DIR: '${DATA_DIR}'"
 	echo "Directory content:"
 	ls "${DATA_DIR}"
+
+	# Clean up coverage file (there shouldn't be any, but just in case)
+	coverage erase
 	
         # Run preliminary tests
         coverage run -a "${DATA_DIR}/test_setup.py"
@@ -38,8 +41,13 @@ case "$TEST_TYPE" in
         # In case of error, I do some debugging, but I make sure I anyway exit with an exit error
         coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${DATA_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
 
-        # run the sphinxext tests
-        pytest --cov aiida --cov-append -vv aiida/sphinxext/tests
+        # run the sphinxext tests, append to coverage file, do not
+	# create final report
+        pytest --cov aiida --cov-append --cov-report= -vv aiida/sphinxext/tests
+
+	# Now, we run all the tests and we manually create the final report
+	# Note that this is only the partial coverage for this backend
+	coverage report
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

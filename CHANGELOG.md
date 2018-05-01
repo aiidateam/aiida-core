@@ -6,9 +6,12 @@
 - Delete nodes via `verdi node delete` [[#1083]](https://github.com/aiidateam/aiida_core/pull/1083)
 - Import structures using ASE [[#1085]](https://github.com/aiidateam/aiida_core/pull/1085)
 - `StructureData` - `pymatgen` - `StructureData` roundtrip works for arbitrary kind names [[#1285]](https://github.com/aiidateam/aiida_core/pull/1285) [[#1306]](https://github.com/aiidateam/aiida_core/pull/1306) [[#1357]](https://github.com/aiidateam/aiida_core/pull/1357)
+- Output format of export file can now be defined for `verdi export migrate` [[#1383]](https://github.com/aiidateam/aiida_core/pull/1383)
+- Automatic reporting of code coverage by unit tests has been added [[#1422]](https://github.com/aiidateam/aiida_core/pull/1422)
 
 ### Critical bug fixes
 - Add `parser_name` `JobProcess` options [[#1118]](https://github.com/aiidateam/aiida_core/pull/1118)
+- Node attribute reads were not always up to date across interpreters for SqlAlchemy [[#1379]](https://github.com/aiidateam/aiida_core/pull/1379)
 
 ### Minor bug fixes
 - Cell vectors not printed correctly [[#1087]](https://github.com/aiidateam/aiida_core/pull/1087)
@@ -16,6 +19,7 @@
 - Fix structure/band visualization in REST API [[#1167]](https://github.com/aiidateam/aiida_core/pull/1167) [[#1182]](https://github.com/aiidateam/aiida_core/pull/1182)
 - Fix `verdi work list` test [[#1286]](https://github.com/aiidateam/aiida_core/pull/1286)
 - Fix `_inline_to_standalone_script` in `TCODExporter` [[#1351]](https://github.com/aiidateam/aiida_core/pull/1351)
+- Updated `reentry` to fix various small bugs related to plugin registering [[#1440]](https://github.com/aiidateam/aiida_core/pull/1440)
 
 ### Miscellaneous
 - Bump `qe-tools` version [[#1090]](https://github.com/aiidateam/aiida_core/pull/1090)
@@ -23,6 +27,8 @@
 - Switch to trusty + postgres 9.5 on Travis [[#1180]](https://github.com/aiidateam/aiida_core/pull/1180)
 - Use raw SQL in sqlalchemy migration of `Code` [[#1291]](https://github.com/aiidateam/aiida_core/pull/1291)
 - Document querying of list attributes [[#1326]](https://github.com/aiidateam/aiida_core/pull/1326)
+- Document running `aiida` as a daemon service [[#1445]](https://github.com/aiidateam/aiida_core/pull/1445)
+- Document that Torque and LoadLever schedulers are now fully supported [[#1447]](https://github.com/aiidateam/aiida_core/pull/1447)
 - Cookbook: how to check the number of queued/running jobs in the scheduler [[#1349]](https://github.com/aiidateam/aiida_core/pull/1349)
 
 

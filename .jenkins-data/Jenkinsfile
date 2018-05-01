@@ -19,10 +19,12 @@ pipeline {
     agent {
         // Documentation: https://jenkins.io/doc/book/pipeline/syntax/#agent
         // Note: we reuse the pip cache for speed
+	// TMPFS: we make sure that postgres is different for every run,
+	//   but also runs fast
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins-data'
-            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/'
+            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp'
 	    additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }
@@ -46,6 +48,14 @@ pipeline {
                 sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
                 // (re)start rabbitmq (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/rabbitmq-server restart'
+                
+                // Make sure the tmpfs folder is owned by postgres, and that it
+		// contains the right data
+                sh 'sudo chown postgres:postgres /var/lib/postgresql-tmp'
+		sh 'sudo mv /var/lib/postgresql/* /var/lib/postgresql-tmp/'
+		sh 'sudo rmdir /var/lib/postgresql/'
+		sh 'sudo ln -s /var/lib/postgresql-tmp/ /var/lib/postgresql'
+
                 // (re)start postgres (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/postgresql restart'
 

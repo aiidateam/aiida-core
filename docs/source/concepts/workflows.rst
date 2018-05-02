@@ -824,3 +824,21 @@ Of course, we then need to explicitly pass the input ``a``.
 
 Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent.
 Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.
+
+.. _upgrading_workchains_beta_release:
+
+Upgrading workchains from pre ``v1.0.0``
+----------------------------------------
+The release of version ``1.0.0`` of ``aiida-core`` saw some major changes to the workflow engine to improve its robustness and userfriendliness.
+In doing so a few minor changes were introduced that break workchains that were written before that release.
+However, these workchains can be updated with just a few minor updates that we will list here:
+
+* The free function ``submit`` in any ``WorkChain`` should be replaced with ``self.submit``.
+* The ``_options`` input for ``JobCalculation`` is now ``options``, simply removed the leading underscore.
+* The ``label`` and ``description`` inputs for ``JobCalculation`` or a ``WorkChain`` have also lost the underscore.
+* The free functions from ``aiida.work.run`` have been moved to ``aiida.work.launch``, even though for the time being the old import will still work.
+* The future returned by ``submit`` no longer has the ``pid`` attribute but rather ``pk``.
+* The ``get_inputs_template class`` method has been replaced by ``get_builder``. See the section on the :ref:`process builder<process_builder>` on how to use it.
+* The import ``aiida.work.workfunction`` has been moved to ``aiida.work.workfunctions``.
+* The ``input_group`` has been deprecated and been replaced by namespaces. See the section on :ref:`port namespaces<ports_portnamespaces>` on how to use them.
+* The use of a ``.`` (period) in output keys is not supported in ``Process.out`` because that is now reserved to indicate namespaces.

@@ -6,7 +6,6 @@
 .. figure:: images/AiiDA_transparent_logo.png
     :width: 250px
     :align: center
-    :height: 100px
 
     Automated Interactive Infrastructure and Database for Computational Science
 

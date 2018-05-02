@@ -15,6 +15,7 @@ cached-property==1.3.1
 certifi==2018.1.18
 cffi==1.11.4
 chardet==3.0.4
+circus==0.14.0
 click==6.7
 click-plugins==1.0.3
 click-spinner==0.1.7
@@ -142,5 +143,5 @@ wcwidth==0.1.7
 Werkzeug==0.14.1
 wrapt==1.10.11
 yapf==0.19.0
--e git://github.com/muhrin/plumpy.git@a07b8db1dd3f28ea427a0ca4b66886553f9d463b#egg=plumpy
--e git://github.com/muhrin/kiwipy.git@561d0a8b97b2a8923e9d85b4cd1c39f0dbe9d182#egg=kiwipy
+kiwipy==0.2.0
+plumpy==0.10.1

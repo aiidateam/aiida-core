@@ -202,26 +202,16 @@ class Waiting(plumpy.Waiting):
         super(Waiting, self).__init__(process, done_callback, msg, data)
         self._task = None  # The currently running task
         self._kill_future = None
-        self._action_handle = None
-
-    def enter(self):
-        super(Waiting, self).enter()
-        self._action_handle = self.process.call_soon(self.action_command)
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
         self._task = None
         self._kill_future = None
-        self._action_handle = self.process.call_soon(self.action_command)
-
-    def exit(self):
-        super(Waiting, self).exit()
-        if self._action_handle and not self._action_handle.cancelled():
-            self._action_handle.cancel()
-        self._action_handle = None
 
     @tornado.gen.coroutine
-    def action_command(self):
+    def execute(self):
+        from tornado.gen import Return
+
         if self._kill_future:
             yield self._do_kill()
             return
@@ -239,7 +229,7 @@ class Waiting(plumpy.Waiting):
                     yield self._do_kill()
                 else:
                     # Now get scheduler updates
-                    self.scheduler_update()
+                    raise Return(self.scheduler_update())
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
                 job_done = False
@@ -252,7 +242,7 @@ class Waiting(plumpy.Waiting):
                         return
 
                 # Done, go on to retrieve
-                self.retrieve()
+                raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
@@ -263,42 +253,61 @@ class Waiting(plumpy.Waiting):
                 if self._kill_future:
                     yield self._do_kill()
                 else:
-                    self.retrieved(retrieved_temporary_folder)
+                    raise Return(self.retrieved(retrieved_temporary_folder))
 
             else:
                 raise RuntimeError("Unknown waiting command")
 
         except TransportTaskException as exception:
             finish_status = JobCalculationFinishStatus[exception.calc_state]
-            self.finished(finish_status)
+            raise Return(
+                self.create_state(processes.ProcessState.FINISHED, finish_status, finish_status is 0))
         except plumpy.CancelledError:
             # A task was cancelled because the state (and process) is being killed
-            yield self._do_kill()
-        except BaseException:
+            next_state = yield self._do_kill()
+            raise Return(next_state)
+        except Return:
+            raise
+        except Exception:
             exc_info = sys.exc_info()
-            self.transition_to(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
+            excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
+            raise Return(excepted_state)
         finally:
             self._task = None
 
     def scheduler_update(self):
+        """
+        Create the next state to go to
+        :return: The appropriate WAITING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting for scheduler update',
             data=UPDATE_SCHEDULER_COMMAND)
 
     def retrieve(self):
+        """
+        Create the next state to go to in order to retrieve
+        :return: The appropriate WAITING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting to retrieve',
             data=RETRIEVE_COMMAND)
 
     def retrieved(self, retrieved_temporary_folder):
+        """
+        Create the next state to go to after retrieving
+        :param retrieved_temporary_folder: The temporary folder used in retrieving, this will
+            be used in parsing.
+        :return: The appropriate RUNNING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.RUNNING,
             self.process.retrieved,
             retrieved_temporary_folder)
@@ -311,13 +320,11 @@ class Waiting(plumpy.Waiting):
         except (InvalidOperation, RemoteOperationError):
             pass
 
-        self.transition_to(processes.ProcessState.KILLED, 'Got killed yo')
         if self._kill_future is not None:
             self._kill_future.set_result(True)
             self._kill_future = None
 
-    def finished(self, result):
-        self.transition_to(processes.ProcessState.FINISHED, result, result is 0)
+        raise tornado.gen.Return(self.create_state(processes.ProcessState.KILLED, 'Got killed yo'))
 
     def kill(self, msg=None):
         if self._kill_future is not None:

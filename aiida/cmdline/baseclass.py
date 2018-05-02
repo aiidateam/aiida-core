@@ -14,10 +14,11 @@ class VerdiCommand(object):
     """
     This command has no documentation yet.
     """
+    _backend = None
 
     class __metaclass__(type):
         """
-        Some python black magic to set correctly the logger also in subclasses.
+        Use a metaclass to set _abstract to False if it is not set in the class itself
         """
 
         def __new__(cls, name, bases, attrs):

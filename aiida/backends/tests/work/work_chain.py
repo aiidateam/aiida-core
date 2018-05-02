@@ -603,7 +603,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 return ToContext(res=wf)
 
             def check(self):
-                test_case.assertSetEqual(self.ctx.res.out, wf.get_results())
+                test_case.assertEquals(self.ctx.res.pk, wf.pk)
 
         run_and_check_success(_TestWf)
 

@@ -266,7 +266,9 @@ class Waiting(plumpy.Waiting):
             # A task was cancelled because the state (and process) is being killed
             next_state = yield self._do_kill()
             raise Return(next_state)
-        except BaseException:
+        except Return:
+            raise
+        except Exception:
             exc_info = sys.exc_info()
             excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
             raise Return(excepted_state)

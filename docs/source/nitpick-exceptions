@@ -118,6 +118,7 @@ py:class  plumpy.Communicator
 py:class  plumpy.Bundle
 py:class  plumpy.workchains.WorkChainSpec
 py:class  plumpy.persistence.Persister
+py:class  plumpy.ports.Port
 py:class  plumpy.ports.InputPort
 py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict

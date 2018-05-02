@@ -8,7 +8,4 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-
-from aiida.orm.implementation.general.calculation.work import \
-    WorkCalculation
-
+from aiida.orm.implementation.general.calculation.work import WorkCalculation

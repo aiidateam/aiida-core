@@ -7,16 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from aiida.plugins.factory import BaseFactory
+from aiida.tools.dbimporters.baseclasses import DbImporter
 
 
-
-def DbImporterFactory(pluginname):
+def DbImporterFactory(entry_point):
     """
-    This function loads the correct DbImporter plugin class
+    Return the DbImporter plugin class for a given entry point
+
+    :param entry_point: the entry point name of the DbImporter plugin
     """
-    from aiida.common.pluginloader import BaseFactory
-    from aiida.tools.dbimporters.baseclasses import DbImporter
-
-    return BaseFactory(pluginname, DbImporter, "aiida.tools.dbimporters.plugins")
-
-    raise NotImplementedError
+    return BaseFactory('aiida.tools.dbimporters', entry_point)

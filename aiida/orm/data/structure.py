@@ -13,6 +13,7 @@ functions to operate on them.
 """
 
 from aiida.orm import Data
+from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
 import itertools
@@ -236,8 +237,8 @@ def validate_symbols_tuple(symbols_tuple):
     Used to validate whether the chemical species are valid.
 
     :param symbols_tuple: a tuple (or list) with the chemical symbols name.
-    :raises: ValueError if any symbol in the tuple is not a valid chemical
-        symbols (with correct capitalization).
+    :raises: UnsupportedSpeciesError if any symbol in the tuple is not a valid chemical
+        symbol (with correct capitalization).
 
     Refer also to the documentation of :func:is_valid_symbol
     """
@@ -246,8 +247,8 @@ def validate_symbols_tuple(symbols_tuple):
     else:
         valid = all(is_valid_symbol(sym) for sym in symbols_tuple)
     if not valid:
-        raise ValueError("At least one element of the symbol list {} has "
-                         "not been recognized.".format(symbols_tuple))
+        raise UnsupportedSpeciesError("At least one element of the symbol list {} has "
+                                      "not been recognized.".format(symbols_tuple))
 
 
 def is_ase_atoms(ase_atoms):
@@ -683,7 +684,7 @@ def ase_refine_cell(aseatoms, **kwargs):
 
 
 @optional_inline
-def _get_cif_ase_inline(struct=None, parameters=None):
+def _get_cif_ase_inline(struct, parameters):
     """
     Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
 

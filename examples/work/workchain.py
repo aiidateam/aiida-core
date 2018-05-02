@@ -8,9 +8,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.base import Float, Int, NumericType
-from aiida.work.run import run
-from aiida.work.workchain import WorkChain
+from aiida.orm.data.base import NumericType
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
+from aiida import work
 
 """
 This example illustrates in a very minimal way how a WorkChain can be defined
@@ -19,7 +20,7 @@ is defined and how functions in the outline of the spec have to be defined.
 """
 
 
-class SumWorkChain(WorkChain):
+class SumWorkChain(work.WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -35,7 +36,7 @@ class SumWorkChain(WorkChain):
         self.out('sum', self.inputs.a + self.inputs.b)
 
 
-class ProductWorkChain(WorkChain):
+class ProductWorkChain(work.WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -51,7 +52,7 @@ class ProductWorkChain(WorkChain):
         self.out('product', self.inputs.a * self.inputs.b)
     
 
-class SumProductWorkChain(WorkChain):
+class SumProductWorkChain(work.WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -79,13 +80,13 @@ def main():
         'c': Int(6)
     }
 
-    results = run(SumWorkChain, **inputs)
+    results = work.run(SumWorkChain, **inputs)
     print 'Result of SumWorkChain: {}'.format(results)
 
-    results = run(ProductWorkChain, **inputs)
+    results = work.run(ProductWorkChain, **inputs)
     print 'Result of ProductWorkChain: {}'.format(results)
 
-    results = run(SumProductWorkChain, **inputs)
+    results = work.run(SumProductWorkChain, **inputs)
     print 'Result of SumProductWorkChain: {}'.format(results)
 
 

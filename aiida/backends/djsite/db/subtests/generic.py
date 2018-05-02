@@ -12,6 +12,7 @@ Generic tests that need the use of the DB
 """
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.orm.node import Node
 
 
@@ -59,11 +60,11 @@ class TestGroupsDjango(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.backends.djsite.utils import get_automatic_user
 
         g1 = Group(name='testquery1').store()
+        self.addCleanup(g1.delete)
         g2 = Group(name='testquery2').store()
+        self.addCleanup(g2.delete)
 
         n1 = Node().store()
         n2 = Node().store()
@@ -73,7 +74,7 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser.objects.create_user(email='test@email.xx', password='')
+        newuser = self.backend.users.create(email='test@email.xx')
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -107,13 +108,40 @@ class TestGroupsDjango(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=get_automatic_user())
+        res = Group.query(user=self.backend.users.get_automatic_user())
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
-        # Final cleanup
-        g1.delete()
-        g2.delete()
-        newuser.delete()
+    def test_rename_existing(self):
+        """
+        Test that renaming to an already existing name is not permitted
+        """
+        from aiida.orm.group import Group
+
+        name_group_a = 'group_a'
+        name_group_b = 'group_b'
+        name_group_c = 'group_c'
+
+        group_a = Group(name=name_group_a, description='I am the Original G')
+        group_a.store()
+
+        # Before storing everything should be fine
+        group_b = Group(name=name_group_a, description='They will try to rename me')
+        group_c = Group(name=name_group_c, description='They will try to rename me')
+
+        # Storing for duplicate group name should trigger UniquenessError
+        with self.assertRaises(exceptions.IntegrityError):
+            group_b.store()
+
+        # Before storing everything should be fine
+        group_c.name = name_group_a
+
+        # Reverting to unique name before storing
+        group_c.name = name_group_c
+        group_c.store()
+
+        # After storing name change to existing should raise
+        with self.assertRaises(exceptions.IntegrityError):
+            group_c.name = name_group_a
 
 
 class TestDbExtrasDjango(AiidaTestCase):

@@ -20,7 +20,6 @@ from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.common.utils import str_timedelta
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbCalcState
 from aiida.backends.sqlalchemy.models.group import DbGroup
 
@@ -51,8 +50,9 @@ class JobCalculation(AbstractJobCalculation, Calculation):
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
         """
+        super(JobCalculation, self)._set_state(state)
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
 
@@ -98,7 +98,7 @@ class JobCalculation(AbstractJobCalculation, Calculation):
         if from_attribute:
             state_to_return = self.get_attr('state', None)
         else:
-            if self._to_be_stored:
+            if not self.is_stored:
                 state_to_return = calc_states.NEW
             else:
                 # In the sqlalchemy model, the state

@@ -13,21 +13,21 @@ import os
 import copy
 from functools import wraps
 from contextlib import contextmanager
+
 try:
     from collections import ChainMap
 except ImportError:
     from chainmap import ChainMap
 
 import yaml
-from plum.util import load_class
 from future.utils import raise_from
-from plum.exceptions import ClassNotFoundException
 
 import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import Enumerate
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
 from aiida.backends.utils import get_current_profile
+from aiida.common.utils import get_object_from_string
 
 __all__ = ['get_use_cache', 'enable_caching', 'disable_caching']
 
@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
     config_keys.enabled: [],
     config_keys.disabled: [],
 }
+
 
 def _get_config(config_file):
     try:
@@ -63,15 +64,17 @@ def _get_config(config_file):
     # load classes
     try:
         for key in [config_keys.enabled, config_keys.disabled]:
-            config[key] = [load_class(c) for c in config[key]]
-    except (ImportError, ClassNotFoundException) as err:
+            config[key] = [get_object_from_string(c) for c in config[key]]
+    except (ValueError) as err:
         raise_from(
             ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)),
             err
         )
     return config
 
+
 _CONFIG = {}
+
 
 def configure(config_file=os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 'cache_config.yml')):
     """
@@ -81,13 +84,16 @@ def configure(config_file=os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 
     _CONFIG.clear()
     _CONFIG.update(_get_config(config_file=config_file))
 
+
 def _with_config(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if not _CONFIG:
             configure()
         return func(*args, **kwargs)
+
     return inner
+
 
 @_with_config
 def get_use_cache(node_class=None):
@@ -102,6 +108,7 @@ def get_use_cache(node_class=None):
             return False
     return _CONFIG[config_keys.default]
 
+
 @contextmanager
 @_with_config
 def _reset_config():
@@ -111,20 +118,42 @@ def _reset_config():
     _CONFIG.clear()
     _CONFIG.update(config_copy)
 
+
 @contextmanager
 def enable_caching(node_class=None):
+    """
+    Context manager to enable caching, either for a specific node class, or globally.
+    Note that this does not affect the behavior of the daemon, only the local Python instance.
+
+    :param node_class: Node class for which caching should be enabled.
+    """
     with _reset_config():
         if node_class is None:
             _CONFIG[config_keys.default] = True
         else:
             _CONFIG[config_keys.enabled].append(node_class)
+            try:
+                _CONFIG[config_keys.disabled].remove(node_class)
+            except ValueError:
+                pass
         yield
+
 
 @contextmanager
 def disable_caching(node_class=None):
+    """
+    Context manager to disable caching, either for a specific node class, or globally.
+    Note that this does not affect the behavior of the daemon, only the local Python instance.
+
+    :param node_class: Node class for which caching should be disabled.
+    """
     with _reset_config():
         if node_class is None:
-            _CONFIG[config_keys.default] = True
+            _CONFIG[config_keys.default] = False
         else:
             _CONFIG[config_keys.disabled].append(node_class)
+            try:
+                _CONFIG[config_keys.enabled].remove(node_class)
+            except ValueError:
+                pass
         yield

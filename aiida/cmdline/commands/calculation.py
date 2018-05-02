@@ -10,6 +10,8 @@
 import os
 import sys
 
+from plumpy import ProcessState
+
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
@@ -57,9 +59,9 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        plugins = sorted(all_plugins('calculations'))
+        plugins = get_entry_point_names('aiida.calculations')
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
@@ -170,6 +172,12 @@ class Calculation(VerdiCommandWithSubcommands):
                             dest='all_states', action='store_true',
                             help="Overwrite manual set of states if present, and look for calculations in every possible state")
         parser.set_defaults(all_states=False)
+        parser.add_argument('-S', '--process-state', choices=([e.value for e in ProcessState]),
+                            help='Only include entries with this process state')
+        parser.add_argument('-f', '--finish-status', type=int,
+                            help='Only include entries with this finish status')
+        parser.add_argument('-n', '--failed', dest='failed', action='store_true',
+                            help='Only include entries that are failed, i.e. whose finish status is non-zero')
         parser.add_argument('-A', '--all-users',
                             dest='all_users', action='store_true',
                             help="Show calculations for all users, rather than only for the current user")
@@ -186,13 +194,11 @@ class Calculation(VerdiCommandWithSubcommands):
                             help='order the results')
         parser.add_argument('--project',
                             choices=(
-                                    'pk', 'state', 'ctime', 'sched', 'computer',
-                                    'type', 'description', 'label', 'uuid',
-                                    'mtime', 'user'
+                                    'pk', 'state', 'ctime', 'job_state', 'calculation_state', 'scheduler_state',
+                                    'computer', 'type', 'description', 'label', 'uuid', 'mtime', 'user', 'sealed'
                                 ),
                             nargs='+',
-                            default=get_property("verdishell.calculation_list"),
-                            #('pk', 'ctime', 'state', 'sched', 'computer', 'type', 'label'),
+                            default=get_property('verdishell.calculation_list'),
                             help="Define the list of properties to show"
                         )
 
@@ -205,6 +211,25 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
+        PROCESS_STATE_KEY = 'attributes.{}'.format(C.PROCESS_STATE_KEY)
+        FINISH_STATUS_KEY = 'attributes.{}'.format(C.FINISH_STATUS_KEY)
+
+        filters = {}
+
+        if parsed_args.process_state:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': parsed_args.process_state}
+
+        if parsed_args.failed:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+            filters[FINISH_STATUS_KEY] = {'!==': 0}
+
+        if parsed_args.finish_status:
+            parsed_args.states = None
+            filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
+            filters[FINISH_STATUS_KEY] = {'==': parsed_args.finish_status}
+
         C._list_calculations(
             states=parsed_args.states,
             past_days=parsed_args.past_days,
@@ -216,6 +241,7 @@ class Calculation(VerdiCommandWithSubcommands):
             # with_scheduler_state=parsed_args.with_scheduler_state,
             order_by=parsed_args.order_by,
             limit=parsed_args.limit,
+            filters=filters,
             projections=parsed_args.project,
         )
 
@@ -270,7 +296,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.cmdline.common import print_node_info
+        from aiida.cmdline.utils.common import print_node_info
 
         if not is_dbenv_loaded():
             load_dbenv()
@@ -357,7 +383,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
         from aiida.common.exceptions import MissingPluginError
 
         if args:
@@ -384,14 +410,14 @@ class Calculation(VerdiCommandWithSubcommands):
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
-            plugins = sorted(all_plugins('calculations'))
+            plugins = get_entry_point_names('aiida.calculations')
             if plugins:
-                print("## Pass as a further parameter one (or more) "
-                      "plugin names to get more details on a given plugin.")
+                print('Registered calculation entry points:')
                 for plugin in plugins:
-                    print "* {}".format(plugin)
+                    print '* {}'.format(plugin)
+                print("\nPass the entry point as an argument to display detailed information")
             else:
-                print "## No calculation plugins found"
+                print 'No calculation plugins found'
 
     def calculation_inputcat(self, *args):
         """
@@ -420,7 +446,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.old_pluginloader import get_class_typestring
+        from aiida.plugins.entry_point import get_entry_point_from_class
 
         try:
             calc = load_node(parsed_args.calc)
@@ -432,11 +458,10 @@ class Calculation(VerdiCommandWithSubcommands):
         if path is None:
             path = calc._DEFAULT_INPUT_FILE
             if path is None:
-                base_class, plugin_string, class_name = get_class_typestring(
-                    calc._plugin_type_string)
+                group, entry_point = get_entry_point_from_class(calc.__module__, calc.__name__)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                                       "default input file. Please specify a path "
-                                      "explicitly".format(plugin_string))
+                                      "explicitly".format(entry_point.name))
                 sys.exit(1)
 
         try:
@@ -576,7 +601,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
         if not is_dbenv_loaded():
             load_dbenv()
-        from aiida.common.old_pluginloader import get_class_typestring
+        from aiida.plugins.entry_point import get_entry_point_from_class
 
         try:
             calc = load_node(parsed_args.calc)
@@ -588,11 +613,10 @@ class Calculation(VerdiCommandWithSubcommands):
         if path is None:
             path = calc._DEFAULT_OUTPUT_FILE
             if path is None:
-                base_class, plugin_string, class_name = get_class_typestring(
-                    calc._plugin_type_string)
+                group, entry_point = get_entry_point_from_class(calc.__module__, calc.__name__)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                                       "default output file. Please specify a path "
-                                      "explicitly".format(plugin_string))
+                                      "explicitly".format(entry_point.name))
                 sys.exit(1)
 
         try:
@@ -615,6 +639,7 @@ class Calculation(VerdiCommandWithSubcommands):
             else:
                 raise
 
+
     def calculation_kill(self, *args):
         """
         Kill a calculation.
@@ -622,9 +647,10 @@ class Calculation(VerdiCommandWithSubcommands):
         Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
+        import argparse
+        from aiida import try_load_dbenv
+        try_load_dbenv()
+        from aiida import work
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation as Calc
         from aiida.common.exceptions import NotExistent, InvalidOperation, \
@@ -651,20 +677,22 @@ class Calculation(VerdiCommandWithSubcommands):
             if not wait_for_confirmation():
                 sys.exit(0)
 
-        counter = 0
-        for calc_pk in parsed_args.calcs:
-            try:
-                c = load_node(calc_pk, parent_class=Calc)
+        with work.new_control_panel() as control_panel:
+            futures = []
+            for calc in parsed_args.calcs:
+                try:
+                    future = control_panel.kill_process(calc)
+                    futures.append((calc, future))
+                except (work.RemoteException, work.DeliveryFailed) as e:
+                    print('Calculation<{}> killing failed {}'.format(calc, e.message))
 
-                c.kill()  # Calc.kill(calc_pk)
-                counter += 1
-            except NotExistent:
-                print >> sys.stderr, ("WARNING: calculation {} "
-                                      "does not exist.".format(calc_pk))
-            except (InvalidOperation, RemoteOperationError) as e:
-                print >> sys.stderr, (e.message)
-        print >> sys.stderr, "{} calculation{} killed.".format(counter,
-                                                               "" if counter == 1 else "s")
+            for future in futures:
+                result = control_panel._communicator.await(future[1])
+                if result:
+                    print('Calculation<{}> successfully killed'.format(future[0]))
+                else:
+                    print('Calculation<{}> killing failed {}'.format(future[0], result))
+
 
     def calculation_cleanworkdir(self, *args):
         """
@@ -711,8 +739,6 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.backends.utils import get_automatic_user
-        from aiida.backends.utils import get_authinfo
         from aiida.common.utils import query_yes_no
         from aiida.orm.computer import Computer as OrmComputer
         from aiida.orm.user import User as OrmUser
@@ -736,7 +762,8 @@ class Calculation(VerdiCommandWithSubcommands):
                 return
 
         qb_user_filters = dict()
-        user = OrmUser(dbuser=get_automatic_user())
+	# TODO: @mu fix this, can't get automatic user this way anymore
+        user = orm.get_automatic_user()
         qb_user_filters["email"] = user.email
 
         qb_computer_filters = dict()
@@ -789,9 +816,9 @@ class Calculation(VerdiCommandWithSubcommands):
         remotes = {}
         for computer in comp_uuid_to_computers.values():
             # initialize a key of info for a given computer
-            remotes[computer.name] = {'transport': get_authinfo(
-                computer=computer, aiidauser=user._dbuser).get_transport(),
-                                      'computer': computer,
+            remotes[computer.name] = {
+                'transport': self.backend.authinfos.get(computer, user).get_transport(),
+                'computer': computer,
             }
 
             # select the calc pks done on this computer

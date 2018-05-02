@@ -65,6 +65,19 @@ class AbstractGroup(object):
         pass
 
     @abstractproperty
+    @name.setter
+    def name(self, name):
+        """
+        Attempt to change the name of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired name, a
+        UniquenessError will be raised
+
+        :param name: the new group name
+        :raises UniquenessError: if another group of same type and name already exists
+        """
+        pass
+
+    @abstractproperty
     def description(self):
         """
         :return: the description of the group as a string

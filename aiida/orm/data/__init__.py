@@ -7,11 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from abc import ABCMeta
+
+try:
+    from functools import singledispatch
+except ImportError:
+    from singledispatch import singledispatch
+
 from aiida.orm.node import Node
 from aiida.common.links import LinkType
 from aiida.common.lang import override
-from aiida.common.exceptions import ModificationNotAllowed
 
+
+@singledispatch
+def to_aiida_type(value):
+    """
+    Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
+    """
+    raise TypeError("Cannot convert value of type {} to AiiDA type.".format(type(value)))
 
 
 class Data(Node):
@@ -78,7 +91,7 @@ class Data(Node):
         """
         if not isinstance(source, dict):
             raise ValueError("Source must be supplied as a dictionary")
-        unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
+        unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
             raise KeyError("Unknown source parameters: "
                            "{}".format(", ".join(unknown_attrs)))
@@ -90,6 +103,14 @@ class Data(Node):
         Sets the dictionary describing the source of Data object.
         """
         self.source = source
+
+    @property
+    def created_by(self):
+        inputs = self.get_inputs(link_type=LinkType.CREATE)
+        if inputs:
+            return inputs[0]
+        else:
+            return None
 
     @override
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
@@ -361,3 +382,81 @@ class Data(Node):
         ##     raise ValidationError("License of the object ({}) requires "
         ##                           "attribution, while none is given in the "
         ##                           "description".format(self.source['license']))
+
+
+
+class BaseType(Data):
+    """
+    Store a base python type as a AiiDA node in the DB.
+
+    Provide the .value property to get the actual value.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, *args, **kwargs):
+        try:
+            getattr(self, '_type')
+        except AttributeError:
+            raise RuntimeError("Derived class must define the _type class member")
+
+        super(BaseType, self).__init__(**self._create_init_args(*args, **kwargs))
+
+    def set_typevalue(self, typevalue):
+        _type, value = typevalue
+        self._type = _type
+        if value:
+            self.value = value
+        else:
+            self.value = _type()
+
+    @property
+    def value(self):
+        return self.get_attr('value')
+
+    @value.setter
+    def value(self, value):
+        self._set_attr('value', self._type(value))
+
+    def __str__(self):
+        return self.value.__str__()
+
+    def __repr__(self):
+        return self.value.__repr__()
+
+    def __eq__(self, other):
+        if isinstance(other, BaseType):
+            return self.value == other.value
+        else:
+            return self.value == other
+
+    def __ne__(self, other):
+        if isinstance(other, BaseType):
+            return self.value != other.value
+        else:
+            return self.value != other
+
+    def new(self, value=None):
+        return self.__class__(typevalue=(self._type, value))
+
+    def _create_init_args(self, *args, **kwargs):
+        if args:
+            assert not kwargs, "Cannot have positional arguments and kwargs"
+            assert len(args) == 1, \
+                "Simple data can only take at most one positional argument"
+
+            kwargs['typevalue'] = (self._type, self._type(args[0]))
+
+        elif 'dbnode' not in kwargs:
+            if 'typevalue' in kwargs:
+                assert kwargs['typevalue'][0] is self._type
+                if kwargs['typevalue'][1] is not None:
+                    kwargs['typevalue'] = \
+                        (self._type, self._type(kwargs['typevalue'][1]))
+            else:
+                kwargs['typevalue'] = (self._type, None)
+
+        else:
+            assert len(kwargs) == 1, \
+                "When specifying dbnode it can be the only kwarg"
+
+        return kwargs

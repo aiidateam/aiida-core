@@ -9,39 +9,26 @@
 ###########################################################################
 
 from aiida.backends.testbase import AiidaTestCase
-import shutil
-import tempfile
 
-import plum.process_monitor
-from aiida.orm.data.base import Int, Str
-from aiida.work.run import queue_up
+import aiida.orm
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
+from aiida.work.launch import run, run_get_node
 from aiida.work.test_utils import DummyProcess
-from aiida.work.persistence import Persistence
-
 
 
 class TestRun(AiidaTestCase):
     def setUp(self):
         super(TestRun, self).setUp()
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
-        self.storedir = tempfile.mkdtemp()
-        self.storage = Persistence.create_from_basedir(self.storedir)
 
     def tearDown(self):
         super(TestRun, self).tearDown()
-        shutil.rmtree(self.storedir)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
-    def test_queue_up(self):
+    def test_run(self):
         inputs = {'a': Int(2), 'b': Str('test')}
+        result = run(DummyProcess, **inputs)
 
-        # Queue up the process
-        pid = queue_up(DummyProcess, inputs, self.storage)
-
-        # Then load the checkpoint and instantiate the class
-        cp = self.storage._load_checkpoint(pid)
-
-        dp = DummyProcess.create_from(cp)
-        self.assertIsInstance(dp, DummyProcess)
-        self.assertEqual(dp.raw_inputs, inputs)
-        dp.run_until_complete()
+    def test_run_get_node(self):
+        inputs = {'a': Int(2), 'b': Str('test')}
+        result, node = run_get_node(DummyProcess, **inputs)
+        self.assertIsInstance(node, aiida.orm.Calculation)

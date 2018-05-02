@@ -15,6 +15,9 @@ from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 
 
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
+
+
 class AbstractCode(Node):
     """
     A code entity.
@@ -420,6 +423,12 @@ class AbstractCode(Node):
         :raise MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no plugin was specified.
         """
+        import warnings
+        warnings.warn(
+            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+        )
+
         from aiida.orm.utils import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
@@ -445,53 +454,49 @@ class AbstractCode(Node):
         new_calc.use_code(self)
         return new_calc
 
-    @property
-    def full_text_info(self):
+    def full_text_info(self, verbose=False):
         """
-        Return a (multiline) string with a human-readable detailed information
-        on this computer.
+        Return a (multiline) string with a human-readable detailed information on this computer
         """
+        result = []
+        result.append(['PK', self.pk])
+        result.append(['UUID', self.uuid])
+        result.append(['Label', self.label])
+        result.append(['Description', self.description])
+        result.append(['Default plugin', self.get_input_plugin_name()])
 
-        ret_lines = []
-        ret_lines.append(" * PK:             {}".format(self.pk))
-        ret_lines.append(" * UUID:           {}".format(self.uuid))
-        ret_lines.append(" * Label:          {}".format(self.label))
-        ret_lines.append(" * Description:    {}".format(self.description))
-        ret_lines.append(" * Default plugin: {}".format(
-            self.get_input_plugin_name()))
-        ret_lines.append(" * Used by:        {} calculations".format(
-            len(self.get_outputs())))
+        if verbose:
+            result.append(['Calculations', len(self.get_outputs())])
+
         if self.is_local():
-            ret_lines.append(" * Type:           {}".format("local"))
-            ret_lines.append(
-                " * Exec name:      {}".format(self.get_execname()))
-            ret_lines.append(" * List of files/folders:")
+            result.append(['Type', 'local'])
+            result.append(['Exec name', self.get_execname()])
+            result.append(['List of files/folders:', ''])
             for fname in self._get_folder_pathsubfolder.get_content_list():
-                ret_lines.append("   * [{}] {}".format(" dir" if
-                                                       self._get_folder_pathsubfolder.isdir(
-                                                           fname) else "file",
-                                                       fname))
+                if self._get_folder_pathsubfolder.isdir(fname):
+                    result.append(['directory', fname])
+                else:
+                    result.append(['file', fname])
         else:
-            ret_lines.append(" * Type:           {}".format("remote"))
-            ret_lines.append(" * Remote machine: {}".format(
-                self.get_remote_computer().name))
-            ret_lines.append(" * Remote absolute path: ")
-            ret_lines.append("   " + self.get_remote_exec_path())
+            result.append(['Type', 'remote'])
+            result.append(['Remote machine', self.get_remote_computer().name])
+            result.append(['Remote absolute path', self.get_remote_exec_path()])
 
-        ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
-            for l in self.get_prepend_text().split('\n'):
-                ret_lines.append("   {}".format(l))
+            result.append(['Prepend text', ''])
+            for line in self.get_prepend_text().split('\n'):
+                result.append(['', line])
         else:
-            ret_lines.append("   # No prepend text.")
-        ret_lines.append(" * append text:")
-        if self.get_append_text().strip():
-            for l in self.get_append_text().split('\n'):
-                ret_lines.append("   {}".format(l))
-        else:
-            ret_lines.append("   # No append text.")
+            result.append(['Prepend text', 'No prepend text'])
 
-        return "\n".join(ret_lines)
+        if self.get_append_text().strip():
+            result.append(['Append text', ''])
+            for line in self.get_append_text().split('\n'):
+                result.append(['', line])
+        else:
+            result.append(['Append text', 'No append text'])
+
+        return result
 
     @classmethod
     def setup(cls, **kwargs):

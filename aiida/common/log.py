@@ -23,6 +23,7 @@ logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {
+    logging.getLevelName(logging.NOTSET): logging.NOTSET,
     logging.getLevelName(logging.DEBUG): logging.DEBUG,
     logging.getLevelName(logging.INFO): logging.INFO,
     logging.getLevelName(LOG_LEVEL_REPORT): LOG_LEVEL_REPORT,
@@ -52,11 +53,11 @@ class DBLogHandler(logging.Handler):
         if not is_dbenv_loaded():
             return
 
-        from aiida.orm.backend import construct
+        from aiida.orm.backend import construct_backend
         from django.core.exceptions import ImproperlyConfigured
 
         try:
-            backend = construct()
+            backend = construct_backend()
             backend.log.create_entry_from_record(record)
 
         except ImproperlyConfigured:
@@ -83,7 +84,7 @@ LOGGING = {
                       '%(thread)d %(message)s',
         },
         'halfverbose': {
-            'format': '%(asctime)s, %(name)s: [%(levelname)s] %(message)s',
+            'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
             'datefmt': '%m/%d/%Y %I:%M:%S %p',
         },
     },
@@ -115,6 +116,16 @@ LOGGING = {
             'level': setup.get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
+        'tornado': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.tornado_loglevel'),
+            'propagate': False,
+        },
+        'plumpy': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.plumpy_loglevel'),
+            'propagate': False,
+        },
         'paramiko': {
             'handlers': ['console'],
             'level': setup.get_property('logging.paramiko_loglevel'),
@@ -131,6 +142,11 @@ LOGGING = {
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
+        'pika': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
     },
 }
 
@@ -138,9 +154,9 @@ def configure_logging(daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
-    daemon running a task for one of the celery workers, set the argument 'daemon' to True
-    and specify the path to the log file. This will cause a 'daemon_handler' to be added
-    to all the configured loggers, that is a RotatingFileHandler that writes to the log file.
+    daemon, set the argument 'daemon' to True and specify the path to the log file. This
+    will cause a 'daemon_handler' to be added to all the configured loggers, that is a
+    RotatingFileHandler that writes to the log file.
 
     :param daemon: configure the logging for a daemon task by adding a file handler instead
         of the default 'console' StreamHandler

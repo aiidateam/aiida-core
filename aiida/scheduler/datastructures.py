@@ -16,17 +16,16 @@ the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
 from __future__ import division
-from aiida.common.extendeddicts import (
-    DefaultFieldsAttributeDict, Enumerate)
+from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
 
 from aiida.common import aiidalogger
-
 
 scheduler_logger = aiidalogger.getChild('scheduler')
 
 
 class JobState(Enumerate):
     pass
+
 
 # This is the list of possible job states
 # Note on names: Jobs are the entities on a
@@ -111,8 +110,7 @@ class NodeNumberJobResource(JobResource):
         """
         Return a list of valid keys to be passed to the __init__
         """
-        return super(NodeNumberJobResource, cls).get_valid_keys() + [
-            "tot_num_mpiprocs", "default_mpiprocs_per_machine"]
+        return super(NodeNumberJobResource, cls).get_valid_keys() + ["tot_num_mpiprocs", "default_mpiprocs_per_machine"]
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -223,7 +221,6 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("num_mpiprocs_per_machine must be >= 1")
         if self.num_machines <= 0:
             raise ValueError("num_machine must be >= 1")
-
 
     def get_tot_num_mpiprocs(self):
         """
@@ -401,11 +398,11 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'prepend_text',
         'append_text',
         'import_sys_environment',
-#        'stderr_name', # this 5 5keys have been moved to codes_info
-#        'join_files',
-#        'argv',
-#        'stdin_name',
-#        'stdout_name',
+        #        'stderr_name', # this 5 5keys have been moved to codes_info
+        #        'join_files',
+        #        'argv',
+        #        'stdin_name',
+        #        'stdout_name',
         'codes_run_mode',
         'codes_info',
     )
@@ -475,27 +472,10 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``finish_time``: the absolute time at which the job first entered the
          'finished' state, of type datetime.datetime
     """
-    _default_fields = (
-        'job_id',
-        'title',
-        'exit_status',
-        'terminating_signal',
-        'annotation',
-        'job_state',
-        'job_substate',
-        'allocated_machines',
-        'job_owner',
-        'num_mpiprocs',
-        'num_cpus',
-        'num_machines',
-        'queue_name',
-        'wallclock_time_seconds',
-        'requested_wallclock_time_seconds',
-        'cpu_time',
-        'submission_time',
-        'dispatch_time',
-        'finish_time'
-    )
+    _default_fields = ('job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state',
+                       'job_substate', 'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines',
+                       'queue_name', 'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time',
+                       'submission_time', 'dispatch_time', 'finish_time')
 
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and
@@ -519,14 +499,11 @@ class JobInfo(DefaultFieldsAttributeDict):
         # is_naive check from django.utils.timezone
         if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
             # TODO: FIX TIMEZONE
-            scheduler_logger.debug("Datetime to serialize in JobInfo is naive, "
-                                   "this should be fixed!")
-            #v = v.replace(tzinfo = pytz.utc)
-            return {'date': v.strftime(
-                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
+            scheduler_logger.debug("Datetime to serialize in JobInfo is naive, " "this should be fixed!")
+            # v = v.replace(tzinfo = pytz.utc)
+            return {'date': v.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
         else:
-            return {'date': v.astimezone(pytz.utc).strftime(
-                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
+            return {'date': v.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
 
     def _deserialize_date(self, v):
         import datetime
@@ -537,18 +514,13 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         if v['timezone'] is None:
             # naive date
-            return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f')
+            return datetime.datetime.strptime(v['date'], '%Y-%m-%dT%H:%M:%S.%f')
         elif v['timezone'] == 'UTC':
-            return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
-                tzinfo=pytz.utc)
+            return datetime.datetime.strptime(v['date'], '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
         else:
             # Try your best
             return datetime.datetime.strptime(v['date'],
-                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
-                tzinfo=pytz.timezone(v['timezone']))
-
+                                              '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.timezone(v['timezone']))
 
     def serialize_field(self, value, field_type):
         if field_type is None:
@@ -569,12 +541,9 @@ class JobInfo(DefaultFieldsAttributeDict):
     def serialize(self):
         import json
 
-        ser_data = {k: self.serialize_field(
-            v, self._special_serializers.get(k, None))
-                    for k, v in self.iteritems()}
+        ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.iteritems()}
 
         return json.dumps(ser_data)
-
 
     def load_from_serialized(self, data):
         import json
@@ -582,8 +551,4 @@ class JobInfo(DefaultFieldsAttributeDict):
         deser_data = json.loads(data)
 
         for k, v in deser_data.iteritems():
-            self[k] = self.deserialize_field(
-                v, self._special_serializers.get(k, None))
-
-
-
+            self[k] = self.deserialize_field(v, self._special_serializers.get(k, None))

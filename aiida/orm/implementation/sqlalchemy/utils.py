@@ -10,8 +10,62 @@
 from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
+import sqlalchemy.exc
+
+from aiida.common import exceptions
 
 __all__ = ['django_filter', 'get_attr']
+
+
+class ModelWrapper(object):
+    """
+    This wraps a SQLA model delegating all get/set attributes to the
+    underlying model class, BUT it will make sure that if the model is
+    stored then:
+    * before every read it has the latest value from the database, and,
+    * after ever write the updated value is flushed to the database.
+    """
+
+    def __init__(self, model):
+        super(ModelWrapper, self).__init__()
+        # Have to do it this way because we overwrite __setattr__
+        object.__setattr__(self, '_model', model)
+
+    def __getattr__(self, item):
+        if self.is_saved() and self._is_model_field(item):
+            self._ensure_model_uptodate(fields=(item,))
+
+        return getattr(self._model, item)
+
+    def __setattr__(self, key, value):
+        setattr(self._model, key, value)
+        if self.is_saved() and self._is_model_field(key):
+            self._flush(fields=(key,))
+
+    def is_saved(self):
+        return self._model.id is not None
+
+    def save(self):
+        """ Store the model (possibly updating values if changed) """
+        try:
+            self._model.save()
+            self._model.session.commit()
+        except sqlalchemy.exc.IntegrityError as e:
+            self._model.session.rollback()
+            raise exceptions.IntegrityError(str(e))
+
+    def _is_model_field(self, name):
+        return inspect(self._model.__class__).has_property(name)
+
+    def _flush(self, fields=None):
+        """ If the user is stored then save the current value """
+        if self.is_saved():
+            # At the moment we have no way to specify which fields to update
+            self.save()
+
+    def _ensure_model_uptodate(self, fields=None):
+        if self.is_saved():
+            self._model.session.expire(self._model, attribute_names=fields)
 
 
 def iter_dict(attrs):

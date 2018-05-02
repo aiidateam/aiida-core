@@ -13,26 +13,22 @@ import django
 from aiida.common.log import get_dblogger_extra
 
 
-def load_dbenv(process=None, profile=None):
+def load_dbenv(profile=None):
     """
     Load the database environment (Django) and perform some checks.
 
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
     :param profile: the string with the profile to use. If not specified,
         use the default one specified in the AiiDA configuration file.
     """
-    _load_dbenv_noschemacheck(process, profile)
+    _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
 
-def _load_dbenv_noschemacheck(process, profile):
+def _load_dbenv_noschemacheck(profile):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
 
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
     :param profile: the string with the profile to use. If not specified,
         use the default one specified in the AiiDA configuration file.
 
@@ -62,56 +58,7 @@ def get_log_messages(obj):
     return log_messages
 
 
-def get_daemon_user():
-    """
-    Return the username (email) of the user that should run the daemon,
-    or the default AiiDA user in case no explicit configuration is found
-    in the DbSetting table.
-    """
-    from aiida.backends.djsite.globalsettings import get_global_setting
-    from aiida.common.setup import DEFAULT_AIIDA_USER
-
-    try:
-        return get_global_setting('daemon|user')
-    except KeyError:
-        return DEFAULT_AIIDA_USER
-
-
-def set_daemon_user(user_email):
-    """
-    Set the username (email) of the user that is allowed to run the daemon.
-    """
-    from aiida.backends.djsite.globalsettings import set_global_setting
-
-    set_global_setting("daemon|user", user_email,
-                       description="The only user that is allowed to run the "
-                                   "AiiDA daemon on this DB instance")
-
 _aiida_autouser_cache = None
-
-
-def get_automatic_user():
-    """
-    Return the default user for this installation of AiiDA.
-    """
-    global _aiida_autouser_cache
-
-    if _aiida_autouser_cache is not None:
-        return _aiida_autouser_cache
-
-    from django.core.exceptions import ObjectDoesNotExist
-    from aiida.backends.djsite.db.models import DbUser
-    from aiida.common.exceptions import ConfigurationError
-    from aiida.common.utils import get_configured_user_email
-
-    email = get_configured_user_email()
-
-    try:
-        _aiida_autouser_cache = DbUser.objects.get(email=email)
-        return _aiida_autouser_cache
-    except ObjectDoesNotExist:
-        raise ConfigurationError("No aiida user with email {}".format(
-            email))
 
 
 def long_field_length():
@@ -176,7 +123,7 @@ def check_schema_version():
             "database (DbSetting table) is {}, stopping.\n"
             "To migrate the database to the current version, run the following commands:"
             "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".
-            format(
+                format(
                 code_schema_version,
                 db_schema_version,
                 filepath_manage,

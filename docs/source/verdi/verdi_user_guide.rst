@@ -157,8 +157,6 @@ submission/retrieval of calculations.
   
   *  **restart**: restarts the daemon.
   
-  *  **configureuser**: sets the user which is running the daemon. See the installation guide for more details.
-  
   *  **logshow**: show the last lines of the daemon log (use for debugging)
   
   
@@ -270,6 +268,7 @@ The command ``verdi devel getproperty [propertyname]`` will give you the set val
   *  **description**: show or change the description of a group
   *  **show**: show the content of a group.
   *  **create**: create a new empty group.
+  *  **rename**: change the name of a group.
   *  **delete**: delete an existing group (but not the nodes belonging to it).
   *  **addnodes**: add nodes to a group.
   *  **removenodes**: remove nodes from a group.
@@ -392,7 +391,7 @@ Manage workflows, valid subcommands:
   * **list**: list the workflows present in the database
   * **plugins**: show the registered workflow plugins
   * **report**: show the log messages for a workflow
-  * **tree**: shows an ASCII tree for a workflow
+  * **status**: shows an ASCII tree for a workflow showing the status of itself and the calculations it called
 
 
 .. _workflow:

@@ -10,14 +10,11 @@
 """
 This allows to manage profiles from command line.
 """
-import sys
-
 import click
+import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.control.postgres import Postgres
-
-valid_processes = ['verdi', 'daemon']
 
 
 class Profile(VerdiCommandWithSubcommands):
@@ -33,60 +30,40 @@ class Profile(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'setdefault': (self.profile_setdefault,
-                           self.complete_processes_profiles),
+            'setdefault': (self.profile_setdefault, self.complete_profiles),
             'list': (self.profile_list, self.complete_none),
-            'delete': (self.profile_delete, self.complete_processes_profiles),
+            'delete': (self.profile_delete, self.complete_profiles),
         }
 
-    def complete_processes_profiles(self, subargs_idx, subargs):
+    def complete_profiles(self, subargs_idx, subargs):
         from aiida.common.setup import get_profiles_list
 
-        if subargs_idx == 1:
+        if subargs_idx == 0:
             return "\n".join(get_profiles_list())
-        elif subargs_idx == 0:
-            return "\n".join(valid_processes)
         else:
             return ""
 
     def profile_setdefault(self, *args):
         from aiida.common.setup import set_default_profile
 
-        valid_processes_strlist = ", ".join("'{}'".format(pr) for pr in
-            valid_processes)
-
-        if len(args) != 2:
-            print >> sys.stderr, ("You have to pass (only) two parameters "
-                                  "after 'profile setdefault', the name of")
-            print >> sys.stderr, ("the process ({}) and the "
-                                  "profile to be set as the default.".format(
-                    valid_processes_strlist))
+        if len(args) != 1:
+            print >> sys.stderr, ("Please specify the profile to be set as the default")
             sys.exit(1)
 
-        process = args[0]
-        if process not in valid_processes:
-            print >> sys.stderr, ("'{}' is not a valid process. Choose it from "
-                                  "the following list: {}.".format(
-                    process, valid_processes_strlist))
-            sys.exit(1)
-
-        profile = args[1]
+        profile = args[0]
         # set default DB profiles
-        set_default_profile(process, profile, force_rewrite=True)
+        set_default_profile(profile, force_rewrite=True)
 
 
     def profile_list(self, *args):
+        from aiida.backends import settings
         from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
         from aiida.common.exceptions import ConfigurationError
 
-        from aiida.backends import settings
-
         print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
 
-        current_profile = settings.AIIDADB_PROFILE
         try:
-            default_profile = get_default_profile(
-                settings.CURRENT_AIIDADB_PROCESS)
+            default_profile = get_default_profile()
         except ConfigurationError as e:
             err_msg = (
                 "Stopping: {}\n"
@@ -94,60 +71,47 @@ class Profile(VerdiCommandWithSubcommands):
             "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
             click.echo(err_msg, err=True)
             sys.exit(1)
-        default_daemon_profile = get_default_profile("daemon")
-        if current_profile is None:
-            current_profile = default_profile
 
-        use_colors = False
+        use_colors = True
         if args:
             try:
                 if len(args) != 1:
                     raise ValueError
-                if args[0] != "--color":
+                if args[0] != '--no-color':
                     raise ValueError
-                use_colors = True
+                use_colors = False
             except ValueError:
-                print >> sys.stderr, ("You can pass only one further argument, "
-                                      "--color, to show the results with colors")
+                print >> sys.stderr, ('You can pass only one further argument, '
+                                      '--no-color, to show the results without colors')
                 sys.exit(1)
 
-        if current_profile is not None:
-            # print >> sys.stderr, "### The '>' symbol indicates the current default user ###"
-            pass
+        if default_profile is None:
+            print >> sys.stderr, "### No default profile configured yet, run 'verdi install'! ###"
+            return
         else:
-            print >> sys.stderr, "### No default profile configured yet, "\
-                                 "run 'verdi install'! ###"
+            print >> sys.stderr, 'The default profile is highlighted and marked by the * symbol'
 
         for profile in get_profiles_list():
             color_id = 39  # Default foreground color
-            if profile == current_profile:
-                symbol = ">"
-                color_id = 31
-            else:
-                symbol = "*"
-
             if profile == default_profile:
-                color_id = 34
-                default_str = ' (DEFAULT)'
+                symbol = '*'
+                color_id = 32
             else:
-                default_str = ''
-            if profile == default_daemon_profile:
-                default_str += ' (DAEMON PROFILE)'
+                symbol = ' '
 
             if use_colors:
-                start_color = "\x1b[{}m".format(color_id)
-                end_color = "\x1b[0m"
-                bold_sequence = "\x1b[1;{}m".format(color_id)
-                nobold_sequence = "\x1b[0;{}m".format(color_id)
+                start_color = '\x1b[{}m'.format(color_id)
+                end_color = '\x1b[0m'
+                bold_sequence = '\x1b[1;{}m'.format(color_id)
+                nobold_sequence = '\x1b[0;{}m'.format(color_id)
             else:
-                start_color = ""
-                end_color = ""
-                bold_sequence = ""
-                nobold_sequence = ""
+                start_color = ''
+                end_color = ''
+                bold_sequence = ''
+                nobold_sequence = ''
 
-            print "{}{} {}{}{} {}{}".format(
-                start_color, symbol,
-                bold_sequence, profile, default_str, nobold_sequence, end_color)
+            print '{}{} {}{} {}{}'.format(
+                start_color, symbol, nobold_sequence, profile, nobold_sequence, end_color)
 
     def profile_delete(self, *args):
         """ Deletes profile

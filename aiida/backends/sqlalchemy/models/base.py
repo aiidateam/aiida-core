@@ -69,6 +69,12 @@ class Model(object):
     session = _SessionProperty()
 
     def save(self, commit=True):
+        """
+        Emulate the behavior of Django's save() method
+
+        :param commit: whether to do a commit or just add to the session
+        :return: the SQLAlchemy instance
+        """
         sess = get_scoped_session()
         sess.add(self)
         if commit:
@@ -76,6 +82,11 @@ class Model(object):
         return self
 
     def delete(self, commit=True):
+        """
+        Emulate the behavior of Django's delete() method
+
+        :param commit: whether to do a commit or just remover from the session
+        """
         sess = get_scoped_session()
         sess.delete(self)
         if commit:

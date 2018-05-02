@@ -7,18 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from abc import abstractmethod
+import abc
 import copy
 import datetime
+import enum
 
-from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.common.old_pluginloader import from_type_to_pluginclassname
+from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
 
 # TODO: set the following as properties of the Calculation
@@ -28,7 +28,29 @@ from aiida.utils import timezone
 # 'rerunnable',
 # 'resourceLimits',
 
+SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
+CALCULATION_STATE_KEY = 'state'
+SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
+PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
+FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
+
 _input_subfolder = 'raw_input'
+
+
+class JobCalculationFinishStatus(enum.Enum):
+    """
+    This enumeration maps specific calculation states to an integer. This integer can
+    then be used to set the finish status of a JobCalculation node. The values defined
+    here map directly on the failed calculation states, but the idea is that sub classes
+    of AbstractJobCalculation can extend this enum with additional error codes
+    """
+    FINISHED = 0
+    SUBMISSIONFAILED = 100
+    RETRIEVALFAILED = 200
+    PARSINGFAILED = 300
+    FAILED = 400
+    I_AM_A_TEAPOT = 418
 
 
 class AbstractJobCalculation(AbstractCalculation):
@@ -37,27 +59,46 @@ class AbstractJobCalculation(AbstractCalculation):
     remotely on a job scheduler.
     """
 
-    _updatable_attributes = AbstractCalculation._updatable_attributes + (
-        'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
-        'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list')
+    @classproperty
+    def finish_status_enum(cls):
+        return JobCalculationFinishStatus
+
+    @property
+    def finish_status_label(self):
+        """
+        Return the label belonging to the finish status of the Calculation
+
+        :returns: the finish status, an integer exit code or None
+        """
+        finish_status = self.finish_status
+
+        try:
+            finish_status_enum = self.finish_status_enum(finish_status)
+            finish_status_label = finish_status_enum.name
+        except ValueError:
+            finish_status_label = 'UNKNOWN'
+
+        return finish_status_label
+
     _cacheable = True
 
     @classproperty
+    def _updatable_attributes(cls):
+        return super(AbstractJobCalculation, cls)._updatable_attributes + (
+            'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+            'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list', 'state'
+        )
+
+    @classproperty
     def _hash_ignored_attributes(cls):
-        # _updatable_attributes are ignored automatically.
-        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + [
+        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + (
             'queue_name',
             'priority',
             'max_wallclock_seconds',
             'max_memory_kb',
-        ]
+        )
 
-    def get_hash(
-        self,
-        ignore_errors=True,
-        ignored_folder_content=('raw_input',),
-        **kwargs
-    ):
+    def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
         return super(AbstractJobCalculation, self).get_hash(
             ignore_errors=ignore_errors,
             ignored_folder_content=ignored_folder_content,
@@ -66,21 +107,24 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classmethod
     def process(cls):
-        from aiida.work.legacy.job_process import JobProcess
+        from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
+
+    @classmethod
+    def get_builder(cls):
+        return cls.process().get_builder()
 
     def _init_internal_params(self):
         """
-        Define here internal parameters that should be defined
-        right after the __init__. This function is actually called
-        by the __init__.
+        Define here internal parameters that should be defined right after the __init__
+        This function is actually called by the __init__
 
-        :note: if you inherit this function, ALWAYS remember to
-          call super()._init_internal_params() as the first thing
-          in your inherited function.
+        :note: if you inherit this function, ALWAYS remember to call super()._init_internal_params()
+            as the first thing in your inherited function.
         """
         # By default, no output parser
         self._default_parser = None
+
         # Set default for the link to the retrieved folder (after calc is done)
         self._linkname_retrieved = 'retrieved'
 
@@ -89,8 +133,7 @@ class AbstractJobCalculation(AbstractCalculation):
         self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
         self._SCHED_ERROR_FILE = '_scheduler-stderr.txt'
 
-        # Files that should be shown by default
-        # Set it to None if you do not have a default file
+        # Files that should be shown by default, set it to None if you do not have a default file
         # Used, e.g., by 'verdi calculation inputshow/outputshow
         self._DEFAULT_INPUT_FILE = None
         self._DEFAULT_OUTPUT_FILE = None
@@ -121,13 +164,9 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         super(AbstractJobCalculation, self).store(*args, **kwargs)
 
-        # I get here if the calculation was successfully stored.
-        # Set to new only if it is not already FINISHED (due to caching)
-        if not self.get_state() == calc_states.FINISHED:
+        if self.get_state() is None:
             self._set_state(calc_states.NEW)
 
-        # Important to return self to allow the one-liner
-        # c = Calculation().store()
         return self
 
     def _add_outputs_from_cache(self, cache_node):
@@ -576,7 +615,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _set_state(self, state):
         """
         Set the state of the calculation.
@@ -595,7 +634,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
@@ -656,20 +695,25 @@ class AbstractJobCalculation(AbstractCalculation):
             calc_states.PARSING
         ]
 
-    def has_finished_ok(self):
+    @property
+    def finished_ok(self):
         """
-        Get whether the calculation is in the FINISHED status.
+        Returns whether the Calculation has finished successfully, which means that it
+        terminated nominally and had a zero exit code indicating a successful execution
 
-        :return: a boolean
+        :return: True if the calculation has finished successfully, False otherwise
+        :rtype: bool
         """
         return self.get_state() in [calc_states.FINISHED]
 
-    def has_failed(self):
+    @property
+    def failed(self):
         """
-        Get whether the calculation is in a failed status,
-        i.e. SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
+        Returns whether the Calculation has failed, which means that it terminated nominally
+        but it had a non-zero exit status
 
-        :return: a boolean
+        :return: True if the calculation has failed, False otherwise
+        :rtype: bool
         """
         return self.get_state() in [calc_states.SUBMISSIONFAILED,
                                     calc_states.RETRIEVALFAILED,
@@ -709,7 +753,7 @@ class AbstractJobCalculation(AbstractCalculation):
         for item in retrieve_list:
             if not isinstance(item, basestring):
                 if (not (isinstance(item, (tuple, list))) or
-                            len(item) != 3):
+                        len(item) != 3):
                     raise ValueError(
                         "You should pass a list containing either "
                         "strings or lists/tuples"
@@ -756,8 +800,8 @@ class AbstractJobCalculation(AbstractCalculation):
                     )
 
                 if (not (isinstance(item[0], basestring)) or
-                    not (isinstance(item[1], basestring)) or
-                    not (isinstance(item[2], int))):
+                        not (isinstance(item[1], basestring)) or
+                        not (isinstance(item[2], int))):
                     raise ValueError(
                         'You have to pass a list (or tuple) of lists, with remotepath(string), '
                         'localpath(string) and depth (integer)'
@@ -851,7 +895,6 @@ class AbstractJobCalculation(AbstractCalculation):
         return self.get_attr('scheduler_lastchecktime', None)
 
     def _set_last_jobinfo(self, last_jobinfo):
-        import pickle
 
         self._set_attr('last_jobinfo', last_jobinfo.serialize())
 
@@ -862,7 +905,6 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
-        import pickle
         from aiida.scheduler.datastructures import JobInfo
 
         last_jobinfo_serialized = self.get_attr('last_jobinfo', None)
@@ -873,12 +915,15 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             return None
 
-    projection_to_qb_tag_map = {
+    projection_map = {
         'pk': ('calculation', 'id'),
         'ctime': ('calculation', 'ctime'),
         'mtime': ('calculation', 'mtime'),
-        'sched': ('calculation', 'attributes.scheduler_state'),
-        'state': ('calculation', 'state'),
+        'scheduler_state': ('calculation', SCHEDULER_STATE_KEY),
+        'calculation_state': ('calculation', CALCULATION_STATE_KEY),
+        'process_state': ('calculation', PROCESS_STATE_KEY),
+        'finish_status': ('calculation', FINISH_STATUS_KEY),
+        'sealed': ('calculation', SEALED_KEY),
         'type': ('calculation', 'type'),
         'description': ('calculation', 'description'),
         'label': ('calculation', 'label'),
@@ -887,12 +932,17 @@ class AbstractJobCalculation(AbstractCalculation):
         'computer': ('computer', 'name')
     }
 
+    compound_projection_map = {
+        'state': ('calculation', (PROCESS_STATE_KEY, FINISH_STATUS_KEY)),
+        'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
+    }
+
     @classmethod
     def _list_calculations(
             cls, states=None, past_days=None, group=None,
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
-            order_by=None, limit=None,
+            order_by=None, limit=None, filters=None,
             projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
     ):
         """
@@ -917,6 +967,7 @@ class AbstractJobCalculation(AbstractCalculation):
             value of the ``past_days`` option.")
         :param relative_ctime: if true, prints the creation time relative from now.
                                (like 2days ago). Default = True
+        :param filters: a dictionary of filters to be passed to the QueryBuilder query
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
 
@@ -925,13 +976,19 @@ class AbstractJobCalculation(AbstractCalculation):
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
+        from aiida.orm.backend import construct_backend
 
         projection_label_dict = {
             'pk': 'PK',
             'state': 'State',
+            'process_state': 'Process state',
+            'finish_status': 'Finish status',
+            'sealed': 'Sealed',
             'ctime': 'Creation',
             'mtime': 'Modification',
-            'sched': 'Sched. state',
+            'job_state': 'Job state',
+            'calculation_state': 'Calculation state',
+            'scheduler_state': 'Scheduler state',
             'computer': 'Computer',
             'type': 'Type',
             'description': 'Description',
@@ -941,6 +998,8 @@ class AbstractJobCalculation(AbstractCalculation):
         }
 
         now = timezone.now()
+
+        backend = construct_backend()
 
         # Let's check the states:
         if states:
@@ -961,7 +1020,10 @@ class AbstractJobCalculation(AbstractCalculation):
 
         print(cls._get_last_daemon_check_string(now))
 
-        calculation_filters = {}
+        if filters is None:
+            calculation_filters = {}
+        else:
+            calculation_filters = filters
 
         # filter for calculation pks:
         if pks:
@@ -979,7 +1041,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = get_automatic_user().id
+                user_id = backend.users.get_automatic_user().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
@@ -1003,19 +1065,25 @@ class AbstractJobCalculation(AbstractCalculation):
             tag='calculation'
         )
         if group_filters is not None:
-            qb.append(type="group", filters=group_filters,
-                      group_of="calculation")
-        qb.append(type="computer", computer_of='calculation', tag='computer')
-        qb.append(type="user", creator_of="calculation", tag="user")
-        # The joining is done
-        # Now the projections:
+            qb.append(type='group', filters=group_filters, group_of='calculation')
+
+        qb.append(type='computer', computer_of='calculation', tag='computer')
+        qb.append(type='user', creator_of="calculation", tag="user")
+
         projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
-        for k, v in [cls.projection_to_qb_tag_map[p] for p in projections]:
-            projections_dict[k].append(v)
+        # Expand compound projections
+        for compound_projection in ['state', 'job_state']:
+            if compound_projection in projections:
+                field, values = cls.compound_projection_map[compound_projection]
+                for value in values:
+                    projections_dict[field].append(value)
 
-        if 'state' in projections:
-            projections_dict['calculation'].append('attributes.state')
+        for p in projections:
+            if p in cls.projection_map:
+                for k, v in [cls.projection_map[p]]:
+                    projections_dict[k].append(v)
+
         for k, v in projections_dict.iteritems():
             qb.add_projection(k, v)
 
@@ -1035,6 +1103,7 @@ class AbstractJobCalculation(AbstractCalculation):
             try:
                 for i in range(100):
                     res = results_generator.next()
+
                     row = cls._get_calculation_info_row(
                         res, projections, now if relative_ctime else None)
 
@@ -1109,7 +1178,7 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             prefix = 'calculation.job.'
             calculation_type = d['calculation']['type']
-            calculation_class = from_type_to_pluginclassname(calculation_type)
+            calculation_class = get_plugin_type_from_type_string(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
             # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
@@ -1136,14 +1205,40 @@ class AbstractJobCalculation(AbstractCalculation):
                             1].split('.')[0].rsplit(":", 1)[0]])
             except (KeyError, ValueError):
                 pass
+
+        if PROCESS_STATE_KEY in d['calculation']:
+
+            process_state = d['calculation'][PROCESS_STATE_KEY]
+
+            if process_state is None:
+                process_state = 'unknown'
+
+            d['calculation'][PROCESS_STATE_KEY] = process_state.capitalize()
+
+        if SEALED_KEY in d['calculation']:
+            sealed = 'True' if d['calculation'][SEALED_KEY] == 1 else 'False'
+            d['calculation'][SEALED_KEY] = sealed
+
         try:
-            if d['calculation']['state'] == calc_states.IMPORTED:
-                d['calculation']['state'] = d['calculation']['attributes.state'] or "UNKNOWN"
+            if d['calculation'][CALCULATION_STATE_KEY] == calc_states.IMPORTED:
+                d['calculation'][CALCULATION_STATE_KEY] = d['calculation']['attributes.state'] or "UNKNOWN"
         except KeyError:
             pass
 
-        return [d[cls.projection_to_qb_tag_map[p][0]][cls.projection_to_qb_tag_map[p][1]]
-                for p in projections]
+        result = []
+
+        for projection in projections:
+
+            if projection in cls.compound_projection_map:
+                field, attributes = cls.compound_projection_map[projection]
+                projected_attributes = [str(d[field][attribute]) for attribute in attributes]
+                result.append(' | '.join(projected_attributes))
+            else:
+                field = cls.projection_map[projection][0]
+                attribute = cls.projection_map[projection][1]
+                result.append(d[field][attribute])
+
+        return result
 
     @classmethod
     def _get_all_with_state(
@@ -1178,7 +1273,6 @@ class AbstractJobCalculation(AbstractCalculation):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
-        from aiida.orm.user import User
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1255,15 +1349,13 @@ class AbstractJobCalculation(AbstractCalculation):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        from aiida.backends.utils import get_authinfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return get_authinfo(computer=computer._dbcomputer,
-                            aiidauser=self.dbnode.user)
+        return self.backend.authinfos.get(computer=computer, user=self.get_user())
 
     def _get_transport(self):
         """
@@ -1273,19 +1365,20 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def submit(self):
         """
-        Puts the calculation in the TOSUBMIT status.
-
-        Actual submission is performed by the daemon.
+        Creates a ContinueJobCalculation and submits it with the current calculation node as the database
+        record. This will ensure that even when this legacy entry point is called, that the calculation is
+        taken through the Process layer. Preferably this legacy method should not be used at all but rather
+        a JobProcess should be used.
         """
-        from aiida.common.exceptions import InvalidOperation
+        import warnings
+        from aiida.work.job_processes import ContinueJobCalculation
+        from aiida.work.launch import submit
+        warnings.warn(
+            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+        )
 
-        current_state = self.get_state()
-        if current_state != calc_states.NEW:
-            raise InvalidOperation("Cannot submit a calculation not in {} "
-                                   "state (the current state is {})"
-                                   .format(calc_states.NEW, current_state))
-
-        self._set_state(calc_states.TOSUBMIT)
+        submit(ContinueJobCalculation, _calc=self)
 
     def set_parser_name(self, parser):
         """
@@ -1305,7 +1398,6 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string.
         """
-        from aiida.parsers import ParserFactory
 
         return self.get_attr('parser', None)
 
@@ -1388,51 +1480,9 @@ class AbstractJobCalculation(AbstractCalculation):
         No changes of calculation status are done (they will be done later by
         the calculation manager).
 
-        .. todo: if the status is TOSUBMIT, check with some lock that it is not
-            actually being submitted at the same time in another thread.
+        .. Note: Deprecated
         """
-        # TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.common.exceptions import (InvalidOperation,
-                                             RemoteOperationError)
-
-        old_state = self.get_state()
-
-        if (old_state == calc_states.NEW or old_state == calc_states.TOSUBMIT):
-            self._set_state(calc_states.FAILED)
-            self.logger.warning(
-                "Calculation {} killed by the user "
-                "(it was in {} state)".format(self.pk, old_state))
-            return
-
-        if old_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation in {} state"
-                                   .format(old_state))
-
-        # I get the scheduler plugin class and initialize it with the correct
-        # transport
-        computer = self.get_computer()
-        t = self._get_transport()
-        s = computer.get_scheduler()
-        s.set_transport(t)
-
-        # And I call the proper kill method for the job ID of this calculation
-        with t:
-            retval = s.kill(self.get_job_id())
-
-        # Raise error is something went wrong
-        if not retval:
-            raise RemoteOperationError(
-                "An error occurred while trying to kill "
-                "calculation {} (jobid {}), see log "
-                "(maybe the calculation already finished?)"
-                    .format(self.pk, self.get_job_id()))
-        else:
-            # Do not set the state, but let the parser do its job
-            # self._set_state(calc_states.FAILED)
-            self._logger.warning(
-                "Calculation {} killed by the user "
-                "(it was {})".format(self.pk,
-                                     calc_states.WITHSCHEDULER))
+        raise NotImplementedError("deprecated method: to kill a calculation go through 'verdi calculation kill'")
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1501,11 +1551,11 @@ class AbstractJobCalculation(AbstractCalculation):
                          if calcinfo.retrieve_list is not None
                          else [])
         if (job_tmpl.sched_output_path is not None and
-                    job_tmpl.sched_output_path not in retrieve_list):
+                job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
             if (job_tmpl.sched_error_path is not None and
-                        job_tmpl.sched_error_path not in retrieve_list):
+                    job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
 
@@ -1524,7 +1574,8 @@ class AbstractJobCalculation(AbstractCalculation):
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = (
+            calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
         self._set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
@@ -1727,18 +1778,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def submit_test(self, folder=None, subfolder_name=None):
         """
-        Test submission, creating the files in a local folder.
+        Run a test submission by creating the files that would be generated for the real calculation in a local folder,
+        without actually storing the calculation nor the input nodes. This functionality therefore also does not
+        require any of the inputs nodes to be stored yet.
 
-        :note: this submit_test function does not require any node
-            (neither the calculation nor the input links) to be stored yet.
-
-        :param folder: A Folder object, within which each calculation files
-            are created; if not passed, a subfolder 'submit_test' of the current
-            folder is used.
-        :param subfolder_name: the name of the subfolder to use for this
-            calculation (within Folder). If not passed, a unique string
-            starting with the date and time in the format ``yymmdd-HHMMSS-``
-            is used.
+        :param folder: a Folder object, within which to create the calculation files. By default a folder
+            will be created in the current working directory
+        :param subfolder_name: the name of the subfolder to use within the directory of the ``folder`` object. By
+            default a unique string will be generated based on the current datetime with the format ``yymmdd-``
+            followed by an auto incrementing index
         """
         import os
         import errno
@@ -1918,6 +1966,7 @@ class AbstractJobCalculation(AbstractCalculation):
         properties.
         """
         return self.get_state(from_attribute=True)
+
 
 class CalculationResultManager(object):
     """

@@ -14,6 +14,7 @@ import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
+from aiida.common import exceptions
 
 
 class TestComputer(AiidaTestCase):
@@ -66,12 +67,15 @@ class TestGroupsSqla(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         g1 = Group(name='testquery1').store()
+        self.addCleanup(g1.delete)
         g2 = Group(name='testquery2').store()
+        self.addCleanup(g2.delete)
 
         n1 = Node().store()
         n2 = Node().store()
@@ -81,7 +85,7 @@ class TestGroupsSqla(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser(email='test@email.xx', password='')
+        newuser = DbUser(email='test@email.xx', password='').get_aiida_class()
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -115,14 +119,52 @@ class TestGroupsSqla(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=get_automatic_user())
+        res = Group.query(user=backend.users.get_automatic_user())
 
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
-        # Final cleanup
-        g1.delete()
-        g2.delete()
-        newuser.delete()
+    def test_rename_existing(self):
+        """
+        Test that renaming to an already existing name is not permitted
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm.group import Group
+
+        name_group_a = 'group_a'
+        name_group_b = 'group_b'
+        name_group_c = 'group_c'
+
+        group_a = Group(name=name_group_a, description='I am the Original G')
+        group_a.store()
+
+        # Before storing everything should be fine
+        group_b = Group(name=name_group_a, description='They will try to rename me')
+        group_c = Group(name=name_group_c, description='They will try to rename me')
+
+        session = get_scoped_session()
+
+        # Storing for duplicate group name should trigger Integrity
+        try:
+            session.begin_nested()
+            with self.assertRaises(exceptions.IntegrityError):
+                group_b.store()
+        finally:
+            session.rollback()
+
+        # Before storing everything should be fine
+        group_c.name = name_group_a
+
+        # Reverting to unique name before storing
+        group_c.name = name_group_c
+        group_c.store()
+
+        # After storing name change to existing should raise
+        try:
+            session.begin_nested()
+            with self.assertRaises(exceptions.IntegrityError):
+                group_c.name = name_group_a
+        finally:
+            session.rollback()
 
 
 class TestDbExtrasSqla(AiidaTestCase):
@@ -131,7 +173,6 @@ class TestDbExtrasSqla(AiidaTestCase):
      """
 
     def test_replacement_1(self):
-
         n1 = Node().store()
         n2 = Node().store()
 
@@ -141,7 +182,8 @@ class TestDbExtrasSqla(AiidaTestCase):
 
         n2.set_extra("pippo2", [3, 4, u'b'])
 
-        self.assertEqual(n1.get_extras(),{'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
+        self.assertEqual(n1.get_extras(),
+                         {'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
 
         self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 

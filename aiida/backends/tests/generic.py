@@ -383,6 +383,31 @@ class TestGroups(AiidaTestCase):
         # To avoid to find it in further tests
         g.delete()
 
+    def test_rename(self):
+        """
+        Test the renaming of a Group
+        """
+        from aiida.orm.group import Group
+
+        name_original = 'groupie'
+        name_changed = 'nogroupie'
+
+        g = Group(name=name_original, description='I will be renamed')
+
+        # Check name changes work before storing
+        self.assertEquals(g.name, name_original)
+        g.name = name_changed
+        self.assertEquals(g.name, name_changed)
+
+        # Revert the name to its original and store it
+        g.name = name_original
+        g.store()
+
+        # Check name changes work after storing
+        self.assertEquals(g.name, name_original)
+        g.name = name_changed
+        self.assertEquals(g.name, name_changed)
+
 
 class TestDbExtras(AiidaTestCase):
     """
@@ -395,11 +420,11 @@ class TestDbExtras(AiidaTestCase):
 
 class TestBool(AiidaTestCase):
     def test_bool_conversion(self):
-        from aiida.orm.data.base import Bool
+        from aiida.orm.data.bool import Bool
         for val in [True, False]:
             self.assertEqual(val, bool(Bool(val)))
 
     def test_int_conversion(self):
-        from aiida.orm.data.base import Bool
+        from aiida.orm.data.bool import Bool
         for val in [True, False]:
             self.assertEqual(int(val), int(Bool(val)))

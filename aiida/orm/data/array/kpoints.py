@@ -707,7 +707,7 @@ class KpointsData(ArrayData):
         import warnings
         warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
-        if self._to_be_stored:
+        if not self.is_stored:
             bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length,
                                                       epsilon_angle=epsilon_angle)
             self.bravais_lattice = bravais_lattice

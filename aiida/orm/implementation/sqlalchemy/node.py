@@ -9,14 +9,9 @@
 ###########################################################################
 from __future__ import absolute_import
 
-import copy
-
-from sqlalchemy import literal
 from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 
-from aiida.backends.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -27,14 +22,15 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.links import LinkType
-
+from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
-from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
     get_attr
 from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.orm.mixins import Sealable
+
+from . import user as users
 
 import aiida.backends.sqlalchemy
 
@@ -54,8 +50,7 @@ class Node(AbstractNode):
         self._init_internal_params()
 
         if dbnode is not None:
-            if not isinstance(dbnode, DbNode):
-                raise TypeError("dbnode is not a DbNode instance")
+            type_check(dbnode, DbNode)
             if dbnode.id is None:
                 raise ValueError("If cannot load an aiida.orm.Node instance "
                                  "from an unsaved DbNode object.")
@@ -74,9 +69,11 @@ class Node(AbstractNode):
 
         else:
             # TODO: allow to get the user from the parameters
-            user = get_automatic_user()
+            user = self._backend.users.get_automatic_user()
+            if user is None:
+                raise RuntimeError("Could not find a default user")
 
-            self._dbnode = DbNode(user=user,
+            self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -147,6 +144,12 @@ class Node(AbstractNode):
         except DatabaseError as de:
             raise ValueError(de.message)
 
+    def __int__(self):
+        if self._to_be_store:
+            return None
+        else:
+            return self._dbnode.id
+
     @classmethod
     def query(cls, *args, **kwargs):
         raise NotImplementedError("The node query method is not supported in "
@@ -177,10 +180,14 @@ class Node(AbstractNode):
         """
         Get the user.
 
-        :return: a Django DbUser model object
+        :return: an aiida user model object
         """
         self._ensure_model_uptodate(attribute_names=['user'])
-        return self._dbnode.user
+        return self._backend.users._from_dbmodel(self._dbnode.user)
+
+    def set_user(self, user):
+        type_check(user, users.SqlaUser)
+        self._dbnode.user = user.dbuser
 
     def get_computer(self):
         """
@@ -208,7 +215,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self._dbnode.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -227,7 +234,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
 
         self._dbnode.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
 
@@ -257,12 +264,11 @@ class Node(AbstractNode):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
-        if not isinstance(src, Node):
-            raise ValueError("src must be a Node instance")
+        type_check(src, Node)
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
@@ -441,7 +447,7 @@ class Node(AbstractNode):
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        comment = DbComment(dbnode=self._dbnode, user=user, content=content)
+        comment = DbComment(dbnode=self._dbnode, user=user.dbuser, content=content)
         session.add(comment)
         try:
             session.commit()
@@ -560,8 +566,16 @@ class Node(AbstractNode):
         return newobject
 
     @property
+    def pk(self):
+        return self._dbnode.id
+
+    @property
     def id(self):
         return self._dbnode.id
+
+    @property
+    def process_type(self):
+        return self._dbnode.process_type
 
     @property
     def dbnode(self):
@@ -587,7 +601,6 @@ class Node(AbstractNode):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-
         self._store_input_nodes()
         self.store(with_transaction=False, use_cache=use_cache)
         self._store_cached_input_links(with_transaction=False)
@@ -624,7 +637,7 @@ class Node(AbstractNode):
           a transaction open!
         """
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} is not stored yet".format(self.id))
 

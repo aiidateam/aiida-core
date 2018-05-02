@@ -17,7 +17,6 @@ import click
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import user, verdi
-from aiida.control.user import get_or_new_user
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -51,16 +50,24 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
 
-def do_configure(email, first_name, last_name, institution, no_password, non_interactive=False, force=False, **kwargs):
+def do_configure(backend, email, first_name, last_name, institution, no_password, non_interactive=False,
+                 force_reconfigure=False):
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.orm import User as UserModel
+    from aiida.orm import User
     import readline
     import getpass
 
     configure_user = False
-    user, created = get_or_new_user(email=email)
+
+    results = backend.users.find(email=email)
+    if results:
+        user = results[0]
+        created = False
+    else:
+        user = backend.users.create(email)
+        created = True
 
     if not created:
         click.echo("\nAn AiiDA user for email '{}' is already present "
@@ -70,7 +77,7 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
             reply = click.confirm("Do you want to reconfigure it?")
             if reply:
                 configure_user = True
-        elif force:
+        elif force_reconfigure:
             configure_user = True
     else:
         configure_user = True
@@ -80,7 +87,7 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
         if not non_interactive:
             try:
                 attributes = {}
-                for field in UserModel.REQUIRED_FIELDS:
+                for field in User.REQUIRED_FIELDS:
                     verbose_name = field.capitalize()
                     readline.set_startup_hook(lambda: readline.insert_text(
                         getattr(user, field)))
@@ -95,10 +102,11 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
             finally:
                 readline.set_startup_hook(lambda: readline.insert_text(""))
         else:
-            attributes = kwargs.copy()
-            attributes['first_name'] = first_name
-            attributes['last_name'] = last_name
-            attributes['institution'] = institution
+            attributes = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'institution': institution,
+            }
 
         for k, v in attributes.iteritems():
             setattr(user, k, v)
@@ -145,13 +153,14 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
             else:
                 user.password = None
 
-        user.force_save()
+        user.store()
         click.echo(">> User {} {} saved. <<".format(user.first_name,
-                                               user.last_name))
+                                                    user.last_name))
         if not user.has_usable_password():
             click.echo("** NOTE: no password set for this user, ")
             click.echo("         so he/she will not be able to login")
             click.echo("         via the REST API and the Web Interface.")
+
 
 @user.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('email', type=str)
@@ -161,9 +170,16 @@ def do_configure(email, first_name, last_name, institution, no_password, non_int
 @click.option('--no-password', is_flag=True)
 @click.option('--force-reconfigure', is_flag=True)
 def configure(email, first_name, last_name, institution, no_password, force_reconfigure):
-    do_configure(email=email, first_name=first_name,
-            last_name=last_name, institution=institution,
-            no_password=no_password, force_reconfigure=force_reconfigure)
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+    do_configure(backend,
+                 email=email,
+                 first_name=first_name,
+                 last_name=last_name,
+                 institution=institution,
+                 no_password=no_password,
+                 force_reconfigure=force_reconfigure)
+
 
 @user.command()
 @click.option('--color', is_flag=True, help='Show results with colors', default=False)
@@ -171,10 +187,11 @@ def list(color):
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.orm.implementation import User
     from aiida.common.utils import get_configured_user_email
-
     from aiida.common.exceptions import ConfigurationError
+    from aiida.orm.backend import construct_backend
+
+    backend = construct_backend()
 
     try:
         current_user = get_configured_user_email()
@@ -186,7 +203,7 @@ def list(color):
     else:
         click.echo("### No default user configured yet, run 'verdi install'! ###", err=True)
 
-    for user in User.get_all_users():
+    for user in backend.users.all():
         name_pieces = []
         if user.first_name:
             name_pieces.append(user.first_name)
@@ -196,15 +213,10 @@ def list(color):
         if full_name:
             full_name = " {}".format(full_name)
 
-        institution_str = " ({})".format(
-            user.institution) if user.institution else ""
+        institution_str = " ({})".format(user.institution) if user.institution else ""
 
         color_id = 39  # Default foreground color
         permissions_list = []
-        if user.is_staff:
-            permissions_list.append("STAFF")
-        if user.is_superuser:
-            permissions_list.append("SUPERUSER")
         if not user.has_usable_password():
             permissions_list.append("NO_PWD")
             color_id = 90  # Dark gray
@@ -235,5 +247,3 @@ def list(color):
             start_color, symbol,
             bold_sequence, user.email, nobold_sequence,
             full_name, institution_str, permissions_str, end_color))
-
-

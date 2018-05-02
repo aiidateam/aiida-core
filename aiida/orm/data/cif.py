@@ -13,6 +13,17 @@ from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
 
+
+class InvalidOccupationsError(Exception):
+    """
+    An exception that will be raised if pymatgen fails to parse the structure from a
+    cif because some site occupancies exceed the occupancy tolerance. This often happens
+    for structures that have attached species, such as hydrogen, and specify a placeholder
+    position for it, leading to occupancies greater than one. Pymatgen only issues a
+    warning in this case and simply does not return a structure
+    """
+
+
 ase_loops = {
     '_atom_site': [
         '_atom_site_label',
@@ -92,43 +103,82 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 
 
 @optional_inline
-def _get_aiida_structure_ase_inline(cif=None, parameters=None):
+def _get_aiida_structure_ase_inline(cif, **kwargs):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
+    from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    kwargs = {}
-    if parameters is not None:
-        kwargs = parameters.get_dict()
-    return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
+    if 'parameters' in kwargs:
+        parameters = kwargs['parameters']
+    else:
+        parameters = {}
+
+    if isinstance(parameters, ParameterData):
+        parameters = parameters.get_dict()
+
+    parameters.pop('occupancy_tolerance', None)
+    parameters.pop('site_tolerance', None)
+
+    return {'structure': StructureData(ase=cif.get_ase(**parameters))}
 
 
 @optional_inline
-def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
+def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     """
-    Creates :py:class:`aiida.orm.data.structure.StructureData` using
-    pymatgen.
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using pymatgen.
+
+    :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+        the occupancies will be scaled down to 1.
+    :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+        in which case they will be combined to a single disordered site. Defaults to 1e-4.
 
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
+    from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    kwargs = {}
-    if parameters is not None:
-        kwargs = parameters.get_dict()
-    kwargs['primitive'] = kwargs.pop('primitive_cell', False)
-    parser = CifParser(cif.get_file_abs_path())
+    if 'parameters' in kwargs:
+        parameters = kwargs['parameters']
+    else:
+        parameters = {}
+
+    if isinstance(parameters, ParameterData):
+        parameters = parameters.get_dict()
+
+    constructor_kwargs = {}
+
+    parameters['primitive'] = parameters.pop('primitive_cell', False)
+
+    for argument in ['occupancy_tolerance', 'site_tolerance']:
+        if argument in parameters:
+            constructor_kwargs[argument] = parameters.pop(argument)
+
+    parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+
     try:
-        struct = parser.get_structures(**kwargs)[0]
-        return {'structure': StructureData(pymatgen_structure=struct)}
-    except IndexError:
-        raise ValueError(
-            "pymatgen failed to provide a structure from the cif file")
+        structures = parser.get_structures(**parameters)
+    except ValueError:
+
+        # Verify whether the failure was due to wrong occupancy numbers
+        try:
+            constructor_kwargs['occupancy_tolerance'] = 1E10
+            parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+            structures = parser.get_structures(**parameters)
+        except ValueError:
+            # If it still fails, the occupancies were not the reason for failure
+            raise ValueError('pymatgen failed to provide a structure from the cif file')
+        else:
+            # If it now succeeds, non-unity occupancies were the culprit
+            raise InvalidOccupationsError(
+                'detected atomic sites with an occupation number larger than the occupation tolerance')
+
+    return {'structure': StructureData(pymatgen_structure=structures[0])}
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
@@ -263,8 +313,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
             # create automatically a loop for non-scalar values
-            if isinstance(values[tag],
-                          (tuple, list)) and tag not in loops.keys():
+            if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
                 datablock.CreateLoop([tag])
     return cif
 
@@ -364,8 +413,7 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
-    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file',
-                                                                   'values')]
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
 
@@ -392,7 +440,7 @@ class CifData(SinglefileData):
         """
         from ase.io import read
 
-        #the read function returns a list as a cif file might contain multiple
+        # the read function returns a list as a cif file might contain multiple
         # structures
         struct_list = read(fileobj, index=':', format='cif', **kwargs)
 
@@ -453,8 +501,7 @@ class CifData(SinglefileData):
                 else:
                     raise ValueError("More than one copy of a CIF file "
                                      "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(
-                                         ",".join([str(i.pk) for i in cifs])))
+                                     "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
             else:
                 return cifs[0], False
 
@@ -480,10 +527,14 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        return CifData.read_cif(
-            self._get_folder_pathsubfolder.open(self.filename), **kwargs)
+        return CifData.read_cif(self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
+        """
+        Set the cif data from an ase atoms object.
+
+        :param aseatoms: The ase atoms object to use
+        """
         import tempfile
         cif = cif_from_ase(aseatoms)
         with tempfile.NamedTemporaryFile() as f:
@@ -508,11 +559,9 @@ class CifData(SinglefileData):
                 import CifFile
                 from CifFile import CifBlock
             except ImportError as e:
-                raise ImportError(
-                    str(e) + '. You need to install the PyCifRW package.')
+                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
 
-            c = CifFile.ReadCif(
-                self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
+            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -551,7 +600,7 @@ class CifData(SinglefileData):
         self._ase = None
 
         if not self.is_stored and 'file' in kwargs \
-           and self.get_attr('parse_policy') == 'eager':
+                and self.get_attr('parse_policy') == 'eager':
             self.parse()
 
     def parse(self, scan_type=None):
@@ -572,7 +621,9 @@ class CifData(SinglefileData):
         """
         Store the node.
         """
-        self._set_attr('md5', self.generate_md5())
+        if not self.is_stored:
+            self._set_attr('md5', self.generate_md5())
+
         return super(CifData, self).store(*args, **kwargs)
 
     # pylint: disable=attribute-defined-outside-init
@@ -586,8 +637,8 @@ class CifData(SinglefileData):
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
-                        self.source.get('source_md5', None) is not None and \
-                        self.source['source_md5'] != md5sum:
+                self.source.get('source_md5', None) is not None and \
+                self.source['source_md5'] != md5sum:
             self.source = {}
         self._set_attr('md5', md5sum)
 
@@ -648,35 +699,29 @@ class CifData(SinglefileData):
         """
         # note: If spacegroup_numbers are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        spg_tags = [
-            "_space_group.it_number", "_space_group_it_number",
-            "_symmetry_int_tables_number"
-        ]
+        spg_tags = ["_space_group.it_number", "_space_group_it_number", "_symmetry_int_tables_number"]
         spacegroup_numbers = []
         for datablock in self.values.keys():
             spacegroup_number = None
-            correct_tags = [
-                tag for tag in spg_tags if tag in self.values[datablock].keys()
-            ]
+            correct_tags = [tag for tag in spg_tags if tag in self.values[datablock].keys()]
             if correct_tags:
                 try:
-                    spacegroup_number = int(
-                        self.values[datablock][correct_tags[0]])
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
                 except ValueError:
                     pass
             spacegroup_numbers.append(spacegroup_number)
 
         return spacegroup_numbers
 
+    @property
     def has_partial_occupancies(self):
         """
-        Check if there are float values in the atom occupancies.
-        :return: True if there are partial occupancies, False
-        otherwise.
+        Check if there are float values in the atomic occupancies
+
+        :returns: True if there are partial occupancies, False otherwise
         """
-        # precision
         epsilon = 1e-6
-        tag = "_atom_site_occupancy"
+        tag = '_atom_site_occupancy'
         partial_occupancies = False
         for datablock in self.values.keys():
             if tag in self.values[datablock].keys():
@@ -694,11 +739,13 @@ class CifData(SinglefileData):
 
         return partial_occupancies
 
+    @property
     def has_attached_hydrogens(self):
         """
-        Check if there are hydrogens without coordinates, specified
-        as attached to the atoms of the structure.
-        :return: True if there are attached hydrogens, False otherwise.
+        Check if there are hydrogens without coordinates, specified as attached
+        to the atoms of the structure.
+
+        :returns: True if there are attached hydrogens, False otherwise.
         """
         tag = '_atom_site_attached_hydrogens'
         for datablock in self.values.keys():
@@ -706,6 +753,56 @@ class CifData(SinglefileData):
                 for value in self.values[datablock][tag]:
                     if value != '.' and value != '?' and value != '0':
                         return True
+
+        return False
+
+    @property
+    def has_atomic_sites(self):
+        """
+        Returns whether there are any atomic sites defined in the cif data. That
+        is to say, it will check all the values for the `_atom_site_fract_*` tags
+        and if they are all equal to `?` that means there are no relevant atomic
+        sites defined and the function will return False. In all other cases the
+        function will return True
+
+        :returns: False when at least one atomic site fractional coordinate is not
+            equal to `?` and True otherwise
+        """
+        tag_x = '_atom_site_fract_x'
+        tag_y = '_atom_site_fract_y'
+        tag_z = '_atom_site_fract_z'
+        coords = []
+        for datablock in self.values.keys():
+            for tag in [tag_x, tag_y, tag_z]:
+                if tag in self.values[datablock].keys():
+                    coords.extend(self.values[datablock][tag])
+
+        return not all([coord == '?' for coord in coords])
+
+    @property
+    def has_unknown_species(self):
+        """
+        Returns whether the cif contains atomic species that are not recognized by AiiDA.
+        The known species are taken from the elements dictionary in aiida.common.constants.
+        If any of the formula of the cif data contain species that are not in that elements
+        dictionary, the function will return True and False in all other cases. If there is
+        no formulae to be found, it will return None
+
+        :returns: True when there are unknown species in any of the formulae, False if not, None if no formula found
+        """
+        from aiida.common.constants import elements
+
+        known_species = [element['symbol'] for element in elements.values()]
+
+        for formula in self.get_formulae():
+
+            if formula is None:
+                return None
+
+            species = parse_formula(formula).keys()
+            if any([specie not in known_species for specie in species]):
+                return True
+
         return False
 
     def generate_md5(self):
@@ -721,30 +818,36 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
-    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
+    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
-        :param converter: specify the converter. Default 'ase'.
+        :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
         :param primitive_cell: if True, primitive cell is returned,
             conventional cell if False. Default False.
+        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+            the occupancies will be scaled down to 1. (pymatgen only)
+        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
+        import cif  # pylint: disable=import-self
         from aiida.orm.data.parameter import ParameterData
 
-        param = ParameterData(dict=kwargs)
-        conv_name = '_get_aiida_structure_{}_inline'.format(converter)
-        try:
-            conv_f = globals()[conv_name]
-        except KeyError:
-            raise ValueError(
-                "No such converter '{}' available".format(converter))
-        ret_dict = conv_f(cif=self, parameters=param, store=store)
-        return ret_dict['structure']
+        parameters = ParameterData(dict=kwargs)
 
-    #pylint: disable=unused-argument
+        try:
+            convert_function = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
+
+        result = convert_function(cif=self, parameters=parameters, store=store)
+
+        return result['structure']
+
+    # pylint: disable=unused-argument
     def _prepare_cif(self, main_file_name=""):
         """
         Return CIF string of CifData object.
@@ -761,7 +864,7 @@ class CifData(SinglefileData):
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read(), {}
 
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):
         """
         Write the given CIF to a string of format TCOD CIF.
@@ -799,5 +902,4 @@ class CifData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()
         if attr_md5 != md5:
-            raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
-                                  "parsed instead.".format(attr_md5, md5))
+            raise ValidationError("Attribute 'md5' says '{}' but '{}' was " "parsed instead.".format(attr_md5, md5))

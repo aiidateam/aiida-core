@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
-###########################################################################
-# Copyright (c), The AiiDA team. All rights reserved.                     #
-# This file is part of the AiiDA code.                                    #
-#                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
-# For further information on the license, see the LICENSE.txt file        #
-# For further information please visit http://www.aiida.net               #
-###########################################################################
 import collections
+import uuid
 from ast import literal_eval
-from plum.util import AttributesFrozendict
+from plumpy.utils import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
@@ -17,6 +10,7 @@ from aiida.orm import Group, Node, load_group, load_node
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
 _PREFIX_VALUE_GROUP = 'aiida_group:'
+_PREFIX_VALUE_UUID = 'aiida_uuid:'
 
 
 def encode_key(key):
@@ -63,6 +57,8 @@ def serialize_data(data):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
     elif isinstance(data, Group):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
+    elif isinstance(data, uuid.UUID):
+        return '{}{}'.format(_PREFIX_VALUE_UUID, data)
     elif isinstance(data, AttributeDict):
         return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
     elif isinstance(data, AttributesFrozendict):
@@ -96,5 +92,7 @@ def deserialize_data(data):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):
         return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
+    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_UUID):
+        return uuid.UUID(data[len(_PREFIX_VALUE_UUID):])
     else:
         return data

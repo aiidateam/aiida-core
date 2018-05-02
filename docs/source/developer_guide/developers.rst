@@ -38,11 +38,11 @@ Python, without being submitted to a cluster.
 However, this operation takes one (or more) input data nodes, and creates new
 data nodes, the operation itself is not recorded in the database, and provenance
 is lost. In order to put a Calculation object inbetween, we define the
-:py:class:`InlineCalculation <aiida.orm.implementation.general.calculation.inline.InlineCalculation>`
+:py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`
 class, that is used as the class for these calculations that are run "in-line".
 
 We also provide a wrapper (that also works as a decorator of a function),
-:py:func:`~aiida.orm.implementation.general.calculation.inline.make_inline`. This can be used
+:py:func:`~aiida.orm.calculation.inline.make_inline`. This can be used
 to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
 and output nodes are also stored.
@@ -501,3 +501,26 @@ In general, changes to ``config.json`` should be avoided if possible. However, i
     * Tests that run a single step in the migration, using the ``ConfigMigration.apply`` method. This can be used if you need to test different edge cases of the migration.
 
   There are examples for both types of tests.
+
+Daemon and signal handling
+++++++++++++++++++++++++++
+
+While the AiiDA daemon is running, interrupt signals (``SIGINT`` and ``SIGTERM``) are captured so that the daemon can shut down gracefully. This is implemented using Python's ``signal`` module, as shown in the following dummy example:
+
+.. code:: python
+
+    import signal
+
+    def print_foo(*args):
+        print('foo')
+
+    signal.signal(signal.SIGINT, print_foo)
+
+You should be aware of this while developing code which runs in the daemon. In particular, it's important when creating subprocesses. When a signal is sent, the whole process group receives that signal. As a result, the subprocess can be killed even though the Python main process captures the signal. This can be avoided by creating a new process group for the subprocess, meaning that it will not receive the signal. To do this, you need to pass ``preexec_fn=os.setsid`` to the ``subprocess`` function:
+
+.. code:: python
+
+    import os
+    import subprocess
+
+    print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setsid))

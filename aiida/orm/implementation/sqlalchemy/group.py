@@ -9,27 +9,28 @@
 ###########################################################################
 
 import collections
-
 from copy import copy
-
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.backends.utils import get_automatic_user
-
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
-                                     NotExistent)
-
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError, NotExistent)
+from aiida.common.utils import type_check
 from aiida.orm.implementation.general.group import AbstractGroup
-
 from aiida.orm.implementation.general.utils import get_db_columns
+
+from . import user as users
+from . import utils
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
+        from aiida.orm.backend import construct_backend
+        super(Group, self).__init__()
+
+        self._backend = construct_backend()
+
         given_dbgroup = kwargs.pop('dbgroup', None)
 
         if given_dbgroup is not None:
@@ -44,27 +45,32 @@ class Group(AbstractGroup):
                 if not dbgroup_res:
                     raise NotExistent("Group with pk={} does not exist".format(
                         given_dbgroup))
-                self._dbgroup = dbgroup_res
+                dbgroup = dbgroup_res
             elif isinstance(given_dbgroup, DbGroup):
-                self._dbgroup = given_dbgroup
-
-
+                dbgroup = given_dbgroup
+            else:
+                raise ValueError("Unrecognised inputs '{}'".format(kwargs))
         else:
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
             group_type = kwargs.pop('type_string',
                                     "")  # By default, an user group
-            user = kwargs.pop('user', get_automatic_user())
+
+            # Get the user and extract the dbuser instance
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = user.dbuser
+
             description = kwargs.pop('description', "")
 
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
-                                 "unknown parameters are: {}".format(
-                    ", ".join(kwargs.keys())))
+                                 "unknown parameters are: {}".format(", ".join(kwargs.keys())))
 
-            self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+            dbgroup = DbGroup(name=name, description=description,
+                              user=user, type=group_type)
+
+        self._dbgroup = utils.ModelWrapper(dbgroup)
 
     @staticmethod
     def get_db_columns():
@@ -73,6 +79,24 @@ class Group(AbstractGroup):
     @property
     def name(self):
         return self._dbgroup.name
+
+    @name.setter
+    def name(self, name):
+        """
+        Attempt to change the name of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired name, a
+        UniquenessError will be raised
+
+        :param name: the new group name
+        :raises UniquenessError: if another group of same type and name already exists
+        """
+        self._dbgroup.name = name
+
+        if self.is_stored:
+            try:
+                self._dbgroup.save()
+            except Exception:
+                raise UniquenessError('a group of the same type with the name {} already exists'.format(name))
 
     @property
     def description(self):
@@ -92,11 +116,16 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return self._dbgroup.user
+        return self._dbgroup.user.get_aiida_class()
+
+    @user.setter
+    def user(self, new_user):
+        type_check(new_user, users.SqlaUser)
+        self._dbgroup.user = new_user.dbuser
 
     @property
     def dbgroup(self):
-        return self._dbgroup
+        return self._dbgroup._model
 
     @property
     def pk(self):
@@ -111,7 +140,7 @@ class Group(AbstractGroup):
         return unicode(self._dbgroup.uuid)
 
     def __int__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return None
         else:
             return self._dbnode.id
@@ -121,15 +150,7 @@ class Group(AbstractGroup):
         return self.pk is not None
 
     def store(self):
-        if not self.is_stored:
-            try:
-                self._dbgroup.save(commit=True)
-            except SQLAlchemyError as ex:
-                print ex.message
-                raise UniquenessError("A group with the same name (and of the "
-                                      "same type) already "
-                                      "exists, unable to store")
-
+        self._dbgroup.save()
         return self
 
     def add_nodes(self, nodes):
@@ -151,7 +172,9 @@ class Group(AbstractGroup):
                             "of such objects, it is instead {}".format(
                 str(type(nodes))))
 
-        list_nodes = []
+        # Get dbnodes here ONCE, otherwise each call to _dbgroup.dbnodes will
+        # re-read teh current value in the database
+        dbnodes = self._dbgroup.dbnodes
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
@@ -167,9 +190,9 @@ class Group(AbstractGroup):
             else:
                 to_add = node
 
-            if to_add not in self._dbgroup.dbnodes:
+            if to_add not in dbnodes:
                 # ~ list_nodes.append(to_add)
-                self._dbgroup.dbnodes.append(to_add)
+                dbnodes.append(to_add)
         session.commit()
         # ~ self._dbgroup.dbnodes.extend(list_nodes)
 
@@ -213,10 +236,12 @@ class Group(AbstractGroup):
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
-                            "list of such objects, it is instead {}".format(
-                str(type(nodes))))
+                            "list of such objects, it is instead {}".format(str(type(nodes))))
 
         list_nodes = []
+        # Have to save dbndoes here ONCE, otherwise it will be reloaded from
+        # the database each time we access it through _dbgroup.dbnodes
+        dbnodes = self._dbgroup.dbnodes
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
@@ -230,11 +255,11 @@ class Group(AbstractGroup):
                 node = node.dbnode
             # If we don't check first, SqlA might issue a DELETE statement for
             # an unexisting key, resulting in an error
-            if node in self._dbgroup.dbnodes:
+            if node in dbnodes:
                 list_nodes.append(node)
 
         for node in list_nodes:
-            self._dbgroup.dbnodes.remove(node)
+            dbnodes.remove(node)
 
         sa.get_scoped_session().commit()
 
@@ -281,7 +306,7 @@ class Group(AbstractGroup):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
-                filters.append(DbGroup.user == user)
+                filters.append(DbGroup.user == user.dbuser)
 
         if name_filters:
             for (k, v) in name_filters.iteritems():

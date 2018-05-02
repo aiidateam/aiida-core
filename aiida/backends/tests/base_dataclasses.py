@@ -13,15 +13,17 @@ import operator
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node
-from aiida.orm.data.base import (
-    NumericType, Float, Str, Bool, Int, get_true_node, get_false_node)
-import aiida.orm.data.base as base
-
+from aiida.orm.data.numeric import NumericType
+from aiida.orm.data.list import List
+from aiida.orm.data.bool import Bool, get_true_node, get_false_node
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 
 
 class TestList(AiidaTestCase):
     def test_creation(self):
-        l = base.List()
+        l = List()
         self.assertEqual(len(l), 0)
         with self.assertRaises(IndexError):
             l[0]
@@ -31,12 +33,12 @@ class TestList(AiidaTestCase):
             self.assertEqual(len(l), 1)
             self.assertEqual(l[0], 4)
 
-        l = base.List()
+        l = List()
         l.append(4)
         do_checks(l)
 
         # Try the same after storing
-        l = base.List()
+        l = List()
         l.append(4)
         l.store()
         do_checks(l)
@@ -50,7 +52,7 @@ class TestList(AiidaTestCase):
             for x, y in zip(lst, l):
                 self.assertEqual(x, y)
 
-        l = base.List()
+        l = List()
         l.extend(lst)
         do_checks(l)
         # Further extend
@@ -63,13 +65,13 @@ class TestList(AiidaTestCase):
             self.assertEqual(lst[i], l[i % len(lst)])
 
         # Now try after strogin
-        l = base.List()
+        l = List()
         l.extend(lst)
         l.store()
         do_checks(l)
 
     def test_mutability(self):
-        l = base.List()
+        l = List()
         l.append(5)
         l.store()
 
@@ -89,6 +91,12 @@ class TestList(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             l.reverse()
 
+    def test_store_load(self):
+        l = List(list=[1, 2, 3])
+        l.store()
+
+        l_loaded = load_node(l.pk)
+        assert l.get_list() == l_loaded.get_list()
 
 class TestFloat(AiidaTestCase):
     def setUp(self):

@@ -11,7 +11,6 @@ from aiida.orm import Data
 import os
 
 
-
 class RemoteData(Data):
     """
     Store a link to a file or folder on a remote machine.
@@ -43,10 +42,7 @@ class RemoteData(Data):
         """
         Check if remote folder is empty
         """
-        from aiida.backends.utils import get_authinfo
-
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = self._get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -65,10 +61,7 @@ class RemoteData(Data):
         :param destpath: A path on the local computer to get the file
         :return: a string with the file content
         """
-        from aiida.backends.utils import get_authinfo
-
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = self._get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -85,7 +78,6 @@ class RemoteData(Data):
 
             return t.listdir()
 
-
     def listdir(self, relpath="."):
         """
         Connects to the remote folder and lists the directory content.
@@ -93,10 +85,7 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a flat list of file/directory names (as strings).
         """
-        from aiida.backends.utils import get_authinfo
-
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = self._get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -105,9 +94,10 @@ class RemoteData(Data):
                 t.chdir(full_path)
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
-                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                        full_path, self.get_computer().name
-                    ))
+                    exc = IOError(
+                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                            full_path, self.get_computer().name
+                        ))
                     exc.errno = e.errno
                     raise exc
                 else:
@@ -133,10 +123,7 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
         """
-        from aiida.backends.utils import get_authinfo
-
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = self._get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -145,9 +132,10 @@ class RemoteData(Data):
                 t.chdir(full_path)
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
-                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                        full_path, self.get_computer().name
-                    ))
+                    exc = IOError(
+                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                            full_path, self.get_computer().name
+                        ))
                     exc.errno = e.errno
                     raise exc
                 else:
@@ -157,24 +145,22 @@ class RemoteData(Data):
                 return t.listdir_withattributes()
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
-                    exc = IOError("The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                        full_path, self.get_computer().name
-                    ))
+                    exc = IOError(
+                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                            full_path, self.get_computer().name
+                        ))
                     exc.errno = e.errno
                     raise exc
                 else:
                     raise
 
-
     def _clean(self):
         """
         Remove all content of the remote folder on the remote computer
         """
-        from aiida.backends.utils import get_authinfo
         import os
 
-        authinfo = get_authinfo(computer=self.get_computer(),
-                                aiidauser=self.get_user())
+        authinfo = self._get_authinfo()
         t = authinfo.get_transport()
 
         remote_dir = self.get_remote_path()
@@ -201,4 +187,6 @@ class RemoteData(Data):
         computer = self.get_computer()
         if computer is None:
             raise ValidationError("Remote computer not set.")
-    
+
+    def _get_authinfo(self):
+        return self.backend.authinfos.get(self.get_computer(), self.get_user())

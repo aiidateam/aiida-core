@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from click_plugins import with_plugins
 
 
 def click_subcmd_complete(cmd_group):
@@ -24,7 +23,8 @@ def click_subcmd_complete(cmd_group):
 
 @click.group()
 @click.option('--profile', '-p')
-def verdi(profile):
+@click.pass_context
+def verdi(ctx, profile):
     """
     Toplevel command for click-implemented verdi commands.
 
@@ -34,7 +34,7 @@ def verdi(profile):
     group hierarchy (group ``verdi``, subgroup ``something``, command ``something``).
 
     """
-    pass
+    ctx.obj = {'profile': profile}
 
 
 @verdi.command()
@@ -60,6 +60,7 @@ def export():
 def work():
     pass
 
+
 @verdi.group()
 def user():
     pass
@@ -67,4 +68,14 @@ def user():
 
 @verdi.group('data')
 def data_cmd():
+    pass
+
+
+@verdi.group('daemon')
+def daemon_cmd():
+    pass
+
+
+@verdi.group('code')
+def code_cmd():
     pass

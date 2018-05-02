@@ -39,12 +39,13 @@ class Comment(VerdiCommandWithSubcommands):
         Add comment to a node
         """
         import argparse
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():
             load_dbenv()
 
-        user = get_automatic_user()
+        backend = construct_backend()
+        user = backend.users.get_automatic_user()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -84,11 +85,9 @@ class Comment(VerdiCommandWithSubcommands):
         Show the comments of a node
         """
         import argparse
-        from aiida.backends.utils import get_automatic_user
 
         if not is_dbenv_loaded():
             load_dbenv()
-        user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -139,11 +138,13 @@ class Comment(VerdiCommandWithSubcommands):
         """
         # Note: in fact, the user can still manually delete any comment
         import argparse
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():
             load_dbenv()
-        user = get_automatic_user()
+
+        backend = construct_backend()
+        user = backend.users.get_automatic_user()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -198,11 +199,13 @@ class Comment(VerdiCommandWithSubcommands):
         Update a comment
         """
         import argparse
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():
             load_dbenv()
-        user = get_automatic_user()
+
+        backend = construct_backend()
+        user = backend.users.get_automatic_user()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

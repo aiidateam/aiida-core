@@ -12,20 +12,17 @@ from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
+from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate
 
 
-
-def SchedulerFactory(module):
+def SchedulerFactory(entry_point):
     """
-    Used to load a suitable Scheduler subclass.
+    Return the Scheduler plugin class for a given entry point
 
-    :param str module: a string with the module name
-    :return: the scheduler subclass contained in module 'module'
+    :param entry_point: the entry point name of the Scheduler plugin
     """
-    from aiida.common.pluginloader import BaseFactory
-
-    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+    return BaseFactory('aiida.schedulers', entry_point)
 
 
 class SchedulerError(AiidaException):
@@ -65,9 +62,9 @@ class Scheduler(object):
 
     @classmethod
     def get_valid_schedulers(cls):
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
-        return all_plugins('schedulers')
+        return get_entry_point_names('aiida.schedulers')
 
     @classmethod
     def get_short_doc(cls):
@@ -89,9 +86,7 @@ class Scheduler(object):
         try:
             return self._features[feature_name]
         except KeyError:
-            raise NotImplementedError(
-                "Feature {} not implemented for this scheduler".format(
-                    feature_name))
+            raise NotImplementedError("Feature {} not implemented for this scheduler".format(feature_name))
 
     @property
     def logger(self):
@@ -145,7 +140,6 @@ class Scheduler(object):
 
         empty_line = ""
 
-
         # I fill the list with the lines, and finally join them and return
         script_lines = []
 
@@ -166,8 +160,7 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(job_tmpl.codes_info,
-                                               job_tmpl.codes_run_mode))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -241,21 +234,16 @@ class Scheduler(object):
                 command_to_exec_list.append(escape_for_bash(arg))
             command_to_exec = " ".join(command_to_exec_list)
 
-            stdin_str = "< {}".format(
-                escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
-            stdout_str = "> {}".format(
-                escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
+            stdin_str = "< {}".format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
+            stdout_str = "> {}".format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = "2>&1"
             else:
-                stderr_str = "2> {}".format(
-                    escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
+                stderr_str = "2> {}".format(escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
 
-            output_string = ("{} {} {} {}".format(
-                command_to_exec,
-                stdin_str, stdout_str, stderr_str))
+            output_string = ("{} {} {} {}".format(command_to_exec, stdin_str, stdout_str, stderr_str))
 
             list_of_runlines.append(output_string)
 
@@ -311,8 +299,8 @@ class Scheduler(object):
         # TODO: Parsing?
 
         command = self._get_detailed_jobinfo_command(jobid=jobid)
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            command)
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(command)
 
         return u"""Detailed jobinfo obtained with command '{}'
 Return Code: {}
@@ -351,8 +339,8 @@ stderr:
         Note: typically, only either jobs or user can be specified. See also
         comments in _get_joblist_command.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs, user=user))
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
@@ -369,8 +357,7 @@ stderr:
         Return the transport set for this scheduler.
         """
         if self._transport is None:
-            raise SchedulerError("Use the set_transport function to set the "
-                                 "transport for the scheduler first.")
+            raise SchedulerError("Use the set_transport function to set the " "transport for the scheduler first.")
         else:
             return self._transport
 
@@ -427,8 +414,7 @@ stderr:
 
         :return: True if everything seems ok, False otherwise.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_kill_command(jobid))
+        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 
     def _get_kill_command(self, jobid):

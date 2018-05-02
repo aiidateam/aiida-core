@@ -1,7 +1,7 @@
 .. aiida documentation master file, created by
-   sphinx-quickstart on Wed Oct 24 11:33:37 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+       sphinx-quickstart on Wed Oct 24 11:33:37 2012.
+       You can adapt this file completely to your liking, but it should at least
+       contain the root `toctree` directive.
 
 .. figure:: images/AiiDA_transparent_logo.png
     :width: 250px
@@ -9,64 +9,95 @@
 
     Automated Interactive Infrastructure and Database for Computational Science
 
+#################################
 Welcome to AiiDA's documentation!
-=================================
+#################################
 
-AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for computational science. Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
+AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for computational science.
+Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
 
 The software is available at http://www.aiida.net.
 
 If you use AiiDA for your research, please cite the following work:
   
 .. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
-  and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
-  for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
-  http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
+    and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
+    for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
+    http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
 
-This is the documentation of the AiiDA framework. For the first setup, configuration and
-usage, refer to the :doc:`user's guide<user_guide/index>` below.
+This is the documentation of the AiiDA framework.
+To install AiiDA follow the instructions in the :ref:`installation section<installation>`.
+After you have successfully installed AiiDA, you can find some tips in the :ref:`get started section<get_started>` to help you on your way.
 
-If, instead, you plan to add new plugins, or you simply want to understand
-AiiDA internals, refer to the :doc:`developer's guide<developer_guide/index>`.
+For advanced users and developers we point you to the developers section :doc:`developer's guide<developer_guide/index>`.
 
-User's guide
-++++++++++++
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 1
+    :caption: Install
 
-   user_guide/index
+    install/quick_installation
+    install/installation
+    install/updating_installation
+    install/details
 
-Other guide resources
-+++++++++++++++++++++
 
 .. toctree::
-   :maxdepth: 3
-    
-   other_guide/index
+    :maxdepth: 1
+    :caption: Get started
 
+    get_started/index
+    get_started/daemon
+    get_started/computers
+    get_started/codes
+    get_started/plugins
+    working_with_aiida/index
 
-Developer's guide
-+++++++++++++++++
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 1
+    :caption: Concepts
+
+    concepts/calculations
+    concepts/workflows
+    concepts/processes
+    concepts/provenance
+    concepts/caching
+    import_export/index
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Tutorials
+
+    tutorial/index
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Developers
 
     developer_guide/index
 
-API reference
-+++++++++++++
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 1
+    :caption: Advanced
 
-   API reference <apidoc/aiida>
+    advanced_guide/index
 
 
+.. toctree::
+    :maxdepth: 1
+    :caption: API reference
+
+    apidoc/aiida
+
+
+******************
 Indices and tables
-==================
+******************
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

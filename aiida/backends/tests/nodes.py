@@ -126,62 +126,13 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
+        from aiida.orm.calculation import Calculation
         c = Calculation()
         hash1 = c.get_hash()
-        c._set_attr('_sealed', True)
+        c._set_process_state('finished')
         hash2 = c.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
-
-
-class TestDataNode(AiidaTestCase):
-    """
-    These tests check the features of Data nodes that differ from the base Node
-    """
-    boolval = True
-    intval = 123
-    floatval = 4.56
-    stringval = "aaaa"
-    # A recursive dictionary
-    dictval = {
-        'num': 3,
-        'something': 'else',
-        'emptydict': {},
-        'recursive': {
-            'a': 1,
-            'b': True,
-            'c': 1.2,
-            'd': [1, 2, None],
-            'e': {
-                'z': 'z',
-                'x': None,
-                'xx': {},
-                'yy': []
-            }
-        }
-    }
-    listval = [1, "s", True, None]
-    emptydict = {}
-    emptylist = []
-
-    def test_attr_after_storing(self):
-        a = Data()
-        a._set_attr('bool', self.boolval)
-        a._set_attr('integer', self.intval)
-        a.store()
-
-        # And now I try to edit/delete the keys; I should not be able to do it
-        # after saving. I try only for a couple of attributes
-        with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('bool')
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('integer', 13)
-
-    def test_modify_attr_after_store(self):
-        a = Data()
-        a.store()
-        with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('i', 12)
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -1188,16 +1139,17 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
+        from aiida.orm.data.list import List
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.data.base import Str, List
+        from aiida.orm.data.str import Str
 
         # This one is unstored
         l1 = List()
-        l1._set_list(['b', [1, 2]])
+        l1.set_list(['b', [1, 2]])
 
         # This one is stored
         l2 = List()
-        l2._set_list(['f', True, {'gg': None}])
+        l2.set_list(['f', True, {'gg': None}])
         l2.store()
 
         # Manages to store, and value is converted to its base type
@@ -1230,15 +1182,16 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
-        from aiida.orm.data.base import Str, List
+        from aiida.orm.data.list import List
+        from aiida.orm.data.str import Str
 
         # This one is unstored
         l1 = List()
-        l1._set_list(['b', [1, 2]])
+        l1.set_list(['b', [1, 2]])
 
         # This one is stored
         l2 = List()
-        l2._set_list(['f', True, {'gg': None}])
+        l2.set_list(['f', True, {'gg': None}])
         l2.store()
 
         # Check also before storing
@@ -1269,40 +1222,42 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a._dbnode.nodeversion, 1)
-        self.assertEquals(a.dbnode.nodeversion, 1)
-        self.assertEquals(a._dbnode.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
+        self.assertEquals(a.nodeversion, 1)
 
         a.label = "label1"
         a.label = "label2"
-        self.assertEquals(a._dbnode.nodeversion, 3)
-        self.assertEquals(a.dbnode.nodeversion, 3)
-        self.assertEquals(a._dbnode.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
+        self.assertEquals(a.nodeversion, 3)
 
         a.description = "desc1"
         a.description = "desc2"
         a.description = "desc3"
-        self.assertEquals(a._dbnode.nodeversion, 6)
-        self.assertEquals(a.dbnode.nodeversion, 6)
-        self.assertEquals(a._dbnode.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
+        self.assertEquals(a.nodeversion, 6)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
         import time
+
+        backend = construct_backend()
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text', user=get_automatic_user())
+            a.add_comment('text', user=backend.users.get_automatic_user())
         a.store()
         self.assertEquals(a.get_comments(), [])
         before = timezone.now()
         time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text', user=get_automatic_user())
-        a.add_comment('text2', user=get_automatic_user())
+        a.add_comment('text', user=backend.users.get_automatic_user())
+        a.add_comment('text2', user=backend.users.get_automatic_user())
         time.sleep(1)
         after = timezone.now()
 
@@ -1598,9 +1553,11 @@ class TestNodeBasic(AiidaTestCase):
         obj = load_node(uuid=testcalc.uuid)
         self.assertEqual(type(testcalc), type(obj))
 
-        # Create a custom calculation type that inherits from JobCalculation
+        # Create a custom calculation type that inherits from JobCalculation but change the plugin type string
         class TestCalculation(JobCalculation):
             pass
+
+        TestCalculation._plugin_type_string = 'calculation.job.simpleplugins_tmp.templatereplacer.TemplatereplacerCalculation.'
 
         jobcalc = JobCalculation(**calc_params).store()
         testcalc = TestCalculation(**calc_params).store()
@@ -1615,10 +1572,10 @@ class TestNodeBasic(AiidaTestCase):
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
         from aiida.orm import DataFactory
+        from aiida.orm.data import Data
 
         KpointsData = DataFactory('array.kpoints')
         kpoint = KpointsData().store()
-        Data = DataFactory("Data")
         data = Data().store()
 
         # compare if plugin exist
@@ -1632,7 +1589,7 @@ class TestNodeBasic(AiidaTestCase):
         test_kpoint = TestKpointsData().store()
 
         # changed node should return data node as its plugin is not exist
-        obj = load_node(uuid=test_kpoint.uuid)
+        obj = load_node(uuid=kpoint.uuid)
         self.assertEqual(type(kpoint), type(obj))
 
         ###### for node
@@ -1996,6 +1953,20 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
+    @unittest.skip("This test should be enabled when link type constraints are properly implemented")
+    def test_multiple_create_links(self):
+        """
+        Cannot have two CREATE links for the same node.
+        """
+        n1 = Node()
+        n2 = Node()
+        n3 = Node()
+
+        # Caching the links
+        n3.add_link_from(n1, label='CREATE', link_type=LinkType.CREATE)
+        with self.assertRaises(UniquenessError):
+            n3.add_link_from(n2, label='CREATE', link_type=LinkType.CREATE)
+
     def test_valid_links(self):
         import tempfile
         from aiida.orm import JobCalculation, DataFactory
@@ -2222,8 +2193,8 @@ class TestNodeDeletion(AiidaTestCase):
         """
         I get 2 lists of uuids
 
-        :param list uuids_check_existence: The list of uuids that have to exist
-        :param list uuids_check_deleted: The list of uuids that should not exist,
+        :param uuids_check_existence: The list of uuids that have to exist
+        :param uuids_check_deleted: The list of uuids that should not exist,
             I check that NotExistent is raised.
         """
         from aiida.common.exceptions import NotExistent

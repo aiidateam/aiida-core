@@ -13,10 +13,8 @@ from abc import ABCMeta, abstractmethod
 class AbstractQueryManager(object):
     __metaclass__ = ABCMeta
 
-
-    def __init__(self,  *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         pass
-
 
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:
@@ -56,14 +54,13 @@ class AbstractQueryManager(object):
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm.computer import Computer
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm.user import User
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
 
         if state not in calc_states:
             raise InputValidationError("querying for calculation state='{}', but it "
-                                "is not a valid calculation state".format(state))
+                                       "is not a valid calculation state".format(state))
 
         calcfilter = {'state': {'==': state}}
         computerfilter = {"enabled": {'==': True}}
@@ -110,7 +107,6 @@ class AbstractQueryManager(object):
             returnresult = qb.all()
             returnresult = zip(*returnresult)[0]
         return returnresult
-
 
     def get_creation_statistics(
             self,
@@ -200,21 +196,22 @@ class AbstractQueryManager(object):
             A list of sublists, each latter containing (in order):
                 pk as string, formula as string, creation date, bandsdata-label
         """
-        
+
         import datetime
         from aiida.utils import timezone
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.backends.utils import get_automatic_user
-        from aiida.orm.implementation import User
         from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
+        from aiida.orm.user import User
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         qb = QueryBuilder()
         if args.all_users is False:
-            au = get_automatic_user()
-            user = User(dbuser=au)
+            user = backend.users.get_automatic_user()
             qb.append(User, tag="creator", filters={"email": user.email})
         else:
             qb.append(User, tag="creator")
@@ -274,7 +271,7 @@ class AbstractQueryManager(object):
                 all_symbols = [_["symbols"][0] for _ in akinds]
                 if not all(
                         [s in all_symbols for s in args.element_only]
-                        ):
+                ):
                     continue
 
             # We want only the StructureData that have attributes

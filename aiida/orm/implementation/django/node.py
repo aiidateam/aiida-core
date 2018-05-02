@@ -15,17 +15,17 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 
 from aiida.backends.djsite.db.models import DbLink
-from aiida.backends.djsite.utils import get_automatic_user
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
-from aiida.common.utils import get_new_uuid
+from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
-# from aiida.orm.implementation.django.utils import get_db_columns
 from aiida.orm.implementation.general.utils import get_db_columns
+
+from . import user as users
 
 
 class Node(AbstractNode):
@@ -83,6 +83,7 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
+
         super(Node, self).__init__()
 
         self._temp_folder = None
@@ -125,8 +126,8 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = get_automatic_user()
-            self._dbnode = DbNode(user=user,
+            user = self._backend.users.get_automatic_user()
+            self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -145,9 +146,36 @@ class Node(AbstractNode):
             # stop
             self._set_with_defaults(**kwargs)
 
+    @classmethod
+    def query(cls, *args, **kwargs):
+        from aiida.backends.djsite.db.models import DbNode
+        if cls._plugin_type_string:
+            if not cls._plugin_type_string.endswith('.'):
+                raise InternalError("The plugin type string does not "
+                                    "finish with a dot??")
+
+            # If it is 'calculation.Calculation.', we want to filter
+            # for things that start with 'calculation.' and so on
+            plug_type = cls._plugin_type_string
+
+            # Remove the implementation.django or sqla part.
+            if plug_type.startswith('implementation.'):
+                plug_type = '.'.join(plug_type.split('.')[2:])
+            pre, sep, _ = plug_type[:-1].rpartition('.')
+            superclass_string = "".join([pre, sep])
+            return DbNode.aiidaobjects.filter(
+                *args, type__startswith=superclass_string, **kwargs)
+        else:
+            # Base Node class, with empty string
+            return DbNode.aiidaobjects.filter(*args, **kwargs)
+
     @property
     def type(self):
         return self._dbnode.type
+
+    @property
+    def nodeversion(self):
+        return self._dbnode.nodeversion
 
     @property
     def ctime(self):
@@ -162,7 +190,7 @@ class Node(AbstractNode):
 
     def _update_db_label_field(self, field_value):
         self._dbnode.label = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
@@ -172,7 +200,7 @@ class Node(AbstractNode):
 
     def _update_db_description_field(self, field_value):
         self._dbnode.description = field_value
-        if not self._to_be_stored:
+        if self.is_stored:
             with transaction.atomic():
                 self._dbnode.save()
                 self._increment_version_number_db()
@@ -196,7 +224,7 @@ class Node(AbstractNode):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
@@ -370,12 +398,14 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
-        if self._to_be_stored:
+        from . import user as users
+
+        if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
         DbComment.objects.create(dbnode=self._dbnode,
-                                 user=user,
+                                 user=user.dbuser,
                                  content=content)
 
     def get_comment_obj(self, id=None, user=None):
@@ -489,10 +519,14 @@ class Node(AbstractNode):
         return self._dbnode.id
 
     @property
+    def process_type(self):
+        return self._dbnode.process_type
+
+    @property
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
         # from aiida.backends.djsite.db.models import DbNode
-        #        if not self._to_be_stored:
+        #        if self.is_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
@@ -523,7 +557,11 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._dbnode.user
+        return self._backend.users._from_dbmodel(self._dbnode.user)
+
+    def set_user(self, user):
+        type_check(user, users.DjangoUser)
+        self._dbnode.user = user.dbuser
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -553,7 +591,7 @@ class Node(AbstractNode):
         else:
             context_man = EmptyContextManager()
 
-        if self._to_be_stored:
+        if not self.is_stored:
             raise ModificationNotAllowed(
                 "Node with pk= {} is not stored yet".format(self.pk))
 

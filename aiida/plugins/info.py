@@ -33,6 +33,18 @@ example registry::
 """
 
 
+def entry_point_from_tpstr(typestring):
+    if typestring.startswith('calculation.job.'):
+        typestring = typestring.split('.', 2)[-1]
+    elif typestring.startswith('calculation.'):
+        typestring = typestring.split('.', 1)[-1]
+    elif typestring.startswith('data.'):
+        typestring = typestring.split('.', 1)[-1]
+    else:
+        raise ValueError('weird typestring')
+    return typestring.split('.', 1)[0]
+
+
 def plugin_ep_iterator():
     """
     return an iterator over the plugin entrypoint base strings
@@ -57,7 +69,6 @@ def find_for_typestring(typestring):
     :return: dict with plugin keys if found, None if not found
     """
     from aiida.plugins.registry import load_cached
-    from aiida.common.pluginloader import entry_point_from_tpstr
     plugins = load_cached()
     entry_point = entry_point_from_tpstr(typestring)
     return plugins.get(entry_point, None)

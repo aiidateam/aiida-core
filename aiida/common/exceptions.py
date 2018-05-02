@@ -9,7 +9,6 @@
 ###########################################################################
 
 
-
 class AiidaException(Exception):
     """
     Base class for all AiiDA exceptions.
@@ -66,10 +65,40 @@ class ModificationNotAllowed(AiidaException):
     pass
 
 
+class IntegrityError(AiidaException):
+    """
+    Raised when there is an underlying data integrity error.  This can be database related
+    or a general data integrity error.  This can happen if, e.g., a foreign key check fails.
+    See PEP 249 for details.
+    """
+    pass
+
+
 class UniquenessError(AiidaException):
     """
     Raised when the user tries to violate a uniqueness constraint (on the
     DB, for instance).
+    """
+    pass
+
+
+class MissingEntryPointError(AiidaException):
+    """
+    Raised when the requested entry point is not registered with the entry point manager
+    """
+    pass
+
+
+class MultipleEntryPointError(AiidaException):
+    """
+    Raised when the requested entry point cannot uniquely be resolved by the entry point manager
+    """
+    pass
+
+
+class LoadingEntryPointError(AiidaException):
+    """
+    Raised when the class corresponding to requested entry point cannot be loaded
     """
     pass
 
@@ -133,17 +162,20 @@ class ConfigurationError(AiidaException):
     """
     pass
 
+
 class ProfileConfigurationError(ConfigurationError):
     """
     Configuration error raised when a wrong/inexistent profile is requested.
     """
     pass
 
+
 class MissingConfigurationError(ConfigurationError):
     """
     Configuration error raised when the configuration file is missing.
     """
     pass
+
 
 class ConfigurationVersionError(ConfigurationError):
     """
@@ -152,20 +184,12 @@ class ConfigurationVersionError(ConfigurationError):
     """
     pass
 
+
 class DbContentError(AiidaException):
     """
     Raised when the content of the DB is not valid.
     This should never happen if the user does not play directly
     with the DB.
-    """
-    pass
-
-
-class AuthenticationError(AiidaException):
-    """
-    Raised when a user tries to access a resource for which it is
-    not authenticated, e.g. an aiidauser tries to access a computer
-    for which there is no entry in the AuthInfo table.
     """
     pass
 
@@ -214,10 +238,18 @@ class LicensingException(AiidaException):
     """
     pass
 
+
 class TestsNotAllowedError(AiidaException):
     """
     Raised when tests are required to be run/loaded, but we are not in a testing environment.
 
     This is to prevent data loss.
+    """
+    pass
+
+
+class UnsupportedSpeciesError(ValueError):
+    """
+    Raised when StructureData operations are fed species that are not supported by AiiDA such as Deuterium
     """
     pass

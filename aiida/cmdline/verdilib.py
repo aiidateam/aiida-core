@@ -27,7 +27,6 @@ import click
 
 import aiida
 import aiida.cmdline.commands.user
-import aiida.control.user
 from aiida.common.exceptions import (
     AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
@@ -35,7 +34,7 @@ from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
 from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 from aiida.cmdline.commands import verdi
-from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
+from aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
 # Import here from other files; once imported, it will be found and
 # used as a command-line parameter
@@ -176,39 +175,41 @@ class CompletionCommand(VerdiCommand):
           and then, no substitution is suggested.
         """
 
-        print r"""
-function _aiida_verdi_completion
-{
-    OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
-    OUTPUT=${OUTPUT%x}
-    if [ -z "$OUTPUT" ]
-    then
-    # Only newline is a valid separator
-        local IFS=$'\n'
+        print(
+            r"""
+            function _aiida_verdi_completion
+            {
+                OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
+                OUTPUT=${OUTPUT%x}
+                if [ -z "$OUTPUT" ]
+                then
+                # Only newline is a valid separator
+                    local IFS=$'\n'
 
-        COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
-    # Add either a slash or a space, depending on whether it is a folder
-    # or a file. printf %q escapes the filename if there are spaces.
-        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-            [ -d "${COMPREPLY[$i]}" ] && \
-               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
-               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
-        done
+                    COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
+                # Add either a slash or a space, depending on whether it is a folder
+                # or a file. printf %q escapes the filename if there are spaces.
+                    for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                        [ -d "${COMPREPLY[$i]}" ] && \
+                           COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
+                           COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
+                    done
 
-    else
-        COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
-        # Always add a space after each command
-        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
-            COMPREPLY[$i]="${COMPREPLY[$i]} "
-        done
-    fi
-}
-complete -o nospace -F _aiida_verdi_completion verdi
-"""
+                else
+                    COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+                    # Always add a space after each command
+                    for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+                        COMPREPLY[$i]="${COMPREPLY[$i]} "
+                    done
+                fi
+            }
+            complete -o nospace -F _aiida_verdi_completion verdi
+            """
+            )
 
     def complete(self, subargs_idx, subargs):
         # disable further completion
-        print ""
+        print("")
 
 
 class Completion(VerdiCommand):
@@ -243,7 +244,7 @@ class Completion(VerdiCommand):
             cword_offset = command_position - 1
 
         if cword == 1 + cword_offset:
-            print " ".join(sorted(short_doc.keys()))
+            print(" ".join(sorted(short_doc.keys())))
             return
         else:
             try:
@@ -271,7 +272,7 @@ class ListParams(VerdiCommand):
     """
 
     def run(self, *args):
-        print get_listparams()
+        print(get_listparams())
 
 
 class Help(VerdiCommand):
@@ -285,23 +286,23 @@ class Help(VerdiCommand):
         try:
             command = args[0]
         except IndexError:
-            print get_listparams()
-            print ""
-            print (
+            print(get_listparams())
+            print("")
+            print(
                 "Before each command you can specify the AiiDA profile to use,"
                 " with 'verdi -p <profile> <command>' or "
                 "'verdi --profile=<profile> <command>'")
-            print ""
-            print ("Use '{} help <command>' for more information "
-                   "on a specific command.".format(execname))
+            print("")
+            print("Use '{} help <command>' for more information "
+                  "on a specific command.".format(execname))
             sys.exit(1)
 
         if command in short_doc:
-            print "Description for '%s %s'" % (execname, command)
-            print ""
-            print "**", short_doc[command]
+            print("Description for '{} {}'".format(execname, command))
+            print("")
+            print("**{}".format(short_doc[command]))
             if command in long_doc:
-                print long_doc[command]
+                print(long_doc[command])
         else:
             print >> sys.stderr, (
                 "{}: '{}' is not a valid command. "
@@ -312,9 +313,10 @@ class Help(VerdiCommand):
 
     def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:
-            print " ".join(sorted(short_doc.keys()))
+            print
+            " ".join(sorted(short_doc.keys()))
         else:
-            print ""
+            print("")
 
 
 class Install(VerdiCommand):
@@ -337,7 +339,8 @@ class Install(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
+        print
+        ""
 
 
 class Setup(VerdiCommand):
@@ -363,7 +366,8 @@ class Setup(VerdiCommand):
         """
         No completion after 'verdi install'.
         """
-        print ""
+        print
+        ""
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -373,7 +377,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']),)
+@click.option('--backend', type=click.Choice(['django', 'sqlalchemy']), )
 @click.option('--email', type=str)
 @click.option('--db_host', type=str)
 @click.option('--db_port', type=int)
@@ -484,7 +488,11 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             click.echo("Error during configuation: {}".format(e.message), err=True)
             sys.exit(1)
         except KeyError as e:
-            click.echo("--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(e.message), err=True)
+            import traceback
+            click.echo(traceback.format_exc())
+            click.echo(
+                "--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(
+                    e.message), err=True)
             sys.exit(1)
     else:
         try:
@@ -494,15 +502,15 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
                 e.message)
             sys.exit(1)
 
-        # set default DB profiles
-        set_default_profile('verdi', gprofile, force_rewrite=False)
-        set_default_profile('daemon', gprofile, force_rewrite=False)
+        # Det default DB profile
+        set_default_profile(gprofile, force_rewrite=False)
 
     if only_user_config:
-        print ("Only user configuration requested, "
-               "skipping the migrate command")
+        print("Only user configuration requested, "
+              "skipping the migrate command")
     else:
-        print "Executing now a migrate command..."
+        print
+        "Executing now a migrate command..."
 
         backend_choice = created_conf['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
@@ -536,16 +544,14 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             print("...for SQLAlchemy backend")
             from aiida import is_dbenv_loaded
             from aiida.backends import settings
-            from aiida.backends.sqlalchemy.utils import (
-                _load_dbenv_noschemacheck, check_schema_version)
+            from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck, check_schema_version
             from aiida.backends.profile import load_profile
 
             # We avoid calling load_dbenv since we want to force the schema
             # migration
             if not is_dbenv_loaded():
                 settings.LOAD_DBENV_CALLED = True
-                # This is going to set global variables in settings, including
-                # settings.BACKEND
+                # This is going to set global variables in settings, including settings.BACKEND
                 load_profile()
                 _load_dbenv_noschemacheck()
 
@@ -556,10 +562,12 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         else:
             raise InvalidOperation("Not supported backend selected.")
 
-    print "Database was created successfully"
+    print
+    "Database was created successfully"
 
     # I create here the default user
-    print "Loading new environment..."
+    print
+    "Loading new environment..."
     if only_user_config:
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
         # db environment has not been loaded in this case
@@ -567,25 +575,27 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
             load_dbenv()
 
     from aiida.common.setup import DEFAULT_AIIDA_USER
-    from aiida.orm.user import User as AiiDAUser
+    from aiida.orm.backend import construct_backend
 
-    if not AiiDAUser.search_for_users(email=DEFAULT_AIIDA_USER):
-        print "Installing default AiiDA user..."
-        nuser = AiiDAUser(email=DEFAULT_AIIDA_USER)
+    backend = construct_backend()
+    if not backend.users.find(email=DEFAULT_AIIDA_USER):
+        print("Installing default AiiDA user...")
+        nuser = backend.users.create(email=DEFAULT_AIIDA_USER)
         nuser.first_name = "AiiDA"
         nuser.last_name = "Daemon"
-        nuser.is_staff = True
         nuser.is_active = True
-        nuser.is_superuser = True
-        nuser.force_save()
+        nuser.store()
 
     from aiida.common.utils import get_configured_user_email
     email = get_configured_user_email()
-    print "Starting user configuration for {}...".format(email)
+    print
+    "Starting user configuration for {}...".format(email)
     if email == DEFAULT_AIIDA_USER:
-        print "You set up AiiDA using the default Daemon email ({}),".format(
+        print
+        "You set up AiiDA using the default Daemon email ({}),".format(
             email)
-        print "therefore no further user configuration will be asked."
+        print
+        "therefore no further user configuration will be asked."
     else:
         # Ask to configure the new user
         if not non_interactive:
@@ -593,16 +603,17 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         else:
             # or don't ask
             aiida.cmdline.commands.user.do_configure(
+                backend,
                 email=kwargs['email'],
                 first_name=kwargs.get('first_name'),
                 last_name=kwargs.get('last_name'),
                 institution=kwargs.get('institution'),
                 no_password=True,
                 non_interactive=non_interactive,
-                force=True
+                force_reconfigure=True
             )
 
-    print "Setup finished."
+    print("Setup finished.")
 
 
 class Quicksetup(VerdiCommand):
@@ -613,7 +624,7 @@ class Quicksetup(VerdiCommand):
     doesn't exist). Creates a database '<profile>_<username>' (if it exists,
     prompts user to use or change the name).
     '''
-    from  aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
+    from aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
 
     def run(self, *args):
         ctx = self._ctx(args)
@@ -625,10 +636,11 @@ class Quicksetup(VerdiCommand):
     def _ctx(args, info_name='verdi quicksetup', **kwargs):
         return quicksetup.make_context(info_name, list(args), **kwargs)
 
+
 @verdi.command('quicksetup', context_settings=CONTEXT_SETTINGS)
 @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
 @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
-                help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
+              help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')
 @click.option('--first-name', prompt='First Name', type=str)
 @click.option('--last-name', prompt='Last Name', type=str)
 @click.option('--institution', prompt='Institution', type=str)
@@ -638,11 +650,12 @@ class Quicksetup(VerdiCommand):
 @click.option('--db-user-pw', type=str)
 @click.option('--db-name', type=str)
 @click.option('--repo', type=str)
-@click.option('--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
+@click.option('--set-default/--no-set-default', default=None,
+              help='Whether to set new profile as default for shell and daemon.')
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
 @click.pass_obj
 def quicksetup(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-                    repo, set_default, non_interactive):
+               repo, set_default, non_interactive):
     '''Set up a sane aiida configuration with as little interaction as possible.'''
     from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
     create_base_dirs()
@@ -678,7 +691,8 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     for v in profs.itervalues():
         if v.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
             dbpass = v.get('AIIDADB_PASS')
-            print 'using found password for {}'.format(dbuser)
+            print
+            'using found password for {}'.format(dbuser)
             break
 
     try:
@@ -739,30 +753,24 @@ def quicksetup(self, profile, email, first_name, last_name, institution, backend
     }
     setup(profile_name, only_config=False, non_interactive=True, **setup_args)
 
-    # Loop over all valid processes and check if a default profile is set for them
-    # If not set the newly created profile as default, otherwise prompt whether to override
-    from aiida.cmdline.commands.profile import valid_processes
+    default_profile = confs.get('default_profile', None)
 
-    default_profiles = confs.get('default_profiles', {})
-
-    for process in valid_processes:
-
-        # if the user specifies whether to override that's fine
-        if set_default in [True, False]:
-            _set_default = set_default
-        # otherwise we may need to ask
+    # If the user specifies whether to override that's fine
+    if set_default in [True, False]:
+        do_set_default = set_default
+    # Otherwise we may need to ask
+    else:
+        # If a default profile exists, confirm to overwrite
+        if default_profile:
+            do_set_default = click.confirm(
+                "The current default profile is set to '{}': do you want to set the newly created '{}' "
+                "as the new default? (can be reverted later)".format(default_profile, profile_name))
         else:
-            default_profile = default_profiles.get(process, '')
-            if default_profile:
-                _set_default = click.confirm("The default profile for the '{}' process is set to '{}': "
-                                                    "do you want to set the newly created '{}' as the new default? (can be reverted later)"
-                                                    .format(process, default_profile, profile_name))
-            # if there are no other default profiles, we don't need to ask
-            else:
-                _set_default = True
+            do_set_default = True
 
-        if _set_default:
-            set_default_profile(process, profile_name, force_rewrite=True)
+    if do_set_default:
+        set_default_profile(profile_name, force_rewrite=True)
+
 
 def _check_db_name(dbname, postgres):
     '''looks up if a database with the name exists, prompts for using or creating a differently named one'''
@@ -843,9 +851,9 @@ class Run(VerdiCommand):
         if parsed_args.group:
             automatic_group_name = parsed_args.groupname
             if automatic_group_name is None:
-                import datetime
+                from aiida.utils import timezone
 
-                now = datetime.datetime.now()
+                now = timezone.now()
                 automatic_group_name = "Verdi autogroup on " + now.strftime(
                     "%Y-%m-%d %H:%M:%S")
 
@@ -963,9 +971,9 @@ def exec_from_cmdline(argv):
         verdi_subcmd.get_command_name(): verdi_subcmd
         for verdi_subcmd in verdilib_namespace.itervalues()
         if inspect.isclass(verdi_subcmd) and not verdi_subcmd == VerdiCommand
-        and issubclass(verdi_subcmd, VerdiCommand)
-        and not verdi_subcmd.__name__.startswith('_')
-        and not verdi_subcmd._abstract
+           and issubclass(verdi_subcmd, VerdiCommand)
+           and not verdi_subcmd.__name__.startswith('_')
+           and not verdi_subcmd._abstract
     }
 
     # Retrieve the list of docstrings, managing correctly the
@@ -1019,8 +1027,6 @@ def exec_from_cmdline(argv):
     # We now set the internal variable, if needed
     if profile is not None:
         settings_profile.AIIDADB_PROFILE = profile
-    # I set the process to verdi
-    settings_profile.CURRENT_AIIDADB_PROCESS = "verdi"
 
     # Finally, we parse the commands and their options
     try:
@@ -1036,7 +1042,7 @@ def exec_from_cmdline(argv):
         else:
             print >> sys.stderr, ("{}: '{}' is not a valid command. "
                                   "See '{} help' for more help.".format(
-                                      execname, command, execname))
+                execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
     except ProfileConfigurationError as err:

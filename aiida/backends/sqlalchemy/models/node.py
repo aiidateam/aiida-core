@@ -73,6 +73,7 @@ class DbNode(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     type = Column(String(255), index=True)
+    process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True,
                    default="")  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=True, default="")
@@ -150,17 +151,16 @@ class DbNode(Base):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.common.old_pluginloader import from_type_to_pluginclassname
         from aiida.orm.node import Node
-        from aiida.common.pluginloader import load_plugin_safe
+        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
 
         try:
-            pluginclassname = from_type_to_pluginclassname(self.type)
+            plugin_type = get_plugin_type_from_type_string(self.type)
         except DbContentError:
             raise DbContentError("The type name of node with pk= {} is "
                                  "not valid: '{}'".format(self.pk, self.type))
 
-        PluginClass = load_plugin_safe(Node, 'aiida.orm', pluginclassname, self.type, self.pk)
+        PluginClass = load_plugin(plugin_type, safe=True)
 
         return PluginClass(dbnode=self)
 

@@ -485,7 +485,7 @@ class IcsdSearchResults(DbSearchResults):
         self.db_parameters = db_parameters
         self.query = query
         self.number_of_results = None
-        self.results = []
+        self._results = []
         self.cif_numbers = []
         self.entries = {}
         self.page = 1
@@ -497,6 +497,13 @@ class IcsdSearchResults(DbSearchResults):
         if self.db_parameters["querydb"]:
             self.query_db_version()
         self.query_page()
+
+    @property
+    def results(self):
+        """
+        Return the list of results
+        """
+        return self._results
 
     def next(self):
         """
@@ -516,7 +523,7 @@ class IcsdSearchResults(DbSearchResults):
 
         if position < 0 or position >= self.number_of_results:
             raise IndexError("index out of bounds")
-        while position + 1 >= len(self.results) and len(self.results) < self.number_of_results:
+        while position + 1 >= len(self._results) and len(self._results) < self.number_of_results:
             self.page = self.page + 1
             self.query_page()
 
@@ -524,15 +531,15 @@ class IcsdSearchResults(DbSearchResults):
             if self.db_parameters["querydb"]:
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]),
+                        self._results[position]),
                     db_name=self.db_name, id=self.cif_numbers[position], 
                     version = self.db_version, 
-                    extras={'idnum': self.results[position]})
+                    extras={'idnum': self._results[position]})
             else:
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]),
-                    db_name=self.db_name, extras={'idnum': self.results[position]})
+                        self._results[position]),
+                    db_name=self.db_name, extras={'idnum': self._results[position]})
         return self.entries[position]
 
 
@@ -583,7 +590,7 @@ class IcsdSearchResults(DbSearchResults):
             self.db.commit()
 
             for row in self.cursor.fetchall():
-                self.results.append(str(row[0]))
+                self._results.append(str(row[0]))
                 self.cif_numbers.append(str(row[1]))
 
             if self.number_of_results is None:
@@ -613,7 +620,7 @@ class IcsdSearchResults(DbSearchResults):
                 raise NoResultsWebExp
 
             for i in self.soup.find_all('input', type="checkbox"):
-                self.results.append(i['id'])
+                self._results.append(i['id'])
 
     def _connect_db(self):
         """
@@ -659,68 +666,41 @@ class IcsdEntry(CifEntry):
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
             'db_name': kwargs.get('db_name','Icsd'),
-            'db_uri': None,  # Server ?
-            'id': kwargs.get('id',None),
-            'version': kwargs.get('version',None),
+            'db_uri': None,
+            'id': kwargs.get('id', None),
+            'version': kwargs.get('version', None),
             'uri': uri,
-            'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
+            'extras': {'idnum': kwargs.get('extras', {}).get('idnum', None)},
             'license': self._license,
         }
-        self._cif = None
 
     @property
-    def cif(self):
+    def contents(self):
         """
-        :return: cif file of Icsd entry.
+        Returns raw contents of a file as string. This overrides the DbEntry implementation because
+        the ICSD php backend returns the contents of the CIF in ISO-8859-1 encoding. However, the
+        PyCifRW library (and most other sensible applications), expects UTF-8. Therefore, we decode
+        the original CIF data to unicode and encode it in the UTF-8 format
         """
-        if self._cif is None:
-            import urllib2
+        if self._contents is None:
+            from hashlib import md5
+            from urllib2 import urlopen
 
-            self._cif = urllib2.urlopen(self.source["uri"]).read()
-        return self._cif
+            self._contents = urlopen(self.source['uri']).read()
+            self._contents = self._contents.decode('iso-8859-1').encode('utf8')
+            self.source['source_md5'] = md5(self._contents).hexdigest()
 
-    def get_cif_node(self):
-        """
-        Create a CIF node, that can be used in AiiDA workflow.
-
-        :return: :py:class:`aiida.orm.data.cif.CifData` object
-        """
-        from aiida.orm.data.cif import CifData
-        import tempfile
-
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(self.cif)
-            f.flush()
-            return CifData(file=f.name, source=self.source)
-
-    def get_corrected_cif(self):
-        """
-        Add quotes to the lines in the author loop if missing.
-
-        :note: ase raises an AssertionError if the quotes in the
-          author loop are missing.
-        """
-        return correct_cif(self.cif)
+        return self._contents
 
     def get_ase_structure(self):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        from aiida.orm.data.cif import CifData
         import StringIO
+        from aiida.orm.data.cif import CifData
 
-        return CifData.read_cif(StringIO.StringIO(self.get_corrected_cif()))
-
-
-    def get_aiida_structure(self):
-        """
-        :return: AiiDA structure corresponding to the CIF file.
-        """
-        from aiida.orm import DataFactory
-
-        S = DataFactory("structure")
-        aiida_structure = S(ase=self.get_ase_structure())
-        return aiida_structure
+        cif = correct_cif(self.cif)
+        return CifData.read_cif(StringIO.StringIO(cif))
 
 
 def correct_cif(cif):

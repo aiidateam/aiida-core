@@ -14,6 +14,9 @@ import yaml
 
 from aiida.backends.utils import get_current_profile
 from aiida.common.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.orm.data.bool import Bool
+from aiida.orm.data.float import Float
+from aiida.orm.data.int import Int
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
 class CacheConfigTest(unittest.TestCase):
@@ -27,8 +30,8 @@ class CacheConfigTest(unittest.TestCase):
         self.config_reference = {
             get_current_profile(): {
                 'default': True,
-                'enabled': [],
-                'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation']
+                'enabled': ['aiida.orm.data.bool.Bool', 'aiida.orm.data.float.Float'],
+                'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
             }
         }
         with tempfile.NamedTemporaryFile() as tf, open(tf.name, 'w') as of:
@@ -45,11 +48,19 @@ class CacheConfigTest(unittest.TestCase):
         self.assertFalse(get_use_cache(TemplatereplacerCalculation))
 
     def test_invalid_config(self):
+        self.assertRaises(ValueError, get_use_cache, Bool)
+
+    def test_contextmanager_enable_explicit(self):
         with enable_caching(TemplatereplacerCalculation):
-            self.assertRaises(ValueError, get_use_cache, TemplatereplacerCalculation)
+            self.assertTrue(get_use_cache(TemplatereplacerCalculation))
+
+    def test_contextmanager_disable_global(self):
+        with disable_caching():
+            self.assertTrue(get_use_cache(Float)) # explicitly set, hence not overwritten
+            self.assertFalse(get_use_cache(Int))
 
     def test_disable_caching(self):
-        from aiida.orm.data.base import Float
+        from aiida.orm.data.float import Float
         with disable_caching(Float):
             self.assertFalse(get_use_cache(Float))
         self.assertTrue(get_use_cache(Float))

@@ -8,16 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import uuid
 import aiida
 import logging
 import json
 
-# The username (email) used by the default superuser, that should also run
-# as the daemon
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
 
+USE_TZ = True
 DEFAULT_AIIDA_USER = 'aiida@localhost'
 
 AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
@@ -37,22 +37,13 @@ CONFIG_INDENT_SIZE = 4
 
 SECRET_KEY_FNAME = 'secret_key.dat'
 
-DAEMON_SUBDIR = 'daemon'
-LOG_SUBDIR = 'daemon/log'
-DAEMON_CONF_FILE = 'aiida_daemon.conf'
-
-CELERY_LOG_FILE = 'celery.log'
-CELERY_PID_FILE = 'celery.pid'
-DAEMON_LOG_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_LOG_FILE)
-DAEMON_PID_FILE = os.path.join(AIIDA_CONFIG_FOLDER, LOG_SUBDIR, CELERY_PID_FILE)
-
 WORKFLOWS_SUBDIR = 'workflows'
 
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 
-# This is the default process used by load_dbenv when no process is specified
-DEFAULT_PROCESS = 'verdi'
+# This key will uniquely identify an AiiDA profile
+PROFILE_UUID_KEY = 'PROFILE_UUID'
 
 # The default umask for file creation under AIIDA_CONFIG_FOLDER
 DEFAULT_UMASK = 0o0077
@@ -63,12 +54,12 @@ aiidadb_backend_key = 'AIIDADB_BACKEND'
 # Profile values
 aiidadb_backend_value_django = 'django'
 
-# Repository for tests
-TEMP_TEST_REPO = None
-
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
 TEST_KEYWORD = 'test_'
+
+# Default timeout in seconds for circus client calls
+DEFAULT_DAEMON_TIMEOUT = 20
 
 
 def get_aiida_dir():
@@ -247,11 +238,12 @@ def create_base_dirs(config_dir=None):
     Create dirs for AiiDA, and install default daemon files.
     """
     import getpass
+    from aiida.common.profile import DAEMON_DIR, DAEMON_LOG_DIR
 
     # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
-    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
-    aiida_log_dir = os.path.join(aiida_dir, LOG_SUBDIR)
+    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_DIR)
+    aiida_log_dir = os.path.join(aiida_dir, DAEMON_LOG_DIR)
     local_user = getpass.getuser()
 
     old_umask = os.umask(DEFAULT_UMASK)
@@ -273,54 +265,39 @@ def create_base_dirs(config_dir=None):
     create_htaccess_file()
 
 
-def set_default_profile(process, profile, force_rewrite=False):
+def set_default_profile(profile, force_rewrite=False):
     """
-    Set a default db profile to be used by a process (default for verdi,
-    default for daemon, ...)
+    Set the default profile
 
-    :param process: A string identifying the process to modify (e.g. ``verdi``
-      or ``daemon``).
-    :param profile: A string specifying the profile that should be used
-      as default.
-    :param force_rewrite: if False, does not change the default profile
-      if this was already set. Otherwise, forces the default profile to be
-      the value specified as ``profile`` also if a default profile for the
-      given ``process`` was already set.
+    :param profile: A string specifying the profile that should be used as default
+    :param force_rewrite: if False, does not change the default profile if already set
     """
     from aiida.common.exceptions import ProfileConfigurationError
 
     if profile not in get_profiles_list():
-        raise ProfileConfigurationError(
-            'Profile {} has not been configured'.format(profile))
+        raise ProfileConfigurationError('Profile {} has not been configured'.format(profile))
+
     confs = get_config()
+    current_default_profile = confs.get('default_profile', None)
 
-    try:
-        confs['default_profiles']
-    except KeyError:
-        confs['default_profiles'] = {}
+    if current_default_profile is None or force_rewrite:
+        confs['default_profile'] = profile
 
-    if force_rewrite:
-        confs['default_profiles'][process] = profile
-    else:
-        confs['default_profiles'][process] = confs['default_profiles'].get(
-            process, profile)
     backup_config()
     store_config(confs)
 
 
-def get_default_profile(process):
+def get_default_profile():
     """
-    Return the profile name to be used by process
+    Return the default profile name from the configuration
 
-    :return: None if no default profile is found, otherwise the name of the
-      default profile for the given process
+    :return: None if no default profile is found
     """
     confs = get_config()
     try:
-        return confs['default_profiles'][process]
+        return confs['default_profile']
     except KeyError:
         return None
-        # raise ConfigurationError("No default profile found for the process {}".format(process))
 
 
 def get_profiles_list():
@@ -336,68 +313,29 @@ def get_profiles_list():
         return ConfigurationError("Please run the setup")
 
 
-def get_profile_config(profile, conf_dict=None, set_test_location=True):
+def get_profile_config(profile, conf_dict=None):
     """
     Return the profile specific configurations
 
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
-    :param set_test_location: if True, sets a new folder for storing repository
-        files during testing (to avoid to replace/overwrite the real repository)
-        Set to False for calls where the folder should not be changed (i.e., if
-        you only want to get the profile
     """
     import sys
     import tempfile
 
-    from aiida.common.exceptions import (
-        ConfigurationError, ProfileConfigurationError)
+    from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 
     if conf_dict is None:
         confs = get_config()
     else:
         confs = conf_dict
 
-    test_string = ""
-    # is_test = False
-    # test_prefix = "test_"
-    # if profile.startswith(test_prefix):
-    #     # Use the same profile
-    #     profile = profile[len(test_prefix):]
-    #     is_test = True
-    #     test_string = "(test) "
-
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
         raise ProfileConfigurationError(
-            "No {}profile configuration found for {}, "
-            "allowed values are: {}.".format(test_string, profile,
-                                             ", ".join(get_profiles_list())))
-
-    # if is_test and set_test_location:
-    #     # import traceback
-    #     # traceback.print_stack()
-    #     # Change the repository and print a message
-    #     ###################################################################
-    #     # IMPORTANT! Choose a different repository location, otherwise
-    #     # real data will be destroyed during tests!!
-    #     # The location is automatically created with the tempfile module
-    #     # Typically, under linux this is created under /tmp
-    #     # and is not deleted at the end of the run.
-    #     global TEMP_TEST_REPO
-    #     if TEMP_TEST_REPO is None:
-    #         TEMP_TEST_REPO = tempfile.mkdtemp(prefix=TEMP_TEST_REPO_PREFIX)
-    #         # We write the local repository on stderr, so that the user running
-    #         # the tests knows where the files are being stored
-    #         print >> sys.stderr, "############################################"
-    #         print >> sys.stderr, "# Creating LOCAL AiiDA REPOSITORY FOR TESTS:"
-    #         print >> sys.stderr, "# {}".format(TEMP_TEST_REPO)
-    #         print >> sys.stderr, "############################################"
-    #     if 'AIIDADB_REPOSITORY_URI' not in profile_info:
-    #         raise ConfigurationError("Config file has not been found, run "
-    #                                  "verdi install first")
-    #     profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + TEMP_TEST_REPO
+            "No profile configuration found for {}, allowed values are: {}.".format(
+                profile, ', '.join(get_profiles_list())))
 
     return profile_info
 
@@ -411,7 +349,8 @@ key_explanation = {
     "AIIDADB_PORT": "Database port",
     "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
     "AIIDADB_USER": "AiiDA Database user",
-    DEFAULT_USER_CONFIG_FIELD: "Default user email"
+    DEFAULT_USER_CONFIG_FIELD: "Default user email",
+    PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
 }
 
 
@@ -515,15 +454,26 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             os.umask(old_umask)
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
+    # Generate the profile uuid
+    new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+
     # finalizing
     write = not dry_run
     old_profiles = get_profiles_list()
     new_profile = update_profile(profile, new_profile, write=write)
     if write:
         if not old_profiles:
-            set_default_profile('verdi', profile)
-            set_default_profile('daemon', profile)
+            set_default_profile(profile)
     return new_profile
+
+
+def generate_new_profile_uuid():
+    """
+    Return a UUID for a new profile
+
+    :returns: the hexadecimal represenation of a uuid4 UUID
+    """
+    return uuid.uuid4().hex
 
 
 def create_configuration(profile='default'):
@@ -553,7 +503,7 @@ def create_configuration(profile='default'):
         # No configuration file found
         confs = {}
 
-        # first time creation check
+    # First time creation check
     try:
         confs['profiles']
     except KeyError:
@@ -780,6 +730,9 @@ def create_configuration(profile='default'):
 
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
+        # Add the profile uuid
+        this_new_confs[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+
         confs['profiles'][profile] = this_new_confs
 
         backup_config()
@@ -817,6 +770,12 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
+    "daemon.timeout": (
+        "daemon_timeout",
+        "int",
+        "The timeout in seconds for calls to the circus client",
+        DEFAULT_DAEMON_TIMEOUT,
+        None),
     "verdishell.modules": (
         "modules_for_verdi_shell",
         "string",
@@ -834,7 +793,7 @@ _property_table = {
         "when typing 'verdi calculation list'. "
         "Set by passing the projections space separated as a string, for example: "
         "verdi devel setproperty verdishell.calculation_list 'pk time state'",
-        ('pk', 'ctime', 'state', 'sched', 'computer', 'type'),
+        ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'),
         None),
     "logging.aiida_loglevel": (
         "logging_aiida_log_level",
@@ -844,6 +803,20 @@ _property_table = {
         "also the logging.db_loglevel variable to further filter messages going "
         "to the database",
         "REPORT",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.tornado_loglevel": (
+        "logging_tornado_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'tornado' loggers",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.plumpy_loglevel": (
+        "logging_plumpy_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'plumpy' logger",
+        "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel": (
         "logging_paramiko_log_level",
@@ -864,12 +837,12 @@ _property_table = {
         "Minimum level to log to the console",
         "WARNING",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.celery_loglevel": (
-        "logging_celery_log_level",
+    "logging.circus_loglevel": (
+        "logging_circus_log_level",
         "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'celery' logger",
-        "WARNING",
+        "Minimum level to log to the circus daemon log file"
+        "for the 'circus' logger",
+        "INFO",
         ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.db_loglevel": (
         "logging_db_log_level",

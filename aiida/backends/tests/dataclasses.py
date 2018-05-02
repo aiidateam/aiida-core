@@ -314,6 +314,10 @@ _cell_angle_alpha 90
 _cell_angle_beta  90
 _cell_angle_gamma 90
 loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 +x,+y,+z
+loop_
 _atom_site_label
 _atom_site_fract_x
 _atom_site_fract_y
@@ -409,6 +413,18 @@ _cell_length_a                   4.395
 _cell_length_b                   4.395
 _cell_length_c                   30.440
 _cod_database_code               9012064
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+2/3+x,1/3+y,1/3+z
+1/3+x,2/3+y,2/3+z
+x,x-y,z
+2/3+x,1/3+x-y,1/3+z
+1/3+x,2/3+x-y,2/3+z
+y,x,-z
+2/3+y,1/3+x,1/3-z
+1/3+y,2/3+x,2/3-z
+-x+y,y,z
 loop_
 _atom_site_label
 _atom_site_fract_x
@@ -636,7 +652,7 @@ _tag   {}
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEqual(a.has_attached_hydrogens(), False)
+        self.assertEqual(a.has_attached_hydrogens, False)
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
@@ -660,7 +676,7 @@ _tag   {}
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEqual(a.has_attached_hydrogens(), True)
+        self.assertEqual(a.has_attached_hydrogens, True)
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -2289,7 +2305,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         a = pymatgen.structure.Structure(lattice=[[4,0,0],[0,4,0],[0,0,4]],
                                          species=[Fe1,Fe2],
                                          coords=[[0,0,0],[0.5,0.5,0.5]])
-                
+
         with self.assertRaises(ValueError): 
             StructureData(pymatgen=a)
 
@@ -2336,7 +2352,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         )
 
         structure = StructureData(pymatgen=a)
-        
+
 
 class TestPymatgenFromStructureData(AiidaTestCase):
     """

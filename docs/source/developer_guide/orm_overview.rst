@@ -30,7 +30,7 @@ Group
 User
 ++++
 
-.. automodule:: aiida.orm.implementation.general.user
+.. automodule:: aiida.orm.user
    :members:
    :noindex:
    :private-members:
@@ -181,9 +181,47 @@ XyData
 
 Base data types
 +++++++++++++++
+
+BaseType and NumericType
+------------------------
 .. automodule:: aiida.orm.data.base
    :members:
    :noindex:
+
+List
+----
+.. autoclass:: aiida.orm.data.list.List
+   :members:
+   :noindex:
+
+
+Bool
+----
+.. automodule:: aiida.orm.data.bool
+   :members:
+   :noindex:
+
+
+Float
+-----
+.. automodule:: aiida.orm.data.float
+   :members:
+   :noindex:
+
+
+Int
+---
+.. automodule:: aiida.orm.data.int
+   :members:
+   :noindex:
+
+
+Str
+---
+.. automodule:: aiida.orm.data.str
+   :members:
+   :noindex:
+
 
 
 ORM documentation: Calculations

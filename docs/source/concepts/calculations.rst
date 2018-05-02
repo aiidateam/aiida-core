@@ -1,0 +1,5 @@
+.. _calculations:
+
+************
+Calculations
+************

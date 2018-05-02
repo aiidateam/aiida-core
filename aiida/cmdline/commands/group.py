@@ -13,8 +13,7 @@ import sys
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.exceptions import NotExistent
-
+from aiida.common.exceptions import NotExistent, UniquenessError
 
 
 class Group(VerdiCommandWithSubcommands):
@@ -34,6 +33,7 @@ class Group(VerdiCommandWithSubcommands):
             'show': (self.group_show, self.complete_none),
             'description': (self.group_description, self.complete_none),
             'create': (self.group_create, self.complete_none),
+            'rename': (self.group_rename, self.complete_none),
             'delete': (self.group_delete, self.complete_none),
             'addnodes': (self.group_addnodes, self.complete_none),
             'removenodes': (self.group_removenodes, self.complete_none),
@@ -67,6 +67,57 @@ class Group(VerdiCommandWithSubcommands):
         else:
             print "Group '{}' already exists, PK = {}".format(
                 group.name, group.pk)
+
+    def group_rename(self, *args):
+        """
+        Rename an existing group.
+        """
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        import argparse
+        from aiida.orm import Group as G
+        from aiida.orm import load_group
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Rename an existing group.')
+        parser.add_argument('GROUP', help='The name or PK of the group to rename')
+        parser.add_argument('NAME', help='The new name of the group')
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group = parsed_args.GROUP
+        name = parsed_args.NAME
+
+        try:
+            group_pk = int(group)
+        except ValueError:
+            group_pk = None
+            group_name = group
+
+        if group_pk is not None:
+            try:
+                group = G(dbgroup=group_pk)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+        else:
+            try:
+                group = G.get_from_string(group_name)
+            except NotExistent as e:
+                print >> sys.stderr, "Error: {}.".format(e.message)
+                sys.exit(1)
+
+        try:
+            group.name = name
+        except UniquenessError as exception:
+            print >> sys.stderr, "Error: {}.".format(exception.message)
+            sys.exit(1)
+        else:
+            print 'Name successfully changed'
+
 
     def group_delete(self, *args):
         """
@@ -146,7 +197,7 @@ class Group(VerdiCommandWithSubcommands):
         from aiida.orm import Group as G
         from aiida.common.utils import str_timedelta
         from aiida.utils import timezone
-        from aiida.common.old_pluginloader import from_type_to_pluginclassname
+        from aiida.plugins.loader import get_plugin_type_from_type_string
         from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
@@ -220,7 +271,7 @@ class Group(VerdiCommandWithSubcommands):
                 if parsed_args.uuid:
                     row.append(n.uuid)
                 row.append(n.pk)
-                row.append(from_type_to_pluginclassname(n.type).rsplit(".", 1)[1])
+                row.append(get_plugin_type_from_type_string(n.type).rsplit(".", 1)[1])
                 row.append(str_timedelta(now - n.ctime, short=True, negative_to_zero=True))
                 table.append(row)
             print(tabulate(table, headers=header))
@@ -418,7 +469,7 @@ class Group(VerdiCommandWithSubcommands):
         import datetime
         from aiida.utils import timezone
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
         from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
@@ -437,6 +488,8 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-d', '--with-description',
                             dest='with_description', action='store_true',
                             help="Show also the group description")
+        parser.add_argument('-C', '--count', action='store_true',
+                            help="Show also the number of nodes in the group")
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only groups created in the past N days",
                             action='store', type=int)
@@ -459,6 +512,8 @@ class Group(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
+        backend = construct_backend()
+
         if parsed_args.all_users:
             user = None
         else:
@@ -466,7 +521,7 @@ class Group(VerdiCommandWithSubcommands):
                 user = parsed_args.user
             else:
                 # By default: only groups of this user
-                user = get_automatic_user()
+                user = backend.users.get_automatic_user()
 
         type_string = ""
         if parsed_args.type is not None:
@@ -497,25 +552,33 @@ class Group(VerdiCommandWithSubcommands):
             except NotExistent as e:
                 print >> sys.stderr, "Error: {}.".format(e.message)
                 sys.exit(1)
-            res = Group.query(user=user, type_string=type_string, nodes=node,
+            result = Group.query(user=user, type_string=type_string, nodes=node,
                               past_days=n_days_ago, name_filters=name_filters)
         else:
-            res = Group.query(user=user, type_string=type_string,
+            result = Group.query(user=user, type_string=type_string,
                               past_days=n_days_ago, name_filters=name_filters)
 
-        groups = tuple([(str(g.pk), g.name, len(g.nodes), g.user.email.strip(),
-                         g.description) for g in res])
-
+        projection_lambdas = {
+            'pk': lambda group: str(group.pk),
+            'name': lambda group: group.name,
+            'count': lambda group: len(group.nodes),
+            'user': lambda group: group.user.email.strip(),
+            'description': lambda group: group.description
+        }
 
         table = []
-        if parsed_args.with_description:
-            table_header = \
-                ["PK", "GroupName", "NumNodes", "User", "Description"]
-            for pk, nam, nod, usr, desc in groups:
-                table.append([pk, nam, nod, usr, desc])
+        projection_header = ['PK', 'Name', 'User']
+        projection_fields = ['pk', 'name', 'user']
 
-        else:
-            table_header = ["PK", "GroupName", "NumNodes", "User"]
-            for pk, nam, nod, usr, _ in groups:
-                table.append([pk, nam, nod, usr])
-        print(tabulate(table, headers=table_header))
+        if parsed_args.with_description:
+            projection_header.append('Description')
+            projection_fields.append('description')
+
+        if parsed_args.count:
+            projection_header.append('Node count')
+            projection_fields.append('count')
+
+        for group in result:
+            table.append([projection_lambdas[field](group) for field in projection_fields])
+
+        print(tabulate(table, headers=projection_header))

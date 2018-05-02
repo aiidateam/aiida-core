@@ -15,5 +15,8 @@
 *.egg-info
 .eggs
 
-# produced by coverage.py
+# files created by coverage
+*\,cover
+coverage/
+.cache
 .coverage

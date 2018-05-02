@@ -10,35 +10,56 @@
 
 import tempfile
 
-import plum.process_monitor
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.persistence import Persistence
-import aiida.work.util as util
+from aiida.work.persistence import AiiDAPersister
+import aiida.work.utils as util
 from aiida.work.test_utils import DummyProcess
+from aiida import work
 
 
 class TestProcess(AiidaTestCase):
+    """ Test the basic saving and loading of process states """
+
     def setUp(self):
         super(TestProcess, self).setUp()
+        work.runners.set_runner(None)
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
-
-        self.persistence = Persistence(running_directory=tempfile.mkdtemp())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
         self.assertEquals(len(util.ProcessStack.stack()), 0)
-        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
 
     def test_save_load(self):
-        dp = DummyProcess.new_instance()
+        process = DummyProcess()
+        saved_state = work.Bundle(process)
+        del process
 
-        # Create a bundle
-        b = self.persistence.create_bundle(dp)
-        # Save a bundle and reload it
-        self.persistence.save(dp)
-        b2 = self.persistence._load_checkpoint(dp.pid)
-        # Now check that they are equal
-        self.assertEqual(b, b2)
+        loaded_process = saved_state.unbundle()
+        result_from_loaded = work.launch.run(loaded_process)
 
-        dp.run_until_complete()
+        self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
+
+
+class TestAiiDAPersister(AiidaTestCase):
+
+    def setUp(self):
+        super(TestAiiDAPersister, self).setUp()
+        work.runners.set_runner(None)
+        self.persister = AiiDAPersister()
+
+    def test_save_load_checkpoint(self):
+        process = DummyProcess()
+        bundle_saved = self.persister.save_checkpoint(process)
+        bundle_loaded = self.persister.load_checkpoint(process.calc.pk)
+
+        self.assertEquals(bundle_saved, bundle_loaded)
+
+    def test_delete_checkpoint(self):
+        process = DummyProcess()
+        self.assertEquals(process.calc.checkpoint, None)
+
+        self.persister.save_checkpoint(process)
+        self.assertTrue(isinstance(process.calc.checkpoint, basestring))
+
+        self.persister.delete_checkpoint(process.pid)
+        self.assertEquals(process.calc.checkpoint, None)

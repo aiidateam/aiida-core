@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
-import sys
 import traceback
 import inspect
 import logging
@@ -22,9 +21,7 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
-
-from aiida.backends.utils import get_automatic_user
-
+from aiida.orm.backend import construct_backend
 from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import abstractclassmethod
@@ -94,13 +91,14 @@ class AbstractWorkflow(object):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
-        pass
+        super(AbstractWorkflow, self).__init__()
+        self._backend = construct_backend()
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return "uuid: {} (unstored)".format(self.uuid)
         else:
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
@@ -208,7 +206,7 @@ class AbstractWorkflow(object):
 
         :return: the RepositoryFolder object.
         """
-        if self._to_be_stored:
+        if not self.is_stored:
             return self.get_temp_folder()
         else:
             return self.repo_folder
@@ -222,6 +220,16 @@ class AbstractWorkflow(object):
         """
         return self.current_folder.get_subfolder(
             self._path_subfolder_name, reset_limit=True)
+
+    @property
+    def is_stored(self):
+        """
+        Returns True if the workflow is already stored, False otherwise
+        
+        :return: True if stored, False otherwise
+        :rtype: bool
+        """
+        return not self._to_be_stored
 
     def get_folder_list(self, subfolder='.'):
         """
@@ -249,7 +257,7 @@ class AbstractWorkflow(object):
 
         Can be called only before storing.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ValueError("Cannot delete a path after storing the node")
 
         if os.path.isabs(path):
@@ -265,7 +273,7 @@ class AbstractWorkflow(object):
         src_abs: the absolute path of the file to copy.
         dst_filename: the (relative) path on which to copy.
         """
-        if not self._to_be_stored:
+        if self.is_stored:
             raise ValueError("Cannot insert a path after storing the node")
 
         if not os.path.isabs(src_abs):
@@ -540,51 +548,52 @@ class AbstractWorkflow(object):
         # This function gets called only if the method is launched with the execution brackets ()
         # Otherwise, when the method is addressed in a next() call this never gets called and only the
         # attributes are added
-        def wrapper(cls, *args, **kwargs):
+        def wrapper(self, *args, **kwargs):
             # Store the workflow at the first step executed
-            if cls._to_be_stored:
-                cls.store()
+            if self._to_be_stored:
+                self.store()
 
             if len(args) > 0:
                 raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
 
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
-            if cls.has_step(wrapped_method) and \
-                    not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                     cls.get_step(wrapped_method).state == wf_states.SLEEP or \
-                                     cls.get_step(wrapped_method).nextcall == wf_default_call or \
-                                     cls.get_step(wrapped_method).nextcall == wrapped_method \
-                         # cls.has_step(wrapped_method) \
-                         ):
+            if self.has_step(wrapped_method) and \
+                    not (self.get_step(wrapped_method).state == wf_states.ERROR or \
+                         self.get_step(wrapped_method).state == wf_states.SLEEP or \
+                         self.get_step(wrapped_method).nextcall == wf_default_call or \
+                         self.get_step(wrapped_method).nextcall == wrapped_method \
+                            # cls.has_step(wrapped_method) \
+                    ):
                 raise AiidaException(
                     "The step {0} has already been initialized, cannot change this outside the parent workflow !".format(
                         wrapped_method))
 
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
-            if cls.has_step(wrapped_method) and \
-                    (cls.get_step(wrapped_method).state == wf_states.ERROR or \
-                                 cls.get_step(wrapped_method).state == wf_states.SLEEP):
+            if self.has_step(wrapped_method) and \
+                    (self.get_step(wrapped_method).state == wf_states.ERROR or \
+                     self.get_step(wrapped_method).state == wf_states.SLEEP):
 
-                for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
-                cls.get_step(wrapped_method).remove_sub_workflows()
+                for w in self.get_step(wrapped_method).get_sub_workflows(): w.kill()
+                self.get_step(wrapped_method).remove_sub_workflows()
 
-                for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
-                cls.get_step(wrapped_method).remove_calculations()
+                for c in self.get_step(wrapped_method).get_calculations(): c.kill()
+                self.get_step(wrapped_method).remove_calculations()
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method,
-                                                                              user=get_automatic_user())
+            automatic_user = self._backend.users.get_automatic_user()
+            method_step, created = self.dbworkflowinstance.steps.get_or_create(
+                name=wrapped_method, user=automatic_user.dbuser)
             try:
-                fun(cls)
+                fun(self)
             except:
                 # exc_type, exc_value, exc_traceback = sys.exc_info()
-                cls.append_to_report(
+                self.append_to_report(
                     "ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(
                         wrapped_method))
-                cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
+                self.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
-                cls.set_state(wf_states.ERROR)
+                self.set_state(wf_states.ERROR)
             return None
 
         out = wrapper
@@ -647,7 +656,8 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
+        method_step = self.dbworkflowinstance.steps.get(name=caller_method,
+                                                        user=self._backend.users.get_automatic_user())
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -957,7 +967,6 @@ class AbstractWorkflow(object):
 #             s.set_state(wf_states.INITIALIZED)
 #
 #         self.set_state(wf_states.RUNNING)
-
 
 
 def kill_all():

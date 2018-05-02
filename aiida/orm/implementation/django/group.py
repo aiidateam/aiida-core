@@ -9,58 +9,61 @@
 ###########################################################################
 
 import collections
+from django.db import transaction, IntegrityError
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.orm.implementation.general.group import AbstractGroup
 
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
-
 from aiida.orm.implementation.django.node import Node
-
-
-from aiida.backends.djsite.utils import get_automatic_user
-
-from django.db import transaction, IntegrityError
-from django.db.models import Q
-from django.core.exceptions import ObjectDoesNotExist
-
 from aiida.orm.implementation.general.utils import get_db_columns
+from aiida.common.utils import type_check
+
+from . import user as users
+from . import utils
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
+        from aiida.orm.backend import construct_backend
+
+        self._backend = construct_backend()
+
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
+            if kwargs:
+                raise ValueError("If you pass a dbgroups, you cannot pass any further parameter")
+
             if isinstance(dbgroup, (int, long)):
                 try:
                     dbgroup = DbGroup.objects.get(pk=dbgroup)
                 except ObjectDoesNotExist:
-                    raise NotExistent("Group with pk={} does not exist".format(
-                        dbgroup))
-            if not isinstance(dbgroup, DbGroup):
-                raise TypeError("dbgroup is not a DbGroup instance, it is "
-                                "instead {}".format(str(type(dbgroup))))
-            if kwargs:
-                raise ValueError("If you pass a dbgroups, you cannot pass any "
-                                 "further parameter")
+                    raise NotExistent("Group with pk={} does not exist".format(dbgroup))
 
-            self._dbgroup = dbgroup
+            type_check(dbgroup, DbGroup)
+            self._dbgroup = utils.ModelWrapper(dbgroup)
         else:
             name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string',
-                                    "")  # By default, an user group
-            user = kwargs.pop('user', get_automatic_user())
+
+            group_type = kwargs.pop('type_string', "")  # By default, a user group
+
+            # Get the user and extract dbuser instance
+            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+
             description = kwargs.pop('description', "")
-            self._dbgroup = DbGroup(name=name, description=description,
-                                    user=user, type=group_type)
+            self._dbgroup = utils.ModelWrapper(
+                DbGroup(name=name, description=description,
+                        user=user.dbuser, type=group_type))
             if kwargs:
-                raise ValueError("Too many parameters passed to Group, the "
-                                 "unknown parameters are: {}".format(
-                    ", ".join(kwargs.keys())))
+                raise ValueError(
+                    "Too many parameters passed to Group, the "
+                    "unknown parameters are: {}".format(", ".join(kwargs.keys())))
 
     @staticmethod
     def get_db_columns():
@@ -70,31 +73,44 @@ class Group(AbstractGroup):
 
     @property
     def name(self):
-        return self.dbgroup.name
+        return self._dbgroup.name
+
+    @name.setter
+    def name(self, name):
+        """
+        Attempt to change the name of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired name, a
+        UniquenessError will be raised
+
+        :param name: the new group name
+        :raises UniquenessError: if another group of same type and name already exists
+        """
+        self._dbgroup.name = name
 
     @property
     def description(self):
-        return self.dbgroup.description
+        return self._dbgroup.description
 
     @description.setter
     def description(self, value):
-        self.dbgroup.description = value
-
-        # Update the entry in the DB, if the group is already stored
-        if self.is_stored:
-            self.dbgroup.save()
+        self._dbgroup.description = value
 
     @property
     def type_string(self):
-        return self.dbgroup.type
+        return self._dbgroup.type
 
     @property
     def user(self):
-        return self.dbgroup.user
+        return self._backend.users._from_dbmodel(self._dbgroup.user)
+
+    @user.setter
+    def user(self, new_user):
+        type_check(new_user, users.DjangoUser)
+        self._dbgroup.user = new_user.dbuser
 
     @property
     def dbgroup(self):
-        return self._dbgroup
+        return self._dbgroup._model
 
     @property
     def pk(self):
@@ -106,10 +122,10 @@ class Group(AbstractGroup):
 
     @property
     def uuid(self):
-        return unicode(self.dbgroup.uuid)
+        return unicode(self._dbgroup.uuid)
 
     def __int__(self):
-        if self._to_be_stored:
+        if not self.is_stored:
             return None
         else:
             return self._dbnode.pk
@@ -120,13 +136,14 @@ class Group(AbstractGroup):
 
     def store(self):
         if not self.is_stored:
-            try:
-                with transaction.atomic():
-                    self.dbgroup.save()
-            except IntegrityError:
-                raise UniquenessError("A group with the same name (and of the "
-                                      "same type) already "
-                                      "exists, unable to store")
+            with transaction.atomic():
+                if self.user is not None and not self.user.is_stored:
+                    self.user.store()
+                    # We now have to reset the model's user entry because
+                    # django will have assigned the user an ID but this
+                    # is not automatically propagated to us
+                    self._dbgroup.user = self.user.dbuser
+                self._dbgroup.save()
 
         # To allow to do directly g = Group(...).store()
         return self
@@ -141,8 +158,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
-                nodes, collections.Iterable):
+        if isinstance(nodes, basestring) or not isinstance(nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
                             "of such objects, it is instead {}".format(
@@ -160,7 +176,7 @@ class Group(AbstractGroup):
                                  "unstored, stopping...")
             list_pk.append(node.pk)
 
-        self.dbgroup.dbnodes.add(*list_pk)
+        self._dbgroup.dbnodes.add(*list_pk)
 
     @property
     def nodes(self):
@@ -186,7 +202,7 @@ class Group(AbstractGroup):
             def next(self):
                 return next(self.generator)
 
-        return iterator(self.dbgroup.dbnodes.all())
+        return iterator(self._dbgroup.dbnodes.all())
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
@@ -217,7 +233,7 @@ class Group(AbstractGroup):
                                  "unstored, stopping...")
             list_pk.append(node.pk)
 
-        self.dbgroup.dbnodes.remove(*list_pk)
+        self._dbgroup.dbnodes.remove(*list_pk)
 
     @classmethod
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
@@ -263,7 +279,7 @@ class Group(AbstractGroup):
             if isinstance(user, basestring):
                 queryobject &= Q(user__email=user)
             else:
-                queryobject &= Q(user=user)
+                queryobject &= Q(user=user.id)
 
         if name_filters is not None:
             name_filters_list = {"name__" + k: v for (k, v)
@@ -308,4 +324,4 @@ class Group(AbstractGroup):
 
     def delete(self):
         if self.pk is not None:
-            self.dbgroup.delete()
+            self._dbgroup.delete()

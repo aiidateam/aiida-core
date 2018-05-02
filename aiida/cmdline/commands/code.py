@@ -14,7 +14,12 @@ TODO: think if we want to allow to change path and prepend/append text.
 """
 import sys
 
+import click
+import tabulate
+
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.commands import verdi, code_cmd
+from aiida.cmdline.utils import decorators
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -128,24 +133,24 @@ class CodeInputValidationClass(object):
          "Label",
          "A label to refer to this code",
          False,
-        ),
+         ),
         ("description",
          "Description",
          "A human-readable description of this code",
          False,
-        ),
+         ),
     ]
     _conf_attributes_start = [
         ("label",
          "Label",
          "A label to refer to this code",
          False,
-        ),
+         ),
         ("description",
          "Description",
          "A human-readable description of this code",
          False,
-        ),
+         ),
         ("is_local",
          "Local",
          "True or False; if True, then you have to provide a folder with "
@@ -153,7 +158,7 @@ class CodeInputValidationClass(object):
          "computers for every calculation submission. If True, the code "
          "is just a link to a remote computer and an absolute path there",
          False,
-        ),
+         ),
         ("input_plugin",
          "Default input plugin",
          "A string of the default input plugin to be used with this code "
@@ -161,7 +166,7 @@ class CodeInputValidationClass(object):
          "'verdi calculation plugins' command to get the list of existing"
          "plugins",
          False,
-        ),
+         ),
     ]
     _conf_attributes_local = [
         ("folder_with_code",
@@ -170,13 +175,13 @@ class CodeInputValidationClass(object):
          "stored in the AiiDA repository and then copied over for every "
          "submitted calculation",
          False,
-        ),
+         ),
         ("local_rel_path",
          "Relative path of the executable",
          "The relative path of the executable file inside the folder entered "
          "in the previous step",
          False,
-        ),
+         ),
     ]
     _conf_attributes_remote = [
         ("computer",
@@ -184,12 +189,12 @@ class CodeInputValidationClass(object):
          "The computer name as on which the code resides, as stored in the "
          "AiiDA database",
          False,
-        ),
+         ),
         ("remote_abs_path",
          "Remote absolute path",
          "The (full) absolute path on the remote machine",
          False,
-        ),
+         ),
     ]
     _conf_attributes_end = [
         ("prepend_text",
@@ -199,14 +204,14 @@ class CodeInputValidationClass(object):
          "the submission script before the real execution of the job. It is\n"
          "your responsibility to write proper bash code!",
          True,
-        ),
+         ),
         ("append_text",
          "Text to append to each command execution",
          "This is a multiline string, whose content will be appended inside\n"
          "the submission script after the real execution of the job. It is\n"
          "your responsibility to write proper bash code!",
          True,
-        ),
+         ),
     ]
 
     label = ""
@@ -415,12 +420,12 @@ class CodeInputValidationClass(object):
         """
         from aiida.common.exceptions import ValidationError
         from aiida.orm import JobCalculation
-        from aiida.common.pluginloader import all_plugins
+        from aiida.plugins.entry_point import get_entry_point_names
 
         if input_plugin is None:
             return
 
-        if input_plugin not in all_plugins('calculations'):
+        if input_plugin not in get_entry_point_names('aiida.calculations'):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                                   "variable, it is not among the existing plugins".format(
                 str(input_plugin)))
@@ -512,19 +517,19 @@ class CodeInputValidationClass(object):
         from aiida.common.exceptions import ValidationError
 
         # convert to string so I can use all the functionalities of the command line
-        kwargs = { k:str(v) for k,v in kwargs.iteritems() }
+        kwargs = {k: str(v) for k, v in kwargs.iteritems()}
 
-        start_var = [ _[0] for _ in self._conf_attributes_start ]
-        local_var = [ _[0] for _ in self._conf_attributes_local ]
-        remote_var = [ _[0] for _ in self._conf_attributes_remote ]
-        end_var = [ _[0] for _ in self._conf_attributes_end ]
+        start_var = [_[0] for _ in self._conf_attributes_start]
+        local_var = [_[0] for _ in self._conf_attributes_local]
+        remote_var = [_[0] for _ in self._conf_attributes_remote]
+        end_var = [_[0] for _ in self._conf_attributes_end]
 
         def internal_launch(self, x, kwargs):
-            default_values = { k:getattr(self,'_get_{}_string'.format(k))() for k in x }
-            setup_keys = [ [k,kwargs.pop(k,default_values[k]) ] for k in x ]
-#            for k,v in setup_keys:
-#                setattr(self,k,v)
-            [ getattr(self,'_set_{}_string'.format(k))(v) for k,v in setup_keys ]
+            default_values = {k: getattr(self, '_get_{}_string'.format(k))() for k in x}
+            setup_keys = [[k, kwargs.pop(k, default_values[k])] for k in x]
+            #            for k,v in setup_keys:
+            #                setattr(self,k,v)
+            [getattr(self, '_set_{}_string'.format(k))(v) for k, v in setup_keys]
 
             return kwargs
 
@@ -572,10 +577,11 @@ class Code(VerdiCommandWithSubcommands):
         """
         if not is_dbenv_loaded():
             load_dbenv()
+        super(Code, self).__init__()
 
         self.valid_subcommands = {
             'list': (self.code_list, self.complete_none),
-            'show': (self.code_show, self.complete_code_names_and_pks),
+            'show': (self.cli, self.complete_code_names_and_pks),
             'setup': (self.code_setup, self.complete_code_pks),
             'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
@@ -583,6 +589,9 @@ class Code(VerdiCommandWithSubcommands):
             'hide': (self.code_hide, self.complete_code_pks),
             'reveal': (self.code_reveal, self.complete_code_pks),
         }
+
+    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+        verdi.main()
 
     def complete_code_names(self, subargs_idx, subargs):
         code_names = [c[1] for c in self.get_code_data()]
@@ -609,7 +618,7 @@ class Code(VerdiCommandWithSubcommands):
         # The default states are those that are shown if no option is given
         parser.add_argument('pks', type=int, nargs='+',
                             help="The pk of the codes to hide",
-        )
+                            )
         parsed_args = parser.parse_args(args)
         from aiida.orm.code import Code
 
@@ -631,7 +640,7 @@ class Code(VerdiCommandWithSubcommands):
         # The default states are those that are shown if no option is given
         parser.add_argument('pks', type=int, nargs='+',
                             help="The pk of the codes to reveal",
-        )
+                            )
         parsed_args = parser.parse_args(args)
         from aiida.orm.code import Code
 
@@ -651,22 +660,22 @@ class Code(VerdiCommandWithSubcommands):
         # The default states are those that are shown if no option is given
         parser.add_argument('-c', '--computer',
                             help="Filter only codes on a given computer",
-        )
+                            )
         parser.add_argument('-p', '--plugin',
                             help="Filter only calculation with a given plugin",
-        )
+                            )
         parser.add_argument('-A', '--all-users', dest='all_users',
                             action='store_true',
                             help="Show codes of all users",
-        )
+                            )
         parser.add_argument('-o', '--show-owner', dest='show_owner',
                             action='store_true',
                             help="Show also the owner of the code",
-        )
+                            )
         parser.add_argument('-a', '--all-codes',
                             action='store_true',
                             help="Show also hidden codes",
-        )
+                            )
         parser.set_defaults(all_users=False, hidden=False)
         parsed_args = parser.parse_args(args)
         computer_filter = parsed_args.computer
@@ -679,11 +688,10 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.code import Code
         from aiida.orm.computer import Computer
         from aiida.orm.user import User
-        from aiida.backends.utils import get_automatic_user
 
         qb_user_filters = dict()
         if not all_users:
-            user = User(dbuser=get_automatic_user())
+            user = self.backend.users.get_automatic_user()
             qb_user_filters['email'] = user.email
 
         qb_computer_filters = dict()
@@ -749,7 +757,7 @@ class Code(VerdiCommandWithSubcommands):
                 qb_code_filters = comp_non_existence
             else:
                 new_qb_code_filters = {"and": [qb_code_filters,
-                                       comp_non_existence]}
+                                               comp_non_existence]}
                 qb_code_filters = new_qb_code_filters
             qb.append(Code, tag="code",
                       filters=qb_code_filters,
@@ -806,7 +814,8 @@ class Code(VerdiCommandWithSubcommands):
 
         return sorted(qb.all())
 
-    def get_code(self, code_id):
+    @classmethod
+    def get_code(cls, code_id):
         """
         Get a Computer object with given identifier, that can either be
         the numeric ID (pk), or the label (if unique).
@@ -835,18 +844,6 @@ class Code(VerdiCommandWithSubcommands):
             except (NotExistent, MultipleObjectsError) as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
-
-    def code_show(self, *args):
-        """
-        Show information on a given code
-        """
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'code show' there should be one "
-                                  "argument only, being the code id.")
-            sys.exit(1)
-
-        code = self.get_code(args[0])
-        print code.full_text_info
 
     def code_setup(self, *args):
         from aiida.common.exceptions import ValidationError
@@ -918,7 +915,9 @@ class Code(VerdiCommandWithSubcommands):
 
     def code_update(self, *args):
         import datetime
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'code update' there should be one "
@@ -1012,7 +1011,7 @@ class Code(VerdiCommandWithSubcommands):
                 DbAttribute.set_value_for_node(code.dbnode, 'remote_exec_path', set_params.remote_abs_path)
 
         # store comment, to track history
-        code.add_comment(comment, user=get_automatic_user())
+        code.add_comment(comment, user=backend.users.get_automatic_user())
 
     def code_delete(self, *args):
         """
@@ -1038,3 +1037,15 @@ class Code(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         print "Code '{}' deleted.".format(pk)
+
+
+@code_cmd.command()
+@click.argument('code_id', metavar='CODE_ID', nargs=1, type=click.STRING)
+@click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
+@decorators.with_dbenv()
+def show(code_id, verbose):
+    """
+    Display information about a Code object identified by CODE_ID which can be the pk or label
+    """
+    code = Code.get_code(code_id)
+    click.echo(tabulate.tabulate(code.full_text_info(verbose)))

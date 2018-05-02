@@ -11,9 +11,10 @@ import sys
 import os
 
 import aiida
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import pass_to_django_manage, execname
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.cmdline.utils import decorators
 from aiida.common.exceptions import InternalError, TestsNotAllowedError
 
 
@@ -85,7 +86,6 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.scheduler',
         'aiida.transport',
         'aiida.common',
-        'aiida.tests.work',
         'aiida.utils',
         'aiida.control',
         'aiida.cmdline.tests'
@@ -98,6 +98,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.backends.tests import get_db_test_names
         from aiida.backends import settings
 
+        load_dbenv()
         db_test_list = get_db_test_names()
 
         super(Devel, self).__init__(*args, **kwargs)
@@ -110,10 +111,9 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
-            'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
-            'tickd': (self.tick_daemon, self.complete_none)
+            'run_daemon': (self.run_daemon, self.complete_none)
         }
 
         # The content of the dict is:
@@ -366,13 +366,13 @@ class Devel(VerdiCommandWithSubcommands):
             except Exception as e:
                 print >> sys.stderr, "# Error loading job # %s (%s): %s" % (job, type(e), e)
 
-    def tick_daemon(self, *args):
+    @decorators.with_dbenv()
+    def run_daemon(self, *args):
         """
-        Call all the functions that the daemon would call if running once and
-        return.
+        Run a daemon instance in this in the current interpreter
         """
-        from aiida.daemon.tasks import manual_tick_all
-        manual_tick_all()
+        from aiida.daemon.runner import start_daemon
+        start_daemon()
 
     def run_listproperties(self, *args):
         """
@@ -404,24 +404,6 @@ class Devel(VerdiCommandWithSubcommands):
                     print "{} = {}".format(prop, val)
             except KeyError:
                 pass
-
-    def run_listislands(self, *args):
-        """
-        List all AiiDA nodes, that have no parents and children.
-        """
-        load_dbenv()
-        from django.db.models import Q
-        from aiida.orm.node import Node
-        from aiida.backends.utils import get_automatic_user
-
-        q_object = Q(user=get_automatic_user())
-        q_object.add(Q(parents__isnull=True), Q.AND)
-        q_object.add(Q(children__isnull=True), Q.AND)
-
-        node_list = Node.query(q_object).distinct().order_by('ctime')
-        print "ID\tclass"
-        for node in node_list:
-            print "{}\t{}".format(node.pk, node.__class__.__name__)
 
     def run_getproperty(self, *args):
         """

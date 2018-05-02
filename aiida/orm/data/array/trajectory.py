@@ -13,7 +13,7 @@ from aiida.orm.calculation.inline import optional_inline
 
 
 @optional_inline
-def _get_aiida_structure_inline(trajectory=None, parameters=None):
+def _get_aiida_structure_inline(trajectory, parameters):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 

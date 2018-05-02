@@ -41,34 +41,35 @@ class QuicksetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             quicksetup, [
-                '--profile=giuseppe',
+                '--profile=giuseppe-{}'.format(self.backend),
                 '--backend={}'.format(self.backend),
                 '--email=giuseppe.verdi@ope.ra',
                 '--first-name=Giuseppe',
                 '--last-name=Verdi',
                 '--institution=Scala',
-                '--db-name=aiida_giuseppe',
-                '--repo=aiida_giuseppe',
+                '--db-name=aiida_giuseppe_{}'.format(self.backend),
+                '--repo=aiida_giuseppe_{}'.format(self.backend),
                 '--no-set-default'])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
-    def test_postgres_faillure(self):
+    def test_postgres_failure(self):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             quicksetup, [
-                '--profile=giuseppe2',
+                '--profile=giuseppe2-{}'.format(self.backend),
                 '--backend={}'.format(self.backend),
                 '--email=giuseppe2.verdi@ope.ra',
                 '--first-name=Giuseppe',
                 '--last-name=Verdi',
                 '--institution=Scala',
                 '--db-port=1111',
-                '--db-name=aiida_giuseppe2',
-                '--repo=aiida_giuseppe2',
+                '--db-name=aiida_giuseppe2_{}'.format(self.backend),
+                '--repo=aiida_giuseppe2_{}'.format(self.backend),
                 '--no-set-default',
                 '--non-interactive'
             ],
-            input='nohost\n1111\naiida_giuseppe2\npostgres\n\n',
+            input='nohost\n1111\naiida_giuseppe2_{}\npostgres\n\n'.format(
+                self.backend),
             catch_exceptions=False
         )
         self.assertFalse(result.exception, msg=get_debug_msg(result))
@@ -87,10 +88,10 @@ class SetupTestCase(unittest.TestCase):
         self.postgres.determine_setup()
         self.dbuser = 'aiida_SetupTestCase'
         self.dbpass = 'setuptestcase'
-        self.dbname = 'aiida_test_setup'
+        self.dbname = 'aiida_test_setup_{}'.format(self.backend)
         self.postgres.create_dbuser(self.dbuser, self.dbpass)
         self.postgres.create_db(self.dbuser, self.dbname)
-        self.repo = abspath('./aiida_radames')
+        self.repo = abspath('./aiida_radames_{}'.format(self.backend))
 
     def tearDown(self):
         self.postgres.drop_db(self.dbname)
@@ -101,7 +102,7 @@ class SetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             _setup_cmd, [
-                'radames',
+                'radames_{}'.format(self.backend),
                 '--non-interactive',
                 '--backend={}'.format(self.backend),
                 '--email=radames.verdi@ope.ra',
@@ -121,7 +122,7 @@ class SetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         self.runner.invoke(
             _setup_cmd, [
-                'radames2',
+                'radames2_{}'.format(self.backend),
                 '--non-interactive',
                 '--backend={}'.format(self.backend),
                 '--email=radames.verdi@ope.ra',
@@ -139,7 +140,7 @@ class SetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
             _setup_cmd,
-            ['radames2', '--only-config'],
+            ['radames2_{}'.format(self.backend), '--only-config'],
             input='yes\nradames.verdi@ope.ra\npostgresql_psycopg2\n\n\n\n\n\n{repo}\nRadames2\nVerdi2\nScala2\nyes\nno\n'.format(
                 repo=self.repo
             ),

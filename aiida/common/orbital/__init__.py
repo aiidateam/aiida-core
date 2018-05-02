@@ -160,14 +160,10 @@ class Orbital(object):
         return self.__module__.split('.')[-1]
 
 
-def OrbitalFactory(module):
+def OrbitalFactory(entry_point):
     """
-    Factory method that returns a suitable Orbital subclass.
+    Return the Orbital plugin class for a given entry point
 
-    :param module: a valid string recognized as a Orbital subclass
+    :param entry_point: the entry point name of the Orbital plugin
     """
-    from aiida.common.pluginloader import BaseFactory
-
-    return BaseFactory(module, Orbital, "aiida.common.orbital")
-
-
+    return BaseFactory('aiida.common.orbital', entry_point)

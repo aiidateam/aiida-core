@@ -26,15 +26,11 @@ def update_req_for_rtd(pre_commit):
 
     import setup_requirements
 
-    reqs = set(setup_requirements.extras_require['docs'] +
-               setup_requirements.extras_require['rest'] +
-               setup_requirements.extras_require['testing'] +
-               setup_requirements.extras_require[':python_version < "3"'] +
-               # To avoid that it requires also the postgres libraries
-               [
-                   p for p in setup_requirements.install_requires
-                   if not p.startswith('psycopg2')
-               ])
+    reqs = set(
+        setup_requirements.extras_require['docs'] + setup_requirements.extras_require['rest'] +
+        setup_requirements.extras_require['testing'] + setup_requirements.extras_require[':python_version < "3"'] +
+        # To avoid that it requires also the postgres libraries
+        [p for p in setup_requirements.install_requires if not p.startswith('psycopg2')])
     reqs_str = "\n".join(sorted(reqs))
 
     basename = 'requirements_for_rtd.txt'
@@ -49,8 +45,7 @@ def update_req_for_rtd(pre_commit):
         msg = 'Some requirements for Read the Docs have changed, {}'
         local_help = 'please add the changes and commit again'
         travis_help = 'please run aiida/docs/update_req_for_rtd.py locally and commit the changes it makes'
-        help_msg = msg.format(
-            travis_help if os.environ.get('TRAVIS') else local_help)
+        help_msg = msg.format(travis_help if os.environ.get('TRAVIS') else local_help)
         click.echo(help_msg, err=True)
 
 

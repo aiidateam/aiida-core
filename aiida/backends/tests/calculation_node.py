@@ -33,19 +33,34 @@ class TestCalcNode(AiidaTestCase):
         }
     }
     stateval = 'RUNNING'
+    emptydict = {}
+    emptylist = []
+
+    def test_process_state(self):
+        """
+        Check the properties of a newly created bare Calculation
+        """
+        calculation = Calculation()
+
+        self.assertEquals(calculation.is_terminated, False)
+        self.assertEquals(calculation.is_excepted, False)
+        self.assertEquals(calculation.is_killed, False)
+        self.assertEquals(calculation.is_finished, False)
+        self.assertEquals(calculation.is_finished_ok, False)
+        self.assertEquals(calculation.is_failed, False)
 
     def test_calculation_updatable_not_copied(self):
         """
         Check that updatable attributes of Calculation are not copied
         """
         a = Calculation()
-        a._set_attr('state', self.stateval)
+        a._set_attr(Calculation.PROCESS_STATE_KEY, self.stateval)
         a.store()
         b = a.copy()
 
         # updatable attributes are not copied
         with self.assertRaises(AttributeError):
-            b.get_attr('state')
+            b.get_attr(Calculation.PROCESS_STATE_KEY)
 
     def test_calculation_updatable_attribute(self):
         """
@@ -66,16 +81,17 @@ class TestCalcNode(AiidaTestCase):
             a._set_attr(k, v)
 
         # Check before storing
-        self.assertEquals(a.get_attr('state'), self.stateval)
+        a._set_attr(Calculation.PROCESS_STATE_KEY, self.stateval)
+        self.assertEquals(a.get_attr(Calculation.PROCESS_STATE_KEY), self.stateval)
 
         a.store()
 
         # Check after storing
-        self.assertEquals(a.get_attr('state'), self.stateval)
+        self.assertEquals(a.get_attr(Calculation.PROCESS_STATE_KEY), self.stateval)
 
         # I should be able to mutate the updatable attribute but not the others
-        a._set_attr('state', 'FINISHED')
-        a._del_attr('state')
+        a._set_attr(Calculation.PROCESS_STATE_KEY, 'FINISHED')
+        a._del_attr(Calculation.PROCESS_STATE_KEY)
 
         with self.assertRaises(ModificationNotAllowed):
             a._set_attr('bool', False)
@@ -87,7 +103,7 @@ class TestCalcNode(AiidaTestCase):
 
         # After sealing, even updatable attributes should be immutable
         with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('state', 'FINISHED')
+            a._set_attr(Calculation.PROCESS_STATE_KEY, 'FINISHED')
 
         with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('state')
+            a._del_attr(Calculation.PROCESS_STATE_KEY)

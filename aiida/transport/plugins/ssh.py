@@ -1117,8 +1117,8 @@ class SshTransport(aiida.transport.Transport):
 
         # if in input I give an invalid object raise ValueError
         if not remotesource:
-            raise ValueError('Input to copy() must be a non empty string. ' +
-                             'Found instead %s as remotesource' % remotesource)
+            raise ValueError(
+                'Input to copy() must be a non empty string. ' + 'Found instead %s as remotesource' % remotesource)
 
         if not remotedestination:
             raise ValueError('Input to copy() must be a non empty string. ' +
@@ -1238,8 +1238,7 @@ class SshTransport(aiida.transport.Transport):
         if not path:
             return False
         try:
-            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path,
-                                                                          self.sftp.normalize(path),
+            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path, self.sftp.normalize(path),
                                                                           self.sftp.stat(path),
                                                                           self.sftp.stat(path).st_mode))
             return S_ISREG(self.sftp.stat(path).st_mode)

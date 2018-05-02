@@ -425,7 +425,8 @@ class PbsBaseClass(object):
 
             raw_data = {
                 i.split('=', 1)[0].strip().lower(): i.split('=', 1)[1].lstrip()
-                for i in job['lines'] if '=' in i
+                for i in job['lines']
+                if '=' in i
             }
 
             ## I ignore the errors for the time being - this seems to be

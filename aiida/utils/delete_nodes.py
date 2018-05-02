@@ -1,4 +1,15 @@
-def delete_nodes(pks, follow_calls=False, follow_returns=False,
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+
+
+def delete_nodes(pks, follow_calls=False, follow_returns=False, 
                  dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
     Delete nodes by a list of pks

@@ -89,16 +89,15 @@ The class method takes two arguments:
 
 As the name suggests, the ``spec`` can be used to specify the properties of the workchain.
 For example, it can be used to define inputs that the workchain takes.
-In our example, we need to be able to pass three integers as input, so we define those in the spec by calling `spec.input()`.
+In our example, we need to be able to pass three integers as input, so we define those in the spec by calling ``spec.input()``.
 The first argument is the name of the input.
 Additionally, as we have done here, you can specify which types are valid for that particular input.
 Since we expect integers, we specify that the valid type is the database storable ``Int`` class.
 Input validation is just one of the advantages of the ``WorkChain`` over the workfunction that we can already see here.
 
-The outputs are defined in a similar manner, calling `spec.output()` you can declare a particular output that the workchain will or is expected to have.
+The outputs are defined in a similar manner, calling ``spec.output()`` you can declare a particular output that the workchain will or is expected to have.
 Be wary that if you define an output, but do not actually add it during the exection, at the end of the workchain, the validation will fail as by default all defined outputs are assumed to be required.
 If you want to specify an output that is optional, you can pass the keyword argument ``required=False``.
-+
 The final part of the spec definition is the ``outline``.
 This is where you specify the 'logic' of the workchain.
 Since this example is rather contrived, in this case it is just a list of three functions calls ``add``, ``multiply`` and ``results``.
@@ -178,6 +177,13 @@ If you would also like to get a reference of the node that represents the ``Work
     :code: python
 
 For the former, the ``node`` will be the ``WorkCalculation`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
+The ``run`` based functions can actually also be used for ``workfunctions``.
+Calling ``run`` with a workfunction, does exactly the same as running the workfunction directly as a normal python function and so doesn't gain anything new.
+However, if you are interested in also getting the calculation node or the pid of the process, in addition to the result of the function, calling the workfunction through ``run_get_node`` or ``run_get_pid`` is the correct solution.
+Note that for workfunctions you can pass the inputs both as arguments as well as keyword arguments:
+
+.. include:: include/snippets/workflows/workfunctions/example_problem_workfunction_run.py
+    :code: python
 
 Submit
 ------
@@ -190,6 +196,9 @@ To circumvent this problem, you can also ``submit`` a process, for example a wor
 
 .. include:: include/snippets/workflows/workchains/run_workchain_submit.py
     :code: python
+
+.. note::
+    Workfunctions cannot be submitted but can only be run
 
 The ``submit`` function will launch the process and send it to the daemon, who will take care of running it to the end.
 This way the interpreter is freed and regains control immediately.
@@ -204,7 +213,9 @@ Instead, the ``WorkChain`` class has its own ``submit`` method that should be us
     :code: python
 
 In this example, we launch another instance of the ``AddAndMultiplyWorkChain`` from within the ``AddAndMultiplyWorkChain`` itself.
-Note that the only difference is that instead of using the free function ``submit``, we use the class instance method ``self.submit``.
+The only difference is that, instead of using the free function ``submit``, we use the class instance method ``self.submit``.
+Note that this example is oversimplified and additional steps are required to be able to continue the workchain after submitting the child workchain.
+For more details, please refer to the advanced section on :ref:`submitting calculations and workchains<submitting_calculations_workchains>`.
 
 .. note::
     When you submit a ``WorkChain`` or any other process over the daemon, you need to make sure that the daemon can find the class when it needs to load it.
@@ -302,7 +313,7 @@ For the purpose of example, we will show the output of the commands for a comple
 
 verdi work report
 -----------------
-The developer of a ``WorkChain`` can attach log messages to the workchain at any place within the function body of one of the outline steps through the ``self.report()`` method.
+The developer of a ``WorkChain`` can attach log messages to the workchain at any place within the function body of one of the outline steps through the :py:meth:`~aiida.work.processes.Process.report` method.
 The ``verdi work report`` command will display all the log messages in chronological order:
 
 .. code-block:: bash
@@ -391,26 +402,371 @@ This overview should give you all the information if you want to inspect a workc
 Workflow development
 ====================
 
-ISSUE#1130
-
+This section will be a more in-depth guide of all the features and tools that the workflow system of AiiDA provides.
+Along the way, we will also highlight how one can use these tools to write maintanable, robust and modular workflows.
+Just like the definition of a ``WorkChain``, we will start with the process specification.
 
 .. _process_spec:
 
-The process specification
--------------------------
+Process specification
+---------------------
+The process specification of a workchain, implemented by the :py:class:`~aiida.work.process_spec.ProcessSpec`, is the construct that is used to define the inputs, outputs and the logical outline of the workchain.
+Defining this specification is therefore one of the more important steps of designing a workflow.
+A very simple example of the definition of a workchain specification, in the :meth:`~aiida.work.workchain.WorkChain.define` method, was demonstrated in the :ref:`introductory section on workchains <workchains_workfunctions>`.
+In this section we will describe all the features of the process spec in more detail.
 
-This will explain details of the ``ProcessSpec``.
+.. _ports_portnamespaces:
 
+Ports and Portnamespaces
+^^^^^^^^^^^^^^^^^^^^^^^^
+Two core concepts and components of the ``ProcessSpec`` that have remained hidden so far, but are crucial to understanding the functionality of the ``ProcessSpec``, are that of the ``Port`` and the ``PortNamespace``.
+In the workchain introduction, we already saw how an input could be defined for the process spec:
+
+.. code:: python
+
+    spec.input('a')
+
+What this directive really accomplishes, is that an :py:class:`~aiida.work.ports.InputPort` is added to the ``inputs`` attribute of the :py:class:`~aiida.work.process_spec.ProcessSpec`, which is a :py:class:`~aiida.work.ports.PortNamespace`.
+This ``PortNamespace`` is a simple namespace that contains all the ``InputPorts`` and can even have nested ``PortNamespaces``.
+This allows the designer of a workchain to create any nested structure for the input ports.
+Creating a new namespace in the inputs namespace is as simple as:
+
+.. code:: python
+
+    spec.input_namespace('namespace')
+
+This will create a new ``PortNamespace`` named ``namespace`` in the ``inputs`` namespace of the spec.
+You can create arbitrarily nested namespaces in one statement, by separating them with a ``.`` as shown here:
+
+.. code:: python
+
+    spec.input_namespace('nested.namespace')
+
+This command will result in the ``PortNamespace`` name ``namespace`` to be nested inside another ``PortNamespace`` called ``nested``.
+
+.. note::
+
+    Because the period is reserved to denote different nested namespaces, it cannot be used in the name of terminal input and output ports as that could be misinterpreted later as a port nested in a namespace.
+
+Graphically, this can be visualized as a nested dictionary and will look like the following:
+
+.. code:: python
+
+    'inputs': {
+        'nested': {
+            'namespace': {}
+        }
+    }
+
+The ``outputs`` attribute of the ``ProcessSpec`` is also a ``PortNamespace`` just as the ``inputs``, with the only different that it will create ``OutputPort`` instead of ``InputPort`` instances.
+Therefore the same concept of nesting through ``PortNamespaces`` applies to the outputs of a ``ProcessSpec``.
+
+Validation and defaults
+^^^^^^^^^^^^^^^^^^^^^^^
+In the previous section, we saw that the ``ProcessSpec`` uses the ``PortNamespace``, ``InputPort`` and ``OutputPort`` to define the inputs and outputs structure of the ``Process``.
+The underlying concept that allows this nesting of ports is that the ``PortNamespace``, ``InputPort`` and ``OutputPort``, are all a subclass of :py:class:`~plumpy.ports.Port`.
+And as different subclasses of the same class, they have more properties and attributes in common, for example related to the concept of validation and default values.
+All three have the following attributes (with the exception of the ``OutputPort`` not having a ``default`` attribute):
+
+    * ``default``
+    * ``required``
+    * ``valid_type``
+    * ``validator``
+
+These attributes can all be set upon construction of the port or after the fact, as long as the spec has not been sealed, which means that they can be altered without limit as long as it is within the ``define`` method of the corresponding ``Process``.
+An example input port that explicitly sets all these attributes is the following:
+
+.. code:: python
+
+    spec.input('positive_number', required=False, default=Int(1), valid_type=(Int, Float), validator=is_number_positive)
+
+Here we define an input named ``positive_number`` that is not required, if a value is not explicitly passed, the default ``Int(1)`` will be used and if a value *is* passed, it should be of type ``Int`` or ``Float`` and it should be valid according to the ``is_number_positive`` validator.
+Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated and should return ``True`` if that value is valid or ``False`` otherwise.
+The ``valid_type`` can define a single type, or a tuple of valid types.
+Note that by default all ports are required, but specifying a default value implies that the input is not required and as such specifying ``required=False`` is not necessary in that case.
+It was added to this example simply for clarity.
+
+The validation of input or output values with respect to the specification of the corresponding port, happens at the instantiation of the process and when it is finalized, respectively.
+If the inputs are invalid, a corresponding exception will be thrown and the process instantiation will fail.
+When the outputs fail to be validated, likewise an exception will be thrown and the process state will be set to ``Excepted``.
+
+Dynamic namespaces
+^^^^^^^^^^^^^^^^^^
+In the previous section we described the various attributes related to validation and claimed that all the port variants share those attributes, yet we only discussed the ``InputPort`` and ``OutputPort``.
+The statement, however, is still correct and the ``PortNamespace`` has the same attributes.
+You might then wonder what the meaning is of a ``valid_type`` or ``default`` for a ``PortNamespace`` if all it does is contain ``InputPorts``, ``OutputPorts`` or other ``PortNamespaces``.
+The answer to this question lies in the ``PortNamespace`` attribute ``dynamic``.
+
+Often when designing the specification of a ``Process``, we cannot know exactly which inputs we want to be able to pass to the process.
+However, with the concept of the ``InputPort`` and ``OutputPort`` one *does* need to know exactly, how many value one expects at least, as they do have to be defined.
+This is where the ``dynamic`` attribute of the ``PortNamespace`` comes in.
+By default this is set to ``False``, but by setting it to ``True``, one indicates that that namespace can take a number of values that is unknown at the time of definition of the specification.
+This now explains the meaning of the ``valid_type``, ``validator`` and ``default`` attributes in the context of the ``PortNamespace``.
+If you do mark a namespace as dynamic, you may still want to limit the set of values that are acceptable, which you can do by specifying the valid type and or validator.
+The values that will eventually be passed to the port namespave will then be validated according to these rules exactly as a value for a regular input port would be.
+
+Non storable inputs
+^^^^^^^^^^^^^^^^^^^
+In the introduction of this section on workflows, we mentioned that valid types for inputs and outputs should be AiiDA data types, as they can be stored in the database and that is the only way the provenance can be kept.
+However, there are cases where you might want to pass an input to a workchain, whose provenance you do not care about and therefore would want to pass a non-database storable type anyway.
+
+.. note::
+
+    AiiDA allows you to break the provenance as to be not too restrictive, but always tries to urge you and guide you in a direction to keep the provenance.
+    There are legitimate reasons to break it regardless, but make sure you think about the implications and whether you are really willing to lose the information.
+
+For this situation, the ``InputPort`` has the attribute ``non_db``.
+By default this is set to ``False``, but by setting it to ``True`` the port is marked that the values that are passed to it should not be stored as a node in the provenance graph and linked to the calculation node.
+This allows one to pass any normal value that one would also be able to pass to a normal function.
+
+Outline
+^^^^^^^
+After the ports, both input and output, have been specified, it is time to define the *outline* of the workchain.
+The outline describes the logical flow of the workchain, which makes it an extremely important part of the workchain design process.
+Since the goal of a workchain should be to execute a very well defined task, it is the goal of the outline to capture the required logic to achieve that goal, in a clear and short yet not overly succint manner.
+The outline supports various logical flow constructs, such as conditionals and while loops, so where possible this logic should be expressed in the outline and not in the body of the outline functions.
+However, one can also go overboard and put too finely grained logical blocks into the outline, causing it to become bulky and difficult to understand.
+
+A good rule of thumb in designing the outline is the following: before you start designing a workchain, define very clearly the task that it should carry out.
+Once the goal is clear, draw a schematic block diagram of the necessary steps and logical decisions that connect them, in order to accomplish that goal.
+Converting the resulting flow diagram in a one-to-one fashion into an outline, often results in very reasonable outline designs.
+
+The currently available logical constructs for the workchain outline are:
+
+    * ``if``, ``elif``, ``else``
+    * ``while``
+    * ``return``
+
+To distinguish these constructs from the python builtins, they are suffixed with an underscore, like so ``while_``.
+To use these in your workchain design, you will have to import them:
+
+.. code:: python
+
+    from aiida.work.workchain import if_, while_, return_
+
+The following example shows how to use these logical constructs to define the outline of a workchain:
+
+.. code:: python 
+
+    spec.outline(
+        cls.intialize_to_zero,
+        while_(cls.n_is_less_than_hundred)(
+            if_(cls.n_is_multitple_of_three)(
+                cls.report_fizz,
+            ).elif_(cls.n_is_multiple_of_five)(
+                cls.report_buzz,
+            ).elif_(cls.n_is_multiple_of_three_and_five)(
+                cls.report_fizz_buzz,
+            ).else_(
+                cls.report_n,
+            )
+        ),
+        cls.increment_n_by_one,
+    )
+
+This is an implementation (and an extremely contrived one at that) of the well known FizzBuzz problem.
+The idea is that the program is supposed to print in sequence the numbers from zero to some limit, except when the number is a multiple of three ``Fizz`` is printed, for a multiple of five ``Buzz`` and when it is a multiple of both, the program should print ``FizzBuzz``.
+The actual implementation of the outline steps themselves is now trivial:
+
+.. code:: python
+
+    def initialize_to_zero(self):
+        self.ctx.n = 0
+
+    def n_is_less_than_hundred(self):
+        return self.ctx.n < 100
+
+    def n_is_multiple_of_three(self):
+        return self.ctx.n % 3 == 0
+
+    def n_is_multiple_of_five(self):
+        return self.ctx.n % 5 == 0
+
+    def n_is_multiple_of_three_and_five(self):
+        return self.ctx.n % 3 == 0 and self.ctx.n % 5 == 0
+
+    def increment_n_by_one(self):
+        self.ctx.n += 1
+
+The intention of this example is to show that with a well designed outline, a user only has to look at the outline to have a good idea *what* the workchain does and *how* it does it.
+One should not have to look at the implementation of the outline steps as all the important information is captured by the outline itself.
+
+.. _reporting:
+
+Reporting
+---------
+During the execution of a ``WorkChain``, we may want to keep the user abreast of its progress and what is happening.
+For this purpose, the ``WorkChain`` implements the :meth:`~aiida.work.processes.Process.report` method, which functions as a logger of sorts.
+It takes a single argument, a string, that is the message that needs to be reported:
+
+.. code:: python
+
+    def submit_calculation(self):
+        self.report('here we will submit a calculation')
+
+This will send that message to the internal logger of python, which will cause it to be picked up by the default AiiDA logger, but it will also trigger the database log handler, which will store the message in the database and link it to the node of the workchain.
+This allows the ``verdi work report`` command to retrieve all those messages that were fired using the ``report`` method for a specifc ``WorkCalculation`` node.
+Note that the report method, in addition to the pk of the workchain, will also automatically record the name of the workchain and the name of the outline step in which the report message was fired.
+This information will show up in the output of ``verdi work report``, so you never have to explicitly reference the workchain name, outline step name or date and time in the message itself.
+
+It is important to note that the report system is a form of logging and as such has been designed to be read by humans only.
+That is to say, the report system is not designed to pass information programmatically by parsing the log messages.
+
+.. _workchain_context:
+
+Context
+-------
+In the simplest workchain example presented in the introductory section, we already saw how the context can be used to persist information during the execution of a workchain and pass it between outline steps.
+The context is essentially a data container, very similar to a dictionary that can hold all sorts of data.
+The workflow engine will ensure that its contents are saved and persisted in between steps and when the daemon shuts down or restarts.
+A trivial example of this would be the following:
+
+.. code:: python
+
+    def step_one(self):
+        self.ctx.some_variable = 'store me in the context'
+
+    def step_two(self):
+        assert self.ctx.some_variable == 'store me in the context'
+
+In the ``step_one`` outline step we store the string ``store me in the context`` in the context, which can be addressed as ``self.ctx``, under the key ``some_variable``.
+Note that for the key you can use anything that would be a valid key for a normal python dictionary.
+In the second outline step ``step_two``, we can verify that the string was successfully persisted, by checking the value stored in the context ``self.ctx.some_variable``.
+This was just a simple example to introduce the concept of the context, however, it really is one of the more important parts of the workchain.
+The context really becomes crucial when you want to submit a calculation or another workchain from within the workchain.
+How this is accomplished, we will show in the next section.
+
+.. _submitting_calculations_workchains:
+
+Submitting calculations and workchains
+--------------------------------------
+One of the main tasks of a ``WorkChain`` will be to launch a ``JobCalculation`` or even another ``WorkChain``.
+An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``JobCalculation`` to the daemon.
+However, that is not enough to complete the process.
+When the ``submit`` method is called, the process is created and submitted to the daemon, but at that point it is not yet done.
+So the value that is returned by the ``submit`` call is not the result of the submitted process, but rather it is a *future*.
+When the process is terminated, this future will than be transformed into the results of the process, however, until this happens, the workchain cannot continue: it has to wait for the process to be finished.
+To do this, control has to be returned to the workflow engine, which can then, when the process is completed, call the next step in the outline, where we can analyse the results.
+
+To context
+^^^^^^^^^^
+In order to store the future of the submitted process, we can store it in the context with a special construct that will tell the workflow engine that it should wait for that process to finish before continuing the workchain.
+To illustrate how this works, consider the following minimal example:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_complete.py
+    :code: python
+
+As explained in the previous section, calling ``self.submit`` for a given process that you want to submit, will return a future.
+To add this future to the context, we can not access the context directly as explained in the :ref:`context section<workchain_context>`, but rather we need to use the class :py:class:`~aiida.work.workchain.ToContext`.
+This class has to be imported from the ``aiida.work.workchain`` module.
+To add the future to the context, simply construct an instance of ``ToContext``, passing the future as a keyword argument, and returning it from the outline step.
+The keyword used, ``workchain`` in this example, will be the key used under which to store the node in the context once its execution has terminated.
+Returning an instance of ``ToContext`` signals to the workflow engine that it has to wait for the futures contained within it to finish execution, store their nodes in the context under the specified keys and then continue to the next step in the outline.
+In this example, that is the ``inspect_workchain`` method.
+At this point we are sure that the process, a workchain in this case, has terminated its execution, although not necessarily successful, and we can continue the logic of the workchain.
+
+Sometimes one wants to launch not just one, but multiple processes at the same time that can run in parallel.
+With the mechanism described above, this will not be possible since after submitting a single process and returning the ``ToContext`` instance, the workchain has to wait for the process to be finished before it can continue.
+To solve this problem, there is another way to add futures to the context:
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
+    :code: python
+
+Here we submit three workchains in a for loop in a single outline step, but instead of returning an instance of ``ToContext``, we call the :meth:`~aiida.work.workchain.WorkChain.to_context` method.
+This method has exactly the same syntax as the ``ToContext`` class, except it is not necessary to return its value, so we can call it multiple times in one outline step.
+Under the hood the functionality is also the same as the ``ToContext`` class.
+At the end of the ``submit_workchains`` outline step, the workflow engine will find the futures that were added by calling ``to_context`` and will wait for all of them to be finished.
+The good thing here is that these three sub workchains can be run in parallel and once all of them are done, the parent workchain will go to the next step, which is ``inspect_workchains``.
+There we can find the nodes of the workchains in the context under the key that was used as the keyword argument in the ``to_context`` call in the previous step.
+
+Since we do not want the subsequent calls of ``to_context`` to override the previous future, we had to create unique keys to store them under.
+In this example, we chose to use the index of the for-loop.
+The name carries no meaning and is just required to guarantee unique key names.
+This pattern will occur often where you will want to launch multiple workchains or calculations in parallel and will have to come up with unique names.
+In essence, however, you are really just creating a list and it would be better to be able to create a list in the context and simply append the future to that list as you submit them.
+How this can be achieved is explained in the next section.
+
+Appending
+^^^^^^^^^
+When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.work.context.append_` function.
+Consider the example from the previous section, but now we will use the ``append_`` function instead: 
+
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
+    :code: python
+
+Notice that in the ``submit_workchains`` step we no longer have to generate a unique key based on the index but we simply wrap the future in the ``append_`` function and assign it to the generic key ``workchains``.
+The workflow engine will see the ``append_`` function and instead of assigning the node corresponding to the future to the key ``workchains``, it will append it to the list stored under that key.
+If the list did not yet exist, it will automatically be created.
+The ``self.ctx.workchains`` now contains a list with the nodes of the completed workchains and so in the ``inspect_workchains`` step we can simply iterate over it to access all of them in order.
+
+Note that the use of ``append_`` is not just limited to the ``to_context`` method.
+You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
+
+Aborting and exit codes
+-----------------------
+At the end of every outline step, the return value will be inspected by the workflow engine.
+If a non-zero integer value is detected, the workflow engine will interpret this as an exit code and will stop the execution of the workchain, while setting its process state to ``Finished``.
+In addition, the integer return value will be set as the ``finish_status`` of the workchain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <process_state>`.
+This is useful because it allows a workflow designer to easily exit from a workchain and use the return value to communicate programmatically the reason for the workchain stopping.
+Consider the following example, where we launch a calculation and in the next step check whether it finished successfully, and if not we exit the workchain:
+
+.. code:: python
+
+    def submit_calculation(self):
+        inputs = {'code': code}
+        future = self.submit(SomeJobCalculation, **inputs)
+        return ToContext(calculation=future)
+
+    def inspect_calculation(self):
+        if not self.ctx.calculation.is_finished_ok:
+            self.report('the calculation did not finish successfully, there is nothing we can do')
+            return 256
+
+        self.report('the calculation finished successfully')
+
+In the ``inspect_calculation`` outline, we retrieve the calculation that was submitted and added to the context in the previous step and check if it finished successfully through the property ``is_finished_ok``.
+If this returns ``False``, in this example we simply fire a report message and return the integer ``256``.
+Note that this value was randomly chosen for the example, but any non-zero integer will do.
+A good practice would be to define constants in your workchain class with the various potential exit codes that can be returned in the workchains execution and use those instead.
+For example:
+
+.. code:: python
+
+    class SomeWorkChain(WorkChain):
+
+        ERROR_CALCULATION_FAILED = 256
+
+        def inspect_calculation(self):
+            if not self.ctx.calculation.is_finished_ok:
+                self.report('the calculation did not finish successfully, there is nothing we can do')
+                return self.ERROR_CALCULATION_FAILED
+
+.. note::
+
+    Make sure that you do not define these in the constructor of the ``WorkChain`` class, as that code will not be reexecuted when the workchain is persisted and subsequently loaded again, which happen for example if it is submitted to the daemon.
+    Instead, as in the example above, define these constants as class variables.
+    This will guarantee that they will always be defined, even when the workchain is loaded from a persisted state
+
+The best part about this method of aborting a workchains execution, is that the finish status can now be used programmatically, by for example a parent workchain.
+Imagine that a parent workchain submitted this workchain.
+After it has terminated its execution, the parent workchain will want to know what happened to the child workchain.
+As already noted in the :ref:`report<reporting>` section, the report messages of the workchain should not be used.
+The finish status, however, is a perfect way.
+The parent workchain can easily request the finish status of the child workchain through the ``finish_status`` property, and based on its value determine how to continue.
+
+Modular workflow design
+-----------------------
+When creating complex workflows, it is a good idea to split them up into smaller, modular parts.
+At the lowest level, each workflow should perform exactly one task.
+These workflows can then be wrapped together by a "parent" workflow to create a larger logical unit.
+
+In order to make this approach manageable, it needs to be as simple as possible to glue together multiple workflows in a larger parent workflow.
+One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another workchain.
 
 .. _expose_inputs_outputs:
 
 Exposing inputs and outputs
----------------------------
-
-When creating complex workflows, it is a good idea to split them up into smaller, modular parts. At the lowest level, each workflow should perform exactly one task. These workflows can then be wrapped together by a "parent" workflow to create a larger logical unit.
-
-In order to make this approach manageable, it needs to be as simple as possible to glue together multiple workflows in a larger parent workflow. For this reason, AiiDA provides the *expose* functionality, which will be explained here.
-
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Consider the following example workchain, which simply takes a few inputs and returns them again as outputs:
 
 .. include:: include/snippets/workflows/expose_inputs/child.py
@@ -421,31 +777,50 @@ As a first example, we will implement a thin wrapper workflow, which simply forw
 .. include:: include/snippets/workflows/expose_inputs/simple_parent.py
     :code: python
 
-In the ``define`` method of this simple parent workchain, we use the :meth:`.expose_inputs` and :meth:`.expose_outputs`. This creates the corresponding input and output ports in the parent workchain.
-
-Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class. This is used when calling the child in the ``run_child`` method. The :meth:`~aiida.work.Process.exposed_inputs` method returns a dictionary of inputs that the parent received which were exposed from the child, and so it can be used to pass these on to the child.
-
-Finally, in the ``finalize`` method, we use :meth:`~aiida.work.Process.exposed_outputs` to retrieve the outputs of the child which were exposed to the parent. Using :meth:`~aiida.work.Process.out_many`, these outputs are added to the outputs of the parent workchain.
-
+In the ``define`` method of this simple parent workchain, we use the :meth:`.expose_inputs` and :meth:`.expose_outputs`.
+This creates the corresponding input and output ports in the parent workchain.
+Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class.
+This is used when calling the child in the ``run_child`` method.
+The :meth:`~aiida.work.Process.exposed_inputs` method returns a dictionary of inputs that the parent received which were exposed from the child, and so it can be used to pass these on to the child.
+Finally, in the ``finalize`` method, we use :meth:`~aiida.work.Process.exposed_outputs` to retrieve the outputs of the child which were exposed to the parent.
+Using :meth:`~aiida.work.Process.out_many`, these outputs are added to the outputs of the parent workchain.
 This workchain can now be run in exactly the same way as the child itself:
 
 .. include:: include/snippets/workflows/expose_inputs/run_simple.py
     :code: python
 
-Next, we will see how a more complex parent workchain can be created by using the additional features of the expose functionality. The following workchain launches two children. These children share the input ``a``, but have different ``b`` and ``c``. The output ``e`` will be taken only from the first child, whereas ``d`` and ``f`` are taken from both children. In order to avoid name conflicts, we need to create a *namespace* for each of the two children, where the inputs and outputs which are not shared are stored. Our goal is that the workflow can be called as follows:
+Next, we will see how a more complex parent workchain can be created by using the additional features of the expose functionality.
+The following workchain launches two children.
+These children share the input ``a``, but have different ``b`` and ``c``.
+The output ``e`` will be taken only from the first child, whereas ``d`` and ``f`` are taken from both children.
+In order to avoid name conflicts, we need to create a *namespace* for each of the two children, where the inputs and outputs which are not shared are stored.
+Our goal is that the workflow can be called as follows:
 
 .. include:: include/snippets/workflows/expose_inputs/run_complex.py
     :code: python
 
-This is achieved by the following workflow. In the next section, we will explain each of the steps.
+This is achieved by the following workflow.
+In the next section, we will explain each of the steps.
 
 .. include:: include/snippets/workflows/expose_inputs/complex_parent.py
     :code: python
 
-First of all, we want to expose the ``a`` input and the ``e`` output at the top-level. For this, we again use :meth:`.expose_inputs` and :meth:`.expose_outputs`, but with the optional keyword ``include``. This specifies a list of keys, and only inputs or outputs which are in that list will be exposed. So by passing ``include=['a']`` to :meth:`.expose_inputs`, only the input ``a`` is exposed.
+First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.
+For this, we again use :meth:`.expose_inputs` and :meth:`.expose_outputs`, but with the optional keyword ``include``.
+This specifies a list of keys, and only inputs or outputs which are in that list will be exposed.
+So by passing ``include=['a']`` to :meth:`.expose_inputs`, only the input ``a`` is exposed.
 
-Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children. For this purpose, we pass the ``namespace`` parameter to the expose functions. However, since we now shouldn't expose ``a`` (``e``) again, we use the ``exclude`` keyword, which specifies a list of keys that will not be exposed.
+Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children.
+For this purpose, we pass the ``namespace`` parameter to the expose functions.
+However, since we now shouldn't expose ``a`` (``e``) again, we use the ``exclude`` keyword, which specifies a list of keys that will not be exposed.
 
-When calling the children, we again use the :meth:`~aiida.work.Process.exposed_inputs` method to forward the exposed inputs. Since the inputs ``b`` and ``c`` are now in a specific namespace, we need to pass this namespace as an additional parameter. By default, :meth:`~aiida.work.Process.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``. If the same input key exists in multiple namespaces, the input in the lowest namespace takes precedence. It's also possible to disable this behavior, and instead search only in the explicit namespace that was passed. This is done by setting ``agglomerate=False``, as shown in the call to ``child_2``. Of course, we then need to explicitly pass the input ``a``.
+When calling the children, we again use the :meth:`~aiida.work.Process.exposed_inputs` method to forward the exposed inputs.
+Since the inputs ``b`` and ``c`` are now in a specific namespace, we need to pass this namespace as an additional parameter.
+By default, :meth:`~aiida.work.Process.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``.
+If the same input key exists in multiple namespaces, the input in the lowest namespace takes precedence.
+It's also possible to disable this behavior, and instead search only in the explicit namespace that was passed.
+This is done by setting ``agglomerate=False``, as shown in the call to ``child_2``.
+Of course, we then need to explicitly pass the input ``a``.
 
-Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent. Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.
+Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent.
+Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.

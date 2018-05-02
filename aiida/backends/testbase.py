@@ -144,7 +144,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
 
     actually_run_tests = []
     num_tests_expected = 0
-    
+
     # To avoid adding more than once the same test
     # (e.g. if you type both db and db.xxx)
     found_modulenames = set()

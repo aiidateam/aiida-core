@@ -21,36 +21,32 @@ import click
 @click.option('--pre-commit', is_flag=True)
 def update_req_for_rtd(pre_commit):
     """Update the separate requirements file for Read the Docs"""
-    sys.path.append(
-        os.path.join(os.path.split(os.path.abspath(__file__))[0], os.pardir))
+    docs_dir = os.path.abspath(os.path.dirname(__file__))
+    sys.path.append(os.path.join(docs_dir, os.pardir))
 
     import setup_requirements
 
-    required_packages = list(setup_requirements.install_requires)
-
-    # Required version
-    req_for_rtd_lines = ['Sphinx>=1.5']
-
-    for package in required_packages:
-        # To avoid that it requires also the postgres libraries
-        if package.startswith('psycopg2'):
-            continue
-
-        req_for_rtd_lines.append(package)
-
-    req_for_rtd = "\n".join(sorted(req_for_rtd_lines))
+    reqs = set(setup_requirements.extras_require['docs'] +
+               setup_requirements.extras_require['rest'] +
+               setup_requirements.extras_require['testing'] +
+               setup_requirements.extras_require[':python_version < "3"'] +
+               # To avoid that it requires also the postgres libraries
+               [
+                   p for p in setup_requirements.install_requires
+                   if not p.startswith('psycopg2')
+               ])
+    reqs_str = "\n".join(sorted(reqs))
 
     basename = 'requirements_for_rtd.txt'
 
     # pylint: disable=bad-continuation
-    with open(
-            os.path.join(os.path.split(os.path.abspath(__file__))[0], basename),
-            'w') as requirements_file:
-        requirements_file.write(req_for_rtd)
+    with open(os.path.join(docs_dir, basename), 'w') as reqs_file:
+        reqs_file.write(reqs_str)
 
     click.echo("File '{}' written.".format(basename))
+
     if pre_commit:
-        msg = 'some requirements for Read the Docs have changed, {}'
+        msg = 'Some requirements for Read the Docs have changed, {}'
         local_help = 'please add the changes and commit again'
         travis_help = 'please run aiida/docs/update_req_for_rtd.py locally and commit the changes it makes'
         help_msg = msg.format(

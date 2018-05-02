@@ -39,7 +39,6 @@ def run_api(App, Api, *args, **kwargs):
     parse_aiida_profile= if True, parses an option to specify the AiiDA
     profile
     All other passed parameters are ignored.
-
     """
 
     import aiida  # Mainly needed to locate the correct aiida path

@@ -28,7 +28,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.links import LinkType
 
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT
+from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.group import Group
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
@@ -39,7 +39,6 @@ from aiida.orm.mixins import Sealable
 import aiida.backends.sqlalchemy
 
 import aiida.orm.autogroup
-
 
 
 class Node(AbstractNode):
@@ -71,7 +70,7 @@ class Node(AbstractNode):
 
             # If this is changed, fix also the importer
             self._repo_folder = RepositoryFolder(section=self._section_name,
-                                                 uuid=self._dbnode.uuid)
+                                                 uuid=self.uuid)
 
         else:
             # TODO: allow to get the user from the parameters
@@ -153,20 +152,81 @@ class Node(AbstractNode):
         raise NotImplementedError("The node query method is not supported in "
                                   "SQLAlchemy. Please use QueryBuilder.")
 
+    @property
+    def type(self):
+        # Type is immutable so no need to ensure the model is up to date
+        return self._dbnode.type
+
+    @property
+    def ctime(self):
+        """
+        Return the creation time of the node.
+        """
+        self._ensure_model_uptodate(attribute_names=['ctime'])
+        return self._dbnode.ctime
+
+    @property
+    def mtime(self):
+        """
+        Return the modification time of the node.
+        """
+        self._ensure_model_uptodate(attribute_names=['mtime'])
+        return self._dbnode.mtime
+
+    def get_user(self):
+        """
+        Get the user.
+
+        :return: a Django DbUser model object
+        """
+        self._ensure_model_uptodate(attribute_names=['user'])
+        return self._dbnode.user
+
+    def get_computer(self):
+        """
+        Get the computer associated to the node.
+
+        :return: the Computer object or None.
+        """
+        self._ensure_model_uptodate(attribute_names=['dbcomputer'])
+        if self._dbnode.dbcomputer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self._dbnode.dbcomputer)
+
+    def _get_db_label_field(self):
+        """
+        Get the label of the node.
+
+        :return: a string.
+        """
+        self._ensure_model_uptodate(attribute_names=['label'])
+        return self._dbnode.label
+
     def _update_db_label_field(self, field_value):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
 
-        self.dbnode.label = field_value
+        self._dbnode.label = field_value
         if not self._to_be_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
+
+    def _get_db_description_field(self):
+        """
+        Get the description of the node.
+
+        :return: a string
+        :rtype: str
+        """
+        self._ensure_model_uptodate(attribute_names=['description'])
+        return self._dbnode.description
 
     def _update_db_description_field(self, field_value):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
 
-        self.dbnode.description = field_value
+        self._dbnode.description = field_value
         if not self._to_be_stored:
             session.add(self._dbnode)
             self._increment_version_number_db()
@@ -219,8 +279,8 @@ class Node(AbstractNode):
         # already in the TC table from self to src
         if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
             if QueryBuilder().append(
-                    Node, filters={'id':self.pk}, tag='parent').append(
-                    Node, filters={'id':src.pk}, tag='child', descendant_of='parent').count() > 0:
+                    Node, filters={'id': self.pk}, tag='parent').append(
+                Node, filters={'id': src.pk}, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 
@@ -228,7 +288,7 @@ class Node(AbstractNode):
             autolabel_idx = 1
 
             existing_from_autolabels = session.query(DbLink.label).filter(
-                DbLink.output_id == self.dbnode.id,
+                DbLink.output_id == self._dbnode.id,
                 DbLink.label.like("link%")
             )
 
@@ -258,7 +318,7 @@ class Node(AbstractNode):
         session = get_scoped_session()
         try:
             with session.begin_nested():
-                link = DbLink(input_id=src.dbnode.id, output_id=self.dbnode.id,
+                link = DbLink(input_id=src.id, output_id=self.id,
                               label=label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as e:
@@ -267,22 +327,21 @@ class Node(AbstractNode):
                                   "".format(e))
 
     def _get_db_input_links(self, link_type):
-        link_filter = {'output': self.dbnode}
+        link_filter = {'output': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
         return [(i.label, i.input.get_aiida_class()) for i in
                 DbLink.query.filter_by(**link_filter).distinct().all()]
 
-
     def _get_db_output_links(self, link_type):
-        link_filter = {'input': self.dbnode}
+        link_filter = {'input': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
         return ((i.label, i.output.get_aiida_class()) for i in
                 DbLink.query.filter_by(**link_filter).distinct().all())
 
     def _set_db_computer(self, computer):
-        self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
+        self._dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
 
     def _set_db_attr(self, key, value):
         """
@@ -295,7 +354,7 @@ class Node(AbstractNode):
         :param value: its value
         """
         try:
-            self.dbnode.set_attr(key, value)
+            self._dbnode.set_attr(key, value)
             self._increment_version_number_db()
         except:
             from aiida.backends.sqlalchemy import get_scoped_session
@@ -305,7 +364,7 @@ class Node(AbstractNode):
 
     def _del_db_attr(self, key):
         try:
-            self.dbnode.del_attr(key)
+            self._dbnode.del_attr(key)
             self._increment_version_number_db()
         except:
             from aiida.backends.sqlalchemy import get_scoped_session
@@ -315,17 +374,16 @@ class Node(AbstractNode):
 
     def _get_db_attr(self, key):
         try:
-            return get_attr(self.dbnode.attributes, key)
+            return get_attr(self._attributes(), key)
         except (KeyError, IndexError):
             raise AttributeError("Attribute '{}' does not exist".format(key))
 
     def _set_db_extra(self, key, value, exclusive=False):
-
         if exclusive:
             raise NotImplementedError("exclusive=True not implemented yet in SQLAlchemy backend")
 
         try:
-            self.dbnode.set_extra(key, value)
+            self._dbnode.set_extra(key, value)
             self._increment_version_number_db()
         except:
             from aiida.backends.sqlalchemy import get_scoped_session
@@ -335,7 +393,7 @@ class Node(AbstractNode):
 
     def _reset_db_extras(self, new_extras):
         try:
-            self.dbnode.reset_extras(new_extras)
+            self._dbnode.reset_extras(new_extras)
             self._increment_version_number_db()
         except:
             from aiida.backends.sqlalchemy import get_scoped_session
@@ -345,14 +403,14 @@ class Node(AbstractNode):
 
     def _get_db_extra(self, key, default=None):
         try:
-            return get_attr(self.dbnode.extras, key)
+            return get_attr(self._extras(), key)
         except (KeyError, AttributeError):
             raise AttributeError("DbExtra {} does not exist".format(
                 key))
 
     def _del_db_extra(self, key):
         try:
-            self.dbnode.del_extra(key)
+            self._dbnode.del_extra(key)
             self._increment_version_number_db()
         except:
             from aiida.backends.sqlalchemy import get_scoped_session
@@ -360,19 +418,19 @@ class Node(AbstractNode):
             session.rollback()
             raise
 
-
     def _db_iterextras(self):
-        if self.dbnode.extras is None:
+        extras = self._extras()
+        if extras is None:
             return dict().iteritems()
 
-        return self.dbnode.extras.iteritems()
+        return extras.iteritems()
 
     def _db_iterattrs(self):
-        for k, v in self.dbnode.attributes.iteritems():
+        for k, v in self._attributes().iteritems():
             yield (k, v)
 
     def _db_attrs(self):
-        for k in self.dbnode.attributes.iterkeys():
+        for k in self._attributes().iterkeys():
             yield k
 
     def add_comment(self, content, user=None):
@@ -417,7 +475,7 @@ class Node(AbstractNode):
             "ctime": c.ctime,
             "mtime": c.mtime,
             "content": c.content
-        } for c in comments ]
+        } for c in comments]
 
     def _get_dbcomments(self, pk=None, with_user=False):
         comments = DbComment.query.filter_by(dbnode=self._dbnode)
@@ -473,7 +531,7 @@ class Node(AbstractNode):
                 raise
 
     def _increment_version_number_db(self):
-        self._dbnode.nodeversion = DbNode.nodeversion + 1
+        self._dbnode.nodeversion = self.nodeversion + 1
         try:
             self._dbnode.save()
         except:
@@ -482,14 +540,15 @@ class Node(AbstractNode):
             session.rollback()
             raise
 
-
-    def copy(self):
+    def copy(self, **kwargs):
+        # Make sure we have the latest version from the database
+        self._ensure_model_uptodate()
         newobject = self.__class__()
-        newobject.dbnode.type = self.dbnode.type  # Inherit type
-        newobject.dbnode.label = self.dbnode.label  # Inherit label
+        newobject._dbnode.type = self._dbnode.type  # Inherit type
+        newobject._dbnode.label = self._dbnode.label  # Inherit label
         # TODO: add to the description the fact that this was a copy?
-        newobject.dbnode.description = self.dbnode.description  # Inherit description
-        newobject.dbnode.dbcomputer = self.dbnode.dbcomputer  # Inherit computer
+        newobject._dbnode.description = self._dbnode.description  # Inherit description
+        newobject._dbnode.dbcomputer = self._dbnode.dbcomputer  # Inherit computer
 
         for k, v in self.iterattrs():
             if k != Sealable.SEALED_KEY:
@@ -502,13 +561,24 @@ class Node(AbstractNode):
 
     @property
     def id(self):
-        return self.dbnode.id
+        return self._dbnode.id
 
     @property
     def dbnode(self):
+        self._ensure_model_uptodate()
         return self._dbnode
 
-    def _db_store_all(self, with_transaction=True):
+    @property
+    def nodeversion(self):
+        self._ensure_model_uptodate(attribute_names=['nodeversion'])
+        return self._dbnode.nodeversion
+
+    @property
+    def public(self):
+        self._ensure_model_uptodate(attribute_names=['public'])
+        return self._dbnode.public
+
+    def _db_store_all(self, with_transaction=True, use_cache=None):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
@@ -519,7 +589,7 @@ class Node(AbstractNode):
         """
 
         self._store_input_nodes()
-        self.store(with_transaction=False)
+        self.store(with_transaction=False, use_cache=use_cache)
         self._store_cached_input_links(with_transaction=False)
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -532,7 +602,6 @@ class Node(AbstractNode):
                 raise
 
         return self
-
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -601,6 +670,8 @@ class Node(AbstractNode):
         :parameter with_transaction: if False, no transaction is used. This
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
+
+        :param bool use_cache: Whether I attempt to find an equal node in the DB.
         """
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -624,8 +695,8 @@ class Node(AbstractNode):
             session.add(self._dbnode)
             # Save its attributes 'manually' without incrementing
             # the version for each add.
-            self.dbnode.attributes = self._attrs_cache
-            flag_modified(self.dbnode, "attributes")
+            self._dbnode.attributes = self._attrs_cache
+            flag_modified(self._dbnode, "attributes")
             # This should not be used anymore: I delete it to
             # possibly free memory
             del self._attrs_cache
@@ -642,7 +713,7 @@ class Node(AbstractNode):
                     # aiida.backends.sqlalchemy.get_scoped_session().commit()
                     session.commit()
                 except SQLAlchemyError as e:
-                    #print "Cannot store the node. Original exception: {" \
+                    # print "Cannot store the node. Original exception: {" \
                     #      "}".format(e)
                     session.rollback()
                     raise
@@ -656,9 +727,21 @@ class Node(AbstractNode):
                 self._repository_folder.abspath, move=True, overwrite=True)
             raise
 
+        self._dbnode.set_extra(_HASH_EXTRA_KEY, self.get_hash())
         return self
-
 
     @property
     def uuid(self):
-        return unicode(self.dbnode.uuid)
+        return unicode(self._dbnode.uuid)
+
+    def _attributes(self):
+        self._ensure_model_uptodate(['attributes'])
+        return self._dbnode.attributes
+
+    def _extras(self):
+        self._ensure_model_uptodate(['extras'])
+        return self._dbnode.extras
+
+    def _ensure_model_uptodate(self, attribute_names=None):
+        if self.is_stored:
+            self._dbnode.session.expire(self._dbnode, attribute_names=attribute_names)

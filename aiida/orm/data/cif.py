@@ -364,9 +364,9 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
-    _set_incompatibilities = [("ase", "file"), ("ase", "values"), ("file",
-                                                                   "values")]
-    _scan_types = ['default', 'flex']
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file',
+                                                                   'values')]
+    _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
 
     @property
@@ -377,8 +377,8 @@ class CifData(SinglefileData):
         """
         parent_dict = super(CifData, self)._set_defaults
         parent_dict.update({
-            "scan_type": self._scan_types[0],
-            "parse_policy": 'eager',
+            'scan_type': self._scan_types[0],
+            'parse_policy': 'eager',
         })
 
         return parent_dict
@@ -510,8 +510,9 @@ class CifData(SinglefileData):
             except ImportError as e:
                 raise ImportError(
                     str(e) + '. You need to install the PyCifRW package.')
-            c = CifFile.ReadCif(self.get_file_abs_path())
-            # change all StarBlocks into CifBlocks
+
+            c = CifFile.ReadCif(
+                self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -603,7 +604,7 @@ class CifData(SinglefileData):
         does not yet support the CIF2 format as of 02/2018.
         See the CifFile.ReadCif function
 
-        :param scan_type: Either 'default' or 'flex' (see _scan_types)
+        :param scan_type: Either 'standard' or 'flex' (see _scan_types)
         """
         if scan_type in self._scan_types:
             self._set_attr('scan_type', scan_type)

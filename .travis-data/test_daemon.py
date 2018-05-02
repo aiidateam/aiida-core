@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import time
+
 from aiida.common.exceptions import NotExistent
 from aiida.orm import DataFactory
 from aiida.orm.data.base import Int
@@ -20,9 +21,10 @@ from workchains import ParentWorkChain
 ParameterData = DataFactory('parameter')
 
 codename = 'doubler@torquessh'
-timeout_secs = 4 * 60 # 4 minutes
-number_calculations = 30 # Number of calculations to submit
-number_workchains = 30 # Number of workchains to submit
+timeout_secs = 4 * 60  # 4 minutes
+number_calculations = 30  # Number of calculations to submit
+number_workchains = 30  # Number of workchains to submit
+
 
 def print_daemon_log():
     home = os.environ['HOME']
@@ -35,11 +37,13 @@ def print_daemon_log():
     except subprocess.CalledProcessError as e:
         print "Note: the command failed, message: {}".format(e.message)
 
+
 def jobs_have_finished(pks):
     finished_list = [load_node(pk).has_finished() for pk in pks]
     num_finished = len([_ for _ in finished_list if _])
     print "{}/{} finished".format(num_finished, len(finished_list))
     return not (False in finished_list)
+
 
 def print_logshow(pk):
     print "Output of 'verdi calculation logshow {}':".format(pk)
@@ -47,9 +51,10 @@ def print_logshow(pk):
         print subprocess.check_output(
             ["verdi", "calculation", "logshow", "{}".format(pk)],
             stderr=subprocess.STDOUT,
-            )
+        )
     except subprocess.CalledProcessError as e2:
         print "Note: the command failed, message: {}".format(e2.message)
+
 
 def validate_calculations(expected_results):
     valid = True
@@ -81,6 +86,7 @@ def validate_calculations(expected_results):
 
     return valid
 
+
 def validate_workchains(expected_results):
     valid = True
     for pk, expected_value in expected_results.iteritems():
@@ -98,47 +104,80 @@ def validate_workchains(expected_results):
 
     return valid
 
-def main():
 
+def validate_cached(cached_calcs):
+    """
+    Check that the calculations with created with caching are indeed cached.
+    """
+    return all(
+        '_aiida_cached_from' in calc.extras() and
+        calc.get_hash() == calc.get_extra('_aiida_hash')
+        for calc in cached_calcs
+    )
+
+
+def create_calculation(code, counter, inputval, use_cache=False):
+    parameters = ParameterData(dict={'value': inputval})
+    template = ParameterData(dict={
+        ## The following line adds a significant sleep time.
+        ## I set it to 1 second to speed up tests
+        ## I keep it to a non-zero value because I want
+        ## To test the case when AiiDA finds some calcs
+        ## in a queued state
+        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+        'cmdline_params': ["1"],
+        'input_file_template': "{value}",  # File just contains the value to double
+        'input_file_name': 'value_to_double.txt',
+        'output_file_name': 'output.txt',
+        'retrieve_temporary_files': ['triple_value.tmp']
+    })
+    calc = code.new_calc()
+    calc.set_max_wallclock_seconds(5 * 60)  # 5 min
+    calc.set_resources({"num_machines": 1})
+    calc.set_withmpi(False)
+    calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
+
+    calc.use_parameters(parameters)
+    calc.use_template(template)
+    calc.store_all(use_cache=use_cache)
+    expected_result = {
+        'value': 2 * inputval,
+        'retrieved_temporary_files': {
+            'triple_value.tmp': str(inputval * 3)
+        }
+    }
+    print "[{}] created calculation {}, pk={}".format(counter, calc.uuid, calc.pk)
+    return calc, expected_result
+
+
+def submit_calculation(code, counter, inputval):
+    calc, expected_result = create_calculation(
+        code=code, counter=counter, inputval=inputval
+    )
+    calc.submit()
+    print "[{}] calculation submitted.".format(counter)
+    return calc, expected_result
+
+
+def create_cache_calc(code, counter, inputval):
+    calc, expected_result = create_calculation(
+        code=code, counter=counter, inputval=inputval, use_cache=True
+    )
+    print "[{}] created cached calculation.".format(counter)
+    return calc, expected_result
+
+
+def main():
     # Submitting the Calculations
     print "Submitting {} calculations to the daemon".format(number_calculations)
     code = Code.get_from_string(codename)
     expected_results_calculations = {}
     for counter in range(1, number_calculations + 1):
         inputval = counter
-        parameters = ParameterData(dict={'value': inputval})
-        template = ParameterData(dict={
-                ## The following line adds a significant sleep time.
-                ## I set it to 1 second to speed up tests
-                ## I keep it to a non-zero value because I want
-                ## To test the case when AiiDA finds some calcs
-                ## in a queued state
-                #'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-                'cmdline_params': ["1"],
-                'input_file_template': "{value}", # File just contains the value to double
-                'input_file_name': 'value_to_double.txt',
-                'output_file_name': 'output.txt',
-                'retrieve_temporary_files': ['triple_value.tmp']
-                })
-        calc = code.new_calc()
-        calc.set_max_wallclock_seconds(5 * 60)  # 5 min
-        calc.set_resources({"num_machines": 1})
-        calc.set_withmpi(False)
-        calc.set_parser_name('simpleplugins.templatereplacer.test.doubler')
-        
-        calc.use_parameters(parameters)
-        calc.use_template(template)
-        calc.store_all()
-        print "[{}] created calculation {}, pk={}".format(
-            counter, calc.uuid, calc.dbnode.pk)
-        expected_results_calculations[calc.pk] = {
-            'value': inputval * 2,
-            'retrieved_temporary_files': {
-                'triple_value.tmp': str(inputval * 3)
-            }
-        }
-        calc.submit()
-        print "[{}] calculation submitted.".format(counter)
+        calc, expected_result = submit_calculation(
+            code=code, counter=counter, inputval=inputval
+        )
+        expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
     print "Submitting {} workchains to the daemon".format(number_workchains)
@@ -148,7 +187,6 @@ def main():
         future = submit(ParentWorkChain, inp=inp)
         expected_results_workchains[future.pid] = index * 2
 
-
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())
     pks = calculation_pks + workchains_pks
@@ -157,18 +195,18 @@ def main():
     start_time = time.time()
     exited_with_timeout = True
     while time.time() - start_time < timeout_secs:
-        time.sleep(15) # Wait a few seconds
-        
+        time.sleep(15)  # Wait a few seconds
+
         # Print some debug info, both for debugging reasons and to avoid
         # that the test machine is shut down because there is no output
 
-        print "#"*78
+        print "#" * 78
         print "####### TIME ELAPSED: {} s".format(time.time() - start_time)
-        print "#"*78
+        print "#" * 78
         print "Output of 'verdi calculation list -a':"
         try:
             print subprocess.check_output(
-                ["verdi", "calculation", "list", "-a"], 
+                ["verdi", "calculation", "list", "-a"],
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as e:
@@ -177,7 +215,7 @@ def main():
         print "Output of 'verdi work list':"
         try:
             print subprocess.check_output(
-                ['verdi', 'work', 'list'], 
+                ['verdi', 'work', 'list'],
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as e:
@@ -186,7 +224,7 @@ def main():
         print "Output of 'verdi daemon status':"
         try:
             print subprocess.check_output(
-                ["verdi", "daemon", "status"], 
+                ["verdi", "daemon", "status"],
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as e:
@@ -204,8 +242,18 @@ def main():
             timeout_secs)
         sys.exit(2)
     else:
+        # create cached calculations -- these should be FINISHED immediately
+        cached_calcs = []
+        for counter in range(1, number_calculations + 1):
+            inputval = counter
+            calc, expected_result = create_cache_calc(
+                code=code, counter=counter, inputval=inputval
+            )
+            cached_calcs.append(calc)
+            expected_results_calculations[calc.pk] = expected_result
         if (validate_calculations(expected_results_calculations)
-            and validate_workchains(expected_results_workchains)):
+                and validate_workchains(expected_results_workchains)
+                and validate_cached(cached_calcs)):
             print_daemon_log()
             print ""
             print "OK, all calculations have the expected parsed result"

@@ -506,7 +506,12 @@ class BandsData(KpointsData):
 
             if len(labels) > 1:
                 for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
-                    plot_info['path'].append([label_from, label_to])
+                    if position_to - position_from > 1:
+                        # Create a new path line only if there are at least two points,
+                        # otherwise it is probably just a discontinuity point in the band
+                        # structure (e.g. Gamma-X|Y-Gamma), where X and Y would be two
+                        # consecutive points, but there is no path between them
+                        plot_info['path'].append([label_from, label_to])
                     path_dict = {'length': position_to - position_from,
                                  'from': label_from,
                                  'to': label_to,

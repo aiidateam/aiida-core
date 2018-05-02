@@ -9,16 +9,17 @@
 ###########################################################################
 
 
-
 try:
     import ultrajson as json
     from functools import partial
+
     # double_precision = 15, to replicate what PostgreSQL numerical type is
     # using
     json_dumps = partial(json.dumps, double_precision=15)
     json_loads = partial(json.loads, precise_float=True)
 except ImportError:
     import json
+
     json_dumps = json.dumps
     json_loads = json.loads
 
@@ -41,6 +42,7 @@ from aiida.common.setup import (get_profile_config)
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
 
+
 # def is_dbenv_loaded():
 #     """
 #     Return if the environment has already been loaded or not.
@@ -56,6 +58,7 @@ def recreate_after_fork(engine):
     """
     sa.engine.dispose()
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+
 
 def reset_session(config):
     """
@@ -100,6 +103,7 @@ def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
     config = get_profile_config(settings.AIIDADB_PROFILE)
     reset_session(config)
 
+
 _aiida_autouser_cache = None
 
 
@@ -111,7 +115,7 @@ def get_automatic_user():
 
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.common.utils import get_configured_user_email
-    
+
     email = get_configured_user_email()
 
     _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
@@ -166,6 +170,7 @@ def dumps_json(d):
 
     return json_dumps(f(d))
 
+
 date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
 
@@ -195,7 +200,6 @@ def loads_json(s):
         return d
 
     return f(ret)
-
 
 
 # XXX the code here isn't different from the one use in Django. We may be able
@@ -488,9 +492,9 @@ def get_db_schema_version(config):
         return []
 
     with EnvironmentContext(
-        config,
-        script,
-        fn=get_db_version
+            config,
+            script,
+            fn=get_db_version
     ):
         script.run_env()
         return config.attributes['rev']
@@ -543,3 +547,37 @@ def alembic_command(selected_command, *args, **kwargs):
             al_command(alembic_cfg, message=args[0][0])
         else:
             al_command(alembic_cfg, *args, **kwargs)
+
+
+def delete_nodes_and_connections_sqla(pks_to_delete):
+    """
+    Delete all nodes corresponding to pks in the input.
+    :param pks_to_delete: A list, tuple or set of pks that should be deleted.
+    """
+    from aiida.backends import sqlalchemy as sa
+    from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
+    from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+
+    session = sa.get_scoped_session()
+    try:
+        # I am first making a statement to delete the membership of these nodes to groups.
+        # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
+        # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
+        # Can this be changed?
+        stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
+        session.execute(stmt)
+        # First delete links, then the Nodes, since we are not cascading deletions.
+        # Here I delete the links coming out of the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Here I delete the links pointing to the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Now I am deleting the nodes
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Here I commit this scoped session!
+        session.commit()
+    except Exception as e:
+        # If there was any exception, I roll back the session.
+        session.rollback()
+        raise e
+    finally:
+        session.close()

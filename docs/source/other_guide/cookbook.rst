@@ -3,71 +3,91 @@ AiiDA cookbook (useful code snippets)
 
 This cookbook is intended to be a collection of useful short scripts and
 code snippets that may be useful in the everyday usage of AiiDA.
-Please read carefully the nodes (if any) before running the scripts!
+Please read carefully the notes (if any) before running the scripts!
 
+Checking the queued jobs on a scheduler
+---------------------------------------
 
-Deletion of nodes
------------------
+If you want to know if which jobs are currently on the scheduler (e.g.
+to dynamically decide on which computer to submit, or to delay submission, etc.)
+you can use a modification of the following script::
 
-At the moment, we do not support natively the deletion of nodes. This is
-mainly because it is very dangerous to delete data, as this is cannot be
-undone.
+    def get_scheduler_jobs(only_current_user=True):
+        """
+        Return a list of all current jobs in the scheduler.
 
-If you really feel the need to delete some code, you can use the
-function below.
+        .. note:: an SSH connection is open and closed at every 
+            launch of this function.
 
-.. note:: **WARNING!** In order to preserve the provenance, this function
-  will delete not only the list of specified nodes,
-  but also all the children nodes! So please be sure to double check what
-  is going to be deleted before running this function.
+        :param only_current_user: if True, filters by these
+            considering only those of the current user (if this 
+            feature is supported by the scheduler plugin). Otherwise,
+            if False show all jobs. 
+        """
+        from aiida.backends.utils import get_automatic_user
 
-Here is the function, pass a list of PKs as parameter to delete those nodes
-and all the children nodes::
+        computer = Computer.get('deneb')
+        dbauthinfo = computer.get_dbauthinfo(get_automatic_user())
+        transport = dbauthinfo.get_transport()
+        scheduler = computer.get_scheduler()
+        scheduler.set_transport(transport)
 
-  def delete_nodes(pks_to_delete):
-      """
-      Delete a set of nodes. 
-      
-      :note: The script will also delete
-      all children calculations generated from the specified nodes.
-      
-      :param pks_to_delete: a list of the PKs of the nodes to delete
-      """
-      from django.db import transaction
-      from django.db.models import Q
-      from aiida.backends.djsite.db import models
-      from aiida.orm import load_node
-  
-      # Delete also all children of the given calculations
-      # Here I get a set of all pks to actually delete, including
-      # all children nodes.
-      all_pks_to_delete = set(pks_to_delete)
-      for pk in pks_to_delete:
-          all_pks_to_delete.update(models.DbNode.objects.filter(
-              parents__in=pks_to_delete).values_list('pk', flat=True))
-  
-      print "I am going to delete {} nodes, including ALL THE CHILDREN".format(
-          len(all_pks_to_delete))
-      print "of the nodes you specified. Do you want to continue? [y/N]"
-      answer = raw_input()
-      
-      if answer.strip().lower() == 'y':
-          # Recover the list of folders to delete before actually deleting
-          # the nodes.  I will delete the folders only later, so that if
-          # there is a problem during the deletion of the nodes in
-          # the DB, I don't delete the folders
-          folders = [load_node(pk).folder for pk in all_pks_to_delete]
-      
-          with transaction.atomic():
-              # Delete all links pointing to or from a given node
-              models.DbLink.objects.filter(
-                  Q(input__in=all_pks_to_delete) | 
-                  Q(output__in=all_pks_to_delete)).delete()
-              # now delete nodes
-              models.DbNode.objects.filter(pk__in=all_pks_to_delete).delete()
-      
-          # If we are here, we managed to delete the entries from the DB.
-          # I can now delete the folders
-          for f in folders:
-              f.erase()
-    
+        # this opens the SSH connection, for SSH transports
+        with transport:
+            if only_current_user:
+                remote_username = transport.whoami()
+                all_jobs = scheduler.getJobs(
+                    user=remote_username,
+                    as_dict=True)
+            else:
+                all_jobs = scheduler.getJobs(
+                    as_dict=True)
+
+        return all_jobs
+
+    if __name__ == "__main__":
+        all_jobs = get_scheduler_jobs(only_current_user=False)
+        user_jobs = get_scheduler_jobs(only_current_user=True)
+
+        print "Current user has {} jobs out of {} in the scheduler".format(
+            len(user_jobs), len(all_jobs)
+        )
+
+        print "Detailed (user's) job view:"
+        for job_id, job_info in user_jobs.iteritems():
+            print "Job ID: {}".format(job_id)
+            for k, v in job_info.iteritems():
+                if k == "raw_data": 
+                    continue
+                print "  {}: {}".format(k, v)
+            print ""
+
+The last part shows how to use the function. 
+
+.. note:: Every time you call the function, an ssh connection 
+  is executed! So be careful and run this function 
+  sparsely, or your supercomputer centre might block your account. 
+
+  Another alternative if you want to call many times the function 
+  is to pass the transport as a parameter, and keep it open from the outside.
+
+An example output would be::
+
+    Current user has 5 jobs out of 1425 in the scheduler
+    Detailed (user's) job view:
+    Job ID: 1658497
+      job_id: 1658497
+      wallclock_time_seconds: 38052
+      title: aiida-2324985
+      num_machines: 4
+      job_state: RUNNING
+      queue_name: parallel
+      num_mpiprocs: 64
+      allocated_machines_raw: r02-node[17-18,53-54]
+      submission_time: 2018-03-28 09:21:35
+      job_owner: some_remote_username
+      dispatch_time: 2018-03-28 09:21:35
+      annotation: None
+      requested_wallclock_time_seconds: 82800
+
+    (...)

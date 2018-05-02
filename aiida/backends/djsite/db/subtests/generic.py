@@ -15,7 +15,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 
 
-
 class TestComputer(AiidaTestCase):
     """
     Test the Computer class.
@@ -41,8 +40,6 @@ class TestComputer(AiidaTestCase):
         }
 
         _ = JobCalculation(**calc_params).store()
-
-        #print "Node stored with pk:",  _.dbnode.pk
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
@@ -123,28 +120,33 @@ class TestDbExtrasDjango(AiidaTestCase):
     """
     Test DbAttributes.
     """
+
     def test_replacement_1(self):
         from aiida.backends.djsite.db.models import DbExtra
 
         n1 = Node().store()
         n2 = Node().store()
 
-        DbExtra.set_value_for_node(n1.dbnode, "pippo", [1, 2, 'a'])
-        DbExtra.set_value_for_node(n1.dbnode, "pippobis", [5, 6, 'c'])
-        DbExtra.set_value_for_node(n2.dbnode, "pippo2", [3, 4, 'b'])
+        DbExtra.set_value_for_node(n1._dbnode, "pippo", [1, 2, 'a'])
+        DbExtra.set_value_for_node(n1._dbnode, "pippobis", [5, 6, 'c'])
+        DbExtra.set_value_for_node(n2._dbnode, "pippo2", [3, 4, 'b'])
 
-        self.assertEquals(n1.dbnode.extras, {'pippo': [1, 2, 'a'],
-                                             'pippobis': [5, 6, 'c']})
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
+        self.assertEquals(n1.get_extras(), {'pippo': [1, 2, 'a'],
+                                            'pippobis': [5, 6, 'c'],
+                                            '_aiida_hash': n1.get_hash()
+                                            })
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'],
+                                            '_aiida_hash': n2.get_hash()
+                                            })
 
         new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
 
-        DbExtra.reset_values_for_node(n1.dbnode, attributes=new_attrs)
-        self.assertEquals(n1.dbnode.extras, new_attrs)
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
+        DbExtra.reset_values_for_node(n1._dbnode, attributes=new_attrs)
+        self.assertEquals(n1.get_extras(), new_attrs)
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
-        DbExtra.del_value_for_node(n1.dbnode, key='newval2')
+        DbExtra.del_value_for_node(n1._dbnode, key='newval2')
         del new_attrs['newval2']
-        self.assertEquals(n1.dbnode.extras, new_attrs)
+        self.assertEquals(n1.get_extras(), new_attrs)
         # Also check that other nodes were not damaged
-        self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
+        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})

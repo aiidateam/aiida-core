@@ -95,6 +95,7 @@ def make_inline(func):
         for v in retval.itervalues():
             v.store(with_transaction=False)
 
+        c.seal()
         # Return the calculation and the return values
         return c, retval
 

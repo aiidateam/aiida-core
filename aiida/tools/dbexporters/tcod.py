@@ -390,7 +390,7 @@ def _inline_to_standalone_script(calc):
     args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
-    code_string = calc.get_attr('source_file').encode('utf-8')
+    code_string = calc.get_attr('source_code').encode('utf-8')
     if calc.get_attr('namespace', '__main__').startswith('aiida.'):
         code_string = "from {} import {}".format(calc.get_attr('namespace', '__main__'),
                                                  calc.get_attr('function_name','f'))

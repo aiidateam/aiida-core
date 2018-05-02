@@ -8,21 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
+
 install_requires = [
-    'pip==9.0.1',
-    'setuptools==36.6.0',
-    'reentry==1.0.2',
-    'wheel==0.29.0',
+    'reentry==1.2.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
     'django==1.7.11',  # upgrade to Django 1.9 does prevent AiiDA functioning
     'django-extensions==1.5.0',
     'tzlocal==1.3',
     'pytz==2014.10',
+    'pyyaml',
     'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
-    'singledispatch==3.4.0.3',
     # We need for the time being to stay with an old version
     # of celery, including the versions of the AMQP libraries below,
     # because the support for a SQLA broker has been dropped in later
@@ -70,6 +68,8 @@ install_requires = [
 ]
 
 extras_require = {
+    # Requirements for Python 2 only
+    ':python_version < "3"': ['chainmap', 'singledispatch >= 3.4.0.3'],
     # Requirements for ssh transport with authentification through Kerberos
     # token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
@@ -115,7 +115,7 @@ extras_require = {
         'PyMySQL==0.7.9',  # required by ICSD tools
         'PyCifRW==4.2.1',
         'seekpath==1.8.0',
-        'qe-tools==1.0',
+        'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
     'notebook': [
@@ -125,13 +125,16 @@ extras_require = {
     'testing': [
         'mock==2.0.0',
         'pgtest==1.1.0',
-        'sqlalchemy-diff==0.1.3'
+        'sqlalchemy-diff==0.1.3',
+        'coverage==4.5.1',
+        'codecov'
     ],
     'dev_precommit': [
         'pre-commit==1.3.0',
         'yapf==0.19.0',
         'prospector==0.12.7',
-        'pylint==1.7.4'
+        'pylint==1.7.4',
+        'toml'
     ]
 }
 

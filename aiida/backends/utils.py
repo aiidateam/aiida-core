@@ -266,6 +266,18 @@ def get_current_profile():
         return None
 
 
+def delete_nodes_and_connections(pks):
+
+    if settings.BACKEND == BACKEND_DJANGO:
+        from aiida.backends.djsite.utils import delete_nodes_and_connections_django as delete_nodes_backend
+    elif settings.BACKEND == BACKEND_SQLA:
+        from aiida.backends.sqlalchemy.utils import delete_nodes_and_connections_sqla as delete_nodes_backend
+    else:
+        raise Exception("unknown backend {}".format(settings.BACKEND))
+
+    delete_nodes_backend(pks)
+
+
 def _get_column(colname, alias):
     """
     Return the column for a given projection. Needed by the QueryBuilder

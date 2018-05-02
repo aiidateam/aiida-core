@@ -11,7 +11,7 @@ The `PBSPro`_ scheduler is supported (and it has been tested with version 12.1).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`.
 
 .. _PBSPro: http://www.pbsworks.com/Product.aspx?id=1
 
@@ -22,7 +22,7 @@ The `SLURM`_ scheduler is supported (and it has been tested with version 2.5.4).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`.
 
 .. _SLURM: https://computing.llnl.gov/linux/slurm/
 
@@ -35,7 +35,7 @@ together with some of the main variants/forks.
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`ParEnvJobResource`
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`ParEnvJobResource`.
 
 .. _SGE: http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html
 
@@ -47,10 +47,18 @@ on the CERN `lxplus` cluster.
 
 .. _LSF: https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_welcome.html
 
-PBS/Torque & Loadleveler
-------------------------
+Torque
+------
 
-PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may* also work for PBS/Torque (even if there will probably be some small issues).
+`Torque`_ (based on OpenPBS) is supported (and it has been tested with Torque v.2.4.16 from Ubuntu).
+
+All the main features are supported with this scheduler.
+
+The :ref:`JobResource <job_resources>` class to be used when setting the job resources is the :ref:`NodeNumberJobResource`.
+
+.. _Torque: http://www.adaptivecomputing.com/products/open-source/torque/
+
+
 
 Direct execution (bypassing schedulers)
 ---------------------------------------

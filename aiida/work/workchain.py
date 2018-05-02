@@ -21,7 +21,7 @@ from . import processes
 from .awaitable import *
 from .context import *
 
-__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs', '_WorkChainSpec']
+__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
 
 
 

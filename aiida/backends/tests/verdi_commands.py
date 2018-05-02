@@ -582,9 +582,8 @@ class TestVerdiDataCommands(AiidaTestCase):
                 if str(nid) not in out_str:
                     self.fail("The data objects ({}) with ids {} and {} "
                               "were not found. "
-                              .format(sub_cmd,
-                                      str(self.cmd_to_nodeid_map[sub_cmd][0]), str(
-                                          self.cmd_to_nodeid_map[sub_cmd][1])) + "The output was {}".format(out_str))
+                              .format(sub_cmd, str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                      str(self.cmd_to_nodeid_map[sub_cmd][1])) + "The output was {}".format(out_str))
 
     def test_trajectory_all_user_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -605,8 +604,7 @@ class TestVerdiDataCommands(AiidaTestCase):
                 for nid in self.cmd_to_nodeid_map[sub_cmd] + self.cmd_to_nodeid_map_for_nuser[sub_cmd]:
                     if str(nid) not in out_str:
                         self.fail("The data objects ({}) with ids {} and {} "
-                                  "were not found. ".format(sub_cmd,
-                                                            str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                  "were not found. ".format(sub_cmd, str(self.cmd_to_nodeid_map[sub_cmd][0]),
                                                             str(self.cmd_to_nodeid_map[sub_cmd][1])) +
                                   "The output was {}".format(out_str))
 
@@ -642,8 +640,7 @@ class TestVerdiDataCommands(AiidaTestCase):
                 for nid in self.cmd_to_nodeid_map[sub_cmd]:
                     if str(nid) not in out_str:
                         self.fail("The data objects ({}) with ids {} and {} "
-                                  "were not found. ".format(sub_cmd,
-                                                            str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                                  "were not found. ".format(sub_cmd, str(self.cmd_to_nodeid_map[sub_cmd][0]),
                                                             str(self.cmd_to_nodeid_map[sub_cmd][1])) +
                                   "The output was {}".format(out_str))
 

@@ -197,7 +197,7 @@ class Runner(object):
             self.rmq.continue_process(process.pid)
         else:
             # Run in this runner
-            process.start()
+            self.loop.add_callback(process.step_until_terminated)
 
         return process.calc
 

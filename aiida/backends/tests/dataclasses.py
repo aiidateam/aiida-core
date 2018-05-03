@@ -387,10 +387,6 @@ O 0.5 0.5 0.5
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """
         Checking the number of atoms per primitive/conventional cell
@@ -2153,10 +2149,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                    "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Tests roundtrip pymatgen -> StructureData -> pymatgen
@@ -2226,10 +2218,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         self.assertEquals(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
         Tests xyz -> pymatgen -> StructureData
@@ -2274,10 +2262,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                 [5.77, 5.89, 5.73])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_partial_occ_and_spin(self):
         """
         Tests pymatgen -> StructureData, with partial occupancies and spins.
@@ -2310,8 +2294,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             StructureData(pymatgen=a)
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and StrictVersion(get_pymatgen_version()) != StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_multiple_kinds_partial_occupancies(self):
         """
         Tests that a structure with multiple sites with the same element but different
@@ -2332,8 +2314,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         structure = StructureData(pymatgen=a)
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and StrictVersion(get_pymatgen_version()) != StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_multiple_kinds_alloy(self):
         """
         Tests that a structure with multiple sites with the same alloy symbols but different
@@ -2364,10 +2344,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_1(self):
         """
         Tests the check of periodic boundary conditions.
@@ -2385,10 +2361,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_2(self):
         """
         Tests ASE -> StructureData -> pymatgen
@@ -2422,10 +2394,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_3(self):
         """
         Tests the conversion of StructureData to pymatgen's Molecule
@@ -2455,10 +2423,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [3.0, 3.0, 3.0]])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_roundtrip(self):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData
@@ -2484,10 +2448,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                           [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_roundtrip_kindnames(self):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData
@@ -2516,10 +2476,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                           [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_roundtrip_spins(self):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData
@@ -2549,10 +2505,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                           [(0.,0.,0.),(2.8,0,2.8),(0,2.8,2.8),(2.8,2.8,0),(2.8,2.8,2.8),(2.8,0,0),(0,2.8,0),(0,0,2.8)])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_roundtrip_partial_occ(self):
         """
         Tests roundtrip StructureData -> pymatgen -> StructureData
@@ -2613,10 +2565,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            (2., 1., 9.5)])
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
-    @unittest.skipIf(has_pymatgen() and
-                     StrictVersion(get_pymatgen_version()) !=
-                     StrictVersion('4.5.3'),
-                     "Mismatch in the version of pymatgen (expected 4.5.3)")
     def test_partial_occ_and_spin(self):
         """
         Tests StructureData -> pymatgen, with partial occupancies and spins.

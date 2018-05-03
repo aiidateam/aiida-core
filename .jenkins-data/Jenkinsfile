@@ -24,7 +24,7 @@ pipeline {
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins-data'
-            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp'
+            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp:exec'
 	    additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }
@@ -76,9 +76,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'pip install --user .[rest,docs,atomic_tools,testing,dev_precommit]'
-                // This is needed while fixing #1204
-                sh 'pip install --user -r requirements.txt'
+                sh 'pip install --user .[all]'
                 // To be able to do ssh localhost
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
                 sh 'cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys'

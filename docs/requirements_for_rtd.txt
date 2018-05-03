@@ -57,7 +57,6 @@ python-mimeparse==1.6.0
 pytz==2018.4
 qe-tools==1.1.0
 reentry==1.2.0
-scipy==1.0.1
 seekpath==1.8.1
 singledispatch >= 3.4.0.3
 six==1.11.0

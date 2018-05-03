@@ -175,7 +175,14 @@ pipeline {
         // Note that I had problems with email, I don't know if it is a configuration problem
         // or a missing plugin.
         changed {
-            echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.currentResult}!"
+            script {
+                if (currentBuild.getPreviousBuild()) {
+                    echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.currentResult}."
+                }
+                else {
+                    echo "This is the first build, and its status is: ${currentBuild.currentResult}."
+                }
+            }
         } 
     } 
 }

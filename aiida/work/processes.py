@@ -212,8 +212,8 @@ class Process(plumpy.Process):
     def on_entered(self, from_state):
         super(Process, self).on_entered(from_state)
         self.update_node_state(self._state)
-        if self._enable_persistence and not self._state.is_terminal() and not self._state.label == ProcessState.CREATED:
-            self.call_soon(self.runner.persister.save_checkpoint, self)
+        if self._enable_persistence and not self._state.is_terminal():
+            self.runner.persister.save_checkpoint(self)
 
     @override
     def on_terminated(self):

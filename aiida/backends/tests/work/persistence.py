@@ -56,7 +56,6 @@ class TestAiiDAPersister(AiidaTestCase):
 
     def test_delete_checkpoint(self):
         process = DummyProcess()
-        self.assertEquals(process.calc.checkpoint, None)
 
         self.persister.save_checkpoint(process)
         self.assertTrue(isinstance(process.calc.checkpoint, basestring))

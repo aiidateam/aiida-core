@@ -20,6 +20,14 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.work import test_utils, utils
 
 
+class NameSpacedProcess(work.Process):
+
+    @classmethod
+    def define(cls, spec):
+        super(NameSpacedProcess, cls).define(spec)
+        spec.input('some.name.space.a', valid_type=Int)
+
+
 class TestProcessNamespace(AiidaTestCase):
 
     def setUp(self):
@@ -35,14 +43,6 @@ class TestProcessNamespace(AiidaTestCase):
         Test that inputs in nested namespaces are properly validated and the link labels
         are properly formatted by connecting the namespaces with underscores
         """
-
-        class NameSpacedProcess(work.Process):
-
-            @classmethod
-            def define(cls, spec):
-                super(NameSpacedProcess, cls).define(spec)
-                spec.input('some.name.space.a', valid_type=Int)
-
         proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts

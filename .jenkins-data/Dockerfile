@@ -58,6 +58,7 @@ RUN cp /etc/postgresql/9.5/main/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
 ## Also install openssh-server needed for AiiDA tests,
 ## and openmpi-bin to have 'mpirun',
 ## and rabbitmq-server needed by AiiDA as the event queue
+## and libkrb5-dev for gssapi.h
 RUN apt-get update \
     && apt-get -y install \
     sudo \
@@ -65,6 +66,7 @@ RUN apt-get update \
     openssh-server \
     openmpi-bin \
     rabbitmq-server \
+    libkrb5-dev \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean all
 

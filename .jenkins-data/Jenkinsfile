@@ -24,7 +24,7 @@ pipeline {
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins-data'
-            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp'
+            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp:exec'
 	    additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }

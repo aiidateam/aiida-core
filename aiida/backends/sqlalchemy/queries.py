@@ -17,7 +17,7 @@ class QueryManagerSQLA(AbstractQueryManager):
 
     def get_creation_statistics(
             self,
-            user_email=None
+            user_pk=None
     ):
         """
         Return a dictionary with the statistics of node creation, summarized by day,
@@ -25,8 +25,8 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.
 
-        :param user_email: If None (default), return statistics for all users.
-            If an email is specified, return only the statistics for the given user.
+        :param user_pk: If None (default), return statistics for all users.
+            If user pk is specified, return only the statistics for the given user.
 
         :return: a dictionary as
             follows::
@@ -48,16 +48,30 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         retdict = {}
 
-        # Total number of nodes
-        retdict["total"] = s.query(m.node.DbNode).count()
+        if user_pk is None:
 
-        # Nodes per type
-        retdict["types"] = dict(s.query(m.node.DbNode.type.label('typestring'),
-            sa.func.count(m.node.DbNode.id)).group_by('typestring').all())
+            # Total number of nodes
+            retdict["total"] = s.query(m.node.DbNode).count()
 
-        # Nodes created per day
-        stat = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
-                       sa.func.count(m.node.DbNode.id)).group_by('cday').order_by('cday').all()
+            # Nodes per type
+            retdict["types"] = dict(s.query(m.node.DbNode.type.label('typestring'),
+                sa.func.count(m.node.DbNode.id)).group_by('typestring').all())
+
+            # Nodes created per day
+            stat = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
+                           sa.func.count(m.node.DbNode.id)).group_by('cday').order_by('cday').all()
+
+        else:
+            # Total number of nodes
+            retdict["total"] = s.query(m.node.DbNode).filter(m.node.DbNode.user_id == user_pk).count()
+
+            # Nodes per type
+            retdict["types"] = dict(s.query(m.node.DbNode.type.label('typestring'),
+                                            sa.func.count(m.node.DbNode.id)).filter(m.node.DbNode.user_id == user_pk).group_by('typestring').all())
+
+            # Nodes created per day
+            stat = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
+                           sa.func.count(m.node.DbNode.id)).filter(m.node.DbNode.user_id == user_pk).group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
         retdict["ctime_by_day"] = ctime_by_day

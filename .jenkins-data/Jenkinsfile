@@ -114,6 +114,7 @@ pipeline {
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
+                        sh '.jenkins-data/test_rpn.sh'
                     }
                 }
                 stage('Test-SQLAlchemy') {
@@ -132,6 +133,7 @@ pipeline {
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
+                        sh '.jenkins-data/test_rpn.sh'
                     }
                 }
             }

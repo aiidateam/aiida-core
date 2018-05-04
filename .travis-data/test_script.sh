@@ -15,21 +15,24 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
-        DATA_DIR="${TRAVIS_BUILD_DIR}/.travis-data"
-        # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
-        export PYTHONPATH="${PYTHONPATH}:${DATA_DIR}"
+        TRAVIS_DATA_DIR="${TRAVIS_BUILD_DIR}/.travis-data"
+        JENKINDS_DATA_DIR="${TRAVIS_BUILD_DIR}/.jenkins-data"
 
-	echo "DATA DIR: '${DATA_DIR}'"
-	echo "Directory content:"
-	ls "${DATA_DIR}"
+        # Add the .travis-data and .jenkins-data folder to the python path so workchains within it can be found by the daemon
+        export PYTHONPATH="${PYTHONPATH}:${TRAVIS_DATA_DIR}"
+        export PYTHONPATH="${PYTHONPATH}:${JENKINDS_DATA_DIR}"
 
-	# Clean up coverage file (there shouldn't be any, but just in case)
-	coverage erase
-	
+        echo "TRAVIS_DATA_DIR: '${TRAVIS_DATA_DIR}'"
+        echo "Directory content:"
+        ls "${TRAVIS_DATA_DIR}"
+
+        # Clean up coverage file (there shouldn't be any, but just in case)
+        coverage erase
+
         # Run preliminary tests
-        coverage run -a "${DATA_DIR}/test_setup.py"
-        coverage run -a "${DATA_DIR}/test_fixtures.py"
-        coverage run -a "${DATA_DIR}/test_plugin_testcase.py"
+        coverage run -a "${TRAVIS_DATA_DIR}/test_setup.py"
+        coverage run -a "${TRAVIS_DATA_DIR}/test_fixtures.py"
+        coverage run -a "${TRAVIS_DATA_DIR}/test_plugin_testcase.py"
 
         # Run verdi devel tests
         VERDI=`which verdi`
@@ -39,15 +42,14 @@ case "$TEST_TYPE" in
         # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
 
         # In case of error, I do some debugging, but I make sure I anyway exit with an exit error
-        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${DATA_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${TRAVIS_DATA_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
 
-        # run the sphinxext tests, append to coverage file, do not
-	# create final report
+        # Run the sphinxext tests, append to coverage file, do not create final report
         pytest --cov aiida --cov-append --cov-report= -vv aiida/sphinxext/tests
 
-	# Now, we run all the tests and we manually create the final report
-	# Note that this is only the partial coverage for this backend
-	coverage report
+        # Now, we run all the tests and we manually create the final report
+        # Note that this is only the partial coverage for this backend
+        coverage report
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

@@ -10,8 +10,8 @@ if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 if [[ "$TEST_TYPE" == "tests" ]]
 then
     # Add the .travis-data and .jenkins-data folder to the python path such that defined workchains can be found by the daemon
-    export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data
-    export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/../.jenkins-data
+    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data"
+    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.jenkins-data/polish"
 
     # Start the daemon for the correct profile
     verdi -p $TEST_AIIDA_BACKEND daemon start

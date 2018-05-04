@@ -22,4 +22,4 @@ coverage/
 .coverage
 
 # Files created by Jenkins tests
-.jenkins-data/polish/workchains/polish*
+.jenkins-data/polish/polish_workchains/polish*

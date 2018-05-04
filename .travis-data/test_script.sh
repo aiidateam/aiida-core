@@ -16,11 +16,11 @@ case "$TEST_TYPE" in
         ;;
     tests)
         TRAVIS_DATA_DIR="${TRAVIS_BUILD_DIR}/.travis-data"
-        JENKINDS_DATA_DIR="${TRAVIS_BUILD_DIR}/.jenkins-data"
+        JENKINS_DATA_DIR="${TRAVIS_BUILD_DIR}/.jenkins-data"
 
         # Add the .travis-data and .jenkins-data folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${TRAVIS_DATA_DIR}"
-        export PYTHONPATH="${PYTHONPATH}:${JENKINDS_DATA_DIR}"
+        export PYTHONPATH="${PYTHONPATH}:${JENKINS_DATA_DIR}"
 
         echo "TRAVIS_DATA_DIR: '${TRAVIS_DATA_DIR}'"
         echo "Directory content:"

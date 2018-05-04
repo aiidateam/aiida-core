@@ -60,7 +60,7 @@ def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout
         expression = generate()
 
     valid, error = validate(expression)
-    
+
     if not valid:
         click.echo("the expression '{}' is invalid: {}".format(expression, error))
         sys.exit(1)
@@ -75,7 +75,7 @@ def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout
 
     if not dry_run:
         try:
-            workchain_module = 'workchains.{}'.format(filename.replace('.py', ''))
+            workchain_module = 'polish_workchains.{}'.format(filename.replace('.py', ''))
             workchains = importlib.import_module(workchain_module)
         except ImportError:
             click.echo('could not import the {} module'.format(workchain_module))

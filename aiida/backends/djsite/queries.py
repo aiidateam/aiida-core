@@ -115,30 +115,32 @@ class QueryManagerDjango(AbstractQueryManager):
 
         retdict = {}
 
+        total_query = s.query(dummy_model.DbNode)
+        types_query = s.query(dummy_model.DbNode.type.label('typestring'),
+                                            sa.func.count(dummy_model.DbNode.id))
+        stat_query = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
+                           sa.func.count(dummy_model.DbNode.id))
+
         if user_pk is None:
 
             # Total number of nodes
-            retdict["total"] = s.query(dummy_model.DbNode).count()
+            retdict["total"] = total_query.count()
 
             # Nodes per type
-            retdict["types"] = dict(s.query(dummy_model.DbNode.type.label('typestring'),
-                                            sa.func.count(dummy_model.DbNode.id)).group_by('typestring').all())
+            retdict["types"] = dict(types_query.group_by('typestring').all())
 
             # Nodes created per day
-            stat = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
-                           sa.func.count(dummy_model.DbNode.id)).group_by('cday').order_by('cday').all()
+            stat = stat_query.group_by('cday').order_by('cday').all()
 
         else:
             # Total number of nodes
-            retdict["total"] = s.query(dummy_model.DbNode).filter(dummy_model.DbNode.user_id == user_pk).count()
+            retdict["total"] = total_query.filter(dummy_model.DbNode.user_id == user_pk).count()
 
             # Nodes per type
-            retdict["types"] = dict(s.query(dummy_model.DbNode.type.label('typestring'),
-                                            sa.func.count(dummy_model.DbNode.id)).filter(dummy_model.DbNode.user_id == user_pk).group_by('typestring').all())
+            retdict["types"] = dict(types_query.filter(dummy_model.DbNode.user_id == user_pk).group_by('typestring').all())
 
             # Nodes created per day
-            stat = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
-                           sa.func.count(dummy_model.DbNode.id)).filter(dummy_model.DbNode.user_id == user_pk).group_by('cday').order_by('cday').all()
+            stat = stat_query.filter(dummy_model.DbNode.user_id == user_pk).group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
         retdict["ctime_by_day"] = ctime_by_day

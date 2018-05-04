@@ -42,8 +42,12 @@ def launch(expression, code, use_calculations, use_workfunctions, dry_run):
 
     If no expression is specified, a random one will be generated that adheres to these rules
     """
+    from aiida.orm import Code
     from aiida.orm.data.str import Str
     from aiida.work.launch import run_get_node, submit
+
+    if use_calculations and not isinstance(code, Code):
+        raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')
 
     if expression is None:
         expression = generate()
@@ -67,13 +71,20 @@ def launch(expression, code, use_calculations, use_workfunctions, dry_run):
             click.echo('could not import the {} module'.format(workchain_module))
             sys.exit(1)
 
-        result, workchain = run_get_node(workchains.Polish00WorkChain, code=code, operands=Str(' '.join(stack)))
+        inputs = {
+            'operands': Str(' '.join(stack))
+        }
+
+        if code:
+            inputs['code'] = code
+
+        result, workchain = run_get_node(workchains.Polish00WorkChain, **inputs)
 
     click.echo('Expression: {}'.format(expression))
     click.echo('Evaluated : {}'.format(evaluated))
 
     if not dry_run:
-        click.echo('Workchain : {} <{}>'.format(result['result'], result['result'].pk))
+        click.echo('Workchain : {} <{}>'.format(result['result'], workchain.pk))
 
         if result['result'] != evaluated:
             click.secho('Failed: ', fg='red', bold=True, nl=False)

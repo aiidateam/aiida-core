@@ -46,12 +46,15 @@ def validate_code(callback_kwargs, ctx, param, value):
     :param value: a Code label
     :returns: a Code instance
     """
-    from aiida.common.exceptions import NotExistent, LoadingPluginFailed, MissingPluginError
+    from aiida.common.exceptions import InputValidationError, NotExistent, LoadingPluginFailed, MissingPluginError
     from aiida.orm import Code, CalculationFactory
+
+    if value is None and not param.required:
+        return value
 
     try:
         code = Code.get_from_string(value)
-    except NotExistent as exception:
+    except (InputValidationError, NotExistent) as exception:
         raise click.BadParameter("failed to load the code with the label '{}'\n{}".format(value, exception))
 
     if 'entry_point' in callback_kwargs:

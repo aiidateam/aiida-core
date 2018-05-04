@@ -6,7 +6,7 @@ class ${class_name}(WorkChain):
     @classmethod
     def define(cls, spec):
         super(${class_name}, cls).define(spec)
-        spec.input('code', valid_type=Code)
+        spec.input('code', valid_type=Code, required=False)
         spec.input('operands', valid_type=Str)
         spec.outline(
 ${outline}
@@ -102,11 +102,12 @@ ${outline}
         operands = Str(' '.join([str(o) for o in self.ctx.operands]))
 
         inputs = {
-            'code': self.inputs.code,
             'operands': operands,
         }
 
-        print operand
+        if 'code' in self.inputs:
+            inputs['code'] = self.inputs.code
+
         for i in range(operand):
             running = self.submit(self.ctx.child_class, **inputs)
             self.report('launching {}<{}> with operands {}'.format(self.ctx.child_class.__name__, running.pk, operands.value))          

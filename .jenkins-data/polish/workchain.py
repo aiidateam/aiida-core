@@ -147,6 +147,8 @@ def write_workchain(outlines, directory=None, filename=None):
 
     if filename is None:
         filename = os.path.join(directory, 'polish.py')
+    else:
+        filename = os.path.join(directory, filename)
 
     try:
         os.makedirs(directory)

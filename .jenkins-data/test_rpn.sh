@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 NUMBER_WORKCHAINS=5
-TIMEOUT=240
+TIMEOUT=600
 CODE='add@torquessh'
 
 # Be verbose, and stop with error as soon there's one

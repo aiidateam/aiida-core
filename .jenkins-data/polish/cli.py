@@ -18,9 +18,11 @@ from aiida.utils.cli import options
     help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state')
 @click.option('-t', '--timeout', type=click.INT, default=60, show_default=True,
     help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out')
+@click.option('-m', '--modulo', type=click.INT, default=1000000, show_default=True,
+    help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow')
 @click.option('-n', '--dry-run', is_flag=True, default=False,
     help='Only evaluate the expression and generate the workchain but do not launch it')
-def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout, dry_run, daemon):
+def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout, modulo, dry_run, daemon):
     """
     Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
     a workchain that encodes the sequence of operators and gets the stack of operands as an input. Multiplications
@@ -48,6 +50,7 @@ def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout
     import time
     import uuid
     from aiida.orm import Code
+    from aiida.orm.data.int import Int
     from aiida.orm.data.str import Str
     from aiida.work.launch import run_get_node, submit
     from expression import generate, validate, evaluate
@@ -66,7 +69,7 @@ def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout
         sys.exit(1)
 
     filename = 'polish_{}.py'.format(str(uuid.uuid4().hex))
-    evaluated = evaluate(expression)
+    evaluated = evaluate(expression, modulo)
     outlines, stack = generate_outlines(expression)
     outlines_string = format_outlines(outlines, use_calculations, use_workfunctions)
     workchain_filename = write_workchain(outlines_string, filename=filename)
@@ -82,6 +85,7 @@ def launch(expression, code, use_calculations, use_workfunctions, sleep, timeout
             sys.exit(1)
 
         inputs = {
+            'modulo': Int(modulo),
             'operands': Str(' '.join(stack))
         }
 

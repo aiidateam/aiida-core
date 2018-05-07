@@ -96,7 +96,7 @@ def validate(expression):
     return True, None
 
 
-def evaluate(expression):
+def evaluate(expression, modulo=None):
     """
     Evaluate an expression in Reverse Polish Notation. There are a few limitations:
 
@@ -120,4 +120,7 @@ def evaluate(expression):
             result = op(x, y)
             stack.appendleft(unicode(result))
 
-    return int(result)
+    if modulo is not None:
+        return int(result % modulo)
+    else:
+        return int(result)

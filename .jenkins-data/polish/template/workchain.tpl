@@ -8,6 +8,7 @@ class ${class_name}(WorkChain):
         super(${class_name}, cls).define(spec)
         spec.input('code', valid_type=Code, required=False)
         spec.input('operands', valid_type=Str)
+        spec.input('modulo', valid_type=Int)
         spec.outline(
 ${outline}
         )
@@ -50,12 +51,12 @@ ${outline}
     def add(self):
         operand = self.ctx.operands.pop(0)
         self.report('summing the inputs {} and {}'.format(self.ctx.result, operand))
-        self.ctx.result = self.ctx.result + abs(operand) * prod(self.ctx.iterators_sign)
+        self.ctx.result = (self.ctx.result + abs(operand) * prod(self.ctx.iterators_sign)) % self.inputs.modulo.value
 
     def subtract(self):
         operand = self.ctx.operands.pop(0)
         self.report('subtracting the inputs {} and {}'.format(self.ctx.result, operand))
-        self.ctx.result = self.ctx.result - abs(operand) * prod(self.ctx.iterators_sign)
+        self.ctx.result = (self.ctx.result - abs(operand) * prod(self.ctx.iterators_sign)) % self.inputs.modulo.value
 
     def add_calculation(self):
         operand = self.ctx.operands.pop(0)
@@ -80,7 +81,7 @@ ${outline}
             return self.ERROR_NO_JOB_CALCULATION
 
         try:
-            self.ctx.result = calculation.out.sum
+            self.ctx.result = calculation.out.sum % self.inputs.modulo
         except AttributeError as exception:
             self.report('no output node found')
             return self.ERROR_NO_OUTPUT_NODE
@@ -89,19 +90,20 @@ ${outline}
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
         self.report('running add workfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
-        self.ctx.result = subtract(self.ctx.result, Int(operand))
+        self.ctx.result = add_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
 
     def subtract_workfunction(self):
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
         self.report('running subtract workfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
-        self.ctx.result = subtract(self.ctx.result, Int(operand))
+        self.ctx.result = subtract_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
 
     def raise_power(self):
         operand = self.ctx.operands.pop(0)
         operands = Str(' '.join([str(o) for o in self.ctx.operands]))
 
         inputs = {
+            'modulo': self.inputs.modulo,
             'operands': operands,
         }
 
@@ -114,12 +116,18 @@ ${outline}
             self.to_context(workchains=append_(running))
 
     def post_raise_power(self):
-        results = []
+        sub_result = prod(self.ctx.iterators_sign)
         for workchain in self.ctx.workchains:
-            results.append(workchain.out.result.value)
+            sub_result *= workchain.out.result.value
+            sub_result %= self.inputs.modulo.value
 
+        self.ctx.result += sub_result
+
+        # Because self.inputs.modulo is of type Int, the result will automatically be converted to Int as well
+        self.ctx.result %= self.inputs.modulo
+
+        # Clear the list so we do not double count elsewhere
         self.ctx.workchains = []
-        self.ctx.result += Int(prod(results) * prod(self.ctx.iterators_sign))
 
     def results(self):
         if not isinstance(self.ctx.result, Int):

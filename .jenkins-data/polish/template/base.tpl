@@ -31,9 +31,9 @@ def get_default_options(num_machines=1, max_wallclock_seconds=1800):
 
 
 @workfunction
-def add(x, y):
-    return x + y
+def add_modulo(x, y, modulo):
+    return (x + y) % modulo
 
 @workfunction
-def subtract(x, y):
-    return x - y
+def subtract_modulo(x, y, modulo):
+    return (x - y) % modulo

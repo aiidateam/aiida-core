@@ -31,10 +31,18 @@ class UserTranslator(BaseTranslator):
 
     _result_type = __label__
 
+    _default_projections = None
+
     # Extract the default projections from custom_schema if they are defined
-    if 'columns' in custom_schema:
-        _default_projections = custom_schema['columns'][__label__]
-    else:
+    if custom_schema is not None:
+        try:
+            # check if schema is defined for given node type
+            if __label__ in custom_schema['columns'].keys():
+                _default_projections = custom_schema['columns'][__label__]
+        except KeyError:
+            pass
+
+    if _default_projections is None:
         # send only white listed keys in default response for user for security reasons
         _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
 

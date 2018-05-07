@@ -59,11 +59,18 @@ class NodeTranslator(BaseTranslator):
         # basic initialization
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
+        self._default_projections = None
+
         # Extract the default projections from custom_schema if they are defined
-        if self.custom_schema is not None and 'columns' in self.custom_schema:
-            self._default_projections = self.custom_schema['columns'][
-                self.__label__]
-        else:
+        if self.custom_schema is not None:
+            try:
+                # check if schema is defined for given node type
+                if self.__label__ in self.custom_schema['columns'].keys():
+                    self._default_projections = self.custom_schema['columns'][self.__label__]
+            except KeyError:
+                pass
+
+        if self._default_projections is None:
             self._default_projections = ['**']
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding

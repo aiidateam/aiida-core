@@ -44,6 +44,8 @@ def print_node_summary(node):
 
     :params node: a Node instance
     """
+    from plumpy import ProcessState
+
     table_headers = ['Property', 'Value']
     table = []
     table.append(['type', node.__class__.__name__])
@@ -54,16 +56,12 @@ def print_node_summary(node):
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
 
-    from plumpy import ProcessState
     try:
         table.append(['process state', ProcessState(node.process_state)])
-    except AttributeError:
-        pass
+    except ValueError:
+        table.append(['process state', node.process_state])
 
-    try:
-        table.append(['finish status', node.finish_status])
-    except AttributeError:
-        pass
+    table.append(['finish status', node.finish_status])
 
     try:
         computer = node.get_computer()

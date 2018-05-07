@@ -1,0 +1,8 @@
+add
+simple script that adds two numbers
+False
+simpleplugins.arithmetic.add
+torquessh
+/usr/local/bin/add.sh
+
+

@@ -13,7 +13,7 @@ then
     psql -h localhost -c "CREATE DATABASE test_$TEST_AIIDA_BACKEND;" -U postgres -w
 
     # Here I setup the actual AiiDA profile, non-interactively
-    verdi -p $TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
+    verdi -p $TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/repository_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password
 
     # Here I setup the test AiiDA profile, non-interactively
     verdi -p test_$TEST_AIIDA_BACKEND setup --non-interactive --backend=$TEST_AIIDA_BACKEND --email="aiida@localhost" --db_host="localhost" --db_port=5432 --db_name="test_$TEST_AIIDA_BACKEND" --db_user=postgres --db_pass='' --repo="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --no-password

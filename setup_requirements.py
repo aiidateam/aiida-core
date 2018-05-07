@@ -111,6 +111,7 @@ extras_require = {
         'yapf==0.21.0',
         'prospector==0.12.7',
         'pylint==1.8.4',
+        'pep8-naming==0.3.3',
         'toml==0.9.4'
     ],
     'dev_sphinxext': [

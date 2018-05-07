@@ -31,10 +31,18 @@ class GroupTranslator(BaseTranslator):
 
     _result_type = __label__
 
+    _default_projections = None
+
     # Extract the default projections from custom_schema if they are defined
-    if __label__ in custom_schema['columns'].keys():
-        _default_projections = custom_schema['columns'][__label__]
-    else:
+    if custom_schema is not None:
+        try:
+            # check if schema is defined for given node type
+            if __label__ in custom_schema['columns'].keys():
+                _default_projections = custom_schema['columns'][__label__]
+        except KeyError:
+            pass
+
+    if _default_projections is None:
         _default_projections = ['**']
 
 

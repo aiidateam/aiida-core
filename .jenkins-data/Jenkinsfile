@@ -19,13 +19,13 @@ pipeline {
     agent {
         // Documentation: https://jenkins.io/doc/book/pipeline/syntax/#agent
         // Note: we reuse the pip cache for speed
-	// TMPFS: we make sure that postgres is different for every run,
-	//   but also runs fast
+        // TMPFS: we make sure that postgres is different for every run,
+        //   but also runs fast
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins-data'
             args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp:exec'
-	    additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
+            additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }
     environment {
@@ -50,11 +50,11 @@ pipeline {
                 sh 'sudo /etc/init.d/rabbitmq-server restart'
                 
                 // Make sure the tmpfs folder is owned by postgres, and that it
-		// contains the right data
+                // contains the right data
                 sh 'sudo chown postgres:postgres /var/lib/postgresql-tmp'
-		sh 'sudo mv /var/lib/postgresql/* /var/lib/postgresql-tmp/'
-		sh 'sudo rmdir /var/lib/postgresql/'
-		sh 'sudo ln -s /var/lib/postgresql-tmp/ /var/lib/postgresql'
+                sh 'sudo mv /var/lib/postgresql/* /var/lib/postgresql-tmp/'
+                sh 'sudo rmdir /var/lib/postgresql/'
+                sh 'sudo ln -s /var/lib/postgresql-tmp/ /var/lib/postgresql'
 
                 // (re)start postgres (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/postgresql restart'
@@ -114,6 +114,7 @@ pipeline {
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
+                        sh '.jenkins-data/test_rpn.sh'
                     }
                 }
                 stage('Test-SQLAlchemy') {
@@ -132,6 +133,7 @@ pipeline {
                         sh '.travis-data/setup_profiles.sh'
                         sh '.travis-data/before_script.sh'
                         sh '.travis-data/test_script.sh'
+                        sh '.jenkins-data/test_rpn.sh'
                     }
                 }
             }
@@ -146,9 +148,9 @@ pipeline {
             //        // note: junit does not like the XML output, it says
             //        // 'None of the test reports contained any result'
             //        // (maybe because it's coverage and not testing?)
-	    //        // For now I'm not doing it as it's ~3 MB every time
-	    //	      // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
-	    //        // coverage folder, first
+            //        // For now I'm not doing it as it's ~3 MB every time
+            //        // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
+            //        // coverage folder, first
             //        archiveArtifacts artifacts: 'coverage/html.zip', fingerprint: true
             //    }
             // }

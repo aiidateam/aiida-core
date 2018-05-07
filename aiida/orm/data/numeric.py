@@ -69,6 +69,14 @@ class NumericType(BaseType):
     def __ge__(self, other):
         return self >= other
 
+    @_left_operator
+    def __mod__(self, other):
+        return self % other
+
+    @_right_operator
+    def __rmod__(self, other):
+        return other % self
+
     def __float__(self):
         return float(self.value)
 

@@ -54,26 +54,19 @@ class QueryManagerSQLA(AbstractQueryManager):
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
                            sa.func.count(m.node.DbNode.id))
 
-        if user_pk is None:
+        if user_pk is not None:
+            total_query = total_query.filter(m.node.DbNode.user_id == user_pk)
+            types_query = types_query.filter(m.node.DbNode.user_id == user_pk)
+            stat_query = stat_query.filter(m.node.DbNode.user_id == user_pk)
 
-            # Total number of nodes
-            retdict["total"] = total_query.count()
+        # Total number of nodes
+        retdict["total"] = total_query.count()
 
-            # Nodes per type
-            retdict["types"] = dict(types_query.group_by('typestring').all())
+        # Nodes per type
+        retdict["types"] = dict(types_query.group_by('typestring').all())
 
-            # Nodes created per day
-            stat = stat_query.group_by('cday').order_by('cday').all()
-
-        else:
-            # Total number of nodes
-            retdict["total"] = total_query.filter(m.node.DbNode.user_id == user_pk).count()
-
-            # Nodes per type
-            retdict["types"] = dict(types_query.filter(m.node.DbNode.user_id == user_pk).group_by('typestring').all())
-
-            # Nodes created per day
-            stat = stat_query.filter(m.node.DbNode.user_id == user_pk).group_by('cday').order_by('cday').all()
+        # Nodes created per day
+        stat = stat_query.group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
         retdict["ctime_by_day"] = ctime_by_day

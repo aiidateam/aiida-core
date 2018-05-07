@@ -31,7 +31,7 @@ class ComputerTranslator(BaseTranslator):
     _result_type = __label__
 
     # Extract the default projections from custom_schema if they are defined
-    if 'columns' in custom_schema:
+    if __label__ in custom_schema['columns'].keys():
         _default_projections = custom_schema['columns'][__label__]
     else:
         _default_projections = ['**']

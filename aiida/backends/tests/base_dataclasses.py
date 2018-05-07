@@ -107,38 +107,38 @@ class TestFloat(AiidaTestCase):
     def test_create(self):
         a = Float()
         # Check that initial value is zero
-        self.assertEqual(a.value, 0.0)
+        self.assertAlmostEqual(a.value, 0.0)
 
         f = Float(6.0)
-        self.assertEqual(f.value, 6.)
-        self.assertEqual(f, Float(6.0))
+        self.assertAlmostEqual(f.value, 6.)
+        self.assertAlmostEqual(f, Float(6.0))
 
         i = Int()
-        self.assertEqual(i.value, 0)
+        self.assertAlmostEqual(i.value, 0)
         i = Int(6)
-        self.assertEqual(i.value, 6)
-        self.assertEqual(f, i)
+        self.assertAlmostEqual(i.value, 6)
+        self.assertAlmostEqual(f, i)
 
         b = Bool()
-        self.assertEqual(b.value, False)
+        self.assertAlmostEqual(b.value, False)
         b = Bool(False)
-        self.assertEqual(b.value, False)
-        self.assertEqual(b.value, get_false_node())
+        self.assertAlmostEqual(b.value, False)
+        self.assertAlmostEqual(b.value, get_false_node())
         b = Bool(True)
-        self.assertEqual(b.value, True)
-        self.assertEqual(b.value, get_true_node())
+        self.assertAlmostEqual(b.value, True)
+        self.assertAlmostEqual(b.value, get_true_node())
 
         s = Str()
-        self.assertEqual(s.value, "")
+        self.assertAlmostEqual(s.value, "")
         s = Str('Hello')
-        self.assertEqual(s.value, 'Hello')
+        self.assertAlmostEqual(s.value, 'Hello')
 
     def test_load(self):
         for t in self.all_types:
             node = t()
             node.store()
             loaded = load_node(node.pk)
-            self.assertEqual(node, loaded)
+            self.assertAlmostEqual(node, loaded)
 
     def test_add(self):
         a = Float(4)
@@ -146,25 +146,25 @@ class TestFloat(AiidaTestCase):
         # Check adding two db Floats
         res = a + b
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 9.0)
+        self.assertAlmostEqual(res, 9.0)
 
         # Check adding db Float and native (both ways)
         res = a + 5.0
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 9.0)
+        self.assertAlmostEqual(res, 9.0)
 
         res = 5.0 + a
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 9.0)
+        self.assertAlmostEqual(res, 9.0)
 
         # Inplace
         a = Float(4)
         a += b
-        self.assertEqual(a, 9.0)
+        self.assertAlmostEqual(a, 9.0)
 
         a = Float(4)
         a += 5
-        self.assertEqual(a, 9.0)
+        self.assertAlmostEqual(a, 9.0)
 
     def test_mul(self):
         a = Float(4)
@@ -172,32 +172,44 @@ class TestFloat(AiidaTestCase):
         # Check adding two db Floats
         res = a * b
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 20.0)
+        self.assertAlmostEqual(res, 20.0)
 
         # Check adding db Float and native (both ways)
         res = a * 5.0
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 20)
+        self.assertAlmostEqual(res, 20)
 
         res = 5.0 * a
         self.assertIsInstance(res, NumericType)
-        self.assertEqual(res, 20.0)
+        self.assertAlmostEqual(res, 20.0)
 
         # Inplace
         a = Float(4)
         a *= b
-        self.assertEqual(a, 20)
+        self.assertAlmostEqual(a, 20)
 
         a = Float(4)
         a *= 5
-        self.assertEqual(a, 20)
+        self.assertAlmostEqual(a, 20)
 
     def test_power(self):
         a = Float(4)
         b = Float(2)
 
         res = a ** b
-        self.assertEqual(res.value, 16.)
+        self.assertAlmostEqual(res.value, 16.)
+
+    def test_modulo(self):
+        a = Float(12.0)
+        b = Float(10.0)
+
+        self.assertAlmostEqual(a % b, 2.0)
+        self.assertIsInstance(a % b, NumericType)
+        self.assertAlmostEqual(a % 10.0, 2.0)
+        self.assertIsInstance(a % 10.0, NumericType)
+        self.assertAlmostEqual(12.0 % b, 2.0)
+        self.assertIsInstance(12.0 % b, NumericType)
+
 
 class TestFloatIntMix(AiidaTestCase):
     def test_operator(self):
@@ -210,3 +222,17 @@ class TestFloatIntMix(AiidaTestCase):
                 c_val = op(x.value, y.value)
                 self.assertEqual(c._type, type(c_val))
                 self.assertEqual(c, op(x.value, y.value))
+
+
+class TestInt(AiidaTestCase):
+
+    def test_modulo(self):
+        a = Int(12)
+        b = Int(10)
+
+        self.assertEqual(a % b, 2)
+        self.assertIsInstance(a % b, NumericType)
+        self.assertEqual(a % 10, 2)
+        self.assertIsInstance(a % 10, NumericType)
+        self.assertEqual(12 % b, 2)
+        self.assertIsInstance(12 % b, NumericType)

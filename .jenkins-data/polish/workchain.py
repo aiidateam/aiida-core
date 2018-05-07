@@ -143,10 +143,12 @@ def write_workchain(outlines, directory=None, filename=None):
     template_file_workchain = os.path.join(template_dir, 'workchain.tpl')
 
     if directory is None:
-        directory = os.path.join(dirpath, 'workchains')
+        directory = os.path.join(dirpath, 'polish_workchains')
 
     if filename is None:
         filename = os.path.join(directory, 'polish.py')
+    else:
+        filename = os.path.join(directory, filename)
 
     try:
         os.makedirs(directory)

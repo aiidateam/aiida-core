@@ -110,15 +110,15 @@ class AbstractQueryManager(object):
 
     def get_creation_statistics(
             self,
-            user_email=None
+            user_pk=None
     ):
         """
         Return a dictionary with the statistics of node creation, summarized by day.
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.
 
-        :param user_email: If None (default), return statistics for all users.
-            If an email is specified, return only the statistics for the given user.
+        :param user_pk: If None (default), return statistics for all users.
+            If user pk is specified, return only the statistics for the given user.
 
         :return: a dictionary as
             follows::
@@ -177,8 +177,9 @@ class AbstractQueryManager(object):
 
         q = QB()
         q.append(Node, project=['id', 'ctime', 'type'], tag='node')
-        if user_email is not None:
-            q.append(User, creator_of='node', project='email', filters={'email': user_email})
+
+        if user_pk is not None:
+            q.append(User, creator_of='node', project='email', filters={'pk': user_pk})
         qb_res = q.all()
 
         # total count

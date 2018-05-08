@@ -57,7 +57,6 @@ pytz==2014.10
 pyyaml
 qe-tools==1.1.0
 reentry==1.2.0
-scipy<1.0.0
 seekpath==1.8.0
 singledispatch >= 3.4.0.3
 six==1.11.0

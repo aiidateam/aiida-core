@@ -158,7 +158,7 @@ def upload_upf_family(folder, group_name, group_description,
         group = Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
         group_created = True
 
-    if group.user != automatic_user:
+    if group.user.email != automatic_user.email:
         raise UniquenessError("There is already a UpfFamily group with name {}"
                               ", but it belongs to user {}, therefore you "
                               "cannot modify it".format(group_name,

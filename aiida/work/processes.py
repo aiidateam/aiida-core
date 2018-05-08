@@ -393,11 +393,11 @@ class Process(plumpy.Process):
         self._add_description_and_label()
 
     def _add_description_and_label(self):
-        if self.raw_inputs:
-            description = self.raw_inputs.get('description', None)
+        if self.inputs:
+            description = self.inputs.get('description', None)
             if description is not None:
                 self._calc.description = description
-            label = self.raw_inputs.get('label', None)
+            label = self.inputs.get('label', None)
             if label is not None:
                 self._calc.label = label
 
@@ -590,15 +590,23 @@ class FunctionProcess(Process):
                 default = ()
                 if i >= first_default_pos:
                     default = defaults[i - first_default_pos]
-                spec.input(args[i], valid_type=Data, default=default)
+
+                if spec.has_input(args[i]):
+                    spec.inputs[args[i]].default = default
+                else:
+                    spec.input(args[i], valid_type=Data, default=default)
+
                 # Make sure to get rid of the argument from the keywords dict
                 kwargs.pop(args[i], None)
 
+            # Add new ports for keyword arguments if and only if they do not already exist
             for k, v in kwargs.iteritems():
-                spec.input(k)
+                if spec.has_input(k):
+                    spec.inputs[k].default = v
+                else:
+                    spec.input(k)
 
-            # If the function support kwargs then allow dynamic inputs,
-            # otherwise disallow
+            # If the function support kwargs then allow dynamic inputs, otherwise disallow
             if keywords is not None:
                 spec.inputs.dynamic = True
             else:

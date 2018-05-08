@@ -14,8 +14,10 @@ from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
 from aiida.orm import load_node
 from aiida.work.launch import run, run_get_node
+from aiida.work.processes import Process
 from aiida.work.workfunctions import workfunction
 
+DEFAULT_LABEL = 'Default label'
 
 @workfunction
 def simple_wf():
@@ -29,6 +31,12 @@ def return_input(inp):
 
 @workfunction
 def single_return_value():
+    return get_true_node()
+
+
+@workfunction
+def set_label_default(label=DEFAULT_LABEL):
+    assert Process.current().calc.label == DEFAULT_LABEL
     return get_true_node()
 
 
@@ -83,6 +91,23 @@ class TestWf(AiidaTestCase):
         self.assertEquals(calculation.finish_status, 0)
         self.assertEquals(calculation.is_finished_ok, True)
         self.assertEquals(calculation.is_failed, False)
+
+    def test_label_description(self):
+        label = 'Test label'
+        description = 'Test description'
+
+        result, node = simple_wf.run_get_node(label=label, description=description)
+        self.assertEqual(node.label, label)
+        self.assertEqual(node.description, description)
+
+        result = simple_wf(label=label, description=description)
+        node = result['result'].get_inputs()[0]
+        self.assertEqual(node.label, label)
+        self.assertEqual(node.description, description)
+
+    def test_override_label_default(self):
+        result, node = set_label_default.run_get_node()
+        self.assertEqual(node.label, DEFAULT_LABEL)
 
     def test_hashes(self):
         result, w1 = run_get_node(return_input, inp=Int(2))

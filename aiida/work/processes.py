@@ -560,18 +560,16 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, calc_node_class=None, **kwargs):
+    def build(func, calc_node_class=None):
         """
         Build a Process from the given function.  All function arguments will
-        be assigned as process inputs.  If keyword arguments are specified then
+        be assigned as process inputs. If keyword arguments are specified then
         these will also become inputs.
 
         :param func: The function to build a process from
         :param calc_node_class: Provide a custom calculation class to be used,
             has to be constructable with no arguments
         :type calc_node_class: :class:`aiida.orm.calculation.Calculation`
-        :param kwargs: Optional keyword arguments that will become additional
-            inputs to the process
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
@@ -582,6 +580,9 @@ class FunctionProcess(Process):
 
         if calc_node_class is None:
             calc_node_class = FunctionCalculation
+
+        if varargs is not None:
+            raise ValueError('variadic arguments are not supported')
 
         def _define(cls, spec):
             super(FunctionProcess, cls).define(spec)
@@ -595,16 +596,6 @@ class FunctionProcess(Process):
                     spec.inputs[args[i]].default = default
                 else:
                     spec.input(args[i], valid_type=Data, default=default)
-
-                # Make sure to get rid of the argument from the keywords dict
-                kwargs.pop(args[i], None)
-
-            # Add new ports for keyword arguments if and only if they do not already exist
-            for k, v in kwargs.iteritems():
-                if spec.has_input(k):
-                    spec.inputs[k].default = v
-                else:
-                    spec.input(k)
 
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             if keywords is not None:
@@ -647,8 +638,7 @@ class FunctionProcess(Process):
         return cls._calc_node_class()
 
     def __init__(self, *args, **kwargs):
-        super(FunctionProcess, self).__init__(
-            enable_persistence=False, *args, **kwargs)
+        super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
 
     def execute(self):
         result = super(FunctionProcess, self).execute()

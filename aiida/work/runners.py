@@ -165,7 +165,7 @@ class Runner(object):
         if isinstance(process, ProcessBuilder):
             builder = process
             process_class = builder._process_class
-            inputs.update(builder._todict())
+            inputs.update(**builder)
         elif issubclass(process, JobCalculation):
             process_class = process.process()
         elif issubclass(process, Process):

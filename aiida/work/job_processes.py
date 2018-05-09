@@ -12,7 +12,6 @@ import sys
 import tempfile
 import tornado.gen
 from voluptuous import Any
-from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
@@ -21,6 +20,7 @@ from aiida.common.exceptions import (InvalidOperation, RemoteOperationError)
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
+from aiida.daemon.timestamps import set_daemon_timestamp
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
@@ -425,6 +425,10 @@ class JobProcess(processes.Process):
     @override
     def get_or_create_db_record(self):
         return self._calc_class()
+
+    def on_entered(self, from_state):
+        super(JobProcess, self).on_entered(from_state)
+        set_daemon_timestamp('updater', 'stop')
 
     @override
     def _setup_db_record(self):

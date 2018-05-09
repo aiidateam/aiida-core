@@ -295,11 +295,11 @@ class Calculation(VerdiCommandWithSubcommands):
         print_dictionary(the_dict, format=parsed_args.format)
 
     def calculation_show(self, *args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.cmdline.utils.common import print_node_info
-
         if not is_dbenv_loaded():
             load_dbenv()
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.calculation import Calculation as OrmCalculation
+        from aiida.cmdline.utils.common import print_node_info
 
         table_headers = ['Link label', 'PK', 'Type']
         for calc_pk in args:
@@ -310,6 +310,10 @@ class Calculation(VerdiCommandWithSubcommands):
                 continue
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
+                continue
+
+            if not isinstance(calc, OrmCalculation):
+                print "*** {}: Is not a Calculation but {}".format(calc_pk, type(calc))
                 continue
 
             print_node_info(calc)

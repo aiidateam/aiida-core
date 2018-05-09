@@ -40,7 +40,7 @@ Mac OS X
 For Mac OS it is adviced to use the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
 
-.. code-block bash::
+.. code-block:: bash
 
     /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
@@ -48,20 +48,20 @@ If you have not installed Homebrew yet, you can do so with the following command
 
 After you have installed Homebrew, you can install the basic requirements as follows:
 
-.. code-block bash::
+.. code-block:: bash
 
     brew install git python postgresql
 
 To start the `postgres` database server, execute:
 
-.. code-block bash::
+.. code-block:: bash
 
     pg_ctl -D /usr/local/var/postgres start
 
 For a more detailed description of database requirements and usage see the :ref:`database<database>` section.
 Installing the RabbitMQ message broke through Homebrew is as easy as:
 
-.. code-block bash::
+.. code-block:: bash
 
     brew install rabbitmq
 

@@ -393,11 +393,11 @@ class Process(plumpy.Process):
         self._add_description_and_label()
 
     def _add_description_and_label(self):
-        if self.raw_inputs:
-            description = self.raw_inputs.get('description', None)
+        if self.inputs:
+            description = self.inputs.get('description', None)
             if description is not None:
                 self._calc.description = description
-            label = self.raw_inputs.get('label', None)
+            label = self.inputs.get('label', None)
             if label is not None:
                 self._calc.label = label
 
@@ -560,18 +560,16 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, calc_node_class=None, **kwargs):
+    def build(func, calc_node_class=None):
         """
         Build a Process from the given function.  All function arguments will
-        be assigned as process inputs.  If keyword arguments are specified then
+        be assigned as process inputs. If keyword arguments are specified then
         these will also become inputs.
 
         :param func: The function to build a process from
         :param calc_node_class: Provide a custom calculation class to be used,
             has to be constructable with no arguments
         :type calc_node_class: :class:`aiida.orm.calculation.Calculation`
-        :param kwargs: Optional keyword arguments that will become additional
-            inputs to the process
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
@@ -583,6 +581,9 @@ class FunctionProcess(Process):
         if calc_node_class is None:
             calc_node_class = FunctionCalculation
 
+        if varargs is not None:
+            raise ValueError('variadic arguments are not supported')
+
         def _define(cls, spec):
             super(FunctionProcess, cls).define(spec)
 
@@ -590,15 +591,13 @@ class FunctionProcess(Process):
                 default = ()
                 if i >= first_default_pos:
                     default = defaults[i - first_default_pos]
-                spec.input(args[i], valid_type=Data, default=default)
-                # Make sure to get rid of the argument from the keywords dict
-                kwargs.pop(args[i], None)
 
-            for k, v in kwargs.iteritems():
-                spec.input(k)
+                if spec.has_input(args[i]):
+                    spec.inputs[args[i]].default = default
+                else:
+                    spec.input(args[i], valid_type=Data, default=default)
 
-            # If the function support kwargs then allow dynamic inputs,
-            # otherwise disallow
+            # If the function support kwargs then allow dynamic inputs, otherwise disallow
             if keywords is not None:
                 spec.inputs.dynamic = True
             else:
@@ -639,8 +638,7 @@ class FunctionProcess(Process):
         return cls._calc_node_class()
 
     def __init__(self, *args, **kwargs):
-        super(FunctionProcess, self).__init__(
-            enable_persistence=False, *args, **kwargs)
+        super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
 
     def execute(self):
         result = super(FunctionProcess, self).execute()

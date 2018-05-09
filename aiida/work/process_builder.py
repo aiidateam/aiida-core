@@ -1,45 +1,41 @@
 # -*- coding: utf-8 -*-
-from aiida.common.extendeddicts import AttributeDict, FixedFieldsAttributeDict
+from collections import Mapping
 from aiida.work.ports import PortNamespace
 
-__all__ = ['ProcessBuilder', 'JobProcessBuilder', 'ProcessBuilderInputDict']
+__all__ = ['ProcessBuilder', 'JobProcessBuilder', 'ProcessBuilderNamespace']
 
 
-class ProcessBuilderInput(object):
-    __slots__ = ['_value', '__doc__']
-
-    def __init__(self, port, value):
-        self._value = value
-        self.__doc__ = str(port)
-
-    def __str__(self):
-        return '{}'.format(self._value.__str__())
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class ProcessBuilderInputDefault(ProcessBuilderInput):
-
-    def __str__(self):
-        return '{} [default]'.format(self._value.__str__())
-
-
-class ProcessBuilderInputDict(FixedFieldsAttributeDict):
-    """Input dictionary for process builder."""
+class ProcessBuilderNamespace(Mapping):
+    """
+    Input namespace for the ProcessBuilder. Dynamically generates the getters and setters
+    for the input ports of a given PortNamespace
+    """
 
     def __init__(self, port_namespace):
         self._valid_fields = port_namespace.keys()
         self._port_namespace = port_namespace
-        super(ProcessBuilderInputDict, self).__init__()
+        self._data = {}
 
         for name, port in port_namespace.items():
+
             if isinstance(port, PortNamespace):
-                self[name] = ProcessBuilderInputDict(port)
+                self._data[name] = ProcessBuilderNamespace(port)
+                def fgetter(self, name=name):
+                    return self._data.get(name)
             elif port.has_default():
-                self[name] = ProcessBuilderInputDefault(port, port.default)
+                def fgetter(self, name=name, default=port.default):
+                    return self._data.get(name, default)
             else:
-                self[name] = ProcessBuilderInput(port, None)
+                def fgetter(self, name=name):
+                    return self._data.get(name, None)
+
+            def fsetter(self, value):
+                self._data[name] = value
+
+            fgetter.__doc__ = str(port)
+            getter = property(fgetter)
+            getter.setter(fsetter)
+            setattr(self.__class__, name, getter)
 
     def __setattr__(self, attr, value):
         """
@@ -55,27 +51,26 @@ class ProcessBuilderInputDict(FixedFieldsAttributeDict):
             if not is_valid:
                 raise ValueError('invalid attribute value: {}'.format(message))
 
-            super(ProcessBuilderInputDict, self).__setattr__(attr, value)
+            self._data[attr] = value
 
     def __repr__(self):
-        return dict(self).__repr__()
+        return self._data.__repr__()
 
     def __dir__(self):
-        return super(ProcessBuilderInputDict, self).__dir__()
+        return sorted(set(self._valid_fields + [n for n in self.__dict__.keys() if n.startswith('_')]))
 
-    def _todict(self):
-        result = {}
-        for name, value in self.items():
-            if isinstance(value, ProcessBuilderInput):
-                continue
-            elif isinstance(value, ProcessBuilderInputDict):
-                result[name] = value._todict()
-            else:
-                result[name] = value
-        return result
+    def __iter__(self):
+       for k, v in self._data.items():
+          yield k
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, item):
+        return self._data[item]
 
 
-class ProcessBuilder(ProcessBuilderInputDict):
+class ProcessBuilder(ProcessBuilderNamespace):
 
     def __init__(self, process_class):
         self._process_class = process_class
@@ -100,8 +95,10 @@ class JobProcessBuilder(ProcessBuilder):
             default a unique string will be generated based on the current datetime with the format ``yymmdd-``
             followed by an auto incrementing index
         """
-        inputs = self._todict()
-        inputs['store_provenance'] = False
+        inputs = {
+            'store_provenance': False
+        }
+        inputs.update(**self)
         process = self._process_class(inputs=inputs)
 
         return process._calc.submit_test(folder, subfolder_name)

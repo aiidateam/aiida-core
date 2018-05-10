@@ -29,13 +29,48 @@ def get_env_with_venv_bin():
 
 def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     """
-    Format a timestamp in a human readable format
+    Format a datetime object or UNIX timestamp in a human readable format
 
-    :param timestamp: UNIX timestamp
+    :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
     from aiida.utils import timezone
-    return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
+
+    if isinstance(timestamp, float):
+        return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
+    else:
+        return timestamp.strftime(format_str)
+
+
+def print_last_process_state_change(process_type='calculation'):
+    """
+    Print the last time that a process of the specified type has changed its state.
+    This function will also print a warning if the daemon is not running.
+
+    :param process_type: the process type for which to get the latest state change timestamp.
+        Valid process types are either 'calculation' or 'work'.
+    """
+    from aiida.cmdline.utils.common import format_local_time
+    from aiida.cmdline.utils.echo import echo_info, echo_warning
+    from aiida.daemon.client import DaemonClient
+    from aiida.utils import timezone
+    from aiida.common.utils import str_timedelta
+    from aiida.work.utils import get_process_state_change_timestamp
+
+    client = DaemonClient()
+
+    timestamp = get_process_state_change_timestamp(process_type)
+
+    if timestamp is None:
+        echo_info('last time an entry changed state: never')
+    else:
+        timedelta = timezone.delta(timestamp, timezone.now())
+        formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
+        relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
+        echo_info('last time an entry changed state: {} ({})'.format(relative, formatted))
+
+    if not client.is_daemon_running:
+        echo_warning('the daemon is not running', bold=True)
 
 
 def print_node_summary(node):

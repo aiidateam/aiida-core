@@ -136,7 +136,7 @@ class Calculation(VerdiCommandWithSubcommands):
             load_dbenv()
 
         import argparse
-        from aiida.cmdline.utils.daemon import print_last_process_state_change
+        from aiida.cmdline.utils.common import print_last_process_state_change
         from aiida.common.datastructures import calc_states
         from aiida.common.setup import get_property
         from aiida.orm.calculation.job import JobCalculation as C

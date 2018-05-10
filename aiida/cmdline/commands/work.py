@@ -102,7 +102,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     if not is_dbenv_loaded():
         load_dbenv()
 
-    from aiida.cmdline.utils.daemon import print_last_process_state_change
+    from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.common.utils import str_timedelta
     from aiida.orm.mixins import Sealable
     from aiida.orm.calculation import Calculation

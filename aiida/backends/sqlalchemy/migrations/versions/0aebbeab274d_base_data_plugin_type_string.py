@@ -1,4 +1,4 @@
-"""base_data_plugin_type_string
+"""Correct the type string for the base data types
 
 Revision ID: 0aebbeab274d
 Revises: 35d4ee9a1b0e

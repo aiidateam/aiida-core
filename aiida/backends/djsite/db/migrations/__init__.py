@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0010_process_type'
+LATEST_MIGRATION = '0011_delete_kombu_tables'
 
 
 def _update_schema_version(version, apps, schema_editor):

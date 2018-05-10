@@ -943,7 +943,7 @@ class AbstractJobCalculation(AbstractCalculation):
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
             order_by=None, limit=None, filters=None,
-            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
+            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'), raw=False
     ):
         """
         Print a description of the AiiDA calculations.
@@ -970,6 +970,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :param filters: a dictionary of filters to be passed to the QueryBuilder query
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
+        :param raw: Only print the query result, without any headers, footers
+            or other additional information
 
         :return: a string with description of calculations.
         """
@@ -1110,13 +1112,20 @@ class AbstractJobCalculation(AbstractCalculation):
 
                     counter += 1
 
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
 
             except StopIteration:
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print("\nTotal results: {}\n".format(counter))
+        if not raw:
+            print("\nTotal results: {}\n".format(counter))
 
     @classmethod
     def _get_calculation_info_row(cls, res, projections, times_since=None):

@@ -168,18 +168,18 @@ def get_global_setting(key):
         from aiida.backends.sqlalchemy.globalsettings import get_global_setting
     else:
         raise Exception("unknown backend {}".format(settings.BACKEND))
+
     return get_global_setting(key)
 
 
 def get_global_setting_description(key):
     if settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.globalsettings import (
-            get_global_setting_description)
+        from aiida.backends.djsite.globalsettings import get_global_setting_description
     elif settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.globalsettings import (
-            get_global_setting_description)
+        from aiida.backends.sqlalchemy.globalsettings import get_global_setting_description
     else:
         raise Exception("unknown backend {}".format(settings.BACKEND))
+
     return get_global_setting_description(key)
 
 

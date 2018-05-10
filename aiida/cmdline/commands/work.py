@@ -9,14 +9,12 @@
 ###########################################################################
 import click
 import logging
-from functools import partial
 from tabulate import tabulate
 from plumpy import ProcessState
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import work, verdi
 from aiida.common.log import LOG_LEVELS
-from aiida.utils.ascii_vis import print_tree_descending
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -272,7 +270,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
 
     def print_subtree(tree, prepend=""):
-        print "{}{}".format(prepend, tree[0])
+        click.echo("{}{}".format(prepend, tree[0]))
         for subtree in tree[1]:
             print_subtree(subtree, prepend=prepend + "  ")
 
@@ -287,7 +285,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
     reports.sort(key=lambda r: r[0].time)
 
     if reports is None or len(reports) == 0:
-        print "No log messages recorded for this work calculation"
+        click.echo("No log messages recorded for this work calculation")
         return
 
     object_ids = [entry[0].id for entry in reports]
@@ -295,7 +293,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
     width_id = len(str(max(object_ids)))
     width_levelname = max(levelnames)
     for entry, depth in reports:
-        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
+        click.echo('{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
             id=entry.id,
             levelname=entry.levelname,
             message=entry.message,
@@ -303,7 +301,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
             width_id=width_id,
             width_levelname=width_levelname,
             indent=' ' * (depth * indent_size)
-        )
+        ))
 
     return
 
@@ -322,13 +320,13 @@ def checkpoint(pks):
             try:
                 cp = storage.load_checkpoint(pk)
             except BaseException as e:
-                print("Failed to load checkpoint {}".format(pk))
-                print("{}: {}".format(e.__class__.__name__, e.message))
+                click.echo("Failed to load checkpoint {}".format(pk))
+                click.echo("{}: {}".format(e.__class__.__name__, e.message))
             else:
-                print("Last checkpoint for calculation '{}'".format(pk))
-                print(str(cp))
+                click.echo("Last checkpoint for calculation '{}'".format(pk))
+                click.echo(str(cp))
         except ValueError:
-            print("Unable to show checkpoint for calculation '{}'".format(pk))
+            click.echo("Unable to show checkpoint for calculation '{}'".format(pk))
 
 
 @work.command('kill', context_settings=CONTEXT_SETTINGS)
@@ -346,7 +344,7 @@ def kill(pks):
                 else:
                     click.echo("Problem killing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to kill '{}': {}".format(pk, e.message))
+                click.echo("Failed to kill '{}': {}".format(pk, e.message))
 
 
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
@@ -364,7 +362,7 @@ def pause(pks):
                 else:
                     click.echo("Problem pausing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to pause '{}': {}".format(pk, e.message))
+                click.echo("Failed to pause '{}': {}".format(pk, e.message))
 
 
 @work.command('play', context_settings=CONTEXT_SETTINGS)
@@ -382,7 +380,7 @@ def play(pks):
                 else:
                     click.echo("Problem playing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to play '{}': {}".format(pk, e.message))
+                click.echo("Failed to play '{}': {}".format(pk, e.message))
 
 
 @work.command('status', context_settings=CONTEXT_SETTINGS)
@@ -390,15 +388,16 @@ def play(pks):
 def status(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import aiida.orm
-    from aiida.utils.ascii_vis import print_call_graph
+    from aiida.orm import load_node
+    from aiida.utils.ascii_vis import format_call_graph
 
     if not pks:
-        click.echo("No pks specified")
+        click.echo('No pks specified')
     else:
         for pk in pks:
-            calc_node = aiida.orm.load_node(pk)
-            print_call_graph(calc_node)
+            calc_node = load_node(pk)
+            graph = format_call_graph(calc_node)
+            click.echo(graph)
 
 
 def _create_status_info(calc_node):
@@ -472,7 +471,7 @@ def watch(pks):
 
 
 def _print(body, sender, subject, correlation_id):
-    print("pk={}, subject={}, body={}".format(sender, subject, body))
+    click.echo("pk={}, subject={}, body={}".format(sender, subject, body))
 
 
 def _build_query(projections=None, filters=None, order_by=None, limit=None, past_days=None):

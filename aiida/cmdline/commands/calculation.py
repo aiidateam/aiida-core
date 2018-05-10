@@ -135,11 +135,11 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.datastructures import calc_states
-
         import argparse
-        from aiida.orm.calculation.job import JobCalculation as C
+        from aiida.cmdline.utils.daemon import print_last_process_state_change
+        from aiida.common.datastructures import calc_states
         from aiida.common.setup import get_property
+        from aiida.orm.calculation.job import JobCalculation as C
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -244,6 +244,9 @@ class Calculation(VerdiCommandWithSubcommands):
             filters=filters,
             projections=parsed_args.project,
         )
+
+        print_last_process_state_change(process_type='calculation')
+
 
     def calculation_res(self, *args):
         """

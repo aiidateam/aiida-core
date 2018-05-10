@@ -74,3 +74,30 @@ def get_daemon_status(client):
                 'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
 
     return template.format(**info)
+
+
+def print_last_process_state_change(process_type='calculation'):
+    """
+    Print the last time that a process of the specified type has changed its state.
+    This function will also print a warning if the daemon is not running.
+
+    :param process_type: the process type for which to get the latest state change timestamp.
+        Valid process types are either 'calculation' or 'work'.
+    """
+    from aiida.cmdline.utils.echo import echo_info, echo_warning
+    from aiida.daemon.client import DaemonClient
+    from aiida.utils import timezone
+    from aiida.common.utils import str_timedelta
+    from aiida.work.utils import get_process_state_change_timestamp
+
+    client = DaemonClient()
+
+    timestamp = get_process_state_change_timestamp(process_type)
+    timedelta = timezone.delta(timestamp, timezone.now())
+    formatted = timezone.localtime(timestamp).strftime('at %H:%M:%S on %Y-%m-%d')
+    relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
+
+    echo_info('last time an entry changed state: {} ({})'.format(relative, formatted))
+
+    if not client.is_daemon_running:
+        echo_warning('the daemon is not running', bold=True)

@@ -12,7 +12,6 @@ from pytz import UTC
 from aiida.backends import settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-
 if settings.BACKEND == BACKEND_DJANGO:
     from aiida.backends.djsite.globalsettings import set_global_setting, get_global_setting
 elif settings.BACKEND == BACKEND_SQLA:
@@ -20,12 +19,11 @@ elif settings.BACKEND == BACKEND_SQLA:
 else:
     raise Exception("Unkown backend {}".format(settings.BACKEND))
 
-
 celery_tasks = {
-        'submitter': 'submitter',
-        'updater': 'updater',
-        'retriever': 'retriever',
-        'workflow': 'workflow_stepper',
+    'submitter': 'submitter',
+    'updater': 'updater',
+    'retriever': 'retriever',
+    'workflow': 'workflow_stepper',
 }
 
 
@@ -102,17 +100,17 @@ def set_daemon_timestamp(task_name, when):
                          "celery_tasks dictionary")
 
     set_global_setting(
-            'daemon|task_{}|{}'.format(when, actual_task_name),
-            timezone.datetime.now(tz=UTC),
-            description=(
-                    "The last time the daemon {} to run the "
-                    "task '{}' ({})"
-                    "".format(
-                            verb,
-                            task_name,
-                            actual_task_name
-                    )
+        'daemon|task_{}|{}'.format(when, actual_task_name),
+        timezone.datetime.now(tz=UTC),
+        description=(
+            "The last time the daemon {} to run the "
+            "task '{}' ({})"
+            "".format(
+                verb,
+                task_name,
+                actual_task_name
             )
+        )
     )
 
 
@@ -137,8 +135,6 @@ def get_last_daemon_timestamp(task_name, when='stop'):
                          "celery_tasks dictionary".format(task_name))
 
     try:
-        return get_global_setting('daemon|task_{}|{}'.format(when,
-                                                             actual_task_name))
+        return get_global_setting('daemon|task_{}|{}'.format(when, actual_task_name))
     except KeyError:  # No such global setting found
         return None
-

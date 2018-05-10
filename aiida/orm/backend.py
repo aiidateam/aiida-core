@@ -44,7 +44,7 @@ def construct_backend(backend_type=None):
 
 class Backend(object):
     """
-    The public interface that defines a backend factory that creates backend
+    The public interface that defines a backend factory that creates backendQ
     specific concrete objects.
     """
     __metaclass__ = ABCMeta

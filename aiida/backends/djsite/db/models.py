@@ -1504,13 +1504,6 @@ class DbLog(m.Model):
                                                self.objname, self.objpk, self.message)
 
 
-class DbLock(m.Model):
-    key = m.CharField(max_length=255, primary_key=True)
-    creation = m.DateTimeField(default=timezone.now, editable=False)
-    timeout = m.IntegerField(editable=False)
-    owner = m.CharField(max_length=255, blank=False)
-
-
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states

@@ -155,8 +155,6 @@ py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
 py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
-py:class  portalocker.utils.Lock
-
 py:class  sphinx.ext.autodoc.ClassDocumenter
 
 py:class  _abcoll.Mapping

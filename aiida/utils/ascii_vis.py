@@ -10,12 +10,15 @@
 from aiida.common.links import LinkType
 from ete3 import Tree
 
+__all__ = ['draw_children', 'draw_parents', 'format_call_graph']
 
-__all__ = ['draw_children', 'draw_parents', 'print_call_graph']
+
+TREE_LAST_ENTRY = u'\u2514\u2500\u2500 '
+TREE_MIDDLE_ENTRY = u'\u251C\u2500\u2500 '
+TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
-def draw_parents(node, node_label=None, show_pk=True, dist=2,
-                 follow_links_of_type=None):
+def draw_parents(node, node_label=None, show_pk=True, dist=2, follow_links_of_type=None):
     """
     Print an ASCII tree of the parents of the given node.
 
@@ -31,12 +34,10 @@ def draw_parents(node, node_label=None, show_pk=True, dist=2,
         if None then it will follow CREATE and INPUT links
     :type follow_links_of_type: str
     """
-    print(get_ascii_tree(node, node_label, show_pk, dist,
-                         follow_links_of_type, False))
+    return get_ascii_tree(node, node_label, show_pk, dist, follow_links_of_type, False)
 
 
-def draw_children(node, node_label=None, show_pk=True, dist=2,
-                  follow_links_of_type=None):
+def draw_children(node, node_label=None, show_pk=True, dist=2, follow_links_of_type=None):
     """
     Print an ASCII tree of the parents of the given node.
 
@@ -52,12 +53,10 @@ def draw_children(node, node_label=None, show_pk=True, dist=2,
         if None then it will follow CREATE and INPUT links
     :type follow_links_of_type: str
     """
-    print(get_ascii_tree(node, node_label, show_pk, dist,
-                         follow_links_of_type, True))
+    return get_ascii_tree(node, node_label, show_pk, dist, follow_links_of_type, True)
 
 
-def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1,
-                   follow_links_of_type=None, descend=True):
+def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of_type=None, descend=True):
     """
     Get a string representing an ASCII tree for the given node.
 
@@ -74,14 +73,13 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1,
         :class:`aiida.common.links.LinkType`
     :param descend: if True will follow outputs, if False inputs
     :type descend: bool
-    :return: The string giving an ASCII representation of the tree from the
-        node
+    :return: The string giving an ASCII representation of the tree from the node
     :rtype: str
     """
     tree_string = build_tree(
         node, node_label, show_pk, max_depth, follow_links_of_type, descend
     )
-    t = Tree("({});".format(tree_string), format=1)
+    t = Tree('({});'.format(tree_string), format=1)
     return t.get_ascii(show_internal=True)
 
 
@@ -108,11 +106,11 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1,
             )
 
         if relatives:
-            out_values.append("({})".format(", ".join(relatives)))
+            out_values.append('({})'.format(', '.join(relatives)))
 
     out_values.append(_generate_node_label(node, node_label, show_pk))
 
-    return "".join(out_values)
+    return ''.join(out_values)
 
 
 def _generate_node_label(node, node_attr, show_pk):
@@ -130,7 +128,10 @@ def _generate_node_label(node, node_attr, show_pk):
     """
     label = None
     if node_attr is None:
-        label = node.process_label
+        try:
+            label = node.process_label
+        except AttributeError:
+            label = None
     else:
         try:
             label = str(getattr(node, node_attr))
@@ -145,7 +146,7 @@ def _generate_node_label(node, node_attr, show_pk):
         label = node.__class__.__name__
 
     if show_pk:
-        label += " [{}]".format(node.pk)
+        label += ' [{}]'.format(node.pk)
 
     return label
 
@@ -159,6 +160,7 @@ def calc_info(calc_node):
     from aiida.orm.calculation.inline import InlineCalculation
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.calculation.work import WorkCalculation
+    from aiida.work.processes import ProcessState
 
     if isinstance(calc_node, WorkCalculation):
         plabel = calc_node.process_label
@@ -184,7 +186,7 @@ def calc_info(calc_node):
     return s
 
 
-def print_call_graph(calc_node, info_fn=calc_info):
+def format_call_graph(calc_node, info_fn=calc_info):
     """
     Print a tree like the POSIX tree command for the calculation call graph
 
@@ -193,7 +195,7 @@ def print_call_graph(calc_node, info_fn=calc_info):
         of information to be displayed for each node.
     """
     call_tree = build_call_graph(calc_node, info_fn=info_fn)
-    print_tree_descending(call_tree)
+    return format_tree_descending(call_tree)
 
 
 def build_call_graph(calc_node, info_fn=calc_info):
@@ -215,22 +217,22 @@ def format_tree_descending(tree, prefix=u"", pos=-1):
         info = tree
 
     if pos == -1:
-        pre = u""
+        pre = u''
     elif pos == 0:
-        pre = u"{}{}".format(prefix, TREE_FIRST_ENTRY)
+        pre = u'{}{}'.format(prefix, TREE_FIRST_ENTRY)
     elif pos == 1:
-        pre = u"{}{}".format(prefix, TREE_MIDDLE_ENTRY)
+        pre = u'{}{}'.format(prefix, TREE_MIDDLE_ENTRY)
     else:
-        pre = u"{}{}".format(prefix, TREE_LAST_ENTRY)
-    text.append(u"{}{}".format(pre, info))
+        pre = u'{}{}'.format(prefix, TREE_LAST_ENTRY)
+    text.append(u'{}{}'.format(pre, info))
 
     if isinstance(tree, tuple):
         key, value = tree
         num_entries = len(value)
         if pos == -1 or pos == 2:
-            new_prefix = u"{}    ".format(prefix)
+            new_prefix = u'{}    '.format(prefix)
         else:
-            new_prefix = u"{}\u2502   ".format(prefix)
+            new_prefix = u'{}\u2502   '.format(prefix)
         for i, entry in enumerate(value):
             if i == num_entries - 1:
                 pos = 2
@@ -240,13 +242,4 @@ def format_tree_descending(tree, prefix=u"", pos=-1):
                 pos = 1
             text.append(format_tree_descending(entry, new_prefix, pos))
 
-    return u"\n".join(text)
-
-
-def print_tree_descending(tree, prefix=u"", pos=-1):
-    print(format_tree_descending(tree, prefix, pos))
-
-
-TREE_MIDDLE_ENTRY = u"\u251C\u2500\u2500 "
-TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
-TREE_LAST_ENTRY = u"\u2514\u2500\u2500 "
+    return u'\n'.join(text)

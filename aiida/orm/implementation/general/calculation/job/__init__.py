@@ -1018,8 +1018,6 @@ class AbstractJobCalculation(AbstractCalculation):
             assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
 
-        print(cls._get_last_daemon_check_string(now))
-
         if filters is None:
             calculation_filters = {}
         else:
@@ -1119,46 +1117,6 @@ class AbstractJobCalculation(AbstractCalculation):
                 break
 
         print("\nTotal results: {}\n".format(counter))
-
-    @classmethod
-    def _get_last_daemon_check_string(cls, since):
-        """
-        Get a string showing the how long it has been since the daemon was
-        last ticked relative to a particular timepoint.
-
-        :param since: The timepoint to get the last check time since.
-        :return: A string indicating the elapsed period, or an information
-          message.
-        """
-        from aiida.daemon.timestamps import get_last_daemon_timestamp
-
-        # get the last daemon check:
-        try:
-            last_daemon_check = \
-                get_last_daemon_timestamp('updater', when='stop')
-        except ValueError:
-            last_check_string = (
-                "# Last daemon state_updater check: "
-                "(Error while retrieving the information)"
-            )
-        else:
-            if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
-            else:
-                last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "{} ({})".format(
-                        str_timedelta(
-                            timezone.delta(last_daemon_check, since),
-                            negative_to_zero=True
-                        ),
-                        timezone.localtime(
-                            last_daemon_check
-                        ).strftime("at %H:%M:%S on %Y-%m-%d")
-                    )
-                )
-
-        return last_check_string
 
     @classmethod
     def _get_calculation_info_row(cls, res, projections, times_since=None):

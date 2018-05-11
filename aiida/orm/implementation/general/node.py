@@ -172,6 +172,12 @@ class AbstractNode(object):
                 "is_foreign_key": False,
                 "type": "dict"
             },
+            "attributes.state": {
+                "display_name": "State",
+                "help_text": "AiiDA state of the calculation",
+                "is_foreign_key": False,
+                "type": ""
+            },
             "ctime": {
                 "display_name": "Creation time",
                 "help_text": "Creation time of the node",

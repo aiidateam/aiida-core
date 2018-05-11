@@ -80,6 +80,7 @@ def print_node_summary(node):
     :params node: a Node instance
     """
     from plumpy import ProcessState
+    from aiida.orm.implementation.general.calculation import AbstractCalculation
 
     table_headers = ['Property', 'Value']
     table = []
@@ -91,12 +92,21 @@ def print_node_summary(node):
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
 
-    try:
-        table.append(['process state', ProcessState(node.process_state)])
-    except ValueError:
-        table.append(['process state', node.process_state])
+    if issubclass(node.__class__, AbstractCalculation):
+        try:
+            process_state = node.process_state
+        except AttributeError:
+            process_state = None
 
-    table.append(['finish status', node.finish_status])
+        try:
+            table.append(['process state', ProcessState(process_state)])
+        except ValueError:
+            table.append(['process state', process_state])
+
+        try:
+            table.append(['finish status', node.finish_status])
+        except AttributeError:
+            table.append(['finish status', None])
 
     try:
         computer = node.get_computer()
@@ -105,6 +115,7 @@ def print_node_summary(node):
     else:
         if computer is not None:
             table.append(['computer', '[{}] {}'.format(node.get_computer().pk, node.get_computer().name)])
+
     try:
         code = node.get_code()
     except AttributeError:

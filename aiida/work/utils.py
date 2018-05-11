@@ -17,6 +17,9 @@ from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = ['ProcessStack']
 
+PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
+PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
+
 
 class ProcessStack(object):
     """
@@ -140,3 +143,60 @@ def loop_scope(loop):
         yield
     finally:
         current.make_current()
+
+
+def set_process_state_change_timestamp(process):
+    """
+    Set the global setting that reflects the last time a process changed state, for the process type
+    of the given process, to the current timestamp. The process type will be determined based on
+    the class of the calculation node it has as its database container.
+
+    :param process: the Process instance that changed its state
+    """
+    from aiida.backends.utils import set_global_setting
+    from aiida.common.exceptions import UniquenessError
+    from aiida.orm.calculation.function import FunctionCalculation
+    from aiida.orm.calculation.inline import InlineCalculation
+    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.utils import timezone
+
+    if isinstance(process.calc, (JobCalculation, InlineCalculation)):
+        process_type = 'calculation'
+    elif isinstance(process.calc, (FunctionCalculation, WorkCalculation)):
+        process_type = 'work'
+    else:
+        raise ValueError('unsupported calculation node type {}'.format(type(process.calc)))
+
+    key = PROCESS_STATE_CHANGE_KEY.format(process_type)
+    description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
+    value = timezone.now()
+
+    try:
+        set_global_setting(key, value, description)
+    except UniquenessError as exception:
+        process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
+        pass
+
+
+def get_process_state_change_timestamp(process_type='calculation'):
+    """
+    Get the global setting that reflects the last time a process of the given process type changed
+    its state. The returned value will be the corresponding timestamp or None if the setting does
+    not exist.
+
+    :param process_type: the process type for which to get the latest state change timestamp.
+        Valid process types are either 'calculation' or 'work'.
+    :return: a timestamp or None
+    """
+    from aiida.backends.utils import get_global_setting
+
+    if process_type not in ['calculation', 'work']:
+        raise ValueError('invalid value for process_type')
+
+    key = PROCESS_STATE_CHANGE_KEY.format(process_type)
+
+    try:
+        return get_global_setting(key)
+    except KeyError:
+        return None

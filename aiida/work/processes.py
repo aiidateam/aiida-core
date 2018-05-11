@@ -215,6 +215,9 @@ class Process(plumpy.Process):
         if self._enable_persistence and not self._state.is_terminal():
             self.runner.persister.save_checkpoint(self)
 
+        # Update the latest process state change timestamp
+        utils.set_process_state_change_timestamp(self)
+
     @override
     def on_terminated(self):
         """
@@ -225,8 +228,8 @@ class Process(plumpy.Process):
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
             except BaseException as e:
-                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(
-                    e, traceback.format_exc()))
+                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(e, traceback.format_exc()))
+
         try:
             self.calc.seal()
         except exceptions.ModificationNotAllowed:

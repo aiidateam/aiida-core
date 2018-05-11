@@ -90,7 +90,11 @@ class Work(VerdiCommandWithSubcommands):
     '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT,
     multiple=True, help='Define the list of properties to show'
 )
-def do_list(past_days, all_states, process_state, finish_status, failed, limit, project):
+@click.option(
+    '-r', '--raw', is_flag=True,
+    help='Only print the query result, without any headers, footers or other additional information'
+)
+def do_list(past_days, all_states, process_state, finish_status, failed, limit, project, raw):
     """
     Return a list of work calculations that are still running
     """
@@ -98,6 +102,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     if not is_dbenv_loaded():
         load_dbenv()
 
+    from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.common.utils import str_timedelta
     from aiida.orm.mixins import Sealable
     from aiida.orm.calculation import Calculation
@@ -194,10 +199,15 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     # Since we sorted by descending creation time, we revert the list to print the most recent entries last
     projection_labels = list(map(lambda p: projection_label_map[p], project))
     table = table[::-1]
-    tabulated = tabulate(table, headers=projection_labels)
 
-    click.echo(tabulated)
-    click.echo('\nTotal results: {}\n'.format(len(table)))
+    if raw:
+        tabulated = tabulate(table, tablefmt='plain')
+        click.echo(tabulated)
+    else:
+        tabulated = tabulate(table, headers=projection_labels)
+        click.echo(tabulated)
+        click.echo('\nTotal results: {}\n'.format(len(table)))
+        print_last_process_state_change(process_type='work')
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)

@@ -943,7 +943,7 @@ class AbstractJobCalculation(AbstractCalculation):
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
             order_by=None, limit=None, filters=None,
-            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
+            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'), raw=False
     ):
         """
         Print a description of the AiiDA calculations.
@@ -970,6 +970,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :param filters: a dictionary of filters to be passed to the QueryBuilder query
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
+        :param raw: Only print the query result, without any headers, footers
+            or other additional information
 
         :return: a string with description of calculations.
         """
@@ -1017,8 +1019,6 @@ class AbstractJobCalculation(AbstractCalculation):
         if limit is not None:
             assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
-
-        print(cls._get_last_daemon_check_string(now))
 
         if filters is None:
             calculation_filters = {}
@@ -1112,53 +1112,20 @@ class AbstractJobCalculation(AbstractCalculation):
 
                     counter += 1
 
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
 
             except StopIteration:
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print("\nTotal results: {}\n".format(counter))
-
-    @classmethod
-    def _get_last_daemon_check_string(cls, since):
-        """
-        Get a string showing the how long it has been since the daemon was
-        last ticked relative to a particular timepoint.
-
-        :param since: The timepoint to get the last check time since.
-        :return: A string indicating the elapsed period, or an information
-          message.
-        """
-        from aiida.daemon.timestamps import get_last_daemon_timestamp
-
-        # get the last daemon check:
-        try:
-            last_daemon_check = \
-                get_last_daemon_timestamp('updater', when='stop')
-        except ValueError:
-            last_check_string = (
-                "# Last daemon state_updater check: "
-                "(Error while retrieving the information)"
-            )
-        else:
-            if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
-            else:
-                last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "{} ({})".format(
-                        str_timedelta(
-                            timezone.delta(last_daemon_check, since),
-                            negative_to_zero=True
-                        ),
-                        timezone.localtime(
-                            last_daemon_check
-                        ).strftime("at %H:%M:%S on %Y-%m-%d")
-                    )
-                )
-
-        return last_check_string
+        if not raw:
+            print("\nTotal results: {}\n".format(counter))
 
     @classmethod
     def _get_calculation_info_row(cls, res, projections, times_since=None):

@@ -135,11 +135,11 @@ class Calculation(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        from aiida.common.datastructures import calc_states
-
         import argparse
-        from aiida.orm.calculation.job import JobCalculation as C
+        from aiida.cmdline.utils.common import print_last_process_state_change
+        from aiida.common.datastructures import calc_states
         from aiida.common.setup import get_property
+        from aiida.orm.calculation.job import JobCalculation as C
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -201,6 +201,9 @@ class Calculation(VerdiCommandWithSubcommands):
                             default=get_property('verdishell.calculation_list'),
                             help="Define the list of properties to show"
                         )
+        parser.add_argument('-r', '--raw', dest='raw', action='store_true',
+            help='Only print the query result, without any headers, footers or other additional information'
+        )
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -238,12 +241,16 @@ class Calculation(VerdiCommandWithSubcommands):
             group=parsed_args.group,
             group_pk=parsed_args.group_pk,
             relative_ctime=parsed_args.relative_ctime,
-            # with_scheduler_state=parsed_args.with_scheduler_state,
             order_by=parsed_args.order_by,
             limit=parsed_args.limit,
             filters=filters,
             projections=parsed_args.project,
+            raw=parsed_args.raw,
         )
+
+        if not parsed_args.raw:
+            print_last_process_state_change(process_type='calculation')
+
 
     def calculation_res(self, *args):
         """

@@ -10,8 +10,6 @@
 import os
 import sys
 
-from plumpy import ProcessState
-
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
@@ -136,6 +134,9 @@ class Calculation(VerdiCommandWithSubcommands):
             load_dbenv()
 
         import argparse
+        from plumpy import ProcessState
+
+        from aiida.common.datastructures import calc_states
         from aiida.cmdline.utils.common import print_last_process_state_change
         from aiida.common.datastructures import calc_states
         from aiida.common.setup import get_property

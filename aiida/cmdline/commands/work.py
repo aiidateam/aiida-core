@@ -10,18 +10,21 @@
 import click
 import logging
 from tabulate import tabulate
-from plumpy import ProcessState
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import work, verdi
 from aiida.common.log import LOG_LEVELS
+from aiida.utils.cli.types import LazyChoice
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
-LIST_CMDLINE_PROCESS_STATE_CHOICES = ([e.value for e in ProcessState])
+
+
+def valid_process_states():
+    from plumpy import ProcessState
+    return ([state.value for state in ProcessState])
 
 
 class Work(VerdiCommandWithSubcommands):
@@ -71,7 +74,7 @@ class Work(VerdiCommandWithSubcommands):
     help='Include all entries, regardless of process state'
 )
 @click.option(
-    '-S', '--process-state', type=click.Choice(LIST_CMDLINE_PROCESS_STATE_CHOICES),
+    '-S', '--process-state', type=LazyChoice(valid_process_states),
     help='Only include entries with this process state'
 )
 @click.option(
@@ -98,6 +101,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     """
     Return a list of work calculations that are still running
     """
+    from plumpy import ProcessState
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
@@ -107,6 +111,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     from aiida.orm.mixins import Sealable
     from aiida.orm.calculation import Calculation
     from aiida.utils import timezone
+
 
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)

@@ -39,15 +39,21 @@ class UserTranslator(BaseTranslator):
             "id",
             "first_name",
             "last_name",
+            "email",
             "institution",
-            "date_joined"
+            "date_joined",
+            "last_login",
+            "is_active"
         ],
         "additional_info": {
             "id": {"is_display": True},
             "first_name": {"is_display": True},
             "last_name": {"is_display": True},
+            "email": {"is_display": True},
             "institution": {"is_display": True},
-            "date_joined": {"is_display": False}
+            "date_joined": {"is_display": False},
+            "last_login": {"is_display": False},
+            "is_active": {"is_display": False}
         }
     }
 

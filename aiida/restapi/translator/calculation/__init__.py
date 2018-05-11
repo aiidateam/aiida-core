@@ -43,7 +43,7 @@ class CalculationTranslator(NodeTranslator):
         ## calculation schema
         # All the values from column_order must present in additional info dict
         # Note: final schema will contain details for only the fields present in column order
-        self._default_projections = {
+        self._schema_projections = {
             "column_order": [
                 "id",
                 "label",

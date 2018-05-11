@@ -39,10 +39,13 @@ class BaseTranslator(object):
 
     _result_type = __label__
 
-    _default = _default_projections = {
+    _default = _default_projections = ["**"]
+
+    _schema_projections = {
         "column_order": [],
         "additional_info": {}
     }
+
     _is_qb_initialized = False
     _is_id_query = None
     _total_count = None
@@ -73,6 +76,7 @@ class BaseTranslator(object):
 
         self._default = Class._default
         self._default_projections = Class._default_projections
+        self._schema_projections = Class._schema_projections
         self._is_qb_initialized = Class._is_qb_initialized
         self._is_id_query = Class._is_id_query
         self._total_count = Class._total_count
@@ -124,8 +128,8 @@ class BaseTranslator(object):
 
         # get addional info and column order from translator class
         # and combine it with basic schema
-        if len(self._default_projections["column_order"]) > 0:
-            for field in self._default_projections["column_order"]:
+        if len(self._schema_projections["column_order"]) > 0:
+            for field in self._schema_projections["column_order"]:
 
                 # basic schema
                 if field in basic_schema.keys():
@@ -146,13 +150,13 @@ class BaseTranslator(object):
                         raise KeyError("{} is not present in ORM basic schema".format(field))
 
                 # additional info defined in translator class
-                if field in self._default_projections["additional_info"]:
-                    schema[field].update(self._default_projections["additional_info"][field])
+                if field in self._schema_projections["additional_info"]:
+                    schema[field].update(self._schema_projections["additional_info"][field])
                 else:
                     raise KeyError("{} is not present in default projection additional info".format(field))
 
             # order
-            ordering = self._default_projections["column_order"]
+            ordering = self._schema_projections["column_order"]
 
         else:
             raise ConfigurationError("Define column order to get schema for {}".format(self._aiida_type))

@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.config import custom_schema
 
 class UserTranslator(BaseTranslator):
     """

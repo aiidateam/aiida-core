@@ -124,14 +124,51 @@ class AbstractGroup(object):
         """
         pass
 
-    @abstractstaticmethod
-    def get_db_columns():
+    @staticmethod
+    def get_schema():
         """
-        This method returns a list with the column names and types of the table
-        corresponding to this class.
-        :return: a list with the names of the columns
+        :return: get schema of the group
         """
-        pass
+        return {
+            "description": {
+                "display_name": "Description",
+                "help_text": "short description of the Computer",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "name": {
+                "display_name": "Name",
+                "help_text": "Name of the object",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "type": {
+                "display_name": "Type",
+                "help_text": "Code type",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "user_id": {
+                "display_name": "Id of creator",
+                "help_text": "Id of the user that created the node",
+                "is_foreign_key": True,
+                "related_column": "id",
+                "related_resource": "_dbusers",
+                "type": "int"
+            },
+            "uuid": {
+                "display_name": "Unique ID",
+                "help_text": "Universally Unique Identifier",
+                "is_foreign_key": False,
+                "type": "unicode"
+            }
+        }
 
     @classmethod
     def create(cls, *args, **kwargs):

@@ -6,9 +6,6 @@ import socket
 import sys
 import tempfile
 
-from circus.client import CircusClient
-from circus.exc import CallError
-
 from aiida.common.profile import ProfileConfig
 from aiida.common.setup import get_property
 from aiida.utils.which import which
@@ -289,6 +286,7 @@ class DaemonClient(ProfileConfig):
 
         :return: CircucClient instance
         """
+        from circus.client import CircusClient
         return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
 
     def call_client(self, command):
@@ -301,6 +299,8 @@ class DaemonClient(ProfileConfig):
         :param command: command to call the circus client with
         :return: the result of the circus client call
         """
+        from circus.exc import CallError
+
         if not self.get_daemon_pid():
             return {'status': self.DAEMON_ERROR_NOT_RUNNING}
 

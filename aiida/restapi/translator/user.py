@@ -29,10 +29,12 @@ class UserTranslator(BaseTranslator):
 
     _result_type = __label__
 
+    _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
+
     ## user schema
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
-    _default_projections = {
+    _schema_projections = {
         "column_order": [
             "id",
             "first_name",

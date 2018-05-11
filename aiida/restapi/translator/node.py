@@ -59,10 +59,23 @@ class NodeTranslator(BaseTranslator):
         # basic initialization
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
+        self._default_projections = [
+            "id",
+            "label",
+            "type",
+            "ctime",
+            "mtime",
+            "uuid",
+            "user_id",
+            "user_email",
+            "attributes",
+            "extras"
+        ]
+
         ## node schema
         # All the values from column_order must present in additional info dict
         # Note: final schema will contain details for only the fields present in column order
-        self._default_projections = {
+        self._schema_projections = {
             "column_order": [
                 "id",
                 "label",

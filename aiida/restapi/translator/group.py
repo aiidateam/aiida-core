@@ -33,7 +33,7 @@ class GroupTranslator(BaseTranslator):
     ## group schema
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
-    _default_projections = {
+    _schema_projections = {
         "column_order": [
             "id",
             "name",

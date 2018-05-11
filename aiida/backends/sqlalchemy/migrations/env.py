@@ -16,7 +16,6 @@ from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup
-from aiida.backends.sqlalchemy.models.lock import DbLock
 from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import (
     DbCalcState, DbComputer,

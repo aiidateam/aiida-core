@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0011_delete_kombu_tables'
+LATEST_MIGRATION = '0012_drop_dblock'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -225,13 +225,6 @@ class FeatureDisabled(AiidaException):
     pass
 
 
-class LockPresent(AiidaException):
-    """
-    Raised when a lock is requested, but cannot be acquired.
-    """
-    pass
-
-
 class LicensingException(AiidaException):
     """
     Raised when requirements for data licensing are not met.

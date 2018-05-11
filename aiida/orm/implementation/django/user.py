@@ -52,12 +52,6 @@ class User(AbstractUser):
         else:
             raise ValueError("Only dbuser & email are accepted as arguments")
 
-    @staticmethod
-    def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import \
-            DbUser as DbU
-        return get_db_columns(DbU)
-
     @property
     def pk(self):
         return self._dbuser.pk

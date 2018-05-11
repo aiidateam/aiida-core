@@ -185,7 +185,7 @@ class AbstractComputer(object):
     @staticmethod
     def get_schema():
         """
-        :return: get schema of the computer node
+        :return: get schema of the computer
         """
         return {
             "description": {

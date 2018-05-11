@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import 
 import click
+from aiida.cmdline.utils.decorators import with_dbenv
 
 
+@with_dbenv()
 def validate_structure(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA structure data pk. It expects
@@ -29,6 +31,8 @@ def validate_structure(callback_kwargs, ctx, param, value):
 
     return structure
 
+
+@with_dbenv()
 def validate_code(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA code. It expects a string for the value
@@ -70,6 +74,8 @@ def validate_code(callback_kwargs, ctx, param, value):
 
     return code
 
+
+@with_dbenv()
 def validate_pseudo_family(callback_kwargs, ctx, param, value):
     """
     Command line option validator for a pseudo potential family. The value should be a
@@ -91,6 +97,8 @@ def validate_pseudo_family(callback_kwargs, ctx, param, value):
 
     return value
 
+
+@with_dbenv()
 def validate_kpoint_mesh(callback_kwargs, ctx, param, value):
     """
     Command line option validator for a kpoints mesh tuple. The value should be a tuple
@@ -116,6 +124,8 @@ def validate_kpoint_mesh(callback_kwargs, ctx, param, value):
 
     return kpoints
 
+
+@with_dbenv()
 def validate_calculation(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA JobCalculation pk. It expects
@@ -157,6 +167,8 @@ def validate_calculation(callback_kwargs, ctx, param, value):
 
     return calculation
 
+
+@with_dbenv()
 def validate_group(callback_kwargs, ctx, param, value):
     """
     Command line option validator for an AiiDA Group. It expects a string for the value

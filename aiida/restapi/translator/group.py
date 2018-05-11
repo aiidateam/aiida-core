@@ -41,6 +41,7 @@ class GroupTranslator(BaseTranslator):
             "type",
             "description",
             "user_id",
+            "user_email",
             "uuid"
         ],
         "additional_info": {
@@ -49,6 +50,7 @@ class GroupTranslator(BaseTranslator):
             "type": {"is_display": True},
             "description": {"is_display": False},
             "user_id": {"is_display": False},
+            "user_email": {"is_display": True},
             "uuid": {"is_display": False}
         }
     }

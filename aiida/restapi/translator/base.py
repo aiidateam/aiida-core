@@ -131,7 +131,19 @@ class BaseTranslator(object):
                 if field in basic_schema.keys():
                     schema[field] = basic_schema[field]
                 else:
-                    raise KeyError("{} is not present in ORM basic schema".format(field))
+                    ## Note: if column name starts with user_* get the schema information from
+                    # user class. It is added mainly to handle user_email case.
+                    # TODO need to improve
+                    field_parts = field.split("_")
+                    if field_parts[0] == "user" and field != "user_id" and len(field_parts) > 1:
+                        from aiida.orm.user import User
+                        user_schema = User.get_schema()
+                        if field_parts[1] in user_schema.keys():
+                            schema[field] = user_schema[field_parts[1]]
+                        else:
+                            raise KeyError("{} is not present in user schema".format(field))
+                    else:
+                        raise KeyError("{} is not present in ORM basic schema".format(field))
 
                 # additional info defined in translator class
                 if field in self._default_projections["additional_info"]:

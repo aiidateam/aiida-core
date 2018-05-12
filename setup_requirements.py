@@ -28,7 +28,6 @@ install_requires = [
     'alembic==0.9.9',
     'ujson==1.35',
     'enum34==1.1.6',
-    'voluptuous==0.11.1',
     'aldjemy==0.8.0',
     'passlib==1.7.1',
     'validate-email==1.3',

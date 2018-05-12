@@ -11,13 +11,11 @@ import shutil
 import sys
 import tempfile
 import tornado.gen
-from voluptuous import Any
-from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import (InvalidOperation, RemoteOperationError)
+from aiida.common.exceptions import InvalidOperation, RemoteOperationError
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
@@ -25,7 +23,6 @@ from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_builder import JobProcessBuilder
-from aiida.work.process_spec import DictSchema
 
 from . import persistence
 from . import processes
@@ -362,26 +359,43 @@ class JobProcess(processes.Process):
         def define(cls_, spec):
             super(JobProcess, cls_).define(spec)
 
-            # Calculation options
-            options = {
-                'max_wallclock_seconds': int,
-                'resources': dict,
-                'custom_scheduler_commands': basestring,
-                'queue_name': basestring,
-                'computer': Computer,
-                'withmpi': bool,
-                'mpirun_extra_params': Any(list, tuple),
-                'import_sys_environment': bool,
-                'environment_variables': dict,
-                'priority': basestring,
-                'max_memory_kb': int,
-                'prepend_text': basestring,
-                'append_text': basestring,
-                'parser_name': basestring,
-            }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
+            # Define the 'options' inputs namespace and its input ports
+            spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
+            spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
+                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '\
+                     'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
+            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
+                help='Set the wallclock in seconds asked to the scheduler')
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '\
+                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '\
+                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '\
+                     ' any non-scheduler command')
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the name of the queue on the remote computer')
+            spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
+                help='Set the computer to be used by the calculation')
+            spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
+                help='Set the calculation to use mpi')
+            spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True, required=False,
+                help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '\
+                     'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
+            spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
+                help='If set to true, the submission script will load the system environment variables')
+            spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True, required=False,
+                help='Set a dictionary of custom environment variables for this calculation')
+            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the priority of the job to be queued')
+            spec.input('{}.max_memory_kb'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, required=False,
+                help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
+            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
+            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
+            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
-            # Inputs from use methods
+            # Define the actual inputs based on the use methods of the calculation class
             for key, use_method in calc_class._use_methods.iteritems():
 
                 valid_type = use_method['valid_types']
@@ -435,17 +449,17 @@ class JobProcess(processes.Process):
 
         self.calc._set_process_type(self._calc_class)
 
-        # Set all the attributes using the setter methods
-        for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
-            if value is not None:
-                getattr(self._calc, 'set_{}'.format(name))(value)
-
-        # Use the use_[x] methods to join up the links in this case
         for name, input_value in self.get_provenance_inputs_iterator():
 
             port = self.spec().inputs[name]
 
             if input_value is None or getattr(port, 'non_db', False):
+                continue
+
+            # Call the 'set' attribute methods for the contents of the 'option' namespace
+            if name == self.OPTIONS_INPUT_LABEL:
+                for option_name, option_value in input_value.items():
+                    getattr(self._calc, 'set_{}'.format(option_name))(option_value)
                 continue
 
             # Call the 'use' methods to set up the data-calc links
@@ -470,6 +484,7 @@ class JobProcess(processes.Process):
                 self._calc.set_computer(code.get_remote_computer())
 
         parent_calc = self.get_parent_calc()
+
         if parent_calc:
             self._calc.add_link_from(parent_calc, 'CALL', LinkType.CALL)
 

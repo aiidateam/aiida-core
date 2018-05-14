@@ -59,19 +59,48 @@ class NodeTranslator(BaseTranslator):
         # basic initialization
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
-        self._default_projections = None
+        self._default_projections = [
+            "id",
+            "label",
+            "type",
+            "ctime",
+            "mtime",
+            "uuid",
+            "user_id",
+            "user_email",
+            "attributes",
+            "extras"
+        ]
 
-        # Extract the default projections from custom_schema if they are defined
-        if self.custom_schema is not None:
-            try:
-                # check if schema is defined for given node type
-                if self.__label__ in self.custom_schema['columns'].keys():
-                    self._default_projections = self.custom_schema['columns'][self.__label__]
-            except KeyError:
-                pass
-
-        if self._default_projections is None:
-            self._default_projections = ['**']
+        ## node schema
+        # All the values from column_order must present in additional info dict
+        # Note: final schema will contain details for only the fields present in column order
+        self._schema_projections = {
+            "column_order": [
+                "id",
+                "label",
+                "type",
+                "ctime",
+                "mtime",
+                "uuid",
+                "user_id",
+                "user_email",
+                "attributes",
+                "extras"
+            ],
+            "additional_info": {
+                "id": {"is_display": True},
+                "label": {"is_display": False},
+                "type": {"is_display": True},
+                "ctime": {"is_display": True},
+                "mtime": {"is_display": True},
+                "uuid": {"is_display": False},
+                "user_id": {"is_display": False},
+                "user_email": {"is_display": True},
+                "attributes": {"is_display": False},
+                "extras": {"is_display": False}
+            }
+        }
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)

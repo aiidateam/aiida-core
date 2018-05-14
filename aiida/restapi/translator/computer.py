@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.config import custom_schema
 
 class ComputerTranslator(BaseTranslator):
     """
@@ -30,19 +29,33 @@ class ComputerTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    _default_projections = None
-
-    # Extract the default projections from custom_schema if they are defined
-    if custom_schema is not None:
-        try:
-            # check if schema is defined for given node type
-            if __label__ in custom_schema['columns'].keys():
-                _default_projections = custom_schema['columns'][__label__]
-        except KeyError:
-            pass
-
-    if _default_projections is None:
-        _default_projections = ['**']
+    ## computer schema
+    # All the values from column_order must present in additional info dict
+    # Note: final schema will contain details for only the fields present in column order
+    _schema_projections = {
+        "column_order": [
+            "id",
+            "name",
+            "hostname",
+            "description",
+            "enabled",
+            "scheduler_type",
+            "transport_type",
+            "transport_params",
+            "uuid"
+        ],
+        "additional_info": {
+            "id": {"is_display": True},
+            "name": {"is_display": True},
+            "hostname": {"is_display": True},
+            "description": {"is_display": False},
+            "enabled": {"is_display": True},
+            "scheduler_type": {"is_display": True},
+            "transport_type": {"is_display": False},
+            "transport_params": {"is_display": False},
+            "uuid": {"is_display": False}
+        }
+    }
 
     def __init__(self, **kwargs):
         """

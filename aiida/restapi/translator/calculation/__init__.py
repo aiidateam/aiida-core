@@ -40,6 +40,38 @@ class CalculationTranslator(NodeTranslator):
         super(CalculationTranslator, self).__init__(
             Class=self.__class__, **kwargs)
 
+        ## calculation schema
+        # All the values from column_order must present in additional info dict
+        # Note: final schema will contain details for only the fields present in column order
+        self._schema_projections = {
+            "column_order": [
+                "id",
+                "label",
+                "type",
+                "ctime",
+                "mtime",
+                "uuid",
+                "user_id",
+                "user_email",
+                "attributes.state",
+                "attributes",
+                "extras"
+            ],
+            "additional_info": {
+                "id": {"is_display": True},
+                "label": {"is_display": False},
+                "type": {"is_display": True},
+                "ctime": {"is_display": True},
+                "mtime": {"is_display": True},
+                "uuid": {"is_display": False},
+                "user_id": {"is_display": False},
+                "user_email": {"is_display": True},
+                "attributes.state": {"is_display": True},
+                "attributes": {"is_display": False},
+                "extras": {"is_display": False}
+            }
+        }
+
     @staticmethod
     def get_files_list(dirobj, files=None, prefix=None):
         if files is None:

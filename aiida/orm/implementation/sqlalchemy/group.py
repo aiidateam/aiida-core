@@ -66,10 +66,6 @@ class Group(AbstractGroup):
             self._dbgroup = DbGroup(name=name, description=description,
                                     user=user, type=group_type)
 
-    @staticmethod
-    def get_db_columns():
-        return get_db_columns(DbGroup)
-
     @property
     def name(self):
         return self._dbgroup.name

@@ -71,7 +71,9 @@ class ProcessBuilderNamespace(Mapping):
 
 
 class ProcessBuilder(ProcessBuilderNamespace):
-
+    """
+    A process builder that helps creating a new calculation
+    """
     def __init__(self, process_class):
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
@@ -79,7 +81,10 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
 
 class JobProcessBuilder(ProcessBuilder):
-
+    """
+    A process builder specific to JobCalculation classes, that provides
+    also the submit_test functionality
+    """
     def __dir__(self):
         return super(JobProcessBuilder, self).__dir__() + ['submit_test']
 

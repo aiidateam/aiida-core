@@ -39,6 +39,10 @@ class Comment(VerdiCommandWithSubcommands):
         Add comment to a node
         """
         import argparse
+        
+        if not is_dbenv_loaded():
+            load_dbenv()
+        
         from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():

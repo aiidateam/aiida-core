@@ -8,13 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import sys
+import click
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-
+from aiida.cmdline.commands import verdi, node
 
 
 def list_repo_files(node, path, color):
@@ -131,8 +132,6 @@ class Node(VerdiCommandRouter):
         }
 
 
-
-
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
@@ -233,12 +232,91 @@ class _Repo(VerdiCommandWithSubcommands):
                 raise
 
 
-class _Show(VerdiCommand):
+# class _Show(VerdiCommand):
+#     """
+#     Show node information (pk, uuid, class, inputs and outputs)
+#     """
+#
+#     def run(self, *args):
+#         """
+#         Show node information.
+#         """
+#         import argparse
+#         from aiida.common.exceptions import NotExistent
+#
+#         parser = argparse.ArgumentParser(
+#             prog=self.get_full_command_name(),
+#             description='Show information of a node.')
+#         parser.add_argument('pk', type=int, default=None, nargs="+",
+#                             help="ID of the node.")
+#         parser.add_argument('--print-groups', action='store_true',
+#                             dest='print_groups', default=False,
+#                             help="Show groups containing the nodes.")
+#         parser.add_argument('--no-print-groups', '--dont-print-groups',
+#                             action='store_false', dest='print_groups',
+#                             default=False,
+#                             help="Do not show groups containing the nodes"
+#                                  "output. Default behaviour.")
+#
+#         args = list(args)
+#         parsed_args = parser.parse_args(args)
+#
+#         if not is_dbenv_loaded():
+#             load_dbenv()
+#
+#         for pk in parsed_args.pk:
+#             try:
+#                 n = load_node(pk)
+#                 self.print_node_info(n, print_groups=parsed_args.print_groups)
+#             except NotExistent as e:
+#                 print >> sys.stderr, e.message
+#                 sys.exit(1)
+#
+#             if len(parsed_args.pk) > 1:
+#                 print ""
+
+# @node.group()
+# def show():
+#     pass
+
+class _Show(VerdiCommandWithSubcommands):
+
+    def run(self, *args):
+        verdi()
+
+@node.command('show')
+@click.argument('identifier', type=str, nargs=-1)
+@click.option('--uuid', 'uuid', flag_value=True, help="If activated the identifier is UUID, otherwise it is a pk/id..")
+@click.option('--print-groups', 'print_groups', flag_value=True, help="Show groups containing the nodes.")
+@click.option('--no-print-groups', '--dont-print-groups', 'print_groups', flag_value=False, help="Do not show groups containing the nodes output. Default behaviour.")
+def show(identifier, uuid, print_groups):
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    print print_groups
+    print uuid
+    print identifier
+    print "show command"
+
+
+class _SShow(VerdiCommandWithSubcommands):
     """
     Show node information (pk, uuid, class, inputs and outputs)
     """
 
-    def run(self, *args):
+    def __init__(self):
+        self.valid_subcommands = {
+            'pk': (self.cli, self.complete_none),
+            'uuid': (self.cli, self.complete_none)
+        }
+
+    def cli(self, *args):
+        verdi()
+
+
+    def cli(self, *args):
+        verdi()
+
         """
         Show node information.
         """
@@ -268,13 +346,15 @@ class _Show(VerdiCommand):
         for pk in parsed_args.pk:
             try:
                 n = load_node(pk)
-                self.print_node_info(n, print_groups=parsed_args.print_groups)
+                self.print_node_info(n,
+                                     print_groups=parsed_args.print_groups)
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
             if len(parsed_args.pk) > 1:
                 print ""
+
 
     def print_node_info(self, node, print_groups=False):
         from aiida.cmdline.common import print_node_info

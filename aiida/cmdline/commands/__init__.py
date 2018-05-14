@@ -67,8 +67,6 @@ def user():
 @verdi.group()
 def node():
     pass
-    # def cli():
-    #     pass
 
 @verdi.group('data')
 def data_cmd():

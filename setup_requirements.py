@@ -38,7 +38,7 @@ install_requires = [
     'anyjson==0.3.3',
     'psutil==5.4.0',
     'meld3==1.0.0',
-    'numpy==1.12.0',
+    'numpy==1.14.3',
     'plumpy==0.7.12',
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465

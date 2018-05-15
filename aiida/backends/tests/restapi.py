@@ -804,4 +804,25 @@ class RESTApiTestSuite(RESTApiTestCase):
         cif = load_node(node_uuid)._prepare_cif()[0]
         self.assertEquals(rv.data, cif )
 
+    ############### schema #############
+    def test_schema(self):
+        """
+        test schema
+        """
+        for nodetype in ["nodes", "calculations", "data", "codes", "computers", "users", "groups"]:
+            url = self.get_url_prefix() + '/' + nodetype + '/schema'
+            with self.app.test_client() as client:
+                rv = client.get(url)
+                response = json.loads(rv.data)
+                expected_keys = ["display_name", "help_text", "is_display", "is_foreign_key", "type"]
 
+                # check fields
+                for pkey, pinfo in response["data"]["fields"].items():
+                    available_keys = pinfo.keys()
+                    for prop in expected_keys:
+                        self.assertIn(prop, available_keys)
+
+                # check order
+                available_properties = response["data"]["fields"].keys()
+                for prop in response["data"]["ordering"]:
+                    self.assertIn(prop, available_properties)

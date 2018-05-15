@@ -45,9 +45,6 @@ class Comment(VerdiCommandWithSubcommands):
         
         from aiida.orm.backend import construct_backend
 
-        if not is_dbenv_loaded():
-            load_dbenv()
-
         backend = construct_backend()
         user = backend.users.get_automatic_user()
 

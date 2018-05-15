@@ -14,7 +14,7 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
-from aiida.work.process_builder import ProcessBuilder
+#from aiida.work.process_builder import ProcessBuilder
 from aiida.work.workchain import WorkChain
 from aiida.work import utils
 
@@ -110,3 +110,34 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEquals(builder.__class__.b.__doc__, str(TestWorkChain.spec().inputs['b']))
         self.assertEquals(builder.__class__.c.__doc__, str(TestWorkChain.spec().inputs['c']))
         self.assertEquals(builder.c.__class__.d.__doc__, str(TestWorkChain.spec().inputs['c']['d']))
+
+    def test_code_get_new_builder(self):
+        """
+        Test that the get_new_builder method of Code returns a builder
+        where the code is already set.
+        """
+        from aiida.orm import Code
+
+        code1 = Code()
+        # This also sets the code as a remote code
+        code1.set_remote_computer_exec((self.computer, '/bin/true'))
+        code1.label = 'test_code1'
+        code1.set_input_plugin_name('simpleplugins.templatereplacer')
+        code1.store()
+
+        # Check that I can get a builder
+        builder = code1.get_new_builder()
+        self.assertEquals(builder.code.pk, code1.pk)
+
+        # Check that I can set the parameters
+        builder.parameters = ParameterData(dict={})
+
+        # Check that it complains for an unknown input
+        with self.assertRaises(AttributeError):
+            builder.unknown_parameter = 3
+
+        # Check that it complains if the type is not the correct one
+        # (for the simpleplugins.templatereplacer, it should be a
+        # ParameterData)
+        with self.assertRaises(ValueError):
+            builder.parameters = Int(3)

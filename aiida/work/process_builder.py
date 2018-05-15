@@ -45,9 +45,12 @@ class ProcessBuilderNamespace(Mapping):
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
-            port = self._port_namespace[attr]
-            is_valid, message = port.validate(value)
+            try:
+                port = self._port_namespace[attr]
+            except KeyError:
+                raise AttributeError('Unknown builder parameter: {}'.format(attr))
 
+            is_valid, message = port.validate(value)
             if not is_valid:
                 raise ValueError('invalid attribute value: {}'.format(message))
 

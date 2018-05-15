@@ -19,6 +19,35 @@ from aiida.common.exceptions import NotExistent
 
 class TestComputer(AiidaTestCase):
 
+    def test_get_transport(self):
+        """
+        Test the get_transport method of Computer
+        """
+        import tempfile
+        from aiida.orm import Computer
+        from aiida.orm.backend import construct_backend
+        backend = construct_backend()
+
+        new_comp = Computer(name='bbb',
+                                hostname='localhost',
+                                transport_type='local',
+                                scheduler_type='direct',
+                                workdir='/tmp/aiida')
+        new_comp.store()
+
+        # Configure the computer - no parameters for local transport
+        authinfo = backend.authinfos.create(computer=new_comp, user=backend.users.get_automatic_user())
+        authinfo.store()
+
+        transport = new_comp.get_transport()
+
+        # It's on localhost, so I see files that I create
+        with transport:
+            with tempfile.NamedTemporaryFile() as f:
+                self.assertEquals(transport.isfile(f.name), True)
+            # Here the file should have been deleted
+            self.assertEquals(transport.isfile(f.name), False)
+
     def test_delete(self):
         from aiida.orm import Computer
         new_comp = Computer(name='aaa',

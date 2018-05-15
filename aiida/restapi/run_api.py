@@ -177,8 +177,7 @@ def run_api(App, Api, *args, **kwargs):
     # Instantiate an Api by associating its app
     api_kwargs = dict(PREFIX=confs.PREFIX,
                       PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
-                      LIMIT_DEFAULT=confs.LIMIT_DEFAULT,
-                      custom_schema=confs.custom_schema)
+                      LIMIT_DEFAULT=confs.LIMIT_DEFAULT)
     api = Api(app, **api_kwargs)
 
     # Check if the app has to be hooked-up or just returned

@@ -77,13 +77,6 @@ class Computer(AbstractComputer):
                                  "callable!".format(k))
             method(v)
 
-
-    @staticmethod
-    def get_db_columns():
-        # from aiida.backends.djsite.db.models import DbComputer
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbComputer
-        return get_db_columns(DbComputer)
-
     @classmethod
     def list_names(cls):
         from aiida.backends.djsite.db.models import DbComputer

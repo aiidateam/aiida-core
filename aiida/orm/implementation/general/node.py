@@ -147,13 +147,92 @@ class AbstractNode(object):
         return ""
 
     @staticmethod
-    def get_db_columns():
+    def get_schema():
         """
-        This method returns a list with the column names and types of the table
-        corresponding to this class.
-        :return: a list with the names of the columns
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+
+        :return: get schema of the node
         """
-        pass
+        return {
+            "attributes": {
+                "display_name": "Attributes",
+                "help_text": "Attributes of the node",
+                "is_foreign_key": False,
+                "type": "dict"
+            },
+            "attributes.state": {
+                "display_name": "State",
+                "help_text": "AiiDA state of the calculation",
+                "is_foreign_key": False,
+                "type": ""
+            },
+            "ctime": {
+                "display_name": "Creation time",
+                "help_text": "Creation time of the node",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "extras": {
+                "display_name": "Extras",
+                "help_text": "Extras of the node",
+                "is_foreign_key": False,
+                "type": "dict"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "label": {
+                "display_name": "Label",
+                "help_text": "User-assigned label",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "mtime": {
+                "display_name": "Last Modification time",
+                "help_text": "Last modification time",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "type": {
+                "display_name": "Type",
+                "help_text": "Code type",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "user_id": {
+                "display_name": "Id of creator",
+                "help_text": "Id of the user that created the node",
+                "is_foreign_key": True,
+                "related_column": "id",
+                "related_resource": "_dbusers",
+                "type": "int"
+            },
+            "uuid": {
+                "display_name": "Unique ID",
+                "help_text": "Universally Unique Identifier",
+                "is_foreign_key": False,
+                "type": "unicode"
+            },
+            "nodeversion": {
+                "display_name": "Node version",
+                "help_text": "Version of the node",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "process_type": {
+                "display_name": "Process type",
+                "help_text": "Process type",
+                "is_foreign_key": False,
+                "type": "str"
+            }
+        }
 
     @property
     def logger(self):

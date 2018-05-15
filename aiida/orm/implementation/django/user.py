@@ -78,11 +78,6 @@ class DjangoUser(User):
         super(DjangoUser, self).__init__(backend)
         self._dbuser = utils.ModelWrapper(DbUser(email=email))
 
-    @staticmethod
-    def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbUser as DbU
-        return get_db_columns(DbU)
-
     @property
     def dbuser(self):
         # We have to get the underlying model here rather than just the wrapper

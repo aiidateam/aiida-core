@@ -83,15 +83,6 @@ class Computer(AbstractComputer):
         if is_modified:
             flag_modified(self._dbcomputer, "_metadata")
 
-
-    @staticmethod
-    def get_db_columns():
-        #I import get_db_columns here to avoid circular imports.
-        #In fact, aiida.orm.implementation.django.utils imports Computer
-        from aiida.orm.implementation.general.utils import get_db_columns
-        return get_db_columns(DbComputer)
-
-
     @classmethod
     def list_names(cls):
         from aiida.backends.sqlalchemy import get_scoped_session

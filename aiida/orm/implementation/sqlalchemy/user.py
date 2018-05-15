@@ -51,11 +51,6 @@ class User(AbstractUser):
         else:
             raise ValueError("Only dbuser & email are accepted as arguments")
 
-    @staticmethod
-    def get_db_columns():
-        from aiida.orm.implementation.general.utils import get_db_columns
-        return get_db_columns(DbUser)
-
     @property
     def pk(self):
         return self._dbuser.id

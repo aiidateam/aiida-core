@@ -39,7 +39,7 @@ itsdangerous==0.24
 marshmallow-sqlalchemy==0.10.0
 meld3==1.0.0
 mock==2.0.0
-numpy==1.12.0
+numpy==1.14.3
 paramiko==2.4.0
 passlib==1.7.1
 pathlib2==2.3.0

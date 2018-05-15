@@ -66,7 +66,7 @@ class Process(plumpy.Process):
         spec.input('description', valid_type=basestring, required=False, non_db=True)
         spec.input('label', valid_type=basestring, required=False, non_db=True)
         spec.inputs.valid_type = (Data, Calculation)
-        spec.outputs.valid_type = (Data)
+        spec.outputs.valid_type = (Data,)
 
     @classmethod
     def get_builder(cls):
@@ -208,12 +208,15 @@ class Process(plumpy.Process):
     def on_entering(self, state):
         super(Process, self).on_entering(state)
         # Update the node attributes every time we enter a new state
-        
+
     def on_entered(self, from_state):
         super(Process, self).on_entered(from_state)
         self.update_node_state(self._state)
         if self._enable_persistence and not self._state.is_terminal():
-            self.runner.persister.save_checkpoint(self)
+            try:
+                self.runner.persister.save_checkpoint(self)
+            except plumpy.PersistenceError:
+                self.logger.warning("Failed to save checkpoint:{}".format(traceback.format_exc()))
 
         # Update the latest process state change timestamp
         utils.set_process_state_change_timestamp(self)
@@ -424,13 +427,13 @@ class Process(plumpy.Process):
         :param separator: character to use for the concatenation of keys
         """
         if (
-            (port is None and isinstance(port_value, Node)) or
-            (isinstance(port, InputPort) and not getattr(port, 'non_db', False))
+                (port is None and isinstance(port_value, Node)) or
+                (isinstance(port, InputPort) and not getattr(port, 'non_db', False))
         ):
             return [(parent_name, port_value)]
         elif (
-            (port is None and isinstance(port_value, collections.Mapping)) or
-            isinstance(port, PortNamespace)
+                (port is None and isinstance(port_value, collections.Mapping)) or
+                isinstance(port, PortNamespace)
         ):
             items = []
             for name, value in port_value.items():
@@ -453,7 +456,6 @@ class Process(plumpy.Process):
         else:
             assert (port is None) or (isinstance(port, InputPort) and port.non_db)
             return []
-
 
     def exposed_inputs(self, process_class, namespace=None, agglomerate=True):
         """
@@ -534,7 +536,6 @@ class Process(plumpy.Process):
                     result[ns + namespace_separator + port_name] = process_outputs_dict[port_name]
         return result
 
-
     @staticmethod
     def _get_namespace_list(namespace=None, agglomerate=True):
         if not agglomerate:
@@ -549,8 +550,8 @@ class Process(plumpy.Process):
                 ])
             return namespace_list
 
-class FunctionProcess(Process):
 
+class FunctionProcess(Process):
     _func_args = None
     _calc_node_class = FunctionCalculation
 
@@ -641,6 +642,8 @@ class FunctionProcess(Process):
         return cls._calc_node_class()
 
     def __init__(self, *args, **kwargs):
+        if kwargs.get('enable_persistence', False):
+            raise RuntimeError('Cannot persist a workfunction')
         super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
 
     def execute(self):

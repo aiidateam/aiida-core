@@ -10,6 +10,7 @@
 
 import logging
 import plumpy
+import traceback
 import yaml
 
 from aiida import orm
@@ -17,10 +18,6 @@ from aiida import orm
 __all__ = ['ObjectLoader', 'get_object_loader']
 
 LOGGER = logging.getLogger(__name__)
-
-
-class PersistenceError(Exception):
-    pass
 
 
 class AiiDAPersister(plumpy.Persister):
@@ -35,9 +32,15 @@ class AiiDAPersister(plumpy.Persister):
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
 
-        bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
-        calc = process.calc
-        calc._set_checkpoint(yaml.dump(bundle))
+        try:
+            bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
+        except ValueError:
+            # Couldn't create the bundle
+            raise plumpy.PersistenceError(
+                "Failed to create a bundle for '{}':{}".format(process, traceback.format_exc()))
+        else:
+            calc = process.calc
+            calc._set_checkpoint(yaml.dump(bundle))
 
         return bundle
 
@@ -49,7 +52,7 @@ class AiiDAPersister(plumpy.Persister):
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
-            raise PersistenceError('Calculation<{}> does not have a saved checkpoint'.format(calculation.pk))
+            raise plumpy.PersistenceError('Calculation<{}> does not have a saved checkpoint'.format(calculation.pk))
 
         bundle = yaml.load(checkpoint)
         return bundle

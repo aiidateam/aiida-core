@@ -43,7 +43,7 @@ install_requires = [
     'pycrypto==2.6.1',
     'pika==0.11.2',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
-    'plumpy==0.10.1',
+    'plumpy==0.10.2',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
 ]

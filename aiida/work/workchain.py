@@ -24,7 +24,6 @@ from .context import *
 __all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
 
 
-
 class _WorkChainSpec(processes.ProcessSpec, plumpy.WorkChainSpec):
     pass
 
@@ -46,8 +45,13 @@ class WorkChain(processes.Process):
         spec.inputs.dynamic = True
         spec.outputs.dynamic = True
 
-    def __init__(self, inputs=None, logger=None, runner=None):
-        super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
+    def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
+        super(WorkChain, self).__init__(
+            inputs=inputs,
+            logger=logger,
+            runner=runner,
+            enable_persistence=enable_persistence
+        )
         self._stepper = None
         self._awaitables = []
         self._context = AttributeDict()

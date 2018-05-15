@@ -248,6 +248,7 @@ class _Show(VerdiCommandWithSubcommands):
                                      "output. Default behaviour.")
 def show(identifiers, uuid, print_groups):
     from aiida.common.exceptions import NotExistent
+    from aiida.common.exceptions import MultipleObjectsError
 
     if not is_dbenv_loaded():
         load_dbenv()
@@ -255,9 +256,20 @@ def show(identifiers, uuid, print_groups):
     for id in identifiers:
         try:
             if uuid:
-                n = load_node(uuid=id)
+                try:
+                    n = load_node(uuid=id)
+                except MultipleObjectsError:
+                    click.echo("More than one node found. Please provide "
+                               "longer starting pattern for uuid.", err=True)
+                    return
             else:
-                n = load_node(pk=int(id))
+                try:
+                    ids = int(id)
+                except ValueError:
+                    click.echo("The pk/id can not be a string. Please provide "
+                               "an integer.", err=True)
+                    return
+                n = load_node(pk=int(ids))
             print_node_info(n, print_groups=print_groups)
         except NotExistent as e:
             click.echo(e.message, err=True)

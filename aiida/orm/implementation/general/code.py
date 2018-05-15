@@ -15,7 +15,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 
 
-DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
+DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/concepts/processes.html#the-process-builder'
 
 
 class AbstractCode(Node):
@@ -421,7 +421,7 @@ class AbstractCode(Node):
             course be cached, since the new node is not stored yet).
 
         :raise MissingPluginError: if the specified plugin does not exist.
-        :raise ValueError: if no plugin was specified.
+        :raise ValueError: if no default plugin was specified in the code.
         """
         import warnings
         warnings.warn(
@@ -453,6 +453,37 @@ class AbstractCode(Node):
         # I link to the code
         new_calc.use_code(self)
         return new_calc
+
+    def get_new_builder(self):
+        """
+        Create and return a new ProcessBuilder for the default Calculation
+        plugin, as obtained by the self.get_input_plugin_name() method.
+
+        :note: it also sets the ``builder.code`` value.
+
+        :raise MissingPluginError: if the specified plugin does not exist.
+        :raise ValueError: if no default plugin was specified.
+
+        :return:
+        """
+        from aiida.orm.utils import CalculationFactory
+        plugin_name = self.get_input_plugin_name()
+        if plugin_name is None:
+            raise ValueError(
+                "You did not specify a default input plugin for this code")
+        try:
+            C = CalculationFactory(plugin_name)
+        except MissingPluginError:
+            raise MissingPluginError(
+                "The input_plugin name for this code is "
+                "'{}', but it is not an existing plugin"
+                "name".format(plugin_name))
+
+        builder = C.get_builder()
+        # Setup the code already
+        builder.code = self
+
+        return builder
 
     def full_text_info(self, verbose=False):
         """

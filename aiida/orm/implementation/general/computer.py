@@ -703,6 +703,35 @@ class AbstractComputer(object):
     def set_transport_params(self, val):
         pass
 
+    def get_transport(self, user=None):
+        """
+        Return a Tranport class, configured with all correct parameters.
+        The Transport is closed (meaning that if you want to run any operation with
+        it, you have to open it first (i.e., e.g. for a SSH tranport, you have
+        to open a connection). To do this you can call ``transport.open()``, or simply
+        run within a ``with`` statement::
+
+           transport = Computer.get_transport()
+           with transport:
+               print(transport.whoami())
+
+        :param user: if None, try to obtain a transport for the default user.
+            Otherwise, pass a valid User.
+
+        :return: a (closed) Transport, already configured with the connection
+            parameters to the supercomputer, as configured with ``verdi computer configure``
+            for the user specified as a parameter ``user``.
+        """
+        from aiida.orm.backend import construct_backend
+        backend = construct_backend()
+        if user is None:
+            authinfo = backend.authinfos.get(self, backend.users.get_automatic_user())
+        else:
+            authinfo = backend.authinfos.get(self, user)
+        transport = authinfo.get_transport()
+
+        return transport
+
     @abstractmethod
     def get_workdir(self):
         pass

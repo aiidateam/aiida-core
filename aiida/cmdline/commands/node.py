@@ -237,7 +237,7 @@ class _Show(VerdiCommandWithSubcommands):
         verdi()
 
 @node.command('show')
-@click.argument('identifiers', type=str, nargs=-1)
+@click.argument('identifiers', type=str, nargs=-1, required=True)
 @click.option('--uuid', 'uuid', flag_value=True,
               help="If activated the identifier is UUID, "
                    "otherwise it is a pk/id..")

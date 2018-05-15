@@ -168,6 +168,12 @@ class AbstractUser(object):
     @staticmethod
     def get_schema():
         """
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+
         :return: get schema of the user
         """
         return {

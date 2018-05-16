@@ -59,20 +59,6 @@ CACHING_TIMEOUTS = { #Caching TIMEOUTS (in seconds)
     'codes': 10,
 }
 
-"""
-Schema customization (if file schema_custom.json is present in this same folder)
-"""
-#TODO add more verbose description
-import os
-import ujson as uj
-
-schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
-try:
-    with open(schema_custom_config) as fin:
-        custom_schema = uj.load(fin)
-except IOError:
-    custom_schema = {}
-
 # IO tree
 MAX_TREE_DEPTH = 5
 

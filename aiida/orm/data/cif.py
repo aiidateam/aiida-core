@@ -531,9 +531,9 @@ class CifData(SinglefileData):
 
     def set_ase(self, aseatoms):
         """
-        Set the cif data from an ase atoms object.
+        Set the contents of the CifData starting from an ASE atoms object
 
-        :param aseatoms: The ase atoms object to use
+        :param aseatoms: The ASE atoms object
         """
         import tempfile
         cif = cif_from_ase(aseatoms)

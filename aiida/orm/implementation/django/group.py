@@ -18,7 +18,6 @@ from aiida.orm.implementation.general.group import AbstractGroup
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
 from aiida.orm.implementation.django.node import Node
-from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.common.utils import type_check
 
 from . import user as users
@@ -64,12 +63,6 @@ class Group(AbstractGroup):
                 raise ValueError(
                     "Too many parameters passed to Group, the "
                     "unknown parameters are: {}".format(", ".join(kwargs.keys())))
-
-    @staticmethod
-    def get_db_columns():
-        # from aiida.backends.djsite.db.models import DbGroup
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbGroup
-        return get_db_columns(DbGroup)
 
     @property
     def name(self):

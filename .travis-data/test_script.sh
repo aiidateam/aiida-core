@@ -22,10 +22,6 @@ case "$TEST_TYPE" in
         export PYTHONPATH="${PYTHONPATH}:${TRAVIS_DATA_DIR}"
         export PYTHONPATH="${PYTHONPATH}:${JENKINS_DATA_DIR}"
 
-        echo "TRAVIS_DATA_DIR: '${TRAVIS_DATA_DIR}'"
-        echo "Directory content:"
-        ls "${TRAVIS_DATA_DIR}"
-
         # Clean up coverage file (there shouldn't be any, but just in case)
         coverage erase
 

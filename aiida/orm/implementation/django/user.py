@@ -10,7 +10,6 @@
 
 from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.user import User, UserCollection
-from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.utils.email import normalize_email
 from aiida.common.utils import type_check
 

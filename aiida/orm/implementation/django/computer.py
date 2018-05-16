@@ -19,8 +19,6 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.general.utils import get_db_columns
-
 
 class Computer(AbstractComputer):
     @property

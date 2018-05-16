@@ -239,7 +239,7 @@ class RESTApiTestCase(AiidaTestCase):
         :param result_name: result name in response e.g. inputs, outputs
         """
 
-        if result_node_type == None and result_name == None:
+        if result_node_type is None and result_name is None:
             result_node_type = node_type
             result_name = node_type
 
@@ -266,15 +266,13 @@ class RESTApiTestCase(AiidaTestCase):
                     raise InputValidationError(
                         "Pass the expected range of the dummydata")
 
-                self.assertTrue(
-                    len(response["data"][result_name]) == len(expected_data))
+                self.assertEqual(
+                    len(response["data"][result_name]), len(expected_data))
 
                 for expected_node, response_node in zip(expected_data,
                                                         response["data"][
                                                             result_name]):
-
-                    self.assertTrue(all(item in response_node.items()
-                                        for item in expected_node.items()))
+                    self.assertEqual(response_node['uuid'], expected_node['uuid'])
 
                 self.compare_extra_response_data(node_type, url, response, uuid)
 

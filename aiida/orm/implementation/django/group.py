@@ -18,7 +18,6 @@ from aiida.orm.implementation.general.group import AbstractGroup
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
 from aiida.orm.implementation.django.node import Node
-from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.common.utils import type_check
 
 from . import user as users

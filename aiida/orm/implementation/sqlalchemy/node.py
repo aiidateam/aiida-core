@@ -27,7 +27,6 @@ from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HA
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.utils import django_filter, \
     get_attr
-from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.orm.mixins import Sealable
 
 from . import user as users

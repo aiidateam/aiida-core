@@ -235,3 +235,64 @@ class User(object):
         :return: The short name
         """
         return self.email
+
+    @staticmethod
+    def get_schema():
+        """
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+        :return: get schema of the user
+        """
+        return {
+            "date_joined": {
+                "display_name": "User since",
+                "help_text": "Date and time of registration",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "email": {
+                "display_name": "email",
+                "help_text": "e-mail of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "first_name": {
+                "display_name": "First name",
+                "help_text": "First name of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "institution": {
+                "display_name": "Institution",
+                "help_text": "Affiliation of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "is_active": {
+                "display_name": "Active",
+                "help_text": "True(False) if the user is active(not)",
+                "is_foreign_key": False,
+                "type": "bool"
+            },
+            "last_login": {
+                "display_name": "Last login",
+                "help_text": "Date and time of the last login",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "last_name": {
+                "display_name": "Last name",
+                "help_text": "Last name of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            }
+        }

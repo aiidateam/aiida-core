@@ -18,7 +18,6 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError, NotExistent)
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.group import AbstractGroup
-from aiida.orm.implementation.general.utils import get_db_columns
 
 from . import user as users
 from . import utils

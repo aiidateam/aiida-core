@@ -23,7 +23,6 @@ from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
 from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
-from aiida.orm.implementation.general.utils import get_db_columns
 
 from . import user as users
 
@@ -40,11 +39,6 @@ class Node(AbstractNode):
             raise NotExistent("UUID={} is not an instance of {}".format(
                 uuid, cls.__name__))
         return node
-
-    @staticmethod
-    def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
-        return get_db_columns(DbNode)
 
     @classmethod
     def get_subclass_from_pk(cls, pk):

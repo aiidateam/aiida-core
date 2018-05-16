@@ -239,7 +239,7 @@ class Node(Resource):
             if filters:
                 usr = filters["user"]["=="]
             else:
-                usr = []
+                usr = None
             results = self.trans.get_statistics(usr)
 
         # TODO Might need to be improved

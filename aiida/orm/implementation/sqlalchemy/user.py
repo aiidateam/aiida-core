@@ -63,11 +63,6 @@ class SqlaUser(User):
         super(SqlaUser, self).__init__(backend)
         self._dbuser = utils.ModelWrapper(DbUser(email=email))
 
-    @staticmethod
-    def get_db_columns():
-        from aiida.orm.implementation.general.utils import get_db_columns
-        return get_db_columns(DbUser)
-
     @property
     def dbuser(self):
         return self._dbuser._model

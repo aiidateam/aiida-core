@@ -170,6 +170,9 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
 @click.option('--no-password', is_flag=True)
 @click.option('--force-reconfigure', is_flag=True)
 def configure(email, first_name, last_name, institution, no_password, force_reconfigure):
+    if not is_dbenv_loaded():
+        load_dbenv()
+
     from aiida.orm.backend import construct_backend
     backend = construct_backend()
     do_configure(backend,

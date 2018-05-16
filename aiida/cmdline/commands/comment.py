@@ -42,7 +42,7 @@ class Comment(VerdiCommandWithSubcommands):
         
         if not is_dbenv_loaded():
             load_dbenv()
-        
+
         from aiida.orm.backend import construct_backend
 
         backend = construct_backend()
@@ -139,10 +139,11 @@ class Comment(VerdiCommandWithSubcommands):
         """
         # Note: in fact, the user can still manually delete any comment
         import argparse
-        from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():
             load_dbenv()
+
+        from aiida.orm.backend import construct_backend
 
         backend = construct_backend()
         user = backend.users.get_automatic_user()
@@ -200,11 +201,11 @@ class Comment(VerdiCommandWithSubcommands):
         Update a comment
         """
         import argparse
-        from aiida.orm.backend import construct_backend
 
         if not is_dbenv_loaded():
             load_dbenv()
 
+        from aiida.orm.backend import construct_backend
         backend = construct_backend()
         user = backend.users.get_automatic_user()
 

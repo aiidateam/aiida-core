@@ -59,6 +59,9 @@ pipeline {
                 // (re)start postgres (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/postgresql restart'
 
+                // rerun updatedb otherwise 'locate' prints a warning that the DB is old...
+                sh 'sudo updatedb'
+
                 // Debug: check that I can connect without password
                 sh 'echo "SELECT datname FROM pg_database" | psql -h localhost -U postgres -w'
 

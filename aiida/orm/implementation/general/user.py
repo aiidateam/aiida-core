@@ -7,127 +7,48 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import abc
-
+import logging
+from abc import abstractmethod, abstractproperty, ABCMeta
 from aiida.common.hashing import is_password_usable
-from aiida.common import exceptions
-
-__all__ = ['User', 'UserCollection']
+from aiida.common.utils import abstractclassmethod
 
 
-class UserCollection(object):
+class AbstractUser(object):
     """
-    The collection of users stored in a backend
+    An AiiDA ORM implementation of a user.
     """
 
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ABCMeta
 
-    @abc.abstractmethod
-    def create(self, email):
-        """
-        Create a user with the provided email address
+    _logger = logging.getLogger(__name__)
 
-        :param email: An email address for the user
-        :return: A new user object
-        :rtype: :class:`User`
-        """
-        pass
-
-    def find(self, email=None, id=None):
-        """
-        Final all users matching the given criteria
-        :param email: An email address to search for
-        :return: A collection of users matching the criteria
-        """
-        from .querybuilder import QueryBuilder
-
-        qb = QueryBuilder()
-        qb.append(User, filters={'email': {'==': email}})
-        res = [_[0] for _ in qb.all()]
-        if res is None:
-            return []
-
-        return res
-
-    def get(self, email):
-        results = self.find(email=email)
-        if not results:
-            raise exceptions.NotExistent()
-        else:
-            if len(results) > 1:
-                raise exceptions.MultipleObjectsError()
-            else:
-                return results[0]
-
-    def get_automatic_user(self):
-        from aiida.common.utils import get_configured_user_email
-
-        email = get_configured_user_email()
-        if not email:
-            return None
-
-        try:
-            return self.get(email)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            return None
-
-    def all(self):
-        """
-        Final all users matching the given criteria
-        :param email:
-        :return: A collection of users matching the criteria
-        """
-        from .querybuilder import QueryBuilder
-
-        qb = QueryBuilder()
-        qb.append(User)
-        return [_[0] for _ in qb.all()]
-
-
-class User(object):
-    """
-    This is the base class for User information in AiiDA.  An implementing
-    backend needs to provide a concrete version.
-    """
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
-    __metaclass__ = abc.ABCMeta
+    @abstractmethod
+    def __init__(self, **kwargs):
+        pass
 
-    def __init__(self, backend):
-        self._backend = backend
-
-    @property
-    def backend(self):
-        return self._backend
-
-    @abc.abstractproperty
+    @abstractproperty
     def pk(self):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def id(self):
         pass
 
-    @abc.abstractproperty
-    def is_stored(self):
-        """
-        Is the user stored
-
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
+    @abstractmethod
+    def save(self):
         pass
 
-    @abc.abstractmethod
-    def store(self):
+    @abstractmethod
+    def force_save(self):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def email(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @email.setter
     def email(self, val):
         pass
@@ -147,64 +68,82 @@ class User(object):
 
         self._set_password(pass_hash)
 
-    @abc.abstractmethod
+    @abstractmethod
     def _get_password(self):
         pass
 
-    @abc.abstractmethod
-    def _set_password(self, new_pass):
+    @abstractmethod
+    def _set_password(self):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
+    def is_superuser(self):
+        pass
+
+    @abstractmethod
+    @is_superuser.setter
+    def is_superuser(self, val):
+        pass
+
+    @abstractproperty
     def first_name(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @first_name.setter
     def first_name(self, val):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def last_name(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @last_name.setter
     def last_name(self, val):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def institution(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @institution.setter
     def institution(self, val):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
+    def is_staff(self):
+        pass
+
+    @abstractmethod
+    @is_staff.setter
+    def is_staff(self, val):
+        pass
+
+    @abstractproperty
     def is_active(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @is_active.setter
     def is_active(self, val):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def last_login(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @last_login.setter
     def last_login(self, val):
         pass
 
-    @abc.abstractproperty
+    @abstractproperty
     def date_joined(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     @date_joined.setter
     def date_joined(self, val):
         pass
@@ -212,41 +151,30 @@ class User(object):
     def has_usable_password(self):
         return is_password_usable(self._get_password())
 
-    def get_full_name(self):
-        """
-        Return the user full name
+    @classmethod
+    def get_all_users(cls):
+        return cls.search_for_users()
 
-        :return: the user full name
+    @abstractclassmethod
+    def search_for_users(cls, **kwargs):
         """
-        if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name,
-                                       self.email)
-        elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)
-        elif self.last_name:
-            return "{} ({})".format(self.last_name, self.email)
-        else:
-            return "{}".format(self.email)
+        Search for a user the passed keys.
 
-    def get_short_name(self):
+        :param kwargs: The keys to search for the user with.
+        :return: A list of users matching the search criteria.
         """
-        Return the user short name (typically, this returns the email)
-
-        :return: The short name
-        """
-        return self.email
+        pass
 
     @staticmethod
     def get_schema():
         """
         Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
 
-          - display_name: display name of the property
-          - help text: short help text of the property
-          - is_foreign_key: is the property foreign key to other type of the node
-          - type: type of the property. e.g. str, dict, int
-
-        :return: schema of the user
+        :return: get schema of the user
         """
         return {
             "date_joined": {
@@ -298,3 +226,16 @@ class User(object):
                 "type": "str"
             }
         }
+
+
+class Util(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def delete_user(self, pk):
+        """
+        Delete the user with the given pk.
+        :param pk: The user pk.
+        """
+        pass
+

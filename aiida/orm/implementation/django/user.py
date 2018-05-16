@@ -10,7 +10,6 @@
 
 from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.user import User, UserCollection
-from aiida.orm.implementation.general.utils import get_db_columns
 from aiida.utils.email import normalize_email
 from aiida.common.utils import type_check
 
@@ -77,11 +76,6 @@ class DjangoUser(User):
     def __init__(self, backend, email):
         super(DjangoUser, self).__init__(backend)
         self._dbuser = utils.ModelWrapper(DbUser(email=email))
-
-    @staticmethod
-    def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbUser as DbU
-        return get_db_columns(DbU)
 
     @property
     def dbuser(self):

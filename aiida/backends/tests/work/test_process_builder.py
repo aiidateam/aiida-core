@@ -111,9 +111,9 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEquals(builder.__class__.c.__doc__, str(TestWorkChain.spec().inputs['c']))
         self.assertEquals(builder.c.__class__.d.__doc__, str(TestWorkChain.spec().inputs['c']['d']))
 
-    def test_code_get_new_builder(self):
+    def test_code_get_builder(self):
         """
-        Test that the get_new_builder method of Code returns a builder
+        Test that the get_builder method of Code returns a builder
         where the code is already set.
         """
         from aiida.orm import Code
@@ -126,7 +126,7 @@ class TestProcessBuilder(AiidaTestCase):
         code1.store()
 
         # Check that I can get a builder
-        builder = code1.get_new_builder()
+        builder = code1.get_builder()
         self.assertEquals(builder.code.pk, code1.pk)
 
         # Check that I can set the parameters

@@ -215,8 +215,12 @@ class Process(plumpy.Process):
         if self._enable_persistence and not self._state.is_terminal():
             try:
                 self.runner.persister.save_checkpoint(self)
-            except plumpy.PersistenceError:
-                self.logger.warning("Failed to save checkpoint:{}".format(traceback.format_exc()))
+            except plumpy.PersistenceError as e:
+                self.logger.warning(
+                    "Exception trying to save checkpoint, this means you will "
+                    "not be able to restart in case of a crash until the next successful checkpoint.")
+                self.logger.debug(
+                    "Exception trying to save checkpoint:\n{}".format(traceback.format_exc()))
 
         # Update the latest process state change timestamp
         utils.set_process_state_change_timestamp(self)

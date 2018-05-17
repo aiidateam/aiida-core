@@ -53,6 +53,7 @@ db_test_list = {
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.log': ['aiida.backends.tests.orm.log'],
+        'orm.mixins': ['aiida.backends.tests.orm.mixins'],
         'orm.utils': ['aiida.backends.tests.orm.utils'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],
         'work.daemon': ['aiida.backends.tests.work.daemon'],

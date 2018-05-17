@@ -214,7 +214,7 @@ class Sealable(object):
         clone = super(Sealable, self).copy()
 
         if include_updatable_attrs is False:
-            for key, value in self._iter_updatable_attributes():
+            for key, value in clone._iter_updatable_attributes():
                 clone._del_attr(key)
 
         return clone

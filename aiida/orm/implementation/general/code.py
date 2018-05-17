@@ -454,7 +454,7 @@ class AbstractCode(Node):
         new_calc.use_code(self)
         return new_calc
 
-    def get_new_builder(self):
+    def get_builder(self):
         """
         Create and return a new ProcessBuilder for the default Calculation
         plugin, as obtained by the self.get_input_plugin_name() method.

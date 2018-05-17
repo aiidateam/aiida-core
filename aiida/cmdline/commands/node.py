@@ -260,15 +260,15 @@ def show(identifiers, uuid, print_groups):
                     n = load_node(uuid=id)
                 except MultipleObjectsError:
                     click.echo("More than one node found. Please provide "
-                               "longer starting pattern for uuid.", err=True)
-                    return
+                               "longer starting UUID pattern.", err=True)
+                    sys.exit(2)
             else:
                 try:
                     ids = int(id)
                 except ValueError:
                     click.echo("The pk/id can not be a string. Please provide "
                                "an integer.", err=True)
-                    return
+                    sys.exit(3)
                 n = load_node(pk=int(ids))
             print_node_info(n, print_groups=print_groups)
         except NotExistent as e:

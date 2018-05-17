@@ -16,20 +16,15 @@ plugin-specific operations.
 import os
 from backports import tempfile
 
-from aiida.common.datastructures import calc_states
-from aiida.scheduler.datastructures import job_states
-from aiida.common.exceptions import (
-    NotExistent,
-    ConfigurationError,
-    ModificationNotAllowed,
-)
 from aiida.common import aiidalogger
+from aiida.common.datastructures import calc_states
+from aiida.common.exceptions import ConfigurationError, ModificationNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import load_node
-from aiida.orm import DataFactory
-from aiida.orm.data.folder import FolderData
 from aiida.common.log import get_dblogger_extra
+from aiida.orm import load_node, DataFactory
+from aiida.orm.data.folder import FolderData
+from aiida.scheduler.datastructures import job_states
 
 
 execlogger = aiidalogger.getChild('execmanager')
@@ -90,10 +85,8 @@ def submit_calc(calc, authinfo, transport=None):
         of the computer defined in the AuthInfo.
     """
     from aiida.orm import Code, Computer
-    from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import InputValidationError
     from aiida.orm.data.remote import RemoteData
-    from aiida.common.log import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -322,7 +315,19 @@ def submit_calc(calc, authinfo, transport=None):
             t.close()
 
 
-def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
+def retrieve_all(job, transport, retrieved_temporary_folder):
+    """
+    Retrieve all the files of a completed job calculation using the given transport. If the job defined
+    anything in the `retrieve_temporary_list`, those entries will be stored in the `retrieved_temporary_folder`.
+    The caller is responsible for creating and destroying this folder.
+
+    :param job: the finished JobCalculation whose files to retrieve
+    :param transport: the Transport instance to use for the file retrieval
+    :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
+        listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
+    """
+    logger_extra = get_dblogger_extra(job)
+
     try:
         job._set_state(calc_states.RETRIEVING)
     except ModificationNotAllowed:
@@ -383,13 +388,15 @@ def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
         retrieved_files.store()
 
 
-def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
+def parse_results(job, retrieved_temporary_folder=None):
     """
     Parse the results for a given JobCalculation (job)
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
     from aiida.orm.calculation.job import JobCalculationFinishStatus
+
+    logger_extra = get_dblogger_extra(job)
 
     job._set_state(calc_states.PARSING)
 

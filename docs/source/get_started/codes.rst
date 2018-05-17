@@ -76,7 +76,7 @@ You will be asked for:
   use the ``verdi calculation plugins`` command. Note: if you do not want to 
   specify a default input plugin, you can write the string "None", but this is
   strongly discouraged, because then you will not be able to use
-  the ``.new_calc`` method of the ``Code`` object.
+  the ``.get_builder`` method of the ``Code`` object.
   
 * **local**: either True (for local codes) or False (for remote
   codes). For the meaning of the distinction, see above. Depending

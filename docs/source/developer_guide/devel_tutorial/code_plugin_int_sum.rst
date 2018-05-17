@@ -407,7 +407,7 @@ Which will give us an output similar to the following::
 
     $ verdi code show 73
      * PK:             73
-    * UUID:           34b44d33-86c1-478b-88ff-baadfb6f30bf
+     * UUID:           34b44d33-86c1-478b-88ff-baadfb6f30bf
      * Label:          sum
      * Description:    A simple sum executable
      * Default plugin: sum

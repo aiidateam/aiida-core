@@ -108,32 +108,16 @@ The builder will help you in defining the inputs that the ``TemplatereplacerCalc
 
 Defining inputs
 ---------------
-For starters, if you are in an interactive shell and you simply evaluate the ``builder``, it will show you the inputs that it can take::
-
-    builder
-    {
-        'code': None,
-        'description': None,
-        'parameters': None,
-        'label': None,
-        'options': None,
-        'template': None,
-        'store_provenance': True [default]
-    }
-
-Each key in the dictionary is an input of the ``TemplatereplacerCalculation`` class and the value is the current value that is set.
-If the calculation class defined a default value for an input (e.g. the ``store_provenance`` input in this example), it will be filled in and marked with ``[default]``.
-Another way to reveal the available inputs is through tab completion.
-In an interactive python shell, simply typing ``builder.`` and hitting the tab key, will show an autocomplete list of all available inputs.
-
+To find out which inputs the builder exposes, you can simply use tab completion.
+In an interactive python shell, by simply typing ``builder.`` and hitting the tab key, a complete list of all the available inputs will be shown.
 Each input of the builder can also show additional information about what sort of input it expects.
 In an interactive shell, you can get this information to display as follows::
 
     builder.parameters?
-    Type:        ProcessBuilderInput
-    String form: None
-    File:        ~/code/aiida/env/workflows/aiida-core/aiida/work/process_builder.py
+    Type:        property
+    String form: <property object at 0x7f04c8ce1c00>
     Docstring:
+        "non_db": "False"
         "help": "Parameters used to replace placeholders in the template",
         "name": "parameters",
         "valid_type": "<class 'aiida.orm.data.parameter.ParameterData'>"
@@ -141,25 +125,28 @@ In an interactive shell, you can get this information to display as follows::
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.
 Additionally, it will display a ``valid_type``, which when defined shows which data types are expected.
 If a default value has been defined, that will also be displayed.
+The ``non_db`` attribute defines whether that particular input will be stored as a proper input node in the database, if the process is submitted.
 
-Setting an input to the builder is as simply as simply assigning it to the attribute.
+Defining an input through the builder is as simple as assigning a value to the attribute.
 The following example shows how to set the ``description`` and ``label`` inputs::
 
     builder.label = 'This is my calculation label'
     builder.description = 'An example calculation to demonstrate the process builder'
 
-If you evaluate the ``builder`` instance once more, it will now display the updated status of the builder::
+If you evaluate the ``builder`` instance, simply by typing the variable name and hitting enter, the current values of the builder's inputs will be displayed::
 
     builder
     {
-        'code': None,
         'description': 'An example calculation to demonstrate the process builder',
-        'parameters': None,
         'label': 'This is my calculation label',
-        'options': None,
-        'template': None,
-        'store_provenance': True [default]
+        'options': {},
     }
+
+In this example, you can see the value that we just set for the ``description`` and the ``label``.
+In addition, it will also show any namespaces, as the inputs of processes support nested namespaces, such as the ``options`` namespace in this example.
+This namespace contains all the additional options for a ``JobCalculation`` that are not stored as input nodes, but rather have to do with how the calculation should be run.
+Examples are the :ref:`job resources <job_resources>` that it should use or any other settings related to the scheduler.
+Note that these options are also all autocompleted, so you can use that to discover all the options that are available, including their description.
 
 All that remains is to fill in all the required inputs and we are ready to launch the ``Calculation`` or ``WorkChain``.
 

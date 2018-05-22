@@ -18,7 +18,7 @@ from aiida.cmdline.baseclass import (
 from aiida.cmdline.commands.node import _Label, _Description
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.cmdline.commands import verdi
-from aiida.plugins.entry_point import get_entry_point_names, get_entry_point
+from aiida.plugins.entry_point import get_entry_point_names
 
 
 class Data(VerdiCommandRouter):
@@ -48,11 +48,6 @@ class Data(VerdiCommandRouter):
         }
         entry_point_group = 'aiida.cmdline.data'
         for entry_point_name in get_entry_point_names(entry_point_group):
-            # Important! I need to load the entry point group in memory,
-            # so click will see it and add the extension of the data command
-            # to the known subgroups.
-            plugin = get_entry_point(entry_point_group, entry_point_name)
-            plugin.load()
             self.routed_subcommands[entry_point_name] = verdi
 
 class Listable(object):

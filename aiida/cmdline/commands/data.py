@@ -1090,7 +1090,7 @@ class _Structure(VerdiCommandWithSubcommands,
         from aiida.orm.data.structure import StructureData
 
         super(_Structure, self).__init__()
-        
+
         self.dataclass = StructureData
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
@@ -1250,9 +1250,9 @@ class _Structure(VerdiCommandWithSubcommands,
     def _show_vesta(self, exec_name, structure_list):
         """
         Plugin for VESTA
-        This VESTA plugin was added by Yue-Wen FANG and Abel Carreras 
+        This VESTA plugin was added by Yue-Wen FANG and Abel Carreras
         at Kyoto University in the group of Prof. Isao Tanaka's lab
-        
+
         """
         import tempfile, subprocess
 

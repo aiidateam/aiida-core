@@ -99,17 +99,17 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
     if not disable_checks:
         called_qb = QueryBuilder()
-        called_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+        called_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         called_qb.append(Calculation, project='type', edge_project='label',
-                filters={'id':{'in':pks_set_to_delete}},
-                edge_filters={'type':{'==': LinkType.CALL.value}})
+                filters={'id': {'in': pks_set_to_delete}},
+                edge_filters={'type': {'==': LinkType.CALL.value}})
         caller_to_called2delete = called_qb.all()
 
         if verbosity > 0 and caller_to_called2delete:
             calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
             print "\n{} calculation{} {} lose at least one called instance".format(
                     len(calculation_pks_losing_called),
-                    's' if len(calculation_pks_losing_created) > 1 else '',
+                    's' if len(calculation_pks_losing_called) > 1 else '',
                     'would' if dry_run else 'will')
             if verbosity > 1:
                 print "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will')
@@ -117,9 +117,9 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
                     print '  ', load_node(calc_losing_called_pk)
 
         created_qb = QueryBuilder()
-        created_qb.append(Calculation, filters={'id':{'!in':pks_set_to_delete}}, project='id')
+        created_qb.append(Calculation, filters={'id':{'!in': pks_set_to_delete}}, project='id')
         created_qb.append(Data, project='type', edge_project='label',
-                filters={'id':{'in':pks_set_to_delete}},
+                filters={'id':{'in': pks_set_to_delete}},
                 edge_filters={'type':{'==':LinkType.CREATE.value}})
 
         creator_to_created2delete = created_qb.all()

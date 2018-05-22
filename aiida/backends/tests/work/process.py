@@ -17,7 +17,7 @@ from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
-from aiida.work import test_utils, utils
+from aiida.work import test_utils, Process
 
 
 class NameSpacedProcess(work.Process):
@@ -32,11 +32,11 @@ class TestProcessNamespace(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessNamespace, self).setUp()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestProcessNamespace, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_namespaced_process(self):
         """
@@ -84,11 +84,11 @@ class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
         work.runners.set_runner(None)
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_process_stack(self):
         work.launch.run(ProcessStackTest)
@@ -217,7 +217,6 @@ class TestProcess(AiidaTestCase):
 class TestFunctionProcess(AiidaTestCase):
 
     def test_fixed_inputs(self):
-
         def wf(a, b, c):
             return {'a': a, 'b': b, 'c': c}
 
@@ -226,7 +225,6 @@ class TestFunctionProcess(AiidaTestCase):
         self.assertEqual(work.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
-
         def wf_with_kwargs(**kwargs):
             return kwargs
 

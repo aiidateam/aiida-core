@@ -7,16 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import aiida.orm
-import aiida.work.utils as util
+from aiida.common.links import LinkType
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
 from aiida.orm import load_node
 from aiida.orm.calculation.function import FunctionCalculation
-from aiida.work.launch import run, run_get_node, submit
-from aiida.work.processes import Process
-from aiida.work.workfunctions import workfunction
+from aiida.work import run, run_get_node, submit, workfunction, Process
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -29,7 +26,7 @@ class TestWf(AiidaTestCase):
 
     def setUp(self):
         super(TestWf, self).setUp()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
         @workfunction
         def wf_return_input(inp):
@@ -74,10 +71,9 @@ class TestWf(AiidaTestCase):
         self.wf_args_and_default = wf_args_and_default
         self.wf_default_label_description = wf_default_label_description
 
-
     def tearDown(self):
         super(TestWf, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_wf_varargs(self):
         """
@@ -186,11 +182,13 @@ class TestWf(AiidaTestCase):
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
-        result, node = self.wf_args_and_kwargs.run_get_node(a=Int(DEFAULT_INT), label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        result, node = self.wf_args_and_kwargs.run_get_node(a=Int(DEFAULT_INT), label=CUSTOM_LABEL,
+                                                            description=CUSTOM_DESCRIPTION)
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
-        result, node = self.wf_args_and_default.run_get_node(a=Int(DEFAULT_INT), label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        result, node = self.wf_args_and_default.run_get_node(a=Int(DEFAULT_INT), label=CUSTOM_LABEL,
+                                                             description=CUSTOM_DESCRIPTION)
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
@@ -203,7 +201,8 @@ class TestWf(AiidaTestCase):
         self.assertEquals(node.label, DEFAULT_LABEL)
         self.assertEquals(node.description, DEFAULT_DESCRIPTION)
 
-        result, node = self.wf_default_label_description.run_get_node(label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        result, node = self.wf_default_label_description.run_get_node(label=CUSTOM_LABEL,
+                                                                      description=CUSTOM_DESCRIPTION)
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
@@ -246,6 +245,25 @@ class TestWf(AiidaTestCase):
             return mul(add(a, b), c)
 
         result = add_mul_wf(Int(3), Int(4), Int(5))
+
+    def test_wf_links(self):
+        @workfunction
+        def a():
+            pass
+
+        @workfunction
+        def b():
+            return Int(5)
+
+        @workfunction
+        def c():
+            a()
+            return b()
+
+        result, calc = run.get_node(c)
+
+        self.assertIn(result.get_inputs(link_type=LinkType.CREATE)[0].pk, [c.pk for c in calc.called])
+        self.assertEqual(calc.get_outputs(link_type=LinkType.RETURN)[0].pk, result.pk)
 
     def test_hashes(self):
         result, w1 = self.wf_return_input.run_get_node(inp=Int(2))

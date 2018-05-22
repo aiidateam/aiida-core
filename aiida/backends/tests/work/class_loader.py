@@ -7,9 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import aiida
-import aiida.work.utils as util
+from aiida.work import Process
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 
@@ -17,11 +16,11 @@ from aiida.orm.calculation.job.simpleplugins.templatereplacer import Templaterep
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_class_loader(self):
         templatereplacer_process = aiida.work.JobProcess.build(TemplatereplacerCalculation)

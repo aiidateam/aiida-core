@@ -14,9 +14,7 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
-#from aiida.work.process_builder import ProcessBuilder
-from aiida.work.workchain import WorkChain
-from aiida.work import utils
+from aiida.work import WorkChain, Process
 
 DEFAULT_INT = 256
 
@@ -35,14 +33,14 @@ class TestProcessBuilder(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessBuilder, self).setUp()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.calculation_class = CalculationFactory('simpleplugins.templatereplacer')
         self.process_class = self.calculation_class.process()
         self.builder = self.process_class.get_builder()
 
     def tearDown(self):
         super(TestProcessBuilder, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_process_builder_attributes(self):
         """

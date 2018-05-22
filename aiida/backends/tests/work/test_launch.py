@@ -11,10 +11,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data.int import Int
-from aiida.work import utils
-from aiida.work.launch import run, run_get_node, run_get_pid
-from aiida.work.workchain import WorkChain
-from aiida.work.workfunctions import workfunction
+from aiida.work import run, run_get_node, run_get_pid, Process, WorkChain, workfunction
 
 
 @workfunction
@@ -42,14 +39,14 @@ class TestLaunchers(AiidaTestCase):
 
     def setUp(self):
         super(TestLaunchers, self).setUp()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.a = Int(1)
         self.b = Int(2)
         self.result = 3
 
     def tearDown(self):
         super(TestLaunchers, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_workfunction_run(self):
         result = run(add, a=self.a, b=self.b)
@@ -101,4 +98,3 @@ class TestLaunchers(AiidaTestCase):
         result, pid = run_get_pid(builder)
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(pid, int))
-

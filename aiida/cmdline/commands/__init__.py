@@ -9,6 +9,8 @@
 ###########################################################################
 import click
 
+from aiida.cmdline.utils.pluginable import Pluginable
+
 
 def click_subcmd_complete(cmd_group):
     """Create a subcommand completion function for a click command group."""
@@ -69,8 +71,9 @@ def user():
 def node():
     pass
 
-@verdi.group('data')
+@verdi.group('data', entry_point_group='aiida.cmdline.data', cls=Pluginable)
 def data_cmd():
+    """Verdi data interface for plugin commands."""
     pass
 
 

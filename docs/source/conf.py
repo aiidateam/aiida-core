@@ -387,7 +387,7 @@ epub_copyright = copyright
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
-nitpick_ignore = []
+nitpick_ignore = [('py:class', 'click.Group'), ('py:class', 'click.core.Group')]
 
 for line in open('nitpick-exceptions'):
     if line.strip() == "" or line.startswith("#"):

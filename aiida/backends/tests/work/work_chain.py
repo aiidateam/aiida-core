@@ -881,11 +881,13 @@ class TestSerializeWorkChain(AiidaTestCase):
     """
     def setUp(self):
         super(TestSerializeWorkChain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
+        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestSerializeWorkChain, self).tearDown()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        work.set_runner(None)
+        self.assertIsNone(Process.current())
 
     def test_serialize(self):
         """
@@ -1083,37 +1085,3 @@ class TestWorkChainExpose(AiidaTestCase):
             }
         )
         work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
-
-class TestSerializeWorkChain(AiidaTestCase):
-    """
-    Test workchains with serialized input / output.
-    """
-    def setUp(self):
-        super(TestSerializeWorkChain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
-    def tearDown(self):
-        super(TestSerializeWorkChain, self).tearDown()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
-    def test_serialize(self):
-        """
-        Test a simple serialization of a class to its identifier.
-        """
-        test_class = self
-
-        class TestSerializeWorkChain(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(TestSerializeWorkChain, cls).define(spec)
-
-                spec.input('test', serialize_fct=lambda x: Str(ObjectLoader().identify_object(x)))
-                spec.input('reference', valid_type=Str)
-
-                spec.outline(cls.do_test)
-
-            def do_test(self):
-                assert isinstance(self.inputs.test, Str)
-                assert self.inputs.test == self.inputs.reference
-
-        work.launch.run(TestSerializeWorkChain, test=Str, reference=Str('aiida.orm.data.base.Str'))

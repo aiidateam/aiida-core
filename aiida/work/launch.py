@@ -58,6 +58,10 @@ def run_get_node(process, *args, **inputs):
     return runner.run_get_node(process, *args, **inputs)
 
 
+# Allow user to also use run.get_node as a convenience (one less import)
+run.get_node = run_get_node
+
+
 def run_get_pid(process, *args, **inputs):
     """
     Run the process with the supplied inputs in a local runner that will block until the process is completed.

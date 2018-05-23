@@ -24,6 +24,7 @@ from aiida.utils.capturing import Capturing
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import Process
+from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
 
 from . import utils
@@ -879,7 +880,7 @@ class SerializeWorkChain(WorkChain):
         spec.input(
             'test',
             valid_type=Str,
-            serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x)),
+            serialize_fct=lambda x: Str(ObjectLoader().identify_object(x)),
         )
         spec.input('reference', valid_type=Str)
 
@@ -901,7 +902,7 @@ class TestSerializeWorkChain(WorkchainTestCase):
         work.launch.run(
             SerializeWorkChain,
             test=Int,
-            reference=Str(CLASS_LOADER.class_identifier(Int))
+            reference=Str(ObjectLoader().identify_object(Int))
         )
 
     def test_serialize_builder(self):
@@ -910,7 +911,7 @@ class TestSerializeWorkChain(WorkchainTestCase):
         """
         builder = SerializeWorkChain.get_builder()
         builder.test = Int
-        builder.reference = Str(CLASS_LOADER.class_identifier(Int))
+        builder.reference = Str(ObjectLoader().identify_object(Int))
 
         work.launch.run(builder)
 

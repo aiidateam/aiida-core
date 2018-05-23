@@ -13,7 +13,7 @@ from aiida.orm.data.list import List
 from aiida.orm.data.str import Str
 from aiida.orm.calculation.inline import make_inline
 from aiida.work import submit
-from aiida.work.class_loader import CLASS_LOADER
+from aiida.work.persistence import ObjectLoader
 from aiida.work.workfunctions import workfunction
 from aiida.work.workchain import WorkChain, ToContext, append_
 
@@ -61,7 +61,7 @@ class SerializeWorkChain(WorkChain):
         spec.input(
             'test',
             valid_type=Str,
-            serialize_fct=lambda x: Str(CLASS_LOADER.class_identifier(x))
+            serialize_fct=lambda x: Str(ObjectLoader().identify_object(x))
         )
 
         spec.outline(cls.echo)

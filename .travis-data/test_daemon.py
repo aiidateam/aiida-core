@@ -20,7 +20,7 @@ from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.work.launch import run_get_node, submit
-from aiida.work.class_loader import CLASS_LOADER
+from aiida.work.persistence import ObjectLoader
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, InlineCalcRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
@@ -326,7 +326,7 @@ def main():
 
     print("Submitting the serializing workchain")
     pk = submit(SerializeWorkChain, test=Int).pk
-    expected_results_workchains[pk] = CLASS_LOADER.class_identifier(Int)
+    expected_results_workchains[pk] = ObjectLoader().identify_object(Int)
 
     print "Submitting the ListEcho workchain."
     list_value = List()

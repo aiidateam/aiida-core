@@ -368,7 +368,7 @@ class Process(plumpy.Process):
 
             value.store()
 
-            if utils.is_process_calc_type(self.calc):
+            if utils.is_work_calc_type(self.calc):
                 value.add_link_from(self.calc, label, LinkType.RETURN)
 
     def _setup_db_record(self):

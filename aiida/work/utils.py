@@ -21,7 +21,7 @@ PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed 
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
 
 
-def is_process_calc_type(calc_node):
+def is_work_calc_type(calc_node):
     """
     Check if the given calculation node is of the new type.
     Currently in AiiDA we have a hierarchy of 'Calculation' nodes with the following subclasses:
@@ -95,7 +95,7 @@ def set_process_state_change_timestamp(process):
 
     if isinstance(process.calc, (JobCalculation, InlineCalculation)):
         process_type = 'calculation'
-    elif is_process_calc_type(process.calc):
+    elif is_work_calc_type(process.calc):
         process_type = 'work'
     else:
         raise ValueError('unsupported calculation node type {}'.format(type(process.calc)))

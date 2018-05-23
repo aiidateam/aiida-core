@@ -21,9 +21,9 @@ from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.utils.capturing import Capturing
-from aiida.work.utils import ProcessStack
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
+from aiida.work import Process
 from aiida.work.workchain import *
 
 from . import utils
@@ -204,13 +204,13 @@ class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_run(self):
         A = Str('A')
@@ -555,7 +555,7 @@ class TestWorkchain(AiidaTestCase):
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
@@ -563,7 +563,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
         work.set_runner(None)
         self.runner.close()
         self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()
@@ -615,13 +615,13 @@ class TestWorkChainAbort(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     class AbortableWorkChain(WorkChain):
         @classmethod
@@ -680,13 +680,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner(with_communicator=True)
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     class SubWorkChain(WorkChain):
         @classmethod
@@ -776,13 +776,13 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_immutable_input(self):
         """
@@ -985,7 +985,7 @@ class TestWorkChainExpose(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainExpose, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
@@ -993,7 +993,7 @@ class TestWorkChainExpose(AiidaTestCase):
         work.set_runner(None)
         self.runner.close()
         self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_expose(self):
         res = work.run(

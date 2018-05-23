@@ -15,8 +15,10 @@ from aiida.orm.data.int import Int
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.persistence import ObjectLoader
 from aiida.work.job_processes import JobProcess
+from aiida.work import Process
 
 from . import utils
+
 
 class AdditionalParameterCalculation(TemplatereplacerCalculation):
     """
@@ -51,16 +53,17 @@ class AdditionalParameterCalculation(TemplatereplacerCalculation):
 
         return '{}_{}'.format('pseudo', suffix_string)
 
+
 class TestJobProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestJobProcess, self).setUp()
-        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
-        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner.close()
         self.runner = None
         work.set_runner(None)
@@ -111,16 +114,17 @@ class TestJobProcess(AiidaTestCase):
         process = TemplatereplacerCalculation.process()
         job = process(inputs)
 
+
 class TestAdditionalParameterJobProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestAdditionalParameterJobProcess, self).setUp()
-        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestAdditionalParameterJobProcess, self).tearDown()
-        self.assertEquals(len(work.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner.close()
         self.runner = None
         work.set_runner(None)

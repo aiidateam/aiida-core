@@ -9,20 +9,19 @@
 ###########################################################################
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.processes import Process
-from aiida.work import utils
+from aiida.work import Process
 
 
 class TestProcessSpec(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessSpec, self).setUp()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.spec = Process.spec()
 
     def tearDown(self):
         super(TestProcessSpec, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_dynamic_input(self):
         from aiida.orm import Node

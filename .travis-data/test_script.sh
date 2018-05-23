@@ -3,32 +3,51 @@
 # Be verbose, and stop with error as soon there's one
 set -ev
 
+# Needed on Jenkins
+if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
+
 case "$TEST_TYPE" in
     docs)
-        # Compile the docs (HTML format); 
+        # Compile the docs (HTML format);
         # -C change to 'docs' directory before doing anything
         # -n to warn about all missing references
         # -W to convert warnings in errors
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
-        # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
-        export PYTHONPATH=${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data
+        TRAVIS_DATA_DIR="${TRAVIS_BUILD_DIR}/.travis-data"
+        JENKINS_DATA_DIR="${TRAVIS_BUILD_DIR}/.jenkins-data"
 
-        # Run the AiiDA tests
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_setup.py
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_fixtures.py
-        python ${TRAVIS_BUILD_DIR}/.travis-data/test_plugin_testcase.py
+        # Add the .travis-data and .jenkins-data folder to the python path so workchains within it can be found by the daemon
+        export PYTHONPATH="${PYTHONPATH}:${TRAVIS_DATA_DIR}"
+        export PYTHONPATH="${PYTHONPATH}:${JENKINS_DATA_DIR}"
 
-        verdi -p test_$TEST_AIIDA_BACKEND devel tests
+        # Clean up coverage file (there shouldn't be any, but just in case)
+        coverage erase
+
+        # Run preliminary tests
+        coverage run -a "${TRAVIS_DATA_DIR}/test_setup.py"
+        coverage run -a "${TRAVIS_DATA_DIR}/test_fixtures.py"
+        coverage run -a "${TRAVIS_DATA_DIR}/test_plugin_testcase.py"
+
+        # Run verdi devel tests
+        VERDI=`which verdi`
+        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests
 
         # Run the daemon tests using docker
-        verdi -p $TEST_AIIDA_BACKEND run ${TRAVIS_BUILD_DIR}/.travis-data/test_daemon.py
+        # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
+
+        # In case of error, I do some debugging, but I make sure I anyway exit with an exit error
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${TRAVIS_DATA_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
+
+        # Run the sphinxext tests, append to coverage file, do not create final report
+        pytest --cov aiida --cov-append --cov-report= -vv aiida/sphinxext/tests
+
+        # Now, we run all the tests and we manually create the final report
+        # Note that this is only the partial coverage for this backend
+        coverage report
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
-        ;;
-    sphinxext)
-        py.test -vv aiida/sphinxext/tests
         ;;
 esac

@@ -147,6 +147,18 @@ class FixtureManager(object):
         self._backup = {}
         self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = backend_settings.AIIDADB_PROFILE
+        self.__backend = None
+
+    @property
+    def _backend(self):
+        """
+        Get the backend
+        """
+        if self.__backend is None:
+            # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
+            from aiida.orm.backend import construct_backend
+            self.__backend = construct_backend()
+        return self.__backend
 
     def create_db_cluster(self):
         if not self.pg_cluster:
@@ -372,10 +384,9 @@ class FixtureManager(object):
         """Clean database for sqlalchemy backend"""
         from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
         from aiida.backends.sqlalchemy import get_scoped_session
-        from aiida.orm import User
 
-        user = User.search_for_users(email=self.email)[0]
-        new_user = User(email=user.email)
+        user = self._backend.users.get(email=self.email)
+        new_user = self._backend.users.create(email=user.email)
         new_user.first_name = user.first_name
         new_user.last_name = user.last_name
         new_user.institution = user.institution
@@ -385,7 +396,7 @@ class FixtureManager(object):
         sqla_testcase.clean_db()
 
         # that deleted our user, we need to recreate it
-        new_user.force_save()
+        new_user.store()
 
     def has_profile_open(self):
         return self.__is_running_on_test_profile

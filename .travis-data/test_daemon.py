@@ -11,7 +11,9 @@ import os
 import subprocess
 import sys
 import time
+
 from aiida.common.exceptions import NotExistent
+from aiida.common.caching import enable_caching
 from aiida.daemon.client import DaemonClient
 from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
@@ -74,16 +76,17 @@ def validate_calculations(expected_results):
     for pk, expected_dict in expected_results.iteritems():
         calc = load_node(pk)
         if not calc.is_finished_ok:
-            print 'Calculation<{}> status was not FINISHED'.format(pk)
+            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
+                pk, calc.process_state, calc.finish_status)
             print_logshow(pk)
-            return False
+            valid = False
 
         try:
             actual_dict = calc.out.output_parameters.get_dict()
         except (KeyError, AttributeError) as exception:
             print 'Could not retrieve output_parameters node for Calculation<{}>'.format(pk)
             print_logshow(pk)
-            return False
+            valid = False
 
         try:
             actual_dict['retrieved_temporary_files'] = dict(actual_dict['retrieved_temporary_files'])
@@ -102,17 +105,31 @@ def validate_calculations(expected_results):
 def validate_workchains(expected_results):
     valid = True
     for pk, expected_value in expected_results.iteritems():
+        this_valid = True
         try:
             calc = load_node(pk)
             actual_value = calc.out.output
         except (NotExistent, AttributeError) as exception:
             print "* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}".format(
                 pk, expected_value, type(exception), exception)
+            valid = False
+            this_valid = False
+            actual_value = None
 
-        if actual_value != expected_value:
+        # I check only if this_valid, otherwise calc could not exist
+        if this_valid and not calc.is_finished_ok:
+            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
+                pk, calc.process_state, calc.finish_status)
+            print_logshow(pk)
+            valid = False
+            this_valid = False
+
+        # I check only if this_valid, otherwise actual_value could be unset
+        if this_valid and actual_value != expected_value:
             print "* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}".format(
                 actual_value, type(actual_value), pk, expected_value, type(expected_value))
             valid = False
+            this_valid = False
 
     return valid
 
@@ -121,11 +138,21 @@ def validate_cached(cached_calcs):
     """
     Check that the calculations with created with caching are indeed cached.
     """
-    return all(
-        '_aiida_cached_from' in calc.extras() and
-        calc.get_hash() == calc.get_extra('_aiida_hash')
-        for calc in cached_calcs
-    )
+    valid = True
+    for calc in cached_calcs:
+
+        if not calc.is_finished_ok:
+            print 'Cached calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
+                pk, calc.process_state, calc.finish_status)
+            print_logshow(pk)
+            valid = False
+
+        if '_aiida_cached_from' not in calc.extras() or calc.get_hash() != calc.get_extra('_aiida_hash'):
+            print 'Cached calculation<{}> has invalid hash'.format(pk)
+            print_logshow(pk)
+            valid = False
+
+    return valid
 
 
 def create_calculation(code, counter, inputval, use_cache=False):
@@ -174,6 +201,24 @@ def launch_calculation(code, counter, inputval):
     """
     Launch calculations to the daemon through the Process layer
     """
+    process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
+    calc = submit(process, **inputs)
+    print "[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.dbnode.pk)
+    return calc, expected_result
+
+def run_calculation(code, counter, inputval):
+    """
+    Run a calculation through the Process layer.
+    """
+    process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
+    result, calc = run_get_node(process, **inputs)
+    print "[{}] ran calculation {}, pk={}".format(counter, calc.uuid, calc.pk)
+    return calc, expected_result
+
+def create_calculation_process(code, inputval):
+    """
+    Create the process and inputs for a submitting / running a calculation.
+    """
     TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
     process = TemplatereplacerCalculation.process()
 
@@ -213,10 +258,7 @@ def launch_calculation(code, counter, inputval):
         'template': template,
         'options': options,
     }
-
-    calc = submit(process, **inputs)
-    print "[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.dbnode.pk)
-    return calc, expected_result
+    return process, inputs, expected_result
 
 def create_cache_calc(code, counter, inputval):
     calc, expected_result = create_calculation(
@@ -254,6 +296,13 @@ def main():
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
+
+    print "Submitting a workchain with 'submit'."
+    builder = NestedWorkChain.get_builder()
+    input_val = 4
+    builder.inp = Int(input_val)
+    proc = submit(builder)
+    expected_results_workchains[proc.pk] = input_val
 
     print "Submitting a workchain with a nested input namespace."
     value = Int(-12)
@@ -346,19 +395,24 @@ def main():
     if exited_with_timeout:
         print_daemon_log()
         print ""
-        print "Timeout!! Calculation did not complete after {} seconds".format(
-            timeout_secs)
+        print "Timeout!! Calculation did not complete after {} seconds".format(timeout_secs)
         sys.exit(2)
     else:
         # create cached calculations -- these should be FINISHED immediately
         cached_calcs = []
         for counter in range(1, number_calculations + 1):
-            inputval = counter
             calc, expected_result = create_cache_calc(
-                code=code, counter=counter, inputval=inputval
+                code=code, counter=counter, inputval=counter
             )
             cached_calcs.append(calc)
             expected_results_calculations[calc.pk] = expected_result
+        # new style cached calculations, with 'run'
+        with enable_caching():
+            for counter in range(1, number_calculations + 1):
+                calc, expected_result = run_calculation(code=code, counter=counter, inputval=counter)
+                cached_calcs.append(calc)
+                expected_results_calculations[calc.pk] = expected_result
+
         if (validate_calculations(expected_results_calculations)
                 and validate_workchains(expected_results_workchains)
                 and validate_cached(cached_calcs)):

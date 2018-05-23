@@ -30,7 +30,7 @@ def check_if_tests_can_run():
     base_repo_path = os.path.basename(
         os.path.normpath(settings2.REPOSITORY_PATH))
     if (not settings.AIIDADB_PROFILE.startswith(TEST_KEYWORD) or
-                TEST_KEYWORD not in base_repo_path or
+            TEST_KEYWORD not in base_repo_path or
             not settings2.DBNAME.startswith(TEST_KEYWORD)):
         msg = [
             "A non-test profile was given for tests. Please note "
@@ -81,6 +81,7 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
+        from aiida.orm.backend import construct_backend
 
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
@@ -89,6 +90,7 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
+        cls.backend = construct_backend()
 
         cls._class_was_setup = True
 
@@ -172,7 +174,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
                     except ImportError as exception:
                         print >> sys.stderr, (
                             "[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
-                            .format(modulename, traceback.format_exc(exception))
+                                .format(modulename, traceback.format_exc(exception))
                         )
                         sys.exit(1)
                 found_modulenames.add(modulename)

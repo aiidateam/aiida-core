@@ -8,10 +8,11 @@ def command():
     Wrapped decorator for click's command decorator, which makes sure
     that the database environment is loaded
     """
-    from aiida import try_load_dbenv
-    try_load_dbenv()
+    from aiida.cmdline.utils.decorators import with_dbenv
 
-    @click.decorators.command
+    @click.command
+    @with_dbenv()
     def inner():
         func(*args, **kwargs)
+
     return inner

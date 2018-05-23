@@ -27,7 +27,12 @@ from aiida.common import aiidalogger
 
 class LocalTransport(Transport):
     """
-    Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands.
+    Support copy and command execution on the same host on which AiiDA is running via direct file copy and
+    execution commands.
+
+    Note that the environment variables are copied from the submitting process, so you might need to clean it
+    with a ``prepend_text``. For example, the AiiDA daemon sets a ``PYTHONPATH``, so you might want to add
+    ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
     # There are no valid parameters for the local transport
     _valid_auth_params = []
@@ -176,7 +181,7 @@ class LocalTransport(Transport):
         Create a folder (directory) named path.
 
         :param path: name of the folder to create
-        :param ignore_existing: if True, does not give any error if the 
+        :param ignore_existing: if True, does not give any error if the
                 directory already exists
 
         :raise OSError: If the directory already exists.
@@ -362,7 +367,7 @@ class LocalTransport(Transport):
     def rmtree(self, path):
         """
         Remove tree as rm -r would do
-        
+
         :param path: a string to path
         """
         the_path = os.path.join(self.curdir, path)
@@ -593,7 +598,7 @@ class LocalTransport(Transport):
         :param source: path to local file
         :param destination: path to remote file
         :param dereference: follow symbolic links. Default = False
-        
+
         :raise ValueError: if 'remote' source or destination is not valid
         :raise OSError: if source does not exist
         """
@@ -684,37 +689,49 @@ class LocalTransport(Transport):
 
     def _exec_command_internal(self, command):
         """
-        Executes the specified command, first changing directory to the
-        current working directory as returned by self.getcwd().
-        Does not wait for the calculation to finish.
+        Executes the specified command in bash login shell.
+        
+        Before the command is executed, changes directory to the current
+        working directory as returned by self.getcwd().
 
-        For a higher-level exec_command that automatically waits for the
-        job to finish, use exec_command_wait.
+        For executing commands and waiting for them to finish, use
+        exec_command_wait.
         Otherwise, to end the process, use the proc.wait() method.
 
-        :param command: the command to execute
+        The subprocess is set to have a different process group than the
+        main process, so that it is shielded from signals sent to the parent.
+
+        :param  command: the command to execute. The command is assumed to be
+            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
         
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
+        from aiida.common.utils import escape_for_bash
+
+        # Note: The outer shell will eat one level of escaping, while
+        # 'bash -l -c ...' will eat another. Thus, we need to escape again.
+        command = 'bash -l -c ' + escape_for_bash(command)
+
         proc = subprocess.Popen(
             command,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=self.getcwd())
+            cwd=self.getcwd(),
+            preexec_fn=os.setsid)
         return proc.stdin, proc.stdout, proc.stderr, proc
 
     def exec_command_wait(self, command, stdin=None):
         """
         Executes the specified command and waits for it to finish.
-        
+
         :param command: the command to execute
 
-        :return: a tuple with (return_value, stdout, stderr) where stdout and 
+        :return: a tuple with (return_value, stdout, stderr) where stdout and
                  stderr are strings.
         """
         local_stdin, local_stdout, local_stderr, local_proc = self._exec_command_internal(command)
@@ -762,7 +779,7 @@ class LocalTransport(Transport):
     def rename(self, src, dst):
         """
         Rename a file or folder from oldpath to newpath.
-        
+
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
@@ -782,9 +799,9 @@ class LocalTransport(Transport):
 
     def symlink(self, remotesource, remotedestination):
         """
-        Create a symbolic link between the remote source and the remote 
+        Create a symbolic link between the remote source and the remote
         destination
-        
+
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """

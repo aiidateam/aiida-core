@@ -469,7 +469,7 @@ class Group(VerdiCommandWithSubcommands):
         import datetime
         from aiida.utils import timezone
         from aiida.orm.group import get_group_type_mapping
-        from aiida.backends.utils import get_automatic_user
+        from aiida.orm.backend import construct_backend
         from tabulate import tabulate
 
         parser = argparse.ArgumentParser(
@@ -512,6 +512,8 @@ class Group(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
+        backend = construct_backend()
+
         if parsed_args.all_users:
             user = None
         else:
@@ -519,7 +521,7 @@ class Group(VerdiCommandWithSubcommands):
                 user = parsed_args.user
             else:
                 # By default: only groups of this user
-                user = get_automatic_user()
+                user = backend.users.get_automatic_user()
 
         type_string = ""
         if parsed_args.type is not None:

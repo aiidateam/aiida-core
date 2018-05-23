@@ -9,21 +9,22 @@
 ###########################################################################
 import click
 import logging
-from functools import partial
 from tabulate import tabulate
-from plumpy import ProcessState
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import work, verdi
 from aiida.common.log import LOG_LEVELS
-from aiida.utils.ascii_vis import print_tree_descending
+from aiida.utils.cli.types import LazyChoice
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description')
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
-LIST_CMDLINE_PROCESS_STATE_CHOICES = ([e.value for e in ProcessState])
+
+
+def valid_process_states():
+    from plumpy import ProcessState
+    return ([state.value for state in ProcessState])
 
 
 class Work(VerdiCommandWithSubcommands):
@@ -73,7 +74,7 @@ class Work(VerdiCommandWithSubcommands):
     help='Include all entries, regardless of process state'
 )
 @click.option(
-    '-S', '--process-state', type=click.Choice(LIST_CMDLINE_PROCESS_STATE_CHOICES),
+    '-S', '--process-state', type=LazyChoice(valid_process_states),
     help='Only include entries with this process state'
 )
 @click.option(
@@ -92,18 +93,25 @@ class Work(VerdiCommandWithSubcommands):
     '-P', '--project', type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT,
     multiple=True, help='Define the list of properties to show'
 )
-def do_list(past_days, all_states, process_state, finish_status, failed, limit, project):
+@click.option(
+    '-r', '--raw', is_flag=True,
+    help='Only print the query result, without any headers, footers or other additional information'
+)
+def do_list(past_days, all_states, process_state, finish_status, failed, limit, project, raw):
     """
     Return a list of work calculations that are still running
     """
+    from plumpy import ProcessState
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
     if not is_dbenv_loaded():
         load_dbenv()
 
+    from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.common.utils import str_timedelta
     from aiida.orm.mixins import Sealable
     from aiida.orm.calculation import Calculation
     from aiida.utils import timezone
+
 
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
@@ -118,6 +126,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': 'UUID',
         'ctime': 'Creation',
         'mtime': 'Modification',
+        'type': 'Type',
         'state': 'State',
         'process_state': 'Process state',
         'finish_status': 'Finish status',
@@ -132,6 +141,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': 'uuid',
         'ctime': 'ctime',
         'mtime': 'mtime',
+        'type': 'type',
         'process_state': PROCESS_STATE_KEY,
         'finish_status': FINISH_STATUS_KEY,
         'sealed': SEALED_KEY,
@@ -145,6 +155,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         'uuid': lambda value: value['uuid'],
         'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
         'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
+        'type': lambda value: value['type'],
         'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[FINISH_STATUS_KEY]),
         'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
         'finish_status': lambda value: value[FINISH_STATUS_KEY],
@@ -193,10 +204,15 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
     # Since we sorted by descending creation time, we revert the list to print the most recent entries last
     projection_labels = list(map(lambda p: projection_label_map[p], project))
     table = table[::-1]
-    tabulated = tabulate(table, headers=projection_labels)
 
-    click.echo(tabulated)
-    click.echo('\nTotal results: {}\n'.format(len(table)))
+    if raw:
+        tabulated = tabulate(table, tablefmt='plain')
+        click.echo(tabulated)
+    else:
+        tabulated = tabulate(table, headers=projection_labels)
+        click.echo(tabulated)
+        click.echo('\nTotal results: {}\n'.format(len(table)))
+        print_last_process_state_change(process_type='work')
 
 
 @work.command('report', context_settings=CONTEXT_SETTINGS)
@@ -228,12 +244,12 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         load_dbenv()
 
     import itertools
-    from aiida.orm.backend import construct
+    from aiida.orm.backend import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 
     def get_report_messages(pk, depth, levelname):
-        backend = construct()
+        backend = construct_backend()
         filters = {
             'objpk': pk,
         }
@@ -269,7 +285,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
         return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
 
     def print_subtree(tree, prepend=""):
-        print "{}{}".format(prepend, tree[0])
+        click.echo("{}{}".format(prepend, tree[0]))
         for subtree in tree[1]:
             print_subtree(subtree, prepend=prepend + "  ")
 
@@ -284,7 +300,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
     reports.sort(key=lambda r: r[0].time)
 
     if reports is None or len(reports) == 0:
-        print "No log messages recorded for this work calculation"
+        click.echo("No log messages recorded for this work calculation")
         return
 
     object_ids = [entry[0].id for entry in reports]
@@ -292,7 +308,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
     width_id = len(str(max(object_ids)))
     width_levelname = max(levelnames)
     for entry, depth in reports:
-        print '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
+        click.echo('{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
             id=entry.id,
             levelname=entry.levelname,
             message=entry.message,
@@ -300,7 +316,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
             width_id=width_id,
             width_levelname=width_levelname,
             indent=' ' * (depth * indent_size)
-        )
+        ))
 
     return
 
@@ -319,13 +335,13 @@ def checkpoint(pks):
             try:
                 cp = storage.load_checkpoint(pk)
             except BaseException as e:
-                print("Failed to load checkpoint {}".format(pk))
-                print("{}: {}".format(e.__class__.__name__, e.message))
+                click.echo("Failed to load checkpoint {}".format(pk))
+                click.echo("{}: {}".format(e.__class__.__name__, e.message))
             else:
-                print("Last checkpoint for calculation '{}'".format(pk))
-                print(str(cp))
+                click.echo("Last checkpoint for calculation '{}'".format(pk))
+                click.echo(str(cp))
         except ValueError:
-            print("Unable to show checkpoint for calculation '{}'".format(pk))
+            click.echo("Unable to show checkpoint for calculation '{}'".format(pk))
 
 
 @work.command('kill', context_settings=CONTEXT_SETTINGS)
@@ -343,7 +359,7 @@ def kill(pks):
                 else:
                     click.echo("Problem killing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to kill '{}': {}".format(pk, e.message))
+                click.echo("Failed to kill '{}': {}".format(pk, e.message))
 
 
 @work.command('pause', context_settings=CONTEXT_SETTINGS)
@@ -361,7 +377,7 @@ def pause(pks):
                 else:
                     click.echo("Problem pausing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to pause '{}': {}".format(pk, e.message))
+                click.echo("Failed to pause '{}': {}".format(pk, e.message))
 
 
 @work.command('play', context_settings=CONTEXT_SETTINGS)
@@ -379,7 +395,7 @@ def play(pks):
                 else:
                     click.echo("Problem playing '{}'".format(pk))
             except (work.RemoteException, work.DeliveryFailed) as e:
-                print("Failed to play '{}': {}".format(pk, e.message))
+                click.echo("Failed to play '{}': {}".format(pk, e.message))
 
 
 @work.command('status', context_settings=CONTEXT_SETTINGS)
@@ -387,15 +403,16 @@ def play(pks):
 def status(pks):
     from aiida import try_load_dbenv
     try_load_dbenv()
-    import aiida.orm
-    from aiida.utils.ascii_vis import print_call_graph
+    from aiida.orm import load_node
+    from aiida.utils.ascii_vis import format_call_graph
 
     if not pks:
-        click.echo("No pks specified")
+        click.echo('No pks specified')
     else:
         for pk in pks:
-            calc_node = aiida.orm.load_node(pk)
-            print_call_graph(calc_node)
+            calc_node = load_node(pk)
+            graph = format_call_graph(calc_node)
+            click.echo(graph)
 
 
 def _create_status_info(calc_node):
@@ -469,18 +486,27 @@ def watch(pks):
 
 
 def _print(body, sender, subject, correlation_id):
-    print("pk={}, subject={}, body={}".format(sender, subject, body))
+    click.echo("pk={}, subject={}, body={}".format(sender, subject, body))
 
 
 def _build_query(projections=None, filters=None, order_by=None, limit=None, past_days=None):
     import datetime
-    from aiida.utils import timezone
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.calculation import Calculation
+    from aiida.orm.calculation.function import FunctionCalculation
     from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.utils import timezone
 
     # Define filters
     if filters is None:
         filters = {}
+
+    # Until the QueryBuilder supports passing a tuple of classes in the append method, we have to query
+    # for the base Calculation class and match the type to get all WorkCalculation AND FunctionCalculation nodes
+    filters['or'] = [
+        {'type': WorkCalculation._plugin_type_string},
+        {'type': FunctionCalculation._plugin_type_string}
+    ]
 
     if past_days is not None:
         n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
@@ -489,7 +515,7 @@ def _build_query(projections=None, filters=None, order_by=None, limit=None, past
     # Build the query
     qb = QueryBuilder()
     qb.append(
-        cls=WorkCalculation,
+        cls=Calculation,
         filters=filters,
         project=projections,
         tag='calculation'

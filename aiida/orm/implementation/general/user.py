@@ -155,32 +155,6 @@ class AbstractUser(object):
     def get_all_users(cls):
         return cls.search_for_users()
 
-    @property
-    def dbuser(self):
-        """
-        The underlying DbUser object.
-
-        :return: An instanc of a DbUser from the proper
-            implementation (Django, SQLAlchemy, ...)
-        """
-        return self._dbuser
-
-    def get_full_name(self):
-        """
-        Return the user full name
-
-        :return: the user full name
-        """
-        return self._dbuser.get_full_name()
-
-    def get_short_name(self):
-        """
-        Return the user short name (typically, this returns the email)
-
-        :return: The short name
-        """
-        return self._dbuser.get_short_name()
-
     @abstractclassmethod
     def search_for_users(cls, **kwargs):
         """
@@ -191,26 +165,68 @@ class AbstractUser(object):
         """
         pass
 
-    @classmethod
-    def get(cls, email):
+    @staticmethod
+    def get_schema():
         """
-        Get the User with the given email
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
 
-        :param email: a string
-        :return: the User object
-        :raise NotExistent: if the User does not Exist
-        :raise MultipleObjectsError: if there are multiple User objects
-            with the same email (should not happen)
+        :return: get schema of the user
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        res = cls.search_for_users(email=email)
-        if res:
-            if len(res) > 1:
-                raise MultipleObjectsError("Multiple users with email {}".format(email))
-            else:
-                return res[0]
-        else:
-            raise NotExistent("No user with email {}".format(email))
+        return {
+            "date_joined": {
+                "display_name": "User since",
+                "help_text": "Date and time of registration",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "email": {
+                "display_name": "email",
+                "help_text": "e-mail of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "first_name": {
+                "display_name": "First name",
+                "help_text": "First name of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "institution": {
+                "display_name": "Institution",
+                "help_text": "Affiliation of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "is_active": {
+                "display_name": "Active",
+                "help_text": "True(False) if the user is active(not)",
+                "is_foreign_key": False,
+                "type": "bool"
+            },
+            "last_login": {
+                "display_name": "Last login",
+                "help_text": "Date and time of the last login",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "last_name": {
+                "display_name": "Last name",
+                "help_text": "Last name of the user",
+                "is_foreign_key": False,
+                "type": "str"
+            }
+        }
+
 
 class Util(object):
     __metaclass__ = ABCMeta
@@ -223,11 +239,3 @@ class Util(object):
         """
         pass
 
-    @staticmethod
-    def get_db_columns():
-        """
-        This method returns a list with the column names and types of the table
-        corresponding to this class.
-        :return: a list with the names of the columns
-        """
-        pass

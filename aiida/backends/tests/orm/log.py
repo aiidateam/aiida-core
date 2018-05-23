@@ -12,7 +12,7 @@ import unittest
 from aiida.utils.timezone import now
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
-from aiida.orm.backend import construct
+from aiida.orm.backend import construct_backend
 from aiida.orm.calculation import Calculation
 from aiida.backends.testbase import AiidaTestCase
 
@@ -20,7 +20,7 @@ from aiida.backends.testbase import AiidaTestCase
 class TestBackendLog(AiidaTestCase):
     def setUp(self):
         super(TestBackendLog, self).setUp()
-        self._backend = construct()
+        self._backend = construct_backend()
         self._record = {
             'time': now(),
             'loggername': 'loggername',
@@ -42,7 +42,7 @@ class TestBackendLog(AiidaTestCase):
         """
         Test creating the backend specific backend instance
         """
-        backend = construct()
+        backend = construct_backend()
 
     def test_delete_many(self):
         """

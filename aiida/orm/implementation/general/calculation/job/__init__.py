@@ -12,7 +12,6 @@ import copy
 import datetime
 import enum
 
-from aiida.backends.utils import get_automatic_user
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
@@ -35,7 +34,6 @@ SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
 PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
 FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
-
 
 _input_subfolder = 'raw_input'
 
@@ -87,7 +85,7 @@ class AbstractJobCalculation(AbstractCalculation):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractJobCalculation, cls)._updatable_attributes + (
-            'job_id', 'scheduler_state','scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
+            'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
             'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list', 'state'
         )
 
@@ -755,7 +753,7 @@ class AbstractJobCalculation(AbstractCalculation):
         for item in retrieve_list:
             if not isinstance(item, basestring):
                 if (not (isinstance(item, (tuple, list))) or
-                            len(item) != 3):
+                        len(item) != 3):
                     raise ValueError(
                         "You should pass a list containing either "
                         "strings or lists/tuples"
@@ -802,8 +800,8 @@ class AbstractJobCalculation(AbstractCalculation):
                     )
 
                 if (not (isinstance(item[0], basestring)) or
-                    not (isinstance(item[1], basestring)) or
-                    not (isinstance(item[2], int))):
+                        not (isinstance(item[1], basestring)) or
+                        not (isinstance(item[2], int))):
                     raise ValueError(
                         'You have to pass a list (or tuple) of lists, with remotepath(string), '
                         'localpath(string) and depth (integer)'
@@ -945,7 +943,7 @@ class AbstractJobCalculation(AbstractCalculation):
             group_pk=None, all_users=False, pks=tuple(),
             relative_ctime=True, with_scheduler_state=False,
             order_by=None, limit=None, filters=None,
-            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type')
+            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'), raw=False
     ):
         """
         Print a description of the AiiDA calculations.
@@ -972,12 +970,15 @@ class AbstractJobCalculation(AbstractCalculation):
         :param filters: a dictionary of filters to be passed to the QueryBuilder query
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
+        :param raw: Only print the query result, without any headers, footers
+            or other additional information
 
         :return: a string with description of calculations.
         """
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
+        from aiida.orm.backend import construct_backend
 
         projection_label_dict = {
             'pk': 'PK',
@@ -1000,6 +1001,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         now = timezone.now()
 
+        backend = construct_backend()
+
         # Let's check the states:
         if states:
             for state in states:
@@ -1016,8 +1019,6 @@ class AbstractJobCalculation(AbstractCalculation):
         if limit is not None:
             assert isinstance(limit, int), \
                 "Limit (set to {}) has to be an integer or None".format(limit)
-
-        print(cls._get_last_daemon_check_string(now))
 
         if filters is None:
             calculation_filters = {}
@@ -1040,7 +1041,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = get_automatic_user().id
+                user_id = backend.users.get_automatic_user().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
@@ -1068,7 +1069,6 @@ class AbstractJobCalculation(AbstractCalculation):
 
         qb.append(type='computer', computer_of='calculation', tag='computer')
         qb.append(type='user', creator_of="calculation", tag="user")
-
 
         projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
@@ -1112,53 +1112,20 @@ class AbstractJobCalculation(AbstractCalculation):
 
                     counter += 1
 
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
 
             except StopIteration:
-                print(tabulate(calc_list_data, headers=calc_list_header))
+                if raw:
+                    print(tabulate(calc_list_data, tablefmt='plain'))
+                else:
+                    print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
-        print("\nTotal results: {}\n".format(counter))
-
-    @classmethod
-    def _get_last_daemon_check_string(cls, since):
-        """
-        Get a string showing the how long it has been since the daemon was
-        last ticked relative to a particular timepoint.
-
-        :param since: The timepoint to get the last check time since.
-        :return: A string indicating the elapsed period, or an information
-          message.
-        """
-        from aiida.daemon.timestamps import get_last_daemon_timestamp
-
-        # get the last daemon check:
-        try:
-            last_daemon_check = \
-                get_last_daemon_timestamp('updater', when='stop')
-        except ValueError:
-            last_check_string = (
-                "# Last daemon state_updater check: "
-                "(Error while retrieving the information)"
-            )
-        else:
-            if last_daemon_check is None:
-                last_check_string = "# Last daemon state_updater check: (Never)"
-            else:
-                last_check_string = (
-                    "# Last daemon state_updater check: "
-                    "{} ({})".format(
-                        str_timedelta(
-                            timezone.delta(last_daemon_check, since),
-                            negative_to_zero=True
-                        ),
-                        timezone.localtime(
-                            last_daemon_check
-                        ).strftime("at %H:%M:%S on %Y-%m-%d")
-                    )
-                )
-
-        return last_check_string
+        if not raw:
+            print("\nTotal results: {}\n".format(counter))
 
     @classmethod
     def _get_calculation_info_row(cls, res, projections, times_since=None):
@@ -1205,7 +1172,6 @@ class AbstractJobCalculation(AbstractCalculation):
                             1].split('.')[0].rsplit(":", 1)[0]])
             except (KeyError, ValueError):
                 pass
-
 
         if PROCESS_STATE_KEY in d['calculation']:
 
@@ -1350,15 +1316,13 @@ class AbstractJobCalculation(AbstractCalculation):
         raise NotImplementedError
 
     def _get_authinfo(self):
-        from aiida.orm.authinfo import AuthInfo
         from aiida.common.exceptions import NotExistent
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return AuthInfo.get(computer=computer._dbcomputer,
-                            user=self.dbnode.user)
+        return self.backend.authinfos.get(computer=computer, user=self.get_user())
 
     def _get_transport(self):
         """
@@ -1378,11 +1342,10 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.work.launch import submit
         warnings.warn(
             'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
-            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
+                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
         )
 
         submit(ContinueJobCalculation, _calc=self)
-
 
     def set_parser_name(self, parser):
         """
@@ -1555,11 +1518,11 @@ class AbstractJobCalculation(AbstractCalculation):
                          if calcinfo.retrieve_list is not None
                          else [])
         if (job_tmpl.sched_output_path is not None and
-                    job_tmpl.sched_output_path not in retrieve_list):
+                job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
             if (job_tmpl.sched_error_path is not None and
-                        job_tmpl.sched_error_path not in retrieve_list):
+                    job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
 
@@ -1578,7 +1541,8 @@ class AbstractJobCalculation(AbstractCalculation):
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = (
+            calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
         self._set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
@@ -1781,18 +1745,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def submit_test(self, folder=None, subfolder_name=None):
         """
-        Test submission, creating the files in a local folder.
+        Run a test submission by creating the files that would be generated for the real calculation in a local folder,
+        without actually storing the calculation nor the input nodes. This functionality therefore also does not
+        require any of the inputs nodes to be stored yet.
 
-        :note: this submit_test function does not require any node
-            (neither the calculation nor the input links) to be stored yet.
-
-        :param folder: A Folder object, within which each calculation files
-            are created; if not passed, a subfolder 'submit_test' of the current
-            folder is used.
-        :param subfolder_name: the name of the subfolder to use for this
-            calculation (within Folder). If not passed, a unique string
-            starting with the date and time in the format ``yymmdd-HHMMSS-``
-            is used.
+        :param folder: a Folder object, within which to create the calculation files. By default a folder
+            will be created in the current working directory
+        :param subfolder_name: the name of the subfolder to use within the directory of the ``folder`` object. By
+            default a unique string will be generated based on the current datetime with the format ``yymmdd-``
+            followed by an auto incrementing index
         """
         import os
         import errno
@@ -1972,6 +1933,7 @@ class AbstractJobCalculation(AbstractCalculation):
         properties.
         """
         return self.get_state(from_attribute=True)
+
 
 class CalculationResultManager(object):
     """

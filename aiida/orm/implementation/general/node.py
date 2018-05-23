@@ -30,7 +30,6 @@ from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 
-
 _NO_DEFAULT = tuple()
 _HASH_EXTRA_KEY = '_aiida_hash'
 
@@ -148,13 +147,92 @@ class AbstractNode(object):
         return ""
 
     @staticmethod
-    def get_db_columns():
+    def get_schema():
         """
-        This method returns a list with the column names and types of the table
-        corresponding to this class.
-        :return: a list with the names of the columns
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+
+        :return: get schema of the node
         """
-        pass
+        return {
+            "attributes": {
+                "display_name": "Attributes",
+                "help_text": "Attributes of the node",
+                "is_foreign_key": False,
+                "type": "dict"
+            },
+            "attributes.state": {
+                "display_name": "State",
+                "help_text": "AiiDA state of the calculation",
+                "is_foreign_key": False,
+                "type": ""
+            },
+            "ctime": {
+                "display_name": "Creation time",
+                "help_text": "Creation time of the node",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "extras": {
+                "display_name": "Extras",
+                "help_text": "Extras of the node",
+                "is_foreign_key": False,
+                "type": "dict"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "label": {
+                "display_name": "Label",
+                "help_text": "User-assigned label",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "mtime": {
+                "display_name": "Last Modification time",
+                "help_text": "Last modification time",
+                "is_foreign_key": False,
+                "type": "datetime.datetime"
+            },
+            "type": {
+                "display_name": "Type",
+                "help_text": "Code type",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "user_id": {
+                "display_name": "Id of creator",
+                "help_text": "Id of the user that created the node",
+                "is_foreign_key": True,
+                "related_column": "id",
+                "related_resource": "_dbusers",
+                "type": "int"
+            },
+            "uuid": {
+                "display_name": "Unique ID",
+                "help_text": "Universally Unique Identifier",
+                "is_foreign_key": False,
+                "type": "unicode"
+            },
+            "nodeversion": {
+                "display_name": "Node version",
+                "help_text": "Version of the node",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "process_type": {
+                "display_name": "Process type",
+                "help_text": "Process type",
+                "is_foreign_key": False,
+                "type": "str"
+            }
+        }
 
     @property
     def logger(self):
@@ -207,6 +285,8 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
+        from aiida.orm.backend import construct_backend
+
         self._to_be_stored = True
         # Empty cache of input links in any case
         self._attrs_cache = {}
@@ -214,6 +294,21 @@ class AbstractNode(object):
 
         self._temp_folder = None
         self._repo_folder = None
+
+        self._backend = construct_backend()
+
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+
+    def __str__(self):
+        if not self.is_stored:
+            return "uuid: {} (unstored)".format(self.uuid)
+
+        return "uuid: {} (pk: {})".format(self.uuid, self.pk)
+
+    @property
+    def backend(self):
+        return self._backend
 
     @property
     def is_stored(self):
@@ -235,14 +330,6 @@ class AbstractNode(object):
         Return the modification time of the node.
         """
         pass
-
-    def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
-
-    def __str__(self):
-        if not self.is_stored:
-            return "uuid: {} (unstored)".format(self.uuid)
-        return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -362,6 +449,15 @@ class AbstractNode(object):
         """
         pass
 
+    @abstractproperty
+    def nodeversion(self):
+        """
+        Return the version of the node
+
+        :return: A version integer
+        """
+        pass
+
     @property
     def label(self):
         """
@@ -449,7 +545,16 @@ class AbstractNode(object):
         """
         Get the user.
 
-        :return: a DbUser model object
+        :return: a User model object
+        """
+        pass
+
+    @abstractmethod
+    def set_user(self, user):
+        """
+        Set the user
+
+        :param user: The new user
         """
         pass
 
@@ -518,7 +623,7 @@ class AbstractNode(object):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
-        
+
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
 
@@ -562,30 +667,6 @@ class AbstractNode(object):
         # If both are stored, remove also from the DB
         if self.is_stored:
             self._remove_dblink_from(label)
-
-    def _remove_link_from(self, label, src_uuid):
-        """
-        Remove from the DB the input link with the given label.
-
-        :note: In subclasses, change only this. Moreover, remember to call
-            the super() method in order to properly use the caching logic!
-
-        :note: No error is raised if the link does not exist.
-
-        :param str label: the name of the label to set the link from src.
-        :param link_type: The type of link, must be one of the enum values form
-          :class:`~aiida.common.links.LinkType`
-        """
-        link_key = LinkKey(label, src_uuid)
-        # Try to remove from the local cache, no problem if none is present
-        try:
-            del self._inputlinks_cache[link_key]
-        except KeyError:
-            pass
-
-        # If both are stored, remove also from the DB
-        if self.is_stored:
-            self._remove_dblink_from(link_key)
 
     @abstractmethod
     def _replace_dblink_from(self, src, label, link_type):
@@ -1341,10 +1422,6 @@ class AbstractNode(object):
         """
         :return: the corresponding DbNode object.
         """
-        # I also update the internal _dbnode variable, if it was saved
-        # from aiida.backends.djsite.db.models import DbNode
-        #        if self.is_stored:
-        #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         pass
 
     @property
@@ -1705,7 +1782,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-                )
+            )
             },
             self.folder,
             computer.uuid if computer is not None else None
@@ -1862,6 +1939,7 @@ class AbstractNode(object):
             process_class = getattr(module, class_name)
 
         return process_class
+
 
 # pylint: disable=too-few-public-methods
 class NodeOutputManager(object):

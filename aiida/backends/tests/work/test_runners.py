@@ -48,7 +48,7 @@ class TestWorkchain(AiidaTestCase):
         self.runner.call_on_calculation_finish(proc.calc.pk, calc_done)
 
         # Run the calculation
-        proc.start()
+        self.runner.loop.add_callback(proc.step_until_terminated)
         self._run_loop_for(5.)
 
         self.assertTrue(future.result())

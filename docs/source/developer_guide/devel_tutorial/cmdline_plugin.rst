@@ -64,7 +64,7 @@ File ``float_cmd.py``::
    import click  # This we will use in a later step
 
    from aiida.cmdline.commands import data_cmd
-   from aiida.cmdline.dbenv_lazyloading import load_dbenv_if_not_loaded  # Will be used in a later step
+   from aiida.cmdline.utils.decorators import load_dbenv_if_not_loaded  # Will be used in a later step
 
    @data_cmd.group('yourplugin-float'):
    def float_cmd():

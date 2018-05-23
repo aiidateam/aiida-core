@@ -20,6 +20,8 @@ from aiida.common.utils import escape_for_bash
 from aiida.transport.util import FileAttribute
 from aiida.common import aiidalogger
 
+__all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
+
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
@@ -188,7 +190,7 @@ class SshTransport(aiida.transport.Transport):
     def _get_timeout_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
-        
+
         Provide 60s as a default timeout for connections.
         """
         config = parse_sshconfig(computer.hostname)
@@ -398,14 +400,14 @@ class SshTransport(aiida.transport.Transport):
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
-        
+
         :param machine: the machine to connect to
         :param load_system_host_keys: (optional, default False)
            if False, do not load the system host keys
         :param key_policy: (optional, default = paramiko.RejectPolicy())
            the policy to use for unknown keys
 
-        Other parameters valid for the ssh connect function (see the 
+        Other parameters valid for the ssh connect function (see the
         self._valid_connect_params list) are passed to the connect
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
@@ -447,11 +449,11 @@ class SshTransport(aiida.transport.Transport):
     def open(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
-        in the __init__. 
-        
+        in the __init__.
+
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
-        
+
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
@@ -462,7 +464,7 @@ class SshTransport(aiida.transport.Transport):
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
         if proxystring is not None:
-            proxy = paramiko.ProxyCommand(proxystring)
+            proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = proxy
 
         try:
@@ -484,9 +486,9 @@ class SshTransport(aiida.transport.Transport):
     def close(self):
         """
         Close the SFTP channel, and the SSHClient.
-        
+
         :todo: correctly manage exceptions
-        
+
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
@@ -533,7 +535,7 @@ class SshTransport(aiida.transport.Transport):
     def chdir(self, path):
         """
         Change directory of the SFTP session. Emulated internally by
-        paramiko. 
+        paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
@@ -900,7 +902,7 @@ class SshTransport(aiida.transport.Transport):
         :param remotepath: a remote path
         :param localpath: an (absolute) local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko). 
+            Default = True (default behaviour in paramiko).
             False is not implemented.
         :param overwrite: if True overwrites files and folders.
             Default = False
@@ -997,8 +999,8 @@ class SshTransport(aiida.transport.Transport):
 
         :param remotepath: a remote path
         :param localpath: an (absolute) local path
-        :param dereference: follow symbolic links. 
-            Default = True (default behaviour in paramiko). 
+        :param dereference: follow symbolic links.
+            Default = True (default behaviour in paramiko).
             False is not implemented.
         :param  overwrite: if True overwrites files and folders.
             Default = False
@@ -1061,8 +1063,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Copy a file from remote source to remote destination
         Redirects to copy().
-        
-        :param remotesource: 
+
+        :param remotesource:
         :param remotedestination:
         :param dereference:
         :param pattern:
@@ -1115,8 +1117,8 @@ class SshTransport(aiida.transport.Transport):
 
         # if in input I give an invalid object raise ValueError
         if not remotesource:
-            raise ValueError('Input to copy() must be a non empty string. ' +
-                             'Found instead %s as remotesource' % remotesource)
+            raise ValueError(
+                'Input to copy() must be a non empty string. ' + 'Found instead %s as remotesource' % remotesource)
 
         if not remotedestination:
             raise ValueError('Input to copy() must be a non empty string. ' +
@@ -1236,8 +1238,7 @@ class SshTransport(aiida.transport.Transport):
         if not path:
             return False
         try:
-            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path,
-                                                                          self.sftp.normalize(path),
+            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path, self.sftp.normalize(path),
                                                                           self.sftp.stat(path),
                                                                           self.sftp.stat(path).st_mode))
             return S_ISREG(self.sftp.stat(path).st_mode)
@@ -1250,23 +1251,24 @@ class SshTransport(aiida.transport.Transport):
 
     def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
         """
-        Executes the specified command, first changing directory to the
-        current working directory are returned by
-        self.getcwd().
-        Does not wait for the calculation to finish.
+        Executes the specified command in bash login shell.
+        
+        Before the command is executed, changes directory to the current
+        working directory as returned by self.getcwd().
 
-        For a higher-level _exec_command_internal that automatically waits for the
-        job to finish, use exec_command_wait.
+        For executing commands and waiting for them to finish, use
+        exec_command_wait.
 
-        :param  command: the command to execute
+        :param  command: the command to execute. The command is assumed to be
+            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
         :param combine_stderr: (default False) if True, combine stdout and
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
         :param bufsize: same meaning of the one used by paramiko.
-        
+
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
-            plus the methods provided by paramiko, and channel is a 
+            plus the methods provided by paramiko, and channel is a
             paramiko.Channel object.
         """
         channel = self.sshclient.get_transport().open_session()
@@ -1281,7 +1283,9 @@ class SshTransport(aiida.transport.Transport):
 
         self.logger.debug("Command to be executed: {}".format(command_to_execute))
 
-        channel.exec_command(command_to_execute)
+        # Note: The default shell will eat one level of escaping, while
+        # 'bash -l -c ...' will eat another. Thus, we need to escape again.
+        channel.exec_command('bash -l -c ' + escape_for_bash(command_to_execute))
 
         stdin = channel.makefile('wb', bufsize)
         stdout = channel.makefile('rb', bufsize)
@@ -1292,7 +1296,7 @@ class SshTransport(aiida.transport.Transport):
     def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):
         """
         Executes the specified command and waits for it to finish.
-        
+
         :param command: the command to execute
         :param stdin: (optional,default=None) can be a string or a
                    file-like object.
@@ -1324,11 +1328,11 @@ class SshTransport(aiida.transport.Transport):
         ssh_stdin.flush()
         ssh_stdin.channel.shutdown_write()
 
-        output_text = stdout.read()
-
-        # I get the return code (blocking, but in principle I waited above)
+        # I get the return code (blocking)
         retval = channel.recv_exit_status()
 
+        # needs to be after 'recv_exit_status', otherwise it might hang
+        output_text = stdout.read()
         stderr_text = stderr.read()
 
         return retval, output_text, stderr_text
@@ -1367,10 +1371,10 @@ class SshTransport(aiida.transport.Transport):
 
     def symlink(self, remotesource, remotedestination):
         """
-        Create a symbolic link between the remote source and the remote 
+        Create a symbolic link between the remote source and the remote
         destination.
-        
-        :param remotesource: remote source. Can contain a pattern. 
+
+        :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """
         # paramiko gives some errors if path is starting with '.'
@@ -1403,3 +1407,16 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
+
+
+class _DetachedProxyCommand(paramiko.ProxyCommand):
+    """
+    Modifies paramiko's ProxyCommand by launching the process in a separate process group.
+    """
+
+    def __init__(self, command_line):
+        from subprocess import Popen, PIPE
+        from shlex import split as shlsplit
+        self.cmd = shlsplit(command_line)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
+        self.timeout = None

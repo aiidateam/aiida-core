@@ -7,8 +7,8 @@ Details
 .. toctree::
     :maxdepth: 1
 
-    details/troubleshooting
+    details/os
     details/database
     details/rabbitmq
     details/virtual_environment
-    details/os
+    details/troubleshooting

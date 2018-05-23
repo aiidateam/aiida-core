@@ -25,14 +25,10 @@ class TestQueryBuilderSQLA(AiidaTestCase):
                 (Group, User, Computer, Node, Data, Calculation),
                 (DbGroup, DbUser, DbComputer, DbNode, DbNode, DbNode),
                 (None, None, None, Node._query_type_string, Data._query_type_string, Calculation._query_type_string)):
-
             cls, clstype, query_type_string = qb._get_ormclass(AiidaCls, None)
-
 
             self.assertEqual(cls, ORMCls)
             self.assertEqual(query_type_string, typestr)
-
-
 
 
 class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
@@ -46,20 +42,19 @@ class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
             n._set_attr('foo', i)
             n.store()
         qb = QueryBuilder().append(
-                Node, project='attributes.foo'
-            ).order_by(
-                {Node:{'attributes.foo':{'cast':'i'}}}
-            )
+            Node, project='attributes.foo'
+        ).order_by(
+            {Node: {'attributes.foo': {'cast': 'i'}}}
+        )
         res = list(zip(*qb.all())[0])
         self.assertEqual(res, range(10))
 
         # Now applying an offset:
         qb.offset(5)
         res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5,10))
+        self.assertEqual(res, range(5, 10))
 
         # Now also applying a limit:
         qb.limit(3)
         res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5,8))
-
+        self.assertEqual(res, range(5, 8))

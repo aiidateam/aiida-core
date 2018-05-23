@@ -13,9 +13,10 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
 
+
 def prompt_for_computer_configuration(computer):
     import inspect, readline
-    from aiida.orm.computer import Computer as Computer
+    from aiida.orm.computer import Computer
     from aiida.common.exceptions import ValidationError
 
     for internal_name, name, desc, multiline in (
@@ -133,6 +134,8 @@ class Computer(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        super(Computer, self).__init__()
+
         self.valid_subcommands = {
             'list': (self.computer_list, self.complete_none),
             'show': (self.computer_show, self.complete_computers),
@@ -162,7 +165,6 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
-        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -216,8 +218,8 @@ class Computer(VerdiCommandWithSubcommands):
                 # color_id = 90 # Dark gray
                 # color_id = 34 # Blue
 
-                is_configured = computer.is_user_configured(get_automatic_user())
-                is_user_enabled = computer.is_user_enabled(get_automatic_user())
+                is_configured = computer.is_user_configured(self.backend.users.get_automatic_user())
+                is_user_enabled = computer.is_user_enabled(self.backend.users.get_automatic_user())
 
                 is_usable = False  # True if both enabled and configured
 
@@ -313,7 +315,6 @@ class Computer(VerdiCommandWithSubcommands):
         if not is_dbenv_loaded():
             load_dbenv()
 
-        # from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
@@ -389,6 +390,7 @@ class Computer(VerdiCommandWithSubcommands):
         print "---------------------------------------"
 
         # get the new computer name
+        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
         input_txt = raw_input("=> Computer name: ")
         if input_txt.strip() == '?':
             print "HELP:", "The computer name"
@@ -473,14 +475,8 @@ class Computer(VerdiCommandWithSubcommands):
         import readline
         import inspect
 
-        from django.core.exceptions import ObjectDoesNotExist
-
-        from aiida.common.exceptions import (
-            NotExistent, ValidationError, MultipleObjectsError)
-        from aiida.backends.utils import get_automatic_user
+        from aiida.common.exceptions import (NotExistent, ValidationError, MultipleObjectsError)
         from aiida.common.utils import get_configured_user_email
-        from aiida.orm.authinfo import AuthInfo
-        from aiida.orm.user import User
 
         import argparse
 
@@ -506,18 +502,18 @@ class Computer(VerdiCommandWithSubcommands):
                 computername)
             sys.exit(1)
         if user_email is None:
-            user = get_automatic_user()
+            user = self.backend.users.get_automatic_user()
         else:
             try:
-                user = User.get(email=user_email)
+                user = self.backend.users.get(email=user_email)
             except (NotExistent, MultipleObjectsError) as e:
                 print >> sys.stderr, ("{}".format(e))
                 sys.exit(1)
 
         try:
-            authinfo = AuthInfo.get(computer=computer, user=user)
+            authinfo = self.backend.authinfos.get(computer=computer, user=user)
         except NotExistent:
-            authinfo = AuthInfo(computer=computer, user=user)
+            authinfo = self.backend.authinfos.create(computer=computer, user=user)
         old_authparams = authinfo.get_auth_params()
 
         Transport = computer.get_transport_class()
@@ -651,8 +647,6 @@ class Computer(VerdiCommandWithSubcommands):
             load_dbenv()
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.user import User
-        from aiida.backends.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -686,9 +680,9 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
 
         if user_email is None:
-            user = User(dbuser=get_automatic_user())
+            user = self.backend.users.get_automatic_user()
         else:
-            user_list = User.search_for_users(email=user_email)
+            user_list = self.backend.users.find(email=user_email)
             # If no user is found
             if not user_list:
                 print >> sys.stderr, ("No user with email '{}' in the "
@@ -876,7 +870,6 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -911,7 +904,7 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(True)
                 print "Computer '{}' enabled.".format(computername)
         else:
-            user_list = User.search_for_users(email=user_email)
+            user_list = self.backend.users.find(email=user_email)
             if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))
@@ -946,7 +939,6 @@ class Computer(VerdiCommandWithSubcommands):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import User
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -981,7 +973,7 @@ class Computer(VerdiCommandWithSubcommands):
                 computer.set_enabled_state(False)
                 print "Computer '{}' disabled.".format(computername)
         else:
-            user_list = User.search_for_users(email=user_email)
+            user_list = self.backend.users.find(email=user_email)
             if user_list is None or len(user_list) == 0:
                 print >> sys.stderr, ("No user with email '{}' in the "
                                       "database.".format(user_email))

@@ -19,8 +19,6 @@ from aiida.common.lang import override
 from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
-from aiida.orm.implementation.general.utils import get_db_columns
-
 
 class Computer(AbstractComputer):
     @property
@@ -76,13 +74,6 @@ class Computer(AbstractComputer):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
-
-
-    @staticmethod
-    def get_db_columns():
-        # from aiida.backends.djsite.db.models import DbComputer
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbComputer
-        return get_db_columns(DbComputer)
 
     @classmethod
     def list_names(cls):
@@ -146,7 +137,7 @@ class Computer(AbstractComputer):
         newdbcomputer = DbComputer.objects.get(pk=self.pk)
         newdbcomputer.pk = None
 
-        newobject = self.__class__(newdbcomputer)
+        newobject = self.__class__(dbcomputer=newdbcomputer)
 
         return newobject
 

@@ -20,7 +20,6 @@ from aiida.common.exceptions import ModificationNotAllowed, DbContentError
 from aiida.common.utils import str_timedelta
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.utils import get_automatic_user
 from aiida.backends.sqlalchemy.models.node import DbNode, DbCalcState
 from aiida.backends.sqlalchemy.models.group import DbGroup
 

@@ -14,13 +14,11 @@ from django.db.models import Q
 from aiida.common.utils import str_timedelta
 from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, DbContentError
-from aiida.backends.djsite.utils import get_automatic_user
 from aiida.orm.group import Group
 from aiida.orm.implementation.django.calculation import Calculation
 from aiida.orm.implementation.general.calculation.job import AbstractJobCalculation
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.utils import timezone
-
 
 
 class JobCalculation(AbstractJobCalculation, Calculation):
@@ -118,4 +116,3 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                             e.message))
 
                     return most_recent_state
-

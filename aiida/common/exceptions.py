@@ -9,7 +9,6 @@
 ###########################################################################
 
 
-
 class AiidaException(Exception):
     """
     Base class for all AiiDA exceptions.
@@ -62,6 +61,15 @@ class ModificationNotAllowed(AiidaException):
     """
     Raised when the user tries to modify a field, object, property, ... that should not
     be modified.
+    """
+    pass
+
+
+class IntegrityError(AiidaException):
+    """
+    Raised when there is an underlying data integrity error.  This can be database related
+    or a general data integrity error.  This can happen if, e.g., a foreign key check fails.
+    See PEP 249 for details.
     """
     pass
 
@@ -213,13 +221,6 @@ class FeatureDisabled(AiidaException):
     """
     Raised when a feature is requested, but the user has chosen to disable
     it (e.g., for submissions on disabled computers).
-    """
-    pass
-
-
-class LockPresent(AiidaException):
-    """
-    Raised when a lock is requested, but cannot be acquired.
     """
     pass
 

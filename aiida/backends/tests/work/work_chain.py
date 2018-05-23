@@ -21,10 +21,9 @@ from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.utils.capturing import Capturing
-from aiida.work.utils import ProcessStack
-from aiida.work.class_loader import CLASS_LOADER
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
+from aiida.work import Process
 from aiida.work.workchain import *
 
 from . import utils
@@ -38,8 +37,8 @@ def run_and_check_success(process_class, **kwargs):
     :returns: instance of process
     """
     process = process_class(inputs=kwargs)
-    process.execute()
-    assert process.calc.is_finished_ok == True
+    work.run(process)
+    assert process.calc.is_finished_ok is True
 
     return process
 
@@ -118,7 +117,6 @@ class Wf(work.WorkChain):
 
 
 class ReturnWorkChain(WorkChain):
-
     FAILURE_STATUS = 1
 
     @classmethod
@@ -141,14 +139,14 @@ class ReturnWorkChain(WorkChain):
 class TestFinishStatus(AiidaTestCase):
 
     def test_failing_workchain(self):
-        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(False))
+        result, node = work.run_get_node(ReturnWorkChain, success=Bool(False))
         self.assertEquals(node.finish_status, ReturnWorkChain.FAILURE_STATUS)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
 
     def test_successful_workchain(self):
-        result, node = work.launch.run_get_node(ReturnWorkChain, success=Bool(True))
+        result, node = work.run_get_node(ReturnWorkChain, success=Bool(True))
         self.assertEquals(node.finish_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
@@ -206,13 +204,13 @@ class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_run(self):
         A = Str('A')
@@ -221,7 +219,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        work.launch.run(Wf, value=A, n=three)
+        work.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -229,7 +227,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = work.launch.run(Wf, value=B, n=three)
+        finished_steps = work.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -237,7 +235,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = work.launch.run(Wf, value=C, n=three)
+        finished_steps = work.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -276,6 +274,8 @@ class TestWorkchain(AiidaTestCase):
         A = Str("a")
         B = Str("b")
 
+        test_case = self
+
         class ReturnA(work.Process):
             def _run(self):
                 self.out('res', A)
@@ -293,20 +293,18 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                return ToContext(
-                    r1=Outputs(self.submit(ReturnA)),
-                    r2=Outputs(self.submit(ReturnB)))
+                return ToContext(r1=self.submit(ReturnA), r2=self.submit(ReturnB))
 
             def s2(self):
-                assert self.ctx.r1['res'] == A
-                assert self.ctx.r2['res'] == B
+                test_case.assertEquals(self.ctx.r1.out.res, A)
+                test_case.assertEquals(self.ctx.r2.out.res, B)
 
                 # Try overwriting r1
-                return ToContext(r1=Outputs(self.submit(ReturnB)))
+                return ToContext(r1=self.submit(ReturnB))
 
             def s3(self):
-                assert self.ctx.r1['res'] == B
-                assert self.ctx.r2['res'] == B
+                test_case.assertEquals(self.ctx.r1.out.res, B)
+                test_case.assertEquals(self.ctx.r2.out.res, B)
 
         run_and_check_success(Wf)
 
@@ -333,8 +331,7 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['s3', 's4', 'isB']:
@@ -342,8 +339,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 's4']:
@@ -351,8 +347,7 @@ class TestWorkchain(AiidaTestCase):
                     finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = \
-            self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
+        finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.iteritems():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -438,19 +433,19 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
-        wc = IfTest()
-        wc.execute(True)
-        self.assertTrue(wc.ctx.s1)
-        self.assertFalse(wc.ctx.s2)
+        if_test_wc = IfTest()
+        work.run(if_test_wc)
+        self.assertTrue(if_test_wc.ctx.s1)
+        self.assertFalse(if_test_wc.ctx.s2)
 
         # Now bundle the thing
-        bundle = plumpy.Bundle(wc)
+        bundle = plumpy.Bundle(if_test_wc)
 
         # Load from saved tate
         wc2 = bundle.unbundle()
         self.assertTrue(wc2.ctx.s1)
         self.assertFalse(wc2.ctx.s2)
-        wc2.execute()
+        work.run(wc2)
         self.assertTrue(wc2.ctx.s1)
         self.assertTrue(wc2.ctx.s2)
 
@@ -470,8 +465,8 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def run(self):
-                from aiida.orm.backend import construct
-                self._backend = construct()
+                from aiida.orm.backend import construct_backend
+                self._backend = construct_backend()
                 self._backend.log.delete_many({})
                 self.report("Testing the report function")
                 return
@@ -485,6 +480,8 @@ class TestWorkchain(AiidaTestCase):
     def test_to_context(self):
         val = Int(5)
 
+        test_case = self
+
         class SimpleWc(work.Process):
             def _run(self):
                 self.out('_return', val)
@@ -497,13 +494,12 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(result_a=Outputs(self.submit(SimpleWc)))
-                return ToContext(result_b=Outputs(self.submit(SimpleWc)))
+                self.to_context(result_a=self.submit(SimpleWc))
+                return ToContext(result_b=self.submit(SimpleWc))
 
             def result(self):
-                assert self.ctx.result_a['_return'] == val
-                assert self.ctx.result_b['_return'] == val
-                return
+                test_case.assertEquals(self.ctx.result_a.out._return, val)
+                test_case.assertEquals(self.ctx.result_b.out._return, val)
 
         run_and_check_success(Workchain)
 
@@ -511,13 +507,7 @@ class TestWorkchain(AiidaTestCase):
         persister = plumpy.test_utils.TestPersister()
         runner = work.new_runner(persister=persister)
         workchain = Wf(runner=runner)
-        workchain.execute()
-
-    def _run_with_checkpoints(self, wf_class, inputs=None):
-        if inputs is None:
-            inputs = {}
-        proc = run_and_check_success(wf_class, **inputs)
-        return proc.finished_steps
+        work.run(workchain)
 
     def test_namespace_nondb_mapping(self):
         """
@@ -556,12 +546,16 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(TestWorkChain, namespace={'value': value})
 
-
+    def _run_with_checkpoints(self, wf_class, inputs=None):
+        if inputs is None:
+            inputs = {}
+        proc = run_and_check_success(wf_class, **inputs)
+        return proc.finished_steps
 
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
@@ -569,7 +563,7 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
         work.set_runner(None)
         self.runner.close()
         self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()
@@ -597,6 +591,8 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
         while wf.is_running():
             execute_steps()
 
+        test_case = self
+
         class _TestWf(WorkChain):
             @classmethod
             def define(cls, spec):
@@ -604,10 +600,10 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
                 spec.outline(cls.begin, cls.check)
 
             def begin(self):
-                return ToContext(res=Outputs(wf))
+                return ToContext(res=wf)
 
             def check(self):
-                assert set(self.ctx.res) == set(wf.get_results())
+                test_case.assertEquals(self.ctx.res.pk, wf.pk)
 
         run_and_check_success(_TestWf)
 
@@ -619,13 +615,13 @@ class TestWorkChainAbort(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     class AbortableWorkChain(WorkChain):
         @classmethod
@@ -651,8 +647,8 @@ class TestWorkChainAbort(AiidaTestCase):
 
         with Capturing():
             with self.assertRaises(RuntimeError):
-                process.execute(True)
-                process.execute()
+                work.run(process)
+                work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -667,9 +663,9 @@ class TestWorkChainAbort(AiidaTestCase):
         process = TestWorkChainAbort.AbortableWorkChain()
 
         with self.assertRaises(plumpy.KilledError):
-            process.execute(True)
+            work.run(process)
             process.kill()
-            process.execute()
+            work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
@@ -684,13 +680,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner(with_communicator=True)
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     class SubWorkChain(WorkChain):
         @classmethod
@@ -723,15 +719,12 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             )
 
         def submit_child(self):
-            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
+            return ToContext(
+                child=self.submit(
+                    TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
-
-        def on_killed(self, msg):
-            super(TestWorkChainAbortChildren.MainWorkChain, self).on_killed(msg)
-            if self.inputs.kill:
-                assert self.ctx.child.calc.is_killed == True, 'Child was not killed'
 
     def test_simple_run(self):
         """
@@ -742,7 +735,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         with Capturing():
             with self.assertRaises(RuntimeError):
-                process.execute()
+                work.run(process)
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -754,11 +747,15 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         workchain and its children end up in the KILLED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        process.add_on_waiting_callback(lambda _: process.pause())
 
         with self.assertRaises(plumpy.KilledError):
-            process.execute(True)
-            process.kill()
-            process.execute()
+            work.run(process)
+            result = process.kill()
+            if isinstance(result, plumpy.Future):
+                # Run the loop until all the killing is done
+                self.runner.loop.run_sync(lambda: result)
+            work.run(process)
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -770,6 +767,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.is_killed, True)
 
 
+#
+
 class TestImmutableInputWorkchain(AiidaTestCase):
     """
     Test that inputs cannot be modified
@@ -777,13 +776,13 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
         work.set_runner(None)
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_immutable_input(self):
         """
@@ -933,6 +932,7 @@ class GrandParentExposeWorkChain(work.WorkChain):
             )
         )
 
+
 class ParentExposeWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -1007,6 +1007,7 @@ class ParentExposeWorkChain(work.WorkChain):
         )
         self.out_many(exposed_2)
 
+
 class ChildExposeWorkChain(work.WorkChain):
     @classmethod
     def define(cls, spec):
@@ -1027,6 +1028,7 @@ class ChildExposeWorkChain(work.WorkChain):
         self.out('b', self.inputs.b)
         self.out('c', self.inputs.c)
 
+
 class TestWorkChainExpose(AiidaTestCase):
     """
     Test the expose inputs / outputs functionality
@@ -1034,7 +1036,7 @@ class TestWorkChainExpose(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkChainExpose, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
         self.runner = utils.create_test_runner()
 
     def tearDown(self):
@@ -1042,10 +1044,10 @@ class TestWorkChainExpose(AiidaTestCase):
         work.set_runner(None)
         self.runner.close()
         self.runner = None
-        self.assertEquals(len(ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_expose(self):
-        res = work.launch.run(
+        res = work.run(
             ParentExposeWorkChain,
             a=Int(1),
             sub_1={'b': Float(2.3), 'c': Bool(True)},
@@ -1061,7 +1063,7 @@ class TestWorkChainExpose(AiidaTestCase):
         )
 
     def test_nested_expose(self):
-        res = work.launch.run(
+        res = work.run(
             GrandParentExposeWorkChain,
             sub=dict(
                 sub=dict(

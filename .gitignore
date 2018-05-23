@@ -1,5 +1,6 @@
 *.pyc
 *~
+*.swp
 *.project
 *.pydevproject
 .settings
@@ -18,3 +19,7 @@
 *\,cover
 coverage/
 .cache
+.coverage
+
+# Files created by Jenkins tests
+.jenkins-data/polish/polish_workchains/polish*

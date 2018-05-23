@@ -1,7 +1,6 @@
 [run]
-data_file = coverage/.coverage
 source = aiida
-omit = *test*,*/migrations/*
+omit = aiida/test*.py,aiida/*/test*.py,aiida/*/*/test*.py,aiida/*/*/*/test*.py,aiida/*/*/*/*/test*.py,aiida/*/*/*/*/*/test*.py,aiida/*/migrations/*.py,aiida/*/migrations/versions/*.py
 
 [html]
 directory = coverage/html

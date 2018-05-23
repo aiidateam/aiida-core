@@ -67,7 +67,7 @@ Now, let's try making a slightly more complex workflow by composing workfunction
 >>> r = prod_sum(Int(2), Int(3), Int(4))
 >>>
 >>> from aiida.utils.ascii_vis import draw_parents
->>> draw_parents(r, dist=4) # doctest: +SKIP
+>>> print draw_parents(r, dist=4) # doctest: +SKIP
                        /-4 [3582]
 -- /20 [3588]prod [3587]
                       |                  /-2 [3581]
@@ -185,7 +185,7 @@ To run the workflow locally we call
 >>> res = ProdSum.run(a=Int(2), b=Int(3), c=Int(4))
 >>> print res
 {'result': 20}
->>> draw_parents(res['result']) # doctest: +SKIP
+>>> print draw_parents(res['result']) # doctest: +SKIP
                           /-2 [3594]
                          |
 -- /20 [3598]ProdSum [3597]-3 [3596]

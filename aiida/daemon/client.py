@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 import enum
 import os
+import shutil
 import socket
 import sys
-
-from circus.client import CircusClient
-from circus.exc import CallError
+import tempfile
 
 from aiida.common.profile import ProfileConfig
+from aiida.common.setup import get_property
+from aiida.utils.which import which
 
-
-VERDI_BIN = os.path.abspath(os.path.join(sys.executable, '../verdi'))
-VIRTUALENV = os.path.abspath(os.path.join(sys.executable, '../../'))
-
+VERDI_BIN = which('verdi')
+# Recent versions of virtualenv create the environment variable VIRTUAL_ENV
+VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 class ControllerProtocol(enum.Enum):
     """
@@ -36,6 +36,12 @@ class DaemonClient(ProfileConfig):
     _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
+
+    def __init__(self, profile_name=None):
+        super(DaemonClient, self).__init__(profile_name)
+        self._SOCKET_DIRECTORY = None
+        self._DAEMON_TIMEOUT = get_property('daemon.timeout')
+
     @property
     def daemon_name(self):
         """
@@ -48,6 +54,10 @@ class DaemonClient(ProfileConfig):
         """
         Return the command string to start the AiiDA daemon
         """
+        from aiida.common.exceptions import ConfigurationError
+        if VERDI_BIN is None:
+            raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
+                "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
 
     @property
@@ -57,10 +67,6 @@ class DaemonClient(ProfileConfig):
     @property
     def virtualenv(self):
         return VIRTUALENV
-
-    @property
-    def circus_sockets(self):
-        return self.filepaths['circus']['socket']
 
     @property
     def circus_log_file(self):
@@ -75,6 +81,14 @@ class DaemonClient(ProfileConfig):
         return self.filepaths['circus']['port']
 
     @property
+    def circus_socket_file(self):
+        return self.filepaths['circus']['socket']['file']
+
+    @property
+    def circus_socket_endpoints(self):
+        return self.filepaths['circus']['socket']
+
+    @property
     def daemon_log_file(self):
         return self.filepaths['daemon']['log']
 
@@ -82,7 +96,6 @@ class DaemonClient(ProfileConfig):
     def daemon_pid_file(self):
         return self.filepaths['daemon']['pid']
 
-    @property
     def get_circus_port(self):
         """
         Retrieve the port for the circus controller, which should be written to the circus port file. If the 
@@ -104,7 +117,40 @@ class DaemonClient(ProfileConfig):
 
             return port
 
-    @property
+    def get_circus_socket_directory(self):
+        """
+        Retrieve the absolute path of the directory where the circus sockets are stored if the IPC protocol is
+        used and the daemon is running. If the daemon is running, the sockets file should exist and contain the
+        absolute path of the directory that contains the sockets of the circus endpoints. If it cannot be read,
+        a RuntimeError will be thrown. If the daemon is not running, a temporary directory will be created and
+        its path will be written to the sockets file and returned.
+
+        .. note:: A temporary folder needs to be used for the sockets because UNIX limits the filepath length to
+            107 bytes. Placing the socket files in the AiiDA config folder might seem like the more logical choice
+            but that folder can be placed in an arbitrarily nested directory, the socket filename will exceed the
+            limit. The solution is therefore to always store them in the temporary directory of the operation system
+            whose base path is typically short enough as to not exceed the limit
+
+        :return: the absolute path of directory to write the sockets to
+        """
+        if self.is_daemon_running:
+            try:
+                return open(self.circus_socket_file, 'r').read().strip()
+            except (ValueError, IOError):
+                raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
+        else:
+
+            # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
+            if self._SOCKET_DIRECTORY is not None:
+                return self._SOCKET_DIRECTORY
+
+            socket_dir_path = tempfile.mkdtemp()
+            with open(self.circus_socket_file, 'w') as handle:
+                handle.write(socket_dir_path)
+
+            self._SOCKET_DIRECTORY = socket_dir_path
+            return socket_dir_path
+
     def get_daemon_pid(self):
         """
         Get the daemon pid which should be written in the daemon pid file specific to the profile
@@ -126,7 +172,22 @@ class DaemonClient(ProfileConfig):
 
         :return: True if daemon is running, False otherwise
         """
-        return self.get_daemon_pid is not None
+        return self.get_daemon_pid() is not None
+
+    def delete_circus_socket_directory(self):
+        """
+        Attempt to delete the directory used to store the circus endpoint sockets. Will not raise if the
+        directory does not exist
+        """
+        directory = self.get_circus_socket_directory()
+
+        try:
+            shutil.rmtree(directory)
+        except OSError as exception:
+            if exception.errno == 2:
+                pass
+            else:
+                raise
 
     def get_available_port(self):
         """
@@ -147,9 +208,9 @@ class DaemonClient(ProfileConfig):
         :return: the endpoint string
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
-            endpoint = self.get_ipc_endpoint(self.circus_sockets['controller'])
+            endpoint = self.get_ipc_endpoint('controller')
         elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
-            endpoint = self.get_tcp_endpoint(self.get_circus_port)
+            endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
 
@@ -163,7 +224,7 @@ class DaemonClient(ProfileConfig):
         :return: the endpoint string
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
-            endpoint = self.get_ipc_endpoint(self.circus_sockets['pubsub'])
+            endpoint = self.get_ipc_endpoint('pubsub')
         elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
@@ -179,7 +240,7 @@ class DaemonClient(ProfileConfig):
         :return: the endpoint string
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
-            endpoint = self.get_ipc_endpoint(self.circus_sockets['stats'])
+            endpoint = self.get_ipc_endpoint('stats')
         elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
@@ -187,15 +248,17 @@ class DaemonClient(ProfileConfig):
 
         return endpoint
 
-    def get_ipc_endpoint(self, socket):
+    def get_ipc_endpoint(self, endpoint):
         """
         Get the ipc endpoint string for a circus daemon endpoint for a given socket
 
-        :param socket: absolute path to socket
+        :param endpoint: the circus endpoint for which to return a socket
         :return: the ipc endpoint string
         """
-        template = 'ipc://{socket}'
-        endpoint = template.format(socket=socket)
+        filepath = self.get_circus_socket_directory()
+        filename = self.circus_socket_endpoints[endpoint]
+        template = 'ipc://{filepath}/{filename}'
+        endpoint = template.format(filepath=filepath, filename=filename)
 
         return endpoint
 
@@ -223,7 +286,8 @@ class DaemonClient(ProfileConfig):
 
         :return: CircucClient instance
         """
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=3.)
+        from circus.client import CircusClient
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
 
     def call_client(self, command):
         """
@@ -235,7 +299,9 @@ class DaemonClient(ProfileConfig):
         :param command: command to call the circus client with
         :return: the result of the circus client call
         """
-        if not self.get_daemon_pid:
+        from circus.exc import CallError
+
+        if not self.get_daemon_pid():
             return {'status': self.DAEMON_ERROR_NOT_RUNNING}
 
         try:
@@ -338,7 +404,12 @@ class DaemonClient(ProfileConfig):
             }
         }
 
-        return self.call_client(command)
+        result = self.call_client(command)
+
+        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
+            self.delete_circus_socket_directory()
+
+        return result
 
     def restart_daemon(self, wait):
         """

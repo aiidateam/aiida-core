@@ -17,32 +17,32 @@ from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
-from aiida.work import test_utils, utils
+from aiida.work import test_utils, Process
+
+
+class NameSpacedProcess(work.Process):
+
+    @classmethod
+    def define(cls, spec):
+        super(NameSpacedProcess, cls).define(spec)
+        spec.input('some.name.space.a', valid_type=Int)
 
 
 class TestProcessNamespace(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessNamespace, self).setUp()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestProcessNamespace, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_namespaced_process(self):
         """
         Test that inputs in nested namespaces are properly validated and the link labels
         are properly formatted by connecting the namespaces with underscores
         """
-
-        class NameSpacedProcess(work.Process):
-
-            @classmethod
-            def define(cls, spec):
-                super(NameSpacedProcess, cls).define(spec)
-                spec.input('some.name.space.a', valid_type=Int)
-
         proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
@@ -84,11 +84,11 @@ class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
         work.runners.set_runner(None)
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        self.assertEquals(len(utils.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_process_stack(self):
         work.launch.run(ProcessStackTest)
@@ -217,16 +217,14 @@ class TestProcess(AiidaTestCase):
 class TestFunctionProcess(AiidaTestCase):
 
     def test_fixed_inputs(self):
-
         def wf(a, b, c):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
         function_process_class = work.FunctionProcess.build(wf)
-        self.assertEqual(work.launch.run(function_process_class, **inputs), inputs)
+        self.assertEqual(work.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
-
         def wf_with_kwargs(**kwargs):
             return kwargs
 

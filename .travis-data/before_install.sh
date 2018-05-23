@@ -10,7 +10,7 @@ then
     docker build -t torquessh ${TRAVIS_BUILD_DIR}/.travis-data/torquessh-doubler
     # Run it in the background, mapping port 22 of the container
     # to port 10022 outside, and passing the environment variable
-    docker run -d --privileged -p=10022:22 --env-file ${TRAVIS_BUILD_DIR}/torquessh.env torquessh
+    docker run -d --privileged -p=10022:22 --name="torquesshmachine" --env-file ${TRAVIS_BUILD_DIR}/torquessh.env torquessh
     # Docker ps to see what is going on
     echo "Running docker ps to see if the 'torquessh' docker image is up..."
     docker ps    

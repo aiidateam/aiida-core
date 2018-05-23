@@ -425,7 +425,8 @@ class PbsBaseClass(object):
 
             raw_data = {
                 i.split('=', 1)[0].strip().lower(): i.split('=', 1)[1].lstrip()
-                for i in job['lines'] if '=' in i
+                for i in job['lines']
+                if '=' in i
             }
 
             ## I ignore the errors for the time being - this seems to be
@@ -554,7 +555,7 @@ class PbsBaseClass(object):
 
             # Double check of redundant info
             if (this_job.allocated_machines is not None and this_job.num_machines is not None):
-                if len(this_job.allocated_machines) != this_job.num_machines:
+                if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(

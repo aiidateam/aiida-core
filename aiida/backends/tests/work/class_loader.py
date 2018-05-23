@@ -7,32 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import aiida.work.utils as util
+import aiida
+from aiida.work import Process
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
-from plumpy.utils import class_name
-from aiida import work
 
-
-CLASS_LOADER = work.CLASS_LOADER
 
 class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_class_loader(self):
-        templatereplacer_process = work.JobProcess.build(TemplatereplacerCalculation)
-        loaded_class = CLASS_LOADER.load_class(
-            class_name(templatereplacer_process, class_loader=CLASS_LOADER))
+        templatereplacer_process = aiida.work.JobProcess.build(TemplatereplacerCalculation)
+        loader = aiida.work.get_object_loader()
+
+        class_name = loader.identify_object(templatereplacer_process)
+        loaded_class = loader.load_object(class_name)
 
         self.assertEqual(templatereplacer_process.__name__, loaded_class.__name__)
-        self.assertEqual(
-            class_name(templatereplacer_process, verify=False),
-            class_name(loaded_class, verify=False))
-
+        self.assertEqual(class_name, loader.identify_object(loaded_class))

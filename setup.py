@@ -9,12 +9,11 @@
 ###########################################################################
 import fastentrypoints
 import re
+import sys
+from distutils.version import StrictVersion
 from os import path
 from setuptools import setup, find_packages
 from setup_requirements import install_requires, extras_require
-
-
-
 
 if __name__ == '__main__':
     # Get the version number
@@ -23,6 +22,21 @@ if __name__ == '__main__':
     with open(fname) as aiida_init:
         match_expr = "__version__[^'\"]+(['\"])([^'\"]+)"
         aiida_version = re.search(match_expr, aiida_init.read()).group(2).strip()
+
+    # Ensure that pip is installed and the version is at least 10.0.0, which is required for the build process
+    try:
+        import pip
+    except ImportError:
+        print 'Could not import pip, which is required for installation'
+        sys.exit(1)
+
+    PIP_REQUIRED_VERSION = '10.0.0'
+    required_version = StrictVersion(PIP_REQUIRED_VERSION)
+    installed_version = StrictVersion(pip.__version__)
+
+    if installed_version < required_version:
+        print 'The installation requires pip>={}, whereas currently {} is installed'.format(required_version, installed_version)
+        sys.exit(1)
 
     bin_folder = path.join(aiida_folder, 'bin')
     setup(
@@ -41,10 +55,6 @@ if __name__ == '__main__':
         install_requires=install_requires,
         extras_require=extras_require,
         packages=find_packages(),
-        # Don't forget to install it as well (by adding to the install_requires)
-        setup_requires=[
-            'reentry >= 1.0.3',
-        ],
         reentry_register=True,
         entry_points={
             'console_scripts': [
@@ -58,6 +68,7 @@ if __name__ == '__main__':
                 'inline = aiida.orm.calculation.inline:InlineCalculation',
                 'job = aiida.orm.calculation.job:JobCalculation',
                 'work = aiida.orm.calculation.work:WorkCalculation',
+                'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
             ],
             'aiida.code': [
@@ -91,6 +102,7 @@ if __name__ == '__main__':
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [
+                'simpleplugins.arithmetic.add = aiida.parsers.simpleplugins.arithmetic.add:ArithmeticAddParser',
                 'simpleplugins.templatereplacer.doubler = aiida.parsers.simpleplugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
             ],
             'aiida.schedulers': [

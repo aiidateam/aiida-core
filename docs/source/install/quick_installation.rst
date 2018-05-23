@@ -24,7 +24,7 @@ This will install the ``aiida-core`` package along with the four base plugins:
     * ``aiida-quantumespresso``
 
 After successful installation AiiDA needs to be setup, which includes setting up a profile and creating a database
-This can be accomplished semi-automatically through through AiiDA's command line interface ``verdi``.
+This can be accomplished semi-automatically through AiiDA's command line interface ``verdi``.
 For maximum control and customizability one can use ``verdi setup``, which will be explained in greater detail in the :ref:`setup section<setup_aiida>`.
 For a quick installation, AiiDA provides ``verdi quicksetup`` which will try to setup all requirements with sensible defaults
 

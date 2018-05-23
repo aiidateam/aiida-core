@@ -11,8 +11,8 @@
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work.persistence import Persistence, AiiDAPersister
-import aiida.work.utils as util
+from aiida.work.persistence import AiiDAPersister
+from aiida.work import Process
 from aiida.work.test_utils import DummyProcess
 from aiida import work
 
@@ -23,11 +23,11 @@ class TestProcess(AiidaTestCase):
     def setUp(self):
         super(TestProcess, self).setUp()
         work.runners.set_runner(None)
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def tearDown(self):
         super(TestProcess, self).tearDown()
-        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertIsNone(Process.current())
 
     def test_save_load(self):
         process = DummyProcess()
@@ -56,7 +56,6 @@ class TestAiiDAPersister(AiidaTestCase):
 
     def test_delete_checkpoint(self):
         process = DummyProcess()
-        self.assertEquals(process.calc.checkpoint, None)
 
         self.persister.save_checkpoint(process)
         self.assertTrue(isinstance(process.calc.checkpoint, basestring))

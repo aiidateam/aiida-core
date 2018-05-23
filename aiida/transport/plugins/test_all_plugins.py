@@ -99,7 +99,8 @@ def run_for_all_plugins(actual_test_method):
             for exc in exceptions:
                 if hasattr(exc[0], "message"):
                     messages.append("*** [For plugin {}]: Exception '{}': {}"
-                                    "".format(exc[2], type(exc[0]).__name__, exc[0].message))
+                                    "".format(exc[2],
+                                              type(exc[0]).__name__, exc[0].message))
                     messages.append(exc[1])
                 else:
                     messages.append("*** [For plugin {}]: Exception '{}'".format(exc[2], type(exc[0]).__name__))

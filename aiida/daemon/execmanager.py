@@ -16,20 +16,15 @@ plugin-specific operations.
 import os
 from backports import tempfile
 
-from aiida.common.datastructures import calc_states
-from aiida.scheduler.datastructures import job_states
-from aiida.common.exceptions import (
-    NotExistent,
-    ConfigurationError,
-    ModificationNotAllowed,
-)
 from aiida.common import aiidalogger
+from aiida.common.datastructures import calc_states
+from aiida.common.exceptions import ConfigurationError, ModificationNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import load_node
-from aiida.orm import DataFactory
-from aiida.orm.data.folder import FolderData
 from aiida.common.log import get_dblogger_extra
+from aiida.orm import load_node, DataFactory
+from aiida.orm.data.folder import FolderData
+from aiida.scheduler.datastructures import job_states
 
 
 execlogger = aiidalogger.getChild('execmanager')
@@ -90,10 +85,8 @@ def submit_calc(calc, authinfo, transport=None):
         of the computer defined in the AuthInfo.
     """
     from aiida.orm import Code, Computer
-    from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import InputValidationError
     from aiida.orm.data.remote import RemoteData
-    from aiida.common.log import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -287,8 +280,7 @@ def submit_calc(calc, authinfo, transport=None):
                                       "calculation {}".format(calc.pk))
 
             remotedata = RemoteData(computer=computer, remote_path=workdir)
-            remotedata.add_link_from(calc, label='remote_folder',
-                                     link_type=LinkType.CREATE)
+            remotedata.add_link_from(calc, label='remote_folder', link_type=LinkType.CREATE)
             remotedata.store()
 
             job_id = s.submit_from_script(t.getcwd(), script_filename)
@@ -297,13 +289,6 @@ def submit_calc(calc, authinfo, transport=None):
             # the only ones submitting this calculations,
             # so I do not check the ModificationNotAllowed
             calc._set_state(calc_states.WITHSCHEDULER)
-            ## I do not set the state to queued; in this way, if the
-            ## daemon is down, the user sees '(unknown)' as last state
-            ## and understands that the daemon is not running.
-            # if job_tmpl.submit_as_hold:
-            #    calc._set_scheduler_state(job_states.QUEUED_HELD)
-            # else:
-            #    calc._set_scheduler_state(job_states.QUEUED)
 
             execlogger.debug("submitted calculation {} on {} with "
                              "jobid {}".format(calc.pk, computer.name, job_id),
@@ -312,18 +297,17 @@ def submit_calc(calc, authinfo, transport=None):
     except Exception as e:
         import traceback
 
-        execlogger.error(
-            "Submission of calc {} failed, check also the log file! Traceback: {}".format(
-                calc.pk, traceback.format_exc()
-            ),
-            extra=logger_extra
-        )
+        execlogger.error('Submission of calc {} failed, check also the log file! Traceback: {}'.format(
+            calc.pk, traceback.format_exc()), extra=logger_extra)
 
         try:
             calc._set_state(calc_states.SUBMISSIONFAILED)
-            return True
         except ModificationNotAllowed:
-            return False
+            execlogger.debug('failed to set state of calculation<{}> to SUBMISSIONFAILED'.format(
+                calc.pk, calc_states.SUBMISSIONFAILED), extra=logger_extra)
+            pass
+
+        raise
 
     finally:
         # close the transport, but only if it was opened within this function
@@ -331,7 +315,19 @@ def submit_calc(calc, authinfo, transport=None):
             t.close()
 
 
-def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
+def retrieve_all(job, transport, retrieved_temporary_folder):
+    """
+    Retrieve all the files of a completed job calculation using the given transport. If the job defined
+    anything in the `retrieve_temporary_list`, those entries will be stored in the `retrieved_temporary_folder`.
+    The caller is responsible for creating and destroying this folder.
+
+    :param job: the finished JobCalculation whose files to retrieve
+    :param transport: the Transport instance to use for the file retrieval
+    :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
+        listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
+    """
+    logger_extra = get_dblogger_extra(job)
+
     try:
         job._set_state(calc_states.RETRIEVING)
     except ModificationNotAllowed:
@@ -392,7 +388,7 @@ def retrieve_all(job, transport, retrieved_temporary_folder, logger_extra=None):
         retrieved_files.store()
 
 
-def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
+def parse_results(job, retrieved_temporary_folder=None):
     """
     Parse the results for a given JobCalculation (job)
 
@@ -400,9 +396,12 @@ def parse_results(job, retrieved_temporary_folder=None, logger_extra=None):
     """
     from aiida.orm.calculation.job import JobCalculationFinishStatus
 
+    logger_extra = get_dblogger_extra(job)
+
     job._set_state(calc_states.PARSING)
 
     Parser = job.get_parserclass()
+    exit_code = None
 
     if Parser is not None:
 

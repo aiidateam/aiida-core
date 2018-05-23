@@ -26,23 +26,23 @@ class DbComment(Base):
 
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
     dbnode_id = Column(
-            Integer,
-            ForeignKey(
-                'db_dbnode.id', ondelete="CASCADE",
-                deferrable=True, initially="DEFERRED"
-            )
+        Integer,
+        ForeignKey(
+            'db_dbnode.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
         )
+    )
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)
 
     user_id = Column(
-            Integer,
-            ForeignKey(
-                'db_dbuser.id', ondelete="CASCADE",
-                deferrable=True, initially="DEFERRED"
-            )
+        Integer,
+        ForeignKey(
+            'db_dbuser.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
         )
+    )
     content = Column(Text, nullable=True)
 
     dbnode = relationship('DbNode', backref='dbcomments')

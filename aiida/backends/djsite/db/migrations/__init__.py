@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0010_process_type'
+LATEST_MIGRATION = '0012_drop_dblock'
 
 
 def _update_schema_version(version, apps, schema_editor):

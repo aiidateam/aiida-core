@@ -39,11 +39,11 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
 
         Example::
 
-            @with_dbenv
+            @with_dbenv()
             def create_my_calculation():
                 from aiida.orm import CalculationFactory  # note the local import
                 my_calc = CalculationFactory('mycalc.mycalc')
-    """
+        """
 
         @wraps(function)
         def decorated_function(*args, **kwargs):
@@ -115,7 +115,7 @@ def only_if_daemon_pid(function):
 
         daemon_client = DaemonClient()
 
-        if not daemon_client.get_daemon_pid:
+        if not daemon_client.get_daemon_pid():
             click.echo('The daemon is not running')
             sys.exit(0)
 

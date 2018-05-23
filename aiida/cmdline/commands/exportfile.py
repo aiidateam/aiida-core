@@ -10,12 +10,15 @@
 import click
 from aiida.cmdline.commands import verdi, export
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
+from aiida.utils.cli.options import MultipleValueOption
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 class DanglingLinkError(Exception):
     pass
+
 
 class Export(VerdiCommandWithSubcommands):
     """
@@ -33,13 +36,13 @@ class Export(VerdiCommandWithSubcommands):
 
 @export.command('create', context_settings=CONTEXT_SETTINGS)
 @click.argument('outfile', type=click.Path())
-@click.option('-n', '--nodes', multiple=True, type=int,
+@click.option('-n', '--nodes', cls=MultipleValueOption, type=int,
     help='Export the given nodes by pk')
-@click.option('-c', '--computers', multiple=True, type=int,
+@click.option('-c', '--computers', cls=MultipleValueOption, type=int,
     help='Export the given computers by pk')
-@click.option('-G', '--groups', multiple=True, type=int,
+@click.option('-G', '--groups', cls=MultipleValueOption, type=int,
     help='Export the given groups by pk')
-@click.option('-g', '--group_names', multiple=True, type=str,
+@click.option('-g', '--group_names', cls=MultipleValueOption, type=str,
     help='Export the given groups by group name')
 @click.option('-P', '--no-parents', is_flag=True, default=False,
     help='Store only the nodes that are explicitly given, without exporting the parents')
@@ -59,7 +62,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.importexport import export, export_zip
 
-    node_id_set = set(nodes)
+    node_id_set = set(nodes or [])
     group_dict = dict()
 
     if group_names:
@@ -143,7 +146,8 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
 @click.argument('file_output', type=click.Path())
 @click.option('-f', '--force', is_flag=True, default=False, help='overwrite output file if it already exists')
 @click.option('-s', '--silent', is_flag=True, default=False, help='suppress output')
-def migrate(file_input, file_output, force, silent):
+@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
+def migrate(file_input, file_output, force, silent, archive_format):
     """
     An entry point to migrate existing AiiDA export archives between version numbers
     """
@@ -159,10 +163,8 @@ def migrate(file_input, file_output, force, silent):
     with SandboxFolder(sandbox_in_repo=False) as folder:
 
         if zipfile.is_zipfile(file_input):
-            archive_format = 'zip'
             extract_zip(file_input, folder, silent=silent)
         elif tarfile.is_tarfile(file_input):
-            archive_format = 'tar.gz'
             extract_tar(file_input, folder, silent=silent)
         else:
             print >> sys.stderr, 'Error: invalid file format, expected either a zip archive or gzipped tarball'
@@ -202,8 +204,9 @@ def migrate(file_input, file_output, force, silent):
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
             json.dump(metadata, f)
 
-        if archive_format == 'zip':
-            with zipfile.ZipFile(file_output, mode='w', compression=zipfile.ZIP_DEFLATED) as archive:
+        if archive_format == 'zip' or archive_format == 'zip-uncompressed':
+            compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
+            with zipfile.ZipFile(file_output, mode='w', compression=compression) as archive:
                 src = folder.abspath
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)

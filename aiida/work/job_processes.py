@@ -11,24 +11,21 @@ import shutil
 import sys
 import tempfile
 import tornado.gen
-from voluptuous import Any
-from functools import partial
 
 import plumpy
 from plumpy.ports import PortNamespace
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import (InvalidOperation, RemoteOperationError)
+from aiida.common.exceptions import InvalidOperation, RemoteOperationError
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
-from aiida.orm.authinfo import AuthInfo
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.scheduler.datastructures import job_states
-from aiida.work.process_spec import DictSchema
+from aiida.work.process_builder import JobProcessBuilder
 
+from . import persistence
 from . import processes
-from . import utils
 
 __all__ = ['JobProcess']
 
@@ -48,13 +45,9 @@ class TransportTask(plumpy.Future):
     """ A general task that requires transport """
 
     def __init__(self, calc_node, transport_queue):
-        from aiida.orm.authinfo import AuthInfo
-
         super(TransportTask, self).__init__()
         self._calc = calc_node
-        self._authinfo = AuthInfo.get(
-            computer=calc_node.get_computer(),
-            user=calc_node.get_user())
+        self._authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
         transport_queue.call_me_with_transport(self._authinfo, self._execute)
 
     def execute(self, transport):
@@ -206,26 +199,16 @@ class Waiting(plumpy.Waiting):
         super(Waiting, self).__init__(process, done_callback, msg, data)
         self._task = None  # The currently running task
         self._kill_future = None
-        self._action_handle = None
-
-    def enter(self):
-        super(Waiting, self).enter()
-        self._action_handle = self.process.call_soon(self.action_command)
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
         self._task = None
         self._kill_future = None
-        self._action_handle = self.process.call_soon(self.action_command)
-
-    def exit(self):
-        super(Waiting, self).exit()
-        if self._action_handle and not self._action_handle.cancelled():
-            self._action_handle.cancel()
-        self._action_handle = None
 
     @tornado.gen.coroutine
-    def action_command(self):
+    def execute(self):
+        from tornado.gen import Return
+
         if self._kill_future:
             yield self._do_kill()
             return
@@ -243,7 +226,7 @@ class Waiting(plumpy.Waiting):
                     yield self._do_kill()
                 else:
                     # Now get scheduler updates
-                    self.scheduler_update()
+                    raise Return(self.scheduler_update())
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
                 job_done = False
@@ -256,7 +239,7 @@ class Waiting(plumpy.Waiting):
                         return
 
                 # Done, go on to retrieve
-                self.retrieve()
+                raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
@@ -267,42 +250,61 @@ class Waiting(plumpy.Waiting):
                 if self._kill_future:
                     yield self._do_kill()
                 else:
-                    self.retrieved(retrieved_temporary_folder)
+                    raise Return(self.retrieved(retrieved_temporary_folder))
 
             else:
                 raise RuntimeError("Unknown waiting command")
 
         except TransportTaskException as exception:
             finish_status = JobCalculationFinishStatus[exception.calc_state]
-            self.finished(finish_status)
+            raise Return(
+                self.create_state(processes.ProcessState.FINISHED, finish_status, finish_status is 0))
         except plumpy.CancelledError:
             # A task was cancelled because the state (and process) is being killed
-            yield self._do_kill()
-        except BaseException:
+            next_state = yield self._do_kill()
+            raise Return(next_state)
+        except Return:
+            raise
+        except Exception:
             exc_info = sys.exc_info()
-            self.transition_to(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
+            excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
+            raise Return(excepted_state)
         finally:
             self._task = None
 
     def scheduler_update(self):
+        """
+        Create the next state to go to
+        :return: The appropriate WAITING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting for scheduler update',
             data=UPDATE_SCHEDULER_COMMAND)
 
     def retrieve(self):
+        """
+        Create the next state to go to in order to retrieve
+        :return: The appropriate WAITING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting to retrieve',
             data=RETRIEVE_COMMAND)
 
     def retrieved(self, retrieved_temporary_folder):
+        """
+        Create the next state to go to after retrieving
+        :param retrieved_temporary_folder: The temporary folder used in retrieving, this will
+            be used in parsing.
+        :return: The appropriate RUNNING state
+        """
         assert self._kill_future is None, "Currently being killed"
-        self.transition_to(
+        return self.create_state(
             processes.ProcessState.RUNNING,
             self.process.retrieved,
             retrieved_temporary_folder)
@@ -315,13 +317,11 @@ class Waiting(plumpy.Waiting):
         except (InvalidOperation, RemoteOperationError):
             pass
 
-        self.transition_to(processes.ProcessState.KILLED, 'Got killed yo')
         if self._kill_future is not None:
             self._kill_future.set_result(True)
             self._kill_future = None
 
-    def finished(self, result):
-        self.transition_to(processes.ProcessState.FINISHED, result)
+        raise tornado.gen.Return(self.create_state(processes.ProcessState.KILLED, 'Got killed yo'))
 
     def kill(self, msg=None):
         if self._kill_future is not None:
@@ -348,6 +348,10 @@ class JobProcess(processes.Process):
     _calc_class = None
 
     @classmethod
+    def get_builder(cls):
+        return JobProcessBuilder(cls)
+
+    @classmethod
     def build(cls, calc_class):
         from aiida.orm.data import Data
         from aiida.orm.computer import Computer
@@ -355,26 +359,43 @@ class JobProcess(processes.Process):
         def define(cls_, spec):
             super(JobProcess, cls_).define(spec)
 
-            # Calculation options
-            options = {
-                'max_wallclock_seconds': int,
-                'resources': dict,
-                'custom_scheduler_commands': basestring,
-                'queue_name': basestring,
-                'computer': Computer,
-                'withmpi': bool,
-                'mpirun_extra_params': Any(list, tuple),
-                'import_sys_environment': bool,
-                'environment_variables': dict,
-                'priority': basestring,
-                'max_memory_kb': int,
-                'prepend_text': basestring,
-                'append_text': basestring,
-                'parser_name': basestring,
-            }
-            spec.input(cls.OPTIONS_INPUT_LABEL, validator=DictSchema(options), non_db=True)
+            # Define the 'options' inputs namespace and its input ports
+            spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
+            spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
+                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '\
+                     'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
+            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
+                help='Set the wallclock in seconds asked to the scheduler')
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '\
+                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '\
+                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '\
+                     ' any non-scheduler command')
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the name of the queue on the remote computer')
+            spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
+                help='Set the computer to be used by the calculation')
+            spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
+                help='Set the calculation to use mpi')
+            spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True, required=False,
+                help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '\
+                     'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
+            spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
+                help='If set to true, the submission script will load the system environment variables')
+            spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True, required=False,
+                help='Set a dictionary of custom environment variables for this calculation')
+            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the priority of the job to be queued')
+            spec.input('{}.max_memory_kb'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, required=False,
+                help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
+            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
+            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
+            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
-            # Inputs from use methods
+            # Define the actual inputs based on the use methods of the calculation class
             for key, use_method in calc_class._use_methods.iteritems():
 
                 valid_type = use_method['valid_types']
@@ -389,7 +410,8 @@ class JobProcess(processes.Process):
             # Outputs
             spec.outputs.valid_type = Data
 
-        class_name = '{}_{}'.format(cls.__name__, utils.class_name(calc_class))
+        dynamic_class_name = persistence.get_object_loader().identify_object(calc_class)
+        class_name = '{}_{}'.format(cls.__name__, dynamic_class_name)
 
         # Dynamically create the type for this Process
         return type(
@@ -427,17 +449,17 @@ class JobProcess(processes.Process):
 
         self.calc._set_process_type(self._calc_class)
 
-        # Set all the attributes using the setter methods
-        for name, value in self.inputs.get(self.OPTIONS_INPUT_LABEL, {}).iteritems():
-            if value is not None:
-                getattr(self._calc, 'set_{}'.format(name))(value)
-
-        # Use the use_[x] methods to join up the links in this case
         for name, input_value in self.get_provenance_inputs_iterator():
 
             port = self.spec().inputs[name]
 
             if input_value is None or getattr(port, 'non_db', False):
+                continue
+
+            # Call the 'set' attribute methods for the contents of the 'option' namespace
+            if name == self.OPTIONS_INPUT_LABEL:
+                for option_name, option_value in input_value.items():
+                    getattr(self._calc, 'set_{}'.format(option_name))(option_value)
                 continue
 
             # Call the 'use' methods to set up the data-calc links
@@ -462,6 +484,7 @@ class JobProcess(processes.Process):
                 self._calc.set_computer(code.get_remote_computer())
 
         parent_calc = self.get_parent_calc()
+
         if parent_calc:
             self._calc.add_link_from(parent_calc, 'CALL', LinkType.CALL)
 
@@ -477,7 +500,9 @@ class JobProcess(processes.Process):
         """
         calc_state = self.calc.get_state()
 
-        if calc_state != calc_states.NEW:
+        if calc_state == calc_states.FINISHED:
+            return 0
+        elif calc_state != calc_states.NEW:
             raise exceptions.InvalidOperation(
                 'Cannot submit a calculation not in {} state (the current state is {})'.format(
                     calc_states.NEW, calc_state

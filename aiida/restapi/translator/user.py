@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.config import custom_schema
+
 
 class UserTranslator(BaseTranslator):
     """
@@ -30,13 +30,33 @@ class UserTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    # Extract the default projections from custom_schema if they are defined
-    if 'columns' in custom_schema:
-        _default_projections = custom_schema['columns'][__label__]
-    else:
-        # send only white listed keys in default response for user for security reasons
-        _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
+    _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
 
+    ## user schema
+    # All the values from column_order must present in additional info dict
+    # Note: final schema will contain details for only the fields present in column order
+    _schema_projections = {
+        "column_order": [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "institution",
+            "date_joined",
+            "last_login",
+            "is_active"
+        ],
+        "additional_info": {
+            "id": {"is_display": True},
+            "first_name": {"is_display": True},
+            "last_name": {"is_display": True},
+            "email": {"is_display": True},
+            "institution": {"is_display": True},
+            "date_joined": {"is_display": False},
+            "last_login": {"is_display": False},
+            "is_active": {"is_display": False}
+        }
+    }
 
     def __init__(self, **kwargs):
         """
@@ -44,4 +64,3 @@ class UserTranslator(BaseTranslator):
         Create the basic query_help
         """
         super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
-

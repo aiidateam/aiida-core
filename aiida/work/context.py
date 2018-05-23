@@ -1,24 +1,9 @@
 # -*- coding: utf-8 -*-
 from .awaitable import construct_awaitable, AwaitableAction
 
-__all__ = ['ToContext', 'Outputs', 'assign_', 'append_']
-
+__all__ = ['ToContext', 'assign_', 'append_']
 
 ToContext = dict
-
-
-def Outputs(target):
-    """
-    Convenience function that will construct an Awaitable that will action not the
-    node of the target itself but its outputs to the context of the workchain
-
-    :param target: an instance of Calculation, Workflow or Awaitable
-    :returns: the awaitable
-    :rtype: Awaitable
-    """
-    awaitable = construct_awaitable(target)
-    awaitable.outputs = True
-    return awaitable
 
 
 def assign_(target):

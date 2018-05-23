@@ -11,22 +11,24 @@
 Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
-
+from django.db import IntegrityError
+from aiida.common.exceptions import UniquenessError
 
 
 def set_global_setting(key, value, description=None):
     """
-    Set a global setting in the DbSetting table (therefore, stored at the DB
-    level).
+    Set a global setting in the DbSetting table (therefore, stored at the DB level).
     """
     from aiida.backends.djsite.db.models import DbSetting
 
     # Before storing, validate the key
     DbSetting.validate_key(key)
 
-    # This also saves in the DB    
-    DbSetting.set_value(key, value,
-                        other_attribs={"description": description})
+    # This also saves in the DB
+    try:
+        DbSetting.set_value(key, value, other_attribs={"description": description})
+    except IntegrityError as exception:
+        raise UniquenessError(exception)
 
 
 def del_global_setting(key):

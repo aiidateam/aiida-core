@@ -21,8 +21,7 @@ from . import processes
 from .awaitable import *
 from .context import *
 
-__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', 'Outputs', '_WorkChainSpec']
-
+__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
 
 
 class _WorkChainSpec(processes.ProcessSpec, plumpy.WorkChainSpec):
@@ -46,8 +45,13 @@ class WorkChain(processes.Process):
         spec.inputs.dynamic = True
         spec.outputs.dynamic = True
 
-    def __init__(self, inputs=None, logger=None, runner=None):
-        super(WorkChain, self).__init__(inputs=inputs, logger=logger, runner=runner)
+    def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
+        super(WorkChain, self).__init__(
+            inputs=inputs,
+            logger=logger,
+            runner=runner,
+            enable_persistence=enable_persistence
+        )
         self._stepper = None
         self._awaitables = []
         self._context = AttributeDict()
@@ -57,8 +61,8 @@ class WorkChain(processes.Process):
         return self._context
 
     @override
-    def save_instance_state(self, out_state):
-        super(WorkChain, self).save_instance_state(out_state)
+    def save_instance_state(self, out_state, save_context):
+        super(WorkChain, self).save_instance_state(out_state, save_context)
         # Save the context
         out_state[self._CONTEXT] = serialize_data(self.ctx)
 

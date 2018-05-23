@@ -20,6 +20,17 @@ class WithNonDb(object):
     def non_db(self):
         return self._non_db
 
+    def get_description(self):
+        """
+        Return a description of the InputPort, which will be a dictionary of its attributes
+
+        :returns: a dictionary of the stringified InputPort attributes
+        """
+        description = super(WithNonDb, self).get_description()
+        description['non_db'] = '{}'.format(self.non_db)
+
+        return description
+
 class WithSerializeFct(object):
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs that are not AiiDA data types.

@@ -4,9 +4,9 @@ import plumpy
 import uuid
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.calculation import Calculation
 from aiida.orm.data.int import Int
 from aiida.work import runners, rmq, test_utils
+
 
 class TestProcessControl(AiidaTestCase):
     """
@@ -18,22 +18,22 @@ class TestProcessControl(AiidaTestCase):
         prefix = '{}.{}'.format(self.__class__.__name__, uuid.uuid4())
         rmq_config = rmq.get_rmq_config(prefix)
 
-        self.loop = plumpy.new_event_loop()
-
+        # These two need to share a common event loop otherwise the first will never send
+        # the message while the daemon is running listening to intercept
         self.runner = runners.Runner(
             rmq_config=rmq_config,
             rmq_submit=True,
-            loop=self.loop,
             poll_interval=0.)
         self.daemon_runner = runners.DaemonRunner(
             rmq_config=rmq_config,
             rmq_submit=True,
-            loop=self.loop,
+            loop=self.runner.loop,
             poll_interval=0.)
 
     def tearDown(self):
         self.daemon_runner.close()
         self.runner.close()
+        super(TestProcessControl, self).tearDown()
 
     def test_submit_simple(self):
         # Launch the process

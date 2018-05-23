@@ -53,6 +53,8 @@ class Daemon(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
+        super(Daemon, self).__init__()
+
         self.valid_subcommands = {
             'start': (self.cli, self.complete_none),
             'status': (self.cli, self.complete_none),

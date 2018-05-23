@@ -30,7 +30,7 @@ Group
 User
 ++++
 
-.. automodule:: aiida.orm.implementation.general.user
+.. automodule:: aiida.orm.user
    :members:
    :noindex:
    :private-members:

@@ -53,11 +53,11 @@ class DBLogHandler(logging.Handler):
         if not is_dbenv_loaded():
             return
 
-        from aiida.orm.backend import construct
+        from aiida.orm.backend import construct_backend
         from django.core.exceptions import ImproperlyConfigured
 
         try:
-            backend = construct()
+            backend = construct_backend()
             backend.log.create_entry_from_record(record)
 
         except ImproperlyConfigured:

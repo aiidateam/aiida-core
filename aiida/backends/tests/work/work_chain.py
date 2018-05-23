@@ -24,6 +24,7 @@ from aiida.utils.capturing import Capturing
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import Process
+from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
 
 from . import utils
@@ -199,6 +200,21 @@ class TestContext(AiidaTestCase):
         with self.assertRaises(KeyError):
             wc.ctx['new_attr']
 
+class WorkchainTestCase(AiidaTestCase):
+    """
+    Test case class for workchain tests. This sets up the runner, and checks
+    that there is no current process when tearing down.
+    """
+
+    def setUp(self):
+        super(WorkchainTestCase, self).setUp()
+        self.assertIsNone(Process.current())
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(WorkchainTestCase, self).tearDown()
+        work.set_runner(None)
+        self.assertIsNone(Process.current())
 
 class TestWorkchain(AiidaTestCase):
 
@@ -854,6 +870,50 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+
+class SerializeWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(SerializeWorkChain, cls).define(spec)
+
+        spec.input(
+            'test',
+            valid_type=Str,
+            serialize_fct=lambda x: Str(ObjectLoader().identify_object(x)),
+        )
+        spec.input('reference', valid_type=Str)
+
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        assert isinstance(self.inputs.test, Str)
+        assert self.inputs.test == self.inputs.reference
+
+class TestSerializeWorkChain(WorkchainTestCase):
+    """
+    Test workchains with serialized input / output.
+    """
+
+    def test_serialize(self):
+        """
+        Test a simple serialization of a class to its identifier.
+        """
+        work.launch.run(
+            SerializeWorkChain,
+            test=Int,
+            reference=Str(ObjectLoader().identify_object(Int))
+        )
+
+    def test_serialize_builder(self):
+        """
+        Test serailization when using a builder.
+        """
+        builder = SerializeWorkChain.get_builder()
+        builder.test = Int
+        builder.reference = Str(ObjectLoader().identify_object(Int))
+
+        work.launch.run(builder)
 
 
 class GrandParentExposeWorkChain(work.WorkChain):

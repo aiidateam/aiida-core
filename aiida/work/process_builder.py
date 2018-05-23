@@ -49,7 +49,7 @@ class ProcessBuilderNamespace(Mapping):
                 port = self._port_namespace[attr]
             except KeyError:
                 raise AttributeError('Unknown builder parameter: {}'.format(attr))
-
+            value = port.serialize(value)
             is_valid, message = port.validate(value)
             if not is_valid:
                 raise ValueError('invalid attribute value: {}'.format(message))

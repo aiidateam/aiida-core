@@ -277,7 +277,7 @@ class CifEntry(DbEntry):
         from aiida.orm.data.cif import CifData
         return CifData.read_cif(StringIO.StringIO(self.cif))
 
-    def get_cif_node(self, store=False):
+    def get_cif_node(self, store=False, parse_policy='lazy'):
         """
 
         Creates a CIF node, that can be used in AiiDA workflow.
@@ -293,7 +293,7 @@ class CifEntry(DbEntry):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
-            cifnode = CifData(file=f.name, source=self.source)
+            cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.
@@ -302,15 +302,13 @@ class CifEntry(DbEntry):
 
         return cifnode
 
-    def get_aiida_structure(self):
+    def get_aiida_structure(self, converter="pymatgen", store=False, **kwargs):
         """
         :return: AiiDA structure corresponding to the CIF file.
         """
-        from aiida.orm import DataFactory
-
-        S = DataFactory("structure")
-        aiida_structure = S(ase=self.get_ase_structure())
-        return aiida_structure
+        cif = self.get_cif_node(store=store, parse_policy='lazy')
+        
+        return cif._get_aiida_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
         """

@@ -231,6 +231,19 @@ class TestWf(AiidaTestCase):
         with self.assertRaises(AssertionError):
             submit(self.wf_return_true)
 
+    def test_default_linkname(self):
+        """
+        Verify that a workfunction that returns a single Data node, a default link label
+        will be used that can be accessed both through the getattr as through the getitem
+        method of the OutputManager of the node
+        """
+        INPUT = 1
+
+        result, node = run_get_node(self.wf_args, a=Int(INPUT))
+        self.assertEquals(node.out.result, INPUT)
+        self.assertEquals(getattr(node.out, Process.SINGLE_RETURN_LINKNAME), INPUT)
+        self.assertEquals(node.out[Process.SINGLE_RETURN_LINKNAME], INPUT)
+
     def test_simple_workflow(self):
         @workfunction
         def add(a, b):

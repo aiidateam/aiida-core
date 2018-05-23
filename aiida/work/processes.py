@@ -51,7 +51,7 @@ class Process(plumpy.Process):
     _spec_type = ProcessSpec
     _calc_class = WorkCalculation
 
-    SINGLE_RETURN_LINKNAME = 'return'
+    SINGLE_RETURN_LINKNAME = 'result'
 
     class SaveKeys(enum.Enum):
         """

@@ -35,8 +35,8 @@ def workfunction(func, calc_node_class=None):
     >>> print(r)
     9
     >>> r.get_inputs_dict() # doctest: +SKIP
-    {u'return': <FunctionCalculation: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
-    >>> r.get_inputs_dict()['return'].get_inputs()
+    {u'result': <FunctionCalculation: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
+    >>> r.get_inputs_dict()['result'].get_inputs()
     [4, 5]
 
     """

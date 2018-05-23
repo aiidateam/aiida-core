@@ -199,6 +199,21 @@ class TestContext(AiidaTestCase):
         with self.assertRaises(KeyError):
             wc.ctx['new_attr']
 
+class WorkchainTestCase(AiidaTestCase):
+    """
+    Test case class for workchain tests. This sets up the runner, and checks
+    that there is no current process when tearing down.
+    """
+
+    def setUp(self):
+        super(WorkchainTestCase, self).setUp()
+        self.assertIsNone(Process.current())
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(WorkchainTestCase, self).tearDown()
+        work.set_runner(None)
+        self.assertIsNone(Process.current())
 
 class TestWorkchain(AiidaTestCase):
 
@@ -874,17 +889,10 @@ class SerializeWorkChain(WorkChain):
         assert isinstance(self.inputs.test, Str)
         assert self.inputs.test == self.inputs.reference
 
-class TestSerializeWorkChain(AiidaTestCase):
+class TestSerializeWorkChain(WorkchainTestCase):
     """
     Test workchains with serialized input / output.
     """
-    def setUp(self):
-        super(TestSerializeWorkChain, self).setUp()
-        self.assertEquals(len(ProcessStack.stack()), 0)
-
-    def tearDown(self):
-        super(TestSerializeWorkChain, self).tearDown()
-        self.assertEquals(len(ProcessStack.stack()), 0)
 
     def test_serialize(self):
         """

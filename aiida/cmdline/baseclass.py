@@ -137,17 +137,24 @@ class VerdiCommandRouter(VerdiCommand):
         sys.exit(1)
 
     def run(self, *args):
+        """Run a subcommand, can be a VerdiCommand or a click.Command"""
         try:
-            the_class = self.routed_subcommands[args[0]]
-            the_class._custom_command_name = "{} {}".format(
+            cmd_or_class = self.routed_subcommands[args[0]]
+            cmd_or_class._custom_command_name = "{} {}".format(
                 self.get_full_command_name(with_exec_name=False), args[0])
-            function_to_call = the_class().run
+            if isinstance(cmd_or_class, click.Command):
+                function_to_call = cmd_or_class
+            else:
+                function_to_call = cmd_or_class().run
         except IndexError:
             function_to_call = self.no_subcommand
         except KeyError:
             function_to_call = self.invalid_subcommand
 
-        function_to_call(*args[1:])
+        if isinstance(function_to_call, click.Command):
+            function_to_call()
+        else:
+            function_to_call(*args[1:])
 
     def complete(self, subargs_idx, subargs):
         """

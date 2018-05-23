@@ -893,7 +893,7 @@ class TestSerializeWorkChain(AiidaTestCase):
         """
         Test a simple serialization of a class to its identifier.
         """
-        work.launch.run(
+        run_and_check_success(
             SerializeWorkChain,
             test=Int,
             reference=Str(ObjectLoader().identify_object(Int))
@@ -1084,4 +1084,4 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
             }
         )
-        work.launch.run(Wf, subspace={'one': Int(1), 'two': Int(2)})
+

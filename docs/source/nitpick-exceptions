@@ -92,6 +92,7 @@ py:class  abc.ABCMeta
 py:class  click.core.Option
 py:class  click.types.ParamType
 py:class  click.types.Choice
+py:class  click.core.Group
 
 py:class  distutils.version.Version
 

@@ -10,7 +10,7 @@
 import click
 from aiida.cmdline.commands import verdi, export
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.utils.cli.options import MultipleValueOption
+from aiida.cmdline.params.options import MultipleValueOption
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])

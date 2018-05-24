@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+import click
+
+
+class MultipleValueParamType(click.ParamType):
+    """
+    An extension of click.ParamType that can parse multiple values for a given ParamType
+    """
+
+    def __init__(self, param_type):
+        super(MultipleValueParamType, self).__init__()
+        self._param_type = param_type
+
+        if hasattr(param_type, 'name'):
+            self.name = '{}...'.format(param_type.name)
+        else:
+            self.name = '{}...'.format(param_type.__name__.upper())
+
+    def get_metavar(self, param):
+        try:
+            return self._param_type.get_metavar(param)
+        except AttributeError:
+            return self.name
+
+    def convert(self, value, param, ctx):
+        try:
+            return tuple([self._param_type(entry) for entry in value])
+        except ValueError:
+            self.fail('could not convert {} into type {}'.format(value, self._param_type))

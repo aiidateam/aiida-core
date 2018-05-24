@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-import logging
 from tabulate import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import work, verdi
+from aiida.cmdline.params.types import LazyChoice
 from aiida.common.log import LOG_LEVELS
-from aiida.utils.cli.types import LazyChoice
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -413,30 +412,6 @@ def status(pks):
             calc_node = load_node(pk)
             graph = format_call_graph(calc_node)
             click.echo(graph)
-
-
-def _create_status_info(calc_node):
-    status_line = _format_status_line(calc_node)
-    called = calc_node.called
-    if called:
-        return status_line, [_create_status_info(child) for child in called]
-    else:
-        return status_line
-
-
-def _format_status_line(calc_node):
-    from aiida.orm.calculation.work import WorkCalculation
-    from aiida.orm.calculation.job import JobCalculation
-
-    if isinstance(calc_node, WorkCalculation):
-        label = calc_node.get_attr('_process_label')
-        state = calc_node.get_attr('process_state')
-    elif isinstance(calc_node, JobCalculation):
-        label = type(calc_node).__name__
-        state = str(calc_node.get_state())
-    else:
-        raise TypeError("Unknown type")
-    return "{} <pk={}> [{}]".format(label, calc_node.pk, state)
 
 
 @work.command('plugins', context_settings=CONTEXT_SETTINGS)

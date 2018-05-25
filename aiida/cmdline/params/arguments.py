@@ -51,6 +51,12 @@ class OverridableArgument(object):
 
 
 CODE = OverridableArgument('code', type=types.CodeParam())
-COMPUTER = OverridableArgument('code', type=types.ComputerParam())
+
+
+COMPUTER = OverridableArgument('computer', type=types.ComputerParam())
+
+
 GROUP = OverridableArgument('group', type=types.GroupParam())
+
+
 NODE = OverridableArgument('node', type=types.NodeParam())

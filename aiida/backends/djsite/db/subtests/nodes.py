@@ -337,7 +337,7 @@ class TestNodeBasicDjango(AiidaTestCase):
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
         with self.assertRaises(InputValidationError):
-            load_node(node_id=a.pk, pk=a.pk)
+            load_node(identifier=a.pk, pk=a.pk)
         with self.assertRaises(InputValidationError):
             load_node(pk=a.pk, uuid=a.uuid)
         with self.assertRaises(TypeError):

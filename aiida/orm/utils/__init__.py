@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from abc import ABCMeta
-from aiida.common.exceptions import InputValidationError, MultipleObjectsError, NotExistent
-from aiida.plugins.factory import BaseFactory
+from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import abstractclassmethod
+from aiida.plugins.factory import BaseFactory
 
 __all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 
            'load_node', 'load_workflow', 'BackendDelegateWithDefault']
@@ -43,166 +43,112 @@ def WorkflowFactory(entry_point):
     return BaseFactory('aiida.workflows', entry_point)
 
 
-def create_node_id_qb(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):
+def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashes=True):
     """
-    Returns the QueryBuilder instance set to retrieve AiiDA objects given their
-    (parent)class and PK (in which case the object should be unique) or UUID
-    or UUID starting pattern.
+    Load a group by one of its identifiers: pk, uuid or label. If the type of the identifier is unknown
+    simply pass it without a keyword and the loader will attempt to infer the type
 
-    :param node_id: PK (integer) or UUID (string) or a node
-    :param pk: PK of a node
-    :param uuid: UUID of a node, or the beginning of the uuid
-    :param parent_class: if specified, looks only among objects that are instances of
-    	a subclass of parent_class, otherwise among nodes
-    :param bool query_with_dashes: Specific if uuid is passed, allows to
-        put the uuid in the correct form. Default=True
-
-    :return: a QueryBuilder instance
-    """
-    # This must be done inside here, because at import time the profile
-    # must have been already loaded. If you put it at the module level,
-    # the implementation is frozen to the default one at import time.
-    from aiida.orm.implementation import Node
-    from aiida.orm.querybuilder import QueryBuilder
-
-    # First checking if the inputs are valid:
-    inputs_provided = [val is not None for val in (node_id, pk, uuid)].count(True)
-    if inputs_provided == 0:
-        raise InputValidationError("one of the parameters 'node_id', 'pk' and 'uuid' has to be supplied")
-    elif inputs_provided > 1:
-        raise InputValidationError("only one of parameters 'node_id', 'pk' and 'uuid' has to be supplied")
-
-    # In principle, I can use this function to fetch any kind of AiiDA object,
-    # but if I don't specify anything, I assume that I am looking for nodes
-    class_ = parent_class or Node
-
-    # The logic is as follows: If pk is specified I will look for the pk
-    # if UUID is specified for the uuid.
-    # node_id can either be string -> uuid or an integer -> pk
-    # Checking first if node_id specified
-    if node_id is not None:
-        if isinstance(node_id, (str, unicode)):
-            uuid = node_id
-        elif isinstance(node_id, int):
-            pk = node_id
-        else:
-            raise TypeError("'node_id' has to be either string, unicode or "
-                                 "integer, {} given".format(type(node_id)))
-
-    # Check whether uuid, if supplied, is a string
-    if uuid is not None:
-        if not isinstance(uuid,(str, unicode)):
-            raise TypeError("'uuid' has to be string or unicode")
-    # Or whether the pk, if provided, is an integer
-    elif pk is not None:
-        if not isinstance(pk, int):
-            raise TypeError("'pk' has to be an integer")
-    else:
-        # I really shouldn't get here
-        assert True,  "Neither pk  nor uuid was provided"
-
-    qb = QueryBuilder()
-    qb.append(class_, tag='node')
-
-    if pk:
-        qb.add_filter('node',  {'id': pk})
-    elif uuid:
-        # Put back dashes in the right place
-        start_uuid = uuid.replace('-', '')
-        # TODO (only if it brings any speed advantage) add a check on the number of characters
-        # to recognize if the uuid pattern is complete. If so, the filter operator can be '=='
-        if query_with_dashes:
-            # Essential that this is ordered from largest to smallest!
-            for dash_pos in [20, 16, 12, 8]:
-                if len(start_uuid) > dash_pos:
-                    start_uuid = '{}-{}'.format(
-                        start_uuid[:dash_pos], start_uuid[dash_pos:]
-                        )
-
-        qb.add_filter('node', {'uuid': {'like': '{}%'.format(start_uuid)}})
-
-    return qb
-
-
-def load_group(group_id=None, pk=None, uuid=None, query_with_dashes=True):
-    """
-    Load a group by its pk or uuid
-
-    :param group_id: pk (integer) or uuid (string) of a group
+    :param identifier: pk (integer), uuid (string) or label (string) of a group
     :param pk: pk of a group
     :param uuid: uuid of a group, or the beginning of the uuid
-    :param bool query_with_dashes: allow to query for a uuid with dashes (default=True)
-    :returns: the requested group if existing and unique
-    :raise InputValidationError: if none or more than one of the arguments are supplied
-    :raise TypeError: if the wrong types are provided
-    :raise NotExistent: if no matching Node is found.
-    :raise MultipleObjectsError: if more than one Node was found
+    :param label: label of a group
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :returns: the group instance
+    :raise InputValidationError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise NotExistent: if no matching Group is found
+    :raise MultipleObjectsError: if more than one Group was found
     """
     from aiida.orm import Group
+    from aiida.orm.utils.loaders import IdentifierType, GroupEntityLoader
 
-    kwargs = {
-        'node_id': group_id,
-        'pk': pk,
-        'uuid': uuid,
-        'parent_class': Group,
-        'query_with_dashes': query_with_dashes
-    }
+    # Verify that at least and at most one identifier is specified
+    inputs_provided = [value is not None for value in (identifier, pk, uuid, label)].count(True)
+    if inputs_provided == 0:
+        raise InputValidationError("one of the parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
+    elif inputs_provided > 1:
+        raise InputValidationError("only one of parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
 
-    qb = create_node_id_qb(**kwargs)
-    qb.add_projection('node', '*')
-    qb.limit(2)
+    if pk is not None:
 
-    try:
-        return qb.one()[0]
-    except MultipleObjectsError:
-        raise MultipleObjectsError('More than one group found. Provide longer starting pattern for uuid.')
-    except NotExistent:
-        raise NotExistent('No group was found')
+        if not isinstance(pk, int):
+            raise TypeError('a pk has to be an integer')
+
+        identifier = pk
+        identifier_type = IdentifierType.ID
+
+    elif uuid is not None:
+
+        if not isinstance(uuid, basestring):
+            raise TypeError('uuid has to be a string type')
+
+        identifier = uuid
+        identifier_type = IdentifierType.UUID
+
+    elif label is not None:
+
+        if not isinstance(label, basestring):
+            raise TypeError('label has to be a string type')
+
+        identifier = label
+        identifier_type = IdentifierType.LABEL
+    else:
+        identifier = str(identifier)
+        identifier_type = None
+
+    return GroupEntityLoader.load_entity(identifier, identifier_type, query_with_dashes=query_with_dashes)
 
 
-def load_node(node_id=None, pk=None, uuid=None, parent_class=None, query_with_dashes=True):
+def load_node(identifier=None, pk=None, uuid=None, orm_class=None, query_with_dashes=True):
     """
-    Load a node by its pk or uuid
+    Load a node by one of its identifiers: pk or uuid. If the type of the identifier is unknown
+    simply pass it without a keyword and the loader will attempt to infer the type
 
-    :param node_id: PK (integer) or UUID (string) or a node
-    :param pk: PK of a node
-    :param uuid: UUID of a node, or the beginning of the uuid
-    :param parent_class: if specified, checks whether the node loaded is a
-        subclass of parent_class
-    :param bool query_with_dashes: allow to query for a uuid with dashes (default=True)
-    :returns: the requested node if existing, unique, and (sub)instance of parent_class
-    :raise InputValidationError: if none or more than one of the arguments are supplied
-    :raise TypeError: if the wrong types are provided
-    :raise NotExistent: if no matching Node is found.
+    :param identifier: pk (integer) or uuid (string)
+    :param pk: pk of a node
+    :param uuid: uuid of a node, or the beginning of the uuid
+    :param orm_class: optional subclass of Node to narrow the orm classes to be queried for
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :returns: the node instance
+    :raise InputValidationError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise NotExistent: if no matching Node is found
     :raise MultipleObjectsError: if more than one Node was found
-
     """
     from aiida.orm.implementation import Node
+    from aiida.orm.utils.loaders import IdentifierType, NodeEntityLoader
 
-    # I can use this functions to load only nodes, i.e. not users, groups etc ...
-    # If nothing is specified I assume the big granpa: Node!
-    class_ = parent_class or Node
-    if not issubclass(class_,  Node):
-        raise TypeError("{} is not a subclass of {}".format(class_, Node))
+    # Make sure that, when specified, the orm_class is a subclass of Node
+    if orm_class and not issubclass(orm_class,  Node):
+        raise TypeError('{} is not a subclass of {}'.format(orm_class, Node))
 
-    kwargs = {
-        'node_id': node_id,
-        'pk': pk,
-        'uuid': uuid,
-        'parent_class': parent_class,
-        'query_with_dashes': query_with_dashes
-    }
+    # Verify that at least and at most one identifier is specified
+    inputs_provided = [value is not None for value in (identifier, pk, uuid)].count(True)
+    if inputs_provided == 0:
+        raise InputValidationError("one of the parameters 'identifier', 'pk' or 'uuid' has to be specified")
+    elif inputs_provided > 1:
+        raise InputValidationError("only one of parameters 'identifier', 'pk' or 'uuid' has to be specified")
 
-    qb = create_node_id_qb(**kwargs)
-    qb.add_projection('node', '*')
-    qb.limit(2)
+    if pk is not None:
 
-    try:
-        return qb.one()[0]
-    except MultipleObjectsError:
-        raise MultipleObjectsError('More than one node found. Provide longer starting pattern for uuid.')
-    except NotExistent:
-        raise NotExistent('No node was found')
+        if not isinstance(pk, int):
+            raise TypeError('a pk has to be an integer')
+
+        identifier = pk
+        identifier_type = IdentifierType.ID
+
+    elif uuid is not None:
+
+        if not isinstance(uuid, basestring):
+            raise TypeError('uuid has to be a string type')
+
+        identifier = uuid
+        identifier_type = IdentifierType.UUID
+    else:
+        identifier = str(identifier)
+        identifier_type = None
+
+    return NodeEntityLoader.load_entity(identifier, identifier_type, orm_class, query_with_dashes)
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

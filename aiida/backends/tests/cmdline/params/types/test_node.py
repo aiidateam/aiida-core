@@ -1,20 +1,20 @@
 #-*- coding: utf8 -*-
 from click import BadParameter
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import IdentifierParam, NodeParam
+from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
 from aiida.orm import Node
 
 
-class TestNodeParam(AiidaTestCase):
+class TestNodeParamType(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
         """
-        Create some nodes to test the NodeParam parameter type for the command line infrastructure
+        Create some nodes to test the NodeParamType parameter type for the command line infrastructure
         """
-        super(TestNodeParam, cls).setUpClass()
+        super(TestNodeParamType, cls).setUpClass()
 
-        cls.param = NodeParam()
+        cls.param = NodeParamType()
         cls.entity_01 = Node().store()
 
     def test_get_by_id(self):
@@ -35,9 +35,9 @@ class TestNodeParam(AiidaTestCase):
 
     def test_get_by_label(self):
         """
-        Verify that using the STRING identifier will raise as the Node class does not have a STRING based identifier
+        Verify that using the LABEL identifier will raise as the Node class does not have a LABEL based identifier
         """
-        identifier = '{}'.format('SOMERANDOMSTRING')
+        identifier = '{}'.format('SOMERANDOMLABEL')
 
         with self.assertRaises(BadParameter):
             result = self.param.convert(identifier, None, None)

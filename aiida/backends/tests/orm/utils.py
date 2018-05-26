@@ -31,11 +31,11 @@ class TestOrmUtils(AiidaTestCase):
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through partial uuid
-        loaded_group = load_group(group.uuid[:2])
+        loaded_group = load_group(uuid=group.uuid[:2])
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through partial uuid
-        loaded_group = load_group(group.uuid[:10])
+        loaded_group = load_group(uuid=group.uuid[:10])
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         with self.assertRaises(NotExistent):
@@ -65,11 +65,11 @@ class TestOrmUtils(AiidaTestCase):
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through partial uuid
-        loaded_node = load_node(node.uuid[:2])
+        loaded_node = load_node(uuid=node.uuid[:2])
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through partial uuid
-        loaded_node = load_node(node.uuid[:10])
+        loaded_node = load_node(uuid=node.uuid[:10])
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         with self.assertRaises(NotExistent):

@@ -1,29 +1,21 @@
 # -*- coding: utf-8 -*-
-from .identifier import IdentifierParam
+from .identifier import IdentifierParamType
 
 
-class CodeParam(IdentifierParam):
+class CodeParamType(IdentifierParamType):
+    """
+    The ParamType for identifying Code entities or its subclasses
+    """
 
     name = 'Code'
 
     @property
-    def orm_class(self):
+    def orm_class_loader(self):
         """
-        Return the ORM class to which any converted values should be mapped
+        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
+        to be used to load the entity for a given identifier 
 
-        :return: the ORM class to which values should be mapped
-        """
-        from aiida.orm import Code
-        return Code
-
-    def orm_load_entity(self, identifier, identifier_type):
-        """
-        Attempt to load an ORM entity, of the class defined by the orm_class property, for the given identifier
-        and identifier type
-
-        :param identifier: the entity identifier
-        :param identifier_type: the type of the identifier, ID, UUID or STRING
-        :return: the entity if the identifier can be uniquely resolved
+        :return: the orm entity loader class for this ParamType
         """
         from aiida.orm.utils.loaders import CodeEntityLoader
-        return CodeEntityLoader().load_entity(identifier, identifier_type)
+        return CodeEntityLoader

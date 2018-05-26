@@ -1,22 +1,23 @@
 #-*- coding: utf8 -*-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import IdentifierParam, GroupParam
+from aiida.cmdline.params.types import IdentifierParamType, GroupParamType
 from aiida.orm import Group
+from aiida.orm.utils.loaders import OrmEntityLoader
 
 
-class TestGroupParam(AiidaTestCase):
+class TestGroupParamType(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
         """
-        Create some groups to test the GroupParam parameter type for the command line infrastructure
+        Create some groups to test the GroupParamType parameter type for the command line infrastructure
         We create an initial group with a random name and then on purpose create two groups with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestGroupParam, cls).setUpClass()
+        super(TestGroupParamType, cls).setUpClass()
 
-        cls.param = GroupParam()
+        cls.param = GroupParamType()
         cls.entity_01 = Group.create(name='group_01')
         cls.entity_02 = Group.create(name=str(cls.entity_01.pk))
         cls.entity_03 = Group.create(name=str(cls.entity_01.uuid))
@@ -39,7 +40,7 @@ class TestGroupParam(AiidaTestCase):
 
     def test_get_by_label(self):
         """
-        Verify that using the STRING will retrieve the correct entity
+        Verify that using the LABEL will retrieve the correct entity
         """
         identifier = '{}'.format(self.entity_01.name)
         result = self.param.convert(identifier, None, None)
@@ -47,30 +48,30 @@ class TestGroupParam(AiidaTestCase):
 
     def test_ambiguous_label_pk(self):
         """
-        Situation: STRING of entity_02 is exactly equal to ID of entity_01
+        Situation: LABEL of entity_02 is exactly equal to ID of entity_01
 
         Verify that using an ambiguous identifier gives precedence to the ID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a STRING
+        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
         identifier = '{}'.format(self.entity_02.name)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.name, IdentifierParam.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_02.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_02.uuid)
 
     def test_ambiguous_label_uuid(self):
         """
-        Situation: STRING of entity_03 is exactly equal to UUID of entity_01
+        Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
 
         Verify that using an ambiguous identifier gives precedence to the UUID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a STRING
+        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
         identifier = '{}'.format(self.entity_03.name)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.name, IdentifierParam.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_03.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_03.uuid)

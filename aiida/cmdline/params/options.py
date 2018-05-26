@@ -101,33 +101,33 @@ class MultipleValueOption(click.Option):
         return result
 
 
-CODE = OverridableOption('-X', '--code', 'code', type=types.CodeParam(),
+CODE = OverridableOption('-X', '--code', 'code', type=types.CodeParamType(),
     help='A single code identified by its ID, UUID or label')
 
 
-CODES = OverridableOption('-X', '--codes', 'codes', cls=MultipleValueOption, type=types.CodeParam(),
+CODES = OverridableOption('-X', '--codes', 'codes', cls=MultipleValueOption, type=types.CodeParamType(),
     help='One or multiple codes identified by their ID, UUID or label')
 
 
-COMPUTER = OverridableOption('-C', '--computer', 'computer', type=types.ComputerParam(),
+COMPUTER = OverridableOption('-C', '--computer', 'computer', type=types.ComputerParamType(),
     help='A single computer identified by its ID, UUID or label')
 
 
-COMPUTERS = OverridableOption('-C', '--computers', 'computers', cls=MultipleValueOption, type=types.ComputerParam(),
+COMPUTERS = OverridableOption('-C', '--computers', 'computers', cls=MultipleValueOption, type=types.ComputerParamType(),
     help='One or multiple computers identified by their ID, UUID or label')
 
 
-GROUPS = OverridableOption('-G', '--group', 'group', type=types.GroupParam(),
+GROUPS = OverridableOption('-G', '--group', 'group', type=types.GroupParamType(),
     help='A single group identified by its ID, UUID or name')
 
 
-GROUPS = OverridableOption('-G', '--groups', 'groups', cls=MultipleValueOption, type=types.GroupParam(),
+GROUPS = OverridableOption('-G', '--groups', 'groups', cls=MultipleValueOption, type=types.GroupParamType(),
     help='One or multiple groups identified by their ID, UUID or name')
 
 
-NODES = OverridableOption('-N', '--node', 'node', type=types.NodeParam(),
+NODES = OverridableOption('-N', '--node', 'node', type=types.NodeParamType(),
     help='A single node identified by its ID or UUID')
 
 
-NODES = OverridableOption('-N', '--nodes', 'nodes', cls=MultipleValueOption, type=types.NodeParam(),
+NODES = OverridableOption('-N', '--nodes', 'nodes', cls=MultipleValueOption, type=types.NodeParamType(),
     help='One or multiple nodes identified by their ID or UUID')

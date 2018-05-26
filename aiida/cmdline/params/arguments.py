@@ -50,13 +50,13 @@ class OverridableArgument(object):
         	return click.argument(*self.args, **kw_copy)
 
 
-CODE = OverridableArgument('code', type=types.CodeParam())
+CODE = OverridableArgument('code', type=types.CodeParamType())
 
 
-COMPUTER = OverridableArgument('computer', type=types.ComputerParam())
+COMPUTER = OverridableArgument('computer', type=types.ComputerParamType())
 
 
-GROUP = OverridableArgument('group', type=types.GroupParam())
+GROUP = OverridableArgument('group', type=types.GroupParamType())
 
 
-NODE = OverridableArgument('node', type=types.NodeParam())
+NODE = OverridableArgument('node', type=types.NodeParamType())

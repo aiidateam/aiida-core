@@ -60,3 +60,9 @@ GROUP = OverridableArgument('group', type=types.GroupParamType())
 
 
 NODE = OverridableArgument('node', type=types.NodeParamType())
+
+
+INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.Path(exists=True))
+
+
+OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=click.Path())

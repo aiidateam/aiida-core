@@ -50,6 +50,7 @@ db_test_list = {
         'restapi': ['aiida.backends.tests.restapi'],
         'computer': ['aiida.backends.tests.computer'],
         'examplehelpers': ['aiida.backends.tests.example_helpers'],
+        'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],

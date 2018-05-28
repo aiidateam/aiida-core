@@ -304,7 +304,7 @@ class Devel(VerdiCommandWithSubcommands):
             values_to_print = []
             in_found = True
             out_found = True
-            c = load_node(job, orm_class=OrmCalculation)
+            c = load_node(job, sub_class=OrmCalculation)
             try:
                 i = c.inp.parameters.get_dict()
             except AttributeError:

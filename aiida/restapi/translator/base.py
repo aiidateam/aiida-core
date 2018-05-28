@@ -487,7 +487,7 @@ class BaseTranslator(object):
                 raise RestValidationError('parameter id has to be an string')
 
             identifier_type = IdentifierType.UUID
-            qb = loader.get_query_builder(id, identifier_type, orm_class=self._aiida_class)
+            qb, _ = loader.get_query_builder(id, identifier_type, sub_classes=(self._aiida_class,))
         else:
 
             # Similarly, check that id is an integer
@@ -495,7 +495,7 @@ class BaseTranslator(object):
                 raise RestValidationError('parameter id has to be an integer')
 
             identifier_type = IdentifierType.ID
-            qb = loader.get_query_builder(id, identifier_type, orm_class=self._aiida_class)
+            qb, _ = loader.get_query_builder(id, identifier_type, sub_classes=(self._aiida_class,))
 
         # For efficiency I don't go further than two results
         qb.limit(2)

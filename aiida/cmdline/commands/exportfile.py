@@ -27,11 +27,20 @@ class Export(VerdiCommandWithSubcommands):
     def __init__(self):
         self.valid_subcommands = {
             'create': (self.cli, self.complete_none),
+            'new': (self.cli, self.complete_none),
             'migrate': (self.cli, self.complete_none)
         }
 
     def cli(self, *args):
         verdi()
+
+from aiida.cmdline.params import options
+from aiida.cmdline.params import types
+
+@export.command('new', context_settings=CONTEXT_SETTINGS)
+@options.CALCULATIONS(type=types.CalculationParamType(('aiida.calculations:work', 'aiida.calculations:function')))
+def new(calculations):
+    click.echo(calculations)
 
 
 @export.command('create', context_settings=CONTEXT_SETTINGS)

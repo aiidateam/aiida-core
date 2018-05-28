@@ -7,7 +7,8 @@ from aiida.common.utils import abstractclassmethod, classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
 __all__ = [
-    'get_loader', 'OrmEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader', 'GroupEntityLoader', 'NodeEntityLoader'
+    'get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
+    'GroupEntityLoader', 'NodeEntityLoader'
 ]
 
 
@@ -52,52 +53,54 @@ class OrmEntityLoader(object):
     LABEL_AMBIGUITY_BREAKER_CHARACTER = '!'
 
     @classproperty
-    def orm_class(self):
+    def orm_base_class(cls):
         """
-        Return the orm class to which loaded entities should be mapped
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
 
-        :returns: the orm class
+        :returns: the orm base class
         """
         raise NotImplementedError
 
     @abstractclassmethod
-    def _get_query_builder_label_identifier(self, identifier, orm_class):
+    def _get_query_builder_label_identifier(self, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
 
         :param identifier: the LABEL identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm class does not support a LABEL like identifier
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         raise NotImplementedError
 
     @classmethod
-    def _get_query_builder_id_identifier(self, identifier, orm_class):
+    def _get_query_builder_id_identifier(self, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as an ID like identifier
 
         :param identifier: the ID identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         """
         qb = QueryBuilder()
-        qb.append(orm_class, tag='entity', project=['*'])
+        qb.append(classes[0], tag='entity', project=['*'])
         qb.add_filter('entity', {'id': identifier})
 
         return qb
 
     @classmethod
-    def _get_query_builder_uuid_identifier(self, identifier, orm_class, query_with_dashes):
+    def _get_query_builder_uuid_identifier(self, identifier, classes, query_with_dashes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a UUID like identifier
 
         :param identifier: the UUID identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         """
         uuid = identifier.replace('-', '')
@@ -108,83 +111,98 @@ class OrmEntityLoader(object):
                     uuid = '{}-{}'.format(uuid[:dash_pos], uuid[dash_pos:])
 
         qb = QueryBuilder()
-        qb.append(orm_class, tag='entity', project=['*'])
+        qb.append(classes[0], tag='entity', project=['*'])
         qb.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
 
         return qb
 
     @classmethod
-    def get_query_builder(cls, identifier, identifier_type=None, orm_class=None, query_with_dashes=True):
+    def get_query_builder(cls, identifier, identifier_type=None, sub_classes=None, query_with_dashes=True):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, inferring the identifier type if it is not defined.
 
         :param identifier: the identifier
         :param identifier_type: the type of the identifier
-        :param orm_class: an optional subclass of the base orm class to make the query more specific
-        :returns: the query builder instance
+        :param sub_classes: an optional tuple of orm classes, that should each be strict sub classes of the
+            base orm class of the loader, that will narrow the queryset
+        :returns: the query builder instance and a dictionary of used query parameters
         """
-        orm_class = cls.validate_orm_class(orm_class)
+        classes = cls.get_query_classes(sub_classes)
 
         if identifier_type is None:
             identifier, identifier_type = cls.infer_identifier_type(identifier)
 
         if identifier_type == IdentifierType.ID:
-            qb = cls._get_query_builder_id_identifier(identifier, orm_class)
+            qb = cls._get_query_builder_id_identifier(identifier, classes)
         elif identifier_type == IdentifierType.UUID:
-            qb = cls._get_query_builder_uuid_identifier(identifier, orm_class, query_with_dashes)
+            qb = cls._get_query_builder_uuid_identifier(identifier, classes, query_with_dashes)
         elif identifier_type == IdentifierType.LABEL:
-            qb = cls._get_query_builder_label_identifier(identifier, orm_class)
+            qb = cls._get_query_builder_label_identifier(identifier, classes)
 
-        return qb
+        query_parameters = {
+            'classes': classes,
+            'identifier': identifier,
+            'identifier_type': identifier_type,
+        }
+
+        return qb, query_parameters
 
     @classmethod
-    def load_entity(cls, identifier, identifier_type=None, orm_class=None, query_with_dashes=True):
+    def load_entity(cls, identifier, identifier_type=None, sub_classes=None, query_with_dashes=True):
         """
         Load an entity that uniquely corresponds to the provided identifier of the identifier type.
 
         :param identifier: the identifier
         :param identifier_type: the type of the identifier
-        :param orm_class: an optional subclass of the base orm class make the query more specific
+        :param sub_classes: an optional tuple of orm classes, that should each be strict sub classes of the
+            base orm class of the loader, that will narrow the queryset
         :returns: the loaded entity
         :raises MultipleObjectsError: if the identifier maps onto multiple entities
         :raises NotExistent: if the identifier maps onto not a single entity
         """
-        orm_class = cls.validate_orm_class(orm_class)
-
-        if identifier_type is None:
-            identifier, identifier_type = cls.infer_identifier_type(identifier)
-
-        qb = cls.get_query_builder(identifier, identifier_type, orm_class, query_with_dashes)
+        qb, query_parameters = cls.get_query_builder(identifier, identifier_type, sub_classes, query_with_dashes)
         qb.limit(2)
+
+        classes = ' or '.join([sub_class.__name__ for sub_class in query_parameters['classes']])
+        identifier = query_parameters['identifier']
+        identifier_type = query_parameters['identifier_type'].value
 
         try:
             entity = qb.one()[0]
         except MultipleObjectsError:
-            error = 'multiple {} entries found with {}<{}>'.format(orm_class.__name__, identifier_type.value, identifier)
+            error = 'multiple {} entries found with {}<{}>'.format(classes, identifier_type, identifier)
             raise MultipleObjectsError(error)
         except NotExistent:
-            error = 'no {} found with {}<{}>'.format(orm_class.__name__, identifier_type.value, identifier)
+            error = 'no {} found with {}<{}>'.format(classes, identifier_type, identifier)
             raise NotExistent(error)
 
         return entity
 
     @classmethod
-    def validate_orm_class(cls, orm_class=None):
+    def get_query_classes(cls, sub_classes=None):
         """
-        Validate the orm_class if a user passes in a specifc one when attempting to load an entity. The orm class
-        should be a subclass of the entity loader's base class
+        Get the tuple of classes to be used for the entity query. If sub_classes is defined, each class will be
+        validated by verifying that it is a sub class of the loader's orm base class.
+        Validate a tuple of classes if a user passes in a specific one when attempting to load an entity. Each class
+        should be a sub class of the entity loader's orm base class
 
-        :returns: the base orm class or the specific orm class if it is valid
-        :raises ValueError: if the defined orm_class is not a subclass of the entity loader's base class
+        :param sub_classes: an optional tuple of orm classes, that should each be strict sub classes of the
+            base orm class of the loader, that will narrow the queryset
+        :returns: the tuple of orm classes to be used for the entity query
+        :raises ValueError: if any of the classes are not a sub class of the entity loader's orm base class
         """
-        if orm_class is not None and not issubclass(orm_class, cls.orm_class):
-            raise ValueError('the specified orm_class is not a proper sub class of the base orm class')
+        if sub_classes is None:
+            return (cls.orm_base_class,)
 
-        if orm_class is None:
-            orm_class = cls.orm_class
+        if not isinstance(sub_classes, tuple):
+            raise TypeError('sub_classes should be a tuple: {}'.format(sub_classes))
 
-        return orm_class
+        for sub_class in sub_classes:
+            if not issubclass(sub_class, cls.orm_base_class):
+                raise ValueError('{} is not a sub class of the base orm class {}'.format(sub_class, cls.orm_base_class))
+
+        return sub_classes
 
     @classmethod
     def infer_identifier_type(cls, value):
@@ -248,29 +266,63 @@ class OrmEntityLoader(object):
         return identifier, identifier_type
 
 
-class CodeEntityLoader(OrmEntityLoader):
+class CalculationEntityLoader(OrmEntityLoader):
 
     @classproperty
-    def orm_class(cls):
+    def orm_base_class(cls):
         """
-        Return the orm class to which loaded entities should be mapped
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
 
-        :returns: the orm class
+        :returns: the orm base class
         """
-        from aiida.orm.code import Code
-        return Code
+        from aiida.orm.calculation import Calculation
+        return Calculation
 
     @classmethod
-    def _get_query_builder_label_identifier(cls, identifier, orm_class):
+    def _get_query_builder_label_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
 
         :param identifier: the LABEL identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm class does not support a LABEL like identifier
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        """
+        qb = QueryBuilder()
+        qb.append(classes[0], tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+
+        return qb
+
+
+class CodeEntityLoader(OrmEntityLoader):
+
+    @classproperty
+    def orm_base_class(cls):
+        """
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
+
+        :returns: the orm base class
+        """
+        from aiida.orm.code import Code
+        return Code
+
+    @classmethod
+    def _get_query_builder_label_identifier(cls, identifier, classes):
+        """
+        Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
+        defined for this loader class, interpreting the identifier as a LABEL like identifier
+
+        :param identifier: the LABEL identifier
+        :param classes: a tuple of orm classes to which the identifier should be mapped
+        :returns: the query builder instance that should retrieve the entity corresponding to the identifier
+        :raises ValueError: if the identifier is invalid
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.orm.computer import Computer
 
@@ -280,7 +332,7 @@ class CodeEntityLoader(OrmEntityLoader):
             raise ValueError('the identifier needs to be a string')
 
         qb = QueryBuilder()
-        qb.append(orm_class, tag='code', project=['*'], filters={'label': {'==': label}})
+        qb.append(classes[0], tag='code', project=['*'], filters={'label': {'==': label}})
 
         if machinename:
             qb.append(Computer, filters={'name': {'==': machinename}}, computer_of='code')
@@ -291,29 +343,31 @@ class CodeEntityLoader(OrmEntityLoader):
 class ComputerEntityLoader(OrmEntityLoader):
 
     @classproperty
-    def orm_class(cls):
+    def orm_base_class(cls):
         """
-        Return the orm class to which loaded entities should be mapped
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
 
-        :returns: the orm class
+        :returns: the orm base class
         """
         from aiida.orm.computer import Computer
         return Computer
 
     @classmethod
-    def _get_query_builder_label_identifier(cls, identifier, orm_class):
+    def _get_query_builder_label_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
 
         :param identifier: the LABEL identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm class does not support a LABEL like identifier
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(orm_class, tag='computer', project=['*'], filters={'name': {'==': identifier}})
+        qb.append(classes[0], tag='computer', project=['*'], filters={'name': {'==': identifier}})
 
         return qb
 
@@ -321,29 +375,31 @@ class ComputerEntityLoader(OrmEntityLoader):
 class GroupEntityLoader(OrmEntityLoader):
 
     @classproperty
-    def orm_class(cls):
+    def orm_base_class(cls):
         """
-        Return the orm class to which loaded entities should be mapped
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
 
-        :returns: the orm class
+        :returns: the orm base class
         """
         from aiida.orm.group import Group
         return Group
 
     @classmethod
-    def _get_query_builder_label_identifier(cls, identifier, orm_class):
+    def _get_query_builder_label_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
 
         :param identifier: the LABEL identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm class does not support a LABEL like identifier
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(orm_class, tag='group', project=['*'], filters={'name': {'==': identifier}})
+        qb.append(classes[0], tag='group', project=['*'], filters={'name': {'==': identifier}})
 
         return qb
 
@@ -351,25 +407,30 @@ class GroupEntityLoader(OrmEntityLoader):
 class NodeEntityLoader(OrmEntityLoader):
 
     @classproperty
-    def orm_class(cls):
+    def orm_base_class(cls):
         """
-        Return the orm class to which loaded entities should be mapped
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
 
-        :returns: the orm class
+        :returns: the orm base class
         """
         from aiida.orm.node import Node
         return Node
 
     @classmethod
-    def _get_query_builder_label_identifier(cls, identifier, orm_class):
+    def _get_query_builder_label_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
 
         :param identifier: the LABEL identifier
-        :param orm_class: the class of the entity to query for
+        :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm class does not support a LABEL like identifier
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        raise NotExistent
+        qb = QueryBuilder()
+        qb.append(classes[0], tag='node', project=['*'], filters={'label': {'==': identifier}})
+
+        return qb

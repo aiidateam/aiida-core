@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractproperty
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.exceptions import LoadingEntryPointError
+from aiida.plugins.entry_point import get_entry_point_from_string,load_entry_point_from_string
 
 
 class IdentifierParamType(click.ParamType):
@@ -18,7 +20,40 @@ class IdentifierParamType(click.ParamType):
 
     __metaclass__ = ABCMeta
 
-    name = 'entity'
+    def __init__(self, sub_classes=None):
+        """
+        Construct the parameter type, optionally specifying a tuple of entry points that reference classes
+        that should be a sub class of the base orm class of the orm class loader. The classes pointed to by
+        these entry points will be passed to the OrmEntityLoader when converting an identifier and they will
+        restrict the query set by demanding that the class of the corresponding entity matches these sub classes.
+
+        To prevent having to load the database environment at import time, the actual loading of the entry points
+        is deferred until the call to `convert` is made. This is to keep the command line autocompletion light
+        and responsive. The entry point strings will be validated, however, to see if the correspond to known
+        entry points.
+
+        :param sub_classes: a tuple of entry point strings that can narrow the set of orm classes that values
+            will be mapped upon. These classes have to be strict sub classes of the base orm class defined
+            by the orm class loader
+        """
+        from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
+
+        self._sub_classes = None
+        self._entry_points = []
+
+        if sub_classes is not None:
+
+            if not isinstance(sub_classes, tuple):
+                raise TypeError('sub_classes should be a tuple of entry point strings')
+
+            for entry_point_string in sub_classes:
+
+                try:
+                    entry_point = get_entry_point_from_string(entry_point_string)
+                except (ValueError, MissingEntryPointError, MultipleEntryPointError) as exception:
+                    raise ValueError('{} is not a valid entry point string: {}'.format(entry_point_string, exception))
+                else:
+                    self._entry_points.append(entry_point)
 
     @abstractproperty
     @with_dbenv()
@@ -52,8 +87,29 @@ class IdentifierParamType(click.ParamType):
         if not issubclass(loader, OrmEntityLoader):
             raise RuntimeError('the orm class loader should be a subclass of OrmEntityLoader')
 
+        # If entry points where in the constructor, we load their corresponding classes, validate that they are valid
+        # sub classes of the orm class loader and then pass it as the sub_class parameter to the load_entity call.
+        # We store the loaded entry points in an instance variable, such that the loading only has to be done once.
+        if self._entry_points and self._sub_classes is None:
+
+            sub_classes = []
+
+            for entry_point in self._entry_points:
+                try:
+                    sub_class = entry_point.load()
+                except ImportError as exception:
+                    raise RuntimeError('failed to load the entry point {}: {}'.format(entry_point, exception))
+
+                if not issubclass(sub_class, loader.orm_base_class):
+                    raise RuntimeError('the class {} of entry point {} is not a sub class of {}'.format(
+                        sub_class, entry_point, loader.orm_base_class))
+                else:
+                    sub_classes.append(sub_class)
+
+            self._sub_classes = tuple(sub_classes)
+
         try:
-            entity = loader.load_entity(value)
+            entity = loader.load_entity(value, sub_classes=self._sub_classes)
         except (MultipleObjectsError, NotExistent, ValueError) as exception:
             raise click.BadParameter(exception.message)
 

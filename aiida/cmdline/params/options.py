@@ -109,11 +109,11 @@ CODES = OverridableOption('-X', '--codes', 'codes', cls=MultipleValueOption, typ
     help='One or multiple codes identified by their ID, UUID or label')
 
 
-COMPUTER = OverridableOption('-C', '--computer', 'computer', type=types.ComputerParamType(),
+COMPUTER = OverridableOption('-Y', '--computer', 'computer', type=types.ComputerParamType(),
     help='A single computer identified by its ID, UUID or label')
 
 
-COMPUTERS = OverridableOption('-C', '--computers', 'computers', cls=MultipleValueOption, type=types.ComputerParamType(),
+COMPUTERS = OverridableOption('-Y', '--computers', 'computers', cls=MultipleValueOption, type=types.ComputerParamType(),
     help='One or multiple computers identified by their ID, UUID or label')
 
 
@@ -131,3 +131,11 @@ NODES = OverridableOption('-N', '--node', 'node', type=types.NodeParamType(),
 
 NODES = OverridableOption('-N', '--nodes', 'nodes', cls=MultipleValueOption, type=types.NodeParamType(),
     help='One or multiple nodes identified by their ID or UUID')
+
+
+CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
+    help='A single calculation identified by its ID or UUID')
+
+
+CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
+    help='One or multiple calculations identified by their ID or UUID')

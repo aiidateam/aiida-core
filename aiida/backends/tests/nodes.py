@@ -1533,7 +1533,7 @@ class TestNodeBasic(AiidaTestCase):
         # Last check, when asking for specific subclass, this should raise:
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
-                load_node(spec, orm_class=ArrayData)
+                load_node(spec, sub_class=ArrayData)
 
     def test_load_unknown_calculation_type(self):
         """

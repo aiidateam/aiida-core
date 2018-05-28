@@ -26,6 +26,57 @@ entry_point_group_to_module_path_map = {
 }
 
 
+def parse_entry_point_string(entry_point_string):
+    """
+    Validate the entry point string and attempt to parse the entry point group and name
+
+    :param entry_point_string: the entry point string
+    :return: the entry point group and name if the string is valid
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    """
+    if not isinstance(entry_point_string, basestring):
+        raise TypeError('the entry_point_string should be a string')
+
+    try:
+        group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
+    except ValueError as exception:
+        raise ValueError('invalid entry_point_string format')
+
+    return group, name
+
+
+def get_entry_point_from_string(entry_point_string):
+    """
+    Return an entry point for the given entry point string
+
+    :param entry_point_string: the entry point string
+    :return: the entry point if it exists else None
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    """
+    group, name = parse_entry_point_string(entry_point_string)
+    return get_entry_point(group, name)
+
+
+def load_entry_point_from_string(entry_point_string):
+    """
+    Load the class registered for a given entry point string that determines group and name
+
+    :param entry_point_string: the entry point string
+    :return: class registered at the given entry point
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises LoadingEntryPointError: entry point could not be loaded
+    """
+    group, name = parse_entry_point_string(entry_point_string)
+    return load_entry_point(group, name)
+
+
 def load_entry_point(group, name):
     """
     Load the class registered under the entry point for a given name and group
@@ -33,6 +84,10 @@ def load_entry_point(group, name):
     :param group: the entry point group
     :param name: the name of the entry point
     :return: class registered at the given entry point
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
     :raises LoadingEntryPointError: entry point could not be loaded
     """
     entry_point = get_entry_point(group, name)
@@ -43,18 +98,6 @@ def load_entry_point(group, name):
         raise LoadingEntryPointError("Failed to load entry point '{}':\n{}".format(name, traceback.format_exc()))
 
     return loaded_entry_point
-
-
-def load_entry_point_from_string(entry_point_string):
-    """
-    Load the class registered for a given entry point string that determines group and name
-
-    :param entry_point_string: the entry point string
-    :return: class registered at the given entry point
-    :raises LoadingEntryPointError: entry point could not be loaded
-    """
-    group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    return load_entry_point(group, name)
 
 
 def get_entry_point_names(group, sort=True):

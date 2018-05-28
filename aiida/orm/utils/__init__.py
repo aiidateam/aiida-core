@@ -59,7 +59,6 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
     :raise NotExistent: if no matching Group is found
     :raise MultipleObjectsError: if more than one Group was found
     """
-    from aiida.orm import Group
     from aiida.orm.utils.loaders import IdentifierType, GroupEntityLoader
 
     # Verify that at least and at most one identifier is specified
@@ -99,7 +98,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
     return GroupEntityLoader.load_entity(identifier, identifier_type, query_with_dashes=query_with_dashes)
 
 
-def load_node(identifier=None, pk=None, uuid=None, orm_class=None, query_with_dashes=True):
+def load_node(identifier=None, pk=None, uuid=None, sub_class=None, query_with_dashes=True):
     """
     Load a node by one of its identifiers: pk or uuid. If the type of the identifier is unknown
     simply pass it without a keyword and the loader will attempt to infer the type
@@ -107,7 +106,8 @@ def load_node(identifier=None, pk=None, uuid=None, orm_class=None, query_with_da
     :param identifier: pk (integer) or uuid (string)
     :param pk: pk of a node
     :param uuid: uuid of a node, or the beginning of the uuid
-    :param orm_class: optional subclass of Node to narrow the orm classes to be queried for
+    :param sub_class: an optional tuple of orm classes, that should each be strict sub class of Node,
+        to narrow the queryset
     :param bool query_with_dashes: allow to query for a uuid with dashes
     :returns: the node instance
     :raise InputValidationError: if none or more than one of the identifiers are supplied
@@ -115,12 +115,7 @@ def load_node(identifier=None, pk=None, uuid=None, orm_class=None, query_with_da
     :raise NotExistent: if no matching Node is found
     :raise MultipleObjectsError: if more than one Node was found
     """
-    from aiida.orm.implementation import Node
     from aiida.orm.utils.loaders import IdentifierType, NodeEntityLoader
-
-    # Make sure that, when specified, the orm_class is a subclass of Node
-    if orm_class and not issubclass(orm_class,  Node):
-        raise TypeError('{} is not a subclass of {}'.format(orm_class, Node))
 
     # Verify that at least and at most one identifier is specified
     inputs_provided = [value is not None for value in (identifier, pk, uuid)].count(True)
@@ -148,7 +143,10 @@ def load_node(identifier=None, pk=None, uuid=None, orm_class=None, query_with_da
         identifier = str(identifier)
         identifier_type = None
 
-    return NodeEntityLoader.load_entity(identifier, identifier_type, orm_class, query_with_dashes)
+    if sub_class is not None and not isinstance(sub_class, tuple):
+        sub_class = (sub_class,)
+
+    return NodeEntityLoader.load_entity(identifier, identifier_type, sub_class, query_with_dashes)
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

@@ -138,7 +138,7 @@ def submit_calc(calc, authinfo, transport=None):
                 folder, use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [load_node(_.code_uuid, orm_class=Code)
+            input_codes = [load_node(_.code_uuid, sub_class=Code)
                            for _ in codes_info]
 
             for code in input_codes:

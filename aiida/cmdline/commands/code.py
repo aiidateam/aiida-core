@@ -623,7 +623,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
-            code = load_node(pk, orm_class=OrmCode)
+            code = load_node(pk, sub_class=OrmCode)
             code._hide()
 
     def code_reveal(self, *args):
@@ -645,7 +645,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
-            code = load_node(pk, orm_class=OrmCode)
+            code = load_node(pk, sub_class=OrmCode)
             code._reveal()
 
     def code_list(self, *args):

@@ -39,6 +39,113 @@ from aiida.backends.utils import _get_column
 from aiida.common.links import LinkType
 
 
+
+def get_querybuilder_classifiers_from_cls(cls, obj):
+    """
+    This utility function return the correct classifiers for the QueryBuilder,
+    given a Class.
+    :param cls: a class or tuple/set/list of classes that are either AiiDA-orm classes or ORM-classes.
+    :param obj: The implementation of the QueryBuilder, with all the attributes correctly set.
+    """
+    if issubclass(cls, obj.Node):
+        # If something pass an ormclass node
+        # Users wouldn't do that, by why not...
+        ormclasstype = obj.AiidaNode._plugin_type_string
+        query_type_string = obj.AiidaNode._query_type_string
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaNode):
+        ormclasstype = cls._plugin_type_string
+        query_type_string = cls._query_type_string
+        ormclass = obj.Node
+    # Groups:
+    elif issubclass(cls, obj.Group):
+        ormclasstype = 'group'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaGroup):
+        ormclasstype = 'group'
+        query_type_string = None
+        ormclass = obj.Group
+    # Computers:
+    elif issubclass(cls, obj.Computer):
+        ormclasstype = 'computer'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaComputer):
+        ormclasstype = 'computer'
+        query_type_string = None
+        ormclass = obj.Computer
+
+    # Users
+    elif issubclass(cls, obj.User):
+        ormclasstype = 'user'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaUser):
+        ormclasstype = 'user'
+        query_type_string = None
+        ormclass = obj.User
+    else:
+        raise InputValidationError(
+            "\n\n\n"
+            "I do not know what to do with {}"
+            "\n\n\n".format(cls)
+        )
+    return ormclasstype, query_type_string, ormclass
+
+
+def get_querybuilder_classifiers_from_type(ormclasstype, obj):
+    """
+    Same as above get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
+    """
+    from aiida.common.exceptions import (
+        DbContentError, MissingPluginError, InputValidationError)
+
+    if ormclasstype.lower() == 'group':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.Group
+    elif ormclasstype.lower() == 'computer':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.Computer
+    elif ormclasstype.lower() == 'user':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.User
+    else:
+        # At this point, it has to be a node.
+        # The only valid string at this point is a string
+        # that matches exactly the _plugin_type_string
+        # of a node class
+        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
+        ormclass = obj.Node
+        try:
+            plugin_type = get_plugin_type_from_type_string(ormclasstype)
+
+            # I want to check at this point if that is a valid class,
+            # so I use the load_plugin to load the plugin class
+            # and use the classes _plugin_type_string attribute
+            # In the future, assuming the user knows what he or she is doing
+            # we could remove that check
+            PluginClass = load_plugin(plugin_type)
+        except (DbContentError, MissingPluginError) as e:
+            raise InputValidationError(
+                "\nYou provide a vertice of the path with\n"
+                "type={}\n"
+                "But that string is not a valid type string\n"
+                "Exception raise during check\n"
+                "{}".format(ormclasstype, e)
+            )
+
+        ormclasstype = PluginClass._plugin_type_string
+        query_type_string = PluginClass._query_type_string
+    return ormclasstype, query_type_string, ormclass
+
+
+
+
+
 class QueryBuilder(object):
     """
     The class to query the AiiDA database. 
@@ -255,7 +362,38 @@ class QueryBuilder(object):
         ormclass back. Just relaying to the implementation, details for this function
         in the interface.
         """
-        return self._impl.get_ormclass(cls, ormclasstype)
+        # If it is a class:
+        if cls is not None:
+            func = get_querybuilder_classifiers_from_cls
+            classifier = cls
+        elif ormclasstype is not None:
+            func = get_querybuilder_classifiers_from_type
+            classifier = ormclasstype
+        else:
+            raise RuntimeError("Neither cls nor ormclasstype specified")
+
+
+        if isinstance(classifier, (tuple, list, set)):
+            # I have been passed a list of classes (hopefully) instead of a class.
+            # Going through each element of the list/tuple/set:
+            query_type_string = []
+            ormclasstype = []
+            for i, c in enumerate(classifier):
+                ormclassifiers = func(c, self._impl)
+                if i:
+                    # This is not my first iteration!
+                    # I check consistensy with what was specified before
+                    if ormclassifiers[2] != ormclass:
+                        raise InputValidationError("Non-matching types have been passed as list/tuple/set.")
+                else:
+                    ormclass = ormclassifiers[2]
+                query_type_string.append(ormclassifiers[1])
+                ormclasstype.append(ormclassifiers[0])
+        else:
+            ormclasstype, query_type_string, ormclass = func(classifier, self._impl)
+
+
+        return ormclass, ormclasstype, query_type_string
 
     def _get_unique_tag(self, ormclasstype):
         """

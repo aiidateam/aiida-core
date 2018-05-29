@@ -319,9 +319,17 @@ class TestQueryBuilder(AiidaTestCase):
         # Now I am testing the subclassing with tuples:
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('structure',  'parameter'), filters={'attributes.cat':'miau'})
+        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'), filters={'attributes.cat':'miau'})
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'}, subclassing=False)
+        self.assertEqual(qb.count(), 2)
+        qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat':'miau'}, )
+        self.assertEqual(qb.count(), 3)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'),
+                filters={'attributes.cat':'miau'}, subclassing=False)
+        self.assertEqual(qb.count(), 2)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.Data.'),
+                filters={'attributes.cat':'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):

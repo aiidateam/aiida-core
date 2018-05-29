@@ -245,10 +245,9 @@ class QueryBuilder(object):
 
         que = self.get_query()
         return str(que.statement.compile(
-            compile_kwargs={"literal_binds": True},
-            dialect=mydialect.dialect()
-        )
-        )
+                compile_kwargs={"literal_binds": True},
+                dialect=mydialect.dialect())
+            )
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -290,7 +289,10 @@ class QueryBuilder(object):
                 as defined as returned by :func:`QueryBuilder._get_ormclass`.
             :returns: A tag, as a string.
             """
-            return ormclasstype.rstrip('.').split('.')[-1] or "node"
+            if isinstance(ormclasstype, list):
+                return '-'.join([t.rstrip('.').split('.')[-1] or "node" for t in ormclasstype])
+            else:
+                return ormclasstype.rstrip('.').split('.')[-1] or "node"
 
         basetag = get_tag_from_type(ormclasstype)
         tags_used = self._tag_to_alias_map.keys()
@@ -309,8 +311,20 @@ class QueryBuilder(object):
         Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
 
-        :param cls: The Aiida-class (or backend-class) defining the appended vertice
-        :param str type: The type of the class, if cls is not given
+        :param cls:
+            The Aiida-class (or backend-class) defining the appended vertice.
+            Also supports a tuple/list of classes. This results in an all instances of
+            this class being accepted in a query. However the classes have to have the same orm-class
+            for the joining to work. I.e. both have to subclasses of Node. Valid is::
+
+                cls=(StructureData, ParameterData)
+
+            This is invalid:
+
+                cls=(Group, Node)
+
+        :param str type:
+            The type of the class, if cls is not given. Also here, a tuple or list is accepted.
         :param bool autotag:
             Whether to find automatically a unique tag. If this is set to True (default False),
 
@@ -369,25 +383,44 @@ class QueryBuilder(object):
         if not (cls or type):
             raise InputValidationError(
                 "\n\n"
-                "You need to specify either a class or a type"
+                "You need to specify at least a class or a type"
                 "\n\n"
             )
 
         # Let's check if it is a valid class or type
         if cls:
-            if not inspect_isclass(cls):
-                raise InputValidationError(
-                    "\n\n"
-                    "{} was passed with kw 'cls', but is not a class"
-                    "\n\n".format(cls)
+            if isinstance(cls, (tuple, list, set)):
+                for c in cls:
+                    if not inspect_isclass(c):
+                        raise InputValidationError(
+                            "\n\n"
+                            "{} was passed with kw 'cls', but is not a class"
+                            "\n\n".format(c)
+                    )
+            else:
+                if not inspect_isclass(cls):
+                    raise InputValidationError(
+                        "\n\n"
+                        "{} was passed with kw 'cls', but is not a class"
+                        "\n\n".format(cls)
                 )
         elif type:
-            if not isinstance(type, basestring):
-                raise InputValidationError(
-                    "\n\n\n"
-                    "{} was passed as type, but is not a string"
-                    "\n\n\n".format(type)
-                )
+            
+            if isinstance(type, (tuple, list, set)):
+                for t in type:
+                    if not isinstance(t, basestring):
+                        raise InputValidationError(
+                            "\n\n\n"
+                            "{} was passed as type, but is not a string"
+                            "\n\n\n".format(t)
+                        )
+            else:
+                if not isinstance(type, basestring):
+                    raise InputValidationError(
+                        "\n\n\n"
+                        "{} was passed as type, but is not a string"
+                        "\n\n\n".format(type)
+                    )
 
         if kwargs.pop('link_tag', None) is not None:
             raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
@@ -458,7 +491,7 @@ class QueryBuilder(object):
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append1, cleaning up"
+                print "DEBUG: Exception caught in append, cleaning up"
                 print "  ", e
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
@@ -474,6 +507,7 @@ class QueryBuilder(object):
             # GROUPS?
             if query_type_string is not None:
                 plugin_type_string = ormclasstype
+                #~ print plugin_type_string
                 self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
@@ -777,14 +811,24 @@ class QueryBuilder(object):
         """
         Add a filter on the type based on the query_type_string
         """
+        def get_type_filter(q,p):
+            if subclassing:
+                return {'like': '{}%'.format(q)}
+            else:
+                return {'==': p}
+
+        
         tag = self._get_tag_from_specification(tagspec)
-
-        if subclassing:
-            node_type_flt = {'like': '{}%'.format(query_type_string)}
+        if isinstance(query_type_string, list):
+            # A list was maybe passed to append, this propagates to a list being passed
+            # as a query type string
+            node_type_filter = {'or':[]}
+            for i, (q, p) in enumerate(zip(query_type_string, plugin_type_string)):
+                node_type_filter['or'].append(get_type_filter(q,p))
         else:
-            node_type_flt = {'==': plugin_type_string}
+            node_type_filter=get_type_filter(query_type_string,  plugin_type_string)
 
-        self.add_filter(tagspec, {'type': node_type_flt})
+        self.add_filter(tagspec, {'type':node_type_filter})
 
     def add_projection(self, tag_spec, projection_spec):
         """

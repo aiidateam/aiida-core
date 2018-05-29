@@ -513,9 +513,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         """
         # Checks whether valid cls and ormclasstype are done before
 
-        # If it is a class:
-        if cls:
-            # Nodes:
+        def get_from_cls(cls):
             if issubclass(cls, self.Node):
                 # If something pass an ormclass node
                 # Users wouldn't do that, by why not...
@@ -560,6 +558,30 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                     "I do not know what to do with {}"
                     "\n\n\n".format(cls)
                 )
+            return ormclasstype, query_type_string, ormclass
+
+        # If it is a class:
+        if cls:
+            # Nodes:
+            if isinstance(cls, (tuple, list, set)):
+                # I have been passed a list of classes (hopefully) instead of a class.
+                # Going through each element of the list/tuple/set:
+                query_type_string = []
+                ormclasstype = []
+                for i, c in enumerate(cls):
+                    ormclassifiers = get_from_cls(c)
+                    if i:
+                        # This is not my first iteration!
+                        # I check consistensy with what was specified before
+                        if ormclassifiers[2] != ormclass:
+                            raise InputValidationError("Non-matching types have been passed as list/tuple/set.")
+                    else:
+                        ormclass = ormclassifiers[2]
+                    query_type_string.append(ormclassifiers[1])
+                    ormclasstype.append(ormclassifiers[0])
+                #~ print query_type_string, ormclasstype
+            else:
+                ormclasstype, query_type_string, ormclass = get_from_cls(cls)
         # If it is not a class
         else:
             if ormclasstype.lower() == 'group':

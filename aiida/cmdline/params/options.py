@@ -159,3 +159,23 @@ SILENT = OverridableOption('-s', '--silent', is_flag=True, default=False,
 
 ARCHIVE_FORMAT = OverridableOption('-F', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
     help='the format of the archive file', default='zip', show_default=True)
+
+
+CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
+    help='A single calculation identified by its ID or UUID')
+
+
+CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
+    help='One or multiple calculations identified by their ID or UUID')
+
+NON_INTERACTIVE = OverridableOption('-n', '--non-interactive', is_flag=True, is_eager=True,
+    help='Noninteractive mode: never prompt the user for input')
+
+PREPEND_TEXT = OverridableOption('--prepend-text', type=str, default='',
+    help='Bash script to be executed before an action')
+
+APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
+    help='Bash script to be executed after an action has completed')
+
+LABEL = OverridableOption('-L', '--label', help='short text to be used as a label')
+DESCRIPTION = OverridableOption('-D', '--description', help='(text) description')

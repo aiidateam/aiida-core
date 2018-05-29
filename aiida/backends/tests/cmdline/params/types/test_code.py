@@ -1,6 +1,6 @@
 #-*- coding: utf8 -*-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import IdentifierParamType, CodeParamType
+from aiida.cmdline.params.types import CodeParamType
 from aiida.orm import Code, Computer
 from aiida.orm.utils.loaders import OrmEntityLoader
 

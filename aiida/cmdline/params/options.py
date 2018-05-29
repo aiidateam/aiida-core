@@ -101,6 +101,14 @@ class MultipleValueOption(click.Option):
         return result
 
 
+CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
+    help='A single calculation identified by its ID or UUID')
+
+
+CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
+    help='One or multiple calculations identified by their ID or UUID')
+
+
 CODE = OverridableOption('-X', '--code', 'code', type=types.CodeParamType(),
     help='A single code identified by its ID, UUID or label')
 
@@ -117,7 +125,15 @@ COMPUTERS = OverridableOption('-Y', '--computers', 'computers', cls=MultipleValu
     help='One or multiple computers identified by their ID, UUID or label')
 
 
-GROUPS = OverridableOption('-G', '--group', 'group', type=types.GroupParamType(),
+DATUM = OverridableOption('-D', '--datum', 'datum', type=types.DataParamType(),
+    help='A single datum identified by its ID, UUID or label')
+
+
+DATA = OverridableOption('-D', '--data', 'data', cls=MultipleValueOption, type=types.DataParamType(),
+    help='One or multiple data identified by their ID, UUID or label')
+
+
+GROUP = OverridableOption('-G', '--group', 'group', type=types.GroupParamType(),
     help='A single group identified by its ID, UUID or name')
 
 
@@ -125,17 +141,9 @@ GROUPS = OverridableOption('-G', '--groups', 'groups', cls=MultipleValueOption, 
     help='One or multiple groups identified by their ID, UUID or name')
 
 
-NODES = OverridableOption('-N', '--node', 'node', type=types.NodeParamType(),
+NODE = OverridableOption('-N', '--node', 'node', type=types.NodeParamType(),
     help='A single node identified by its ID or UUID')
 
 
 NODES = OverridableOption('-N', '--nodes', 'nodes', cls=MultipleValueOption, type=types.NodeParamType(),
     help='One or multiple nodes identified by their ID or UUID')
-
-
-CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
-    help='A single calculation identified by its ID or UUID')
-
-
-CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
-    help='One or multiple calculations identified by their ID or UUID')

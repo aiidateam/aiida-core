@@ -1,8 +1,8 @@
 #-*- coding: utf8 -*-
-from click import BadParameter
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
+from aiida.cmdline.params.types import NodeParamType
 from aiida.orm import Node
+from aiida.orm.utils.loaders import OrmEntityLoader
 
 
 class TestNodeParamType(AiidaTestCase):
@@ -10,12 +10,21 @@ class TestNodeParamType(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         """
-        Create some nodes to test the NodeParamType parameter type for the command line infrastructure
+        Create some code to test the NodeParamType parameter type for the command line infrastructure
+        We create an initial code with a random name and then on purpose create two code with a name
+        that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
+        the rules implemented to solve ambiguities that arise when determing the identifier type
         """
         super(TestNodeParamType, cls).setUpClass()
 
         cls.param = NodeParamType()
         cls.entity_01 = Node().store()
+        cls.entity_02 = Node().store()
+        cls.entity_03 = Node().store()
+
+        cls.entity_01.label = 'data_01'
+        cls.entity_02.label = str(cls.entity_01.pk)
+        cls.entity_03.label = str(cls.entity_01.uuid)
 
     def test_get_by_id(self):
         """
@@ -35,9 +44,38 @@ class TestNodeParamType(AiidaTestCase):
 
     def test_get_by_label(self):
         """
-        Verify that using the LABEL identifier will raise as the Node class does not have a LABEL based identifier
+        Verify that using the LABEL will retrieve the correct entity
         """
-        identifier = '{}'.format('SOMERANDOMLABEL')
+        identifier = '{}'.format(self.entity_01.label)
+        result = self.param.convert(identifier, None, None)
+        self.assertEquals(result.uuid, self.entity_01.uuid)
 
-        with self.assertRaises(BadParameter):
-            result = self.param.convert(identifier, None, None)
+    def test_ambiguous_label_pk(self):
+        """
+        Situation: LABEL of entity_02 is exactly equal to ID of entity_01
+
+        Verify that using an ambiguous identifier gives precedence to the ID interpretation
+        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+        """
+        identifier = '{}'.format(self.entity_02.label)
+        result = self.param.convert(identifier, None, None)
+        self.assertEquals(result.uuid, self.entity_01.uuid)
+
+        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        result = self.param.convert(identifier, None, None)
+        self.assertEquals(result.uuid, self.entity_02.uuid)
+
+    def test_ambiguous_label_uuid(self):
+        """
+        Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
+
+        Verify that using an ambiguous identifier gives precedence to the UUID interpretation
+        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+        """
+        identifier = '{}'.format(self.entity_03.label)
+        result = self.param.convert(identifier, None, None)
+        self.assertEquals(result.uuid, self.entity_01.uuid)
+
+        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        result = self.param.convert(identifier, None, None)
+        self.assertEquals(result.uuid, self.entity_03.uuid)

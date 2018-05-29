@@ -1,6 +1,6 @@
 #-*- coding: utf8 -*-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import IdentifierParamType, GroupParamType
+from aiida.cmdline.params.types import GroupParamType
 from aiida.orm import Group
 from aiida.orm.utils.loaders import OrmEntityLoader
 

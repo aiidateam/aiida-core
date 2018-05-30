@@ -19,6 +19,7 @@ class ConditionalOption(click.Option):
     :param required_fn: callable(ctx) -> True | False, returns True
         if the parameter is required to have a value
     """
+
     def __init__(self, param_decls=None, required_fn=lambda ctx: True, **kwargs):
         self.required_fn = required_fn
         super(ConditionalOption, self).__init__(param_decls=param_decls, **kwargs)

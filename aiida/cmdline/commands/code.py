@@ -1039,6 +1039,31 @@ class Code(VerdiCommandWithSubcommands):
         print "Code '{}' deleted.".format(pk)
 
 
+def is_on_computer(ctx):
+    return bool(ctx.params.get('on_computer'))
+
+
+def is_not_on_computer(ctx):
+    return bool(not is_on_computer(ctx))
+
+
+@code_cmd.command('setup')
+@click.pass_context
+@options.LABEL(prompt='Label', cls=InteractiveOption)
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
+@click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on Computer?', cls=InteractiveOption)
+@options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
+@options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=remote_computer_param_required)
+@click.option('--code-folder', prompt='Folder containing the code', type=click.Path(file_okay=False, exists=True, readable=True), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: folder containing the executable and ' 'all other files necessary for execution of the code'))
+@click.option('--code-rel-path', prompt='Relative path of the executable', type=click.Path(dir_okay=False), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: The relative path of the executable file inside ' 'the folder entered in the previous step or in --code-folder'))
+@options.REMOTE_ABS_PATH(prompt='Remote path', required_fn=lambda c: c.params.get('on_computer'), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+def code_setup(ctx, non_interactive, dry_run, **kwargs):
+    """Add a Code."""
+
+
 @code_cmd.command()
 @click.argument('code_id', metavar='CODE_ID', nargs=1, type=click.STRING)
 @click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')

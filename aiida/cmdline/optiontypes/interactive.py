@@ -83,8 +83,11 @@ class InteractiveOption(ConditionalOption):
 
     def prompt_func(self, ctx):
         """prompt function with args set"""
-        return click.prompt(self._prompt, default=self._get_default(ctx), hide_input=self.hide_input,
-                            confirmation_prompt=self.confirmation_prompt)
+        return click.prompt(
+            self._prompt,
+            default=self._get_default(ctx),
+            hide_input=self.hide_input,
+            confirmation_prompt=self.confirmation_prompt)
 
     def ctrl_help(self):
         """control behaviour when help is requested from the prompt"""
@@ -187,7 +190,6 @@ class InteractiveOption(ConditionalOption):
             # no value was given but a value is required
             # check for BadParameter too, because convert might not check for None specifically
 
-
             # no prompting allowed
             if noninteractive(ctx):
                 # either get a default value and return ...
@@ -211,6 +213,7 @@ def opt_prompter(ctx, cmd, givenkwargs, oldvalues=None):
     if not oldvalues:
         oldvalues = {}
     cmdparams = {i.name: i for i in cmd.params}
+
     def opt_prompt(opt, prompt, default=None):
         """Prompt interactively for the value of option ``opt``"""
         if not givenkwargs[opt]:
@@ -219,4 +222,5 @@ def opt_prompter(ctx, cmd, givenkwargs, oldvalues=None):
             optobj.default = default or oldvalues.get(opt)
             return optobj.prompt_loop(ctx, optobj, givenkwargs[opt])
         return givenkwargs[opt]
+
     return opt_prompt

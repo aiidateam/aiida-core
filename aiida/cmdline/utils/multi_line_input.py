@@ -5,20 +5,22 @@ utilities for getting multi line input from the commandline
 import click
 
 
-def edit_pre_post(pre='', post='', summary={}):
+def edit_pre_post(pre=None, post=None, summary=None):
     """
     use click to call up an editor to write or edit pre / post
     execution scripts for both codes and computers
     """
     from aiida.cmdline.utils.templates import env
     t = env.get_template('prepost.bash.tpl')
+    summary = summary or {}
     summary = {k: v for k, v in summary.iteritems() if v}
-    content = t.render(default_pre=pre, default_post=post, summary=summary)
+    content = t.render(default_pre=pre or '', default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
     if mlinput:
-        from re import findall
-        regex = r'(#==*#\n#=\s*P.*execution script\s*=#\n#==*#\n)([^#]*)'
-        pre, post = [i[1].strip() for i in findall(regex, mlinput)]
+        import re
+        # ~ regex = r'(#==*#\n#=\s*P.*execution script\s*=#\n#==*#\n)([^#]*)'
+        regex = r'^#.*$\n((^[^#\s].*$\n)+)^#.*$'
+        pre, post = [i[0].strip() for i in re.findall(regex, mlinput, re.MULTILINE)]
     else:
         pre, post = ('', '')
     return pre, post

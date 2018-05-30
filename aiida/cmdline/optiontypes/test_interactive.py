@@ -12,19 +12,19 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def simple_command(self, **kwargs):
         """Return a simple command with one InteractiveOption, kwargs get relayed to the option."""
+
         @click.command()
         @click.option('--opt', prompt='Opt', cls=InteractiveOption, **kwargs)
         @click.option('--non-interactive', is_flag=True)
         def cmd(opt, non_interactive):
             """test command for InteractiveOption"""
             click.echo(str(opt))
-        return cmd
 
+        return cmd
 
     def prompt_output(self, cli_input, converted=None):
         """Return expected output of simple_command, given a commandline cli_input string."""
         return "Opt: {}\n{}\n".format(cli_input, converted or cli_input)
-
 
     def test_prompt_str(self):
         """
@@ -38,7 +38,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
 
-
     def test_prompt_empty_input(self):
         """
         scenario: using InteractiveOption with type=str and invoking without options
@@ -51,7 +50,6 @@ class InteractiveOptionTest(unittest.TestCase):
         expected = "Opt: \nOpt: TEST\nTEST\n"
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
-
 
     def test_prompt_help_default(self):
         """
@@ -67,7 +65,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
 
-
     def test_prompt_help_custom(self):
         """
         scenario: using InteractiveOption with type=str and help message
@@ -81,7 +78,6 @@ class InteractiveOptionTest(unittest.TestCase):
         expected = "Opt: ?\n\tPlease enter some text\nOpt: TEST\nTEST\n"
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
-
 
     def test_prompt_simple(self):
         """
@@ -98,11 +94,9 @@ class InteractiveOptionTest(unittest.TestCase):
             self.assertIsNone(result.exception)
             self.assertEqual(result.output, expected)
 
-
     def strip_line(self, text):
         """returns text without the last line"""
         return text.rsplit('\n')[0]
-
 
     def test_prompt_complex(self):
         """
@@ -118,7 +112,6 @@ class InteractiveOptionTest(unittest.TestCase):
             expected_beginning += self.strip_line(self.prompt_output(cli_input))
             self.assertIsNone(result.exception)
             self.assertTrue(result.output.startswith(expected_beginning))
-
 
     def test_default_value_prompt(self):
         """
@@ -140,7 +133,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertEqual(result.output, expected)
         return returns
 
-
     def test_default_value_empty_opt(self):
         """
         scenario: InteractiveOption with default value, invoke with empty option (--opt=)
@@ -152,7 +144,6 @@ class InteractiveOptionTest(unittest.TestCase):
         expected = '\n'
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
-
 
     def test_opt_given_valid(self):
         """
@@ -166,7 +157,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
 
-
     def test_opt_given_invalid(self):
         """
         scenario: InteractiveOption, invoked with a valid value on the cmdline
@@ -177,7 +167,6 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, ['--opt=foo'])
         self.assertIsNotNone(result.exception)
         self.assertIn('Invalid value', result.output)
-
 
     def test_non_interactive(self):
         """
@@ -191,7 +180,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIn('Usage: ', result.output)
         self.assertIn('Missing option', result.output)
 
-
     def test_non_interactive_default(self):
         """
         scenario: InteractiveOption, invoked with only --non-interactive
@@ -203,7 +191,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, 'default\n')
 
-
     def user_callback(self, ctx, param, value):
         if not value:
             return -1
@@ -211,7 +198,6 @@ class InteractiveOptionTest(unittest.TestCase):
             raise click.BadParameter('invalid', param=param)
         else:
             return value
-
 
     def test_after_callback_valid(self):
         """
@@ -224,7 +210,6 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, ['--opt=42'])
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, '42\n')
-
 
     def test_after_callback_invalid(self):
         """
@@ -239,7 +224,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIn('Invalid value', result.output)
         self.assertIn('invalid', result.output)
 
-
     def test_after_callback_wrong_typ(self):
         """
         scenario: InteractiveOption with a user callback
@@ -252,7 +236,6 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNotNone(result.exception)
         self.assertIn('Invalid value', result.output)
         self.assertIn('bla', result.output)
-
 
     def test_after_callback_empty(self):
         """

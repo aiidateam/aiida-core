@@ -17,12 +17,14 @@ class ConditionalOptionTest(unittest.TestCase):
             * an option created from the args and kwargs
             * --opt, ConditionalOption with required_fn from kwargs
         """
+
         @click.command()
         @click.option(pname, **kwargs)
         @click.option('--opt', required_fn=required_fn, cls=ConditionalOption)
         def cmd(on, opt):
             """dummy command for testing"""
             click.echo(opt)
+
         return cmd
 
     def test_switch_off(self):
@@ -72,7 +74,6 @@ class ConditionalOptionTest(unittest.TestCase):
         self.assertIsNotNone(result.exception)
         self.assertIn('Error: Missing option "--opt".', result.output)
 
-
     def setup_multi_non_eager(self):
         """
         scenario a-or-b:
@@ -81,19 +82,17 @@ class ConditionalOptionTest(unittest.TestCase):
             * opt-a required if a_or_b == True
             * opt-b required if a_or_b == False
         """
+
         @click.command()
         @click.option('--a/--b', 'a_or_b')
-        @click.option('--opt-a', required_fn=lambda c: c.params.get('a_or_b'),
-                    cls=ConditionalOption)
-        @click.option('--opt-b', required_fn=lambda c: not c.params.get('a_or_b'),
-                    cls=ConditionalOption)
+        @click.option('--opt-a', required_fn=lambda c: c.params.get('a_or_b'), cls=ConditionalOption)
+        @click.option('--opt-b', required_fn=lambda c: not c.params.get('a_or_b'), cls=ConditionalOption)
         def cmd(a_or_b, opt_a, opt_b):
             """test command for scenario a-or-b"""
             click.echo('{} / {}'.format(opt_a, opt_b))
 
         runner = CliRunner()
         return runner, cmd
-
 
     def test_aa(self):
         """
@@ -110,7 +109,6 @@ class ConditionalOptionTest(unittest.TestCase):
         self.assertIsNone(result_rev.exception)
         self.assertEqual(result_rev.output, 'Bla / None\n')
 
-
     def test_ab(self):
         """
         scenario = a-or-b
@@ -125,7 +123,6 @@ class ConditionalOptionTest(unittest.TestCase):
         result_rev = runner.invoke(cmd, ['--opt-b=Bla', '--a'])
         self.assertIsNotNone(result_rev.exception)
         self.assertIn('Error: Missing option "--opt-a".', result_rev.output)
-
 
     def test_ba(self):
         """

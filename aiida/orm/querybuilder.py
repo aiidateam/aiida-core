@@ -39,6 +39,113 @@ from aiida.backends.utils import _get_column
 from aiida.common.links import LinkType
 
 
+
+def get_querybuilder_classifiers_from_cls(cls, obj):
+    """
+    This utility function return the correct classifiers for the QueryBuilder,
+    given a Class.
+    :param cls: a class or tuple/set/list of classes that are either AiiDA-orm classes or ORM-classes.
+    :param obj: The implementation of the QueryBuilder, with all the attributes correctly set.
+    """
+    if issubclass(cls, obj.Node):
+        # If something pass an ormclass node
+        # Users wouldn't do that, by why not...
+        ormclasstype = obj.AiidaNode._plugin_type_string
+        query_type_string = obj.AiidaNode._query_type_string
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaNode):
+        ormclasstype = cls._plugin_type_string
+        query_type_string = cls._query_type_string
+        ormclass = obj.Node
+    # Groups:
+    elif issubclass(cls, obj.Group):
+        ormclasstype = 'group'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaGroup):
+        ormclasstype = 'group'
+        query_type_string = None
+        ormclass = obj.Group
+    # Computers:
+    elif issubclass(cls, obj.Computer):
+        ormclasstype = 'computer'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaComputer):
+        ormclasstype = 'computer'
+        query_type_string = None
+        ormclass = obj.Computer
+
+    # Users
+    elif issubclass(cls, obj.User):
+        ormclasstype = 'user'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, obj.AiidaUser):
+        ormclasstype = 'user'
+        query_type_string = None
+        ormclass = obj.User
+    else:
+        raise InputValidationError(
+            "\n\n\n"
+            "I do not know what to do with {}"
+            "\n\n\n".format(cls)
+        )
+    return ormclasstype, query_type_string, ormclass
+
+
+def get_querybuilder_classifiers_from_type(ormclasstype, obj):
+    """
+    Same as above get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
+    """
+    from aiida.common.exceptions import (
+        DbContentError, MissingPluginError, InputValidationError)
+
+    if ormclasstype.lower() == 'group':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.Group
+    elif ormclasstype.lower() == 'computer':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.Computer
+    elif ormclasstype.lower() == 'user':
+        ormclasstype = ormclasstype.lower()
+        query_type_string = None
+        ormclass = obj.User
+    else:
+        # At this point, it has to be a node.
+        # The only valid string at this point is a string
+        # that matches exactly the _plugin_type_string
+        # of a node class
+        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
+        ormclass = obj.Node
+        try:
+            plugin_type = get_plugin_type_from_type_string(ormclasstype)
+
+            # I want to check at this point if that is a valid class,
+            # so I use the load_plugin to load the plugin class
+            # and use the classes _plugin_type_string attribute
+            # In the future, assuming the user knows what he or she is doing
+            # we could remove that check
+            PluginClass = load_plugin(plugin_type)
+        except (DbContentError, MissingPluginError) as e:
+            raise InputValidationError(
+                "\nYou provide a vertice of the path with\n"
+                "type={}\n"
+                "But that string is not a valid type string\n"
+                "Exception raise during check\n"
+                "{}".format(ormclasstype, e)
+            )
+
+        ormclasstype = PluginClass._plugin_type_string
+        query_type_string = PluginClass._query_type_string
+    return ormclasstype, query_type_string, ormclass
+
+
+
+
+
 class QueryBuilder(object):
     """
     The class to query the AiiDA database. 
@@ -245,10 +352,9 @@ class QueryBuilder(object):
 
         que = self.get_query()
         return str(que.statement.compile(
-            compile_kwargs={"literal_binds": True},
-            dialect=mydialect.dialect()
-        )
-        )
+                compile_kwargs={"literal_binds": True},
+                dialect=mydialect.dialect())
+            )
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -256,7 +362,38 @@ class QueryBuilder(object):
         ormclass back. Just relaying to the implementation, details for this function
         in the interface.
         """
-        return self._impl.get_ormclass(cls, ormclasstype)
+        # If it is a class:
+        if cls is not None:
+            func = get_querybuilder_classifiers_from_cls
+            classifier = cls
+        elif ormclasstype is not None:
+            func = get_querybuilder_classifiers_from_type
+            classifier = ormclasstype
+        else:
+            raise RuntimeError("Neither cls nor ormclasstype specified")
+
+
+        if isinstance(classifier, (tuple, list, set)):
+            # I have been passed a list of classes (hopefully) instead of a class.
+            # Going through each element of the list/tuple/set:
+            query_type_string = []
+            ormclasstype = []
+            for i, c in enumerate(classifier):
+                ormclassifiers = func(c, self._impl)
+                if i:
+                    # This is not my first iteration!
+                    # I check consistensy with what was specified before
+                    if ormclassifiers[2] != ormclass:
+                        raise InputValidationError("Non-matching types have been passed as list/tuple/set.")
+                else:
+                    ormclass = ormclassifiers[2]
+                query_type_string.append(ormclassifiers[1])
+                ormclasstype.append(ormclassifiers[0])
+        else:
+            ormclasstype, query_type_string, ormclass = func(classifier, self._impl)
+
+
+        return ormclass, ormclasstype, query_type_string
 
     def _get_unique_tag(self, ormclasstype):
         """
@@ -290,7 +427,10 @@ class QueryBuilder(object):
                 as defined as returned by :func:`QueryBuilder._get_ormclass`.
             :returns: A tag, as a string.
             """
-            return ormclasstype.rstrip('.').split('.')[-1] or "node"
+            if isinstance(ormclasstype, list):
+                return '-'.join([t.rstrip('.').split('.')[-1] or "node" for t in ormclasstype])
+            else:
+                return ormclasstype.rstrip('.').split('.')[-1] or "node"
 
         basetag = get_tag_from_type(ormclasstype)
         tags_used = self._tag_to_alias_map.keys()
@@ -309,8 +449,20 @@ class QueryBuilder(object):
         Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
 
-        :param cls: The Aiida-class (or backend-class) defining the appended vertice
-        :param str type: The type of the class, if cls is not given
+        :param cls:
+            The Aiida-class (or backend-class) defining the appended vertice.
+            Also supports a tuple/list of classes. This results in an all instances of
+            this class being accepted in a query. However the classes have to have the same orm-class
+            for the joining to work. I.e. both have to subclasses of Node. Valid is::
+
+                cls=(StructureData, ParameterData)
+
+            This is invalid:
+
+                cls=(Group, Node)
+
+        :param str type:
+            The type of the class, if cls is not given. Also here, a tuple or list is accepted.
         :param bool autotag:
             Whether to find automatically a unique tag. If this is set to True (default False),
 
@@ -369,25 +521,44 @@ class QueryBuilder(object):
         if not (cls or type):
             raise InputValidationError(
                 "\n\n"
-                "You need to specify either a class or a type"
+                "You need to specify at least a class or a type"
                 "\n\n"
             )
 
         # Let's check if it is a valid class or type
         if cls:
-            if not inspect_isclass(cls):
-                raise InputValidationError(
-                    "\n\n"
-                    "{} was passed with kw 'cls', but is not a class"
-                    "\n\n".format(cls)
+            if isinstance(cls, (tuple, list, set)):
+                for c in cls:
+                    if not inspect_isclass(c):
+                        raise InputValidationError(
+                            "\n\n"
+                            "{} was passed with kw 'cls', but is not a class"
+                            "\n\n".format(c)
+                    )
+            else:
+                if not inspect_isclass(cls):
+                    raise InputValidationError(
+                        "\n\n"
+                        "{} was passed with kw 'cls', but is not a class"
+                        "\n\n".format(cls)
                 )
         elif type:
-            if not isinstance(type, basestring):
-                raise InputValidationError(
-                    "\n\n\n"
-                    "{} was passed as type, but is not a string"
-                    "\n\n\n".format(type)
-                )
+            
+            if isinstance(type, (tuple, list, set)):
+                for t in type:
+                    if not isinstance(t, basestring):
+                        raise InputValidationError(
+                            "\n\n\n"
+                            "{} was passed as type, but is not a string"
+                            "\n\n\n".format(t)
+                        )
+            else:
+                if not isinstance(type, basestring):
+                    raise InputValidationError(
+                        "\n\n\n"
+                        "{} was passed as type, but is not a string"
+                        "\n\n\n".format(type)
+                    )
 
         if kwargs.pop('link_tag', None) is not None:
             raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
@@ -458,7 +629,7 @@ class QueryBuilder(object):
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append1, cleaning up"
+                print "DEBUG: Exception caught in append, cleaning up"
                 print "  ", e
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
@@ -474,6 +645,7 @@ class QueryBuilder(object):
             # GROUPS?
             if query_type_string is not None:
                 plugin_type_string = ormclasstype
+                #~ print plugin_type_string
                 self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
@@ -777,14 +949,24 @@ class QueryBuilder(object):
         """
         Add a filter on the type based on the query_type_string
         """
+        def get_type_filter(q,p):
+            if subclassing:
+                return {'like': '{}%'.format(q)}
+            else:
+                return {'==': p}
+
+        
         tag = self._get_tag_from_specification(tagspec)
-
-        if subclassing:
-            node_type_flt = {'like': '{}%'.format(query_type_string)}
+        if isinstance(query_type_string, list):
+            # A list was maybe passed to append, this propagates to a list being passed
+            # as a query type string
+            node_type_filter = {'or':[]}
+            for i, (q, p) in enumerate(zip(query_type_string, plugin_type_string)):
+                node_type_filter['or'].append(get_type_filter(q,p))
         else:
-            node_type_flt = {'==': plugin_type_string}
+            node_type_filter=get_type_filter(query_type_string,  plugin_type_string)
 
-        self.add_filter(tagspec, {'type': node_type_flt})
+        self.add_filter(tagspec, {'type':node_type_filter})
 
     def add_projection(self, tag_spec, projection_spec):
         """

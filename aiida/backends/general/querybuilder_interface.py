@@ -143,9 +143,6 @@ class QueryBuilderInterface():
         """
         pass
 
-    @abstractmethod
-    def get_ormclass(self,  cls, ormclasstype):
-        pass
 
 
     @abstractmethod

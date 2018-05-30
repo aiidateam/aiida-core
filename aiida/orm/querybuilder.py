@@ -641,15 +641,18 @@ class QueryBuilder(object):
         try:
             self._filters[tag] = {}
             # I have to add a filter on column type.
-            # This so far only is necessary for AiidaNodes
-            # GROUPS?
-            if query_type_string is not None:
+            # This so far only is necessary for AiidaNodes not for groups.
+            # Now here there is the issue that for everything else,
+            # the query_type_string is either None (e.g. if Group was passed)
+            # or a list of None (if (Group, ) was passed.
+            # Here we have to only call the function _add_type_filter essentially if it makes sense to
+            # For now that is only nodes, and it is hardcoded. In the future (e.g. we subclass group)
+            # this has to be added
+            if ormclass == self._impl.Node:
                 plugin_type_string = ormclasstype
-                #~ print plugin_type_string
                 self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
-
             # if the user specified a filter, add it:
             if filters is not None:
                 self.add_filter(tag, filters)

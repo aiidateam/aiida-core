@@ -88,7 +88,7 @@ class OrmEntityLoader(object):
         :returns: the query builder instance
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='entity', project=['*'])
+        qb.append(cls=classes, tag='entity', project=['*'])
         qb.add_filter('entity', {'id': identifier})
 
         return qb
@@ -111,7 +111,7 @@ class OrmEntityLoader(object):
                     uuid = '{}-{}'.format(uuid[:dash_pos], uuid[dash_pos:])
 
         qb = QueryBuilder()
-        qb.append(classes[0], tag='entity', project=['*'])
+        qb.append(cls=classes, tag='entity', project=['*'])
         qb.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
 
         return qb
@@ -293,7 +293,7 @@ class CalculationEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+        qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
 
         return qb
 
@@ -332,7 +332,7 @@ class CodeEntityLoader(OrmEntityLoader):
             raise ValueError('the identifier needs to be a string')
 
         qb = QueryBuilder()
-        qb.append(classes[0], tag='code', project=['*'], filters={'label': {'==': label}})
+        qb.append(cls=classes, tag='code', project=['*'], filters={'label': {'==': label}})
 
         if machinename:
             qb.append(Computer, filters={'name': {'==': machinename}}, computer_of='code')
@@ -367,7 +367,7 @@ class ComputerEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='computer', project=['*'], filters={'name': {'==': identifier}})
+        qb.append(cls=classes, tag='computer', project=['*'], filters={'name': {'==': identifier}})
 
         return qb
 
@@ -399,7 +399,7 @@ class DataEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+        qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
 
         return qb
 
@@ -431,7 +431,7 @@ class GroupEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='group', project=['*'], filters={'name': {'==': identifier}})
+        qb.append(cls=classes, tag='group', project=['*'], filters={'name': {'==': identifier}})
 
         return qb
 
@@ -463,6 +463,6 @@ class NodeEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(classes[0], tag='node', project=['*'], filters={'label': {'==': identifier}})
+        qb.append(cls=classes, tag='node', project=['*'], filters={'label': {'==': identifier}})
 
         return qb

@@ -1,21 +1,25 @@
 #-*- coding: utf8 -*-
-"""
-click parameter type for Plugins
-"""
+"""Click parameter type for AiiDA Plugins."""
 import click
 from click_completion import startswith
-
-from aiida.cmdline.utils.decorators import with_dbenv
 
 
 class PluginParamType(click.ParamType):
     """
-    handle verification, completion for plugin arguments
+    AiiDA Plugin name parameter type.
+
+    :param category: Str, entry point group without leading "aiida.".
+    :param available: [True] bool, If true, the plugin name has to be discoverable by the plugin loader.
+
+    Usage::
+
+        click.option(... type=PluginParamType(category='calculations')
+
     """
     name = 'aiida plugin'
 
     def __init__(self, category=None, available=True, *args, **kwargs):
-        self.category = category
+        self.category = 'aiida.{}'.format(category)
         self.must_available = available
         super(PluginParamType, self).__init__(*args, **kwargs)
 
@@ -23,11 +27,10 @@ class PluginParamType(click.ParamType):
         """return a list of plugins starting with incomplete"""
         return [p for p in self.get_all_plugins() if startswith(p, incomplete)]
 
-    @with_dbenv
     def get_all_plugins(self):
         """use entry points"""
-        from aiida.common.pluginloader import all_plugins
-        return all_plugins(self.category)
+        from aiida.plugins.entry_point import get_entry_point_names
+        return get_entry_point_names(self.category)
 
     def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
         """return possible completions"""

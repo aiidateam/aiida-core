@@ -90,7 +90,8 @@ class Devel(VerdiCommandWithSubcommands):
         'aiida.control',
         'aiida.cmdline.tests',
         'aiida.cmdline.optiontypes',
-        'aiida.cmdline.utils'
+        'aiida.cmdline.utils',
+        'aiida.cmdline.params.types'
     ]
 
     _dbrawprefix = "db"

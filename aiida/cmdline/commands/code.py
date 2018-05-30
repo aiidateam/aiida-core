@@ -19,9 +19,11 @@ import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, code_cmd
-from aiida.cmdline.utils import decorators
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.multi_line_input import edit_pre_post
 from aiida.cmdline.params import options
 from aiida.cmdline.optiontypes.interactive import InteractiveOption
+from aiida.control.code import CodeBuilder
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -584,7 +586,7 @@ class Code(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'list': (self.code_list, self.complete_none),
             'show': (self.cli, self.complete_code_names_and_pks),
-            'setup': (self.code_setup, self.complete_code_pks),
+            'setup': (self.cli, self.complete_none),
             'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
             'delete': (self.code_delete, self.complete_code_pks),
@@ -847,34 +849,6 @@ class Code(VerdiCommandWithSubcommands):
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
-    def code_setup(self, *args):
-        from aiida.common.exceptions import ValidationError
-
-        if len(args) != 0:
-            print >> sys.stderr, ("after 'code setup' there cannot be any "
-                                  "argument")
-            sys.exit(1)
-
-        set_params = CodeInputValidationClass()
-
-        set_params.ask()
-
-        code = set_params.create_code()
-
-        try:
-            code.store()
-        except ValidationError as e:
-            print "Unable to store the computer: {}. Exiting...".format(e.message)
-            sys.exit(1)
-
-        # Enforcing the code to be not hidden.
-        code._reveal()
-
-        print "Code '{}' successfully stored in DB.".format(code.label)
-        print "pk: {}, uuid: {}".format(code.pk, code.uuid)
-
-        return code
-
     def code_rename(self, *args):
         import argparse
         from aiida.common.exceptions import NotExistent
@@ -1049,6 +1023,12 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
+def ensure_scripts(pre, post, summary):
+    if (not pre) or (not post):
+        return edit_pre_post(pre, post, summary)
+    return pre, post
+
+
 REMOTE_ABS_PATH = click.option(
     '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
 
@@ -1057,23 +1037,48 @@ REMOTE_ABS_PATH = click.option(
 @click.pass_context
 @options.LABEL(prompt='Label', cls=InteractiveOption)
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
-@click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on Computer?', cls=InteractiveOption)
+@click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on remote Computer?', cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
 @options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=is_on_computer)
+@REMOTE_ABS_PATH
 @click.option('--code-folder', prompt='Folder containing the code', type=click.Path(file_okay=False, exists=True, readable=True), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: folder containing the executable and ' 'all other files necessary for execution of the code'))
 @click.option('--code-rel-path', prompt='Relative path of the executable', type=click.Path(dir_okay=False), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: The relative path of the executable file inside ' 'the folder entered in the previous step or in --code-folder'))
-@REMOTE_ABS_PATH
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
-def setup_code(ctx, non_interactive, dry_run, **kwargs):
+@with_dbenv()
+def setup_code(ctx, non_interactive, **kwargs):
     """Add a Code."""
+    from aiida.common.exceptions import ValidationError
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    if kwargs.pop('on_computer'):
+        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+    else:
+        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+    code_builder = CodeBuilder(**kwargs)
+    code = code_builder.new()
+
+    try:
+        code.store()
+        code._reveal()  # newly setup code shall not be hidden
+    except ValidationError as err:
+        click.secho('Unable to store the code: {}. Exiting...'.format(err), fg='red', err=True)
+        raise click.Abort()
+
+    click.secho('Code "{}" successfully stored in DB.'.format(code.label), fg='green')
+    click.echo('pk: {}, uuid: {}'.format(code.pk, code.uuid))
+
 
 
 @code_cmd.command()
-@click.argument('code_id', metavar='CODE_ID', nargs=1, type=click.STRING)
+@options.CODE()
 @click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
-@decorators.with_dbenv()
+@with_dbenv()
 def show(code_id, verbose):
     """
     Display information about a Code object identified by CODE_ID which can be the pk or label

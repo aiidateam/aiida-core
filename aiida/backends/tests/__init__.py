@@ -58,7 +58,7 @@ db_test_list = {
         'cmdline.params.types.group': ['aiida.backends.tests.cmdline.params.types.test_group'],
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
-        'cmdline.commands.code': ['aiida.backends.tests.cmdline.params.types.test_node'],
+        'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.log': ['aiida.backends.tests.orm.log'],

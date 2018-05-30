@@ -18,9 +18,8 @@ def edit_pre_post(pre=None, post=None, summary=None):
     mlinput = click.edit(content, extension='.bash')
     if mlinput:
         import re
-        # ~ regex = r'(#==*#\n#=\s*P.*execution script\s*=#\n#==*#\n)([^#]*)'
-        regex = r'^#.*$\n((^[^#\s].*$\n)+)^#.*$'
-        pre, post = [i[0].strip() for i in re.findall(regex, mlinput, re.MULTILINE)]
+        stripped_input = re.sub(r'(^#.*$\n)+', '#', mlinput, flags=re.M).strip('#')
+        pre, post = [text.strip() for text in stripped_input.split('#')]
     else:
         pre, post = ('', '')
     return pre, post

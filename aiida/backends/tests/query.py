@@ -431,6 +431,46 @@ class TestQueryBuilder(AiidaTestCase):
         ])
 
 
+class TestQueryHelp(AiidaTestCase):
+    def test_queryhelp(self):   
+        """
+        Here I test the queryhelp by seeing whether results are the same as using the append method.
+        I also check passing of tuples.
+        """
+        
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data import Data
+        from aiida.orm.querybuilder import QueryBuilder
+        for cls in (StructureData, ParameterData, Data):
+            obj = cls()
+            obj._set_attr('foo-qh2', 'bar')
+            obj.store()
+
+        for cls, expected_count, subclassing in (
+                (StructureData, 1, True),
+                (ParameterData, 1, True),
+                (Data, 3, True),
+                (Data, 1, False),
+                ((ParameterData, StructureData), 2, True),
+                ((ParameterData, StructureData), 2, False),
+                ((ParameterData, Data), 2, False),
+                ((ParameterData, Data), 3, True),
+                ((ParameterData, Data, StructureData), 3, False),
+            ):
+            qb = QueryBuilder()
+            qb.append(cls, filters={'attributes.foo-qh2':'bar'}, subclassing=subclassing, project='uuid')
+            self.assertEqual(qb.count(), expected_count)
+
+            qh = qb.get_json_compatible_queryhelp()
+            qb_new = QueryBuilder(**qh)
+            self.assertEqual(qb_new.count(), expected_count)
+            self.assertEqual(
+                sorted([uuid for uuid, in qb.all()]),
+                sorted([uuid for uuid, in qb_new.all()]))
+
+
+            
 class TestQueryBuilderCornerCases(AiidaTestCase):
     """
     In this class corner cases of QueryBuilder are added.

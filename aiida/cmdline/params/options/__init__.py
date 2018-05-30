@@ -9,6 +9,14 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
+def valid_process_states():
+    """
+    Return a list of valid values for the ProcessState enum.
+    """
+    from plumpy import ProcessState
+    return ([state.value for state in ProcessState])
+
+
 CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
     help='a single calculation identified by its ID or UUID')
 
@@ -62,7 +70,7 @@ FORCE = OverridableOption('-f', '--force', is_flag=True, default=False,
 
 
 SILENT = OverridableOption('-s', '--silent', is_flag=True, default=False,
-    help='suppres any output printed to stdout')
+    help='suppress any output printed to stdout')
 
 
 ARCHIVE_FORMAT = OverridableOption('-F', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
@@ -88,3 +96,35 @@ DESCRIPTION = OverridableOption('-D', '--description', help='a detailed descript
 
 
 INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(group='calculations'))
+
+
+PROCESS_STATE = OverridableOption('-S', '--process-state', 'process_state', type=types.LazyChoice(valid_process_states),
+    help='only include entries with this process state')
+
+
+FINISH_STATUS = OverridableOption('-F', '--finish-status', 'finish_status', type=click.INT,
+    help='only include entries with this finish status')
+
+
+FAILED = OverridableOption('-x', '--failed', 'failed', is_flag=True, default=False,
+    help='only include entries that have failed')
+
+
+LIMIT = OverridableOption('-l', '--limit', 'limit', type=click.INT, default=None,
+    help='limit the number of entries to display')
+
+
+PROJECT = OverridableOption('-P', '--project', 'project', cls=MultipleValueOption,
+    help='select the list of entity attributes to project')
+
+
+PAST_DAYS = OverridableOption('-p', '--past-days', 'past_days', type=click.INT, default=1, metavar='PAST_DAYS',
+    help='only include entries created in the last PAST_DAYS number of days')
+
+
+ALL = OverridableOption('-a', '--all', 'all', is_flag=True, default=False,
+    help='include all entries, disregarding all other filter options and flags')
+
+
+RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
+    help='display only raw query results, without any headers or footers')

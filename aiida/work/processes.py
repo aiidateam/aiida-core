@@ -259,6 +259,22 @@ class Process(plumpy.Process):
         self.calc._set_finish_status(result)
 
     @override
+    def on_paused(self):
+        """
+        The Process was paused so set the paused attribute on the Calculation node
+        """
+        super(Process, self).on_paused()
+        self.calc.pause()
+
+    @override
+    def on_playing(self):
+        """
+        The Process was unpaused so remove the paused attribute on the Calculation node
+        """
+        super(Process, self).on_playing()
+        self.calc.unpause()
+
+    @override
     def on_output_emitting(self, output_port, value):
         """
         The process has emitted a value on the given output port.

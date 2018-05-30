@@ -272,8 +272,7 @@ class Runner(object):
 
         :return: A future representing the completion of the calculation node
         """
-        return futures.CalculationFuture(
-            pk, self._loop, self._poll_interval, self._communicator)
+        return futures.CalculationFuture(pk, self._loop, self._poll_interval, self._communicator)
 
     @contextmanager
     def child_runner(self):

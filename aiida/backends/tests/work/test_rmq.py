@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import uuid
 
 import plumpy
-import uuid
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int

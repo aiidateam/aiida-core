@@ -180,3 +180,5 @@ APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
 
 LABEL = OverridableOption('-L', '--label', help='short text to be used as a label')
 DESCRIPTION = OverridableOption('-D', '--description', help='(text) description')
+
+INPUT_PLUGIN = OverridableOption('--input-plugin', help='input plugin string', type=types.PluginParamType(category='calculations'))

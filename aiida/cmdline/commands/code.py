@@ -20,6 +20,8 @@ import tabulate
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, code_cmd
 from aiida.cmdline.utils import decorators
+from aiida.cmdline.params import options
+from aiida.cmdline.optiontypes.interactive import InteractiveOption
 
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -1047,20 +1049,24 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
+REMOTE_ABS_PATH = click.option(
+    '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
+
+
 @code_cmd.command('setup')
 @click.pass_context
 @options.LABEL(prompt='Label', cls=InteractiveOption)
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
 @click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on Computer?', cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
-@options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=remote_computer_param_required)
+@options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=is_on_computer)
 @click.option('--code-folder', prompt='Folder containing the code', type=click.Path(file_okay=False, exists=True, readable=True), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: folder containing the executable and ' 'all other files necessary for execution of the code'))
 @click.option('--code-rel-path', prompt='Relative path of the executable', type=click.Path(dir_okay=False), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: The relative path of the executable file inside ' 'the folder entered in the previous step or in --code-folder'))
-@options.REMOTE_ABS_PATH(prompt='Remote path', required_fn=lambda c: c.params.get('on_computer'), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
+@REMOTE_ABS_PATH
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
-def code_setup(ctx, non_interactive, dry_run, **kwargs):
+def setup_code(ctx, non_interactive, dry_run, **kwargs):
     """Add a Code."""
 
 

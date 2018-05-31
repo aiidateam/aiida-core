@@ -26,7 +26,7 @@ install_requires = [
     'meld3==1.0.2',
     'mock==2.0.0',
     'numpy==1.14.3',
-    'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
+    'SQLAlchemy==1.2.12',
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.9',
     'ujson==1.35',

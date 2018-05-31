@@ -1,7 +1,6 @@
 #-*- coding: utf8 -*-
 """Click parameter type for AiiDA Plugins."""
 import click
-from click_completion import startswith
 
 
 class PluginParamType(click.ParamType):
@@ -25,7 +24,7 @@ class PluginParamType(click.ParamType):
 
     def get_possibilities(self, incomplete=''):
         """return a list of plugins starting with incomplete"""
-        return [p for p in self.get_all_plugins() if startswith(p, incomplete)]
+        return [p for p in self.get_all_plugins() if p.startswith(incomplete)]
 
     def get_all_plugins(self):
         """use entry points"""

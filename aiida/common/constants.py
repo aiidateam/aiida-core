@@ -26,6 +26,7 @@ invcm_to_THz = 0.0299792458
 # Retrieved in October 2014 for atomic numbers 1-103, and in May 2016
 # for atomic numbers 104-112, 114 and 116.
 elements = {
+    0: {'mass': 1.00000, 'name': 'Unknown', 'symbol': 'X'},
     1: {'mass': 1.00794, 'name': 'Hydrogen', 'symbol': 'H'},
     2: {'mass': 4.002602, 'name': 'Helium', 'symbol': 'He'},
     3: {'mass': 6.941, 'name': 'Lithium', 'symbol': 'Li'},

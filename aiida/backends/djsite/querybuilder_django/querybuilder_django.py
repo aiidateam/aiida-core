@@ -25,7 +25,7 @@ from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotE
 from sqlalchemy import and_, or_, not_, exists, select, exists, case
 from sqlalchemy.types import Float, String
 from sqlalchemy.orm import aliased
-from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 
 from sqlalchemy.sql.expression import cast, ColumnClause
 from sqlalchemy.sql.elements import Cast, Label
@@ -41,22 +41,6 @@ from aiida.common.exceptions import (
 class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def __init__(self, *args, **kwargs):
-        # ~ from aiida.orm.implementation.django.node import Node as AiidaNode
-        # ~ from aiida.orm.implementation.django.group import Group as AiidaGroup
-        # ~ from aiida.orm.implementation.django.computer import Computer as AiidaComputer
-        # ~ from aiida.orm.implementation.django.user import User as AiidaUser
-
-        # ~ self.Link               = dummy_model.DbLink
-        # ~ self.Node               = dummy_model.DbNode
-        # ~ self.Computer           = dummy_model.DbComputer
-        # ~ self.User               = dummy_model.DbUser
-        # ~ self.Group              = dummy_model.DbGroup
-        # ~ self.table_groups_nodes = dummy_model.table_groups_nodes
-        # ~ self.AiidaNode          = AiidaNode
-        # ~ self.AiidaGroup         = AiidaGroup
-        # ~ self.AiidaComputer      = AiidaComputer
-        # ~ self.AiidaUser          = AiidaUser
-
         super(QueryBuilderImplDjango, self).__init__(*args, **kwargs)
 
     @property
@@ -107,7 +91,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label, ColumnClause)):
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column
@@ -136,10 +120,8 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             )
         return expr
 
-    def get_filter_expr(
-            self, operator, value, attr_key, is_attribute,
-            alias=None, column=None, column_name=None
-    ):
+    def get_filter_expr(self, operator, value, attr_key, is_attribute,
+            alias=None, column=None, column_name=None):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -272,10 +254,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise Exception(
+                        raise RuntimeError(
                             "I need to get the column but do not know \n"
-                            "the alias and the column name"
-                        )
+                            "the alias and the column name")
                     column = _get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
@@ -312,17 +293,22 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         def get_attribute_db_column(mapped_class, dtype, castas=None):
             if dtype == 't':
                 mapped_entity = mapped_class.tval
+                additional_type_constraint = None
             elif dtype == 'b':
                 mapped_entity = mapped_class.bval
-                # ~ mapped_entity = cast(mapped_class.value_str, Boolean)
+                additional_type_constraint = None
             elif dtype == 'f':
                 mapped_entity = mapped_class.fval
-                # ~ mapped_entity = cast(mapped_class.value_str, Float)
+                additional_type_constraint = None
             elif dtype == 'i':
                 mapped_entity = mapped_class.ival
-                # ~ mapped_entity = cast(mapped_class.value_str, Integer)
+                # IN the schema, we also have dicts and lists storing something in the
+                # ival column, namely the length. I need to check explicitly whether
+                # this is meant to be an integer!
+                additional_type_constraint = mapped_class.datatype == 'int'
             elif dtype == 'd':
                 mapped_entity = mapped_class.dval
+                additional_type_constraint = None
             else:
                 raise InputValidationError(
                     "I don't know what to do with dtype {}".format(dtype)
@@ -332,7 +318,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             elif castas == 'f':
                 mapped_entity = cast(mapped_entity, Float)
 
-            return mapped_entity
+            return mapped_entity, additional_type_constraint
 
         if column:
             mapped_class = column.prop.mapper.class_
@@ -387,7 +373,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             elif issubclass(mapped_class, dummy_model.DbExtra):
                 expr = alias.extras.any(mapped_class.key == '.'.join(attr_key + [value]))
             else:
-                raise Exception("I was given {} as an attribute base class".format(mapped_class))
+                raise TypeError("I was given {} as an attribute base class".format(mapped_class))
 
         else:
             types_n_casts = []
@@ -403,16 +389,17 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
             expressions = []
             for dtype, castas in types_n_casts:
-                try:
-                    expressions.append(
-                        self.get_filter_expr(
+                attr_column, additional_type_constraint = get_attribute_db_column(
+                                mapped_class, dtype, castas=castas)
+                expression_this_typ_cas = self.get_filter_expr(
                             operator, value, attr_key=[],
-                            column=get_attribute_db_column(mapped_class, dtype, castas=castas),
+                            column=attr_column,
                             is_attribute=False
                         )
-                    )
-                except InputValidationError as e:
-                    raise e
+                if additional_type_constraint is not None:
+                    expression_this_typ_cas = and_(
+                        expression_this_typ_cas, additional_type_constraint)
+                expressions.append(expression_this_typ_cas)
 
             actual_attr_key = '.'.join(attr_key)
             expr = column.any(and_(
@@ -543,9 +530,8 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     def iterall(self, query, batch_size, tag_to_index_dict):
         from django.db import transaction
-
         if not tag_to_index_dict:
-            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+            raise ValueError("Got an empty dictionary: {}".format(tag_to_index_dict))
 
         with transaction.atomic():
             results = query.yield_per(batch_size)
@@ -574,7 +560,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
 
         if not nr_items:
-            raise Exception("Got an empty dictionary")
+            raise ValueError("Got an empty dictionary")
 
         # Wrapping everything in an atomic transaction:
         with transaction.atomic():

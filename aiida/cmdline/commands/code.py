@@ -21,6 +21,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, code_cmd
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import edit_pre_post
+from aiida.cmdline.utils import echo
 from aiida.cmdline.params import options
 from aiida.cmdline.optiontypes.interactive import InteractiveOption
 from aiida.control.code import CodeBuilder
@@ -1067,11 +1068,10 @@ def setup_code(ctx, non_interactive, **kwargs):
         code.store()
         code._reveal()  # newly setup code shall not be hidden
     except ValidationError as err:
-        click.secho('Unable to store the code: {}. Exiting...'.format(err), fg='red', err=True)
-        raise click.Abort()
+        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
 
-    click.secho('Code "{}" successfully stored in DB.'.format(code.label), fg='green')
-    click.echo('pk: {}, uuid: {}'.format(code.pk, code.uuid))
+    echo.echo_success('Code "{}" stored in DB.'.format(code.label))
+    echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
 
 
 
@@ -1079,9 +1079,8 @@ def setup_code(ctx, non_interactive, **kwargs):
 @options.CODE()
 @click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
 @with_dbenv()
-def show(code_id, verbose):
+def show(code, verbose):
     """
     Display information about a Code object identified by CODE_ID which can be the pk or label
     """
-    code = Code.get_code(code_id)
     click.echo(tabulate.tabulate(code.full_text_info(verbose)))

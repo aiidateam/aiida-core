@@ -8,22 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from aiida.cmdline.commands import verdi, export
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.params.options import MultipleValueOption
-
+from aiida.cmdline.commands import verdi, export
+from aiida.cmdline.params import arguments
+from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
+from aiida.common.exceptions import DanglingLinkError
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-
-class DanglingLinkError(Exception):
-    pass
 
 
 class Export(VerdiCommandWithSubcommands):
     """
     Create and manage AiiDA export archives
     """
+
     def __init__(self):
         self.valid_subcommands = {
             'create': (self.cli, self.complete_none),
@@ -34,150 +33,91 @@ class Export(VerdiCommandWithSubcommands):
     def cli(self, *args):
         verdi()
 
-from aiida.cmdline.params import options
-from aiida.cmdline.params import types
-
-@export.command('new', context_settings=CONTEXT_SETTINGS)
-@options.CALCULATIONS(type=types.CalculationParamType(('aiida.calculations:work', 'aiida.calculations:function')))
-def new(calculations):
-    click.echo(calculations)
-
 
 @export.command('create', context_settings=CONTEXT_SETTINGS)
-@click.argument('outfile', type=click.Path())
-@click.option('-n', '--nodes', cls=MultipleValueOption, type=int,
-    help='Export the given nodes by pk')
-@click.option('-c', '--computers', cls=MultipleValueOption, type=int,
-    help='Export the given computers by pk')
-@click.option('-G', '--groups', cls=MultipleValueOption, type=int,
-    help='Export the given groups by pk')
-@click.option('-g', '--group_names', cls=MultipleValueOption, type=str,
-    help='Export the given groups by group name')
+@arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@options.CODES()
+@options.COMPUTERS()
+@options.GROUPS()
+@options.NODES()
+@options.ARCHIVE_FORMAT()
+@options.FORCE(help='overwrite output file if it already exists')
 @click.option('-P', '--no-parents', is_flag=True, default=False,
-    help='Store only the nodes that are explicitly given, without exporting the parents')
+    help='store only the nodes that are explicitly given, without exporting the parents'
+)
 @click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
-    help='If a calculation is included in the list of nodes to export, do not export its outputs')
-@click.option('-f', '--overwrite', is_flag=True, default=False,
-    help='Overwrite the output file, if it exists')
-@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
-def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_outputs, overwrite, archive_format):
+    help='if a calculation is included in the list of nodes to export, do not export its outputs'
+)
+def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_outputs, force, archive_format):
     """
-    Export nodes and groups of nodes to an archive file for backup or sharing purposes
+    Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
+    sharing purposes.
     """
-    import sys
-    from aiida.backends.utils import load_dbenv
-    load_dbenv()
-    from aiida.orm import Group, Node, Computer
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.importexport import export, export_zip
 
-    node_id_set = set(nodes or [])
-    group_dict = dict()
+    entities = []
 
-    if group_names:
-        qb = QueryBuilder()
-        qb.append(Group, tag='group', project=['*'], filters={'name': {'in': group_names}})
-        qb.append(Node, tag='node', member_of='group', project=['id'])
-        res = qb.dict()
-
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
-        node_id_set.update([node['node']['id'] for node in res])
-
-    if groups:
-        qb = QueryBuilder()
-        qb.append(Group, tag='group', project=['*'], filters={'id': {'in': groups}})
-        qb.append(Node, tag='node', member_of='group', project=['id'])
-        res = qb.dict()
-
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
-        node_id_set.update([node['node']['id'] for node in res])
-
-    # The db_groups that correspond to what was searched above
-    dbgroups_list = group_dict.values()
-
-    # Getting the nodes that correspond to the ids that were found above
-    if len(node_id_set) > 0:
-        qb = QueryBuilder()
-        qb.append(Node, tag='node', project=['*'], filters={'id': {'in': node_id_set}})
-        node_list = [node[0] for node in qb.all()]
-    else:
-        node_list = list()
-
-    # Check if any of the nodes wasn't found in the database.
-    missing_nodes = node_id_set.difference(node.id for node in node_list)
-    for node_id in missing_nodes:
-        print >> sys.stderr, ('WARNING! Node with pk={} not found, skipping'.format(node_id))
-
-    # The dbnodes of the above node list
-    dbnode_list = [node.dbnode for node in node_list]
+    if codes:
+        entities.extend([e.dbnode for e in codes])
 
     if computers:
-        qb = QueryBuilder()
-        qb.append(Computer, tag='comp', project=['*'], filters={'id': {'in': set(computers)}})
-        computer_list = [computer[0] for computer in qb.all()]
-        missing_computers = set(computers).difference(computer.id for computer in computer_list)
+        entities.extend([e.dbcomputer for e in computers])
 
-        for computer_id in missing_computers:
-            print >> sys.stderr, ('WARNING! Computer with pk={} not found, skipping'.format(computer_id))
-    else:
-        computer_list = []
+    if groups:
+        entities.extend([e.dbgroup for e in groups])
 
-    # The dbcomputers of the above computer list
-    dbcomputer_list = [computer.dbcomputer for computer in computer_list]
+    if nodes:
+        entities.extend([e.dbnode for e in nodes])
 
-    what_list = dbnode_list + dbcomputer_list + dbgroups_list
-    additional_kwargs = dict()
+    kwargs = {
+        'also_parents': not no_parents,
+        'also_calc_outputs': not no_calc_outputs,
+        'overwrite': force,
+    }
 
     if archive_format == 'zip':
         export_function = export_zip
-        additional_kwargs.update({'use_compression': True})
+        kwargs.update({'use_compression': True})
     elif archive_format == 'zip-uncompressed':
         export_function = export_zip
-        additional_kwargs.update({'use_compression': False})
+        kwargs.update({'use_compression': False})
     elif archive_format == 'tar.gz':
         export_function = export
-    else:
-        print >> sys.stderr, 'invalid --archive-format value {}'.format(archive_format)
-        sys.exit(1)
 
     try:
-        export_function(
-            what=what_list, also_parents=not no_parents, also_calc_outputs=not no_calc_outputs,
-            outfile=outfile, overwrite=overwrite, **additional_kwargs
-        )
-    except IOError as e:
-        print >> sys.stderr, 'IOError: {}'.format(e.message)
-        sys.exit(1)
+        export_function(entities, outfile=output_file, **kwargs)
+    except IOError as exception:
+        echo.echo_critical('failed to write the export archive file: {}'.format(exception.message))
+    else:
+        echo.echo_success('wrote the export archive file to {}'.format(output_file))
 
 
 @export.command('migrate', context_settings=CONTEXT_SETTINGS)
-@click.argument('file_input', type=click.Path(exists=True))
-@click.argument('file_output', type=click.Path())
-@click.option('-f', '--force', is_flag=True, default=False, help='overwrite output file if it already exists')
-@click.option('-s', '--silent', is_flag=True, default=False, help='suppress output')
-@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
-def migrate(file_input, file_output, force, silent, archive_format):
+@arguments.INPUT_FILE()
+@arguments.OUTPUT_FILE()
+@options.ARCHIVE_FORMAT()
+@options.FORCE(help='overwrite output file if it already exists')
+@options.SILENT()
+def migrate(input_file, output_file, force, silent, archive_format):
     """
-    An entry point to migrate existing AiiDA export archives between version numbers
+    Migrate an existing export archive file to the most recent version of the export format
     """
-    import os, json, sys
+    import os, json
     import tarfile, zipfile
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
 
-    if os.path.exists(file_output) and not force:
-        print >> sys.stderr, 'Error: the output file already exists'
-        sys.exit(2)
+    if os.path.exists(output_file) and not force:
+        echo.echo_critical('the output file already exists')
 
     with SandboxFolder(sandbox_in_repo=False) as folder:
 
-        if zipfile.is_zipfile(file_input):
-            extract_zip(file_input, folder, silent=silent)
-        elif tarfile.is_tarfile(file_input):
-            extract_tar(file_input, folder, silent=silent)
+        if zipfile.is_zipfile(input_file):
+            extract_zip(input_file, folder, silent=silent)
+        elif tarfile.is_tarfile(input_file):
+            extract_tar(input_file, folder, silent=silent)
         else:
-            print >> sys.stderr, 'Error: invalid file format, expected either a zip archive or gzipped tarball'
-            sys.exit(2)
+            echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
             with open(folder.get_abs_path('data.json')) as f:
@@ -185,7 +125,7 @@ def migrate(file_input, file_output, force, silent, archive_format):
             with open(folder.get_abs_path('metadata.json')) as f:
                 metadata = json.load(f)
         except IOError as e:
-            raise ValueError('export archive does not contain the required file {}'.format(e.filename))
+            echo.echo_critical('export archive does not contain the required file {}'.format(f.filename))
 
         old_version = verify_metadata_version(metadata)
 
@@ -196,14 +136,11 @@ def migrate(file_input, file_output, force, silent, archive_format):
                 try:
                     migrate_v2_to_v3(metadata, data)
                 except DanglingLinkError as e:
-                    print "An exception occured!"
-                    print e
-                    raise RuntimeError("You're export file is broken because it contains dangling links")
+                    echo.echo_critical('export file is invalid because it contains dangling links')
             else:
-                raise ValueError('cannot migrate from version {}'.format(old_version))
+                echo.echo_critical('cannot migrate from version {}'.format(old_version))
         except ValueError as exception:
-            print >> sys.stderr, 'Error:', exception
-            sys.exit(2)
+            echo.echo_critical(exception)
 
         new_version = verify_metadata_version(metadata)
 
@@ -215,7 +152,7 @@ def migrate(file_input, file_output, force, silent, archive_format):
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
-            with zipfile.ZipFile(file_output, mode='w', compression=compression) as archive:
+            with zipfile.ZipFile(output_file, mode='w', compression=compression) as archive:
                 src = folder.abspath
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)
@@ -224,11 +161,11 @@ def migrate(file_input, file_output, force, silent, archive_format):
                         real_dest = os.path.join(relpath,fn)
                         archive.write(real_src, real_dest)
         elif archive_format == 'tar.gz':
-            with tarfile.open(file_output, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
+            with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
                 archive.add(folder.abspath, arcname='')
 
         if not silent:
-            print 'Successfully migrated the archive from version {} to {}'.format(old_version, new_version)
+            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
 
 
 def verify_metadata_version(metadata, version=None):
@@ -252,6 +189,7 @@ def verify_metadata_version(metadata, version=None):
         raise ValueError('expected export file with version {} but found version {}'
             .format(version, metadata_version))
 
+
 def update_metadata(metadata, version):
     """
     Update the metadata with a new version number and a notification of the
@@ -270,6 +208,7 @@ def update_metadata(metadata, version):
     metadata['aiida_version'] = aiida.get_version()
     metadata['export_version'] = version
     metadata['conversion_info'] = conversion_info
+
 
 def migrate_v1_to_v2(metadata, data):
     """

@@ -4,7 +4,7 @@ import unittest
 import click
 from click.testing import CliRunner
 
-from aiida.cmdline.optiontypes.interactive import InteractiveOption
+from aiida.cmdline.params.options.types.interactive import InteractiveOption
 
 
 class InteractiveOptionTest(unittest.TestCase):

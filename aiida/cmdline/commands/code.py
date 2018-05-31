@@ -19,11 +19,11 @@ import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, code_cmd
+from aiida.cmdline.params import options
+from aiida.cmdline.params.options.types.interactive import InteractiveOption
+from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import edit_pre_post
-from aiida.cmdline.utils import echo
-from aiida.cmdline.params import options
-from aiida.cmdline.optiontypes.interactive import InteractiveOption
 from aiida.control.code import CodeBuilder
 
 
@@ -424,7 +424,6 @@ class CodeInputValidationClass(object):
         Validates the input_plugin, checking it is in the list of existing plugins.
         """
         from aiida.common.exceptions import ValidationError
-        from aiida.orm import JobCalculation
         from aiida.plugins.entry_point import get_entry_point_names
 
         if input_plugin is None:
@@ -625,7 +624,6 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to hide",
                             )
         parsed_args = parser.parse_args(args)
-        from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
             code = load_node(pk, sub_class=OrmCode)
@@ -647,7 +645,6 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to reveal",
                             )
         parsed_args = parser.parse_args(args)
-        from aiida.orm.code import Code
 
         for pk in parsed_args.pks:
             code = load_node(pk, sub_class=OrmCode)

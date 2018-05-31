@@ -41,8 +41,7 @@ class InteractiveOptionTest(unittest.TestCase):
     def test_prompt_empty_input(self):
         """
         scenario: using InteractiveOption with type=str and invoking without options
-        behaviour: pressing enter on empty line at prompt repeats the prompt without
-            a message
+        behaviour: pressing enter on empty line at prompt repeats the prompt without a message
         """
         cmd = self.simple_command(type=str)
         runner = CliRunner()
@@ -53,10 +52,8 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def test_prompt_help_default(self):
         """
-        scenario: using InteractiveOption with type=str and no help parameter
-            and invoking without options
-        behaviour: entering '?' leads to a default help message being printed
-            and prompt repeated
+        scenario: using InteractiveOption with type=str and no help parameter and invoking without options
+        behaviour: entering '?' leads to a default help message being printed and prompt repeated
         """
         cmd = self.simple_command(type=str)
         runner = CliRunner()
@@ -67,10 +64,8 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def test_prompt_help_custom(self):
         """
-        scenario: using InteractiveOption with type=str and help message
-            and invoking without options
-        behaviour: entering '?' leads to the given help message being printed
-            and the prompt repeated
+        scenario: using InteractiveOption with type=str and help message and invoking without options
+        behaviour: entering '?' leads to the given help message being printed and the prompt repeated
         """
         cmd = self.simple_command(type=str, help='Please enter some text')
         runner = CliRunner()

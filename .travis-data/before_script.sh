@@ -26,7 +26,10 @@ then
         cat ${TRAVIS_BUILD_DIR}/.travis-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
 
         # Configure the 'doubler' code inside torquessh
-        cat ${TRAVIS_BUILD_DIR}/.travis-data/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+            -D "simple script that doubles a number and sleeps for a given number of seconds" \
+            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Make sure that the torquessh (localhost:10022) key is hashed
         # in the known_hosts file
@@ -50,10 +53,15 @@ then
         cat .jenkins-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
 
         # Configure the 'doubler' code inside torquessh
-        cat .travis-data/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+            -D "simple script that doubles a number and sleeps for a given number of seconds" \
+            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
-        cat .jenkins-data/code-add-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L add \
+            -D "simple script that adds two numbers" --on-computer -P simpleplugins.templatereplacer \
+            -Y torquessh --remote-abs-path=/usr/local/bin/add.sh
 
         ## The key of localhost should be already set in the Jenkinsfile
     fi

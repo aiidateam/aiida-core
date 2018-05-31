@@ -53,11 +53,28 @@ code_common_info_2 = [
 ]
 
 # Code #1
-code_name_1 = "doubler_1"
-code_setup_input_1 = ([code_name_1] + code_common_info_1 + [computer_name_1] + code_common_info_2)
+CODE_NAME_1 = "doubler_1"
 # Code #2
-code_name_2 = "doubler_2"
-code_setup_input_2 = ([code_name_2] + code_common_info_1 + [computer_name_2] + code_common_info_2)
+CODE_NAME_2 = "doubler_2"
+
+COMMON_CODE_SETUP_OPTS = [
+    '--non-interactive',
+    '--description', 'simple script',
+    '--on-computer',
+    '--input-plugin', 'simpleplugins.templatereplacer',
+    '--remote-abs-path', '/usr/local/bin/doubler.sh',
+    '--prepend-text=', '--append-text='
+]  # yapf: disable
+
+CODE_SETUP_OPTS_1 = COMMON_CODE_SETUP_OPTS + [
+    '--label', CODE_NAME_1,
+    '--computer', computer_name_1,
+]  # yapf: disable
+
+CODE_SETUP_OPTS_2 = COMMON_CODE_SETUP_OPTS + [
+    '--label', CODE_NAME_2,
+    '--computer', computer_name_2,
+]  # yapf: disable
 
 # User #1
 user_1 = {
@@ -149,11 +166,11 @@ class TestVerdiCodeCommands(AiidaTestCase):
                 cmd_comp.computer_setup()
 
         # Setup a code for computer #1
-        from aiida.cmdline.commands.code import Code
-        code_cmd = Code()
-        with mock.patch('__builtin__.raw_input', side_effect=code_setup_input_1):
-            with Capturing():
-                cls.code1 = code_cmd.code_setup()
+        from aiida.cmdline.commands.code import setup_code
+        from aiida.orm import Code
+        runner = CliRunner()
+        runner.invoke(setup_code, CODE_SETUP_OPTS_1)
+        cls.code1 = Code.get_from_string('{}@{}'.format(CODE_NAME_1, computer_name_1))
 
         # Setup computer #2
         with mock.patch('__builtin__.raw_input', side_effect=computer_setup_input_2):
@@ -161,9 +178,8 @@ class TestVerdiCodeCommands(AiidaTestCase):
                 cmd_comp.computer_setup()
 
         # Setup a code for computer #2
-        with mock.patch('__builtin__.raw_input', side_effect=code_setup_input_2):
-            with Capturing():
-                cls.code2 = code_cmd.code_setup()
+        runner.invoke(setup_code, CODE_SETUP_OPTS_2)
+        cls.code2 = Code.get_from_string('{}@{}'.format(CODE_NAME_2, computer_name_2))
 
     def test_code_list(self):
         """
@@ -178,9 +194,9 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list()
         out_str_1 = ''.join(output)
         self.assertTrue(computer_name_1 in out_str_1, "The computer 1 name should be included into this list")
-        self.assertTrue(code_name_1 in out_str_1, "The code 1 name should be included into this list")
+        self.assertTrue(CODE_NAME_1 in out_str_1, "The code 1 name should be included into this list")
         self.assertTrue(computer_name_2 in out_str_1, "The computer 2 name should be included into this list")
-        self.assertTrue(code_name_2 in out_str_1, "The code 2 name should be included into this list")
+        self.assertTrue(CODE_NAME_2 in out_str_1, "The code 2 name should be included into this list")
 
         # Run a verdi code list -a, capture the output and check if the result
         # is the same as the previous one
@@ -205,9 +221,9 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code_cmd.code_list()
         out_str_3 = ''.join(output)
         self.assertTrue(computer_name_1 in out_str_3, "The computer 1 name should be included into this list")
-        self.assertTrue(code_name_1 in out_str_3, "The code 1 name should be included into this list")
+        self.assertTrue(CODE_NAME_1 in out_str_3, "The code 1 name should be included into this list")
         self.assertFalse(computer_name_2 in out_str_3, "The computer 2 name should not be included into this list")
-        self.assertFalse(code_name_2 in out_str_3, "The code 2 name should not be included into this list")
+        self.assertFalse(CODE_NAME_2 in out_str_3, "The code 2 name should not be included into this list")
 
 
 # pylint: disable=abstract-method

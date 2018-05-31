@@ -1,4 +1,5 @@
 import os
+import subprocess as sp
 import click
 from click.testing import CliRunner
 
@@ -28,6 +29,10 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
     def test_help(self):
         result = self.runner.invoke(setup_code, ['--help'])
+
+    def test_reachable(self):
+        output = sp.check_output(['verdi', 'code', 'setup', '--help'])
+        self.assertIn('Usage:', output)
 
     def test_interactive_remote(self):
         from aiida.orm import Code

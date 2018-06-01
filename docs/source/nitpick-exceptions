@@ -93,6 +93,7 @@ py:exc    click.BadParameter
 py:class  click.ParamType
 py:class  click.core.Group
 py:class  click.core.Option
+py:class  click.Option
 py:class  click.types.ParamType
 py:class  click.types.Choice
 
@@ -169,3 +170,7 @@ py:class  _abcoll.MutableSequence
 py:class  aiida.orm.node.Node
 # This comes from ABCMeta
 py:meth   aiida.orm.group.Group.get_from_string
+
+py:mod    click
+
+py:func   click.Option.get_default

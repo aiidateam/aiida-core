@@ -8,8 +8,9 @@ from .group import GroupParamType
 from .identifier import IdentifierParamType
 from .node import NodeParamType
 from .multiple import MultipleValueParamType
+from .plugin import PluginParamType
 
 __all__ = [
-	'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
-	'GroupParamType', 'NodeParamType', 'MultipleValueParamType'
+    'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
+    'GroupParamType', 'NodeParamType', 'MultipleValueParamType', 'PluginParamType'
 ]

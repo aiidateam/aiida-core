@@ -45,24 +45,19 @@ class OverridableArgument(object):
         kw_copy.update(kwargs)
 
         if args:
-        	return click.argument(*args, **kw_copy)
+            return click.argument(*args, **kw_copy)
         else:
-        	return click.argument(*self.args, **kw_copy)
+            return click.argument(*self.args, **kw_copy)
 
 
 CODE = OverridableArgument('code', type=types.CodeParamType())
 
-
 COMPUTER = OverridableArgument('computer', type=types.ComputerParamType())
-
 
 GROUP = OverridableArgument('group', type=types.GroupParamType())
 
-
 NODE = OverridableArgument('node', type=types.NodeParamType())
 
-
 INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.Path(exists=True))
-
 
 OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=click.Path())

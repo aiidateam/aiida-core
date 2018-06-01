@@ -1,5 +1,6 @@
 #-*- coding: utf8 -*-
 import click
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
 from aiida.orm.data.base import Bool, Float, Int

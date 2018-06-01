@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+# yapf: disable
 import click
 
-from . import types
+from aiida.cmdline.params.options.types import MultipleValueOption
+from aiida.cmdline.params import types
 
 
 class OverridableOption(object):
@@ -44,61 +46,6 @@ class OverridableOption(object):
         kw_copy = self.kwargs.copy()
         kw_copy.update(kwargs)
         return click.option(*self.args, **kw_copy)
-
-
-class MultipleValueOption(click.Option):
-    """
-    An option that can handle multiple values with a single flag. For example::
-
-        @click.option('-n', '--nodes', cls=MultipleValueOption)
-
-    Will be able to parse the following::
-
-        --nodes 10 15 12
-
-    This is better than the builtin ``multiple=True`` keyword for click's option which forces the user to specify
-    the option flag for each value, which gets impractical for long lists of values
-    """
-
-    def __init__(self, *args, **kwargs):
-        param_type = kwargs.pop('type', None)
-
-        if param_type is not None:
-            kwargs['type'] = types.MultipleValueParamType(param_type)
-
-        super(MultipleValueOption, self).__init__(*args, **kwargs)
-        self._previous_parser_process = None
-        self._eat_all_parser = None
-
-    def add_to_parser(self, parser, ctx):
-        result = super(MultipleValueOption, self).add_to_parser(parser, ctx)
-
-        def parser_process(value, state):
-            ENDOPTS = '--'
-            done = False
-            value = [value]
-
-            # Grab everything up to the next option or endopts symbol
-            while state.rargs and not done:
-                for prefix in self._eat_all_parser.prefixes:
-                    if state.rargs[0].startswith(prefix) or state.rargs[0] == ENDOPTS:
-                        done = True
-                if not done:
-                    value.append(state.rargs.pop(0))
-
-            value = tuple(value)
-
-            self._previous_parser_process(value, state)
-
-        for name in self.opts:
-            our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
-            if our_parser:
-                self._eat_all_parser = our_parser
-                self._previous_parser_process = our_parser.process
-                our_parser.process = parser_process
-                break
-
-        return result
 
 
 CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
@@ -159,3 +106,18 @@ SILENT = OverridableOption('-s', '--silent', is_flag=True, default=False,
 
 ARCHIVE_FORMAT = OverridableOption('-F', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
     help='the format of the archive file', default='zip', show_default=True)
+
+
+NON_INTERACTIVE = OverridableOption('-n', '--non-interactive', is_flag=True, is_eager=True,
+    help='Noninteractive mode: never prompt the user for input')
+
+PREPEND_TEXT = OverridableOption('--prepend-text', type=str, default='',
+    help='Bash script to be executed before an action')
+
+APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
+    help='Bash script to be executed after an action has completed')
+
+LABEL = OverridableOption('-L', '--label', help='short text to be used as a label')
+DESCRIPTION = OverridableOption('-D', '--description', help='(text) description')
+
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(category='calculations'))

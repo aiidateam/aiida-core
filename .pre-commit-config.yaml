@@ -9,6 +9,11 @@
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/params/.*.py|
+        aiida/cmdline/optiontypes/.*.py|
+        aiida/cmdline/utils/multi_line_input.py|
+        aiida/cmdline/utils/test_multiline.py|
+        aiida/cmdline/utils/templates.py|
         docs/update_req_for_rtd.py| # a|b -> match a OR b
         .travis_data/test_setup.py|
         aiida/transport/.*.py|

@@ -24,7 +24,8 @@ invcm_to_THz = 0.0299792458
 
 # Element table, from NIST (http://www.nist.gov/pml/data/index.cfm)
 # Retrieved in October 2014 for atomic numbers 1-103, and in May 2016
-# for atomic numbers 104-112, 114 and 116.
+# for atomic numbers 104-112, 114 and 116. In addition, element X is
+# added to support unknown elements.
 elements = {
     0: {'mass': 1.00000, 'name': 'Unknown', 'symbol': 'X'},
     1: {'mass': 1.00794, 'name': 'Hydrogen', 'symbol': 'H'},

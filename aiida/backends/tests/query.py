@@ -83,6 +83,7 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
 
+
     def test_simple_query_1(self):
         """
         Testing a simple query
@@ -442,10 +443,14 @@ class TestQueryHelp(AiidaTestCase):
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data import Data
         from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.group import Group
+        from aiida.orm.computer import Computer
+        g = Group(name='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
             obj = cls()
             obj._set_attr('foo-qh2', 'bar')
             obj.store()
+            g.add_nodes(obj)
 
         for cls, expected_count, subclassing in (
                 (StructureData, 1, True),
@@ -469,6 +474,17 @@ class TestQueryHelp(AiidaTestCase):
                 sorted([uuid for uuid, in qb.all()]),
                 sorted([uuid for uuid, in qb_new.all()]))
 
+        qb = QueryBuilder().append(Group, filters={'name':'helloworld'})
+        self.assertEqual(qb.count(), 1)
+
+        qb = QueryBuilder().append((Group,), filters={'name':'helloworld'})
+        self.assertEqual(qb.count(), 1)
+
+        qb = QueryBuilder().append(Computer,)
+        self.assertEqual(qb.count(), 1)
+
+        qb = QueryBuilder().append(cls=(Computer,))
+        self.assertEqual(qb.count(), 1)
 
             
 class TestQueryBuilderCornerCases(AiidaTestCase):

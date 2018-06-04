@@ -15,8 +15,6 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
 
 class Rehash(VerdiCommand):
     """
@@ -29,7 +27,7 @@ class Rehash(VerdiCommand):
             rehash.invoke(ctx)
 
 
-@verdi_rehash.command('rehash', context_settings=CONTEXT_SETTINGS)
+@verdi_rehash.command('rehash')
 @arguments.NODES()
 @click.option('-e', '--entry-point', type=PluginParamType(group=('node', 'calculations', 'data'), load=True), default='node',
     help='restrict nodes which are re-hashed to instances that are a sub class of the class identified by this entry point')

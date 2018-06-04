@@ -18,8 +18,6 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi_user, verdi
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
 
 class User(VerdiCommandWithSubcommands):
     """
@@ -162,7 +160,7 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
             click.echo("         via the REST API and the Web Interface.")
 
 
-@verdi_user.command(context_settings=CONTEXT_SETTINGS)
+@verdi_user.command()
 @click.argument('email', type=str)
 @click.option('--first-name', prompt='First Name', type=str)
 @click.option('--last-name', prompt='Last Name', type=str)

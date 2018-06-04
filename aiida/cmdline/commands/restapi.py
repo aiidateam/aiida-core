@@ -8,56 +8,61 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-This allows to hook-up the AiIDA built-in RESTful API.
+This allows to hook-up the AiiDA built-in RESTful API.
 Main advantage of doing this by means of a verdi command is that different
 profiles can be selected at hook-up (-p flag).
 
 """
+import os
 
+import click
+
+import aiida.restapi
 from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.commands import verdi_restapi
+
+
+DEFAULT_CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
+
 
 class Restapi(VerdiCommand):
     """
-    verdi command used to hook up the AiIDA REST API.
-    Example Usage:
-
-    verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789
-    --config-dir <location of the onfig.py file>
-
+    Command line utility to hook up the AiiDA REST API
     """
-    import os
-    import aiida.restapi
-
-    # Defaults defined at class level
-    default_host = "127.0.0.1"
-    default_port = "5000"
-    default_config_dir = os.path.join(os.path.split(os.path.abspath(
-        aiida.restapi.__file__))[0], 'common')
-    parse_aiida_profile = False
 
     def run(self, *args):
-        """
-        Hook up the default RESTful API of AiiDA.
-        args include port, host, config_file
-        """
-        from aiida.restapi.api import App, AiidaApi
-        from aiida.restapi.run_api import run_api
+        ctx = restapi.make_context('restapi', list(args))
+        with ctx:
+            restapi.invoke(ctx)
 
-        # Construct dparameter dictionary
-        kwargs = dict(
-            hookup=True,
-            prog_name=self.get_full_command_name(),
-            default_host=self.default_host,
-            default_port=self.default_port,
-            default_config=self.default_config_dir,
-            parse_aiida_profile=self.parse_aiida_profile,
-            catch_internal_server=True)
 
-        # Invoke the runner
-        run_api(App, AiidaApi, *args, **kwargs)
+@verdi_restapi.command('restapi')
+@click.option('-H', '--host', type=click.STRING, default='127.0.0.1',
+    help='the hostname to use')
+@click.option('-p', '--port', type=click.INT, default=5000,
+    help='the port to use')
+@click.option('-c', '--config-dir', type=click.Path(exists=True), default=DEFAULT_CONFIG_DIR,
+    help='the path of the configuration directory')
+def restapi(host, port, config_dir):
+    """
+    Command line utility to hook up the AiiDA REST API.
+    Example Usage:
 
-    def complete(self, subargs_idx, subargs):
-        """
-        No particular completion features required
-        """
-        return ""
+        \b
+        verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+    """
+    from aiida.restapi.api import App, AiidaApi
+    from aiida.restapi.run_api import run_api
+
+    # Construct parameter dictionary
+    kwargs = dict(
+        hookup=True,
+        prog_name='verdi-restapi',
+        default_host=host,
+        default_port=port,
+        default_config=config_dir,
+        parse_aiida_profile=False,
+        catch_internal_server=True)
+
+    # Invoke the runner
+    run_api(App, AiidaApi, **kwargs)

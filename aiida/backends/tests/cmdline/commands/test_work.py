@@ -41,15 +41,6 @@ class TestVerdiWork(AiidaTestCase):
     def get_lines(self, result):
         return [e for e in result.output.split('\n') if e]
 
-    def test_help(self):
-        """
-        Verify that all subcommands support both of the -h/--help options to show the help string
-        """
-        for sub_command in work.verdi_work.commands.values():
-            for option in ['-h', '--help']:
-                result = self.cli_runner.invoke(sub_command, [option])
-                self.assertIsNone(result.exception)
-
     def test_pause_play_kill(self):
         """
         Test the pause/play/kill commands

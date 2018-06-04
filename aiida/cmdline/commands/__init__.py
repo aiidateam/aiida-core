@@ -34,9 +34,9 @@ def verdi(ctx, profile):
     currently. Instead, it is used for subcommand routing of commands written in click, see aiida/cmdline/commands/work.py for an
     example. In short it exists, so the name by which the subcommand is called ('verdi something something') matches it's command
     group hierarchy (group ``verdi``, subgroup ``something``, command ``something``).
-
     """
     ctx.obj = {'profile': profile}
+    ctx.help_option_names = ['-h', '--help']
 
 
 @verdi.command()
@@ -54,74 +54,92 @@ def completion(completion_args):
 
 
 @verdi.group('calculation')
-def verdi_calculation():
+@click.pass_context
+def verdi_calculation(ctx):
     pass
 
 @verdi.group('code')
-def verdi_code():
+@click.pass_context
+def verdi_code(ctx):
     pass
 
 @verdi.group('comment')
-def verdi_comment():
+@click.pass_context
+def verdi_comment(ctx):
     pass
 
 @verdi.group('computer')
-def verdi_computer():
+@click.pass_context
+def verdi_computer(ctx):
     pass
 
 @verdi.group('daemon')
-def verdi_daemon():
+@click.pass_context
+def verdi_daemon(ctx):
     pass
 
 @verdi.group('data', entry_point_group='aiida.cmdline.data', cls=Pluginable)
-def verdi_data():
+@click.pass_context
+def verdi_data(ctx):
     """Verdi data interface for plugin commands."""
     pass
 
 @verdi.group('devel')
-def verdi_devel():
+@click.pass_context
+def verdi_devel(ctx):
     pass
 
 @verdi.group('export')
-def verdi_export():
+@click.pass_context
+def verdi_export(ctx):
     pass
 
 @verdi.group('graph')
-def verdi_graph():
+@click.pass_context
+def verdi_graph(ctx):
     pass
 
 @verdi.group('group')
-def verdi_group():
+@click.pass_context
+def verdi_group(ctx):
     pass
 
 @verdi.group('import')
-def verdi_import():
+@click.pass_context
+def verdi_import(ctx):
     pass
 
 @verdi.group('node')
-def verdi_node():
+@click.pass_context
+def verdi_node(ctx):
     pass
 
 @verdi.group('profile')
-def verdi_profile():
+@click.pass_context
+def verdi_profile(ctx):
     pass
 
 @verdi.group('rehash')
-def verdi_rehash():
+@click.pass_context
+def verdi_rehash(ctx):
     pass
 
 @verdi.group('restapi')
-def verdi_restapi():
+@click.pass_context
+def verdi_restapi(ctx):
     pass
 
 @verdi.group('shell')
-def verdi_shell():
+@click.pass_context
+def verdi_shell(ctx):
     pass
 
 @verdi.group('user')
-def verdi_user():
+@click.pass_context
+def verdi_user(ctx):
     pass
 
 @verdi.group('work')
-def verdi_work():
+@click.pass_context
+def verdi_work(ctx):
     pass

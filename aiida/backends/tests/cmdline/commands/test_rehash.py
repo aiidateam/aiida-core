@@ -25,13 +25,6 @@ class TestVerdiRehash(AiidaTestCase):
     def setUp(self):
         self.runner = CliRunner()
 
-    def test_help(self):
-        result = self.runner.invoke(rehash.rehash, ['-h'])
-        self.assertIsNone(result.exception)
-
-        result = self.runner.invoke(rehash.rehash, ['--help'])
-        self.assertIsNone(result.exception)
-
     def test_rehash(self):
         """
         Passing no options to the command will rehash all 5 nodes

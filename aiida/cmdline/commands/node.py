@@ -15,7 +15,7 @@ from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.cmdline.commands import verdi, node
+from aiida.cmdline.commands import verdi, verdi_node
 
 
 def list_repo_files(node, path, color):
@@ -236,7 +236,7 @@ class _Show(VerdiCommandWithSubcommands):
     def run(self, *args):
         verdi()
 
-@node.command('show')
+@verdi_node.command('show')
 @click.argument('identifiers', type=str, nargs=-1, required=True)
 @click.option('-u', '--uuid', 'uuid', flag_value=True,
               help="If activated the identifier is UUID, "

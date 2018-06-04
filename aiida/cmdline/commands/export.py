@@ -9,7 +9,7 @@
 ###########################################################################
 import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, export
+from aiida.cmdline.commands import verdi, verdi_export
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
@@ -34,7 +34,7 @@ class Export(VerdiCommandWithSubcommands):
         verdi()
 
 
-@export.command('create', context_settings=CONTEXT_SETTINGS)
+@verdi_export.command('create', context_settings=CONTEXT_SETTINGS)
 @arguments.OUTPUT_FILE(type=click.Path(exists=False))
 @options.CODES()
 @options.COMPUTERS()
@@ -92,7 +92,7 @@ def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_out
         echo.echo_success('wrote the export archive file to {}'.format(output_file))
 
 
-@export.command('migrate', context_settings=CONTEXT_SETTINGS)
+@verdi_export.command('migrate', context_settings=CONTEXT_SETTINGS)
 @arguments.INPUT_FILE()
 @arguments.OUTPUT_FILE()
 @options.ARCHIVE_FORMAT()

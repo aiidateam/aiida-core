@@ -16,7 +16,7 @@ import click
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import user, verdi
+from aiida.cmdline.commands import verdi_user, verdi
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -162,7 +162,7 @@ def do_configure(backend, email, first_name, last_name, institution, no_password
             click.echo("         via the REST API and the Web Interface.")
 
 
-@user.command(context_settings=CONTEXT_SETTINGS)
+@verdi_user.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('email', type=str)
 @click.option('--first-name', prompt='First Name', type=str)
 @click.option('--last-name', prompt='Last Name', type=str)
@@ -184,7 +184,7 @@ def configure(email, first_name, last_name, institution, no_password, force_reco
                  force_reconfigure=force_reconfigure)
 
 
-@user.command()
+@verdi_user.command()
 @click.option('--color', is_flag=True, help='Show results with colors', default=False)
 def list(color):
     if not is_dbenv_loaded():

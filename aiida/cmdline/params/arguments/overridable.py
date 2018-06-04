@@ -1,7 +1,10 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf8 -*-
+"""
+.. py:module::overridable
+    :synopsis: Convenience class which can be used to defined a set of commonly used arguments that
+        can be easily reused and which improves consistency across the command line interface
+"""
 import click
-
-from . import types
 
 
 class OverridableArgument(object):
@@ -48,16 +51,3 @@ class OverridableArgument(object):
             return click.argument(*args, **kw_copy)
         else:
             return click.argument(*self.args, **kw_copy)
-
-
-CODE = OverridableArgument('code', type=types.CodeParamType())
-
-COMPUTER = OverridableArgument('computer', type=types.ComputerParamType())
-
-GROUP = OverridableArgument('group', type=types.GroupParamType())
-
-NODE = OverridableArgument('node', type=types.NodeParamType())
-
-INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.Path(exists=True))
-
-OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=click.Path())

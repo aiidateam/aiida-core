@@ -53,35 +53,75 @@ def completion(completion_args):
     Completion().run(*completion_args)
 
 
-@verdi.group()
-def export():
+@verdi.group('calculation')
+def verdi_calculation():
     pass
 
-
-@verdi.group()
-def work():
+@verdi.group('code')
+def verdi_code():
     pass
 
-
-@verdi.group()
-def user():
+@verdi.group('comment')
+def verdi_comment():
     pass
 
-@verdi.group()
-def node():
+@verdi.group('computer')
+def verdi_computer():
+    pass
+
+@verdi.group('daemon')
+def verdi_daemon():
     pass
 
 @verdi.group('data', entry_point_group='aiida.cmdline.data', cls=Pluginable)
-def data_cmd():
+def verdi_data():
     """Verdi data interface for plugin commands."""
     pass
 
-
-@verdi.group('daemon')
-def daemon_cmd():
+@verdi.group('devel')
+def verdi_devel():
     pass
 
+@verdi.group('export')
+def verdi_export():
+    pass
 
-@verdi.group('code')
-def code_cmd():
+@verdi.group('graph')
+def verdi_graph():
+    pass
+
+@verdi.group('group')
+def verdi_group():
+    pass
+
+@verdi.group('import')
+def verdi_import():
+    pass
+
+@verdi.group('node')
+def verdi_node():
+    pass
+
+@verdi.group('profile')
+def verdi_profile():
+    pass
+
+@verdi.group('rehash')
+def verdi_rehash():
+    pass
+
+@verdi.group('restapi')
+def verdi_restapi():
+    pass
+
+@verdi.group('shell')
+def verdi_shell():
+    pass
+
+@verdi.group('user')
+def verdi_user():
+    pass
+
+@verdi.group('work')
+def verdi_work():
     pass

@@ -774,7 +774,7 @@ class Calculation(VerdiCommandWithSubcommands):
                 return
 
         qb_user_filters = dict()
-	# TODO: @mu fix this, can't get automatic user this way anymore
+        # TODO: @mu fix this, can't get automatic user this way anymore
         user = orm.get_automatic_user()
         qb_user_filters["email"] = user.email
 

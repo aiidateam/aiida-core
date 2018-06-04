@@ -4,7 +4,7 @@ import unittest
 import click
 from click.testing import CliRunner
 
-from aiida.cmdline.params.options.types.conditional import ConditionalOption
+from aiida.cmdline.params.options.conditional import ConditionalOption
 
 
 class ConditionalOptionTest(unittest.TestCase):

@@ -19,7 +19,7 @@ import click
 from click_spinner import spinner
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, daemon_cmd
+from aiida.cmdline.commands import verdi, verdi_daemon
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
@@ -70,7 +70,7 @@ class Daemon(VerdiCommandWithSubcommands):
         verdi.main()
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
@@ -102,7 +102,7 @@ def start(foreground):
     print_client_response_status(response)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons')
 def status(all_profiles):
     """
@@ -121,7 +121,7 @@ def status(all_profiles):
         click.echo(result)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_pid
 def incr(number):
@@ -133,7 +133,7 @@ def incr(number):
     print_client_response_status(response)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_pid
 def decr(number):
@@ -145,7 +145,7 @@ def decr(number):
     print_client_response_status(response)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 def logshow():
     """
     Show the log of the daemon, press CTRL+C to quit
@@ -160,7 +160,7 @@ def logshow():
         process.kill()
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons')
 def stop(no_wait, all_profiles):
@@ -196,7 +196,7 @@ def stop(no_wait, all_profiles):
             print_client_response_status(response)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.option('--reset', is_flag=True, help='Completely reset the daemon')
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
 @click.pass_context
@@ -229,7 +229,7 @@ def restart(ctx, reset, no_wait):
             print_client_response_status(response)
 
 
-@daemon_cmd.command()
+@verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version

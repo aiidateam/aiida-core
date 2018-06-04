@@ -452,13 +452,13 @@ class TestRunner(unittest.runner.TextTestRunner):
         import unittest
         from aiida.utils.fixtures import TestRunner
 
-        runner = TestRunner()
-        runner.run(unittest.TestLoader().discover('.'))
+        tests = unittest.defaultTestLoader.discover('.')
+        TestRunner().run(tests)
 
     """
 
     # pylint: disable=arguments-differ
-    def run(self, test, backend=BACKEND_DJANGO):
+    def run(self, suite, backend=BACKEND_DJANGO):
         """
         Run tests using fixture manager for specified backend.
 
@@ -469,4 +469,4 @@ class TestRunner(unittest.runner.TextTestRunner):
         with Capturing():
             with fixture_manager() as manager:
                 manager.backend = backend
-                super(TestRunner, self).run(test)
+                super(TestRunner, self).run(suite)

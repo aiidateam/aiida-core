@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from aiida.common.exceptions import AiidaException
 
-__all__ = ['Exit']
+__all__ = ['Exit', 'PastException']
 
 
-class Exit(Exception):
+class Exit(AiidaException):
     """
     This can be raised from within a workfunction to tell it to exit immediately, but as opposed to all other
     exceptions will not cause the workflow engine to mark the workfunction as excepted. Rather it will take
@@ -21,3 +22,10 @@ class Exit(Exception):
     @property
     def exit_code(self):
         return self._exit_code
+
+
+class PastException(AiidaException):
+    """
+    Raised when an attempt is made to continue a Process that has already excepted before
+    """
+    pass

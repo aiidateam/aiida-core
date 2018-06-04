@@ -7,7 +7,7 @@
 
 import click
 
-from aiida.cmdline.params.options.types.conditional import ConditionalOption
+from aiida.cmdline.params.options.conditional import ConditionalOption
 
 
 def noninteractive(ctx):

@@ -11,7 +11,7 @@ import click
 from tabulate import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import work, verdi
+from aiida.cmdline.commands import verdi_work, verdi
 from aiida.cmdline.params.types import LazyChoice
 from aiida.common.log import LOG_LEVELS
 
@@ -63,7 +63,7 @@ class Work(VerdiCommandWithSubcommands):
         return '\n'.join(return_plugins)
 
 
-@work.command('list', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('list', context_settings=CONTEXT_SETTINGS)
 @click.option(
     '-p', '--past-days', type=int, default=1, metavar='N',
     help='Only include entries created in the past N days'
@@ -214,7 +214,7 @@ def do_list(past_days, all_states, process_state, finish_status, failed, limit, 
         print_last_process_state_change(process_type='work')
 
 
-@work.command('report', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('report', context_settings=CONTEXT_SETTINGS)
 @click.argument(
     'pk', nargs=1, type=int
 )
@@ -320,7 +320,7 @@ def report(pk, levelname, order_by, indent_size, max_depth):
     return
 
 
-@work.command('checkpoint', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('checkpoint', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def checkpoint(pks):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -343,7 +343,7 @@ def checkpoint(pks):
             click.echo("Unable to show checkpoint for calculation '{}'".format(pk))
 
 
-@work.command('kill', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('kill', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def kill(pks):
     from aiida import try_load_dbenv
@@ -361,7 +361,7 @@ def kill(pks):
                 click.echo("Failed to kill '{}': {}".format(pk, e.message))
 
 
-@work.command('pause', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('pause', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def pause(pks):
     from aiida import try_load_dbenv
@@ -379,7 +379,7 @@ def pause(pks):
                 click.echo("Failed to pause '{}': {}".format(pk, e.message))
 
 
-@work.command('play', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('play', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def play(pks):
     from aiida import try_load_dbenv
@@ -397,7 +397,7 @@ def play(pks):
                 click.echo("Failed to play '{}': {}".format(pk, e.message))
 
 
-@work.command('status', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('status', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def status(pks):
     from aiida import try_load_dbenv
@@ -414,7 +414,7 @@ def status(pks):
             click.echo(graph)
 
 
-@work.command('plugins', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('plugins', context_settings=CONTEXT_SETTINGS)
 @click.argument('entry_point', type=str, required=False)
 def plugins(entry_point):
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -441,7 +441,7 @@ def plugins(entry_point):
             click.echo("No workflow plugins found")
 
 
-@work.command('watch', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('watch', context_settings=CONTEXT_SETTINGS)
 @click.argument('pks', nargs=-1, type=int)
 def watch(pks):
     from aiida import try_load_dbenv

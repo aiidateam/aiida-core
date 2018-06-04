@@ -18,9 +18,9 @@ import click
 import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, code_cmd
+from aiida.cmdline.commands import verdi, verdi_code
 from aiida.cmdline.params import options
-from aiida.cmdline.params.options.types.interactive import InteractiveOption
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import edit_pre_post
@@ -1031,7 +1031,7 @@ REMOTE_ABS_PATH = click.option(
     '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
 
 
-@code_cmd.command('setup')
+@verdi_code.command('setup')
 @click.pass_context
 @options.LABEL(prompt='Label', cls=InteractiveOption)
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
@@ -1072,7 +1072,7 @@ def setup_code(ctx, non_interactive, **kwargs):
 
 
 
-@code_cmd.command()
+@verdi_code.command()
 @options.CODE()
 @click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
 @with_dbenv()

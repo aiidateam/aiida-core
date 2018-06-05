@@ -60,7 +60,7 @@ then
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
         verdi -p $TEST_AIIDA_BACKEND code setup -n -L add \
-            -D "simple script that adds two numbers" --on-computer -P simpleplugins.templatereplacer \
+            -D "simple script that adds two numbers" --on-computer -P simpleplugins.arithmetic.add \
             -Y torquessh --remote-abs-path=/usr/local/bin/add.sh
 
         ## The key of localhost should be already set in the Jenkinsfile

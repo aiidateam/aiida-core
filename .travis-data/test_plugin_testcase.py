@@ -108,4 +108,4 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    TestRunner().run(SUITE)
+    TestRunner().run(SUITE, backend=determine_backend())

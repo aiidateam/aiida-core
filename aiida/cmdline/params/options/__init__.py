@@ -81,10 +81,10 @@ APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
     help='bash script to be executed after an action has completed')
 
 
-LABEL = OverridableOption('-L', '--label', help='short text to be used as a label')
+LABEL = OverridableOption('-L', '--label', help='short name to be used as a label')
 
 
-DESCRIPTION = OverridableOption('-D', '--description', help='(text) description')
+DESCRIPTION = OverridableOption('-D', '--description', help='a detailed description')
 
 
-INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(category='calculations'))
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(group='calculations'))

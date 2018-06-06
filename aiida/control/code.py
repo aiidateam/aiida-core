@@ -68,7 +68,7 @@ class CodeBuilder(object):
 
         code.label = self.label
         code.description = self.description
-        code.set_input_plugin_name(self.input_plugin)
+        code.set_input_plugin_name(self.input_plugin.name)
         code.set_prepend_text(self.prepend_text)
         code.set_append_text(self.append_text)
 

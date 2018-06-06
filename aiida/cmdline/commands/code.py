@@ -1027,20 +1027,23 @@ def ensure_scripts(pre, post, summary):
     return pre, post
 
 
-REMOTE_ABS_PATH = click.option(
-    '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True), cls=InteractiveOption, help=('[if --installed]: The (full) absolute path on the remote ' 'machine'))
-
-
 @verdi_code.command('setup')
 @click.pass_context
 @options.LABEL(prompt='Label', cls=InteractiveOption)
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
-@click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on remote Computer?', cls=InteractiveOption)
+@click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on remote Computer?',
+    cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
 @options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=is_on_computer)
-@REMOTE_ABS_PATH
-@click.option('--code-folder', prompt='Folder containing the code', type=click.Path(file_okay=False, exists=True, readable=True), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: folder containing the executable and ' 'all other files necessary for execution of the code'))
-@click.option('--code-rel-path', prompt='Relative path of the executable', type=click.Path(dir_okay=False), required_fn=is_not_on_computer, cls=InteractiveOption, help=('[if --upload]: The relative path of the executable file inside ' 'the folder entered in the previous step or in --code-folder'))
+@click.option(
+    '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True),
+    cls=InteractiveOption, help=('[if --installed]: the (full) absolute path on the remote machine'))
+@click.option('--code-folder', prompt='Folder containing the code', type=click.Path(file_okay=False, exists=True, readable=True),
+    required_fn=is_not_on_computer, cls=InteractiveOption,
+    help=('[if --upload]: folder containing the executable and all other files necessary for execution of the code'))
+@click.option('--code-rel-path', prompt='Relative path of the executable', type=click.Path(dir_okay=False),
+    required_fn=is_not_on_computer, cls=InteractiveOption,
+    help=('[if --upload]: the relative path of the executable file inside the folder entered in the previous step or in --code-folder'))
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -1065,16 +1068,15 @@ def setup_code(ctx, non_interactive, **kwargs):
         code.store()
         code._reveal()  # newly setup code shall not be hidden
     except ValidationError as err:
-        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
+        echo.echo_critical('unable to store the code: {}. Exiting...'.format(err))
 
-    echo.echo_success('Code "{}" stored in DB.'.format(code.label))
+    echo.echo_success('code "{}" stored in DB.'.format(code.label))
     echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
-
 
 
 @verdi_code.command()
 @options.CODE()
-@click.option('-v', '--verbose', is_flag=True, help='Show additional verbose information')
+@click.option('-v', '--verbose', is_flag=True, help='show additional verbose information')
 @with_dbenv()
 def show(code, verbose):
     """

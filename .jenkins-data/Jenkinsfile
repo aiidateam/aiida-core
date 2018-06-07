@@ -190,6 +190,11 @@ pipeline {
             }
         } 
     } 
+    options {
+        // we do not want the whole run to hang forever - 
+ 	// we set a total timeout of 1 hour
+        timeout(time: 60, unit: 'MINUTES')
+    }
 }
 
 

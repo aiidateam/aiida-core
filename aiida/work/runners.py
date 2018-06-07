@@ -267,7 +267,7 @@ class Runner(object):
 
     def get_calculation_future(self, pk):
         """
-        Get a future for an orm Calculation.  The future will have the calculation node
+        Get a future for an orm Calculation. The future will have the calculation node
         as the result when finished.
 
         :return: A future representing the completion of the calculation node

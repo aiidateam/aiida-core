@@ -247,8 +247,12 @@ class Process(plumpy.Process):
     def on_except(self, exc_info):
         """
         Log the exception by calling the report method with formatted stack trace from exception info object
+        and store the exception string as a node attribute
+
+        :param exc_info: the sys.exc_info() object
         """
         super(Process, self).on_except(exc_info)
+        self.calc._set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override

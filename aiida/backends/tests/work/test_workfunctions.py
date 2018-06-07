@@ -11,6 +11,7 @@ from aiida.common.links import LinkType
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.orm import load_node
 from aiida.orm.calculation.function import FunctionCalculation
 from aiida.work import run, run_get_node, submit, workfunction, Process, Exit
@@ -66,6 +67,10 @@ class TestWf(AiidaTestCase):
         def wf_exit(exit_code):
             raise Exit(exit_code.value)
 
+        @workfunction
+        def wf_excepts(exception):
+            raise RuntimeError(exception.value)
+
         self.wf_return_input = wf_return_input
         self.wf_return_true = wf_return_true
         self.wf_args = wf_args
@@ -75,6 +80,7 @@ class TestWf(AiidaTestCase):
         self.wf_args_and_default = wf_args_and_default
         self.wf_default_label_description = wf_default_label_description
         self.wf_exit = wf_exit
+        self.wf_excepts = wf_excepts
 
     def tearDown(self):
         super(TestWf, self).tearDown()
@@ -245,6 +251,17 @@ class TestWf(AiidaTestCase):
         self.assertTrue(node.is_finished)
         self.assertFalse(node.is_finished_ok)
         self.assertEquals(node.finish_status, finish_status)
+
+    def test_normal_exception(self):
+        """
+        If a process, for example a FunctionProcess, excepts, the exception should be stored in the node
+        """
+        exception = 'This workfunction excepted'
+
+        with self.assertRaises(RuntimeError):
+            result, node = self.wf_excepts.run_get_node(exception=Str(exception))
+            self.assertTrue(node.is_excepted)
+            self.assertEquals(node.exception, exception)
 
     def test_default_linkname(self):
         """

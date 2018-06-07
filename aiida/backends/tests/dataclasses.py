@@ -1306,6 +1306,42 @@ class TestStructureData(AiidaTestCase):
         self.assertFalse(a.is_alloy())
         self.assertTrue(a.has_vacancies())
 
+    def test_cell_ok_and_unknown_atoms(self):
+        """
+        Test the creation of a cell and the appending of atoms, including
+        the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
+
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        self.assertAlmostEquals(cell, out_cell)
+
+        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+        a.append_atom(position=(1., 1., 1.), symbols=['X'])
+        a.append_atom(position=(1.2, 1.4, 1.6), symbols=['X'])
+        self.assertFalse(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+        # There should be only two kinds! (two atoms of kind X should
+        # belong to the same kind)
+        self.assertEquals(len(a.kinds), 2)
+
+        a.append_atom(position=(0.5, 1., 1.5), symbols=['O', 'C'],
+                      weights=[0.5, 0.5])
+        self.assertTrue(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+
+        a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
+        self.assertTrue(a.is_alloy())
+        self.assertTrue(a.has_vacancies())
+
+        a.clear_kinds()
+        a.append_atom(position=(0.5, 1., 1.5), symbols=['X'], weights=[0.5])
+        self.assertFalse(a.is_alloy())
+        self.assertTrue(a.has_vacancies())
+        
     def test_kind_1(self):
         """
         Test the management of kinds (automatic detection of kind of
@@ -1324,6 +1360,24 @@ class TestStructureData(AiidaTestCase):
         self.assertEqual(set(k.name for k in a.kinds),
                          set(('Ba', 'Ti')))
 
+    def test_kind_1_unknown(self):
+        """
+        Test the management of kinds (automatic detection of kind of
+        simple atoms), inluding the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols=['X'])
+        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'])
+        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+
+        self.assertEqual(len(a.kinds), 2)  # I should only have two types
+        # I check for the default names of kinds
+        self.assertEqual(set(k.name for k in a.kinds),
+                         set(('X', 'Ti')))
+        
     def test_kind_2(self):
         """
         Test the management of kinds (manual specification of kind name).
@@ -1341,6 +1395,24 @@ class TestStructureData(AiidaTestCase):
         self.assertEqual(set(k.name for k in kind_list),
                          set(('Ba1', 'Ba2', 'Ti')))
 
+    def test_kind_2_unknown(self):
+        """
+        Test the management of kinds (manual specification of kind name),
+        including the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols=['X'], name='X1')
+        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], name='X2')
+        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+
+        kind_list = a.kinds
+        self.assertEqual(len(kind_list), 3)  # I should have now three kinds
+        self.assertEqual(set(k.name for k in kind_list),
+                         set(('X1', 'X2', 'Ti')))
+        
     def test_kind_3(self):
         """
         Test the management of kinds (adding an atom with different mass).
@@ -1365,6 +1437,31 @@ class TestStructureData(AiidaTestCase):
         self.assertEqual(len(a.sites), 3)  # and 3 sites
         self.assertEqual(set(k.name for k in a.kinds), set(('Ba', 'Ba2', 'Ti')))
 
+    def test_kind_3_unknown(self):
+        """
+        Test the management of kinds (adding an atom with different mass),
+        including the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols=['X'], mass=100.)
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, I am adding two sites with the same name 'Ba'
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'],
+                          mass=101., name='X')
+
+            # now it should work because I am using a different kind name
+        a.append_atom(position=(0.5, 0.5, 0.5),
+                      symbols=['X'], mass=101., name='X2')
+
+        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+
+        self.assertEqual(len(a.kinds), 3)  # I should have now three types
+        self.assertEqual(len(a.sites), 3)  # and 3 sites
+        self.assertEqual(set(k.name for k in a.kinds), set(('X', 'X2', 'Ti')))
+        
     def test_kind_4(self):
         """
         Test the management of kind (adding an atom with different symbols
@@ -1403,6 +1500,44 @@ class TestStructureData(AiidaTestCase):
 
         self.assertEquals(len(a.kinds), 1)
 
+    def test_kind_4_unknown(self):
+        """
+        Test the management of kind (adding an atom with different symbols
+        or weights), including the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols=['X', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different weights
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X', 'Ti'],
+                          weights=(0.9, 0.1), name='mytype')
+
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different weights (with vacancy)
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X', 'Ti'],
+                          weights=(0.8, 0.1), name='mytype')
+
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different symbols list
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'],
+                          name='mytype')
+
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different symbols list
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Si', 'Ti'],
+                          weights=(1., 0.), name='mytype')
+
+            # should allow because every property is identical
+        a.append_atom(position=(0., 0., 0.), symbols=['X', 'Ti'],
+                      weights=(1., 0.), name='mytype')
+
+        self.assertEquals(len(a.kinds), 1)
+        
     def test_kind_5(self):
         """
         Test the management of kinds (automatic creation of new kind
@@ -1431,6 +1566,35 @@ class TestStructureData(AiidaTestCase):
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
         self.assertEquals(len(a.sites), 5)
 
+    def test_kind_5_unknown(self):
+        """
+        Test the management of kinds (automatic creation of new kind
+        if name is not specified and properties are different), including
+        the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
+        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        # The name already exists, but the properties are different!
+        with self.assertRaises(ValueError):
+            a.append_atom(position=(1., 1., 1.), symbols='Ti', mass=100.,
+                          name='Ti2')
+        # Should not complain, should create a new type
+        a.append_atom(position=(0., 0., 0.), symbols='X', mass=150.)
+
+        # There should be 4 kinds, the automatic name for the last one
+        # should be Ba1
+        self.assertEquals([k.name for k in a.kinds],
+                          ['X', 'Ti', 'Ti2', 'X1'])
+        self.assertEquals(len(a.sites), 5)
+        
     def test_kind_5_bis(self):
         """
         Test the management of kinds (automatic creation of new kind
@@ -1459,6 +1623,35 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(kind_of_each_site,
                           ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe1'])
 
+    def test_kind_5_bis_unknown(self):
+        """
+        Test the management of kinds (automatic creation of new kind
+        if name is not specified and properties are different).
+        This test was failing in, e.g., commit f6a8f4b. This also includes
+        the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.constants import elements
+
+        s = StructureData(cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
+
+        s.append_atom(symbols='X', position=[0, 0, 0], mass=12)
+        s.append_atom(symbols='X', position=[1, 0, 0], mass=12)
+        s.append_atom(symbols='X', position=[2, 0, 0], mass=12)
+        s.append_atom(symbols='X', position=[2, 0, 0])
+        s.append_atom(symbols='X', position=[4, 0, 0])
+
+        # I expect only two species, the first one with name 'X', mass 12,
+        # and referencing the first three atoms; the second with name
+        # 'X', mass = elements[0]['mass'], and referencing the last two atoms
+        self.assertEquals(
+            set([(k.name, k.mass) for k in s.kinds]),
+            set([('X', 12.0), ('X1', elements[0]['mass'])]))
+
+        kind_of_each_site = [site.kind_name for site in s.sites]
+        self.assertEquals(kind_of_each_site,
+                          ['X', 'X', 'X', 'X1', 'X1'])
+        
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_kind_5_bis_ase(self):
         """
@@ -1494,6 +1687,41 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(kind_of_each_site,
                           ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe1'])
 
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    def test_kind_5_bis_ase_unknown(self):
+        """
+        Same test as test_kind_5_bis_unknown, but using ase
+        """
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        asecell = ase.Atoms('X5',
+                            cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
+        asecell.set_positions([
+            [0, 0, 0],
+            [1, 0, 0],
+            [2, 0, 0],
+            [3, 0, 0],
+            [4, 0, 0],
+        ])
+
+        asecell[0].mass = 12.
+        asecell[1].mass = 12.
+        asecell[2].mass = 12.
+
+        s = StructureData(ase=asecell)
+
+        # I expect only two species, the first one with name 'X', mass 12,
+        # and referencing the first three atoms; the second with name
+        # 'X1', mass = elements[26]['mass'], and referencing the last two atoms
+        self.assertEquals(
+            set([(k.name, k.mass) for k in s.kinds]),
+            set([('X', 12.0), ('X1', asecell[3].mass)]))
+
+        kind_of_each_site = [site.kind_name for site in s.sites]
+        self.assertEquals(kind_of_each_site,
+                          ['X', 'X', 'X', 'X1', 'X1'])
+        
     def test_kind_6(self):
         """
         Test the returning of kinds from the string name (most of the code
@@ -1524,6 +1752,36 @@ class TestStructureData(AiidaTestCase):
         self.assertEqual(k.symbols, ('Ba',))
         self.assertAlmostEqual(k.mass, 150.)
 
+    def test_kind_6_unknown(self):
+        """
+        Test the returning of kinds from the string name (most of the code
+        copied from :py:meth:`.test_kind_5`), including the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
+        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        # Should not complain, should create a new type
+        a.append_atom(position=(0., 0., 0.), symbols='X', mass=150.)
+        # There should be 4 kinds, the automatic name for the last one
+        # should be Ba1 (same check of test_kind_5
+        self.assertEquals([k.name for k in a.kinds],
+                          ['X', 'Ti', 'Ti2', 'X1'])
+        #############################
+        # Here I start the real tests
+        # No such kind
+        with self.assertRaises(ValueError):
+            a.get_kind('Ti3')
+        k = a.get_kind('X1')
+        self.assertEqual(k.symbols, ('X',))
+        self.assertAlmostEqual(k.mass, 150.)
+        
     def test_kind_7(self):
         """
         Test the functions returning the list of kinds, symbols, ...
@@ -1542,6 +1800,25 @@ class TestStructureData(AiidaTestCase):
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
 
+    def test_kind_7_unknown(self):
+        """
+        Test the functions returning the list of kinds, symbols, ...
+        including the unknown entry.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+
+        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
+        a.append_atom(position=(0., 0., 0.), symbols='X')
+        # The name does not exist
+        a.append_atom(position=(0., 0., 0.), symbols='X', name='X2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'],
+                      weights=[0.9, 0.1], mass=15.)
+
+        self.assertEquals(a.get_symbols_set(), set(['Ba', 'X', 'O', 'H']))
+        
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     def test_kind_8(self):
@@ -1679,6 +1956,45 @@ class TestStructureData(AiidaTestCase):
                                       mode="count_compact"),
                           'BaTiO3')
 
+    def test_get_formula_unknown(self):
+        """
+        Tests the generation of formula, including unknown entry.
+        """
+        from aiida.orm.data.structure import get_formula
+
+        self.assertEquals(get_formula(['Ba', 'Ti'] + ['X'] * 3),
+                          'BaTiX3')
+        self.assertEquals(get_formula(['Ba', 'Ti', 'C'] + ['X'] * 3,
+                                      separator=" "),
+                          'C Ba Ti X3')
+        self.assertEquals(get_formula(['X'] * 6 + ['C'] * 6),
+                          'C6X6')
+        self.assertEquals(get_formula(['X'] * 6 + ['C'] * 6,
+                                      mode="hill_compact"),
+                          'CX')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
+                                      ['Ba'] + ['X'] * 2 + ['O'] * 3,
+                                      mode="group"),
+                          '(BaTiX3)2BaX2O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
+                                      ['Ba'] + ['X'] * 2 + ['O'] * 3,
+                                      mode="group", separator=" "),
+                          '(Ba Ti X3)2 Ba X2 O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['X'] * 3,
+                                      mode="reduce"),
+                          'BaTiX3BaTiX3BaTi2X3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['X'] * 3,
+                                      mode="reduce", separator=", "),
+                          'Ba, Ti, X3, Ba, Ti, X3, Ba, Ti2, X3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count"),
+                          'Ba2Ti2O6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2,
+                                      mode="count_compact"),
+                          'BaTiX3')
+        
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_get_cif(self):

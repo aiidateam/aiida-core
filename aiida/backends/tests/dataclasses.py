@@ -907,6 +907,14 @@ class TestKindValidSymbols(AiidaTestCase):
 
         _ = Kind(symbols=['H', 'He'], weights=[0.5, 0.5])
 
+    def test_unknown_symbol(self):
+        """
+        Should test if symbol X is valid and defined
+        in the elements dictionary.
+        """
+        from aiida.orm.data.structure import Kind
+
+        _ = Kind(symbols=['X'])
 
 class TestSiteValidWeights(AiidaTestCase):
     """
@@ -1054,12 +1062,21 @@ class TestKindTestGeneral(AiidaTestCase):
         a = Kind(symbols='Ba')
         self.assertEqual(a.name, 'Ba')
 
+        a = Kind(symbols='X')
+        self.assertEqual(a.name, 'X')
+        
         a = Kind(symbols=('Si', 'Ge'), weights=(1. / 3., 2. / 3.))
         self.assertEqual(a.name, 'GeSi')
 
+        a = Kind(symbols=('Si', 'X'), weights=(1. / 3., 2. / 3.))
+        self.assertEqual(a.name, 'SiX')
+        
         a = Kind(symbols=('Si', 'Ge'), weights=(0.4, 0.5))
         self.assertEqual(a.name, 'GeSiX')
 
+        a = Kind(symbols=('Si', 'X'), weights=(0.4, 0.5))
+        self.assertEqual(a.name, 'SiXX')
+        
         # Manually setting the name of the species
         a.name = 'newstring'
         self.assertEqual(a.name, 'newstring')

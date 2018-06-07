@@ -224,10 +224,10 @@ def is_valid_symbol(symbol):
     Validates the chemical symbol name.
 
     :return: True if the symbol is a valid chemical symbol (with correct
-        capitalization), False otherwise.
+        capitalization), or the dummy X, False otherwise.
 
     Recognized symbols are for elements from hydrogen (Z=1) to lawrencium
-    (Z=103).
+    (Z=103). In addition, a dummy element unknown name (Z=0) is supported.
     """
     return symbol in _valid_symbols
 

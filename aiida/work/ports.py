@@ -31,13 +31,13 @@ class WithNonDb(object):
 
         return description
 
-class WithSerializeFct(object):
+class WithSerialize(object):
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs that are not AiiDA data types.
     """
     def __init__(self, *args, **kwargs):
         serialize_fct = kwargs.pop('serialize_fct', None)
-        super(WithSerializeFct, self).__init__(*args, **kwargs)
+        super(WithSerialize, self).__init__(*args, **kwargs)
         self._serialize_fct = serialize_fct
 
     def serialize(self, value):
@@ -46,7 +46,7 @@ class WithSerializeFct(object):
             return value
         return self._serialize_fct(value)
 
-class InputPort(WithSerializeFct, WithNonDb, ports.InputPort):
+class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     pass
 
 

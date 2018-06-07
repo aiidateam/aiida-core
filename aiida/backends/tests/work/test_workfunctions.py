@@ -13,7 +13,7 @@ from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
 from aiida.orm import load_node
 from aiida.orm.calculation.function import FunctionCalculation
-from aiida.work import run, run_get_node, submit, workfunction, Process
+from aiida.work import run, run_get_node, submit, workfunction, Process, Exit
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -62,6 +62,10 @@ class TestWf(AiidaTestCase):
         def wf_default_label_description(a=Int(DEFAULT_INT), label=DEFAULT_LABEL, description=DEFAULT_DESCRIPTION):
             return a
 
+        @workfunction
+        def wf_exit(exit_code):
+            raise Exit(exit_code.value)
+
         self.wf_return_input = wf_return_input
         self.wf_return_true = wf_return_true
         self.wf_args = wf_args
@@ -70,6 +74,7 @@ class TestWf(AiidaTestCase):
         self.wf_args_and_kwargs = wf_args_and_kwargs
         self.wf_args_and_default = wf_args_and_default
         self.wf_default_label_description = wf_default_label_description
+        self.wf_exit = wf_exit
 
     def tearDown(self):
         super(TestWf, self).tearDown()
@@ -230,6 +235,16 @@ class TestWf(AiidaTestCase):
 
         with self.assertRaises(AssertionError):
             submit(self.wf_return_true)
+
+    def test_exit_exception(self):
+        """
+        A workfunction that raises the Exit exception should not EXCEPT but be FINISHED
+        """
+        finish_status = 418
+        result, node = self.wf_exit.run_get_node(exit_code=Int(finish_status))
+        self.assertTrue(node.is_finished)
+        self.assertFalse(node.is_finished_ok)
+        self.assertEquals(node.finish_status, finish_status)
 
     def test_default_linkname(self):
         """

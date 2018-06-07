@@ -31,6 +31,7 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.exceptions import Exit
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec
 from aiida.work.process_builder import ProcessBuilder
@@ -686,18 +687,23 @@ class FunctionProcess(Process):
             except ValueError:
                 kwargs[name] = value
 
-        result = self._func(*args, **kwargs)
-        if result is not None:
-            if isinstance(result, Data):
-                self.out(self.SINGLE_RETURN_LINKNAME, result)
-            elif isinstance(result, collections.Mapping):
-                for name, value in result.iteritems():
-                    self.out(name, value)
-            else:
-                raise TypeError(
-                    "Workfunction returned unsupported type '{}'\n"
-                    "Must be a Data type or a Mapping of {{string: Data}}".
-                        format(result.__class__))
+        try:
+            result = self._func(*args, **kwargs)
+        except Exit as exception:
+            finish_status = exception.exit_code
+        else:
+            finish_status = 0
 
-        # Execution successful so we return exit code (finish status) 0
-        return 0
+            if result is not None:
+                if isinstance(result, Data):
+                    self.out(self.SINGLE_RETURN_LINKNAME, result)
+                elif isinstance(result, collections.Mapping):
+                    for name, value in result.iteritems():
+                        self.out(name, value)
+                else:
+                    raise TypeError(
+                        "Workfunction returned unsupported type '{}'\n"
+                        "Must be a Data type or a Mapping of {{string: Data}}".
+                            format(result.__class__))
+
+        return finish_status

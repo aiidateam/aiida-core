@@ -6,6 +6,12 @@ from aiida.cmdline.params import types
 from aiida.cmdline.params.arguments.overridable import OverridableArgument
 
 
+CALCULATION = OverridableArgument('calculation', type=types.CalculationParamType())
+
+
+CALCULATIONS = OverridableArgument('calculations', nargs=-1, type=types.CalculationParamType())
+
+
 CODE = OverridableArgument('code', type=types.CodeParamType())
 
 
@@ -16,6 +22,12 @@ COMPUTER = OverridableArgument('computer', type=types.ComputerParamType())
 
 
 COMPUTERS = OverridableArgument('computers', nargs=-1, type=types.ComputerParamType())
+
+
+DATUM = OverridableArgument('datum', type=types.DataParamType())
+
+
+DATA = OverridableArgument('data', nargs=-1, type=types.DataParamType())
 
 
 GROUP = OverridableArgument('group', type=types.GroupParamType())

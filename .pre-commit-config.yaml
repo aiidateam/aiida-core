@@ -18,7 +18,23 @@
         aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/work/awaitable.py|
+        aiida/work/context.py|
+        aiida/work/exceptions.py|
+        aiida/work/futures.py|
+        aiida/work/launch.py|
+        aiida/work/persistence.py|
+        aiida/work/ports.py|
+        aiida/work/process_builder.py|
+        aiida/work/process_spec.py|
+        aiida/work/rmq.py|
+        aiida/work/runners.py|
+        aiida/work/test_utils.py|
+        aiida/work/transports.py|
+        aiida/work/utils.py|
+        aiida/work/workchain.py|
+        aiida/work/workfunctions.py
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 
 # prospector: collection of linters
@@ -41,7 +57,23 @@
         aiida/orm/data/cif.py|
         aiida/restapi/translator/data/cif.py|
         aiida/restapi/resources.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/work/awaitable.py|
+        aiida/work/context.py|
+        aiida/work/exceptions.py|
+        aiida/work/futures.py|
+        aiida/work/launch.py|
+        aiida/work/persistence.py|
+        aiida/work/ports.py|
+        aiida/work/process_builder.py|
+        aiida/work/process_spec.py|
+        aiida/work/rmq.py|
+        aiida/work/runners.py|
+        aiida/work/test_utils.py|
+        aiida/work/transports.py|
+        aiida/work/utils.py|
+        aiida/work/workchain.py|
+        aiida/work/workfunctions.py
       )$
 
 - repo: local

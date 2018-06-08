@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Exceptions that can be thrown by parts of the workflow engine."""
 from aiida.common.exceptions import AiidaException
 
 __all__ = ['Exit', 'PastException']
@@ -17,6 +18,7 @@ class Exit(AiidaException):
 
         :param exit_code: the integer exit code, default is 0
         """
+        super(Exit, self).__init__()
         self._exit_code = exit_code
 
     @property

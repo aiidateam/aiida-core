@@ -36,15 +36,15 @@ class WithSerialize(object):
     A mixin that adds support for a serialization function which is automatically applied on inputs that are not AiiDA data types.
     """
     def __init__(self, *args, **kwargs):
-        serialize_fct = kwargs.pop('serialize_fct', None)
+        serializer = kwargs.pop('serializer', None)
         super(WithSerialize, self).__init__(*args, **kwargs)
-        self._serialize_fct = serialize_fct
+        self._serializer = serializer
 
     def serialize(self, value):
         from aiida.orm import Data
-        if self._serialize_fct is None or isinstance(value, Data):
+        if self._serializer is None or isinstance(value, Data):
             return value
-        return self._serialize_fct(value)
+        return self._serializer(value)
 
 class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     pass

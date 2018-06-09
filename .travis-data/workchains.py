@@ -60,7 +60,7 @@ class SerializeWorkChain(WorkChain):
         spec.input(
             'test',
             valid_type=Str,
-            serialize_fct=lambda x: Str(ObjectLoader().identify_object(x))
+            serializer=lambda x: Str(ObjectLoader().identify_object(x))
         )
 
         spec.outline(cls.echo)

@@ -830,7 +830,7 @@ Again, the ``namespace`` and ``agglomerate`` options can be used to select which
 Automatic input serialization
 -----------------------------
 
-Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a workflow. Doing this manually can be cumbersome, so you can define a function which does this automatically when defining the input spec. This function, passed as ``serialize_fct`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a workflow. Doing this manually can be cumbersome, so you can define a function which does this automatically when defining the input spec. This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type. For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
 

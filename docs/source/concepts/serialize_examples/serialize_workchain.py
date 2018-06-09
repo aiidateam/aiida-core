@@ -9,9 +9,9 @@ class SerializeWorkChain(WorkChain):
     def define(cls, spec):
         super(SerializeWorkChain, cls).define(spec)
 
-        spec.input('a', serialize_fct=to_aiida_type)
-        spec.input('b', serialize_fct=to_aiida_type)
-        spec.input('c', serialize_fct=to_aiida_type)
+        spec.input('a', serializer=to_aiida_type)
+        spec.input('b', serializer=to_aiida_type)
+        spec.input('c', serializer=to_aiida_type)
 
         spec.outline(cls.echo)
 

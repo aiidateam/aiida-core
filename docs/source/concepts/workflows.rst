@@ -754,6 +754,23 @@ As already noted in the :ref:`report<reporting>` section, the report messages of
 The finish status, however, is a perfect way.
 The parent workchain can easily request the finish status of the child workchain through the ``finish_status`` property, and based on its value determine how to continue.
 
+Workfunction exit codes
+^^^^^^^^^^^^^^^^^^^^^^^
+The method of setting the finish status for a ``WorkChain`` as explained in the previous section, by simply returning an integer from any of the outline steps, will not work of course for workfunctions, as there you can only return once and the return value has to be a database storable type.
+To still be able to mark a workfunction as ``failed'' by letting it finish nominally, but setting a non-zero finish status, we provide a special exception class :py:class:`~aiida.work.exceptions.Exit`.
+This exception can be constructed with an integer, to denote the desired finish status and when raised from a workfunction, workflow engine will mark the node as ``Finished`` and set the finish status to the value of the exception.
+Consider the following example:
+
+.. code:: python
+
+    @workfunction
+    def exiting_workfunction():
+        from aiida.work import Exit
+        raise Exit(418)
+
+The execution of the workfunction will be immediately terminated as soon as the exception is raised and the finish status will be set to ``418`` in this example.
+Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs.
+
 Modular workflow design
 -----------------------
 When creating complex workflows, it is a good idea to split them up into smaller, modular parts.

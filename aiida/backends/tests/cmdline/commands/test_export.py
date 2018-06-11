@@ -64,15 +64,6 @@ class TestVerdiExport(AiidaTestCase):
 
         return os.path.join(dirpath_archive, archive)
 
-    def test_help(self):
-        """
-        Verify that all subcommands support both of the -h/--help options to show the help string
-        """
-        for sub_command in export.verdi_export.commands.values():
-            for option in ['-h', '--help']:
-                result = self.cli_runner.invoke(sub_command, [option])
-                self.assertIsNone(result.exception)
-
     def test_create_file_already_exists(self):
         """
         Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise

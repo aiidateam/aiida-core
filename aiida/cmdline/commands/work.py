@@ -17,7 +17,6 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 
@@ -54,7 +53,7 @@ class Work(VerdiCommandWithSubcommands):
         return '\n'.join(return_plugins)
 
 
-@verdi_work.command('list', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('list')
 @options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
 @options.PROCESS_STATE()
 @options.FINISH_STATUS()
@@ -178,7 +177,7 @@ def do_list(past_days, all, process_state, finish_status, failed, limit, project
         print_last_process_state_change(process_type='work')
 
 
-@verdi_work.command('report', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('report')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 @click.option(
     '-i', '--indent-size', type=int, default=2,
@@ -280,7 +279,7 @@ def report(calculations, levelname, order_by, indent_size, max_depth):
     return
 
 
-@verdi_work.command('kill', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('kill')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def kill(calculations):
     """
@@ -304,7 +303,7 @@ def kill(calculations):
                 echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, e.message))
 
 
-@verdi_work.command('pause', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('pause')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def pause(calculations):
     """
@@ -328,7 +327,7 @@ def pause(calculations):
                 echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, e.message))
 
 
-@verdi_work.command('play', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('play')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def play(calculations):
     """
@@ -352,7 +351,7 @@ def play(calculations):
                 echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, e.message))
 
 
-@verdi_work.command('watch', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('watch')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def watch(calculations):
     """
@@ -381,7 +380,7 @@ def watch(calculations):
             pass
 
 
-@verdi_work.command('status', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('status')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def status(calculations):
     """
@@ -394,7 +393,7 @@ def status(calculations):
         echo.echo(graph)
 
 
-@verdi_work.command('plugins', context_settings=CONTEXT_SETTINGS)
+@verdi_work.command('plugins')
 @click.argument('entry_point', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def plugins(entry_point):

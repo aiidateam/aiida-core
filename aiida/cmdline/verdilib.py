@@ -370,10 +370,7 @@ class Setup(VerdiCommand):
         ""
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-
-@verdi.command('setup', context_settings=CONTEXT_SETTINGS)
+@verdi.command('setup')
 @click.argument('profile', default='', type=str)
 @click.option('--only-config', is_flag=True)
 @click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
@@ -637,7 +634,7 @@ class Quicksetup(VerdiCommand):
         return quicksetup.make_context(info_name, list(args), **kwargs)
 
 
-@verdi.command('quicksetup', context_settings=CONTEXT_SETTINGS)
+@verdi.command('quicksetup')
 @click.option('--profile', prompt='Profile name', type=str, default='quicksetup')
 @click.option('--email', prompt='Email Address (identifies your data when sharing)', type=str,
               help='This email address will be associated with your data and will be exported along with it, should you choose to share any of your work')

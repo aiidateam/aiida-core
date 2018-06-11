@@ -31,10 +31,34 @@ class WithNonDb(object):
 
         return description
 
+class WithSerialize(object):
+    """
+    A mixin that adds support for a serialization function which is automatically applied on inputs that are not AiiDA data types.
+    """
+    def __init__(self, *args, **kwargs):
+        serializer = kwargs.pop('serializer', None)
+        super(WithSerialize, self).__init__(*args, **kwargs)
+        self._serializer = serializer
 
-class InputPort(WithNonDb, ports.InputPort):
+    def serialize(self, value):
+        from aiida.orm import Data
+        if self._serializer is None or isinstance(value, Data):
+            return value
+        return self._serializer(value)
+
+class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     pass
 
 
 class PortNamespace(ports.PortNamespace):
-    pass
+    def serialize(self, mapping):
+        if mapping is None:
+            return
+        result = {}
+        for name, value in mapping.items():
+            if name in self:
+                port = self[name]
+                result[name] = port.serialize(value)
+            else:
+                result[name] = value
+        return result

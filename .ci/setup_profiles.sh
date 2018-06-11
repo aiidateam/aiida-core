@@ -9,6 +9,7 @@ if [[ "$TEST_TYPE" != "pre-commit" ]]
 then
     # Here I create the actual DB for submission
     psql -h localhost -c "CREATE DATABASE $TEST_AIIDA_BACKEND;" -U postgres -w
+
     # Here I create the test DB
     psql -h localhost -c "CREATE DATABASE test_$TEST_AIIDA_BACKEND;" -U postgres -w
 

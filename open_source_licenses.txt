@@ -16,7 +16,7 @@ Fastep:
   * fastentrypoints.py
 
 wait-for-it:
-  * .travis-data/wait-for-it.sh
+  * .ci/wait-for-it.sh
 
 The respective copyright notices follow below.
 

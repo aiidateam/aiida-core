@@ -30,6 +30,7 @@ class AbstractCalculation(Sealable):
     """
 
     PAUSED_KEY = 'paused'
+    EXCEPTION_KEY = 'exception'
     PROCESS_LABEL_KEY = '_process_label'
     PROCESS_STATE_KEY = 'process_state'
     FINISH_STATUS_KEY = 'finish_status'
@@ -43,6 +44,7 @@ class AbstractCalculation(Sealable):
     def _updatable_attributes(cls):
         return super(AbstractCalculation, cls)._updatable_attributes + (
             cls.PAUSED_KEY,
+            cls.EXCEPTION_KEY,
             cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
             cls.FINISH_STATUS_KEY,
@@ -331,6 +333,28 @@ class AbstractCalculation(Sealable):
             raise ValueError('finish status has to be an integer, got {}'.format(status))
 
         return self._set_attr(self.FINISH_STATUS_KEY, status)
+
+    @property
+    def exception(self):
+        """
+        Return the exception of the Calculation or None if the calculation is not EXCEPTED. If the calculation
+        is marked as EXCEPTED yet there is no exception attribute, an empty string will be returned
+
+        :returns: the exception message or None
+        """
+        if self.is_excepted:
+            return self.get_attr(self.EXCEPTION_KEY, '')
+
+    def _set_exception(self, exception):
+        """
+        Set the exception of the Calculation
+
+        :param exception: the exception message
+        """
+        if not isinstance(exception, basestring):
+            raise ValueError('exception message has to be a string type, got {}'.format(type(exception)))
+
+        return self._set_attr(self.EXCEPTION_KEY, exception)
 
     @property
     def checkpoint(self):

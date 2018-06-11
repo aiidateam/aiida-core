@@ -12,11 +12,11 @@ CODE='add@torquessh'
 if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
 # Define the absolute path to the RPN cli script
-JENKINS_DATA_DIR="${TRAVIS_BUILD_DIR}/.jenkins-data"
-CLI_SCRIPT="${JENKINS_DATA_DIR}/polish/cli.py"
+DATA_DIR="${TRAVIS_BUILD_DIR}/.ci"
+CLI_SCRIPT="${DATA_DIR}/polish/cli.py"
 
 # Export the polish module to the python path so generated workchains can be imported
-export PYTHONPATH="${PYTHONPATH}:${JENKINS_DATA_DIR}/polish"
+export PYTHONPATH="${PYTHONPATH}:${DATA_DIR}/polish"
 
 # Get the absolute path for verdi
 VERDI=$(which verdi)

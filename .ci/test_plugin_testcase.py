@@ -44,7 +44,7 @@ class PluginTestcaseTestCase(PluginTestCase):
         """
         Return some ParameterData
         """
-        from aiida.orm import DataFactory
+        from aiida.orm.utils import DataFactory
         data = DataFactory('parameter')(dict={'data': 'test'})
         data.store()
         return data
@@ -71,7 +71,7 @@ class PluginTestcaseTestCase(PluginTestCase):
         Check that the data is indeed in the DB when calling load_node
         """
         from aiida.orm import Computer
-        from aiida.orm import load_node
+        from aiida.orm.utils import load_node
         self.assertTrue(is_dbenv_loaded())
         self.assertEqual(load_node(self.data_pk).uuid, self.data.uuid)
         self.assertEqual(Computer.get('localhost').uuid, self.computer.uuid)

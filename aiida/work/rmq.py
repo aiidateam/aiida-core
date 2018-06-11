@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-import json
+import yaml
 import collections
 import plumpy
 import plumpy.rmq
 import tornado.ioloop
+from plumpy.process_comms import PID_KEY
 
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.exceptions import PastException
 from aiida.work.persistence import AiiDAPersister
 
 from . import persistence
@@ -123,7 +125,7 @@ def encode_response(response):
     :rtype: str
     """
     serialized = serialize_data(response)
-    return json.dumps(serialized)
+    return yaml.dump(serialized)
 
 
 def decode_response(response):
@@ -137,7 +139,7 @@ def decode_response(response):
     :param response: The response string to decode
     :return: A data structure containing deserialized node instances
     """
-    response = json.loads(response)
+    response = yaml.load(response)
     return deserialize_data(response)
 
 
@@ -202,11 +204,39 @@ class ExecuteProcessAction(plumpy.Action):
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
+
     def _launch(self, task):
         from plumpy.process_comms import KWARGS_KEY
         kwargs = task.get(KWARGS_KEY, {})
         task[KWARGS_KEY] = kwargs
         return super(ProcessLauncher, self)._launch(task)
+
+    def _continue(self, task):
+        from aiida.common import exceptions
+        from aiida.orm import load_node, Data
+
+        # Process may have already been finished by another worker, but then have failed to send the acknowledgment.
+        # Therefore we check here directly on the node whether it has reached a terminal state and return the
+        # corresponding the future to acknowledge that the task has been completed
+        try:
+            node = load_node(pk=task[PID_KEY])
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+            raise plumpy.TaskRejected('Cannot continue process: {}'.format(exception))
+
+        if node.is_terminated:
+
+            future = plumpy.Future()
+
+            if node.is_finished:
+                future.set_result(dict(node.get_outputs(node_type=Data, also_labels=True)))
+            elif node.is_excepted:
+                future.set_exception(PastException(node.exception))
+            elif node.is_killed:
+                future.set_exception(plumpy.KilledError())
+
+            return future
+
+        return super(ProcessLauncher, self)._continue(task)
 
 
 class ProcessControlPanel(object):

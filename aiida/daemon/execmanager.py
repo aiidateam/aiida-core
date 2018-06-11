@@ -14,7 +14,6 @@ the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
 import os
-from backports import tempfile
 
 from aiida.common import aiidalogger
 from aiida.common.datastructures import calc_states

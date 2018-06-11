@@ -68,7 +68,7 @@ As the name suggests, this construct is a way to chain multiple logical steps of
 The workchain is therefore the preferred solution for parts of the workflow that involve more expensive and complex calculations.
 To define a workchain, AiiDA implements the ``WorkChain`` class.
 
-If we were to reimplement our workfunction solution of the simple example problem of the previous section, but this time using a workchain, it would look something like the following: 
+If we were to reimplement our workfunction solution of the simple example problem of the previous section, but this time using a workchain, it would look something like the following:
 
 .. include:: include/snippets/workflows/workchains/example_problem_workchain.py
     :code: python
@@ -171,7 +171,7 @@ One can also define the inputs in a dictionary and then use the standard python 
 
 After the workchain's execution is finished, the result is returned, which is a dictionary of its outputs.
 In this example the variable ``result`` will therefore be equal to ``{'result': 9}``.
-If you would also like to get a reference of the node that represents the ``WorkChain`` in the database, one can use the ``run_get_node`` or ``run_get_pid`` functions: 
+If you would also like to get a reference of the node that represents the ``WorkChain`` in the database, one can use the ``run_get_node`` or ``run_get_pid`` functions:
 
 .. include:: include/snippets/workflows/workchains/run_workchain_get_node_pid.py
     :code: python
@@ -546,7 +546,7 @@ To use these in your workchain design, you will have to import them:
 
 The following example shows how to use these logical constructs to define the outline of a workchain:
 
-.. code:: python 
+.. code:: python
 
     spec.outline(
         cls.intialize_to_zero,
@@ -689,7 +689,7 @@ How this can be achieved is explained in the next section.
 Appending
 ^^^^^^^^^
 When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.work.context.append_` function.
-Consider the example from the previous section, but now we will use the ``append_`` function instead: 
+Consider the example from the previous section, but now we will use the ``append_`` function instead:
 
 .. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
     :code: python
@@ -753,6 +753,23 @@ After it has terminated its execution, the parent workchain will want to know wh
 As already noted in the :ref:`report<reporting>` section, the report messages of the workchain should not be used.
 The finish status, however, is a perfect way.
 The parent workchain can easily request the finish status of the child workchain through the ``finish_status`` property, and based on its value determine how to continue.
+
+Workfunction exit codes
+^^^^^^^^^^^^^^^^^^^^^^^
+The method of setting the finish status for a ``WorkChain`` as explained in the previous section, by simply returning an integer from any of the outline steps, will not work of course for workfunctions, as there you can only return once and the return value has to be a database storable type.
+To still be able to mark a workfunction as ``failed'' by letting it finish nominally, but setting a non-zero finish status, we provide a special exception class :py:class:`~aiida.work.exceptions.Exit`.
+This exception can be constructed with an integer, to denote the desired finish status and when raised from a workfunction, workflow engine will mark the node as ``Finished`` and set the finish status to the value of the exception.
+Consider the following example:
+
+.. code:: python
+
+    @workfunction
+    def exiting_workfunction():
+        from aiida.work import Exit
+        raise Exit(418)
+
+The execution of the workfunction will be immediately terminated as soon as the exception is raised and the finish status will be set to ``418`` in this example.
+Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs.
 
 Modular workflow design
 -----------------------
@@ -824,6 +841,27 @@ Of course, we then need to explicitly pass the input ``a``.
 
 Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent.
 Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.
+
+.. _serialize_inputs:
+
+Automatic input serialization
+-----------------------------
+
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a workflow. Doing this manually can be cumbersome, so you can define a function which does this automatically when defining the input spec. This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+
+For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type. For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
+
+The following example workchain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`.to_aiida_type` function is used as serialization function.
+
+.. include:: serialize_examples/serialize_workchain.py
+    :code: python
+
+This workchain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`.to_aiida_type`.
+
+.. include:: serialize_examples/run_serialize.py
+    :code: python
+
+Of course, you can also use the serialization feature to perform a more complex serialization of the inputs.
 
 .. _upgrading_workchains_beta_release:
 

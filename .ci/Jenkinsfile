@@ -23,7 +23,7 @@ pipeline {
         //   but also runs fast
         dockerfile {
             filename 'Dockerfile'
-            dir '.jenkins-data'
+            dir '.ci'
             args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp:exec'
             additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
@@ -73,7 +73,7 @@ pipeline {
                 // So it can find the location of 'verdi'
                 sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
                 // Add path needed by the daemon to find the workchains
-                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.travis-data/' ~/.bashrc"
+                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.ci/' ~/.bashrc"
                 sh "cat ~/.bashrc"
             }
         }
@@ -114,10 +114,10 @@ pipeline {
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
                         sh 'mkdir -p "$AIIDA_PATH/.aiida"'
-                        sh '.travis-data/setup_profiles.sh'
-                        sh '.travis-data/before_script.sh'
-                        sh '.travis-data/test_script.sh'
-                        sh '.jenkins-data/test_rpn.sh'
+                        sh '.ci/setup_profiles.sh'
+                        sh '.ci/before_script.sh'
+                        sh '.ci/test_script.sh'
+                        sh '.ci/test_rpn.sh'
                     }
                 }
                 stage('Test-SQLAlchemy') {
@@ -133,10 +133,10 @@ pipeline {
                     steps {
                         // An empty .aiida folder must be present in the AIIDA_PATH
                         sh 'mkdir -p "$AIIDA_PATH/.aiida"'
-                        sh '.travis-data/setup_profiles.sh'
-                        sh '.travis-data/before_script.sh'
-                        sh '.travis-data/test_script.sh'
-                        sh '.jenkins-data/test_rpn.sh'
+                        sh '.ci/setup_profiles.sh'
+                        sh '.ci/before_script.sh'
+                        sh '.ci/test_script.sh'
+                        sh '.ci/test_rpn.sh'
                     }
                 }
             }
@@ -144,7 +144,7 @@ pipeline {
         stage('Final') {
             steps {
                 // create the final coverage info, summed over the various backends
-                sh '.jenkins-data/create_coverage_info.sh'
+                sh '.ci/create_coverage_info.sh'
             }
             // post {
             //    always {
@@ -190,6 +190,11 @@ pipeline {
             }
         } 
     } 
+    options {
+        // we do not want the whole run to hang forever - 
+ 	// we set a total timeout of 1 hour
+        timeout(time: 60, unit: 'MINUTES')
+    }
 }
 
 

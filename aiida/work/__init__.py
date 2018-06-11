@@ -10,6 +10,7 @@
 
 from plumpy import Bundle
 from plumpy import ProcessState
+from .exceptions import *
 from .futures import *
 from .launch import *
 from .job_processes import *
@@ -21,7 +22,7 @@ from .utils import *
 from .workfunctions import *
 from .workchain import *
 
-__all__ = (processes.__all__ + runners.__all__ + utils.__all__ +
+__all__ = (exceptions.__all__ + processes.__all__ + runners.__all__ + utils.__all__ +
            workchain.__all__ + launch.__all__ + workfunctions.__all__ +
            ['ProcessState'] + job_processes.__all__ +
            rmq.__all__ + futures.__all__ + persistence.__all__)

@@ -12,6 +12,7 @@ from aiida.orm.data.list import List
 from aiida.orm.data.str import Str
 from aiida.orm.calculation.inline import make_inline
 from aiida.work import submit
+from aiida.work.persistence import ObjectLoader
 from aiida.work.workfunctions import workfunction
 from aiida.work.workchain import WorkChain, ToContext, append_
 
@@ -50,6 +51,22 @@ class NestedWorkChain(WorkChain):
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
+
+class SerializeWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(SerializeWorkChain, cls).define(spec)
+
+        spec.input(
+            'test',
+            valid_type=Str,
+            serializer=lambda x: Str(ObjectLoader().identify_object(x))
+        )
+
+        spec.outline(cls.echo)
+
+    def echo(self):
+        self.out('output', self.inputs.test)
 
 class NestedInputNamespace(WorkChain):
     @classmethod

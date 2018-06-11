@@ -11,7 +11,6 @@
 This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
-
 import functools
 from . import processes
 from . import runners

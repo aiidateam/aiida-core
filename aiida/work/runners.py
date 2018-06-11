@@ -24,7 +24,7 @@ def new_runner(**kwargs):
     Create a default runner optionally passing keyword arguments
 
     :param kwargs: arguments to be passed to Runner constructor
-    :return: a new runner instance 
+    :return: a new runner instance
     """
     if 'rmq_config' not in kwargs:
         kwargs['rmq_config'] = rmq.get_rmq_config()
@@ -52,7 +52,6 @@ def set_runner(runner):
     """
     global _runner
     _runner = runner
-
 
 class Runner(object):
 
@@ -228,7 +227,7 @@ class Runner(object):
 
         :param process: the process class or workfunction to run
         :param inputs: the inputs to be passed to the process
-        :return: the outputs of the process 
+        :return: the outputs of the process
         """
         result, node = self._run(process, *args, **inputs)
         return result
@@ -267,7 +266,7 @@ class Runner(object):
 
     def get_calculation_future(self, pk):
         """
-        Get a future for an orm Calculation.  The future will have the calculation node
+        Get a future for an orm Calculation. The future will have the calculation node
         as the result when finished.
 
         :return: A future representing the completion of the calculation node

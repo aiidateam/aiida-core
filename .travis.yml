@@ -35,7 +35,7 @@ before_install:
     - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
 
     # Build the docker image if needed
-    - .travis-data/before_install.sh
+    - .ci/before_install.sh
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
@@ -55,10 +55,10 @@ env:
 
 
 before_script:
-    - .travis-data/setup_profiles.sh
-    - .travis-data/before_script.sh
+    - .ci/setup_profiles.sh
+    - .ci/before_script.sh
 
-script: .travis-data/test_script.sh
+script: .ci/test_script.sh
 
 after_success:
   # upload coverage report to codecov.io

@@ -9,9 +9,9 @@ if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
 if [[ "$TEST_TYPE" == "tests" ]]
 then
-    # Add the .travis-data and .jenkins-data folder to the python path such that defined workchains can be found by the daemon
-    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.travis-data"
-    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.jenkins-data/polish"
+    # Add the .ci and the polish folder to the python path such that defined workchains can be found by the daemon
+    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.ci"
+    export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.ci/polish"
 
     # Start the daemon for the correct profile and add four additional workers to prevent deadlock with integration tests
     verdi -p $TEST_AIIDA_BACKEND daemon start
@@ -20,13 +20,13 @@ then
     if [[ "$COMPUTER_SETUP_TYPE" != "jenkins" ]]
     then
         # Setup the torquessh computer
-        cat ${TRAVIS_BUILD_DIR}/.travis-data/computer-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
+        cat ${TRAVIS_BUILD_DIR}/.ci/computer-torquessh-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
 
         # Configure the torquessh computer
-        cat ${TRAVIS_BUILD_DIR}/.travis-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
+        cat ${TRAVIS_BUILD_DIR}/.ci/computer-torquessh-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
 
         # Configure the 'doubler' code inside torquessh
-        cat ${TRAVIS_BUILD_DIR}/.travis-data/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        cat ${TRAVIS_BUILD_DIR}/.ci/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
 
         # Make sure that the torquessh (localhost:10022) key is hashed
         # in the known_hosts file
@@ -44,16 +44,16 @@ then
         # Computer configuration on Jenkins
 
         # Setup the torquessh computer - this one is custom, using direct scheduler
-        cat .jenkins-data/computer-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
+        cat .ci/computer-direct-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
 
         # Configure the torquessh computer - this one is custom, using port 22
-        cat .jenkins-data/computer-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
+        cat .ci/computer-direct-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
 
         # Configure the 'doubler' code inside torquessh
-        cat .travis-data/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        cat .ci/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
-        cat .jenkins-data/code-add-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        cat .ci/code-add-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
 
         ## The key of localhost should be already set in the Jenkinsfile
     fi

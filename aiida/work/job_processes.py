@@ -20,7 +20,7 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.calculation.job import JobCalculationFinishStatus
+from aiida.orm.calculation.job import JobCalculationExitStatus
 from aiida.scheduler.datastructures import job_states
 from aiida.work.process_builder import JobProcessBuilder
 
@@ -252,9 +252,8 @@ class Waiting(plumpy.Waiting):
                 raise RuntimeError("Unknown waiting command")
 
         except TransportTaskException as exception:
-            finish_status = JobCalculationFinishStatus[exception.calc_state]
-            raise Return(
-                self.create_state(processes.ProcessState.FINISHED, finish_status, finish_status is 0))
+            exit_status = JobCalculationExitStatus[exception.calc_state]
+            raise Return(self.create_state(processes.ProcessState.FINISHED, exit_status, exit_status is 0))
         except plumpy.CancelledError:
             # A task was cancelled because the state (and process) is being killed
             next_state = yield self._do_kill()

@@ -26,6 +26,7 @@ from aiida import work
 from aiida.work import Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
+from aiida.work.process_spec import ExitCode
 
 from . import utils
 
@@ -117,13 +118,16 @@ class Wf(work.WorkChain):
         self.finished_steps[function_name] = True
 
 
-class ReturnWorkChain(WorkChain):
-    FAILURE_STATUS = 1
+class PotentialFailureWorkChain(WorkChain):
+
+    EXIT_STATUS = 1
+    EXIT_MESSAGE = 'Well you did ask for it'
 
     @classmethod
     def define(cls, spec):
-        super(ReturnWorkChain, cls).define(spec)
+        super(PotentialFailureWorkChain, cls).define(spec)
         spec.input('success', valid_type=Bool)
+        spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
         spec.outline(
             cls.failure,
             cls.success
@@ -131,24 +135,36 @@ class ReturnWorkChain(WorkChain):
 
     def failure(self):
         if self.inputs.success.value is False:
-            return self.FAILURE_STATUS
+            if self.inputs.through_exit_code.value is False:
+                return self.EXIT_STATUS
+            else:
+                return ExitCode(self.EXIT_STATUS, self.EXIT_MESSAGE)
 
     def success(self):
         return
 
 
-class TestFinishStatus(AiidaTestCase):
+class TestExitStatus(AiidaTestCase):
 
     def test_failing_workchain(self):
-        result, node = work.run_get_node(ReturnWorkChain, success=Bool(False))
-        self.assertEquals(node.finish_status, ReturnWorkChain.FAILURE_STATUS)
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False))
+        self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
+        self.assertEquals(node.exit_message, None)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, False)
+        self.assertEquals(node.is_failed, True)
+
+    def test_failing_workchain_with_message(self):
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
+        self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
+        self.assertEquals(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
 
     def test_successful_workchain(self):
-        result, node = work.run_get_node(ReturnWorkChain, success=Bool(True))
-        self.assertEquals(node.finish_status, 0)
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True))
+        self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
@@ -546,6 +562,37 @@ class TestWorkchain(AiidaTestCase):
                 assert self.inputs.namespace.value == value
 
         run_and_check_success(TestWorkChain, namespace={'value': value})
+
+    def test_exit_codes(self):
+        status = 418
+        label = 'SOME_EXIT_CODE'
+        message = 'I am a teapot'
+
+        class ExitCodeWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(ExitCodeWorkChain, cls).define(spec)
+                spec.outline(cls.run)
+                spec.exit_code(status, label, message)
+
+            def run(self):
+                pass
+
+        wc = ExitCodeWorkChain()
+        self.assertEquals(wc.exit_code('SOME_EXIT_CODE').status, status)
+
+        with self.assertRaises(ValueError):
+            wc.exit_code('NON_EXISTENT_ERROR')
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message, message)
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes[label].status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes[label].message, message)
 
     def _run_with_checkpoints(self, wf_class, inputs=None):
         if inputs is None:

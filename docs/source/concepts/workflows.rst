@@ -261,7 +261,7 @@ A typical example may look something like the following:
 
     Total results: 2
 
-The 'State' column is a concatenation of the ``process_state`` and the ``finish_status`` of the ``WorkCalculation``.
+The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkCalculation``.
 By default, the command will only show active items, i.e. ``WorkCalculations`` that have not yet reached a terminal state.
 If you want to also show the nodes in a terminal states, you can use the ``-a`` flag and call ``verdi work list -a``:
 
@@ -278,7 +278,7 @@ If you want to also show the nodes in a terminal states, you can use the ``-a`` 
     Total results: 4
 
 For more information on the meaning of the 'state' column, please refer to the documentation of the :ref:`process state <process_state>`.
-The ``-s`` flag let's you query for specific process states, i.e. issuing ``verdi work list -s created`` will return:
+The ``-S`` flag let's you query for specific process states, i.e. issuing ``verdi work list -S created`` will return:
 
 .. code-block:: bash
 
@@ -289,7 +289,7 @@ The ``-s`` flag let's you query for specific process states, i.e. issuing ``verd
 
     Total results: 1
 
-To query for a specific finish status, one can use ``verdi work list -f 0``:
+To query for a specific exit status, one can use ``verdi work list -E 0``:
 
 .. code-block:: bash
 
@@ -365,7 +365,7 @@ An example output for a ``PwBaseWorkChain`` would look like the following:
     ctime          2018-04-08 21:18:50.850361+02:00
     mtime          2018-04-08 21:18:50.850372+02:00
     process state  ProcessState.FINISHED
-    finish status  0
+    exit status    0
     code           pw-v6.1
 
     Inputs            PK  Type
@@ -706,7 +706,7 @@ Aborting and exit codes
 -----------------------
 At the end of every outline step, the return value will be inspected by the workflow engine.
 If a non-zero integer value is detected, the workflow engine will interpret this as an exit code and will stop the execution of the workchain, while setting its process state to ``Finished``.
-In addition, the integer return value will be set as the ``finish_status`` of the workchain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <process_state>`.
+In addition, the integer return value will be set as the ``exit_status`` of the workchain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <process_state>`.
 This is useful because it allows a workflow designer to easily exit from a workchain and use the return value to communicate programmatically the reason for the workchain stopping.
 Consider the following example, where we launch a calculation and in the next step check whether it finished successfully, and if not we exit the workchain:
 
@@ -747,18 +747,18 @@ For example:
     Instead, as in the example above, define these constants as class variables.
     This will guarantee that they will always be defined, even when the workchain is loaded from a persisted state
 
-The best part about this method of aborting a workchains execution, is that the finish status can now be used programmatically, by for example a parent workchain.
+The best part about this method of aborting a workchains execution, is that the exit status can now be used programmatically, by for example a parent workchain.
 Imagine that a parent workchain submitted this workchain.
 After it has terminated its execution, the parent workchain will want to know what happened to the child workchain.
 As already noted in the :ref:`report<reporting>` section, the report messages of the workchain should not be used.
-The finish status, however, is a perfect way.
-The parent workchain can easily request the finish status of the child workchain through the ``finish_status`` property, and based on its value determine how to continue.
+The exit status, however, is a perfect way.
+The parent workchain can easily request the exit status of the child workchain through the ``exit_status`` property, and based on its value determine how to continue.
 
 Workfunction exit codes
 ^^^^^^^^^^^^^^^^^^^^^^^
-The method of setting the finish status for a ``WorkChain`` as explained in the previous section, by simply returning an integer from any of the outline steps, will not work of course for workfunctions, as there you can only return once and the return value has to be a database storable type.
-To still be able to mark a workfunction as ``failed'' by letting it finish nominally, but setting a non-zero finish status, we provide a special exception class :py:class:`~aiida.work.exceptions.Exit`.
-This exception can be constructed with an integer, to denote the desired finish status and when raised from a workfunction, workflow engine will mark the node as ``Finished`` and set the finish status to the value of the exception.
+The method of setting the exit status for a ``WorkChain`` as explained in the previous section, by simply returning an integer from any of the outline steps, will not work of course for workfunctions, as there you can only return once and the return value has to be a database storable type.
+To still be able to mark a workfunction as ``failed'' by letting it finish nominally, but setting a non-zero exit status, we provide a special exception class :py:class:`~aiida.work.exceptions.Exit`.
+This exception can be constructed with an integer, to denote the desired exit status and when raised from a workfunction, workflow engine will mark the node as ``Finished`` and set the exit status to the value of the exception.
 Consider the following example:
 
 .. code:: python
@@ -768,7 +768,7 @@ Consider the following example:
         from aiida.work import Exit
         raise Exit(418)
 
-The execution of the workfunction will be immediately terminated as soon as the exception is raised and the finish status will be set to ``418`` in this example.
+The execution of the workfunction will be immediately terminated as soon as the exception is raised and the exit status will be set to ``418`` in this example.
 Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs.
 
 Modular workflow design

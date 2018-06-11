@@ -12,10 +12,10 @@ import functools
 
 from plumpy import auto_persist, WorkChainSpec, Wait, Continue
 from plumpy.workchains import if_, while_, return_, _PropagateReturn
-
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
+from aiida.common.utils import classproperty
 from aiida.orm.utils import load_node, load_workflow
 from aiida.utils.serialize import serialize_data, deserialize_data
 
@@ -89,6 +89,38 @@ class WorkChain(Process):
     def on_run(self):
         super(WorkChain, self).on_run()
         self.calc.set_stepper_state_info(str(self._stepper))
+
+    @classproperty
+    def exit_codes(cls):
+        """
+        Return the exit codes defined for the ProcessSpec of this WorkChain
+
+        :returns: list of ExitCode named tuples
+        """
+        return cls.spec().exit_codes
+
+    def exit_code(self, identifier):
+        """
+        Return a specific exit code identified by either its exit status or label
+
+        :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as
+            the exit code status, otherwise it be interpreted as the exit code label
+        :returns: an ExitCode named tuple
+        :raises ValueError: if no exit code with the given label is defined for this process
+        """
+        if isinstance(identifier, int):
+            for label, exit_code in self.spec().exit_codes.iteritems():
+                if exit_code.status == identifier:
+                    return exit_code
+            else:
+                raise ValueError('the exit code status {} does not correspond to a valid exit code')
+        else:
+            try:
+                exit_code = self.spec().exit_codes[identifier]
+            except KeyError:
+                raise ValueError('the exit code label {} does not correspond to a valid exit code')
+            else:
+                return exit_code
 
     def insert_awaitable(self, awaitable):
         """

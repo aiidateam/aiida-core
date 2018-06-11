@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """AiiDA specific implementation of plumpy's ProcessSpec."""
 import plumpy
-
 from aiida.work.ports import InputPort, PortNamespace
+
+
+ExitCode = namedtuple('ExitCode', 'status message')
 
 
 class ProcessSpec(plumpy.ProcessSpec):

@@ -23,8 +23,8 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCEDIR)
 all: html
 
 clean:
-	rm -r $(BUILDDIR)
-	rm -r $(HTMLBUILDDIR)
+	@rm -r $(BUILDDIR) || true
+	@rm -r $(HTMLBUILDDIR) || true
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(HTMLBUILDDIR)

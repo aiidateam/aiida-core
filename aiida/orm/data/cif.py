@@ -533,7 +533,7 @@ class CifData(SinglefileData):
         """
         Set the contents of the CifData starting from an ASE atoms object
 
-        :param aseatoms: The ASE atoms object
+        :param aseatoms: the ASE atoms object
         """
         import tempfile
         cif = cif_from_ase(aseatoms)

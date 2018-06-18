@@ -46,6 +46,7 @@ install_requires = [
     'plumpy==0.10.2',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
+    'bpython==0.17.1',
 ]
 
 extras_require = {

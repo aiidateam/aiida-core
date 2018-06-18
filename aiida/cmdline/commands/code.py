@@ -19,7 +19,7 @@ import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_code
-from aiida.cmdline.params import options
+from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -589,7 +589,7 @@ class Code(VerdiCommandWithSubcommands):
             'setup': (self.cli, self.complete_none),
             'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
-            'delete': (self.code_delete, self.complete_code_pks),
+            'delete': (self.cli, self.complete_none),
             'hide': (self.code_hide, self.complete_code_pks),
             'reveal': (self.code_reveal, self.complete_code_pks),
         }
@@ -987,32 +987,6 @@ class Code(VerdiCommandWithSubcommands):
         # store comment, to track history
         code.add_comment(comment, user=backend.users.get_automatic_user())
 
-    def code_delete(self, *args):
-        """
-        Delete a code
-
-        Does not delete the code if there are calculations that are using it
-        (i.e., if there are output links)
-        """
-        from aiida.common.exceptions import InvalidOperation
-        from aiida.orm.code import delete_code
-
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'code delete' there should be one "
-                                  "argument only, being the code id.")
-            sys.exit(1)
-
-        code = self.get_code(args[0])
-        pk = code.pk
-        try:
-            delete_code(code)
-        except InvalidOperation as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-
-        print "Code '{}' deleted.".format(pk)
-
-
 def is_on_computer(ctx):
     return bool(ctx.params.get('on_computer'))
 
@@ -1028,7 +1002,6 @@ def ensure_scripts(pre, post, summary):
 
 
 @verdi_code.command('setup')
-@click.pass_context
 @options.LABEL(prompt='Label', cls=InteractiveOption)
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
 @click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on remote Computer?',
@@ -1048,7 +1021,7 @@ def ensure_scripts(pre, post, summary):
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @with_dbenv()
-def setup_code(ctx, non_interactive, **kwargs):
+def setup_code(non_interactive, **kwargs):
     """Add a Code."""
     from aiida.common.exceptions import ValidationError
 
@@ -1083,3 +1056,25 @@ def show(code, verbose):
     Display information about a Code object identified by CODE_ID which can be the pk or label
     """
     click.echo(tabulate.tabulate(code.full_text_info(verbose)))
+
+@verdi_code.command()
+@arguments.CODE()
+@with_dbenv()
+def delete(code):
+    """
+    Delete codes.
+
+    Does not delete codes that are used by calculations
+    (i.e., if there are output links)
+    """
+    from aiida.common.exceptions import InvalidOperation
+    from aiida.orm.code import delete_code
+
+    for code in codes:
+        pk = code.pk
+        try:
+            delete_code(code)
+        except InvalidOperation as e:
+            echo.echo_critical(e.message)
+
+        echo.echo_info("Code '{}' deleted.".format(pk))

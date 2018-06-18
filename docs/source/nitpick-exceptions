@@ -55,6 +55,8 @@ py:class  dict
 py:class  list
 py:class  object
 py:class  unittest.case.TestCase
+py:class  unittest.runner.TextTestRunner
+py:meth   unittest.TestLoader.discover
 py:class  ABCMeta
 py:class  exceptions.Exception
 py:class  exceptions.ValueError

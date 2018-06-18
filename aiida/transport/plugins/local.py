@@ -723,6 +723,7 @@ class LocalTransport(Transport):
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
             preexec_fn=os.setsid)
+
         return proc.stdin, proc.stdout, proc.stderr, proc
 
     def exec_command_wait(self, command, stdin=None):

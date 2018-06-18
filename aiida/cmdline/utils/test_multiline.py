@@ -2,7 +2,6 @@
 import os
 import unittest
 
-import click
 from click.testing import CliRunner
 
 from aiida.cmdline.utils.multi_line_input import edit_pre_post, edit_comment

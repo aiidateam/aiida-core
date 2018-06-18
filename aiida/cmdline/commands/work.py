@@ -418,7 +418,8 @@ def plugins(entry_point):
             for entry_point in entry_points:
                 echo.echo("* {}".format(entry_point))
 
-            echo.echo_info('Pass the entry point as an argument to display detailed information', prefix='\n')
+            echo.echo('')
+            echo.echo_info('Pass the entry point as an argument to display detailed information')
         else:
             echo.echo_error('No workflow plugins found')
 

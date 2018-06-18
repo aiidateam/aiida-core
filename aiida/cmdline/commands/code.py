@@ -9,8 +9,6 @@
 ###########################################################################
 """
 This allows to setup and configure a code from command line.
-
-TODO: think if we want to allow to change path and prepend/append text.
 """
 import sys
 
@@ -584,7 +582,7 @@ class Code(VerdiCommandWithSubcommands):
         super(Code, self).__init__()
 
         self.valid_subcommands = {
-            'list': (self.code_list, self.complete_none),
+            'list': (self.cli, self.complete_none),
             'show': (self.cli, self.complete_code_names_and_pks),
             'setup': (self.cli, self.complete_none),
             'rename': (self.cli, self.complete_none),
@@ -610,153 +608,6 @@ class Code(VerdiCommandWithSubcommands):
         return "\n".join([self.complete_code_names(subargs_idx, subargs),
                           self.complete_code_pks(subargs_idx, subargs)])
 
-    def code_list(self, *args):
-        """
-        List available codes
-        """
-        import argparse
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List the codes in the database.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument('-c', '--computer',
-                            help="Filter only codes on a given computer",
-                            )
-        parser.add_argument('-p', '--plugin',
-                            help="Filter only calculation with a given plugin",
-                            )
-        parser.add_argument('-A', '--all-users', dest='all_users',
-                            action='store_true',
-                            help="Show codes of all users",
-                            )
-        parser.add_argument('-o', '--show-owner', dest='show_owner',
-                            action='store_true',
-                            help="Show also the owner of the code",
-                            )
-        parser.add_argument('-a', '--all-codes',
-                            action='store_true',
-                            help="Show also hidden codes",
-                            )
-        parser.set_defaults(all_users=False, hidden=False)
-        parsed_args = parser.parse_args(args)
-        computer_filter = parsed_args.computer
-        plugin_filter = parsed_args.plugin
-        all_users = parsed_args.all_users
-        show_owner = parsed_args.show_owner
-        reveal_filter = parsed_args.all_codes
-
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.code import Code
-        from aiida.orm.computer import Computer
-        from aiida.orm.user import User
-
-        qb_user_filters = dict()
-        if not all_users:
-            user = self.backend.users.get_automatic_user()
-            qb_user_filters['email'] = user.email
-
-        qb_computer_filters = dict()
-        if computer_filter is not None:
-            qb_computer_filters['name'] = computer_filter
-
-        qb_code_filters = dict()
-        if plugin_filter is not None:
-            qb_code_filters['attributes.input_plugin'] = plugin_filter
-
-        # If were not showing all, only show those codes without 'hidden' extra or where it is False
-        if not reveal_filter:
-            qb_code_filters['or'] = [
-                {'extras': {'!has_key': Code.HIDDEN_KEY}},
-                {'extras.{}'.format(Code.HIDDEN_KEY): {'==': False}}
-            ]
-
-        print "# List of configured codes:"
-        print "# (use 'verdi code show CODEID' to see the details)"
-        if computer_filter is not None:
-            qb = QueryBuilder()
-            qb.append(Code, tag="code",
-                      filters=qb_code_filters,
-                      project=["id", "label"])
-            # We have a user assigned to the code so we can ask for the
-            # presence of a user even if there is no user filter
-            qb.append(User, creator_of="code",
-                      project=["email"],
-                      filters=qb_user_filters)
-            # We also add the filter on computer. This will automatically
-            # return codes that have a computer (and of course satisfy the
-            # other filters). The codes that have a computer attached are the
-            # remote codes.
-            qb.append(Computer, computer_of="code",
-                      project=["name"],
-                      filters=qb_computer_filters)
-            qb.order_by({Code: {'id': 'asc'}})
-            self.print_list_res(qb, show_owner)
-
-        # If there is no filter on computers
-        else:
-            # Print all codes that have a computer assigned to them
-            # (these are the remote codes)
-            qb = QueryBuilder()
-            qb.append(Code, tag="code",
-                      filters=qb_code_filters,
-                      project=["id", "label"])
-            # We have a user assigned to the code so we can ask for the
-            # presence of a user even if there is no user filter
-            qb.append(User, creator_of="code",
-                      project=["email"],
-                      filters=qb_user_filters)
-            qb.append(Computer, computer_of="code",
-                      project=["name"])
-            qb.order_by({Code: {'id': 'asc'}})
-            self.print_list_res(qb, show_owner)
-
-            # Now print all the local codes. To get the local codes we ask
-            # the dbcomputer_id variable to be None.
-            qb = QueryBuilder()
-            comp_non_existence = {"dbcomputer_id": {"==": None}}
-            if not qb_code_filters:
-                qb_code_filters = comp_non_existence
-            else:
-                new_qb_code_filters = {"and": [qb_code_filters,
-                                               comp_non_existence]}
-                qb_code_filters = new_qb_code_filters
-            qb.append(Code, tag="code",
-                      filters=qb_code_filters,
-                      project=["id", "label"])
-            # We have a user assigned to the code so we can ask for the
-            # presence of a user even if there is no user filter
-            qb.append(User, creator_of="code",
-                      project=["email"],
-                      filters=qb_user_filters)
-            qb.order_by({Code: {'id': 'asc'}})
-            self.print_list_res(qb, show_owner)
-
-    @staticmethod
-    def print_list_res(qb_query, show_owner):
-        if qb_query.count > 0:
-            for tuple_ in qb_query.all():
-                if len(tuple_) == 3:
-                    (pk, label, useremail) = tuple_
-                    computername = None
-                elif len(tuple_) == 4:
-                    (pk, label, useremail, computername) = tuple_
-                else:
-                    print "Wrong tuple size"
-                    return
-
-                if show_owner:
-                    owner_string = " ({})".format(useremail)
-                else:
-                    owner_string = ""
-                if computername is None:
-                    computernamestring = ""
-                else:
-                    computernamestring = "@{}".format(computername)
-                print "* pk {} - {}{}{}".format(
-                    pk, label, computernamestring, owner_string)
-        else:
-            print "# No codes found matching the specified criteria."
 
     def get_code_data(self, django_filter=None):
         """
@@ -1061,3 +912,128 @@ def rename(ctx, old_label, new_label):
     """
     echo.echo_deprecated("Use 'relabel' instead")
     ctx.forward(relabel)
+
+@verdi_code.command('list')
+@options.COMPUTER(help="Filter codes by computer")
+@options.INPUT_PLUGIN(help="Filter codes by calculation input plugin.")
+@options.ALL(help="Include all codes (including hidden ones), disregarding all other filter criteria.")
+@options.ALL_USERS(help="Include codes from all users.")
+@click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False,
+    help='Show owners of codes.')
+@with_dbenv()
+def code_list(computer, input_plugin, all, all_users, show_owner):
+    """List the codes in the database."""
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.code import Code
+    from aiida.orm.computer import Computer
+    from aiida.orm.user import User
+
+    qb_user_filters = dict()
+    if not all_users:
+        user = backend.users.get_automatic_user()
+        qb_user_filters['email'] = user.email
+
+    qb_computer_filters = dict()
+    if computer is not None:
+        qb_computer_filters['name'] = computer.name
+
+    qb_code_filters = dict()
+    if input_plugin is not None:
+        qb_code_filters['attributes.input_plugin'] = input_plugin.name
+
+    # If were not showing all, only show those codes without 'hidden' extra or where it is False
+    if not all:
+        qb_code_filters['or'] = [
+            {'extras': {'!has_key': Code.HIDDEN_KEY}},
+            {'extras.{}'.format(Code.HIDDEN_KEY): {'==': False}}
+        ]
+
+    echo.echo("# List of configured codes:")
+    echo.echo("# (use 'verdi code show CODEID' to see the details)")
+
+    if computer is not None:
+        qb = QueryBuilder()
+        qb.append(Code, tag="code",
+                  filters=qb_code_filters,
+                  project=["id", "label"])
+        # We have a user assigned to the code so we can ask for the
+        # presence of a user even if there is no user filter
+        qb.append(User, creator_of="code",
+                  project=["email"],
+                  filters=qb_user_filters)
+        # We also add the filter on computer. This will automatically
+        # return codes that have a computer (and of course satisfy the
+        # other filters). The codes that have a computer attached are the
+        # remote codes.
+        qb.append(Computer, computer_of="code",
+                  project=["name"],
+                  filters=qb_computer_filters)
+        qb.order_by({Code: {'id': 'asc'}})
+        print_list_res(qb, show_owner)
+
+    # If there is no filter on computers
+    else:
+        # Print all codes that have a computer assigned to them
+        # (these are the remote codes)
+        qb = QueryBuilder()
+        qb.append(Code, tag="code",
+                  filters=qb_code_filters,
+                  project=["id", "label"])
+        # We have a user assigned to the code so we can ask for the
+        # presence of a user even if there is no user filter
+        qb.append(User, creator_of="code",
+                  project=["email"],
+                  filters=qb_user_filters)
+        qb.append(Computer, computer_of="code",
+                  project=["name"])
+        qb.order_by({Code: {'id': 'asc'}})
+        print_list_res(qb, show_owner)
+
+        # Now print all the local codes. To get the local codes we ask
+        # the dbcomputer_id variable to be None.
+        qb = QueryBuilder()
+        comp_non_existence = {"dbcomputer_id": {"==": None}}
+        if not qb_code_filters:
+            qb_code_filters = comp_non_existence
+        else:
+            new_qb_code_filters = {"and": [qb_code_filters,
+                                           comp_non_existence]}
+            qb_code_filters = new_qb_code_filters
+        qb.append(Code, tag="code",
+                  filters=qb_code_filters,
+                  project=["id", "label"])
+        # We have a user assigned to the code so we can ask for the
+        # presence of a user even if there is no user filter
+        qb.append(User, creator_of="code",
+                  project=["email"],
+                  filters=qb_user_filters)
+        qb.order_by({Code: {'id': 'asc'}})
+        print_list_res(qb, show_owner)
+
+def print_list_res(qb_query, show_owner):
+    if qb_query.count > 0:
+        for tuple_ in qb_query.all():
+            if len(tuple_) == 3:
+                (pk, label, useremail) = tuple_
+                computername = None
+            elif len(tuple_) == 4:
+                (pk, label, useremail, computername) = tuple_
+            else:
+                echo.warning("Wrong tuple size")
+                return
+
+            if show_owner:
+                owner_string = " ({})".format(useremail)
+            else:
+                owner_string = ""
+            if computername is None:
+                computernamestring = ""
+            else:
+                computernamestring = "@{}".format(computername)
+            echo.echo("* pk {} - {}{}{}".format(
+                pk, label, computernamestring, owner_string))
+    else:
+        echo.echo("# No codes found matching the specified criteria.")

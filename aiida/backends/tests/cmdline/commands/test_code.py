@@ -4,7 +4,8 @@ import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.code import setup_code, delete, hide, reveal, relabel
+from aiida.cmdline.commands.code import (setup_code, delete,
+    hide, reveal, relabel, code_list)
 from aiida.common.exceptions import NotExistent
 
 class TestVerdiCodeSetup(AiidaTestCase):
@@ -137,3 +138,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
             from aiida.orm import Code
             Code.get_from_string('code')
 
+    def test_code_list(self):
+        result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code@otherstuff'])
+        self.assertIsNotNone(result.exception)
+
+        options = ['-a','-A', '-o', '--input-plugin=simpleplugins.arithmetic.add',
+                   '--computer={}'.format(self.comp.name)]
+        result = self.runner.invoke(code_list, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(str(self.code.pk) in result.output)

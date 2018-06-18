@@ -125,6 +125,8 @@ PAST_DAYS = OverridableOption('-p', '--past-days', 'past_days', type=click.INT, 
 ALL = OverridableOption('-a', '--all', 'all', is_flag=True, default=False,
     help='include all entries, disregarding all other filter options and flags')
 
+ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, default=False,
+    help='include entries from all users')
 
 RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
     help='display only raw query results, without any headers or footers')

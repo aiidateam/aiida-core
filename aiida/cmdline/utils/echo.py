@@ -89,7 +89,7 @@ def echo_critical(message, bold=False, nl=True):
     """
     click.secho('Critical: ', fg='red', bold=True, nl=False, err=True)
     click.secho(message, bold=bold, nl=nl, err=True)
-    sys.exit(ExitCode.CRITICAL)
+    sys.exit(ExitCode.CRITICAL.value)
 
 
 #pylint: disable=redefined-builtin
@@ -109,4 +109,4 @@ def echo_deprecated(message, bold=False, nl=True, exit=False):
     click.secho(message, bold=bold, nl=nl, err=True)
 
     if exit:
-        sys.exit(ExitCode.DEPRECATED)
+        sys.exit(ExitCode.DEPRECATED.value)

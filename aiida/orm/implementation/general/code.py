@@ -79,6 +79,15 @@ class AbstractCode(Node):
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
+        computer_str = self.get_computer_name()
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
+                                                             self.label,
+                                                             computer_str,
+                                                             self.pk, self.uuid)
+
+    def get_computer_name(self):
+        """Get name of this code's computer."""
+
         if self.is_local():
             computer_str = "repository"
         else:
@@ -87,10 +96,21 @@ class AbstractCode(Node):
             else:
                 computer_str = "[unknown]"
 
-        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
-                                                             self.label,
-                                                             computer_str,
-                                                             self.pk, self.uuid)
+        return computer_str
+
+    def get_label(self, full=True):
+        """Get (full) label of this code.
+        
+        Same as Code.label by default, use full=True to get the full label <code-label>@<computer-name>.
+
+        :param full: If True, return <code-label>@<computer-name>
+        """
+        label = self.label
+
+        if full:
+            label += '@' + self.get_computer_name()
+
+        return label
 
     def get_desc(self):
         """

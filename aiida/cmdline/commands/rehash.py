@@ -53,4 +53,5 @@ def rehash(nodes, entry_point):
             echo.echo('.', nl=False)
         node.rehash()
 
-    echo.echo_success('{} nodes re-hashed'.format(i + 1), prefix='\n')
+    echo.echo('')
+    echo.echo_success('{} nodes re-hashed'.format(i + 1))

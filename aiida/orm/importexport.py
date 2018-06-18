@@ -2064,7 +2064,7 @@ class ZipFolder(object):
     """
 
     def __init__(self, zipfolder_or_fname, mode=None, subfolder='.',
-                 use_compression=True):
+                use_compression=True, allowZip64=True):
         """
         :param zipfolder_or_fname: either another ZipFolder instance,
           of which you want to get a subfolder, or a filename to create.
@@ -2090,7 +2090,8 @@ class ZipFolder(object):
             else:
                 compression = zipfile.ZIP_STORED
             self._zipfile = zipfile.ZipFile(zipfolder_or_fname, mode=the_mode,
-                                            compression=compression)
+                                            compression=compression,
+                                            allowZip64=allowZip64)
             self._pwd = subfolder
         else:
             if mode is not None:

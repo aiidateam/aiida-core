@@ -53,12 +53,15 @@ db_test_list = {
         'cmdline.commands.calculation': ['aiida.backends.tests.cmdline.commands.test_calculation'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'cmdline.commands.computer': ['aiida.backends.tests.cmdline.commands.test_computer'],
+        'cmdline.commands.comment': ['aiida.backends.tests.cmdline.commands.test_comment'],
         'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.work': ['aiida.backends.tests.cmdline.commands.test_work'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
+        'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
+        'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],
@@ -68,8 +71,6 @@ db_test_list = {
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
         'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
-        'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
-        'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.log': ['aiida.backends.tests.orm.log'],
@@ -98,6 +99,7 @@ db_test_list = {
     }
 }
 
+
 def get_db_test_names():
     retlist = []
     for backend in db_test_list:
@@ -115,7 +117,7 @@ def get_db_test_names():
     for k in retlist:
         if '.' in k:
             parts = k.split('.')
-            for last_idx in range(1,len(parts)):
+            for last_idx in range(1, len(parts)):
                 parentkey = ".".join(parts[:last_idx])
                 final_list.append(parentkey)
 
@@ -168,7 +170,7 @@ def get_db_test_list():
     for k, v in retdict.iteritems():
         if '.' in k:
             parts = k.split('.')
-            for last_idx in range(1,len(parts)):
+            for last_idx in range(1, len(parts)):
                 parentkey = ".".join(parts[:last_idx])
                 final_retdict[parentkey].extend(v)
 

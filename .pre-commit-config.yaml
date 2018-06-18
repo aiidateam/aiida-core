@@ -14,6 +14,7 @@
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/calculation.py|
+        aiida/cmdline/commands/comment.py|
         aiida/cmdline/commands/daemon.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
@@ -32,8 +33,11 @@
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|
         aiida/cmdline/utils/echo.py|
-        aiida/transport/__init__.py|
         aiida/orm/data/cif.py|
+        aiida/orm/implementation/sqlalchemy/node.py|
+        aiida/orm/user.py|
+        aiida/scheduler/.*.py|
+        aiida/transport/__init__.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|

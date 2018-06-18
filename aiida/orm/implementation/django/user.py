@@ -30,7 +30,7 @@ class DjangoUserCollection(UserCollection):
                           last_name=last_name,
                           institution=institution)
 
-    def _from_dbmodel(self, dbuser):
+    def from_dbmodel(self, dbuser):
         return DjangoUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
@@ -53,7 +53,7 @@ class DjangoUserCollection(UserCollection):
             dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
         users = []
         for dbuser in dbusers:
-            users.append(self._from_dbmodel(dbuser))
+            users.append(self.from_dbmodel(dbuser))
         return users
 
 

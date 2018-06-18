@@ -15,6 +15,9 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.control.postgres import Postgres
+from aiida.cmdline.commands import verdi, verdi_profile
+from aiida.cmdline.utils import echo
+from aiida.cmdline.params import options
 
 
 class Profile(VerdiCommandWithSubcommands):
@@ -30,10 +33,13 @@ class Profile(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'setdefault': (self.profile_setdefault, self.complete_profiles),
-            'list': (self.profile_list, self.complete_none),
-            'delete': (self.profile_delete, self.complete_profiles),
+            'setdefault': (self.cli, self.complete_profiles),
+            'list': (self.cli, self.complete_none),
+            'delete': (self.cli, self.complete_profiles),
         }
+
+    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+        verdi.main()
 
     def complete_profiles(self, subargs_idx, subargs):
         from aiida.common.setup import get_profiles_list
@@ -43,148 +49,135 @@ class Profile(VerdiCommandWithSubcommands):
         else:
             return ""
 
-    def profile_setdefault(self, *args):
-        from aiida.common.setup import set_default_profile
 
-        if len(args) != 1:
-            print >> sys.stderr, ("Please specify the profile to be set as the default")
-            sys.exit(1)
+@verdi_profile.command("list")
+@click.option('--no-color', is_flag=True, default=False, help='to show results without colors')
+def profile_list(no_color):
+    """
+    Displays list of all available profiles.
+    """
 
-        profile = args[0]
-        # set default DB profiles
-        set_default_profile(profile, force_rewrite=True)
+    from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
+    from aiida.common.exceptions import ConfigurationError
+
+    print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
+
+    try:
+        default_profile = get_default_profile()
+    except ConfigurationError as e:
+        err_msg = ("Stopping: {}\n"
+                   "Note: if no configuration file was found, it means that you have not run\n"
+                   "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
+        echo.echo_critical(err_msg)
+
+    if default_profile is None:
+        echo.echo_error("### No default profile configured yet, run 'verdi install'! ###")
+        return
+    else:
+        echo.echo_info('The default profile is highlighted and marked by the * symbol')
+
+    for profile in get_profiles_list():
+        color_id = 39  # Default foreground color
+        if profile == default_profile:
+            symbol = '*'
+            color_id = 32
+        else:
+            symbol = ' '
+
+        if not no_color:
+            start_color = '\x1b[{}m'.format(color_id)
+            end_color = '\x1b[0m'
+            bold_sequence = '\x1b[1;{}m'.format(color_id)
+            nobold_sequence = '\x1b[0;{}m'.format(color_id)
+        else:
+            start_color = ''
+            end_color = ''
+            bold_sequence = ''
+            nobold_sequence = ''
+
+        echo.echo('{}{} {}{} {}{}'.format(start_color, symbol,
+                                               nobold_sequence, profile,
+                                               nobold_sequence, end_color))
 
 
-    def profile_list(self, *args):
-        from aiida.backends import settings
-        from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
-        from aiida.common.exceptions import ConfigurationError
+@verdi_profile.command("setdefault")
+@click.argument('profile_name', nargs=1, type=click.STRING)
+def profile_setdefault(profile_name):
+    """
+    Set the passed profile as default profile in aiida config file.
+    """
+    from aiida.common.setup import set_default_profile
+    set_default_profile(profile_name, force_rewrite=True)
 
-        print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
 
+@verdi_profile.command("delete")
+@options.FORCE(help='to skip any questions/warnings about loss of data')
+@click.argument('profiles_to_delete', nargs=-1,
+                type=click.STRING)
+def profile_delete(force, profiles_to_delete):
+    """
+    Delete profile from aiida config file along with its associated
+    database and repository.
+
+    :param profiles_to_delete: list of profiles separated by space
+    """
+    from aiida.common.setup import get_or_create_config, update_config
+    import os.path
+    from urlparse import urlparse
+
+    confs = get_or_create_config()
+    profiles = confs.get('profiles', {})
+    users = [profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
+
+    for profile_to_delete in profiles_to_delete:
         try:
-            default_profile = get_default_profile()
-        except ConfigurationError as e:
-            err_msg = (
-                "Stopping: {}\n"
-                "Note: if no configuration file was found, it means that you have not run\n" 
-            "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
-            click.echo(err_msg, err=True)
-            sys.exit(1)
+            profile = profiles[profile_to_delete]
+        except KeyError:
+            echo.echo_info("Profile '{}' does not exist".format(profile_to_delete))
+            continue
 
-        use_colors = True
-        if args:
-            try:
-                if len(args) != 1:
-                    raise ValueError
-                if args[0] != '--no-color':
-                    raise ValueError
-                use_colors = False
-            except ValueError:
-                print >> sys.stderr, ('You can pass only one further argument, '
-                                      '--no-color, to show the results without colors')
-                sys.exit(1)
+        postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
+        postgres.determine_setup()
 
-        if default_profile is None:
-            print >> sys.stderr, "### No default profile configured yet, run 'verdi install'! ###"
-            return
-        else:
-            print >> sys.stderr, 'The default profile is highlighted and marked by the * symbol'
+        import pprint
+        pprint.pprint(postgres.dbinfo, width=1, indent=2)
 
-        for profile in get_profiles_list():
-            color_id = 39  # Default foreground color
-            if profile == default_profile:
-                symbol = '*'
-                color_id = 32
-            else:
-                symbol = ' '
+        db_name = profile.get('AIIDADB_NAME', '')
+        if not postgres.db_exists(db_name):
+            echo.echo_info("Associated database '{}' does not exist.".format(db_name))
+        elif force or click.confirm("Delete associated database '{}'?\n" \
+                                    "WARNING: All data will be lost.".format(db_name)):
+            echo.echo_info("Deleting database '{}'.".format(db_name))
+            postgres.drop_db(db_name)
 
-            if use_colors:
-                start_color = '\x1b[{}m'.format(color_id)
-                end_color = '\x1b[0m'
-                bold_sequence = '\x1b[1;{}m'.format(color_id)
-                nobold_sequence = '\x1b[0;{}m'.format(color_id)
-            else:
-                start_color = ''
-                end_color = ''
-                bold_sequence = ''
-                nobold_sequence = ''
+        user = profile.get('AIIDADB_USER', '')
+        if not postgres.dbuser_exists(user):
+            echo.echo_info("Associated database user '{}' does not exist.".format(user))
+        elif users.count(user) > 1:
+            echo.echo_info("Associated database user '{}' is used by other profiles " \
+                  "and will not be deleted.".format(user))
+        elif force or click.confirm("Delete database user '{}'?".format(user)):
+            echo.echo_info("Deleting user '{}'.".format(user))
+            postgres.drop_dbuser(user)
 
-            print '{}{} {}{} {}{}'.format(
-                start_color, symbol, nobold_sequence, profile, nobold_sequence, end_color)
+        repo_uri = profile.get('AIIDADB_REPOSITORY_URI', '')
+        repo_path = urlparse(repo_uri).path
+        repo_path = os.path.expanduser(repo_path)
+        if not os.path.isabs(repo_path):
+            echo.echo_info("Associated file repository '{}' does not exist." \
+                  .format(repo_path))
+        elif not os.path.isdir(repo_path):
+            echo.echo_info("Associated file repository '{}' is not a directory." \
+                  .format(repo_path))
+        elif force or click.confirm("Delete associated file repository '{}'?\n" \
+                                    "WARNING: All data will be lost.".format(repo_path)):
+            echo.echo_info("Deleting directory '{}'.".format(repo_path))
+            import shutil
+            shutil.rmtree(repo_path)
 
-    def profile_delete(self, *args):
-        """ Deletes profile
-
-        Asks whether to delete associated database and associated database
-        user.
-
-        Specify argument '--force' to skip any questions warning about loss of
-        data.
-        """
-        from aiida.common.setup import get_or_create_config, update_config
-        import os.path
-        from urlparse import urlparse
-
-        args = list(args)
-        if '--force' in args:
-            force = True
-            args.remove('--force')
-        else:
-            force = False
-
-        confs = get_or_create_config()
-        profiles = confs.get('profiles',{})
-        users = [ profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
-
-        profiles_to_delete = args
-        for profile_to_delete in profiles_to_delete:
-            try:
-                profile = profiles[profile_to_delete]
-            except KeyError:
-                print("Profile '{}' does not exist".format(profile_to_delete))
-                continue
-
-            postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
-            postgres.determine_setup()
-            print postgres.dbinfo
-
-            db_name = profile.get('AIIDADB_NAME', '')
-            if not postgres.db_exists(db_name):
-                print("Associated database '{}' does not exist.".format(db_name))
-            elif force or click.confirm("Delete associated database '{}'?\n" \
-                             "WARNING: All data will be lost.".format(db_name)):
-                print("Deleting database '{}'.".format(db_name))
-                postgres.drop_db(db_name)
-
-            user = profile.get('AIIDADB_USER', '')
-            if not postgres.dbuser_exists(user):
-                print("Associated database user '{}' does not exist.".format(user))
-            elif users.count(user) > 1:
-                print("Associated database user '{}' is used by other profiles "\
-                      "and will not be deleted.".format(user))
-            elif force or click.confirm("Delete database user '{}'?".format(user)):
-                print("Deleting user '{}'.".format(user))
-                postgres.drop_dbuser(user)
-
-            repo_uri = profile.get('AIIDADB_REPOSITORY_URI','')
-            repo_path = urlparse(repo_uri).path
-            repo_path = os.path.expanduser(repo_path)
-            if not os.path.isabs(repo_path):
-                print("Associated file repository '{}' does not exist."\
-                      .format(repo_path))
-            elif not os.path.isdir(repo_path):
-                print("Associated file repository '{}' is not a directory."\
-                       .format(repo_path))
-            elif force or click.confirm("Delete associated file repository '{}'?\n" \
-                               "WARNING: All data will be lost.".format(repo_path)):
-                print("Deleting directory '{}'.".format(repo_path))
-                import shutil
-                shutil.rmtree(repo_path)
-
-            if force or click.confirm("Delete configuration for profile '{}'?\n" \
-                             "WARNING: Permanently removes profile from the list of AiiDA profiles."\
-                             .format(profile_to_delete)):
-                print("Deleting configuration for profile '{}'.".format(profile_to_delete))
-                del profiles[profile_to_delete]
-                update_config(confs)
+        if force or click.confirm("Delete configuration for profile '{}'?\n" \
+                                  "WARNING: Permanently removes profile from the list of AiiDA profiles." \
+                                          .format(profile_to_delete)):
+            echo.echo_info("Deleting configuration for profile '{}'.".format(profile_to_delete))
+            del profiles[profile_to_delete]
+            update_config(confs)

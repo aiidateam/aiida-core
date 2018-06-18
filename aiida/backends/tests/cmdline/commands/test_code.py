@@ -4,7 +4,7 @@ import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.code import setup_code
+from aiida.cmdline.commands.code import setup_code, delete, hide, reveal
 
 
 class TestVerdiCodeSetup(AiidaTestCase):
@@ -85,3 +85,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
         result = self.runner.invoke(setup_code, options, input=user_input)
         self.assertIsNone(result.exception, result.output[-1000:])
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+
+    def test_delete_one(self):
+        result = self.runner.invoke(delete, ['1'])
+
+    def test_hide_one(self):
+        result = self.runner.invoke(hide, ['1'])
+
+    def test_reveal_one(self):
+        result = self.runner.invoke(reveal, ['1'])

@@ -590,8 +590,8 @@ class Code(VerdiCommandWithSubcommands):
             'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
             'delete': (self.cli, self.complete_none),
-            'hide': (self.code_hide, self.complete_code_pks),
-            'reveal': (self.code_reveal, self.complete_code_pks),
+            'hide': (self.cli, self.complete_none),
+            'reveal': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
@@ -608,47 +608,6 @@ class Code(VerdiCommandWithSubcommands):
     def complete_code_names_and_pks(self, subargs_idx, subargs):
         return "\n".join([self.complete_code_names(subargs_idx, subargs),
                           self.complete_code_pks(subargs_idx, subargs)])
-
-    def code_hide(self, *args):
-        """
-        Hide one or more codes from the verdi show command
-        """
-        import argparse
-        from aiida.orm.code import Code as OrmCode
-        from aiida.orm.utils import load_node
-
-        parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
-                                         description='Hide codes from the verdi show command.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument('pks', type=int, nargs='+',
-                            help="The pk of the codes to hide",
-                            )
-        parsed_args = parser.parse_args(args)
-
-        for pk in parsed_args.pks:
-            code = load_node(pk, sub_class=OrmCode)
-            code._hide()
-
-    def code_reveal(self, *args):
-        """
-        Reveal (if it was hidden before) one or more codes from the verdi show command
-        """
-        import argparse
-        from aiida.orm.code import Code as OrmCode
-        from aiida.orm.utils import load_node
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Reveal codes (if they were hidden before) from the verdi show command.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument('pks', type=int, nargs='+',
-                            help="The pk of the codes to reveal",
-                            )
-        parsed_args = parser.parse_args(args)
-
-        for pk in parsed_args.pks:
-            code = load_node(pk, sub_class=OrmCode)
-            code._reveal()
 
     def code_list(self, *args):
         """
@@ -1058,9 +1017,9 @@ def show(code, verbose):
     click.echo(tabulate.tabulate(code.full_text_info(verbose)))
 
 @verdi_code.command()
-@arguments.CODE()
+@arguments.CODES()
 @with_dbenv()
-def delete(code):
+def delete(codes):
     """
     Delete codes.
 
@@ -1078,3 +1037,23 @@ def delete(code):
             echo.echo_critical(e.message)
 
         echo.echo_info("Code '{}' deleted.".format(pk))
+
+@verdi_code.command()
+@arguments.CODES()
+@with_dbenv()
+def hide(codes):
+    """
+    Hide one or more codes from the verdi show command
+    """
+    for code in codes:
+        code._hide()
+
+@verdi_code.command()
+@arguments.CODES()
+@with_dbenv()
+def reveal(codes):
+    """
+    Reveal one or more hidden codes to the verdi show command
+    """
+    for code in codes:
+        code._reveal()

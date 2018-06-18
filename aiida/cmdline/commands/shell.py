@@ -13,7 +13,8 @@ from __future__ import absolute_import
 import os
 
 from aiida.cmdline.baseclass import VerdiCommand
-
+from aiida.cmdline.commands import verdi_shell
+from aiida.cmdline.utils import decorators, echo
 
 
 default_modules_list = [
@@ -34,6 +35,26 @@ default_modules_list = [
     # ("aiida.backends.djsite.db", "models", "models"),
     # ("aiida.backends.sqlalchemy", "models", "models"),
 ]
+
+
+# class Shell(VerdiCommand):
+#     """
+#     Re-hash nodes filtered by identifier and or node class
+#     """
+#
+#     def run(self, *args):
+#         ctx = rehash.make_context('rehash', list(args))
+#         with ctx:
+#             rehash.invoke(ctx)
+#
+#
+# @verdi_shell.command('shell')
+# @decorators.with_dbenv()
+# def shell(nodes, entry_point):
+#
+#     pass
+
+
 
 class Shell(VerdiCommand):
     """

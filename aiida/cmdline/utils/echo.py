@@ -74,7 +74,7 @@ def echo_error(message, bold=False, nl=True):
     click.secho(message, bold=bold, nl=nl, err=True)
 
 
-def echo_exit(message, bold=False, nl=True, exit_status=ExitCode.UNKNOWN, exit_label='EXIT: '):
+def echo_exit(message, bold=False, nl=True, exit_status=ExitCode.UNKNOWN, exit_label='Exit: '):
     """
     Print error message through click's echo function to stdout, prefixed with
     exit_label and then calls sys.exit with the given exit_status.
@@ -102,7 +102,6 @@ def echo_critical(message, bold=False, nl=True):
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
-    :param exit_status: the integer to pass to the sys.exit() call
     """
     echo_exit(message=message, bold=bold, nl=nl, exit_status=ExitCode.CRITICAL, exit_label='Critical: ')
 
@@ -117,6 +116,5 @@ def echo_deprecated(message, bold=False, nl=True):
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
-    :param exit_status: the integer to pass to the sys.exit() call
     """
     echo_exit(message=message, bold=bold, nl=nl, exit_status=ExitCode.DEPRECATED, exit_label='Deprecated: ')

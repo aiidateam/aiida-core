@@ -161,33 +161,24 @@ def user_list(color):
 
         institution_str = " ({})".format(user.institution) if user.institution else ""
 
-        color_id = 39  # Default foreground color
         permissions_list = []
         if not user.has_usable_password():
             permissions_list.append("NO_PWD")
-            color_id = 90  # Dark gray
+            color_id = 'black'  # Dark gray
         else:
-            color_id = 34  # Blue
+            color_id = 'blue'  # Blue
         permissions_str = ",".join(permissions_list)
         if permissions_str:
             permissions_str = " [{}]".format(permissions_str)
 
         if user.email == current_user:
             symbol = ">"
-            color_id = 31
+            color_id = 'red'
         else:
             symbol = "*"
 
-        if color:
-            start_color = "\x1b[{}m".format(color_id)
-            end_color = "\x1b[0m"
-            bold_sequence = "\x1b[1;{}m".format(color_id)
-            nobold_sequence = "\x1b[0;{}m".format(color_id)
-        else:
-            start_color = ""
-            end_color = ""
-            bold_sequence = ""
-            nobold_sequence = ""
+        if not color:
+            color_id = None
 
-        click.echo("{}{} {}{}{}:{}{}{}{}".format(start_color, symbol, bold_sequence, user.email, nobold_sequence,
-                                                 full_name, institution_str, permissions_str, end_color))
+        click.secho("{}{}".format(symbol, user.email), fg=color_id, bold=True, nl=False)
+        click.secho(":{}{}{}".format(full_name, institution_str, permissions_str), fg=color_id)

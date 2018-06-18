@@ -94,7 +94,7 @@ class Group(AbstractGroup):
 
     @property
     def user(self):
-        return self._backend.users._from_dbmodel(self._dbgroup.user)
+        return self._backend.users.from_dbmodel(self._dbgroup.user)
 
     @user.setter
     def user(self, new_user):

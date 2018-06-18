@@ -354,10 +354,9 @@ class Node(AbstractNode):
         raise NotImplementedError("Reset of extras has not been implemented"
                                   "for Django backend.")
 
-    def _get_db_extra(self, key, *args):
+    def _get_db_extra(self, key):
         from aiida.backends.djsite.db.models import DbExtra
-        return DbExtra.get_value_for_node(dbnode=self._dbnode,
-                                          key=key)
+        return DbExtra.get_value_for_node(dbnode=self._dbnode, key=key)
 
     def _del_db_extra(self, key):
         from aiida.backends.djsite.db.models import DbExtra
@@ -392,15 +391,17 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
-        from . import user as users
 
         if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        DbComment.objects.create(dbnode=self._dbnode,
-                                 user=user.dbuser,
-                                 content=content)
+        if user is None:
+            user = self.backend.users.get_automatic_user()
+
+        return DbComment.objects.create(dbnode=self._dbnode,
+                                        user=user.dbuser,
+                                        content=content).id
 
     def get_comment_obj(self, id=None, user=None):
         from aiida.backends.djsite.db.models import DbComment
@@ -551,7 +552,7 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._backend.users._from_dbmodel(self._dbnode.user)
+        return self._backend.users.from_dbmodel(self._dbnode.user)
 
     def set_user(self, user):
         type_check(user, users.DjangoUser)

@@ -205,7 +205,7 @@ class CompletionCommand(VerdiCommand):
             }
             complete -o nospace -F _aiida_verdi_completion verdi
             """
-            )
+        )
 
     def complete(self, subargs_idx, subargs):
         # disable further completion
@@ -384,13 +384,14 @@ class Setup(VerdiCommand):
 @click.option('--first-name', type=str)
 @click.option('--last-name', type=str)
 @click.option('--institution', type=str)
-@click.option('--no-password', is_flag=True)
 @click.option('--repo', type=str)
 def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
-               first_name, last_name, institution, no_password, repo):
-    '''verdi setup command, forward cmdline arguments to the setup function.
+               first_name, last_name, institution, repo):
+    """
+    verdi setup command, forward cmdline arguments to the setup function.
 
-    Note: command line options are IGNORED unless --non-interactive is given.'''
+    Note: command line options are IGNORED unless --non-interactive is given.
+    """
     kwargs = dict(
         profile=profile,
         only_config=only_config,
@@ -412,7 +413,7 @@ def _setup_cmd(profile, only_config, non_interactive, backend, email, db_host, d
 
 
 def setup(profile, only_config, non_interactive=False, **kwargs):
-    '''
+    """
     setup an aiida profile and aiida user (and the aiida default user).
 
     :param profile: Profile name
@@ -424,7 +425,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
     :param db_port: port to connect to the database
     :param db_user: name of the db user
     :param db_pass: password of the db user
-    '''
+    """
     from aiida.common.setup import (create_base_dirs, create_configuration,
                                     set_default_profile, DEFAULT_UMASK,
                                     create_config_noninteractive)
@@ -506,8 +507,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         print("Only user configuration requested, "
               "skipping the migrate command")
     else:
-        print
-        "Executing now a migrate command..."
+        print("Executing now a migrate command...")
 
         backend_choice = created_conf['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
@@ -559,12 +559,10 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
         else:
             raise InvalidOperation("Not supported backend selected.")
 
-    print
-    "Database was created successfully"
+    print("Database was created successfully")
 
     # I create here the default user
-    print
-    "Loading new environment..."
+    print("Loading new environment...")
     if only_user_config:
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
         # db environment has not been loaded in this case
@@ -577,51 +575,51 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
     backend = construct_backend()
     if not backend.users.find(email=DEFAULT_AIIDA_USER):
         print("Installing default AiiDA user...")
-        nuser = backend.users.create(email=DEFAULT_AIIDA_USER)
-        nuser.first_name = "AiiDA"
-        nuser.last_name = "Daemon"
+        nuser = backend.users.create(
+            email=DEFAULT_AIIDA_USER,
+            first_name="AiiDA",
+            last_name="Daemon")
         nuser.is_active = True
         nuser.store()
 
     from aiida.common.utils import get_configured_user_email
     email = get_configured_user_email()
-    print
-    "Starting user configuration for {}...".format(email)
+    print("Starting user configuration for {}...".format(email))
     if email == DEFAULT_AIIDA_USER:
-        print
-        "You set up AiiDA using the default Daemon email ({}),".format(
-            email)
-        print
-        "therefore no further user configuration will be asked."
+        print("You set up AiiDA using the default Daemon email ({}),".format(email))
+        print("therefore no further user configuration will be asked.")
     else:
-        # Ask to configure the new user
-        if not non_interactive:
-            user.configure.main(args=[email])
+        if non_interactive:
+            # Here we map the keyword arguments onto the command line arguments
+            # for verdi user configure.  We have to be careful that there the
+            # argument names are the same as those int he kwargs dict
+            commands = [kwargs['email'], '--non-interactive']
+
+            for arg in ('first_name', 'last_name', 'institution'):
+                value = kwargs.get(arg, None)
+                if value is not None:
+                    commands.extend(('--{}'.format(arg.replace('_', '-')), str(value)))
         else:
-            # or don't ask
-            aiida.cmdline.commands.user.do_configure(
-                backend,
-                email=kwargs['email'],
-                first_name=kwargs.get('first_name'),
-                last_name=kwargs.get('last_name'),
-                institution=kwargs.get('institution'),
-                no_password=True,
-                non_interactive=non_interactive,
-                force_reconfigure=True
-            )
+            commands = [email]
+
+        # Ask to configure the user
+        try:
+            user.configure(commands)
+        except SystemExit:
+            # Have to catch this as the configure command will do a sys.exit()
+            pass
 
     print("Setup finished.")
 
 
 class Quicksetup(VerdiCommand):
-    '''
+    """
     Quick setup for the most common usecase (1 user, 1 machine).
 
     Creates a database user 'aiida_qs_<login-name>' with random password (if it
     doesn't exist). Creates a database '<profile>_<username>' (if it exists,
     prompts user to use or change the name).
-    '''
-    from aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
+    """
 
     def run(self, *args):
         ctx = self._ctx(args)
@@ -653,7 +651,7 @@ class Quicksetup(VerdiCommand):
 @click.pass_obj
 def quicksetup(self, profile, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
                repo, set_default, non_interactive):
-    '''Set up a sane aiida configuration with as little interaction as possible.'''
+    """Set up a sane aiida configuration with as little interaction as possible."""
     from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
     create_base_dirs()
 

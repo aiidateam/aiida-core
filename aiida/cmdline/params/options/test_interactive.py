@@ -3,14 +3,16 @@ import unittest
 
 import click
 from click.testing import CliRunner
+from click.types import IntParamType
 
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.options import NON_INTERACTIVE
 
-from click.types import IntParamType
-
 
 class Only42IntParamType(IntParamType):
+    """
+    Param type that only accepts 42 as valid value
+    """
     name = 'only42int'
 
     def convert(self, value, param, ctx):
@@ -26,14 +28,20 @@ class Only42IntParamType(IntParamType):
 class InteractiveOptionTest(unittest.TestCase):
     """Unit tests for InteractiveOption."""
 
+    # pylint: disable=too-many-public-methods, missing-docstring
+
     def simple_command(self, **kwargs):
         """Return a simple command with one InteractiveOption, kwargs get relayed to the option."""
+
+        # pylint: disable=no-self-use
 
         @click.command()
         @click.option('--opt', prompt='Opt', cls=InteractiveOption, **kwargs)
         @NON_INTERACTIVE()
         def cmd(opt, non_interactive):
             """test command for InteractiveOption"""
+            # pylint: disable=unused-argument
+
             click.echo(str(opt))
 
         return cmd
@@ -44,6 +52,8 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def prompt_output(self, cli_input, converted=None):
         """Return expected output of simple_command, given a commandline cli_input string."""
+        # pylint: disable=no-self-use
+
         return "Opt: {}\n{}\n".format(cli_input, converted or cli_input)
 
     def test_prompt_str(self):
@@ -119,7 +129,8 @@ class InteractiveOptionTest(unittest.TestCase):
             self.assertIn(expected_1, result.output)
             self.assertIn(expected_2, result.output)
 
-    def strip_line(self, text):
+    @staticmethod
+    def strip_line(text):
         """returns text without the last line"""
         return text.rsplit('\n')[0]
 
@@ -217,7 +228,16 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, 'default\n')
 
-    def user_callback(self, ctx, param, value):
+    @staticmethod
+    def user_callback(_ctx, param, value):
+        """
+        A fake user callback ued for testing.
+
+        :param _ctx: The click context
+        :param param: The parameter name
+        :param value: The parameter value
+        :return: The validated parameter
+        """
         if not value:
             return -1
         elif value != 42:
@@ -304,6 +324,7 @@ class InteractiveOptionTest(unittest.TestCase):
         Behaviour:
             * the default value gets passed through the callback and rejected
         """
+        # pylint: disable=invalid-name
         cmd = self.simple_command(callback=self.user_callback, type=int, default=23)
         result = self.runner.invoke(cmd, ['--non-interactive'])
         self.assertIsNotNone(result.exception)
@@ -323,13 +344,6 @@ class InteractiveOptionTest(unittest.TestCase):
         expected = 'Opt []: \n\n'
         self.assertIsNone(result.exception)
         self.assertIn(expected, result.output)
-
-    def test_default_empty_noninteractive(self):
-        """Test that empty_ok=True allows to pass an empty cli option also in non interactive mode."""
-        cmd = self.simple_command(default="", type=str)
-        result = self.runner.invoke(cmd, ['--non-interactive', '--opt='])
-        self.assertIsNone(result.exception)
-        self.assertEqual(result.output, '\n')
 
     def test_prompt_dynamic_default(self):
         """Test that dynamic defaults for prompting still work."""

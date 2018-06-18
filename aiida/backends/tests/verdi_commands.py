@@ -9,13 +9,9 @@
 ###########################################################################
 # pylint: disable=missing-docstring,invalid-name,protected-access
 
-import mock
-from click.testing import CliRunner
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.datastructures import calc_states
 from aiida.utils.capturing import Capturing
-from aiida.work import WorkChain
 
 # Common computer information
 computer_common_info = [
@@ -76,92 +72,8 @@ CODE_SETUP_OPTS_2 = COMMON_CODE_SETUP_OPTS + [
     '--computer', computer_name_2,
 ]  # yapf: disable
 
-# User #1
-user_1 = {
-    'email': "testuser1@localhost",
-    'first_name': "Max",
-    'last_name': "Mueller",
-    'institution': "Testing Instiute"
-}
-# User #2
-user_2 = {
-    'email': "testuser2@localhost",
-    'first_name': "Sabine",
-    'last_name': "Mueller",
-    'institution': "Testing Instiute"
-}
-
-
-# pylint: disable=abstract-method
-class Wf(WorkChain):
-    """
-    Utility workchain used for testing
-    """
-    TEST_STRING = 'Test report.'
-
-    @classmethod
-    def define(cls, spec):
-        super(Wf, cls).define(spec)
-        spec.outline(cls.create_logs)
-
-    def create_logs(self):
-        self.report(self.TEST_STRING)
-
 
 # pylint: disable=no-self-use
-class TestVerdiUserCommands(AiidaTestCase):
-
-    def setUp(self):
-        """
-        Create a user
-        """
-        super(TestVerdiUserCommands, self).setUp()
-
-        # Setup user #1
-        from aiida.cmdline.commands.user import do_configure
-
-        with mock.patch('__builtin__.raw_input', side_effect=computer_setup_input_1):
-            with Capturing():
-                do_configure(
-                    self.backend,
-                    user_1['email'],
-                    user_1['first_name'],
-                    user_1['last_name'],
-                    user_1['institution'],
-                    no_password=True,
-                    non_interactive=True,
-                    force_reconfigure=True)
-
-    def test_user_list(self):
-        """
-        verdi user list
-        """
-        from aiida.cmdline.commands.user import list as list_user
-
-        result = CliRunner().invoke(list_user, [], catch_exceptions=False)
-        self.assertTrue(user_1['email'] in result.output)
-
-    def test_user_configure(self):
-        """
-        Try configuring a new user
-        verdi user configure
-        """
-        from aiida.cmdline.commands.user import configure
-
-        cli_options = [
-            user_2['email'], '--first-name', user_2['first_name'], '--last-name', user_2['last_name'], '--institution',
-            user_2['institution'], '--no-password', '--force-reconfigure'
-        ]
-
-        # configure user
-        result = CliRunner().invoke(configure, cli_options, catch_exceptions=False)
-        self.assertTrue(user_2['email'] in result.output)
-        self.assertTrue("is already present" not in result.output)
-
-        # reconfigure user
-        result = CliRunner().invoke(configure, cli_options, catch_exceptions=False)
-        self.assertTrue(user_2['email'] in result.output)
-        self.assertTrue("is already present" in result.output)
 
 
 class TestVerdiDataCommands(AiidaTestCase):

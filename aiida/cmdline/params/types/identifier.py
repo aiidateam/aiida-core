@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+Module for custom click param type identifier
+"""
 from abc import ABCMeta, abstractproperty
 
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import LoadingEntryPointError
-from aiida.plugins.entry_point import get_entry_point_from_string, load_entry_point_from_string
+from aiida.plugins.entry_point import get_entry_point_from_string
 
 
 class IdentifierParamType(click.ParamType):
@@ -60,7 +62,7 @@ class IdentifierParamType(click.ParamType):
     def orm_class_loader(self):
         """
         Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
-        to be used to load the entity for a given identifier 
+        to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
         """

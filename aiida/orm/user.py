@@ -24,11 +24,17 @@ class UserCollection(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def create(self, email):
+    def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
 
         :param email: An email address for the user
+        :param first_name: The users first name
+        :type first_name: str
+        :param last_name: The users last name
+        :type last_name: str
+        :institution: The users instution
+        :type institution: str
         :return: A new user object
         :rtype: :class:`User`
         """
@@ -59,6 +65,12 @@ class UserCollection(object):
                 raise exceptions.MultipleObjectsError()
             else:
                 return results[0]
+
+    def get_or_create(self, email):
+        try:
+            return False, self.get(email)
+        except exceptions.NotExistent:
+            return True, self.create(email)
 
     def get_automatic_user(self):
         from aiida.common.utils import get_configured_user_email
@@ -146,6 +158,11 @@ class User(object):
             pass_hash = pwd_context.encrypt(val)
 
         self._set_password(pass_hash)
+
+    def verify_password(self, password):
+        from aiida.common.hashing import pwd_context
+
+        return pwd_context.verify(password, self.password)
 
     @abc.abstractmethod
     def _get_password(self):

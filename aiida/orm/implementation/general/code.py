@@ -10,7 +10,7 @@
 import os
 from abc import abstractmethod
 from aiida.orm.implementation import Node
-from aiida.common.exceptions import (ValidationError, MissingPluginError)
+from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 
@@ -111,6 +111,27 @@ class AbstractCode(Node):
             label += '@' + self.get_computer_name()
 
         return label
+
+    def relabel(self, new_label, raise_error=True):
+        """Relabel this code.
+
+        :param new_label: new code label
+        :param raise_error: Set to False in order to return a list of errors
+            instead of raising them.
+        """
+        suffix = '@{}'.format(self.get_computer_name())
+        if new_label.endswith(suffix):
+            new_label = new_label[:-len(suffix)]
+
+        if '@' in new_label:
+            msg = "Code labels must not contain the '@' symbol"
+            if raise_error:
+                raise InputValidationError(msg)
+            else:
+                return InputValidationError(msg)
+
+        self.label = new_label
+
 
     def get_desc(self):
         """
@@ -561,6 +582,8 @@ class AbstractCode(Node):
             raise ValidationError(
                 "Unable to store the computer: {}.".format(e.message))
         return code
+
+
 
 
 def delete_code(code):

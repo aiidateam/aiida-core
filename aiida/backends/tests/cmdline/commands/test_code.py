@@ -4,7 +4,7 @@ import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.code import setup_code, delete, hide, reveal
+from aiida.cmdline.commands.code import setup_code, delete, hide, reveal, relabel
 
 
 class TestVerdiCodeSetup(AiidaTestCase):
@@ -20,9 +20,24 @@ class TestVerdiCodeSetup(AiidaTestCase):
                                 workdir='/tmp/aiida')
         new_comp.store()
 
+
     def setUp(self):
-        from aiida.orm import Computer
+        from aiida.orm import Computer, Code
         self.comp = Computer.get('comp')
+
+        from aiida.orm import Code
+        from aiida.common.exceptions import NotExistent
+        try:
+            code = Code.get_from_string('code')
+        except NotExistent:
+            code = Code(
+                input_plugin_name='simpleplugins.arithmetic.add',
+                remote_computer_exec=[self.comp, '/remote/abs/path'],
+            )
+            code.label = 'code'
+            code.store()
+        self.code = code
+
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
@@ -86,11 +101,28 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output[-1000:])
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
-    def test_delete_one(self):
-        result = self.runner.invoke(delete, ['1'])
-
     def test_hide_one(self):
-        result = self.runner.invoke(hide, ['1'])
+        result = self.runner.invoke(hide, [str(self.code.pk)])
+        self.assertIsNone(result.exception)
 
     def test_reveal_one(self):
-        result = self.runner.invoke(reveal, ['1'])
+        result = self.runner.invoke(reveal, [str(self.code.pk)])
+        self.assertIsNone(result.exception)
+
+    def test_relabel_code(self):
+        result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code'])
+        self.assertIsNone(result.exception)
+
+    def test_relabel_code_2(self):
+        result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code@comp'])
+        self.assertIsNone(result.exception)
+
+    def test_relabel_code_3(self):
+        result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code@otherstuff'])
+        self.assertIsNotNone(result.exception)
+
+    def test_delete_one(self):
+        result = self.runner.invoke(delete, [str(self.code.pk)])
+        self.assertIsNone(result.exception)
+
+

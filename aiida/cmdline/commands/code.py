@@ -587,8 +587,9 @@ class Code(VerdiCommandWithSubcommands):
             'list': (self.code_list, self.complete_none),
             'show': (self.cli, self.complete_code_names_and_pks),
             'setup': (self.cli, self.complete_none),
-            'rename': (self.code_rename, self.complete_none),
-            'update': (self.code_update, self.complete_code_pks),
+            'rename': (self.cli, self.complete_none),
+            'relabel': (self.cli, self.complete_none),
+            'update': (self.cli, self.complete_none),
             'delete': (self.cli, self.complete_none),
             'hide': (self.cli, self.complete_none),
             'reveal': (self.cli, self.complete_none),
@@ -806,46 +807,6 @@ class Code(VerdiCommandWithSubcommands):
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
-    def code_rename(self, *args):
-        import argparse
-        from aiida.common.exceptions import NotExistent
-
-        from aiida.orm.code import Code
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Rename a code (change its label).')
-        # The default states are those that are shown if no option is given
-        parser.add_argument('old_name', help="The old name of the code")
-        parser.add_argument('new_name', help="The new name of the code")
-
-        parsed_args = parser.parse_args(args)
-
-        new_name = parsed_args.new_name
-        old_name = parsed_args.old_name
-
-        try:
-            code = Code.get_from_string(old_name)
-        except NotExistent:
-            print "ERROR! A code with name {} could not be found".format(old_name)
-            sys.exit(1)
-
-        suffix = '@{}'.format(code.get_computer().name)
-        if new_name.endswith(suffix):
-            new_name = new_name[:-len(suffix)]
-
-        if '@' in new_name:
-            print >> sys.stderr, "ERROR! Do not put '@' symbols in the code name"
-            sys.exit(1)
-
-        retrieved_old_name = '{}@{}'.format(code.label, code.get_computer().name)
-        # CHANGE HERE
-        code.label = new_name
-        retrieved_new_name = '{}@{}'.format(code.label, code.get_computer().name)
-
-        print "Renamed code with ID={} from '{}' to '{}'".format(
-            code.pk, retrieved_old_name, retrieved_new_name)
-
     def code_update(self, *args):
         import datetime
         from aiida.orm.backend import construct_backend
@@ -1030,13 +991,12 @@ def delete(codes):
     from aiida.orm.code import delete_code
 
     for code in codes:
-        pk = code.pk
         try:
             delete_code(code)
         except InvalidOperation as e:
             echo.echo_critical(e.message)
 
-        echo.echo_info("Code '{}' deleted.".format(pk))
+        echo.echo_success("Code '{}' deleted.".format(code.pk))
 
 @verdi_code.command()
 @arguments.CODES()
@@ -1047,6 +1007,7 @@ def hide(codes):
     """
     for code in codes:
         code._hide()
+        echo.echo_success("Code '{}' hidden.".format(code.pk))
 
 @verdi_code.command()
 @arguments.CODES()
@@ -1057,3 +1018,46 @@ def reveal(codes):
     """
     for code in codes:
         code._reveal()
+        echo.echo_success("Code '{}' revealed.".format(code.pk))
+
+
+@verdi_code.command()
+@arguments.CODE()
+@with_dbenv()
+def update(code):
+    """
+    Update an existing code.
+    
+    Warning: This function is deprecated, since updating existing codes breaks data proevenance.
+    Use 'duplicate' instead.
+    """
+    echo.echo_deprecated("Please use 'duplicate' instead.", exit=True)
+
+@verdi_code.command()
+@arguments.CODE('old_label')
+@arguments.LABEL('new_label')
+@with_dbenv()
+def relabel(old_label, new_label):
+    """
+    Relabel a code.
+    """
+    # Note: old_label actually holds a code but we need to 
+    # specify it that way for the click help message
+    code = old_label
+    old_label = code.get_label(full=True)
+    code.relabel(new_label)
+
+    echo.echo_success("Relabeled code with ID={} from '{}' to '{}'".format( code.pk,
+        old_label, code.get_label(full=True)))
+
+@verdi_code.command()
+@arguments.CODE('OLD_LABEL')
+@arguments.LABEL('NEW_LABEL')
+@with_dbenv()
+@click.pass_context
+def rename(ctx, old_label, new_label):
+    """
+    Rename a code (change its label).
+    """
+    echo.echo_deprecated("Use 'relabel' instead")
+    ctx.forward(relabel)

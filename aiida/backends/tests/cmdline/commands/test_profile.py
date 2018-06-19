@@ -21,12 +21,12 @@ class TestVerdiProfileSetup(AiidaTestCase):
         :param args: list of arguments
         :param kwargs: list of keyword arguments
         """
-        import tempfile
-
         super(TestVerdiProfileSetup, cls).setUpClass()
 
+        import tempfile
+
         cls._old_aiida_config_folder = None
-        cls._new_aiida_config_folder = tempfile.mkstemp()
+        cls._new_aiida_config_folder = tempfile.mkdtemp()
         print ":", cls._new_aiida_config_folder
 
         cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER

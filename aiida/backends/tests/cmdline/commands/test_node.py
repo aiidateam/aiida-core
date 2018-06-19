@@ -79,10 +79,21 @@ class TestVerdiNode(AiidaTestCase):
         node.label = label
         node.store()
         
+        # read existing label
         options = [str(node.pk), '--raw']
         result = self.runner.invoke(node_label, options)
         self.assertIsNone(result.exception)
         self.assertEquals(result.output, label+'\n')
+
+        # set new label
+        new_label = "my new label"
+        options = [str(node.pk), '--label', new_label, '--force']
+        result = self.runner.invoke(node_label, options)
+        self.assertIsNone(result.exception)
+
+        from aiida.orm import load_node
+        updated_node = load_node(node.pk)
+        self.assertEquals(updated_node.label, new_label)
 
     def test_node_description(self):
         node = self.nodes['in1']

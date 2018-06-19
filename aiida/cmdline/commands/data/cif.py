@@ -14,7 +14,8 @@ from aiida.cmdline.utils import echo
 from aiida.orm.data.cif import CifData
 from aiida.utils import timezone
 import datetime
-
+from aiida.common.exceptions import MultipleObjectsError
+from aiida.common.utils import Prettifier
 
 @verdi_data.group('cif')
 @click.pass_context
@@ -157,14 +158,13 @@ def show(nodes, format):
 
     try:
         if format == 'jmol':
-            _show_jmol()
-
-        func(format, n_list, **parsed_args)
+            _show_jmol(format, nodes)
+        if format == 'vesta':
+            _show_vesta(format, nodes)
     except MultipleObjectsError:
-        print >> sys.stderr, (
+        echo.echo_critical(
             "Visualization of multiple objects is not implemented "
             "for '{}'".format(format))
-        sys.exit(1)
 
 def _show_jmol(exec_name, structure_list):
     """
@@ -185,10 +185,9 @@ def _show_jmol(exec_name, structure_list):
                 exec_name)
         except OSError as e:
             if e.errno == 2:
-                print ("No executable '{}' found. Add to the path, "
+                echo.echo_critical("No executable '{}' found. Add to the path, "
                        "or try with an absolute path.".format(
                     exec_name))
-                sys.exit(1)
             else:
                 raise
 
@@ -211,8 +210,95 @@ def _show_vesta(exec_name, structure_list):
             print "Note: the call to {} ended with an error.".format(exec_name)
         except OSError as e:
             if e.errno == 2:
-                print ("No executable '{}' found. Add to the path, "
+                echo.echo_critical("No executable '{}' found. Add to the path, "
                        "or try with an absolute path.".format(exec_name))
-                sys.exit(1)
             else:
                 raise
+
+@cif.command('export')
+@click.option('-y', '--format',
+              type=click.Choice(['cif', 'tcod', 'tcod_parameters']),
+              default='json',
+              help="Type of the exported file.")
+@click.option('-o', '--output', type=click.STRING,
+              default=None,
+              help="If present, store the output directly on a file "
+              "with the given name. It is essential to use this option "
+              "if more than one file needs to be created.")
+@options.FORCE(help="If passed, overwrite files without checking.")
+@click.option('--prettify-format', default=None,
+                type=click.Choice(Prettifier.get_prettifiers()),
+                help='The style of labels for the prettifier')
+@arguments.NODE()
+def export(format, output, force, prettify_format, node):
+    """
+    Export the data node to a given format.
+    """
+    if format is None:
+        print >> sys.stderr, (
+            "Default format is not defined, please specify.\n"
+            "Valid formats are:")
+        for i in sorted(self.get_export_plugins().keys()):
+            print >> sys.stderr, "  {}".format(i)
+        sys.exit(1)
+
+    output_fname = parsed_args.pop('output')
+    if not output:
+        output = ""
+
+    overwrite = parsed_args.pop('overwrite')
+
+    # if parsed_args:
+    #    raise InternalError(
+    #        "Some command line parameters were not properly parsed: {}".format(
+    #            parsed_args.keys()
+    #        ))
+
+    try:
+        func = self.get_export_plugins()[format]
+    except KeyError:
+        print >> sys.stderr, "Not implemented; implemented plugins are:"
+        print >> sys.stderr, "{}.".format(
+            ",".join(self.get_export_plugins()))
+        sys.exit(1)
+
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    n = load_node(data_id)
+
+    try:
+        if not isinstance(n, self.dataclass):
+            print >> sys.stderr, ("Node {} is of class {} instead "
+                                  "of {}".format(n, type(n), self.dataclass))
+            sys.exit(1)
+    except AttributeError:
+        pass
+
+    func(n, output_fname=output_fname, overwrite=force, **parsed_args)
+
+def _export_cif(self, node, output_fname, overwrite, **kwargs):
+    """
+    Exporter to CIF.
+    """
+    self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite,
+                        other_args=kwargs)
+
+def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
+    """
+    Plugin for TCOD
+    """
+    parameters = None
+    if parameter_data is not None:
+        from aiida.orm import DataFactory
+        ParameterData = DataFactory('parameter')
+        parameters = load_node(parameter_data, sub_class=ParameterData)
+    self.print_or_store(node, output_fname, fileformat='tcod', overwrite=overwrite,
+                        other_args=kwargs)
+
+def _export_tcod_parameters(self, parser, **kwargs):
+    """
+    Command line parameters for TCOD
+    """
+    from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
+    extend_with_cmdline_parameters(parser, self.dataclass.__name__)

@@ -12,9 +12,6 @@ class TestVerdiProfileSetup(AiidaTestCase):
     Test suite to test verdi profile command
     """
 
-    _old_aiida_config_folder = None
-    _new_aiida_config_folder = "~/.aiidadummy"
-
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """
@@ -24,7 +21,13 @@ class TestVerdiProfileSetup(AiidaTestCase):
         :param args: list of arguments
         :param kwargs: list of keyword arguments
         """
+        import tempfile
+
         super(TestVerdiProfileSetup, cls).setUpClass()
+
+        cls._old_aiida_config_folder = None
+        cls._new_aiida_config_folder = tempfile.mkstemp()
+        print ":", cls._new_aiida_config_folder
 
         cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER
         aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
@@ -57,9 +60,8 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         import os
         import shutil
-        dummy_aiida_dir = os.path.expanduser(cls._new_aiida_config_folder)
-        if os.path.isdir(dummy_aiida_dir):
-            shutil.rmtree(dummy_aiida_dir)
+        if os.path.isdir(cls._new_aiida_config_folder):
+            shutil.rmtree(cls._new_aiida_config_folder)
 
     def setUp(self):
         """
@@ -103,6 +105,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         from aiida.cmdline.commands.profile import profile_setdefault
         result = self.runner.invoke(profile_setdefault, ["dummy_profile2"])
+        self.assertIsNone(result.exception)
 
         from aiida.cmdline.commands.profile import profile_list
         result = self.runner.invoke(profile_list)
@@ -120,13 +123,20 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         ### delete single profile
         result = self.runner.invoke(profile_delete, ["--force", "dummy_profile3"])
+        self.assertIsNone(result.exception)
+        print "delete output: ", result.output
+
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
+        print "list output: ", result.output
+
         self.assertNotIn('dummy_profile3', result.output)
         self.assertIsNone(result.exception)
 
         ### delete multiple profile
         result = self.runner.invoke(profile_delete, ["--force", "dummy_profile4", "dummy_profile5"])
+        self.assertIsNone(result.exception)
+
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertNotIn('dummy_profile4', result.output)

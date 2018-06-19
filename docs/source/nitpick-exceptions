@@ -98,8 +98,8 @@ py:class  click.core.Option
 py:class  click.Option
 py:class  click.types.ParamType
 py:class  click.types.Choice
-py:class  click.types.IntType
-py:class  click.types.StringType
+py:class  click.types.IntParamType
+py:class  click.types.StringParamType
 
 py:class  distutils.version.Version
 

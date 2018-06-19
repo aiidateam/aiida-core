@@ -9,6 +9,7 @@
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/code.py|
         aiida/cmdline/params/.*.py|
         aiida/cmdline/optiontypes/.*.py|
         aiida/cmdline/utils/multi_line_input.py|
@@ -40,6 +41,7 @@
         aiida/control/.*.py|
         aiida/cmdline/tests/.*.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/code.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|

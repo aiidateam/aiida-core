@@ -151,9 +151,6 @@ class ConditionalOptionTest(unittest.TestCase):
         else:
             return value
 
-    def not_user_callback(self, ctx, param, value):
-        return not self.user_callback(ctx, param, value)
-
     def setup_flag_cond(self, **kwargs):
         """Set up a command with a flag and a customizable option that depends on it."""
 
@@ -200,8 +197,8 @@ class ConditionalOptionTest(unittest.TestCase):
 
     def test_required(self):
         """Test that required_fn overrides required if it evaluates to False."""
-        cmd = self.setup_flag_cond(required=True, callback=self.not_user_callback)
+        cmd = self.setup_flag_cond(required=True)
         result_noflag = self.runner.invoke(cmd)
-        self.assertIsNotNone(result_noflag.exception)
-        result_flag = self.runner.invoke(cmd, ['--flag'])
         self.assertIsNone(result_noflag.exception)
+        result_flag = self.runner.invoke(cmd, ['--flag'])
+        self.assertIsNotNone(result_flag.exception)

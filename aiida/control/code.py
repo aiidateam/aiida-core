@@ -3,40 +3,7 @@ import enum
 import os
 
 from aiida.cmdline.utils.decorators import with_dbenv
-
-
-class ErrorAccumulator(object):
-    """
-    Allows to run a number of functions and collect all the errors they raise
-
-    This allows to validate multiple things and tell the user about all the
-    errors encountered at once. Works best if the individual functions do not depend on each other.
-
-    Does not allow to trace the stack of each error, therefore do not use for debugging, but for
-    semantical checking with user friendly error messages.
-    """
-
-    def __init__(self, *error_cls):
-        self.error_cls = error_cls
-        self.errors = {k: [] for k in self.error_cls}
-
-    def run(self, function, *args, **kwargs):
-        try:
-            function(*args, **kwargs)
-        except self.error_cls as err:
-            self.errors[err.__class__].append(err)
-
-    def success(self):
-        return bool(not any(self.errors.values()))
-
-    def result(self, raise_error=Exception):
-        if raise_error:
-            self.raise_errors(raise_error)
-        return self.success(), self.errors
-
-    def raise_errors(self, raise_cls):
-        if not self.success():
-            raise raise_cls('The following errors were encountered: {}'.format(self.errors))
+from aiida.utils.error_accumulator import ErrorAccumulator
 
 
 class CodeBuilder(object):
@@ -44,7 +11,6 @@ class CodeBuilder(object):
 
     def __init__(self, **kwargs):
         self._code_spec = kwargs
-        self._validators = []
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
 
     def validate(self, raise_error=True):
@@ -60,17 +26,31 @@ class CodeBuilder(object):
 
         from aiida.orm import Code
 
-        if self.code_type == self.CodeType.STORE_AND_UPLOAD:
-            file_list = [os.path.realpath(os.path.join(self.code_folder, f)) for f in os.listdir(self.code_folder)]
-            code = Code(local_executable=self.code_rel_path, files=file_list)
-        else:
-            code = Code(remote_computer_exec=(self.computer, self.remote_abs_path))
+        # Will be used at the end to check if all keys are known
+        passed_keys = set(self._code_spec.keys())
+        used = set()
 
-        code.label = self.label
-        code.description = self.description
-        code.set_input_plugin_name(self.input_plugin.name)
-        code.set_prepend_text(self.prepend_text)
-        code.set_append_text(self.append_text)
+        if self.code_type == self.CodeType.STORE_AND_UPLOAD:
+            file_list = [
+                os.path.realpath(os.path.join(self.code_folder, f))
+                for f in os.listdir(self._get_and_count('code_folder', used))
+            ]
+            code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
+        else:
+            code = Code(
+                remote_computer_exec=(self._get_and_count('computer', used),
+                                      self._get_and_count('remote_abs_path', used)))
+
+        code.label = self._get_and_count('label', used)
+        code.description = self._get_and_count('description', used)
+        code.set_input_plugin_name(self._get_and_count('input_plugin', used).name)
+        code.set_prepend_text(self._get_and_count('prepend_text', used))
+        code.set_append_text(self._get_and_count('append_text', used))
+
+        # Complain if there are keys that are passed but not used
+        if passed_keys - used:
+            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(
+                ", ".join(sorted(passed_keys - used))))
 
         return code
 
@@ -84,7 +64,26 @@ class CodeBuilder(object):
         return None
 
     def _get(self, key):
+        """
+        Return a spec, or None if not defined
+
+        :param key: name of a code spec
+        """
         return self._code_spec.get(key)
+
+    def _get_and_count(self, key, used):
+        """
+        Return a spec, or raise if not defined.
+        Moreover, add the key to the 'used' dict.
+
+        :param key: name of a code spec
+        :param used: should be a set of keys that you want to track.
+           ``key`` will be added to this set if the value exists in the spec and can be retrieved.
+        """
+        retval = self.__getattr__(key)
+        ## I first get a retval, so if I get an exception, I don't add it to the 'used' set
+        used.add(key)
+        return retval
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):

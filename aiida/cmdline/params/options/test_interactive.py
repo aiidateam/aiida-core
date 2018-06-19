@@ -5,6 +5,22 @@ import click
 from click.testing import CliRunner
 
 from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options import NON_INTERACTIVE
+
+from click.types import IntParamType
+
+
+class Only42IntParamType(IntParamType):
+    name = 'only42int'
+
+    def convert(self, value, param, ctx):
+        newval = super(Only42IntParamType, self).convert(value, param, ctx)
+        if newval != 42:
+            self.fail("Type validation: invalid, should be 42")
+        return newval
+
+    def __repr__(self):
+        return 'ONLY42INT'
 
 
 class InteractiveOptionTest(unittest.TestCase):
@@ -15,7 +31,7 @@ class InteractiveOptionTest(unittest.TestCase):
 
         @click.command()
         @click.option('--opt', prompt='Opt', cls=InteractiveOption, **kwargs)
-        @click.option('--non-interactive', is_flag=True)
+        @NON_INTERACTIVE()
         def cmd(opt, non_interactive):
             """test command for InteractiveOption"""
             click.echo(str(opt))
@@ -168,10 +184,10 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def test_non_interactive(self):
         """
-        scenario: InteractiveOption, invoked with only --non-interactive
+        scenario: InteractiveOption, invoked with only --non-interactive (and the option is required)
         behaviout: fail
         """
-        cmd = self.simple_command()
+        cmd = self.simple_command(required=True)
         runner = CliRunner()
         result = runner.invoke(cmd, ['--non-interactive'])
         self.assertIsNotNone(result.exception)
@@ -244,12 +260,12 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIn('Invalid value', result.output)
         self.assertNotIn('empty', result.output)
 
-    def test_after_callback_interactive(self):
+    def test_after_validation_interactive(self):
         """
-        Test that the callback gets called on values entered at a prompt.
+        Test that the type validation gets called on values entered at a prompt.
 
         Scenario:
-            * InteractiveOption with user callback and prompt set
+            * InteractiveOption with custom type and prompt set
             * invoked without passing the options
             * on prompt: first enter an invalid value, then a valid one
 
@@ -258,11 +274,11 @@ class InteractiveOptionTest(unittest.TestCase):
             * reject invalid value, prompt again
             * accept valid value
         """
-        cmd = self.simple_command(callback=self.user_callback, type=int)
+        cmd = self.simple_command(callback=self.user_callback, type=Only42IntParamType())
         result = self.runner.invoke(cmd, [], input='23\n42\n')
         self.assertIsNone(result.exception)
-        self.assertIn(result.output, 'Opt: 23\n')
-        self.assertIn(result.output, 'Opt: 42\n42\n')
+        self.assertIn('Opt: 23\nType validation: invalid', result.output)
+        self.assertIn('Opt: 42\n42\n', result.output)
 
     def test_after_callback_default_noninteractive(self):
         """
@@ -277,36 +293,29 @@ class InteractiveOptionTest(unittest.TestCase):
         """
         cmd = self.simple_command(callback=self.user_callback, type=int, default=23)
         result = self.runner.invoke(cmd, ['--non-interactive'])
-        self.assertIsInstance(result.exception, click.BadParameter)
+        self.assertIsNotNone(result.exception)
         self.assertIn('Invalid value', result.output)
 
-    def test_empty_ok(self):
-        """
-        Test empty_ok option. An option with empty_ok=True should accept enter on an empty prompt
-        * empyt_ok True / False
-        * interactive + pass, noninteractive + pass / no pass, interactive + prompt
-        """
-
-    def test_empty_ok_empty_cli(self):
-        """Test that empty_ok=True allows to pass an empty cli option."""
-        cmd = self.simple_command(empty_ok=True, type=int)
+    def test_default_empty_empty_cli(self):
+        """Test that default="" allows to pass an empty cli option."""
+        cmd = self.simple_command(default="", type=str)
         result = self.runner.invoke(cmd, ['--opt='])
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'None')
+        self.assertEqual(result.output, '\n')
 
-    def test_empty_ok_prompt(self):
-        """Test that empty_ok=True allows to pass an empty cli option."""
-        cmd = self.simple_command(empty_ok=True, type=int)
-        result = self.runner.invoke(cmd, input='\n5\n')
+    def test_default_empty_prompt(self):
+        """Test that default="" allows to pass an empty cli option."""
+        cmd = self.simple_command(default="", type=str)
+        result = self.runner.invoke(cmd, input='\n')
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'Opt: \nNone\n')
+        self.assertEqual(result.output, 'Opt []: \n\n')
 
-    def test_empty_ok_noninteractive(self):
+    def test_default_empty_noninteractive(self):
         """Test that empty_ok=True allows to pass an empty cli option also in non interactive mode."""
-        cmd = self.simple_command(empty_ok=True, type=int)
-        result = self.runner.invoke(cmd, ['--non-interactive --opt='])
+        cmd = self.simple_command(default="", type=str)
+        result = self.runner.invoke(cmd, ['--non-interactive', '--opt='])
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'None')
+        self.assertEqual(result.output, '\n')
 
     def test_prompt_dynamic_default(self):
         """Test that dynamic defaults for prompting still work."""
@@ -315,7 +324,8 @@ class InteractiveOptionTest(unittest.TestCase):
         cmd = self.simple_command(required=False)
         result = self.runner.invoke(cmd, ['--non-interactive'])
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'None')
+        # I strip, there is typically a \n at the end
+        self.assertEqual(result.output, 'None\n')
 
     def test_not_required_interactive(self):
         cmd = self.simple_command(required=False)

@@ -20,19 +20,33 @@ class ConditionalOption(click.Option):
         if the parameter is required to have a value
     """
 
-    def __init__(self, param_decls=None, required_fn=lambda ctx: True, **kwargs):
+    def __init__(self, param_decls=None, required_fn=None, **kwargs):
+
+        # note default behaviour for required: False
         self.required_fn = required_fn
+
+        # Required_fn overrides 'required', if defined
+        if required_fn is not None:
+            # There is a required_fn
+            self.required = False  # So it does not show up as 'required'
+
         super(ConditionalOption, self).__init__(param_decls=param_decls, **kwargs)
-        self.required = True
 
     def full_process_value(self, ctx, value):
         try:
             value = super(ConditionalOption, self).full_process_value(ctx, value)
+            if self.required_fn and self.value_is_missing(value):
+                if self.is_required(ctx):
+                    raise click.MissingParameter(ctx=ctx, param=self)
         except click.MissingParameter as err:
             if self.is_required(ctx):
-                raise err
+                raise
         return value
 
     def is_required(self, ctx):
         """runs the given check on the context to determine requiredness"""
-        return self.required_fn(ctx)
+
+        if self.required_fn:
+            return self.required_fn(ctx)
+        else:
+            return self.required

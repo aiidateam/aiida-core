@@ -1034,7 +1034,7 @@ def ensure_scripts(pre, post, summary):
 @click.option('--on-computer/--store-upload', is_eager=False, default=True, prompt='Installed on remote Computer?',
     cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
-@options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=is_on_computer)
+@options.COMPUTER(prompt='Remote computer', cls=InteractiveOption, required_fn=is_on_computer)
 @click.option(
     '--remote-abs-path', prompt='Remote path', required_fn=is_on_computer, type=click.Path(file_okay=True),
     cls=InteractiveOption, help=('[if --installed]: the (full) absolute path on the remote machine'))

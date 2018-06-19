@@ -15,7 +15,7 @@ class OverridableOption(object):
     help message for an option on a per-command basis. Sometimes the option should be prompted for if it is not given
     On some commands an option might take any folder path, while on another the path only has to exist.
 
-    Overridable options store the arguments to click.option and only instanciate the click.Option on call,
+    Overridable options store the arguments to click.option and only instantiate the click.Option on call,
     kwargs given to ``__call__`` override the stored ones.
 
     Example::
@@ -40,7 +40,7 @@ class OverridableOption(object):
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, **kwargs):
+    def __call__(self, *args, **kwargs):
         """
         Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option
         """

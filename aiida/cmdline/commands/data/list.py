@@ -2,13 +2,44 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.implementation import Group
 from aiida.orm.user import User
 from aiida.orm.backend import construct_backend
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.utils import echo
+from aiida.cmdline.params import options
+import click
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 
-if not is_dbenv_loaded():
-    load_dbenv()
-        
+_list_options = [
+    click.option('-e', '--elements', type=click.STRING,
+              cls=MultipleValueOption,
+              default=None,
+              help="Print all bandsdatas from structures "
+              "containing desired elements"),
+    click.option('-eo', '--elements-only', type=click.STRING,
+              cls=MultipleValueOption,
+              default=None,
+              help="Print all bandsdatas from structures "
+              "containing only the selected elements"),
+    click.option('-f', '--formulamode',
+              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+              default='hill',
+              help="Formula printing mode (if None, does not print the formula)"),
+    click.option('-p', '--past-days', type=click.INT,
+              default=None,
+              help="Add a filter to show only bandsdatas"
+              " created in the past N days"),
+    click.option('-A', '--all-users', is_flag=True, default=False,
+              help="show groups for all users, rather than only for the"
+              "current user"),
+    options.GROUPS(),
+]
+
+def list_options(func):
+    for option in reversed(_list_options):
+        func = option(func)
+
+    return func
+
+
 def query(datatype, project, past_days, group_pks, all_users):
     """
     Perform the query
@@ -67,7 +98,8 @@ def query_group(filters, group_pks):
     if group_pks is not None:
         filters.update({"id": {"in": group_pks}})
  
-def _list(datatype, columns, elements, elements_only, formulamode, past_days, groups, all_users):
+def _list(datatype, columns, elements, elements_only, formulamode,
+          past_days, groups, all_users):
     """
     List stored objects
     """

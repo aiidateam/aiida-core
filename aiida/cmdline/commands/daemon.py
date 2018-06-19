@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Verdi daemon commands
-"""
+"""`verdi daemon` commands."""
 import os
 import sys
 import subprocess

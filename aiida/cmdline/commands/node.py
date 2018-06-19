@@ -37,7 +37,6 @@ class Node(VerdiCommandRouter):
         A dictionary with valid commands and functions to be called.
         """
         super(Node, self).__init__()
-        ## Add here the classes to be supported.
         self.routed_subcommands = {
             'repo': _Repo,
             'show': verdi,
@@ -262,12 +261,13 @@ def node_description(nodes, description, force, raw):
 @with_dbenv()
 def show(nodes, print_groups):
     """Show generic information on node(s)."""
-    from aiida.cmdline.utils.common import print_node_info
+    from aiida.cmdline.utils.common import get_node_info
+
     for node in nodes:
         # pylint: disable=fixme
         #TODO: Add a check here on the node type, otherwise it might try to access
         # attributes such as code which are not necessarily there
-        print_node_info(node)
+        echo.echo(get_node_info(node))
 
         if print_groups:
             from aiida.orm.querybuilder import QueryBuilder
@@ -311,13 +311,12 @@ class NodeTreePrinter(object):
     @classmethod
     def print_node_tree(cls, node, max_depth, follow_links=None):
         """Top-level function for printing node tree."""
-        from aiida.cmdline.utils.common import print_node_summary
         from ete3 import Tree
-        print_node_summary(node)
+        from aiida.cmdline.utils.common import get_node_summary
 
-        tree_string = \
-            "({});".format(cls._build_tree(node, max_depth=max_depth,
-                                            follow_links=follow_links))
+        echo.echo(get_node_summary(node))
+
+        tree_string = '({});'.format(cls._build_tree(node, max_depth=max_depth, follow_links=follow_links))
         tmp = Tree(tree_string, format=1)
         echo.echo(tmp.get_ascii(show_internal=True))
 

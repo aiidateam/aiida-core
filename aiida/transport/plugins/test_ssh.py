@@ -57,6 +57,17 @@ class TestBasicConnection(unittest.TestCase):
         # Reset logging level
         logging.disable(logging.NOTSET)
 
+    def test_is_open(self):
+        """Test that the is_open property works."""
+        transport = SshTransport(machine='localhost', timeout=5, load_system_host_keys=True, key_policy='AutoAddPolicy')
+
+        self.assertFalse(transport.is_open)
+
+        with transport:
+            self.assertTrue(transport.is_open)
+
+        self.assertFalse(transport.is_open)
+
 
 if __name__ == '__main__':
     unittest.main()

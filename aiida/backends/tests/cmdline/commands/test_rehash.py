@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import click
+"""Tests for `verdi rehash`."""
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -7,10 +7,11 @@ from aiida.cmdline.commands import rehash
 
 
 class TestVerdiRehash(AiidaTestCase):
+    """Tests for `verdi rehash`."""
 
     @classmethod
-    def setUpClass(cls):
-        super(TestVerdiRehash, cls).setUpClass()
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiRehash, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Node
         from aiida.orm.data.bool import Bool
         from aiida.orm.data.float import Float
@@ -26,9 +27,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.runner = CliRunner()
 
     def test_rehash(self):
-        """
-        Passing no options to the command will rehash all 5 nodes
-        """
+        """Passing no options to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = []
         result = self.runner.invoke(rehash.rehash, options)
@@ -36,9 +35,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_bool(self):
-        """
-        Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2
-        """
+        """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
         expected_node_count = 2
         options = ['-e', 'aiida.data:bool']
         result = self.runner.invoke(rehash.rehash, options)
@@ -46,9 +43,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_float(self):
-        """
-        Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1
-        """
+        """Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:float']
         result = self.runner.invoke(rehash.rehash, options)
@@ -56,9 +51,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_int(self):
-        """
-        Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1
-        """
+        """Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:int']
         result = self.runner.invoke(rehash.rehash, options)
@@ -66,9 +59,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_explicit_pk(self):
-        """
-        Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example
-        """
+        """Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example."""
         expected_node_count = 2
         options = [str(self.node_bool_true.pk), str(self.node_float.uuid)]
         result = self.runner.invoke(rehash.rehash, options)
@@ -76,9 +67,7 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_explicit_pk_and_entry_point(self):
-        """
-        Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1 in this example
-        """
+        """Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
         result = self.runner.invoke(rehash.rehash, options)
@@ -86,17 +75,14 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_rehash_entry_point_no_matches(self):
-        """
-        Limiting the queryset by defining explicit entry point which yields no nodes should exit with non-zero status
-        """
+        """Limiting the queryset by defining explicit entry point, with no nodes should exit with non-zero status."""
         options = ['-e', 'aiida.data:structure']
         result = self.runner.invoke(rehash.rehash, options)
         self.assertIsNotNone(result.exception)
 
     def test_rehash_invalid_entry_point(self):
-        """
-        Passing an invalid entry point should exit with non-zero status
-        """
+        """Passing an invalid entry point should exit with non-zero status."""
+
         # Incorrect entry point group
         options = ['-e', 'data:structure']
         result = self.runner.invoke(rehash.rehash, options)

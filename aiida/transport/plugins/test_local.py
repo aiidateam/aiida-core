@@ -48,6 +48,17 @@ class TestBasicConnection(unittest.TestCase):
         with LocalTransport():
             pass
 
+    def test_is_open(self):
+        """Test that the is_open property works."""
+        transport = LocalTransport()
+
+        self.assertFalse(transport.is_open)
+
+        with transport:
+            self.assertTrue(transport.is_open)
+
+        self.assertFalse(transport.is_open)
+
 
 if __name__ == '__main__':
     unittest.main()

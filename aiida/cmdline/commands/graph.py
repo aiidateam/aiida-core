@@ -10,8 +10,9 @@
 import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_graph
-from aiida.cmdline.params import arguments 
+from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators, echo
+
 
 class Graph(VerdiCommandWithSubcommands):
     """
@@ -38,20 +39,35 @@ class Graph(VerdiCommandWithSubcommands):
     def cli(self, *args):
         verdi()
 
+
 @verdi_graph.command('generate')
 @arguments.NODE('root_node')
-@click.option('-a', '--ancestor-depth',
-    help="The maximum depth when recursing upwards, if not set it will recurse to the end", type=click.IntRange(min=0))
-@click.option('-d', '--descendant-depth', 
-    help="The maximum depth when recursing through the descendants, if not set it will recurse to the end", 
+@click.option(
+    '-a',
+    '--ancestor-depth',
+    help="The maximum depth when recursing upwards, if not set it will recurse to the end",
     type=click.IntRange(min=0))
-@click.option('-o', '--outputs', is_flag=True,
+@click.option(
+    '-d',
+    '--descendant-depth',
+    help="The maximum depth when recursing through the descendants, if not set it will recurse to the end",
+    type=click.IntRange(min=0))
+@click.option(
+    '-o', 
+    '--outputs', 
+    is_flag=True, 
     help="Always show all outputs of a calculation")
-@click.option('-i', '--inputs', is_flag=True,
+@click.option(
+    '-i', 
+    '--inputs', 
+    is_flag=True, 
     help="Always show all inputs of a calculation")
-@click.option('-f', '--output-format',
-   help="The output format, something that can be recognized by graphvix"
-         "(see http://www.graphviz.org/doc/info/output.html)", default='dot')
+@click.option(
+    '-f',
+    '--output-format',
+    help="The output format, something that can be recognized by graphvix"
+    "(see http://www.graphviz.org/doc/info/output.html)",
+    default='dot')
 @decorators.with_dbenv()
 def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, output_format):
     """
@@ -60,9 +76,12 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, outpu
     from aiida.orm import load_node
     from aiida.common.graph import draw_graph
 
-    exit_status, output_file_name = draw_graph(root_node, 
-            ancestor_depth=ancestor_depth, descendant_depth=descendant_depth, 
-            format=output_format, include_calculation_inputs=inputs, 
-            include_calculation_outputs=outputs)
+    exit_status, output_file_name = draw_graph(
+        root_node,
+        ancestor_depth=ancestor_depth,
+        descendant_depth=descendant_depth,
+        format=output_format,
+        include_calculation_inputs=inputs,
+        include_calculation_outputs=outputs)
     if not exit_status:
         echo.echo_success("Output file is {}".format(output_file_name))

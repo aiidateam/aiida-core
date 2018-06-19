@@ -38,10 +38,11 @@ class Profile(VerdiCommandWithSubcommands):
             'delete': (self.cli, self.complete_profiles),
         }
 
-    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+    @staticmethod
+    def cli(*args):  # pylint: disable=unused-argument
         verdi.main()
 
-    def complete_profiles(self, subargs_idx, subargs):
+    def complete_profiles(self, subargs_idx, subargs):  #pylint: disable=unused-argument,no-self-use
         """
         :param subargs_idx: flag
         :param subargs: additional arguments

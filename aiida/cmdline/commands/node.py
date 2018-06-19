@@ -15,60 +15,13 @@ from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.cmdline.commands import verdi, verdi_node
+from aiida.cmdline.commands import verdi, verdi_node, verdi_node_repo
 
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import options, arguments
 
 
-def list_repo_files(node, path, color):
-    """
-    Given a Node and a relative path prints in output the list of files
-    in the given path in the Node repository directory.
-
-    :param node: a Node instance
-    :param path: a string with the relative path to list. Can be a file.
-    :param color: boolean, if True prints with the codes to show colors.
-    :raise ValueError: if the file or directory is not found.
-    """
-    import os
-
-    f = node.folder
-
-    is_dir = False
-    parts = path.split(os.path.sep)
-    # except the last item
-    for item in parts[:-1]:
-        f = f.get_subfolder(item)
-    if parts:
-        if f.isdir(parts[-1]):
-            f = f.get_subfolder(parts[-1])
-            is_dir = True
-        else:
-            fname = parts[-1]
-    else:
-        is_dir = True
-
-    if is_dir:
-        if not f.isdir('.'):
-            raise ValueError(
-                "{}: No such file or directory in the repo".format(path))
-
-        for elem, elem_is_file in sorted(f.get_content_list(only_paths=False)):
-            if elem_is_file or not color:
-                print elem
-            else:
-                # BOLD("1;") and color 34=blue
-                outstr = "\x1b[1;{color_id}m{elem}\x1b[0m".format(color_id=34,
-                                                                  elem=elem)
-                print outstr
-    else:
-        if not f.isfile(fname):
-            raise ValueError(
-                "{}: No such file or directory in the repo".format(path))
-
-        print fname
 
 
 def cat_repo_files(node, path):
@@ -137,9 +90,6 @@ class Node(VerdiCommandRouter):
         }
 
 
-    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
-        verdi.main()
-
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
@@ -153,50 +103,9 @@ class _Repo(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'ls': (self.ls, self.complete_none),
+            'ls': (verdi, self.complete_none),
             'cat': (self.cat, self.complete_none),
         }
-
-    def ls(self, *args):
-        """
-        List the files in the repository folder.
-        """
-        import argparse
-        from aiida.common.exceptions import NotExistent
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List files in the repository folder.')
-
-        parser.add_argument('-c', '--color', action='store_true',
-                            help="Color folders with a different color")
-        parser.add_argument('-p', '--pk', type=int, required=True,
-                            help='The pk of the node')
-        parser.add_argument('path', type=str, default='.', nargs='?',
-                            help='The relative path of the file you '
-                                 'want to show')
-        # parser.add_argument('-d', '--with-description',
-        #                    dest='with_description',action='store_true',
-        #                    help="Show also the description for the UPF family")
-        # parser.set_defaults(with_description=False)
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        try:
-            n = load_node(parsed_args.pk)
-        except NotExistent as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-
-        try:
-            list_repo_files(n, parsed_args.path, parsed_args.color)
-        except ValueError as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
 
     def cat(self, *args):
         """
@@ -239,15 +148,76 @@ class _Repo(VerdiCommandWithSubcommands):
             else:
                 raise
 
+
+@verdi_node_repo.command('ls')
+@arguments.NODE()
+@click.argument('relative_path', type=str, default='.')
+@click.option('-c', '--color', 'color', flag_value=True,
+              help="Use different color for folders and files.")
+@with_dbenv()
+def repo_ls(node, relative_path, color):
+     """List files in the repository folder."""
+
+     try:
+         list_repo_files(node, relative_path, color)
+     except ValueError as e:
+         echo.critical(e.message)
+
+def list_repo_files(node, path, color):
+    """
+    Given a Node and a relative path prints in output the list of files
+    in the given path in the Node repository directory.
+
+    :param node: a Node instance
+    :param path: a string with the relative path to list. Can be a file.
+    :param color: boolean, if True prints with the codes to show colors.
+    :raise ValueError: if the file or directory is not found.
+    """
+    import os
+
+    f = node.folder
+
+    is_dir = False
+    parts = path.split(os.path.sep)
+    # except the last item
+    for item in parts[:-1]:
+        f = f.get_subfolder(item)
+    if parts:
+        if f.isdir(parts[-1]):
+            f = f.get_subfolder(parts[-1])
+            is_dir = True
+        else:
+            fname = parts[-1]
+    else:
+        is_dir = True
+
+    if is_dir:
+        if not f.isdir('.'):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+
+        for elem, elem_is_file in sorted(f.get_content_list(only_paths=False)):
+            if elem_is_file or not color:
+                print elem
+            else:
+                # BOLD("1;") and color 34=blue
+                outstr = "\x1b[1;{color_id}m{elem}\x1b[0m".format(color_id=34,
+                                                                  elem=elem)
+                print outstr
+    else:
+        if not f.isfile(fname):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+
+        print fname
+
+
 @verdi_node.command('show')
 @arguments.NODES()
 @click.option('--print-groups', 'print_groups', flag_value=True,
               help="Show groups containing the nodes.")
 @with_dbenv()
 def show(nodes, print_groups):
-    from aiida.common.exceptions import NotExistent
-    from aiida.common.exceptions import MultipleObjectsError
-
     from aiida.cmdline.utils.common import print_node_info
     for node in nodes:
         ###TODO

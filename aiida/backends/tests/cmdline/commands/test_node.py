@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete, show, tree
+from aiida.cmdline.commands.node import node_delete, show, tree, repo_ls
 
 class TestVerdiNode(AiidaTestCase):
 
@@ -86,4 +86,12 @@ class TestVerdiNode(AiidaTestCase):
         self.assertTrue(str(nodes['outp3'].pk) in result.output)
         self.assertTrue(str(nodes['in2'].pk) not in result.output)
 
+    def test_node_repo_ls(self):
+        nodes = self.nodes
+        options = [str(nodes['in1'].pk)]
+        result = self.runner.invoke(repo_ls, options)
+        self.assertIsNone(result.exception)
 
+        options = [str(nodes['in1'].pk), 'non-existent-path']
+        result = self.runner.invoke(repo_ls, options)
+        self.assertIsNotNone(result.exception)

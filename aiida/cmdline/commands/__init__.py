@@ -114,6 +114,11 @@ def verdi_import(ctx):
 def verdi_node(ctx):
     pass
 
+@verdi_node.group('repo')
+@click.pass_context
+def verdi_node_repo(ctx):
+    pass
+
 @verdi.group('profile')
 @click.pass_context
 def verdi_profile(ctx):

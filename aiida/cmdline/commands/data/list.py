@@ -2,15 +2,10 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.implementation import Group
 from aiida.orm.user import User
 from aiida.orm.backend import construct_backend
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params import options
 import click
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
-
-
-if not is_dbenv_loaded():
-    load_dbenv()
 
 
 _list_options = [

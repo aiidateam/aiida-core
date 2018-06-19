@@ -24,48 +24,6 @@ from aiida.cmdline.params import options, arguments
 
 
 
-def cat_repo_files(node, path):
-    """
-    Given a Node and a relative path to a file in the Node repository directory,
-    prints in output the content of the file.
-
-    :param node: a Node instance
-    :param path: a string with the relative path to list. Must be a file.
-    :raise ValueError: if the file is not found, or is a directory.
-    """
-    import os
-
-    f = node.folder
-
-    is_dir = False
-    parts = path.split(os.path.sep)
-    # except the last item
-    for item in parts[:-1]:
-        f = f.get_subfolder(item)
-    if parts:
-        if f.isdir(parts[-1]):
-            f = f.get_subfolder(parts[-1])
-            is_dir = True
-        else:
-            fname = parts[-1]
-    else:
-        is_dir = True
-
-    if is_dir:
-        if not f.isdir('.'):
-            raise ValueError(
-                "{}: No such file or directory in the repo".format(path))
-        else:
-            raise ValueError("{}: is a directory".format(path))
-    else:
-        if not f.isfile(fname):
-            raise ValueError(
-                "{}: No such file or directory in the repo".format(path))
-
-        absfname = f.get_abs_path(fname)
-        with open(absfname) as f:
-            for l in f:
-                sys.stdout.write(l)
 
 
 class Node(VerdiCommandRouter):
@@ -104,49 +62,72 @@ class _Repo(VerdiCommandWithSubcommands):
         """
         self.valid_subcommands = {
             'ls': (verdi, self.complete_none),
-            'cat': (self.cat, self.complete_none),
+            'cat': (verdi, self.complete_none),
         }
 
-    def cat(self, *args):
-        """
-        Output the content of a file in the repository folder.
-        """
-        import argparse
-        from aiida.common.exceptions import NotExistent
 
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Output the content of a file in the repository folder.')
-        parser.add_argument('-p', '--pk', type=int, required=True,
-                            help='The pk of the node')
-        parser.add_argument('path', type=str,
-                            help='The relative path of the file you '
-                                 'want to show')
+@verdi_node_repo.command('cat')
+@arguments.NODE()
+@click.argument('relative_path', type=str)
+@click.option('-c', '--color', 'color', flag_value=True,
+              help="Use different color for folders and files.")
+@with_dbenv()
+def repo_cat(node, relative_path, color):
+     """Output the content of a file in the repository folder."""
+     try:
+         cat_repo_files(node, relative_path)
+     except ValueError as e:
+         echo.echo_critical(e.message)
+     except IOError as e:
+         import errno
+         # Ignore Broken pipe errors, re-raise everything else
+         if e.errno == errno.EPIPE:
+             pass
+         else:
+             echo.echo_critical(e.message)
 
-        args = list(args)
-        parsed_args = parser.parse_args(args)
+def cat_repo_files(node, path):
+    """
+    Given a Node and a relative path to a file in the Node repository directory,
+    prints in output the content of the file.
 
-        if not is_dbenv_loaded():
-            load_dbenv()
+    :param node: a Node instance
+    :param path: a string with the relative path to list. Must be a file.
+    :raise ValueError: if the file is not found, or is a directory.
+    """
+    import os
 
-        try:
-            n = load_node(parsed_args.pk)
-        except NotExistent as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
+    f = node.folder
 
-        try:
-            cat_repo_files(n, parsed_args.path)
-        except ValueError as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-        except IOError as e:
-            import errno
-            # Ignore Broken pipe errors, re-raise everything else
-            if e.errno == errno.EPIPE:
-                pass
-            else:
-                raise
+    is_dir = False
+    parts = path.split(os.path.sep)
+    # except the last item
+    for item in parts[:-1]:
+        f = f.get_subfolder(item)
+    if parts:
+        if f.isdir(parts[-1]):
+            f = f.get_subfolder(parts[-1])
+            is_dir = True
+        else:
+            fname = parts[-1]
+    else:
+        is_dir = True
+
+    if is_dir:
+        if not f.isdir('.'):
+            raise ValueError(
+                "No directory '{}' in the repo".format(path))
+        else:
+            raise ValueError("'{}' is a directory".format(path))
+    else:
+        if not f.isfile(fname):
+            raise ValueError(
+                "No file '{}' in the repo".format(path))
+
+        absfname = f.get_abs_path(fname)
+        with open(absfname) as f:
+            for l in f:
+                sys.stdout.write(l)
 
 
 @verdi_node_repo.command('ls')

@@ -5,24 +5,11 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete, show, tree, repo_ls
+from aiida.cmdline.commands.node import node_delete, show, tree, repo_ls, repo_cat
 
 class TestVerdiNode(AiidaTestCase):
 
     node_labels = ('in1', 'in2', 'wf', 'slave1', 'slave2', 'outp1', 'outp2', 'outp3', 'outp4')
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestVerdiNode, cls).setUpClass()
-        from aiida.orm import Computer
-        new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
-        new_comp.store()
-
-
 
     def setUp(self):
         """Sets up a few nodes to play around with."""
@@ -86,12 +73,37 @@ class TestVerdiNode(AiidaTestCase):
         self.assertTrue(str(nodes['outp3'].pk) in result.output)
         self.assertTrue(str(nodes['in2'].pk) not in result.output)
 
+class TestVerdiNodeRepo(AiidaTestCase):
+
+    def setUp(self):
+        """Sets up a few nodes to play around with."""
+        from aiida.orm.data.singlefile import SinglefileData
+        import tempfile
+
+        file_content = '''file-with-contents'''
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            node = SinglefileData(file=f.name)
+            node.store()
+
+        self.node = node
+        self.file_content = file_content
+
+        self.runner = CliRunner()
+
     def test_node_repo_ls(self):
-        nodes = self.nodes
-        options = [str(nodes['in1'].pk)]
+        options = [str(self.node.pk)]
         result = self.runner.invoke(repo_ls, options)
         self.assertIsNone(result.exception)
 
-        options = [str(nodes['in1'].pk), 'non-existent-path']
+        options = [str(self.node.pk), 'non-existent-path']
         result = self.runner.invoke(repo_ls, options)
         self.assertIsNotNone(result.exception)
+
+    def test_node_repo_cat(self):
+        options = [str(self.node.pk), "path/" + self.node.filename]
+        result = self.runner.invoke(repo_cat, options)
+        self.assertIsNone(result.exception)
+        self.assertEquals(self.file_content, result.output)

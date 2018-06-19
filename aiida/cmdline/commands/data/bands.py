@@ -76,7 +76,7 @@ def bands(ctx):
 @bands.command('show')
 @arguments.NODES()
 @click.option('-f', '--format', 'format',
-              type=click.Choice(['xmgrace', 'gnuplot']),
+              type=click.Choice(['xmgrace']),
               default='xmgrace',
               help="Filter the families only to those containing "
               "a pseudo for each of the specified elements")

@@ -9,16 +9,16 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 
 _list_options = [
-    click.option('-e', '--elements', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all bandsdatas from structures "
-              "containing desired elements"),
-    click.option('-eo', '--elements-only', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all bandsdatas from structures "
-              "containing only the selected elements"),
+    # click.option('-e', '--elements', type=click.STRING,
+    #           cls=MultipleValueOption,
+    #           default=None,
+    #           help="Print all bandsdatas from structures "
+    #           "containing desired elements"),
+    # click.option('-eo', '--elements-only', type=click.STRING,
+    #           cls=MultipleValueOption,
+    #           default=None,
+    #           help="Print all bandsdatas from structures "
+    #           "containing only the selected elements"),
     click.option('-f', '--formulamode',
               type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
               default='hill',

@@ -19,6 +19,7 @@
 *\,cover
 coverage/
 .cache
+.pytest_cache
 .coverage
 
 # Files created by RPN tests

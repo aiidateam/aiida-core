@@ -149,7 +149,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
-            with zipfile.ZipFile(output_file, mode='w', compression=compression) as archive:
+            with zipfile.ZipFile(output_file, mode='w', compression=compression, allowZip64=True) as archive:
                 src = folder.abspath
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)

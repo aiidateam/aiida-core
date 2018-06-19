@@ -14,17 +14,33 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import DanglingLinkError
-
+from aiida.orm.data.parameter import ParameterData
 
         
 @verdi_data.group('parameter')
 @click.pass_context
-def cif(ctx):
-    """help"""
+def parameter(ctx):
+    """
+    View and manipulate Parameter data classes.
+    """
     pass
     
 
-@cif.command()
-def show():
-    """help"""
-    click.echo("Test")
+@parameter.command('show')
+@arguments.NODES()
+@click.option('-f', '--format', 'format',
+              type=click.Choice(['json_date']),
+              default='json_date',
+              help="Filter the families only to those containing "
+              "a pseudo for each of the specified elements")
+def show(nodes, format):
+    """
+    Show contents of ParameterData nodes.
+    """
+    from aiida.cmdline import print_dictionary
+    for node in nodes:
+        if not isinstance(node, ParameterData):
+            echo.echo_error("Node {} is of class {} instead of {}".format(node, type(node), ParameterData))
+            continue
+        the_dict = node.get_dict()
+        print_dictionary(the_dict, 'json+date')

@@ -77,8 +77,7 @@ def profile_list():
         echo.echo_critical(err_msg)
 
     if default_profile is None:
-        echo.echo_error("### No default profile configured yet, run 'verdi install'! ###")
-        return
+        echo.echo_critical("### No default profile configured yet, run 'verdi install'! ###")
     else:
         echo.echo_info('The default profile is highlighted and marked by the * symbol')
 

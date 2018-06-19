@@ -48,11 +48,13 @@ class InteractiveOption(ConditionalOption):
             self,
             param_decls=None,
             switch=None,  #
+            prompt_fn=None,
             # empty_ok=False,
             **kwargs):
         """
         :param param_decls: relayed to :class:`click.Option`
         :param switch: sequence of parameter
+        :param prompt_fn: a callable that defines if the option should be asked for or not in interactive mode
         """
 
         # intercept prompt kwarg; I need to pop it before calling super
@@ -60,6 +62,8 @@ class InteractiveOption(ConditionalOption):
 
         # call super
         super(InteractiveOption, self).__init__(param_decls=param_decls, **kwargs)
+
+        self.prompt_fn = prompt_fn
 
         # I check that a prompt was actually defined.
         # I do it after calling super so e.g. 'self.name' is defined
@@ -186,9 +190,16 @@ class InteractiveOption(ConditionalOption):
                 # In the else case: no default, not required: value is None, it's just  passed to the after_callback
             return self.after_callback(ctx, param, value)
 
-        # If we are here, we are in interactive mode and the parameter is not specified
-        # We enter the prompt loop
-        value = self.prompt_loop(ctx, param, value)
+        if self.prompt_fn is None or (self.prompt_fn is not None and self.prompt_fn(ctx)):
+            # There is no prompt_fn function, or a prompt_fn function and it says we should ask for the value
+
+            # If we are here, we are in interactive mode and the parameter is not specified
+            # We enter the prompt loop
+            value = self.prompt_loop(ctx, param, value)
+        else:
+            # There is a prompt_fn function and returns False (i.e. should not ask for this value
+            # We then set the value to None
+            value = None
 
         # And then we call the callback
         return self.after_callback(ctx, param, value)

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Provide reusable options, helping to keep interfaces consistent."""
 # yapf: disable
 import click
 
@@ -49,8 +50,8 @@ CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types
     help='a single calculation identified by its ID or UUID')
 
 
-CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
-    help='one or multiple calculations identified by their ID or UUID')
+CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption,
+    type=types.CalculationParamType(), help='one or multiple calculations identified by their ID or UUID')
 
 
 CODE = OverridableOption('-X', '--code', 'code', type=types.CodeParamType(),
@@ -124,7 +125,8 @@ DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metava
 
 
 
-INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(group='calculations'))
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string',
+    type=types.PluginParamType(group='calculations'))
 
 
 CALCULATION_STATE = OverridableOption('-s', '--calculation-state', 'calculation_state', cls=MultipleValueOption, type=types.LazyChoice(valid_calculation_states),
@@ -166,6 +168,7 @@ OLDER_THAN = OverridableOption('-o', '--older-than', 'older_than', type=click.IN
 ALL = OverridableOption('-a', '--all', 'all_entries', is_flag=True, default=False,
     help='include all entries, disregarding all other filter options and flags')
 
+ALL_STATES = OverridableOption('-A', '--all-states', is_flag=True, help='do not limit to items in running state')
 
 ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, default=False,
     help='include all entries regardless of the owner')

@@ -154,3 +154,8 @@ def verdi_user(ctx):
 @click.pass_context
 def verdi_work(ctx):
     pass
+
+@verdi.group('workflow')
+@click.pass_context
+def verdi_workflow(ctx):
+    pass

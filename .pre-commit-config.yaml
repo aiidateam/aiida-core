@@ -20,8 +20,9 @@
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
+        aiida/cmdline/commands/workflow.py|
         aiida/cmdline/params/.*.py|
-        aiida/cmdline/optiontypes/.*.py|
+        aiida/cmdline/options/.*.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|
@@ -58,6 +59,9 @@
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
+        aiida/cmdline/commands/workflow.py|
+        aiida/cmdline/params/.*.py|
+        aiida/cmdline/options/.*.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|

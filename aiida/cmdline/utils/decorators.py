@@ -157,3 +157,29 @@ def check_circus_zmq_version(function):
         return function(*args, **kwargs)
 
     return decorated_function
+
+
+def deprecated_command(message):
+    def decorator(function):
+        """
+        Function decorator that echoes a deprecation warning before doing anything else in a click commad.
+
+        Example::
+
+            @click.commad()
+            @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
+            def mycommand():
+                pass
+        """
+        @wraps(function)
+        def decorated_function(*args, **kwargs):
+            """Echo a deprecation warning before doing anything else."""
+            from aiida.cmdline.utils import echo, templates
+            from textwrap import wrap
+
+            template = templates.env.get_template('deprecated.tpl')
+            width = 80
+            echo.echo(template.render(msg=wrap(message, width), width=width))
+            return function(*args, **kwargs)
+        return decorated_function
+    return decorator

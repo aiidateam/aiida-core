@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete
+from aiida.cmdline.commands.node import node_delete, show
 
 class TestVerdiNode(AiidaTestCase):
 
@@ -65,11 +65,16 @@ class TestVerdiNode(AiidaTestCase):
         See also backends/tests/nodes.py."""
         nodes = self.nodes
         options = [str(nodes['in1'].pk), '-v', '--non-interactive']
-        result = self.runner.invoke(node_delete, options, input=user_input)
+        result = self.runner.invoke(node_delete, options)
         self.assertIsNone(result.exception)
 
-        for label in ['in1', 'wf', 'slave1', 'outp1', 'outp3']:
-            node = nodes[label]
-            self.assertTrue(str(node.uuid) in result.output, "Node {} should be deleted".format(label))
+    def test_node_show(self):
+        nodes = self.nodes
+        options = [str(nodes['in1'].pk), '--print-groups']
+        result = self.runner.invoke(show, options)
+        self.assertIsNone(result.exception)
+
+        self.assertTrue(str(nodes['in1'].uuid) in result.output)
+
 
 

@@ -131,7 +131,7 @@ class Node(VerdiCommandRouter):
         ## Add here the classes to be supported.
         self.routed_subcommands = {
             'repo': _Repo,
-            'show': _Show,
+            'show': verdi,
             'tree': _Tree,
             'delete': verdi,
         }
@@ -239,81 +239,42 @@ class _Repo(VerdiCommandWithSubcommands):
             else:
                 raise
 
-class _Show(VerdiCommandWithSubcommands):
-
-    def run(self, *args):
-        verdi()
-
 @verdi_node.command('show')
-@click.argument('identifiers', type=str, nargs=-1, required=True)
-@click.option('-u', '--uuid', 'uuid', flag_value=True,
-              help="If activated the identifier is UUID, "
-                   "otherwise it is a pk/id.")
+@arguments.NODES()
 @click.option('--print-groups', 'print_groups', flag_value=True,
               help="Show groups containing the nodes.")
-@click.option('--no-print-groups', '--dont-print-groups', 'print_groups',
-              flag_value=False, help="Do not show groups containing the nodes "
-                                     "output. Default behaviour.")
-def show(identifiers, uuid, print_groups):
+@with_dbenv()
+def show(nodes, print_groups):
     from aiida.common.exceptions import NotExistent
     from aiida.common.exceptions import MultipleObjectsError
 
-    if not is_dbenv_loaded():
-        load_dbenv()
-
-    for id in identifiers:
-        try:
-            if uuid:
-                try:
-                    n = load_node(uuid=id)
-                except MultipleObjectsError:
-                    click.echo("More than one node found. Please provide "
-                               "longer starting UUID pattern.", err=True)
-                    sys.exit(2)
-            else:
-                try:
-                    ids = int(id)
-                except ValueError:
-                    click.echo("The pk/id can not be a string. Please provide "
-                               "an integer.", err=True)
-                    sys.exit(3)
-                n = load_node(pk=int(ids))
-            print_node_info(n, print_groups=print_groups)
-        except NotExistent as e:
-            click.echo(e.message, err=True)
-            sys.exit(1)
-
-        if len(identifiers) > 1:
-            click.echo("")
-
-def print_node_info(node, print_groups=False):
     from aiida.cmdline.utils.common import print_node_info
+    for node in nodes:
+        ###TODO
+        #Add a check here on the node type, otherwise it might try to access attributes such as code which are not necessarily there
+        #####
+        print_node_info(node)
 
-    ###TODO
-    #Add a check here on the node type, otherwise it might try to access attributes such as code which are not necessarily there
-    #####
-    print_node_info(node)
+        if print_groups:
+            from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.group import Group
+            from aiida.orm.node import Node
 
-    if print_groups:
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.group import Group
-        from aiida.orm.node import Node
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
+            qb.append(Group, tag='groups', group_of='node',
+                      project=['id', 'name'])
 
-        qb = QueryBuilder()
-        qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
-        qb.append(Group, tag='groups', group_of='node',
-                  project=['id', 'name'])
+            echo.echo("#### GROUPS:")
 
-        click.echo("#### GROUPS:")
-
-        if qb.count() == 0:
-            click.echo("No groups found containing node {}".format(node.pk))
-        else:
-            res = qb.iterdict()
-            for gr in res:
-                gr_specs = "{} {}".format(gr['groups']['name'],
-                                          gr['groups']['id'])
-                click.echo(gr_specs)
+            if qb.count() == 0:
+                echo.echo("No groups found containing node {}".format(node.pk))
+            else:
+                res = qb.iterdict()
+                for gr in res:
+                    gr_specs = "{} {}".format(gr['groups']['name'],
+                                              gr['groups']['id'])
+                    echo.echo(gr_specs)
 
 
 @verdi_node.command('delete')

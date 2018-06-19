@@ -321,12 +321,11 @@ def print_node_info(node, print_groups=False):
 @click.option('-c', '--follow-calls', is_flag=True, help='follow call links downwards when deleting')
 # Commenting also the option for follow returns. This is dangerous for the inexperienced user.
 #@click.option('-r', '--follow-returns', is_flag=True, help='follow return links downwards when deleting')
-@click.option('-f', '--force', is_flag=True, help='delete without user confirmation')
 @click.option('-n', '--dry-run', is_flag=True, help='dry run, does not delete')
 @click.option('-v', '--verbose', is_flag=True, help='print individual nodes marked for deletion.')
 @options.NON_INTERACTIVE()
 @with_dbenv()
-def node_delete(nodes, follow_calls, force, dry_run, verbose, non_interactive):
+def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
     """
     Deletes a node and everything that originates from it.
     """
@@ -343,9 +342,8 @@ def node_delete(nodes, follow_calls, force, dry_run, verbose, non_interactive):
 
     node_pks_to_delete = [ node.pk for node in nodes ]
 
-    delete_nodes(node_pks_to_delete,
-            follow_calls=follow_calls,
-            dry_run=dry_run, verbosity=verbosity)
+    delete_nodes(node_pks_to_delete, follow_calls=follow_calls,
+            dry_run=dry_run, verbosity=verbosity, force=non_interactive)
 
 
 class _Tree(VerdiCommand):

@@ -132,7 +132,7 @@ class Node(VerdiCommandRouter):
         self.routed_subcommands = {
             'repo': _Repo,
             'show': verdi,
-            'tree': _Tree,
+            'tree': verdi,
             'delete': verdi,
         }
 
@@ -277,6 +277,72 @@ def show(nodes, print_groups):
                     echo.echo(gr_specs)
 
 
+@verdi_node.command()
+@arguments.NODES()
+@click.option('-d', '--depth', 'depth', default=1, help="Show children of nodes up to given depth")
+@with_dbenv()
+def tree(nodes, depth):
+    """
+    Show trees of nodes.
+    """
+    for node in nodes:
+        NodeTreePrinter.print_node_tree(node, depth)
+
+        if len(nodes) > 1:
+            echo.echo("")
+
+class NodeTreePrinter(object):
+    """Utility functions for printing node trees."""
+
+    @classmethod
+    def print_node_tree(cls, node, max_depth, follow_links=None):
+        from aiida.cmdline.utils.common import print_node_summary
+        from ete3 import Tree
+        print_node_summary(node)
+
+        tree_string = \
+            "({});".format(cls._build_tree(node, max_depth=max_depth,
+                                            follow_links=follow_links))
+        t = Tree(tree_string, format=1)
+        echo.echo(t.get_ascii(show_internal=True))
+
+    @classmethod
+    def _ctime(cls, nodelab):
+        return nodelab[1].ctime
+
+    @classmethod
+    def _build_tree(cls, node, label_type=None, show_pk=True, max_depth=None,
+                    follow_links=None, depth=0):
+        if max_depth is not None and depth > max_depth:
+            return
+
+        children = []
+        for label, child \
+                in sorted(node.get_outputs(also_labels=True,
+                                           link_type=follow_links),
+                          key=cls._ctime):
+            child_str = cls._build_tree(
+                child, label, show_pk, follow_links=follow_links,
+                max_depth=max_depth, depth=depth + 1)
+            if child_str:
+                children.append(child_str)
+
+        out_values = []
+        if children:
+            out_values.append("(")
+            out_values.append(", ".join(children))
+            out_values.append(")")
+
+        lab = node.__class__.__name__
+
+        if show_pk:
+            lab += " [{}]".format(node.pk)
+
+        out_values.append(lab)
+
+        return "".join(out_values)
+
+
 @verdi_node.command('delete')
 @arguments.NODES('nodes')
 @click.option('-c', '--follow-calls', is_flag=True, help='follow call links downwards when deleting')
@@ -306,90 +372,6 @@ def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
     delete_nodes(node_pks_to_delete, follow_calls=follow_calls,
             dry_run=dry_run, verbosity=verbosity, force=non_interactive)
 
-
-class _Tree(VerdiCommand):
-    """
-    Show a tree of the nodes.
-    """
-
-    def run(self, *args):
-        """
-        Show node information.
-        """
-        import argparse
-        from aiida.common.exceptions import NotExistent
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Show information of a node.')
-        parser.add_argument('pk', type=int, default=None, nargs="+",
-                            help="ID of the node.")
-        parser.add_argument('-d', '--depth', action='store', default=1,
-                            metavar="N", type=int,
-                            help="Add children of shown nodes up to Nth "
-                                 "level. Default 0")
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        for pk in parsed_args.pk:
-            try:
-                n = load_node(pk)
-                self.print_node_tree(n, parsed_args.depth)
-            except NotExistent as e:
-                print >> sys.stderr, e.message
-                sys.exit(1)
-
-            if len(parsed_args.pk) > 1:
-                print ""
-
-    def print_node_tree(self, node, max_depth, follow_links=None):
-        from aiida.cmdline.utils.common import print_node_summary
-        from ete3 import Tree
-        print_node_summary(node)
-
-        tree_string = \
-            "({});".format(self._build_tree(node, max_depth=max_depth,
-                                            follow_links=follow_links))
-        t = Tree(tree_string, format=1)
-        print(t.get_ascii(show_internal=True))
-
-    def _ctime(self, nodelab):
-        return nodelab[1].ctime
-
-    def _build_tree(self, node, label_type=None, show_pk=True, max_depth=None,
-                    follow_links=None, depth=0):
-        if max_depth is not None and depth > max_depth:
-            return
-
-        children = []
-        for label, child \
-                in sorted(node.get_outputs(also_labels=True,
-                                           link_type=follow_links),
-                          key=self._ctime):
-            child_str = self._build_tree(
-                child, label, show_pk, follow_links=follow_links,
-                max_depth=max_depth, depth=depth + 1)
-            if child_str:
-                children.append(child_str)
-
-        out_values = []
-        if children:
-            out_values.append("(")
-            out_values.append(", ".join(children))
-            out_values.append(")")
-
-        lab = node.__class__.__name__
-
-        if show_pk:
-            lab += " [{}]".format(node.pk)
-
-        out_values.append(lab)
-
-        return "".join(out_values)
 
 
 # the classes _Label and _Description are written here,

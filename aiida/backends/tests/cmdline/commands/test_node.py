@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete, show
+from aiida.cmdline.commands.node import node_delete, show, tree
 
 class TestVerdiNode(AiidaTestCase):
 
@@ -76,5 +76,14 @@ class TestVerdiNode(AiidaTestCase):
 
         self.assertTrue(str(nodes['in1'].uuid) in result.output)
 
+    def test_node_tree(self):
+        nodes = self.nodes
+        options = [str(nodes['in1'].pk), '-d', 3]
+        result = self.runner.invoke(tree, options)
+        self.assertIsNone(result.exception)
+
+        self.assertTrue(str(nodes['in1'].uuid) in result.output)
+        self.assertTrue(str(nodes['outp3'].pk) in result.output)
+        self.assertTrue(str(nodes['in2'].pk) not in result.output)
 
 

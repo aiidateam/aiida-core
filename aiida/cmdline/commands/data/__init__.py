@@ -22,9 +22,7 @@ from aiida.cmdline.commands.data import cif
 from aiida.cmdline.commands.data import trajectory
 from aiida.cmdline.commands.data import parameter
 from aiida.cmdline.commands.data import array
-from aiida.cmdline.commands.data import label
 from aiida.cmdline.commands.data import remote
-from aiida.cmdline.commands.data import description
 
 
 class Data(VerdiCommandWithSubcommands):
@@ -44,9 +42,7 @@ class Data(VerdiCommandWithSubcommands):
             'trajectory': (self.cli, self.complete_none),
             'parameter': (self.cli, self.complete_none),
             'array': (self.cli, self.complete_none),
-            'label': (self.cli, self.complete_none),
             'remote': (self.cli, self.complete_none),
-            'description': (self.cli, self.complete_none),
         }
 
     def cli(self, *args):

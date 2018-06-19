@@ -323,7 +323,7 @@ def print_node_info(node, print_groups=False):
 #@click.option('-r', '--follow-returns', is_flag=True, help='follow return links downwards when deleting')
 @click.option('-f', '--force', is_flag=True, help='delete without user confirmation')
 @click.option('-n', '--dry-run', is_flag=True, help='dry run, does not delete')
-@click.option('-v', '--verbose', help='print individual nodes marked for deletion.')
+@click.option('-v', '--verbose', is_flag=True, help='print individual nodes marked for deletion.')
 @options.NON_INTERACTIVE()
 @with_dbenv()
 def node_delete(nodes, follow_calls, force, dry_run, verbose, non_interactive):

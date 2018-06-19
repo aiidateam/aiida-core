@@ -1,14 +1,26 @@
+# -*- coding: utf-8 -*-
+
 from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import setup as aiida_cfg
 
 class TestVerdiProfileSetup(AiidaTestCase):
+    """
+    Test suite to test verdi profile command
+    """
 
     _old_aiida_config_folder = None
     _new_aiida_config_folder = "~/.aiidadummy"
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
+        """
+        Create dummy 5 profiles and set first profile as default profile.
+        All tests will run on these dummy profiles.
+
+        :param args: list of arguments
+        :param kwargs: list of keyword arguments
+        """
         super(TestVerdiProfileSetup, cls).setUpClass()
 
         cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER
@@ -32,6 +44,12 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
+        """
+        Remove dummy profiles created in setUpClass.
+
+        :param args: list of arguments
+        :param kwargs: list of keyword arguments
+        """
 
         aiida_cfg.AIIDA_CONFIG_FOLDER = cls._old_aiida_config_folder
 
@@ -42,13 +60,20 @@ class TestVerdiProfileSetup(AiidaTestCase):
             shutil.rmtree(dummy_aiida_dir)
 
     def setUp(self):
+        """
+        Create runner object to run tests
+        """
         self.runner = CliRunner()
 
     def test_help(self):
+        """
+        Tests help text for all profile sub commands
+        """
         options = ["--help"]
         from aiida.cmdline.commands.profile import (profile_list,
                                                     profile_setdefault,
                                                     profile_delete)
+
         result = self.runner.invoke(profile_list, options)
         self.assertIsNone(result.exception)
         self.assertIn('Usage', result.output)
@@ -62,6 +87,9 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.assertIn('Usage', result.output)
 
     def test_list(self):
+        """
+        Test for verdi profile list command
+        """
         from aiida.cmdline.commands.profile import profile_list
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
@@ -70,6 +98,9 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.assertIn('dummy_profile2', result.output)
 
     def test_setdefault(self):
+        """
+        Test for verdi profile setdefault command
+        """
         from aiida.cmdline.commands.profile import profile_setdefault
         result = self.runner.invoke(profile_setdefault, ["dummy_profile2"])
 
@@ -82,12 +113,13 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.assertIsNone(result.exception)
 
     def test_delete(self):
-        from aiida.cmdline.commands.profile import profile_delete
+        """
+        Test for verdi profile delete command
+        """
+        from aiida.cmdline.commands.profile import profile_delete, profile_list
 
         ### delete single profile
         result = self.runner.invoke(profile_delete, ["--force", "dummy_profile3"])
-
-        from aiida.cmdline.commands.profile import profile_list
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertNotIn('dummy_profile3', result.output)
@@ -95,8 +127,6 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         ### delete multiple profile
         result = self.runner.invoke(profile_delete, ["--force", "dummy_profile4", "dummy_profile5"])
-
-        from aiida.cmdline.commands.profile import profile_list
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertNotIn('dummy_profile4', result.output)

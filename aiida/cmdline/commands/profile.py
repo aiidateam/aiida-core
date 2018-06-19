@@ -11,7 +11,6 @@
 This allows to manage profiles from command line.
 """
 import click
-import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.control.postgres import Postgres
@@ -32,6 +31,7 @@ class Profile(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        super(Profile, self).__init__()
         self.valid_subcommands = {
             'setdefault': (self.cli, self.complete_profiles),
             'list': (self.cli, self.complete_none),
@@ -64,10 +64,10 @@ def profile_list(no_color):
 
     try:
         default_profile = get_default_profile()
-    except ConfigurationError as e:
+    except ConfigurationError as err:
         err_msg = ("Stopping: {}\n"
                    "Note: if no configuration file was found, it means that you have not run\n"
-                   "'verdi setup' yet to configure at least one AiiDA profile.".format(e.message))
+                   "'verdi setup' yet to configure at least one AiiDA profile.".format(err.message))
         echo.echo_critical(err_msg)
 
     if default_profile is None:

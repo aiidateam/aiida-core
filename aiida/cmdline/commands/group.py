@@ -10,10 +10,15 @@
 
 import argparse
 import sys
+import click
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import NotExistent, UniquenessError
+from aiida.cmdline.commands import verdi, verdi_group
+from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.params import options
 
 
 class Group(VerdiCommandWithSubcommands):
@@ -32,41 +37,16 @@ class Group(VerdiCommandWithSubcommands):
             'list': (self.group_list, self.complete_none),
             'show': (self.group_show, self.complete_none),
             'description': (self.group_description, self.complete_none),
-            'create': (self.group_create, self.complete_none),
+            'create': (self.cli, self.complete_none),
             'rename': (self.group_rename, self.complete_none),
             'delete': (self.group_delete, self.complete_none),
             'addnodes': (self.group_addnodes, self.complete_none),
             'removenodes': (self.group_removenodes, self.complete_none),
         }
 
-    def group_create(self, *args):
-        """
-        Create a new empty group.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
+    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+        verdi.main()
 
-        import argparse
-        from aiida.orm import Group as G
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Create a new empty group.')
-        parser.add_argument('GROUPNAME', help="The name of the new group")
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        group_name = parsed_args.GROUPNAME
-
-        group, created = G.get_or_create(name=group_name)
-
-        if created:
-            print "Group created with PK = {} and name '{}'".format(
-                group.pk, group.name)
-        else:
-            print "Group '{}' already exists, PK = {}".format(
-                group.name, group.pk)
 
     def group_rename(self, *args):
         """
@@ -582,3 +562,22 @@ class Group(VerdiCommandWithSubcommands):
             table.append([projection_lambdas[field](group) for field in projection_fields])
 
         print(tabulate(table, headers=projection_header))
+
+@verdi_group.command("create")
+@click.argument('group_name', nargs=1, type=click.STRING)
+@with_dbenv()
+def group_create(group_name, *args):
+    """
+    Create a new empty group.
+
+    :param group_name: name of the new group
+    """
+
+    from aiida.orm import Group as G
+
+    group, created = G.get_or_create(name=group_name)
+
+    if created:
+        echo.echo_success("Group created with PK = {} and name '{}'".format(group.pk, group.name))
+    else:
+        echo.echo_info("Group '{}' already exists, PK = {}".format(group.name, group.pk))

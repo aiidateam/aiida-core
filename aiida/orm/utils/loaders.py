@@ -484,6 +484,8 @@ class LegacyWorkflowLoader(OrmEntityLoader):
         elif identifier_type == IdentifierType.LABEL:
             result = Workflow.query(label=identifier)
 
+        result = [workflow for workflow in result]
+
         if len(result) > 1:
             error = 'multiple legacy workflows found with {} <{}>'.format(identifier_type, identifier)
             raise MultipleObjectsError(error)

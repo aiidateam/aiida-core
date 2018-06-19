@@ -62,7 +62,7 @@ def get_all_workflows(all_states=True):
         for state in wf_states:
             if state not in ['FINISHED', 'ERROR']:
                 workflows.extend(Workflow_.query(state=state))
-    return workflows
+    return [workflow for workflow in workflows]
 
 
 @verdi_workflow.command('logshow')

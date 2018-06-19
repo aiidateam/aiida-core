@@ -49,7 +49,6 @@ def list(vseparator, header, past_days, all_users, groups):
             to_print += vseparator.join(entry) + "\n"
         echo.echo(to_print)
 
-
 def get_column_names():
     """
     Return the list with column names.
@@ -120,7 +119,100 @@ def query(past_days, all_users, groups):
             entry_list.append([str(obj.pk), formulae, source_uri])
     return entry_list
 
+valid_formats = ['jmol', 'vesta']
 @cif.command()
-def show():
-    """help"""
-    click.echo("Test")
+@arguments.NODES()
+@click.option('-f', '--format', 'format',
+              type=click.Choice(valid_formats),
+              default='jmol',
+              help="Type of the visualization format/tool.")
+def show(nodes, format):
+    """
+    Show the data node with a visualization program.
+    """
+
+    args = list(args)
+    parsed_args = vars(parser.parse_args(args))
+
+    data_id = parsed_args.pop('data_id')
+    format = parsed_args.pop('format')
+
+    # Removing the keys, whose values are None
+    for key in parsed_args.keys():
+        if parsed_args[key] is None:
+            parsed_args.pop(key)
+
+    if format is None:
+        echo.echo_critical(
+            "Default format is not defined, please specify.\n"
+            "Valid formats are: {}".format(valid_formats))
+
+    for n in nodes:
+        try:
+            if not isinstance(n, CifData):
+                echo.echo_critical("Node {} is of class {} instead "
+                                      "of {}".format(n, type(n), CifData))
+        except AttributeError:
+            pass
+
+    try:
+        if format == 'jmol':
+            _show_jmol()
+
+        func(format, n_list, **parsed_args)
+    except MultipleObjectsError:
+        print >> sys.stderr, (
+            "Visualization of multiple objects is not implemented "
+            "for '{}'".format(format))
+        sys.exit(1)
+
+def _show_jmol(exec_name, structure_list):
+    """
+    Plugin for jmol
+    """
+    import tempfile, subprocess
+
+    with tempfile.NamedTemporaryFile() as f:
+        for structure in structure_list:
+            f.write(structure._exportstring('cif')[0])
+        f.flush()
+
+        try:
+            subprocess.check_output([exec_name, f.name])
+        except subprocess.CalledProcessError:
+            # The program died: just print a message
+            print "Note: the call to {} ended with an error.".format(
+                exec_name)
+        except OSError as e:
+            if e.errno == 2:
+                print ("No executable '{}' found. Add to the path, "
+                       "or try with an absolute path.".format(
+                    exec_name))
+                sys.exit(1)
+            else:
+                raise
+
+def _show_vesta(exec_name, structure_list):
+    """
+    Plugin for VESTA, added by Yue-Wen FANG and Abel Carreras
+    at Kyoto University in the group of Prof. Isao Tanaka's lab
+    """
+    import tempfile, subprocess
+
+    with tempfile.NamedTemporaryFile(suffix='.cif') as f:
+        for structure in structure_list:
+            f.write(structure._exportstring('cif')[0])
+        f.flush()
+
+        try:
+            subprocess.check_output([exec_name, f.name])
+        except subprocess.CalledProcessError:
+            # The program died: just print a message
+            print "Note: the call to {} ended with an error.".format(exec_name)
+        except OSError as e:
+            if e.errno == 2:
+                print ("No executable '{}' found. Add to the path, "
+                       "or try with an absolute path.".format(exec_name))
+                sys.exit(1)
+            else:
+                raise

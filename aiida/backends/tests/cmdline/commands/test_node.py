@@ -53,7 +53,6 @@ class TestVerdiNode(AiidaTestCase):
         options = [str(nodes['in1'].pk), '-v']
         user_input = '\n'.join(['Y'])
         result = self.runner.invoke(node_delete, options, input=user_input)
-        import pdb; pdb.set_trace()
         self.assertIsNone(result.exception)
 
         for label in ['in1', 'wf', 'slave1', 'outp1', 'outp3']:

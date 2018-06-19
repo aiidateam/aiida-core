@@ -34,7 +34,7 @@ class Group(VerdiCommandWithSubcommands):
         list.
         """
         self.valid_subcommands = {
-            'list': (self.group_list, self.complete_none),
+            'list': (self.cli, self.complete_none),
             'show': (self.cli, self.complete_none),
             'description': (self.cli, self.complete_none),
             'create': (self.cli, self.complete_none),
@@ -324,24 +324,24 @@ def group_show(group, raw, uuid, *args):
 
 
 @verdi_group.command("list")
-@click.option('-A', '--all-users', is_flag=True, default=False,
+@click.option('-A', '--all-users', 'all_users', is_flag=True, default=False,
               help="Show groups for all users, rather than only for the current user")
-@click.option('-u', '--user', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
-@click.option('-t', '--type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
-@click.option('-d', '--with-description', is_flag=True, default=False, help="Show also the group description")
+@click.option('-u', '--user', 'user_email', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
+@click.option('-t', '--type', 'type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
+@click.option('-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
 @click.option('-C', '--count', type=click.INT, help="Show also the number of nodes in the group")
-@click.option('-p', '--past-days', type=click.INT, help="add a filter to show only groups created in the past N days")
+@options.PAST_DAYS(help="add a filter to show only groups created in the past N days")
 @click.option('-s', '--startswith', type=click.STRING, default=None,
               help="add a filter to show only groups for which the name begins with STRING")
 @click.option('-e', '--endswith', type=click.STRING, default=None,
               help="add a filter to show only groups for which the name ends with STRING")
 @click.option('-c', '--contains', type=click.STRING, default=None,
               help="add a filter to show only groups for which the name contains STRING")
-@click.option('-n', '--node', type=click.INT, default=None,
-              help="Show only the groups that contain the node specified by PK")
+
+@options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
 def group_list(all_users, user_email, type, with_description, count,
-               past_days, starts_with, ends_with, contains, node, *args):
+               past_days, startswith, endswith, contains, node, *args):
     """
     List AiiDA user-defined groups.
     """
@@ -350,6 +350,71 @@ def group_list(all_users, user_email, type, with_description, count,
     from aiida.orm.group import get_group_type_mapping
     from aiida.orm.backend import construct_backend
     from tabulate import tabulate
+
+    backend = construct_backend()
+
+    if all_users:
+        user = None
+    else:
+        if user_email:
+            user = user_email
+        else:
+            # By default: only groups of this user
+            user = backend.users.get_automatic_user()
+
+    type_string = ""
+    if type is not None:
+        try:
+            type_string = get_group_type_mapping()[type]
+        except KeyError:
+            echo.echo_critical("Invalid group type. Valid group types are: {}".format(
+                ",".join(sorted(get_group_type_mapping().keys()))))
+
+    n_days_ago = None
+    if past_days:
+        n_days_ago = (timezone.now() - datetime.timedelta(days=past_days))
+
+    name_filters = {
+        'startswith': startswith,
+        'endswith': endswith,
+        'contains': contains
+    }
+
+    # Depending on --nodes option use or not key "nodes"
+    from aiida.orm.implementation import Group
+    from aiida.orm import load_node
+
+    if node:
+        result = Group.query(user=user, type_string=type_string, nodes=node,
+                              past_days=n_days_ago, name_filters=name_filters)
+    else:
+        result = Group.query(user=user, type_string=type_string,
+                              past_days=n_days_ago, name_filters=name_filters)
+
+    projection_lambdas = {
+        'pk': lambda group: str(group.pk),
+        'name': lambda group: group.name,
+        'count': lambda group: len(group.nodes),
+        'user': lambda group: group.user.email.strip(),
+        'description': lambda group: group.description
+    }
+
+    table = []
+    projection_header = ['PK', 'Name', 'User']
+    projection_fields = ['pk', 'name', 'user']
+
+    if with_description:
+        projection_header.append('Description')
+        projection_fields.append('description')
+
+    if count:
+        projection_header.append('Node count')
+        projection_fields.append('count')
+
+    for group in result:
+        table.append([projection_lambdas[field](group) for field in projection_fields])
+
+    echo.echo(tabulate(table, headers=projection_header))
 
 
 @verdi_group.command("create")

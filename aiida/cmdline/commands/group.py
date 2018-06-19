@@ -36,7 +36,7 @@ class Group(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'list': (self.group_list, self.complete_none),
             'show': (self.cli, self.complete_none),
-            'description': (self.group_description, self.complete_none),
+            'description': (self.cli, self.complete_none),
             'create': (self.cli, self.complete_none),
             'rename': (self.group_rename, self.complete_none),
             'delete': (self.group_delete, self.complete_none),
@@ -314,39 +314,6 @@ class Group(VerdiCommandWithSubcommands):
 
         group.remove_nodes(nodes)
 
-    def group_description(self, *args):
-        """
-        Edit the group description.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import argparse
-        from aiida.orm import Group as G
-        from aiida.common.exceptions import NotExistent
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Change the description of a given group.')
-        parser.add_argument('PK', type=int,
-                            help="The PK of the group for which "
-                                 "you want to edit the description")
-        parser.add_argument('description', type=str,
-                            help="The new description. If not provided, "
-                                 "just show the current description.")
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        group_pk = parsed_args.PK
-        try:
-            group = G(dbgroup=group_pk)
-        except NotExistent as e:
-            print >> sys.stderr, "Error: {}.".format(e.message)
-            sys.exit(1)
-
-        group.description = parsed_args.description
-
     def group_list(self, *args):
         """
         Print a list of groups in the DB.
@@ -472,6 +439,19 @@ class Group(VerdiCommandWithSubcommands):
         print(tabulate(table, headers=projection_header))
 
 
+@verdi_group.command("description")
+@arguments.GROUP()
+@click.argument("description", type=click.STRING)
+@with_dbenv()
+def group_description(group, description, *args):
+    """
+    Change the description of a given group.
+    Pass the GROUP for which you want to edit the description and its
+    new DESCRIPTION. If DESCRIPTION is not provided, just show the current description.
+
+    """
+    group.description = description
+
 @verdi_group.command("show")
 @click.option('-r', '--raw', is_flag=True, default=False,
               help="Show only a space-separated list of PKs of the calculations in the group")
@@ -479,7 +459,7 @@ class Group(VerdiCommandWithSubcommands):
               help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
 @arguments.GROUP()
 @with_dbenv()
-def group_show(group, raw, uuid,  *args):
+def group_show(group, raw, uuid, *args):
     """
     Show information on a given group. Pass the GROUP as a parameter.
     """

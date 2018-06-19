@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+"""Tests for `verdi export`."""
 import errno
 import os
 import tempfile
 import tarfile
 import zipfile
 
-import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -28,20 +28,32 @@ def delete_temporary_file(filepath):
             pass
 
 
+def get_archive_file(archive):
+    """
+    Return the absolute path of the archive file used for testing purposes. The expected path for these files:
+
+        aiida.backends.tests.export_import_test_files.migrate
+
+    :param archive: the relative filename of the archive
+    :returns: absolute filepath of the archive test file
+    """
+    dirpath_current = os.path.dirname(os.path.abspath(__file__))
+    dirpath_archive = os.path.join(dirpath_current, os.pardir, os.pardir, 'fixtures', 'export', 'migrate')
+
+    return os.path.join(dirpath_archive, archive)
+
+
 class TestVerdiExport(AiidaTestCase):
+    """Tests for `verdi export`."""
 
     @classmethod
-    def setUpClass(cls):
-        super(TestVerdiExport, cls).setUpClass()
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiExport, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Code, Computer, Group, Node
 
         cls.computer = Computer(
-            name='comp',
-            hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct',
-            workdir='/tmp/aiida'
-        ).store()
+            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
+            workdir='/tmp/aiida').store()
 
         cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = Group(name='test_group').store()
@@ -50,50 +62,35 @@ class TestVerdiExport(AiidaTestCase):
     def setUp(self):
         self.cli_runner = CliRunner()
 
-    def _get_archive_file(self, archive):
-        """
-        Return the absolute path of the archive file used for testing purposes. The expected path for these files:
-
-            aiida.backends.tests.export_import_test_files.migrate
-
-        :param archive: the relative filename of the archive
-        :returns: absolute filepath of the archive test file
-        """
-        dirpath_current = os.path.dirname(os.path.abspath(__file__))
-        dirpath_archive = os.path.join(dirpath_current, os.pardir, os.pardir, 'export_import_test_files', 'migrate')
-
-        return os.path.join(dirpath_archive, archive)
-
     def test_create_file_already_exists(self):
-        """
-        Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise
-        """
-        with tempfile.NamedTemporaryFile() as file:
-            options = [file.name]
+        """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
+        with tempfile.NamedTemporaryFile() as handle:
+            options = [handle.name]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNotNone(result.exception)
 
-    def test_create_file_already_exists_force(self):
+    def test_create_force(self):
         """
         Test that using a file that already exists, which is the case when using NamedTemporaryFile, will work
         when the -f/--force parameter is used
         """
-        with tempfile.NamedTemporaryFile() as file:
-            options = ['-f', file.name]
+        with tempfile.NamedTemporaryFile() as handle:
+            options = ['-f', handle.name]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNone(result.exception)
 
-            options = ['--force', file.name]
+            options = ['--force', handle.name]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNone(result.exception)
 
     def test_create_zip(self):
-        """
-        Test that creating an archive for a set of various ORM entities works with the zip format
-        """
-        filename = next(tempfile._get_candidate_names())
+        """Test that creating an archive for a set of various ORM entities works with the zip format."""
+        filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
         try:
-            options = ['-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'zip', filename]
+            options = [
+                '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'zip',
+                filename
+            ]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
@@ -102,12 +99,13 @@ class TestVerdiExport(AiidaTestCase):
             delete_temporary_file(filename)
 
     def test_create_zip_uncompressed(self):
-        """
-        Test that creating an archive for a set of various ORM entities works with the zip-uncompressed format
-        """
-        filename = next(tempfile._get_candidate_names())
+        """Test that creating an archive for a set of various ORM entities works with the zip-uncompressed format."""
+        filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
         try:
-            options = ['-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'zip-uncompressed', filename]
+            options = [
+                '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F',
+                'zip-uncompressed', filename
+            ]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
@@ -116,12 +114,13 @@ class TestVerdiExport(AiidaTestCase):
             delete_temporary_file(filename)
 
     def test_create_tar_gz(self):
-        """
-        Test that creating an archive for a set of various ORM entities works with the tar.gz format
-        """
-        filename = next(tempfile._get_candidate_names())
+        """Test that creating an archive for a set of various ORM entities works with the tar.gz format."""
+        filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
         try:
-            options = ['-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'tar.gz', filename]
+            options = [
+                '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'tar.gz',
+                filename
+            ]
             result = self.cli_runner.invoke(export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
@@ -130,9 +129,7 @@ class TestVerdiExport(AiidaTestCase):
             delete_temporary_file(filename)
 
     def test_migrate_versions_old(self):
-        """
-        Migrating archives with a version older than the current should work
-        """
+        """Migrating archives with a version older than the current should work."""
         archives = [
             'export_v0.1.aiida',
             'export_v0.2.aiida',
@@ -140,8 +137,8 @@ class TestVerdiExport(AiidaTestCase):
 
         for archive in archives:
 
-            filename_input = self._get_archive_file(archive)
-            filename_output = next(tempfile._get_candidate_names())
+            filename_input = get_archive_file(archive)
+            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             try:
                 options = [filename_input, filename_output]
@@ -153,17 +150,15 @@ class TestVerdiExport(AiidaTestCase):
                 delete_temporary_file(filename_output)
 
     def test_migrate_versions_recent(self):
-        """
-        Migrating an archive with the current version should exit with non-zero status
-        """
+        """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
             'export_v0.3.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = self._get_archive_file(archive)
-            filename_output = next(tempfile._get_candidate_names())
+            filename_input = get_archive_file(archive)
+            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             try:
                 options = [filename_input, filename_output]
@@ -173,16 +168,14 @@ class TestVerdiExport(AiidaTestCase):
                 delete_temporary_file(filename_output)
 
     def test_migrate_force(self):
-        """
-        Test that passing the -f/--force option will overwrite the output file even if it exists
-        """
+        """Test that passing the -f/--force option will overwrite the output file even if it exists."""
         archives = [
             'export_v0.1.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = self._get_archive_file(archive)
+            filename_input = get_archive_file(archive)
 
             # Using the context manager will create the file and so the command should fail
             with tempfile.NamedTemporaryFile() as file_output:
@@ -202,17 +195,15 @@ class TestVerdiExport(AiidaTestCase):
                     self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
 
     def test_migrate_silent(self):
-        """
-        Test that the captured output is an empty string when the -s/--silent option is passed
-        """
+        """Test that the captured output is an empty string when the -s/--silent option is passed."""
         archives = [
             'export_v0.1.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = self._get_archive_file(archive)
-            filename_output = next(tempfile._get_candidate_names())
+            filename_input = get_archive_file(archive)
+            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             for option in ['-s', '--silent']:
                 try:
@@ -226,17 +217,15 @@ class TestVerdiExport(AiidaTestCase):
                     delete_temporary_file(filename_output)
 
     def test_migrate_tar_gz(self):
-        """
-        Test that -F/--archive-format option can be used to write a tar.gz instead
-        """
+        """Test that -F/--archive-format option can be used to write a tar.gz instead."""
         archives = [
             'export_v0.1.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = self._get_archive_file(archive)
-            filename_output = next(tempfile._get_candidate_names())
+            filename_input = get_archive_file(archive)
+            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             for option in ['-F', '--archive-format']:
                 try:

@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
+"""
+Test suite to test verdi profile command
+"""
 
 from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import setup as aiida_cfg
+
 
 class TestVerdiProfileSetup(AiidaTestCase):
     """
@@ -27,8 +30,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
         aiida_cfg.create_base_dirs()
 
-        for profile in ['dummy_profile1', 'dummy_profile2', 'dummy_profile3',
-                        'dummy_profile4', 'dummy_profile5']:
+        for profile in ['dummy_profile1', 'dummy_profile2', 'dummy_profile3', 'dummy_profile4', 'dummy_profile5']:
             dummy_profile = {}
             dummy_profile['backend'] = 'django'
             dummy_profile['db_host'] = 'localhost'
@@ -70,9 +72,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         Tests help text for all profile sub commands
         """
         options = ["--help"]
-        from aiida.cmdline.commands.profile import (profile_list,
-                                                    profile_setdefault,
-                                                    profile_delete)
+        from aiida.cmdline.commands.profile import (profile_list, profile_setdefault, profile_delete)
 
         result = self.runner.invoke(profile_list, options)
         self.assertIsNone(result.exception)
@@ -93,7 +93,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         from aiida.cmdline.commands.profile import profile_list
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
-        self.assertIn('Configuration folder: '+ self._new_aiida_config_folder, result.output)
+        self.assertIn('Configuration folder: ' + self._new_aiida_config_folder, result.output)
         self.assertIn('* dummy_profile1', result.output)
         self.assertIn('dummy_profile2', result.output)
 

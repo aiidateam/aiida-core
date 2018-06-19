@@ -42,17 +42,22 @@ class Profile(VerdiCommandWithSubcommands):
         verdi.main()
 
     def complete_profiles(self, subargs_idx, subargs):
+        """
+        :param subargs_idx: flag
+        :param subargs: additional arguments
+
+        :return: either profiles list or None.
+        """
         from aiida.common.setup import get_profiles_list
 
         if subargs_idx == 0:
             return "\n".join(get_profiles_list())
-        else:
-            return ""
+
+        return ""
 
 
 @verdi_profile.command("list")
-@click.option('--no-color', is_flag=True, default=False, help='to show results without colors')
-def profile_list(no_color):
+def profile_list():
     """
     Displays list of all available profiles.
     """
@@ -60,7 +65,7 @@ def profile_list(no_color):
     from aiida.common.setup import get_profiles_list, get_default_profile, AIIDA_CONFIG_FOLDER
     from aiida.common.exceptions import ConfigurationError
 
-    print('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
+    echo.echo_info('Configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
 
     try:
         default_profile = get_default_profile()
@@ -77,27 +82,14 @@ def profile_list(no_color):
         echo.echo_info('The default profile is highlighted and marked by the * symbol')
 
     for profile in get_profiles_list():
-        color_id = 39  # Default foreground color
+        color_id = ''
         if profile == default_profile:
             symbol = '*'
-            color_id = 32
+            color_id = 'green'
         else:
             symbol = ' '
 
-        if not no_color:
-            start_color = '\x1b[{}m'.format(color_id)
-            end_color = '\x1b[0m'
-            bold_sequence = '\x1b[1;{}m'.format(color_id)
-            nobold_sequence = '\x1b[0;{}m'.format(color_id)
-        else:
-            start_color = ''
-            end_color = ''
-            bold_sequence = ''
-            nobold_sequence = ''
-
-        echo.echo('{}{} {}{} {}{}'.format(start_color, symbol,
-                                               nobold_sequence, profile,
-                                               nobold_sequence, end_color))
+        click.secho('{} {}'.format(symbol, profile), fg=color_id)
 
 
 @verdi_profile.command("setdefault")
@@ -112,8 +104,7 @@ def profile_setdefault(profile_name):
 
 @verdi_profile.command("delete")
 @options.FORCE(help='to skip any questions/warnings about loss of data')
-@click.argument('profiles_to_delete', nargs=-1,
-                type=click.STRING)
+@click.argument('profiles_to_delete', nargs=-1, type=click.STRING)
 def profile_delete(force, profiles_to_delete):
     """
     Delete profile from aiida config file along with its associated
@@ -139,8 +130,8 @@ def profile_delete(force, profiles_to_delete):
         postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
         postgres.determine_setup()
 
-        import pprint
-        pprint.pprint(postgres.dbinfo, width=1, indent=2)
+        import json
+        echo.echo(json.dumps(postgres.dbinfo, indent=4))
 
         db_name = profile.get('AIIDADB_NAME', '')
         if not postgres.db_exists(db_name):

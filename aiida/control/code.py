@@ -26,11 +26,11 @@ class CodeBuilder(object):
 
         from aiida.orm import Code
 
-        # Will be used at the end to check if all keys are known
-        passed_keys = set(self._code_spec.keys())
+        # Will be used at the end to check if all keys are known (those that are not None)
+        passed_keys = set([k for k in self._code_spec.keys() if self._code_spec[k] is not None])
         used = set()
 
-        if self.code_type == self.CodeType.STORE_AND_UPLOAD:
+        if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:
             file_list = [
                 os.path.realpath(os.path.join(self.code_folder, f))
                 for f in os.listdir(self._get_and_count('code_folder', used))

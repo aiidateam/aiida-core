@@ -238,7 +238,10 @@ class VerdiCommandWithSubcommands(VerdiCommand):
         except KeyError:
             function_to_call = self.invalid_subcommand
 
-        function_to_call(*args[1:])
+        if isinstance(function_to_call, click.Command):
+            function_to_call()
+        else:
+            function_to_call(*args[1:])
 
     def complete(self, subargs_idx, subargs):
         if subargs_idx == 0:

@@ -26,18 +26,6 @@ class TestVerdiCodeSetup(AiidaTestCase):
         from aiida.orm import Computer, Code
         self.comp = Computer.get('comp')
 
-        from aiida.orm import Code
-        try:
-            code = Code.get_from_string('code')
-        except NotExistent:
-            code = Code(
-                input_plugin_name='simpleplugins.arithmetic.add',
-                remote_computer_exec=[self.comp, '/remote/abs/path'],
-            )
-            code.label = 'code'
-            code.store()
-        self.code = code
-
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
@@ -101,6 +89,43 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output[-1000:])
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
+
+class TestVerdiCodeCommands(AiidaTestCase):
+    """Testing verdi code commands.
+
+    Testing everything besides `code setup`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiCodeCommands, cls).setUpClass()
+        from aiida.orm import Computer
+        new_comp = Computer(name='comp',
+                                hostname='localhost',
+                                transport_type='local',
+                                scheduler_type='direct',
+                                workdir='/tmp/aiida')
+        new_comp.store()
+
+
+    def setUp(self):
+        from aiida.orm import Computer, Code
+        self.comp = Computer.get('comp')
+
+        try:
+            code = Code.get_from_string('code')
+        except NotExistent:
+            code = Code(
+                input_plugin_name='simpleplugins.arithmetic.add',
+                remote_computer_exec=[self.comp, '/remote/abs/path'],
+            )
+            code.label = 'code'
+            code.store()
+        self.code = code
+
+        self.runner = CliRunner()
+
+
     def test_hide_one(self):
         result = self.runner.invoke(hide, [str(self.code.pk)])
         self.assertIsNone(result.exception)
@@ -139,13 +164,40 @@ class TestVerdiCodeSetup(AiidaTestCase):
             Code.get_from_string('code')
 
     def test_code_list(self):
-        options = ['-a','-A', '-o', '--input-plugin=simpleplugins.arithmetic.add',
+        # set up second code 'code2'
+        from aiida.orm import Code
+        try:
+            code = Code.get_from_string('code2')
+        except NotExistent:
+            code = Code(
+                input_plugin_name='simpleplugins.templatereplacer',
+                remote_computer_exec=[self.comp, '/remote/abs/path'],
+            )
+            code.label = 'code2'
+            code.store()
+
+        options = ['-A', '-a', '-o', '--input-plugin=simpleplugins.arithmetic.add',
                    '--computer={}'.format(self.comp.name)]
         result = self.runner.invoke(code_list, options)
         self.assertIsNone(result.exception)
-        self.assertTrue(str(self.code.pk) in result.output)
+        self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
+        self.assertTrue('code2' not in result.output, 'label of second code should not be included')
+        self.assertTrue('comp' in result.output, 'computer name should be included')
+
+    def test_code_list_hide(self):
+        self.code._hide()
+        options = ['-A']
+        result = self.runner.invoke(code_list, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(self.code.get_label(full=True) not in result.output, 'code should be hidden')
+
+        options = ['-a']
+        result = self.runner.invoke(code_list, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(self.code.get_label(full=True) in result.output, 'code should be shown')
 
     def test_code_show(self):
         result = self.runner.invoke(show, [str(self.code.pk)])
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
+

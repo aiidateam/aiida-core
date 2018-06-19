@@ -835,11 +835,12 @@ def rename(ctx, old_label, new_label):
 @verdi_code.command('list')
 @options.COMPUTER(help="Filter codes by computer")
 @options.INPUT_PLUGIN(help="Filter codes by calculation input plugin.")
-@options.ALL('all_codes', help="Include all codes (including hidden ones), disregarding all other filter criteria.")
+@options.ALL(help="Include hidden codes.")
 @options.ALL_USERS(help="Include codes from all users.")
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
-def code_list(computer, input_plugin, all_codes, all_users, show_owner):
+# pylint: disable=redefined-builtin
+def code_list(computer, input_plugin, all, all_users, show_owner):
     """List the codes in the database."""
     from aiida.orm.backend import construct_backend
     backend = construct_backend()
@@ -862,8 +863,8 @@ def code_list(computer, input_plugin, all_codes, all_users, show_owner):
     if input_plugin is not None:
         qb_code_filters['attributes.input_plugin'] = input_plugin.name
 
-    # If were not showing all, only show those codes without 'hidden' extra or where it is False
-    if not all_codes:
+    # If not all, hide codes with HIDDEN_KEY extra set to True
+    if not all:
         qb_code_filters['or'] = [{
             'extras': {
                 '!has_key': Code.HIDDEN_KEY

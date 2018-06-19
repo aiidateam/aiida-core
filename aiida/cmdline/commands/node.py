@@ -12,6 +12,7 @@ Manipulating and printing information of nodes.
 """
 import sys
 import click
+import tabulate
 
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline import delayed_load_node as load_node
@@ -42,6 +43,8 @@ class Node(VerdiCommandRouter):
             'show': verdi,
             'tree': verdi,
             'delete': verdi,
+            'label': verdi,
+            'description': verdi,
         }
 
 
@@ -183,6 +186,74 @@ def list_repo_files(node, path, color):
             raise ValueError("{}: No such file or directory in the repo".format(path))
 
         print fname
+
+
+@verdi_node.command('label')
+@arguments.NODES()
+@options.LABEL(help='Set LABEL as the new label for all NODES')
+@options.RAW(help='Display only the labels, no extra information')
+@options.FORCE()
+@with_dbenv()
+def node_label(nodes, label, raw, force):
+    """View or set the labels of one or more nodes."""
+    table = []
+
+    if label is None:
+        for node in nodes:
+
+            if raw:
+                table.append([node.label])
+            else:
+                table.append([node.pk, node.label])
+
+        if raw:
+            echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+        else:
+            echo.echo(tabulate.tabulate(table, headers=['ID', 'Label']))
+
+    else:
+        if not force:
+            warning = 'Are you sure you want to set the label for {} nodes?'.format(len(nodes))
+            click.confirm(warning, abort=True)
+
+        for node in nodes:
+            node.label = label
+
+        echo.echo_success("Set label '{}' for {} nodes".format(label, len(nodes)))
+
+
+@verdi_node.command('description')
+@arguments.NODES()
+@options.DESCRIPTION(help='Set DESCRIPTION as the new description for all NODES')
+@options.RAW(help='Display only descriptions, no extra information')
+@options.FORCE()
+@with_dbenv()
+def node_description(nodes, description, force, raw):
+    """View or set the descriptions of one or more nodes."""
+    table = []
+
+    if description is None:
+        for node in nodes:
+
+            if raw:
+                table.append([node.description])
+            else:
+                table.append([node.pk, node.description])
+
+        if raw:
+            echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+        else:
+            echo.echo(tabulate.tabulate(table, headers=['ID', 'Description']))
+
+    else:
+        if not force:
+            warning = 'Are you sure you want to set the description for  {} nodes?'.format(len(nodes))
+            click.confirm(warning, abort=True)
+
+        for node in nodes:
+            node.description = description
+
+        echo.echo_success("Set description for {} nodes".format(len(nodes)))
 
 
 @verdi_node.command('show')

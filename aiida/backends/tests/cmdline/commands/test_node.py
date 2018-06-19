@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete, show, tree, repo_ls, repo_cat
+from aiida.cmdline.commands.node import node_delete, node_label, node_description, show, tree, repo_ls, repo_cat
 
 class TestVerdiNode(AiidaTestCase):
 
@@ -71,7 +71,30 @@ class TestVerdiNode(AiidaTestCase):
 
         self.assertTrue(str(nodes['in1'].uuid) in result.output)
         self.assertTrue(str(nodes['outp3'].pk) in result.output)
-        self.assertTrue(str(nodes['in2'].pk) not in result.output)
+        self.assertTrue(str(nodes['in2'].uuid) not in result.output)
+
+    def test_node_label(self):
+        node = self.nodes['in1']
+        label = u"my label"
+        node.label = label
+        node.store()
+        
+        options = [str(node.pk), '--raw']
+        result = self.runner.invoke(node_label, options)
+        self.assertIsNone(result.exception)
+        self.assertEquals(result.output, label+'\n')
+
+    def test_node_description(self):
+        node = self.nodes['in1']
+        description = u"my desc\nover two lines"
+        node.description = description
+        node.store()
+        
+        options = [str(node.pk), '--raw']
+        result = self.runner.invoke(node_description, options)
+        self.assertIsNone(result.exception)
+        self.assertEquals(result.output, description+'\n')
+
 
 class TestVerdiNodeRepo(AiidaTestCase):
 

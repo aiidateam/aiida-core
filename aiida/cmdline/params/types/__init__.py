@@ -12,7 +12,7 @@ from .multiple import MultipleValueParamType
 from .nonemptystring import NonemptyStringParamType
 from .shebang import ShebangParamType
 from .plugin import PluginParamType
-from .legacy_workflows import LegacyWorkflowParamType
+from .legacy_workflow import LegacyWorkflowParamType
 
 __all__ = [
     'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',

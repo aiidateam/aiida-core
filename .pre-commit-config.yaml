@@ -12,6 +12,7 @@
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
+        aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
@@ -29,6 +30,7 @@
         aiida/cmdline/utils/echo.py|
         aiida/scheduler/.*.py|
         aiida/transport/.*.py|
+        aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
@@ -52,6 +54,7 @@
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
+        aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/cmdline/tests/.*.py|
         aiida/cmdline/commands/calculation.py|

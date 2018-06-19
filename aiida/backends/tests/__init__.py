@@ -63,6 +63,7 @@ db_test_list = {
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
+        'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
         'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],

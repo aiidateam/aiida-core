@@ -32,7 +32,7 @@
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|
-        docs/update_req_for_rtd.py| # a|b -> match a OR b
+        docs/update_req_for_rtd.py # a|b -> match a OR b
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 
 # prospector: collection of linters
@@ -67,7 +67,7 @@
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|
-        docs/update_req_for_rtd.py|
+        docs/update_req_for_rtd.py
       )$
 
 - repo: local

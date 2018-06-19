@@ -38,7 +38,7 @@ class Group(VerdiCommandWithSubcommands):
             'show': (self.cli, self.complete_none),
             'description': (self.cli, self.complete_none),
             'create': (self.cli, self.complete_none),
-            'rename': (self.group_rename, self.complete_none),
+            'rename': (self.cli, self.complete_none),
             'delete': (self.group_delete, self.complete_none),
             'addnodes': (self.group_addnodes, self.complete_none),
             'removenodes': (self.group_removenodes, self.complete_none),
@@ -47,56 +47,6 @@ class Group(VerdiCommandWithSubcommands):
     @staticmethod
     def cli(*args):  # pylint: disable=unused-argument
         verdi.main()
-
-    def group_rename(self, *args):
-        """
-        Rename an existing group.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import argparse
-        from aiida.orm import Group as G
-        from aiida.orm import load_group
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Rename an existing group.')
-        parser.add_argument('GROUP', help='The name or PK of the group to rename')
-        parser.add_argument('NAME', help='The new name of the group')
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        group = parsed_args.GROUP
-        name = parsed_args.NAME
-
-        try:
-            group_pk = int(group)
-        except ValueError:
-            group_pk = None
-            group_name = group
-
-        if group_pk is not None:
-            try:
-                group = G(dbgroup=group_pk)
-            except NotExistent as e:
-                print >> sys.stderr, "Error: {}.".format(e.message)
-                sys.exit(1)
-        else:
-            try:
-                group = G.get_from_string(group_name)
-            except NotExistent as e:
-                print >> sys.stderr, "Error: {}.".format(e.message)
-                sys.exit(1)
-
-        try:
-            group.name = name
-        except UniquenessError as exception:
-            print >> sys.stderr, "Error: {}.".format(exception.message)
-            sys.exit(1)
-        else:
-            print 'Name successfully changed'
 
     def group_delete(self, *args):
         """
@@ -437,6 +387,23 @@ class Group(VerdiCommandWithSubcommands):
             table.append([projection_lambdas[field](group) for field in projection_fields])
 
         print(tabulate(table, headers=projection_header))
+
+
+@verdi_group.command("rename")
+@arguments.GROUP()
+@click.argument("name", nargs=1, type=click.STRING)
+@with_dbenv()
+def group_description(group, name, *args):
+    """
+    Rename an existing group. Pass the GROUP for which you want to rename and its
+    new NAME.
+    """
+    try:
+        group.name = name
+    except UniquenessError as exception:
+        echo.echo_critical("Error: {}.".format(exception.message))
+    else:
+        echo.echo_success('Name successfully changed')
 
 
 @verdi_group.command("description")

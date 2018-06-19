@@ -18,7 +18,7 @@ from aiida.common.exceptions import NotExistent, UniquenessError
 from aiida.cmdline.commands import verdi, verdi_group
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.params import options
+from aiida.cmdline.params import options, arguments
 
 
 class Group(VerdiCommandWithSubcommands):
@@ -35,7 +35,7 @@ class Group(VerdiCommandWithSubcommands):
         """
         self.valid_subcommands = {
             'list': (self.group_list, self.complete_none),
-            'show': (self.group_show, self.complete_none),
+            'show': (self.cli, self.complete_none),
             'description': (self.group_description, self.complete_none),
             'create': (self.cli, self.complete_none),
             'rename': (self.group_rename, self.complete_none),
@@ -44,9 +44,9 @@ class Group(VerdiCommandWithSubcommands):
             'removenodes': (self.group_removenodes, self.complete_none),
         }
 
-    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
+    @staticmethod
+    def cli(*args):  # pylint: disable=unused-argument
         verdi.main()
-
 
     def group_rename(self, *args):
         """
@@ -97,7 +97,6 @@ class Group(VerdiCommandWithSubcommands):
             sys.exit(1)
         else:
             print 'Name successfully changed'
-
 
     def group_delete(self, *args):
         """
@@ -164,97 +163,6 @@ class Group(VerdiCommandWithSubcommands):
 
         group.delete()
         print "Group '{}' (PK={}) deleted.".format(group_name, group_pk)
-
-    def group_show(self, *args):
-        """
-        Show information on a given group. Pass the PK as a parameter.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import argparse
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm import Group as G
-        from aiida.common.utils import str_timedelta
-        from aiida.utils import timezone
-        from aiida.plugins.loader import get_plugin_type_from_type_string
-        from tabulate import tabulate
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Information on a given AiiDA group.')
-        parser.add_argument('-r', '--raw',
-                            dest='raw', action='store_true',
-                            help="Show only a space-separated list of PKs of "
-                                 "the calculations in the group")
-        parser.add_argument('-u', '--uuid',
-                            dest='uuid', action='store_true',
-                            help="Show UUIDs together with PKs. Note: if the "
-                                 "--raw option is also passed, PKs are not "
-                                 "printed, but oly UUIDs.")
-        parser.add_argument('GROUP', help="The PK of the group to show")
-        parser.set_defaults(raw=False)
-        parser.set_defaults(uuid=False)
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        group = parsed_args.GROUP
-        try:
-            group_pk = int(group)
-        except ValueError:
-            group_pk = None
-            group_name = group
-
-        if group_pk is not None:
-            try:
-                group = G(dbgroup=group_pk)
-            except NotExistent as e:
-                print >> sys.stderr, "Error: {}.".format(e.message)
-                sys.exit(1)
-        else:
-            try:
-                group = G.get_from_string(group_name)
-            except NotExistent as e:
-                print >> sys.stderr, "Error: {}.".format(e.message)
-                sys.exit(1)
-
-        group_pk = group.pk
-        group_name = group.name
-
-        if parsed_args.raw:
-            if parsed_args.uuid:
-                print " ".join(str(_.uuid) for _ in group.nodes)
-            else:
-                print " ".join(str(_.pk) for _ in group.nodes)
-        else:
-            type_string = group.type_string
-            desc = group.description
-            now = timezone.now()
-
-            table = []
-            table.append(["Group name", group.name])
-            table.append(["Group type",
-                          type_string if type_string else "<user-defined>"])
-            table.append(["Group description",
-                          desc if desc else "<no description>"])
-            print(tabulate(table))
-
-            table = []
-            header = []
-            if parsed_args.uuid:
-                header.append('UUID')
-            header.extend(['PK', 'Type', 'Created'])
-            print "# Nodes:"
-            for n in group.nodes:
-                row = []
-                if parsed_args.uuid:
-                    row.append(n.uuid)
-                row.append(n.pk)
-                row.append(get_plugin_type_from_type_string(n.type).rsplit(".", 1)[1])
-                row.append(str_timedelta(now - n.ctime, short=True, negative_to_zero=True))
-                table.append(row)
-            print(tabulate(table, headers=header))
 
     def group_addnodes(self, *args):
         """
@@ -563,14 +471,92 @@ class Group(VerdiCommandWithSubcommands):
 
         print(tabulate(table, headers=projection_header))
 
+
+@verdi_group.command("show")
+@click.option('-r', '--raw', is_flag=True, default=False,
+              help="Show only a space-separated list of PKs of the calculations in the group")
+@click.option('-u', '--uuid', is_flag=True, default=False,
+              help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
+@arguments.GROUP()
+@with_dbenv()
+def group_show(group, raw, uuid,  *args):
+    """
+    Show information on a given group. Pass the GROUP as a parameter.
+    """
+
+    from aiida.common.utils import str_timedelta
+    from aiida.utils import timezone
+    from aiida.plugins.loader import get_plugin_type_from_type_string
+    from tabulate import tabulate
+
+    if raw:
+        if uuid:
+            echo.echo(" ".join(str(_.uuid) for _ in group.nodes))
+        else:
+            echo.echo(" ".join(str(_.pk) for _ in group.nodes))
+    else:
+        type_string = group.type_string
+        desc = group.description
+        now = timezone.now()
+
+        table = []
+        table.append(["Group name", group.name])
+        table.append(["Group type", type_string if type_string else "<user-defined>"])
+        table.append(["Group description", desc if desc else "<no description>"])
+        echo.echo(tabulate(table))
+
+        table = []
+        header = []
+        if uuid:
+            header.append('UUID')
+        header.extend(['PK', 'Type', 'Created'])
+        echo.echo("# Nodes:")
+        for n in group.nodes:
+            row = []
+            if uuid:
+                row.append(n.uuid)
+            row.append(n.pk)
+            row.append(get_plugin_type_from_type_string(n.type).rsplit(".", 1)[1])
+            row.append(str_timedelta(now - n.ctime, short=True, negative_to_zero=True))
+            table.append(row)
+        echo.echo(tabulate(table, headers=header))
+
+
+@verdi_group.command("list")
+@click.option('-A', '--all-users', is_flag=True, default=False,
+              help="Show groups for all users, rather than only for the current user")
+@click.option('-u', '--user', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
+@click.option('-t', '--type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
+@click.option('-d', '--with-description', is_flag=True, default=False, help="Show also the group description")
+@click.option('-C', '--count', type=click.INT, help="Show also the number of nodes in the group")
+@click.option('-p', '--past-days', type=click.INT, help="add a filter to show only groups created in the past N days")
+@click.option('-s', '--startswith', type=click.STRING, default=None,
+              help="add a filter to show only groups for which the name begins with STRING")
+@click.option('-e', '--endswith', type=click.STRING, default=None,
+              help="add a filter to show only groups for which the name ends with STRING")
+@click.option('-c', '--contains', type=click.STRING, default=None,
+              help="add a filter to show only groups for which the name contains STRING")
+@click.option('-n', '--node', type=click.INT, default=None,
+              help="Show only the groups that contain the node specified by PK")
+@with_dbenv()
+def group_list(all_users, user_email, type, with_description, count,
+               past_days, starts_with, ends_with, contains, node, *args):
+    """
+    List AiiDA user-defined groups.
+    """
+    import datetime
+    from aiida.utils import timezone
+    from aiida.orm.group import get_group_type_mapping
+    from aiida.orm.backend import construct_backend
+    from tabulate import tabulate
+
+
 @verdi_group.command("create")
 @click.argument('group_name', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_name, *args):
     """
-    Create a new empty group.
-
-    :param group_name: name of the new group
+    Create a new empty group with the name GROUP_NAME
     """
 
     from aiida.orm import Group as G

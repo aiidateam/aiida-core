@@ -120,7 +120,8 @@ APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
 LABEL = OverridableOption('-L', '--label', type=click.STRING, metavar='LABEL', help='short name to be used as a label')
 
 
-DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metavar='DESCRIPTION', help='a detailed description')
+DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metavar='DESCRIPTION', help='a detailed description', default="", required=False)
+
 
 
 INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(group='calculations'))
@@ -172,3 +173,10 @@ ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, de
 
 RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
     help='display only raw query results, without any headers or footers')
+
+
+HOSTNAME = OverridableOption('-H', '--hostname', help='hostname')
+
+TRANSPORT = OverridableOption('-T', '--transport', help='transport type', type=types.PluginParamType(group='transports'), required=True)
+
+SCHEDULER = OverridableOption('-S', '--scheduler', help='scheduler type', type=types.PluginParamType(group='schedulers'), required=True)

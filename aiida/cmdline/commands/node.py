@@ -223,7 +223,7 @@ def node_label(nodes, label, raw, force):
 
 @verdi_node.command('description')
 @arguments.NODES()
-@options.DESCRIPTION(help='Set DESCRIPTION as the new description for all NODES')
+@options.DESCRIPTION(help='Set DESCRIPTION as the new description for all NODES', default=None)
 @options.RAW(help='Display only descriptions, no extra information')
 @options.FORCE()
 @with_dbenv()

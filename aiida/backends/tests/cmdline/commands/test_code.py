@@ -36,23 +36,23 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
     def test_interactive_remote(self):
         from aiida.orm import Code
-        os.environ['VISUAL'] = 'vim -cwq'
-        os.environ['EDITOR'] = 'vim -cwq'
+        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_remote'
         user_input = '\n'.join([
             label, 'description', 'yes', 'simpleplugins.arithmetic.add', self.comp.name,
             '/remote/abs/path'])
         result = self.runner.invoke(setup_code, input=user_input)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_interactive_upload(self):
         from aiida.orm import Code
-        os.environ['VISUAL'] = 'vim -cwq'
-        os.environ['EDITOR'] = 'vim -cwq'
+        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_upload'
         user_input = '\n'.join([
-            label, 'description', 'no', 'simpleplugins.arithmetic.add', self.this_folder, self.this_file])
+            label, 'description', 'no', 'simpleplugins.arithmetic.add', self.comp.name, self.this_folder, self.this_file])
         result = self.runner.invoke(setup_code, input=user_input)
         self.assertIsNone(result.exception, result.output)
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)

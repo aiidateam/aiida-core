@@ -31,7 +31,6 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.work.exceptions import Exit
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
 from aiida.work.process_builder import ProcessBuilder
@@ -702,23 +701,19 @@ class FunctionProcess(Process):
             except ValueError:
                 kwargs[name] = value
 
-        try:
-            result = self._func(*args, **kwargs)
-        except Exit as exception:
-            exit_status = exception.status
-            self.calc._set_exit_message(exception.message)
+        result = self._func(*args, **kwargs)
+
+        if result is None or isinstance(result, ExitCode):
+            return result
+
+        if isinstance(result, Data):
+            self.out(self.SINGLE_RETURN_LINKNAME, result)
+        elif isinstance(result, collections.Mapping):
+            for name, value in result.iteritems():
+                self.out(name, value)
         else:
-            exit_status = 0
+            raise TypeError(
+                "Workfunction returned unsupported type '{}'\n"
+                "Must be a Data type or a Mapping of {{string: Data}}".format(result.__class__))
 
-            if result is not None:
-                if isinstance(result, Data):
-                    self.out(self.SINGLE_RETURN_LINKNAME, result)
-                elif isinstance(result, collections.Mapping):
-                    for name, value in result.iteritems():
-                        self.out(name, value)
-                else:
-                    raise TypeError(
-                        "Workfunction returned unsupported type '{}'\n"
-                        "Must be a Data type or a Mapping of {{string: Data}}".format(result.__class__))
-
-        return exit_status
+        return ExitCode()

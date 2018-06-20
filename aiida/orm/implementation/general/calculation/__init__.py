@@ -345,10 +345,13 @@ class AbstractCalculation(Sealable):
 
     def _set_exit_message(self, message):
         """
-        Set the exit message of the Calculation
+        Set the exit message of the Calculation, if None nothing will be done
 
         :param message: a string message
         """
+        if message is None:
+            return
+
         if not isinstance(message, basestring):
             raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
 

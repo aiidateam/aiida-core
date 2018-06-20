@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import inspect
 import plumpy
 import plumpy.test_utils
-import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
@@ -26,7 +24,6 @@ from aiida import work
 from aiida.work import Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
-from aiida.work.process_spec import ExitCode
 
 from . import utils
 
@@ -128,6 +125,7 @@ class PotentialFailureWorkChain(WorkChain):
         super(PotentialFailureWorkChain, cls).define(spec)
         spec.input('success', valid_type=Bool)
         spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
+        spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(
             cls.failure,
             cls.success
@@ -138,7 +136,7 @@ class PotentialFailureWorkChain(WorkChain):
             if self.inputs.through_exit_code.value is False:
                 return self.EXIT_STATUS
             else:
-                return ExitCode(self.EXIT_STATUS, self.EXIT_MESSAGE)
+                return self.exit_codes.EXIT_STATUS
 
     def success(self):
         return
@@ -580,10 +578,14 @@ class TestWorkchain(AiidaTestCase):
                 pass
 
         wc = ExitCodeWorkChain()
-        self.assertEquals(wc.exit_code('SOME_EXIT_CODE').status, status)
 
-        with self.assertRaises(ValueError):
-            wc.exit_code('NON_EXISTENT_ERROR')
+        # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
+        self.assertEquals(wc.exit_codes(status).status, status)
+        self.assertEquals(wc.exit_codes(label).status, status)
+        self.assertEquals(wc.exit_codes.SOME_EXIT_CODE.status, status)
+
+        with self.assertRaises(AttributeError):
+            wc.exit_codes.NON_EXISTENT_ERROR
 
         self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)
         self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)
@@ -1131,4 +1133,3 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
             }
         )
-

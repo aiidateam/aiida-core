@@ -91,36 +91,15 @@ class WorkChain(Process):
         self.calc.set_stepper_state_info(str(self._stepper))
 
     @classproperty
-    def exit_codes(cls):
+    def exit_codes(self):
         """
-        Return the exit codes defined for the ProcessSpec of this WorkChain
+        Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
+        The namespace supports getitem and getattr operations with an ExitCode label to retrieve a specific code.
+        Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
 
-        :returns: list of ExitCode named tuples
+        :returns: ExitCodesNamespace of ExitCode named tuples
         """
-        return cls.spec().exit_codes
-
-    def exit_code(self, identifier):
-        """
-        Return a specific exit code identified by either its exit status or label
-
-        :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as
-            the exit code status, otherwise it be interpreted as the exit code label
-        :returns: an ExitCode named tuple
-        :raises ValueError: if no exit code with the given label is defined for this process
-        """
-        if isinstance(identifier, int):
-            for label, exit_code in self.spec().exit_codes.iteritems():
-                if exit_code.status == identifier:
-                    return exit_code
-            else:
-                raise ValueError('the exit code status {} does not correspond to a valid exit code')
-        else:
-            try:
-                exit_code = self.spec().exit_codes[identifier]
-            except KeyError:
-                raise ValueError('the exit code label {} does not correspond to a valid exit code')
-            else:
-                return exit_code
+        return self.spec().exit_codes
 
     def insert_awaitable(self, awaitable):
         """

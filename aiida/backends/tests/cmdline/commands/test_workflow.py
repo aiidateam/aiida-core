@@ -32,21 +32,21 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_list_default(self):
         result = self.runner.invoke(workflow_list, [])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(str(self.workflow.pk), result.output)
         self.assertIn(str(self.other_workflow.pk), result.output)
         self.assertNotIn(str(self.done_workflow.pk), result.output)
 
     def test_workflow_list_workflows(self):
         result = self.runner.invoke(workflow_list, ['--workflows={}'.format(self.workflow.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(str(self.workflow.pk), result.output)
         self.assertNotIn(str(self.other_workflow.pk), result.output)
         self.assertNotIn(str(self.done_workflow.pk), result.output)
 
     def test_workflow_list_states(self):
         result = self.runner.invoke(workflow_list, ['--all-states'])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(str(self.workflow.pk), result.output)
         self.assertIn(str(self.other_workflow.pk), result.output)
         self.assertIn(str(self.done_workflow.pk), result.output)
@@ -58,7 +58,7 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         results.append(self.runner.invoke(workflow_list, ['--depth=2']))
 
         for result in results:
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, msg=debug_msg(result))
 
         self.assertTrue(len(results[0].output) < len(results[1].output))
         self.assertTrue(len(results[1].output) < len(results[2].output))

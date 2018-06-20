@@ -50,21 +50,6 @@ class Workflow(VerdiCommandWithSubcommands):
         verdi()  # pylint: disable=no-value-for-parameter
 
 
-@with_dbenv()
-def get_all_workflows(all_states=True):
-    """Get a list of workflows, by default excluding those in FINISHED and ERROR state."""
-    from aiida.orm import Workflow as Workflow_
-    from aiida.common.datastructures import wf_states
-    workflows = []
-    if all_states:
-        workflows = Workflow_.query()
-    else:
-        for state in wf_states:
-            if state not in [u'FINISHED', u'ERROR']:
-                workflows.extend(Workflow_.query(state=unicode(state)))
-    return [workflow for workflow in workflows]
-
-
 @verdi_workflow.command('logshow')
 @click.argument('workflows', type=LegacyWorkflowParamType(), nargs=-1)
 @deprecated_command(DEPRECATION_MSG)
@@ -137,10 +122,10 @@ def workflow_report(workflow):
     help='show only steps down to a depth of DEPTH levels in subworkflows (0 means only the parent)')  # yapf: disable
 @click.option(
     '-p', '--past-days', type=int, help='add a filter to show only workflows created in the past PAST_DAYS days')
-@click.option('-W', '--workflows', type=LegacyWorkflowParamType(), cls=MultipleValueOption,
+@click.option('-W', '--workflows', default=[], type=LegacyWorkflowParamType(), cls=MultipleValueOption,
     help='limit the listing to these workflows')  # yapf: disable
-@with_dbenv()
 @deprecated_command(DEPRECATION_MSG)
+@with_dbenv()
 def workflow_list(short, all_states, depth, past_days, workflows):
     """List legacy workflows"""
     from aiida.backends.utils import get_workflow_list
@@ -150,9 +135,6 @@ def workflow_list(short, all_states, depth, past_days, workflows):
 
     backend = construct_backend()
     current_user = backend.users.get_automatic_user()
-
-    if not workflows:
-        workflows = get_all_workflows(all_states=all_states)
 
     wf_list = get_workflow_list(
         [workflow.pk for workflow in workflows], user=current_user, all_states=all_states, n_days_ago=past_days)

@@ -69,7 +69,7 @@ def get_all_workflows(all_states=True):
 @click.argument('workflows', type=LegacyWorkflowParamType(), nargs=-1)
 @deprecated_command(DEPRECATION_MSG)
 def workflow_logshow(workflows):
-    """Show the for each in a list of WORKFLOWS."""
+    """Show the log for each workflow in a list of WORKFLOWS."""
     from aiida.backends.utils import get_log_messages
     for workflow in workflows:
         log_messages = get_log_messages(workflow)
@@ -83,9 +83,9 @@ def workflow_logshow(workflows):
             echo.echo('*** Report is empty')
 
         if log_messages:
-            print '*** {} LOG MESSAGES:'.format(len(log_messages))
+            echo.echo('*** {} LOG MESSAGES:'.format(len(log_messages)))
         else:
-            print '*** NO LOG MESSAGES'
+            echo.echo('*** NO LOG MESSAGES')
 
         for log in log_messages:
             echo.echo('+-> {} at {}'.format(log['levelname'], log['time']))

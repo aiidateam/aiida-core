@@ -166,7 +166,7 @@ def deprecated_command(message):
 
         Example::
 
-            @click.commad()
+            @click.command()
             @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
             def mycommand():
                 pass

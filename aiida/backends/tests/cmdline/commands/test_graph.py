@@ -8,6 +8,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import graph
 
+
 def delete_temporary_file(filepath):
     """
     Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
@@ -23,13 +24,14 @@ def delete_temporary_file(filepath):
         else:
             pass
 
+
 class TestVerdiGraph(AiidaTestCase):
-    
+
     @classmethod
     def setUpClass(cls):
         super(TestVerdiGraph, cls).setUpClass()
-        from aiida.orm import Node, LinkType 
-       
+        from aiida.orm import Node, LinkType
+
         cls.node = Node().store()
 
     def setUp(self):
@@ -54,12 +56,12 @@ class TestVerdiGraph(AiidaTestCase):
     def test_catch_bad_pk(self):
         """
         Test that an invalid root_node pk (non-numeric, negative, or decimal),
-        or non-existant pk will produce an error        
+        or non-existant pk will produce an error 
         """
-        from aiida.orm import load_node 
-        
+        from aiida.orm import load_node
+
         # Forbidden pk
-        for root_node in ['xyz','-5','3.14'] :
+        for root_node in ['xyz', '-5', '3.14']:
             options = [root_node]
             filename = root_node + '.dot'
             try:
@@ -68,12 +70,12 @@ class TestVerdiGraph(AiidaTestCase):
                 self.assertFalse(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
-        
+
         # Non-existant pk
 
         ### Check that an arbitrary pk definately can't be loaded
         root_node = 123456789
-        try:        
+        try:
             nx = load_node(pk=root_node)
             self.assertIsNone(nx)
         except:
@@ -92,13 +94,13 @@ class TestVerdiGraph(AiidaTestCase):
         """
         Test the ancestor-depth and descendent-depth options.
         Test that they don't fail and that, if specified, they only accept 
-        positive ints        
+        positive ints 
         """
         root_node = str(self.node.pk)
         filename = root_node + '.dot'
-        
+
         # Test that the options don't fail
-        for opt in ['-a','--ancestor-depth','-d','--descendant-depth'] :
+        for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
             options = [opt, None, root_node]
             try:
                 result = self.cli_runner.invoke(graph.generate, options)
@@ -106,10 +108,10 @@ class TestVerdiGraph(AiidaTestCase):
                 self.assertTrue(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
-        
-      # Test that the options accept zero or a positive int
-        for opt in ['-a','--ancestor-depth','-d','--descendant-depth'] :
-            for value in ['0','1'] :
+
+        # Test that the options accept zero or a positive int
+        for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
+            for value in ['0', '1']:
                 options = [opt, value, root_node]
                 try:
                     result = self.cli_runner.invoke(graph.generate, options)
@@ -117,10 +119,10 @@ class TestVerdiGraph(AiidaTestCase):
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)
-        
+
         # Check the options reject any values that are not positive ints
-        for flag in ['-a','--ancestor-depth','-d','--descendant-depth'] :
-            for badvalue in ['xyz','3.14','-5'] :
+        for flag in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
+            for badvalue in ['xyz', '3.14', '-5']:
                 options = [flag, badvalue, root_node]
                 try:
                     result = self.cli_runner.invoke(graph.generate, options)
@@ -135,8 +137,8 @@ class TestVerdiGraph(AiidaTestCase):
         """
         root_node = str(self.node.pk)
         filename = root_node + '.dot'
-         
-        for flag in ['-i','--inputs','-o','--outputs'] :
+
+        for flag in ['-i', '--inputs', '-o', '--outputs']:
             options = [flag, root_node]
             try:
                 result = self.cli_runner.invoke(graph.generate, options)
@@ -151,13 +153,13 @@ class TestVerdiGraph(AiidaTestCase):
         """
         root_node = str(self.node.pk)
 
-        for option in ['-f','--output-format'] :
-            
-            # Test different formats. Could exhaustively test the formats 
-            # supported on a given OS (printed by '$ dot -T?') but here 
-            # we use the built-ins dot and canon as a minimal check that 
+        for option in ['-f', '--output-format']:
+
+            # Test different formats. Could exhaustively test the formats
+            # supported on a given OS (printed by '$ dot -T?') but here
+            # we just use the built-ins dot and canon as a minimal check that
             # the option works. After all, this test is for the cmdline.
-            for fileformat in ['dot','canon'] :
+            for fileformat in ['dot', 'canon']:
                 filename = root_node + '.' + fileformat
                 options = [option, fileformat, root_node]
                 try:
@@ -166,4 +168,3 @@ class TestVerdiGraph(AiidaTestCase):
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)
-    

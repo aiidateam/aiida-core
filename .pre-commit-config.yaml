@@ -78,7 +78,7 @@
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|
         aiida/utils/fixtures.py|
-        docs/update_req_for_rtd.py
+        docs/update_req_for_rtd.py|
       )$
 
 - repo: local

@@ -21,6 +21,10 @@ from aiida.cmdline.utils import echo
 DEPRECATION_MSG = 'Legacy workflows have been deprecated in AiiDA v1.0.'
 
 
+def format_pk(workflow):
+    return '(pk: {})'.format(workflow.pk)
+
+
 class Workflow(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA legacy worflow manager
@@ -60,10 +64,10 @@ def workflow_logshow(workflows):
         log_messages = get_log_messages(workflow)
         label_str = ' [{}]'.format(workflow.label) if workflow.label else ''
         state = workflow.get_state()
-        echo.echo('*** {pk}{label}: {state}'.format(pk=workflow.pk, label=label_str, state=state))
+        echo.echo('*** {pk}{label}: {state}'.format(pk=format_pk(workflow), label=label_str, state=state))
 
         if workflow.get_report():
-            echo.echo('Print the report with `verdi workflow report {}`'.format(workflow.pk))
+            echo.echo('Print the report with `verdi workflow report {}`'.format(format_pk(workflow)))
         else:
             echo.echo('*** Report is empty')
 
@@ -111,7 +115,7 @@ def workflow_kill(force, verbose, workflows):
 @deprecated_command(DEPRECATION_MSG)
 def workflow_report(workflow):
     """Report on a WORKFLOW (given by ID, UUID or label)."""
-    echo.echo('### WORKFLOW pk: {} ###'.format(workflow.pk))
+    echo.echo('### WORKFLOW {} ###'.format(format_pk(workflow)))
     echo.echo('\n'.join(workflow.get_report()))
 
 

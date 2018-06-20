@@ -60,8 +60,8 @@ def get_all_workflows(all_states=True):
         workflows = Workflow_.query()
     else:
         for state in wf_states:
-            if state not in ['FINISHED', 'ERROR']:
-                workflows.extend(Workflow_.query(state=state))
+            if state not in [u'FINISHED', u'ERROR']:
+                workflows.extend(Workflow_.query(state=unicode(state)))
     return [workflow for workflow in workflows]
 
 
@@ -89,7 +89,7 @@ def workflow_logshow(workflows):
 
         for log in log_messages:
             echo.echo('+-> {} at {}'.format(log['levelname'], log['time']))
-            echo.echo('\n'.join(['|\t{}'.format(msg) for msg in log['message'].splitlies()]))
+            echo.echo('\n'.join(['|\t{}'.format(msg) for msg in log.get('message', '').splitlines()]))
 
 
 @verdi_workflow.command('kill')

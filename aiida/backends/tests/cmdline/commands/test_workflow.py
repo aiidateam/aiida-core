@@ -1,8 +1,13 @@
 import click
 from click.testing import CliRunner
+from traceback import format_exception
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.workflow import workflow_list, workflow_kill, workflow_report, workflow_logshow
+
+
+def debug_msg(result):
+    return ''.join(format_exception(*result.exc_info))
 
 
 class TestVerdiLegacyWorkflow(AiidaTestCase):
@@ -60,7 +65,7 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_report(self):
         result = self.runner.invoke(workflow_report, [str(self.super_workflow.uuid)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(str(self.super_workflow.pk), result.output)
 
     def test_workflow_kill(self):
@@ -81,6 +86,6 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_logshow(self):
         result = self.runner.invoke(workflow_logshow, [str(self.super_workflow.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(str(self.super_workflow.pk), result.output)
 

@@ -17,7 +17,9 @@ class ConditionalOption(click.Option):
     amount of other parameter values etc.
 
     :param required_fn: callable(ctx) -> True | False, returns True
-        if the parameter is required to have a value
+        if the parameter is required to have a value.
+        This is typically used when the condition depends on other
+        parameters specified on the command line.
     """
 
     def __init__(self, param_decls=None, required_fn=None, **kwargs):

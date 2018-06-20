@@ -34,6 +34,18 @@ class InteractiveOption(ConditionalOption):
     Intercepts certain keyword arguments to circumvent :mod:`click`'s prompting
     behaviour and define a more feature-rich one
 
+    .. note:: This class has a parameter ``required_fn`` that can be passed to its ``__init__`` (inherited
+        from the superclass :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`) and a
+        ``prompt_fn``.
+
+        - ``required_fn`` is about "is this parameter required" depending on the value of other params.
+        - ``prompt_fn`` is about "should I prompt for this value if in interactive mode" and only makes sense
+          in this class and not in :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`.
+
+        In most usecases, if I have a ``prompt_fn``, then I would like to have also (the same) ``required_fn``.
+        The implementation still makes them independent for usecases where they might be different functions
+        (e.g. if the variable is anyway not required, but you want to decide whether to prompt for it or not).
+
     Usage::
 
         import click
@@ -44,23 +56,18 @@ class InteractiveOption(ConditionalOption):
             click.echo('Labeling with label: {}'.format(label))
     """
 
-    def __init__(
-            self,
-            param_decls=None,
-            switch=None,  #
-            prompt_fn=None,
-            # empty_ok=False,
-            **kwargs):
+    def __init__(self, param_decls=None, switch=None, prompt_fn=None, **kwargs):
         """
         :param param_decls: relayed to :class:`click.Option`
         :param switch: sequence of parameter
-        :param prompt_fn: a callable that defines if the option should be asked for or not in interactive mode
+        :param prompt_fn: callable(ctx) -> True | False, returns True
+            if the option should be prompted for in interactive mode.
         """
 
         # intercept prompt kwarg; I need to pop it before calling super
         self._prompt = kwargs.pop('prompt', None)
 
-        # call super
+        # call super class here, after removing `prompt` from the kwargs.
         super(InteractiveOption, self).__init__(param_decls=param_decls, **kwargs)
 
         self.prompt_fn = prompt_fn

@@ -108,4 +108,7 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    TestRunner().run(SUITE, backend=determine_backend())
+    RESULT = TestRunner().run(SUITE, backend=determine_backend())
+
+    EXIT_CODE = int(not RESULT.wasSuccessful())
+    sys.exit(EXIT_CODE)

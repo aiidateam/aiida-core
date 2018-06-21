@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`verdi graph` commands"""
 import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_graph
@@ -30,11 +31,9 @@ class Graph(VerdiCommandWithSubcommands):
         """
         A dictionary with valid subcommands as keys and corresponding functions as values
         """
+        super(Graph, self).__init__()
 
-        self.valid_subcommands = {'generate': (self.cli, self.complete_none)}
-
-    def cli(self, *args):
-        verdi()
+        self.valid_subcommands = {'generate': (verdi, self.complete_none)}
 
 
 @verdi_graph.command('generate')
@@ -60,7 +59,7 @@ class Graph(VerdiCommandWithSubcommands):
 @decorators.with_dbenv()
 def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, output_format):
     """
-    Generate a graph given a ROOT_NODE user-specified by its pk.
+    Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
     from aiida.common.graph import draw_graph
 
@@ -71,7 +70,7 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, outpu
         format=output_format,
         include_calculation_inputs=inputs,
         include_calculation_outputs=outputs)
-    if not exit_status:
-        echo.echo_success("Output file is {}".format(output_file_name))
-    else:
+    if exit_status:
         echo.echo_critical("Failed to generate graph")
+    else:
+        echo.echo_success("Output file is {}".format(output_file_name))

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+"""Tests for verdi graph"""
 import errno
 import os
 
-import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -26,11 +26,12 @@ def delete_temporary_file(filepath):
 
 
 class TestVerdiGraph(AiidaTestCase):
+    """Tests for verdi graph"""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
         super(TestVerdiGraph, cls).setUpClass()
-        from aiida.orm import Node, LinkType
+        from aiida.orm import Node
 
         cls.node = Node().store()
 
@@ -56,9 +57,10 @@ class TestVerdiGraph(AiidaTestCase):
     def test_catch_bad_pk(self):
         """
         Test that an invalid root_node pk (non-numeric, negative, or decimal),
-        or non-existant pk will produce an error 
+        or non-existent pk will produce an error
         """
         from aiida.orm import load_node
+        from aiida.common.exceptions import NotExistent
 
         # Forbidden pk
         for root_node in ['xyz', '-5', '3.14']:
@@ -76,9 +78,9 @@ class TestVerdiGraph(AiidaTestCase):
         ### Check that an arbitrary pk definately can't be loaded
         root_node = 123456789
         try:
-            nx = load_node(pk=root_node)
-            self.assertIsNone(nx)
-        except:
+            node = load_node(pk=root_node)
+            self.assertIsNone(node)
+        except NotExistent:
             pass
         ###  Make sure verdi graph rejects this non-existant pk
         try:
@@ -93,8 +95,8 @@ class TestVerdiGraph(AiidaTestCase):
     def test_check_recursion_flags(self):
         """
         Test the ancestor-depth and descendent-depth options.
-        Test that they don't fail and that, if specified, they only accept 
-        positive ints 
+        Test that they don't fail and that, if specified, they only accept
+        positive ints
         """
         root_node = str(self.node.pk)
         filename = root_node + '.dot'

@@ -150,7 +150,7 @@ class TestVerdiWork(AiidaTestCase):
             self.assertEquals(len(get_result_lines(result)), 6)
 
             for line in get_result_lines(result):
-                self.assertIn(line, [str(calc.pk) for calc in calcs])
+                self.assertIn(line.strip(), [str(calc.pk) for calc in calcs])
 
     def test_report(self):
         """Test the report command."""

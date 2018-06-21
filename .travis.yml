@@ -26,6 +26,7 @@ addons:
             - texlive-latex-extra
             - dvipng
             - dvidvi
+            - graphviz
 
 before_install:
     # This is needed for the SSH tests (being able to ssh to localhost)

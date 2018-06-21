@@ -68,7 +68,7 @@ class SubmitJob(TransportTask):
         self._calc.logger.info('Submitting calculation<{}>'.format(self._calc.pk))
         try:
             execmanager.submit_calc(self._calc, self._authinfo, transport)
-        except Exception as exception:
+        except Exception:
             raise TransportTaskException(calc_states.SUBMISSIONFAILED)
 
 
@@ -99,11 +99,7 @@ class UpdateSchedulerState(TransportTask):
             job_done = True
             self._calc._set_scheduler_state(job_states.DONE)
         else:
-            # Has the state changed?
-            last_jobinfo = self._calc._get_last_jobinfo()
-
             execmanager.update_job_calc_from_job_info(self._calc, info)
-
             job_done = info.job_state == job_states.DONE
 
         if job_done:
@@ -136,7 +132,7 @@ class RetrieveJob(TransportTask):
         self._calc.logger.info('Retrieving completed calculation<{}>'.format(self._calc.pk))
         try:
             return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
-        except Exception as exception:
+        except Exception:
             raise TransportTaskException(calc_states.RETRIEVALFAILED)
 
 
@@ -313,7 +309,7 @@ class Waiting(plumpy.Waiting):
     def _do_kill(self):
         self._task = KillJob(self.process.calc, self.process.runner.transport)
         try:
-            killed = yield self._task
+            yield self._task
         except (InvalidOperation, RemoteOperationError):
             pass
 
@@ -362,14 +358,14 @@ class JobProcess(processes.Process):
             # Define the 'options' inputs namespace and its input ports
             spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
             spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
-                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '\
+                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                      'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
             spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
                 help='Set the wallclock in seconds asked to the scheduler')
             spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '\
-                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '\
-                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '\
+                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
+                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '
                      ' any non-scheduler command')
             spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
                 help='Set the name of the queue on the remote computer')
@@ -378,7 +374,7 @@ class JobProcess(processes.Process):
             spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
                 help='Set the calculation to use mpi')
             spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True, required=False,
-                help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '\
+                help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
                      'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
             spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
                 help='If set to true, the submission script will load the system environment variables')

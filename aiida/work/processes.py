@@ -20,7 +20,6 @@ from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState
 from aiida.common import exceptions
-from aiida.common import caching
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
@@ -216,7 +215,7 @@ class Process(plumpy.Process):
         if self._enable_persistence and not self._state.is_terminal():
             try:
                 self.runner.persister.save_checkpoint(self)
-            except plumpy.PersistenceError as e:
+            except plumpy.PersistenceError:
                 self.logger.warning(
                     "Exception trying to save checkpoint, this means you will "
                     "not be able to restart in case of a crash until the next successful checkpoint.")
@@ -235,8 +234,8 @@ class Process(plumpy.Process):
         if self._enable_persistence:
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
-            except BaseException as e:
-                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(e, traceback.format_exc()))
+            except BaseException as exception:
+                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(exception, traceback.format_exc()))
 
         try:
             self.calc.seal()
@@ -274,8 +273,7 @@ class Process(plumpy.Process):
         super(Process, self).on_output_emitting(output_port, value)
         if not isinstance(value, Data):
             raise TypeError(
-                "Values outputted from process must be instances of AiiDA Data " \
-                "types.  Got: {}".format(value.__class__)
+                'Values outputted from process must be instances of AiiDA Data types. Got: {}'.format(value.__class__)
             )
 
     # end region
@@ -325,7 +323,7 @@ class Process(plumpy.Process):
                     # returned regardless of whether they end in '_pk'
                     for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
                         self.out(name, value)
-            except exceptions.ModificationNotAllowed as exception:
+            except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
 
@@ -360,8 +358,7 @@ class Process(plumpy.Process):
 
     def update_outputs(self):
         # Link up any new outputs
-        new_outputs = set(self.outputs.keys()) - \
-                      set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
+        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
         for label in new_outputs:
             value = self.outputs[label]
             # Try making us the creator
@@ -483,7 +480,7 @@ class Process(plumpy.Process):
 
         namespace_list = self._get_namespace_list(namespace=namespace, agglomerate=agglomerate)
         for namespace in namespace_list:
-            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
+
             # The namespace None indicates the base level namespace
             if namespace is None:
                 inputs = self.inputs
@@ -496,6 +493,9 @@ class Process(plumpy.Process):
                     port_namespace = self.spec().inputs.get_port(namespace)
                 except KeyError:
                     raise ValueError('this process does not contain the "{}" input namespace'.format(namespace))
+
+            # Get the list of ports that were exposed for the given Process class in the current namespace
+            exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
 
             for name, port in port_namespace.ports.iteritems():
                 if name in inputs and name in exposed_inputs_list:
@@ -619,13 +619,15 @@ class FunctionProcess(Process):
             # Workfunctions return data types
             spec.outputs.valid_type = Data
 
-        return type(func.__name__, (FunctionProcess,),
-                    {
-                        '_func': staticmethod(func),
-                        Process.define.__name__: classmethod(_define),
-                        '_func_args': args,
-                        '_calc_node_class': calc_node_class
-                    })
+        return type(
+            func.__name__, (FunctionProcess,),
+            {
+                '_func': staticmethod(func),
+                Process.define.__name__: classmethod(_define),
+                '_func_args': args,
+                '_calc_node_class': calc_node_class
+            }
+        )
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):
@@ -707,7 +709,6 @@ class FunctionProcess(Process):
                 else:
                     raise TypeError(
                         "Workfunction returned unsupported type '{}'\n"
-                        "Must be a Data type or a Mapping of {{string: Data}}".
-                            format(result.__class__))
+                        "Must be a Data type or a Mapping of {{string: Data}}".format(result.__class__))
 
         return finish_status

@@ -363,7 +363,7 @@ class AbstractCalculation(Sealable):
         """
         return self.get_attr(self.CHECKPOINT_KEY, None)
 
-    def _set_checkpoint(self, checkpoint):
+    def set_checkpoint(self, checkpoint):
         """
         Set the checkpoint bundle set for the Calculation
 
@@ -371,7 +371,7 @@ class AbstractCalculation(Sealable):
         """
         return self._set_attr(self.CHECKPOINT_KEY, checkpoint)
 
-    def _del_checkpoint(self):
+    def del_checkpoint(self):
         """
         Delete the checkpoint bundle set for the Calculation
         """

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Convenience functions to add awaitables to the Context of a WorkChain."""
 from .awaitable import construct_awaitable, AwaitableAction
 
 __all__ = ['ToContext', 'assign_', 'append_']

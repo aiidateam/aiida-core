@@ -7,29 +7,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Components for the WorkChain concept of the workflow engine."""
 import functools
-import plumpy
-import plumpy.workchains
 
+from plumpy import auto_persist, WorkChainSpec, Wait, Continue
 from plumpy.workchains import if_, while_, return_, _PropagateReturn
-from aiida.common.extendeddicts import AttributeDict
-from aiida.orm.utils import load_node, load_workflow
-from aiida.common.lang import override
+
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.common.extendeddicts import AttributeDict
+from aiida.common.lang import override
+from aiida.orm.utils import load_node, load_workflow
 from aiida.utils.serialize import serialize_data, deserialize_data
-from . import processes
-from .awaitable import *
-from .context import *
 
-__all__ = ['WorkChain', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
+from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
+from .context import ToContext, assign_, append_
+from .process_spec import ProcessSpec
+from .processes import Process, ProcessState
+
+__all__ = ['WorkChain', 'assign_', 'append_', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
 
 
-class _WorkChainSpec(processes.ProcessSpec, plumpy.WorkChainSpec):
+class _WorkChainSpec(ProcessSpec, WorkChainSpec):
     pass
 
 
-@plumpy.auto_persist('_awaitables')
-class WorkChain(processes.Process):
+@auto_persist('_awaitables')
+class WorkChain(Process):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
@@ -47,11 +50,7 @@ class WorkChain(processes.Process):
 
     def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
         super(WorkChain, self).__init__(
-            inputs=inputs,
-            logger=logger,
-            runner=runner,
-            enable_persistence=enable_persistence
-        )
+            inputs=inputs, logger=logger, runner=runner, enable_persistence=enable_persistence)
         self._stepper = None
         self._awaitables = []
         self._context = AttributeDict()
@@ -89,7 +88,7 @@ class WorkChain(processes.Process):
 
     def on_run(self):
         super(WorkChain, self).on_run()
-        self.calc._set_stepper_state_info(str(self._stepper))
+        self.calc.set_stepper_state_info(str(self._stepper))
 
     def insert_awaitable(self, awaitable):
         """
@@ -127,7 +126,7 @@ class WorkChain(processes.Process):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 
-    def _do_step(self, wait_on=None):
+    def _do_step(self):
         """
         Execute the next step in the outline, if the stepper returns a non-finished status
         and the return value is of type ToContext, it will be added to the awaitables.
@@ -146,11 +145,11 @@ class WorkChain(processes.Process):
                 self.to_context(**return_value)
 
             if self._awaitables:
-                return plumpy.Wait(self._do_step, 'Waiting before next step')
-            else:
-                return plumpy.Continue(self._do_step)
-        else:
-            return return_value
+                return Wait(self._do_step, 'Waiting before next step')
+
+            return Continue(self._do_step)
+
+        return return_value
 
     def on_wait(self, awaitables):
         super(WorkChain, self).on_wait(awaitables)
@@ -169,11 +168,11 @@ class WorkChain(processes.Process):
         """
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.CALCULATION:
-                fn = functools.partial(self._run_task, self.on_calculation_finished, awaitable)
-                self.runner.call_on_calculation_finish(awaitable.pk, fn)
+                callback = functools.partial(self._run_task, self.on_calculation_finished, awaitable)
+                self.runner.call_on_calculation_finish(awaitable.pk, callback)
             elif awaitable.target == AwaitableTarget.WORKFLOW:
-                fn = functools.partial(self._run_task, self.on_legacy_workflow_finished, awaitable)
-                self.runner.call_on_legacy_workflow_finish(awaitable.pk, fn)
+                callback = functools.partial(self._run_task, self.on_legacy_workflow_finished, awaitable)
+                self.runner.call_on_legacy_workflow_finish(awaitable.pk, callback)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
@@ -189,7 +188,7 @@ class WorkChain(processes.Process):
         """
         try:
             node = load_node(pk)
-        except (MultipleObjectsError, NotExistent) as exception:
+        except (MultipleObjectsError, NotExistent):
             raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
 
         if awaitable.outputs:
@@ -205,7 +204,7 @@ class WorkChain(processes.Process):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
-        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+        if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()
 
     def on_legacy_workflow_finished(self, awaitable, pk):
@@ -220,7 +219,7 @@ class WorkChain(processes.Process):
         """
         try:
             workflow = load_workflow(pk=pk)
-        except ValueError as exception:
+        except ValueError:
             raise ValueError('provided pk<{}> could not be resolved to a valid Workflow instance'.format(pk))
 
         if awaitable.outputs:
@@ -236,5 +235,5 @@ class WorkChain(processes.Process):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
-        if self.state == processes.ProcessState.WAITING and len(self._awaitables) == 0:
+        if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()

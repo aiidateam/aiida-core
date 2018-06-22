@@ -104,9 +104,9 @@ def print_node_summary(node):
             table.append(['process state', process_state])
 
         try:
-            table.append(['finish status', node.finish_status])
+            table.append(['exit status', node.exit_status])
         except AttributeError:
-            table.append(['finish status', None])
+            table.append(['exit status', None])
 
     try:
         computer = node.get_computer()

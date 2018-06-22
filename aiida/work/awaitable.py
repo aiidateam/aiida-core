@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-few-public-methods
+"""Enums and function for the awaitables of Processes."""
 from enum import Enum
 from plumpy.utils import AttributesDict
 from aiida.orm.calculation import Calculation
 from aiida.orm.workflow import Workflow
 
 __all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
+
+
+class Awaitable(AttributesDict):
+    """
+    An attribute dictionary that represents an action that a Process could be waiting for to finish
+    """
+    pass
 
 
 class AwaitableTarget(Enum):
@@ -21,13 +30,6 @@ class AwaitableAction(Enum):
     """
     ASSIGN = 'assign'
     APPEND = 'append'
-
-
-class Awaitable(AttributesDict):
-    """
-    This is some reference
-    """
-    pass
 
 
 def construct_awaitable(target):
@@ -48,17 +50,18 @@ def construct_awaitable(target):
     if isinstance(target, Awaitable):
         return target
 
+    if isinstance(target, Calculation):
+        awaitable_target = AwaitableTarget.CALCULATION
+    elif isinstance(target, Workflow):
+        awaitable_target = AwaitableTarget.WORKFLOW
+    else:
+        raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
+
     awaitable = Awaitable(**{
         'pk': target.pk,
         'action': AwaitableAction.ASSIGN,
+        'target': awaitable_target,
         'outputs': False,
     })
-
-    if isinstance(target, Calculation):
-        awaitable.target = AwaitableTarget.CALCULATION
-    elif isinstance(target, Workflow):
-        awaitable.target = AwaitableTarget.WORKFLOW
-    else:
-        raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
 
     return awaitable

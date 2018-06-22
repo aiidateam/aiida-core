@@ -76,8 +76,8 @@ def validate_calculations(expected_results):
     for pk, expected_dict in expected_results.iteritems():
         calc = load_node(pk)
         if not calc.is_finished_ok:
-            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
+            print 'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                pk, calc.process_state, calc.exit_status)
             print_logshow(pk)
             valid = False
 
@@ -118,8 +118,8 @@ def validate_workchains(expected_results):
 
         # I check only if this_valid, otherwise calc could not exist
         if this_valid and not calc.is_finished_ok:
-            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
+            print 'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                pk, calc.process_state, calc.exit_status)
             print_logshow(pk)
             valid = False
             this_valid = False
@@ -142,8 +142,8 @@ def validate_cached(cached_calcs):
     for calc in cached_calcs:
 
         if not calc.is_finished_ok:
-            print 'Cached calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
+            print 'Cached calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                pk, calc.process_state, calc.exit_status)
             print_logshow(pk)
             valid = False
 

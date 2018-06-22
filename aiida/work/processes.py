@@ -19,6 +19,7 @@ import traceback
 from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState
+
 from aiida.common import exceptions
 from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
@@ -30,9 +31,8 @@ from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.orm.data import Data
 from aiida.utils.serialize import serialize_data, deserialize_data
-from aiida.work.exceptions import Exit
 from aiida.work.ports import InputPort, PortNamespace
-from aiida.work.process_spec import ProcessSpec
+from aiida.work.process_spec import ProcessSpec, ExitCode
 from aiida.work.process_builder import ProcessBuilder
 from .runners import get_runner
 from . import utils
@@ -235,7 +235,7 @@ class Process(plumpy.Process):
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
             except BaseException as exception:
-                self.logger.warning("Failed to delete checkpoint: {}\n{}".format(exception, traceback.format_exc()))
+                self.logger.warning('Failed to delete checkpoint: {}\n{}'.format(exception, traceback.format_exc()))
 
         try:
             self.calc.seal()
@@ -260,7 +260,14 @@ class Process(plumpy.Process):
         Set the finish status on the Calculation node
         """
         super(Process, self).on_finish(result, successful)
-        self.calc._set_finish_status(result)
+
+        if result is None or isinstance(result, int):
+            self.calc._set_exit_status(result)
+        elif isinstance(result, ExitCode):
+            self.calc._set_exit_status(result.status)
+            self.calc._set_exit_message(result.message)
+        else:
+            raise ValueError('the result should be an integer, ExitCode or None, got {}'.format(type(result)))
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -271,9 +278,10 @@ class Process(plumpy.Process):
         :param value: The value emitted
         """
         super(Process, self).on_output_emitting(output_port, value)
+
         if not isinstance(value, Data):
             raise TypeError(
-                'Values outputted from process must be instances of AiiDA Data types. Got: {}'.format(value.__class__)
+                'Values output from process must be instances of AiiDA Data types, got {}'.format(value.__class__)
             )
 
     # end region
@@ -693,22 +701,19 @@ class FunctionProcess(Process):
             except ValueError:
                 kwargs[name] = value
 
-        try:
-            result = self._func(*args, **kwargs)
-        except Exit as exception:
-            finish_status = exception.exit_code
+        result = self._func(*args, **kwargs)
+
+        if result is None or isinstance(result, ExitCode):
+            return result
+
+        if isinstance(result, Data):
+            self.out(self.SINGLE_RETURN_LINKNAME, result)
+        elif isinstance(result, collections.Mapping):
+            for name, value in result.iteritems():
+                self.out(name, value)
         else:
-            finish_status = 0
+            raise TypeError(
+                "Workfunction returned unsupported type '{}'\n"
+                "Must be a Data type or a Mapping of {{string: Data}}".format(result.__class__))
 
-            if result is not None:
-                if isinstance(result, Data):
-                    self.out(self.SINGLE_RETURN_LINKNAME, result)
-                elif isinstance(result, collections.Mapping):
-                    for name, value in result.iteritems():
-                        self.out(name, value)
-                else:
-                    raise TypeError(
-                        "Workfunction returned unsupported type '{}'\n"
-                        "Must be a Data type or a Mapping of {{string: Data}}".format(result.__class__))
-
-        return finish_status
+        return ExitCode()

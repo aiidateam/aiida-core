@@ -393,7 +393,7 @@ def parse_results(job, retrieved_temporary_folder=None):
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.orm.calculation.job import JobCalculationFinishStatus
+    from aiida.orm.calculation.job import JobCalculationExitStatus
 
     logger_extra = get_dblogger_extra(job)
 
@@ -413,7 +413,7 @@ def parse_results(job, retrieved_temporary_folder=None):
         if isinstance(exit_code, bool) and exit_code is True:
             exit_code = 0
         elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = JobCalculationFinishStatus[calc_states.FAILED]
+            exit_code = JobCalculationExitStatus[calc_states.FAILED]
 
         for label, n in new_nodes_tuple:
             n.add_link_from(job, label=label, link_type=LinkType.CREATE)

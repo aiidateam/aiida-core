@@ -12,10 +12,10 @@ import functools
 
 from plumpy import auto_persist, WorkChainSpec, Wait, Continue
 from plumpy.workchains import if_, while_, return_, _PropagateReturn
-
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
+from aiida.common.utils import classproperty
 from aiida.orm.utils import load_node, load_workflow
 from aiida.utils.serialize import serialize_data, deserialize_data
 
@@ -89,6 +89,17 @@ class WorkChain(Process):
     def on_run(self):
         super(WorkChain, self).on_run()
         self.calc.set_stepper_state_info(str(self._stepper))
+
+    @classproperty
+    def exit_codes(self):
+        """
+        Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
+        The namespace supports getitem and getattr operations with an ExitCode label to retrieve a specific code.
+        Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
+
+        :returns: ExitCodesNamespace of ExitCode named tuples
+        """
+        return self.spec().exit_codes
 
     def insert_awaitable(self, awaitable):
         """

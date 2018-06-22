@@ -252,7 +252,7 @@ class Waiting(plumpy.Waiting):
                 raise RuntimeError("Unknown waiting command")
 
         except TransportTaskException as exception:
-            exit_status = JobCalculationExitStatus[exception.calc_state]
+            exit_status = JobCalculationExitStatus[exception.calc_state].value
             raise Return(self.create_state(processes.ProcessState.FINISHED, exit_status, exit_status is 0))
         except plumpy.CancelledError:
             # A task was cancelled because the state (and process) is being killed
@@ -515,7 +515,7 @@ class JobProcess(processes.Process):
         """
         try:
             exit_code = execmanager.parse_results(self.calc, retrieved_temporary_folder)
-        except BaseException:
+        except Exception:
             try:
                 self.calc._set_state(calc_states.PARSINGFAILED)
             except exceptions.ModificationNotAllowed:

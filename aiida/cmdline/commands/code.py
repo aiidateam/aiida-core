@@ -304,8 +304,7 @@ def setup_code(non_interactive, **kwargs):
 
     try:
         code.store()
-        # pylint: disable=protected-access
-        code._reveal()  # newly setup code shall not be hidden
+        code.reveal()  # newly setup code shall not be hidden
     except ValidationError as err:
         echo.echo_critical('unable to store the code: {}. Exiting...'.format(err))
 
@@ -367,8 +366,7 @@ def reveal(codes):
     Reveal one or more hidden codes to the verdi show command
     """
     for code in codes:
-        # pylint: disable=protected-access
-        code._reveal()
+        code.reveal()
         echo.echo_success("Code '{}' revealed.".format(code.pk))
 
 

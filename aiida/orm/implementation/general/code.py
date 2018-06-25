@@ -43,20 +43,20 @@ class AbstractCode(Node):
         """
         self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
 
-    def _hide(self):
+    def hide(self):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
         self.set_extra(self.HIDDEN_KEY, True)
 
-    def _reveal(self):
+    def reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
         self.set_extra(self.HIDDEN_KEY, False)
 
-    def _is_hidden(self):
+    def is_hidden(self):
         """
         Determines whether the Code is hidden or not
         """

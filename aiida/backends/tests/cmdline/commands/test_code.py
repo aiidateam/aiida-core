@@ -127,15 +127,13 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.runner.invoke(hide, [str(self.code.pk)])
         self.assertIsNone(result.exception)
 
-        # pylint: disable=protected-access
-        self.assertTrue(self.code._is_hidden())
+        self.assertTrue(self.code.is_hidden())
 
     def test_reveal_one(self):
         result = self.runner.invoke(reveal, [str(self.code.pk)])
         self.assertIsNone(result.exception)
 
-        # pylint: disable=protected-access
-        self.assertFalse(self.code._is_hidden())
+        self.assertFalse(self.code.is_hidden())
 
     def test_relabel_code(self):
         result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code'])
@@ -185,8 +183,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertTrue('comp' in result.output, 'computer name should be included')
 
     def test_code_list_hide(self):
-        # pylint: disable=protected-access
-        self.code._hide()
+        self.code.hide()
         options = ['-A']
         result = self.runner.invoke(code_list, options)
         self.assertIsNone(result.exception)

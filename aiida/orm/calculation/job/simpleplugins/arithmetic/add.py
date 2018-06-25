@@ -23,6 +23,9 @@ class ArithmeticAddCalculation(JobCalculation):
         self._required_inputs = ['code', 'x', 'y']
         self._optional_inputs = []
 
+        self._DEFAULT_INPUT_FILE = self._INPUT_FILE_NAME
+        self._DEFAULT_OUTPUT_FILE = self._OUTPUT_FILE_NAME
+
     @classproperty
     def _use_methods(cls):
         """

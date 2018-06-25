@@ -226,7 +226,7 @@ class OrmEntityLoader(object):
         As one can see, the user will always be able to include at least one dash of the UUID identifier to prevent it
         from being interpreted as an ID. For the potential ambiguities in LABEL identifiers, we had to introduce a
         special marker to provide a surefire way of breaking any ambiguity that may arise. Adding an exclamation point
-        will break the normal strategy and the identifier will directly be interpreted as a LABEL identifier. 
+        will break the normal strategy and the identifier will directly be interpreted as a LABEL identifier.
 
         :param value: the value of the identifier
         :returns: the identifier and identifier type
@@ -466,3 +466,31 @@ class NodeEntityLoader(OrmEntityLoader):
         qb.append(cls=classes, tag='node', project=['*'], filters={'label': {'==': identifier}})
 
         return qb
+
+
+class LegacyWorkflowLoader(OrmEntityLoader):
+
+    @classmethod
+    def load_entity(cls, identifier, identifier_type=None, sub_classes=None, query_with_dashes=True):
+        from aiida.orm import Workflow
+
+        if identifier_type is None:
+            identifier, identifier_type = cls.infer_identifier_type(identifier)
+
+        if identifier_type == IdentifierType.ID:
+            result = Workflow.query(pk=identifier)
+        elif identifier_type == IdentifierType.UUID:
+            result = Workflow.query(uuid=identifier)
+        elif identifier_type == IdentifierType.LABEL:
+            result = Workflow.query(label=identifier)
+
+        result = [workflow for workflow in result]
+
+        if len(result) > 1:
+            error = 'multiple legacy workflows found with {} <{}>'.format(identifier_type, identifier)
+            raise MultipleObjectsError(error)
+        elif not result:
+            error = 'no legacy workflow found with {} <{}>'.format(identifier_type, identifier)
+            raise NotExistent(error)
+
+        return result[0]

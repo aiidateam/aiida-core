@@ -496,7 +496,8 @@ class Workflow(AbstractWorkflow):
           This is not the case anymore.
         :return: a list of strings
         """
-        return self.dbworkflowinstance.report.splitlines()
+        report = self.dbworkflowinstance.report or ''
+        return report.splitlines()
 
     def clear_report(self):
         """

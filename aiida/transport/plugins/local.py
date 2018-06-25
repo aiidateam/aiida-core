@@ -15,6 +15,7 @@
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+import errno
 import os
 import shutil
 import subprocess
@@ -373,11 +374,13 @@ class LocalTransport(Transport):
         the_path = os.path.join(self.curdir, path)
         try:
             shutil.rmtree(the_path)
-        except OSError as e:
-            if e.errno == 20:
+        except OSError as exception:
+            if exception.errno == errno.ENOENT:
+                pass
+            elif exception.errno == errno.ENOTDIR:
                 os.remove(the_path)
             else:
-                raise e
+                raise IOError(exception)
 
     def get(self, source, destination, dereference=True, overwrite=True, ignore_nonexisting=False):
         """

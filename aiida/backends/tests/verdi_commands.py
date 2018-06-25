@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=missing-docstring,invalid-name
+# pylint: disable=missing-docstring,invalid-name,protected-access
 
 import mock
 from click.testing import CliRunner
@@ -92,63 +92,6 @@ user_2 = {
 }
 
 
-# pylint: disable=protected-access
-class TestVerdiCalculationCommands(AiidaTestCase):
-
-    # pylint: disable=no-member
-    # pylint says: Method 'computer' has no 'name' / 'id' member
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create some calculations with various states
-        """
-        super(TestVerdiCalculationCommands, cls).setUpClass()
-
-        from aiida.orm import JobCalculation
-
-        # Create some calculation
-        calc1 = JobCalculation(
-            computer=cls.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc1._set_state(calc_states.TOSUBMIT)
-        calc2 = JobCalculation(
-            computer=cls.computer.name, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc2._set_state(calc_states.COMPUTED)
-        calc3 = JobCalculation(
-            computer=cls.computer.id, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc3._set_state(calc_states.FINISHED)
-
-    def test_calculation_list(self):
-        """
-        Do some calculation listing to ensure that verdi calculation list
-        works and gives at least to some extent the expected results.
-        """
-        from aiida.cmdline.commands.calculation import Calculation
-        calc_cmd = Calculation()
-
-        with Capturing() as output:
-            calc_cmd.calculation_list()
-
-        out_str = ''.join(output)
-        self.assertTrue(calc_states.TOSUBMIT in out_str, 'TOSUBMIT state not found in: {}'.format(out_str))
-        self.assertTrue(calc_states.COMPUTED in out_str, 'COMPUTED state not found in: {}'.format(out_str))
-        self.assertFalse(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
-
-        with Capturing() as output:
-            calc_cmd.calculation_list(*['-a'])
-
-        out_str = ''.join(output)
-        self.assertTrue(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
-
-
 # pylint: disable=abstract-method
 class Wf(WorkChain):
     """
@@ -163,48 +106,6 @@ class Wf(WorkChain):
 
     def create_logs(self):
         self.report(self.TEST_STRING)
-
-
-class TestVerdiWorkCommands(AiidaTestCase):
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create a simple workchain and run it.
-        """
-        super(TestVerdiWorkCommands, cls).setUpClass()
-        from aiida.work.launch import run_get_pid
-
-        cls.test_string = Wf.TEST_STRING
-
-        _, cls.workchain_pid = run_get_pid(Wf)
-
-    def test_report(self):
-        """
-        Test that 'verdi work report' contains the report message.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid)], catch_exceptions=False)
-        self.assertTrue(self.test_string in result.output)
-
-    def test_report_debug(self):
-        """
-        Test that 'verdi work report' contains the report message when called with levelname DEBUG.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'DEBUG'], catch_exceptions=False)
-        self.assertTrue(self.test_string in result.output)
-
-    def test_report_error(self):
-        """
-        Test that 'verdi work report' does not contain the report message when called with levelname ERROR.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'ERROR'], catch_exceptions=False)
-        self.assertTrue(self.test_string not in result.output)
 
 
 # pylint: disable=no-self-use

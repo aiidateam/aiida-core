@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Provide reusable options, helping to keep interfaces consistent."""
 # yapf: disable
 import click
 
@@ -10,19 +11,47 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 
 
 def valid_process_states():
-    """
-    Return a list of valid values for the ProcessState enum.
-    """
+    """Return a list of valid values for the ProcessState enum."""
     from plumpy import ProcessState
     return ([state.value for state in ProcessState])
+
+
+def valid_calculation_states():
+    """Return a list of valid values for the CalcState enum."""
+    from aiida.common.datastructures import calc_states
+    return ([state for state in calc_states])
+
+
+def active_calculation_states():
+    """Return a list of calculation states that are considered active."""
+    from aiida.common.datastructures import calc_states
+    return ([
+        calc_states.NEW,
+        calc_states.TOSUBMIT,
+        calc_states.SUBMITTING,
+        calc_states.WITHSCHEDULER,
+        calc_states.COMPUTED,
+        calc_states.RETRIEVING,
+        calc_states.PARSING,
+    ])
+
+
+def active_process_states():
+    """Return a list of process states that are considered active."""
+    from plumpy import ProcessState
+    return ([
+        ProcessState.CREATED.value,
+        ProcessState.WAITING.value,
+        ProcessState.RUNNING.value,
+    ])
 
 
 CALCULATION = OverridableOption('-C', '--calculation', 'calculation', type=types.CalculationParamType(),
     help='a single calculation identified by its ID or UUID')
 
 
-CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption, type=types.CalculationParamType(),
-    help='one or multiple calculations identified by their ID or UUID')
+CALCULATIONS = OverridableOption('-C', '--calculations', 'calculations', cls=MultipleValueOption,
+    type=types.CalculationParamType(), help='one or multiple calculations identified by their ID or UUID')
 
 
 CODE = OverridableOption('-X', '--code', 'code', type=types.CodeParamType(),
@@ -89,17 +118,23 @@ APPEND_TEXT = OverridableOption('--append-text', type=str, default='',
     help='bash script to be executed after an action has completed')
 
 
-LABEL = OverridableOption('-L', '--label', help='short name to be used as a label')
+LABEL = OverridableOption('-L', '--label', type=click.STRING, metavar='LABEL', help='short name to be used as a label')
 
 
-DESCRIPTION = OverridableOption('-D', '--description', help='a detailed description')
+DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metavar='DESCRIPTION', help='a detailed description', default="", required=False)
 
 
-INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string', type=types.PluginParamType(group='calculations'))
+
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string',
+    type=types.PluginParamType(group='calculations'))
 
 
-PROCESS_STATE = OverridableOption('-S', '--process-state', 'process_state', type=types.LazyChoice(valid_process_states),
-    help='only include entries with this process state')
+CALCULATION_STATE = OverridableOption('-s', '--calculation-state', 'calculation_state', cls=MultipleValueOption, type=types.LazyChoice(valid_calculation_states),
+    help='only include entries with this calculation state', default=active_calculation_states)
+
+
+PROCESS_STATE = OverridableOption('-S', '--process-state', 'process_state', cls=MultipleValueOption, type=types.LazyChoice(valid_process_states),
+    help='only include entries with this process state', default=active_process_states)
 
 
 FINISH_STATUS = OverridableOption('-F', '--finish-status', 'finish_status', type=click.INT,
@@ -118,15 +153,32 @@ PROJECT = OverridableOption('-P', '--project', 'project', cls=MultipleValueOptio
     help='select the list of entity attributes to project')
 
 
-PAST_DAYS = OverridableOption('-p', '--past-days', 'past_days', type=click.INT, default=1, metavar='PAST_DAYS',
+ORDER_BY = OverridableOption('-o', '--order-by', 'order_by', type=click.Choice(['id', 'ctime']),
+    help='order the entries by this attribute', default='ctime', show_default=True)
+
+
+PAST_DAYS = OverridableOption('-p', '--past-days', 'past_days', type=click.INT, metavar='PAST_DAYS',
     help='only include entries created in the last PAST_DAYS number of days')
 
 
-ALL = OverridableOption('-a', '--all', 'all', is_flag=True, default=False,
+OLDER_THAN = OverridableOption('-o', '--older-than', 'older_than', type=click.INT, metavar='OLDER_THAN',
+    help='only include entries created before OLDER_THAN days ago')
+
+
+ALL = OverridableOption('-a', '--all', 'all_entries', is_flag=True, default=False,
     help='include all entries, disregarding all other filter options and flags')
 
+ALL_STATES = OverridableOption('-A', '--all-states', is_flag=True, help='do not limit to items in running state')
+
 ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, default=False,
-    help='include entries from all users')
+    help='include entries regardless of the owner')
 
 RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
     help='display only raw query results, without any headers or footers')
+
+
+HOSTNAME = OverridableOption('-H', '--hostname', help='hostname')
+
+TRANSPORT = OverridableOption('-T', '--transport', help='transport type', type=types.PluginParamType(group='transports'), required=True)
+
+SCHEDULER = OverridableOption('-S', '--scheduler', help='scheduler type', type=types.PluginParamType(group='schedulers'), required=True)

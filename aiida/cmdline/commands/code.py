@@ -673,29 +673,34 @@ def ensure_scripts(pre, post, summary):
     prompt='Installed on remote Computer?',
     cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
-@options.COMPUTER(prompt='Remote Computer', cls=InteractiveOption, required_fn=is_on_computer)
+@options.COMPUTER(prompt='Remote computer', cls=InteractiveOption, required_fn=is_on_computer, prompt_fn=is_on_computer)
 @click.option(
     '--remote-abs-path',
     prompt='Remote path',
     required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
     type=click.Path(file_okay=True),
     cls=InteractiveOption,
-    help=('[if --installed]: the (full) absolute path on the remote machine'))
+    help=('[if --on-computer]: the (full) absolute path on the remote machine'))
 @click.option(
     '--code-folder',
     prompt='Folder containing the code',
     type=click.Path(file_okay=False, exists=True, readable=True),
     required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --upload]: folder containing the executable and all other files necessary for execution of the code'))
+    help=(
+        '[if --store-upload]: folder containing the executable and all other files necessary for execution of the code')
+)
 @click.option(
     '--code-rel-path',
     prompt='Relative path of the executable',
     type=click.Path(dir_okay=False),
     required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --upload]: the relative path of the executable file inside the folder ' +
-          'entered in the previous step or in --code-folder'))
+    help=('[if --store-upload]: the relative path of the executable file ' + \
+          'inside the folder entered in the previous step or in --code-folder'))
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()

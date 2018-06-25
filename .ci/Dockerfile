@@ -45,6 +45,7 @@ RUN apt-get update \
     texlive-latex-extra \
     dvipng \
     dvidvi \
+    graphviz \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean all
 

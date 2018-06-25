@@ -15,7 +15,7 @@ import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_code
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
@@ -676,10 +676,10 @@ def ensure_scripts(pre, post, summary):
 @options.COMPUTER(prompt='Remote computer', cls=InteractiveOption, required_fn=is_on_computer, prompt_fn=is_on_computer)
 @click.option(
     '--remote-abs-path',
-    prompt='Remote path',
+    prompt='Remote absolute path',
     required_fn=is_on_computer,
     prompt_fn=is_on_computer,
-    type=click.Path(file_okay=True),
+    type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
     help=('[if --on-computer]: the (full) absolute path on the remote machine'))
 @click.option(

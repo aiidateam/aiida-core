@@ -22,131 +22,11 @@ from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import edit_pre_post
 from aiida.control.code import CodeBuilder
 
-#def cmdline_fill(attributes, store, print_header=True):
-#    import inspect
-#    import readline
-#    from aiida.common.exceptions import ValidationError
-#
-#    if print_header:
-#        print "At any prompt, type ? to get some help."
-#        print "---------------------------------------"
-#
-#    for internal_name, name, desc, multiline in (attributes):
-#
-#        getter_name = '_get_{}_string'.format(internal_name)
-#        try:
-#            getter = dict(inspect.getmembers(store))[getter_name]
-#        except KeyError:
-#            print >> sys.stderr, ("Internal error! " "No {} getter defined in Computer".format(getter_name))
-#            sys.exit(1)
-#        previous_value = getter()
-#
-#        setter_name = '_set_{}_string'.format(internal_name)
-#        try:
-#            setter = dict(inspect.getmembers(store))[setter_name]
-#        except KeyError:
-#            print >> sys.stderr, ("Internal error! " "No {} setter defined in Computer".format(setter_name))
-#            sys.exit(1)
-#
-#        valid_input = False
-#        while not valid_input:
-#            if multiline:
-#                newlines = []
-#                print "=> {}: ".format(name)
-#                print "   # This is a multiline input, press CTRL+D on a"
-#                print "   # empty line when you finish"
-#
-#                try:
-#                    for l in previous_value.splitlines():
-#                        while True:
-#                            readline.set_startup_hook(lambda: readline.insert_text(l))
-#                            input_txt = raw_input()
-#                            if input_txt.strip() == '?':
-#                                print ["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')]
-#                                continue
-#                            else:
-#                                newlines.append(input_txt)
-#                                break
-#
-#                    # Reset the hook (no default text printed)
-#                    readline.set_startup_hook()
-#
-#                    print "   # ------------------------------------------"
-#                    print "   # End of old input. You can keep adding     "
-#                    print "   # lines, or press CTRL+D to store this value"
-#                    print "   # ------------------------------------------"
-#
-#                    while True:
-#                        input_txt = raw_input()
-#                        if input_txt.strip() == '?':
-#                            print "\n".join(["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')])
-#                            continue
-#                        else:
-#                            newlines.append(input_txt)
-#                except EOFError:
-#                    # Ctrl+D pressed: end of input.
-#                    pass
-#
-#                input_txt = "\n".join(newlines)
-#
-#            else:  # No multiline
-#                readline.set_startup_hook(lambda: readline.insert_text(previous_value))
-#                input_txt = raw_input("=> {}: ".format(name))
-#                if input_txt.strip() == '?':
-#                    print "HELP:", desc
-#                    continue
-#
-#            try:
-#                setter(input_txt)
-#                valid_input = True
-#            except ValidationError as e:
-#                print >> sys.stderr, "Invalid input: {}".format(e.message)
-#                print >> sys.stderr, "Enter '?' for help".format(e.message)
+# pylint: disable=fixme
+#TODO: This may be partly used in verdi code duplicate
 
 #class CodeInputValidationClass(object):
-#    """
-#    A class with information for the validation of input text of Codes
-#    """
-#    # It is a list of tuples. Each tuple has three elements:
-#    # 1. an internal name (used to find the
-#    # _set_internalname_string, and get_internalname_string methods)
-#    # 2. a short human-readable name
-#    # 3. A long human-readable description
-#    # 4. True if it is a multi-line input, False otherwise
-#    # IMPORTANT!
-#    # for each entry, remember to define the
-#    # _set_internalname_string and get_internalname_string methods.
-#    # Moreover, the _set_internalname_string method should also immediately
-#    # validate the value.
-#
-#    #pylint: disable=no-self-use
-#    _conf_attributes_relabel = [
-#        (
-#            "label",
-#            "Label",
-#            "A label to refer to this code",
-#            False,
-#        ),
-#        (
-#            "description",
-#            "Description",
-#            "A human-readable description of this code",
-#            False,
-#        ),
-#    ]
 #    _conf_attributes_start = [
-#        (
-#            "label",
-#            "Label",
-#            "A label to refer to this code",
-#            False,
-#        ),
-#        (
-#            "description",
-#            "Description",
-#            "A human-readable description of this code",
-#            False,
-#        ),
 #        (
 #            "is_local",
 #            "Local",
@@ -156,320 +36,26 @@ from aiida.control.code import CodeBuilder
 #            "is just a link to a remote computer and an absolute path there",
 #            False,
 #        ),
-#        (
-#            "input_plugin",
-#            "Default input plugin",
-#            "A string of the default input plugin to be used with this code "
-#            "that is recognized by the CalculationFactory. Use the "
-#            "'verdi calculation plugins' command to get the list of existing"
-#            "plugins",
-#            False,
-#        ),
-#    ]
-#    _conf_attributes_local = [
-#        (
-#            "folder_with_code",
-#            "Folder with the code",
-#            "The folder on your local computer in which there are the files to be "
-#            "stored in the AiiDA repository and then copied over for every "
-#            "submitted calculation",
-#            False,
-#        ),
-#        (
-#            "local_rel_path",
-#            "Relative path of the executable",
-#            "The relative path of the executable file inside the folder entered "
-#            "in the previous step",
-#            False,
-#        ),
-#    ]
-#    _conf_attributes_remote = [
-#        (
-#            "computer",
-#            "Remote computer name",
-#            "The computer name as on which the code resides, as stored in the "
-#            "AiiDA database",
-#            False,
-#        ),
-#        (
-#            "remote_abs_path",
-#            "Remote absolute path",
-#            "The (full) absolute path on the remote machine",
-#            False,
-#        ),
-#    ]
-#    _conf_attributes_end = [
-#        (
-#            "prepend_text",
-#            "Text to prepend to each command execution\n"
-#            "FOR INSTANCE, MODULES TO BE LOADED FOR THIS CODE",
-#            "This is a multiline string, whose content will be prepended inside\n"
-#            "the submission script before the real execution of the job. It is\n"
-#            "your responsibility to write proper bash code!",
-#            True,
-#        ),
-#        (
-#            "append_text",
-#            "Text to append to each command execution",
-#            "This is a multiline string, whose content will be appended inside\n"
-#            "the submission script after the real execution of the job. It is\n"
-#            "your responsibility to write proper bash code!",
-#            True,
-#        ),
 #    ]
 #
-#    label = ""
 #
-#    def _get_label_string(self):
-#        return self.label
+#     def load_from_code(self, code):
+#         from aiida.orm import Code as AiidaOrmCode
 #
-#    def _set_label_string(self, string):
-#        """
-#        Set the label starting from a string.
-#        """
-#        self._label_validator(string)
-#        self.label = string
+#         if not isinstance(code, AiidaOrmCode):
+#             raise ValueError("code is not a valid Code instance")
 #
-#    def _label_validator(self, label):
-#        """
-#        Validates the label.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#
-#        if not label.strip():
-#            raise ValidationError("No label specified")
-#
-#        if "@" in label:
-#            raise ValidationError("Can not use '@' in label")
-#
-#    description = ""
-#
-#    def _get_description_string(self):
-#        return self.description
-#
-#    def _set_description_string(self, string):
-#        """
-#        Set the description starting from a string.
-#        """
-#        self._description_validator(string)
-#        self.description = string
-#
-#    def _description_validator(self, folder_with_code):
-#        """
-#        Validates the folder_with_code.
-#        """
-#        pass
-#
-#    folder_with_code = ""
-#
-#    def _get_folder_with_code_string(self):
-#        return self.folder_with_code
-#
-#    def _set_folder_with_code_string(self, string):
-#        """
-#        Set the folder_with_code starting from a string.
-#        """
-#        self._folder_with_code_validator(string)
-#        self.folder_with_code = string
-#
-#    def _folder_with_code_validator(self, folder_with_code):
-#        """
-#        Validates the folder_with_code.
-#        """
-#        import os.path
-#        from aiida.common.exceptions import ValidationError
-#
-#        if not os.path.isdir(folder_with_code):
-#            raise ValidationError("'{}' is not a valid directory".format(folder_with_code))
-#
-#    local_rel_path = ""
-#
-#    def _get_local_rel_path_string(self):
-#        return self.local_rel_path
-#
-#    def _set_local_rel_path_string(self, string):
-#        """
-#        Set the local_rel_path starting from a string.
-#        """
-#        self._local_rel_path_validator(string)
-#        self.local_rel_path = string
-#
-#    def _local_rel_path_validator(self, local_rel_path):
-#        """
-#        Validates the local_rel_path.
-#        """
-#        import os.path
-#        from aiida.common.exceptions import ValidationError
-#
-#        if not os.path.isfile(os.path.join(self.folder_with_code, local_rel_path)):
-#            raise ValidationError("'{}' is not a valid file within '{}'".format(local_rel_path, self.folder_with_code))
-#
-#    computer = None
-#
-#    def _get_computer_string(self):
-#        if self.computer is None:
-#            return ""
-#        else:
-#            return self.computer.name
-#
-#    def _set_computer_string(self, string):
-#        """
-#        Set the computer starting from a string.
-#        """
-#        from aiida.common.exceptions import ValidationError, NotExistent
-#        from aiida.orm import Computer as AiidaOrmComputer
-#
-#        try:
-#            computer = AiidaOrmComputer.get(string)
-#        except NotExistent:
-#            raise ValidationError("Computer with name '{}' not found in " "DB".format(string))
-#
-#        self._computer_validator(computer)
-#        self.computer = computer
-#
-#    def _computer_validator(self, computer):
-#        """
-#        Validates the computer.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#        from aiida.orm import Computer as AiidaOrmComputer
-#
-#        if not isinstance(computer, AiidaOrmComputer):
-#            raise ValidationError("The computer is not a valid Computer instance")
-#
-#    remote_abs_path = ""
-#
-#    def _get_remote_abs_path_string(self):
-#        return self.remote_abs_path
-#
-#    def _set_remote_abs_path_string(self, string):
-#        """
-#        Set the remote_abs_path starting from a string.
-#        """
-#        self._remote_abs_path_validator(string)
-#        self.remote_abs_path = string
-#
-#    def _remote_abs_path_validator(self, remote_abs_path):
-#        """
-#        Validates the remote_abs_path.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#        import os.path
-#
-#        if not os.path.isabs(remote_abs_path):
-#            raise ValidationError("This is not a valid absolute path")
-#        if not os.path.split(remote_abs_path)[1]:
-#            raise ValidationError("This is a folder, not an executable")
-#
-#    is_local = False
-#
-#    def _get_is_local_string(self):
-#        return "True" if self.is_local else "False"
-#
-#    def _set_is_local_string(self, string):
-#        """
-#        Set the is_local starting from a string.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#
-#        upper_string = string.upper()
-#        if upper_string in ['YES', 'Y', 'T', 'TRUE']:
-#            is_local = True
-#        elif upper_string in ['NO', 'N', 'F', 'FALSE']:
-#            is_local = False
-#        else:
-#            raise ValidationError("Invalid value '{}' for the is_local variable, must " "be a boolean".format(string))
-#
-#        self._is_local_validator(is_local)
-#        self.is_local = is_local
-#
-#    def _is_local_validator(self, is_local):
-#        """
-#        Validates the is_local.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#
-#        if not isinstance(is_local, bool):
-#            raise ValidationError("Invalid value '{}' for the is_local variable, must "
-#                                  "be a boolean".format(str(is_local)))
-#
-#    input_plugin = None
-#
-#    def _get_input_plugin_string(self):
-#        """
-#        Return the input plugin string
-#        """
-#        return self.input_plugin
-#
-#    def _set_input_plugin_string(self, string):
-#        """
-#        Set the input_plugin starting from a string.
-#        """
-#        input_plugin = string.strip()
-#
-#        if input_plugin.lower == "none":
-#            input_plugin = None
-#
-#        self._input_plugin_validator(input_plugin)
-#        self.input_plugin = input_plugin
-#
-#    def _input_plugin_validator(self, input_plugin):
-#        """
-#        Validates the input_plugin, checking it is in the list of existing plugins.
-#        """
-#        from aiida.common.exceptions import ValidationError
-#        from aiida.plugins.entry_point import get_entry_point_names
-#
-#        if input_plugin is None:
-#            return
-#
-#        if input_plugin not in get_entry_point_names('aiida.calculations'):
-#            raise ValidationError("Invalid value '{}' for the input_plugin "
-#                                  "variable, it is not among the existing plugins".format(str(input_plugin)))
-#
-#    prepend_text = ""
-#
-#    def create_code(self):
-#        """
-#        Create a code with the information contained in this class,
-#        BUT DOES NOT STORE IT.
-#        """
-#        import os.path
-#        from aiida.orm import Code as AiidaOrmCode
-#
-#        if self.is_local:
-#            file_list = [
-#                os.path.realpath(os.path.join(self.folder_with_code, f)) for f in os.listdir(self.folder_with_code)
-#            ]
-#            code = AiidaOrmCode(local_executable=self.local_rel_path, files=file_list)
-#        else:
-#            code = AiidaOrmCode(remote_computer_exec=(self.computer, self.remote_abs_path))
-#
-#        code.label = self.label
-#        code.description = self.description
-#        code.set_input_plugin_name(self.input_plugin)
-#        code.set_prepend_text(self.prepend_text)
-#        code.set_append_text(self.append_text)
-#
-#        return code
-#
-#    #     def load_from_code(self, code):
-#    #         from aiida.orm import Code as AiidaOrmCode
-#    #
-#    #         if not isinstance(code, AiidaOrmCode):
-#    #             raise ValueError("code is not a valid Code instance")
-#    #
-#    #         self.label = code.label
-#    #         self.description = code.description
-#    #         # Add here also the input_plugin stuff
-#    #         self.is_local = code.is_local()
-#    #         if self.is_local:
-#    #             raise NotImplementedError
-#    #         else:
-#    #             self.computer = code.get_remote_computer()
-#    #             self.remote_abs_path = code.get_remote_exec_path()
-#    #         self.prepend_text = code.get_prepend_text()
-#    #         self.append_text = code.get_append_text()
+#         self.label = code.label
+#         self.description = code.description
+#         # Add here also the input_plugin stuff
+#         self.is_local = code.is_local()
+#         if self.is_local:
+#             raise NotImplementedError
+#         else:
+#             self.computer = code.get_remote_computer()
+#             self.remote_abs_path = code.get_remote_exec_path()
+#         self.prepend_text = code.get_prepend_text()
+#         self.append_text = code.get_append_text()
 #
 #    def set_and_validate_from_code(self, kwargs):
 #        """
@@ -510,14 +96,6 @@ from aiida.control.code import CodeBuilder
 #        if kwargs:
 #            raise ValidationError("Some parameters were not " "recognized: {}".format(kwargs))
 #        return self.create_code()
-#
-#    def ask(self):
-#        cmdline_fill(self._conf_attributes_start, store=self)
-#        if self.is_local:
-#            cmdline_fill(self._conf_attributes_local, store=self, print_header=False)
-#        else:
-#            cmdline_fill(self._conf_attributes_remote, store=self, print_header=False)
-#        cmdline_fill(self._conf_attributes_end, store=self, print_header=False)
 
 
 class Code(VerdiCommandWithSubcommands):
@@ -664,8 +242,8 @@ def ensure_scripts(pre, post, summary):
 
 
 @verdi_code.command('setup')
-@options.LABEL(prompt='Label', cls=InteractiveOption)
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
+@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
 @click.option(
     '--on-computer/--store-upload',
     is_eager=False,
@@ -673,7 +251,12 @@ def ensure_scripts(pre, post, summary):
     prompt='Installed on remote Computer?',
     cls=InteractiveOption)
 @options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
-@options.COMPUTER(prompt='Remote computer', cls=InteractiveOption, required_fn=is_on_computer, prompt_fn=is_on_computer)
+@options.COMPUTER(
+    prompt='Computer',
+    cls=InteractiveOption,
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    help='Name of the computer, on which the code resides')
 @click.option(
     '--remote-abs-path',
     prompt='Remote absolute path',
@@ -681,7 +264,7 @@ def ensure_scripts(pre, post, summary):
     prompt_fn=is_on_computer,
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
-    help=('[if --on-computer]: the (full) absolute path on the remote machine'))
+    help=('[if --on-computer]: the absolute path to the executable on the remote machine'))
 @click.option(
     '--code-folder',
     prompt='Folder containing the code',
@@ -689,9 +272,7 @@ def ensure_scripts(pre, post, summary):
     required_fn=is_not_on_computer,
     prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=(
-        '[if --store-upload]: folder containing the executable and all other files necessary for execution of the code')
-)
+    help=('[if --store-upload]: code-folder containing the executable and all other files necessary for execution'))
 @click.option(
     '--code-rel-path',
     prompt='Relative path of the executable',
@@ -699,8 +280,8 @@ def ensure_scripts(pre, post, summary):
     required_fn=is_not_on_computer,
     prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --store-upload]: the relative path of the executable file ' + \
-          'inside the folder entered in the previous step or in --code-folder'))
+    help=('[if --store-upload]: the relative path of the executable ' + \
+          'inside the code-folder'))
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()

@@ -13,6 +13,7 @@
         aiida/backends/tests/cmdline/commands/test_graph.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/control/.*.py|        # must match the whole path, therefore
@@ -57,6 +58,7 @@
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_graph.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|

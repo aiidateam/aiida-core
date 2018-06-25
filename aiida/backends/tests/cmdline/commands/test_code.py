@@ -1,29 +1,27 @@
+"""Tests for the 'verdi code' command."""
 import os
 import subprocess as sp
-import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.code import (setup_code, delete,
-    hide, reveal, relabel, code_list, show)
+from aiida.cmdline.commands.code import (setup_code, delete, hide, reveal, relabel, code_list, show)
 from aiida.common.exceptions import NotExistent
 
+
+# pylint: disable=missing-docstring
 class TestVerdiCodeSetup(AiidaTestCase):
+    """Tests for the 'verdi code setup' command."""
 
     @classmethod
-    def setUpClass(cls):
-        super(TestVerdiCodeSetup, cls).setUpClass()
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiCodeSetup, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Computer
-        new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+        new_comp = Computer(
+            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
-
     def setUp(self):
-        from aiida.orm import Computer, Code
+        from aiida.orm import Computer
         self.comp = Computer.get('comp')
 
         self.runner = CliRunner()
@@ -31,7 +29,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.this_file = os.path.basename(__file__)
 
     def test_help(self):
-        result = self.runner.invoke(setup_code, ['--help'])
+        self.runner.invoke(setup_code, ['--help'])
 
     def test_reachable(self):
         output = sp.check_output(['verdi', 'code', 'setup', '--help'])
@@ -42,9 +40,8 @@ class TestVerdiCodeSetup(AiidaTestCase):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_remote'
-        user_input = '\n'.join([
-            label, 'description', 'yes', 'simpleplugins.arithmetic.add', self.comp.name,
-            '/remote/abs/path'])
+        user_input = '\n'.join(
+            [label, 'description', 'yes', 'simpleplugins.arithmetic.add', self.comp.name, '/remote/abs/path'])
         result = self.runner.invoke(setup_code, input=user_input)
         self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
@@ -55,7 +52,8 @@ class TestVerdiCodeSetup(AiidaTestCase):
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_upload'
         user_input = '\n'.join([
-            label, 'description', 'no', 'simpleplugins.arithmetic.add', self.comp.name, self.this_folder, self.this_file])
+            label, 'description', 'no', 'simpleplugins.arithmetic.add', self.comp.name, self.this_folder, self.this_file
+        ])
         result = self.runner.invoke(setup_code, input=user_input)
         self.assertIsNone(result.exception, result.output)
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
@@ -63,9 +61,11 @@ class TestVerdiCodeSetup(AiidaTestCase):
     def test_noninteractive_remote(self):
         from aiida.orm import Code
         label = 'noninteractive_remote'
-        options = ['--non-interactive', '--label={}'.format(label), '--description=description',
-                   '--on-computer', '--input-plugin=simpleplugins.arithmetic.add',
-                   '--computer={}'.format(self.comp.name), '--remote-abs-path=/remote/abs/path']
+        options = [
+            '--non-interactive', '--label={}'.format(label), '--description=description', '--on-computer',
+            '--input-plugin=simpleplugins.arithmetic.add', '--computer={}'.format(self.comp.name),
+            '--remote-abs-path=/remote/abs/path'
+        ]
         result = self.runner.invoke(setup_code, options)
         self.assertIsNone(result.exception, result.output[-1000:])
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
@@ -73,9 +73,11 @@ class TestVerdiCodeSetup(AiidaTestCase):
     def test_noninteractive_upload(self):
         from aiida.orm import Code
         label = 'noninteractive_upload'
-        options = ['--non-interactive', '--label={}'.format(label), '--description=description',
-                   '--store-upload', '--input-plugin=simpleplugins.arithmetic.add',
-                   '--code-folder={}'.format(self.this_folder), '--code-rel-path={}'.format(self.this_file)]
+        options = [
+            '--non-interactive', '--label={}'.format(label), '--description=description',
+            '--store-upload', '--input-plugin=simpleplugins.arithmetic.add', '--code-folder={}'.format(
+                self.this_folder), '--code-rel-path={}'.format(self.this_file)
+        ]
         result = self.runner.invoke(setup_code, options)
         self.assertIsNone(result.exception, result.output[-1000:])
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
@@ -97,16 +99,12 @@ class TestVerdiCodeCommands(AiidaTestCase):
     """
 
     @classmethod
-    def setUpClass(cls):
-        super(TestVerdiCodeCommands, cls).setUpClass()
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiCodeCommands, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Computer
-        new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+        new_comp = Computer(
+            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
-
 
     def setUp(self):
         from aiida.orm import Computer, Code
@@ -125,18 +123,19 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
         self.runner = CliRunner()
 
-
     def test_hide_one(self):
         result = self.runner.invoke(hide, [str(self.code.pk)])
         self.assertIsNone(result.exception)
 
-        self.assertTrue(self.code.get_extra(self.code.HIDDEN_KEY))
-        
+        # pylint: disable=protected-access
+        self.assertTrue(self.code._is_hidden())
+
     def test_reveal_one(self):
         result = self.runner.invoke(reveal, [str(self.code.pk)])
         self.assertIsNone(result.exception)
 
-        self.assertFalse(self.code.get_extra(self.code.HIDDEN_KEY))
+        # pylint: disable=protected-access
+        self.assertFalse(self.code._is_hidden())
 
     def test_relabel_code(self):
         result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code'])
@@ -146,7 +145,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertEquals(new_code.label, 'new_code')
 
     def test_relabel_code_full(self):
-        result = self.runner.invoke(relabel, [str(self.code.pk), 'new_code@comp'])
+        self.runner.invoke(relabel, [str(self.code.pk), 'new_code@comp'])
         from aiida.orm import load_node
         new_code = load_node(self.code.pk)
         self.assertEquals(new_code.label, 'new_code')
@@ -176,8 +175,9 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code.label = 'code2'
             code.store()
 
-        options = ['-A', '-a', '-o', '--input-plugin=simpleplugins.arithmetic.add',
-                   '--computer={}'.format(self.comp.name)]
+        options = [
+            '-A', '-a', '-o', '--input-plugin=simpleplugins.arithmetic.add', '--computer={}'.format(self.comp.name)
+        ]
         result = self.runner.invoke(code_list, options)
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
@@ -185,6 +185,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertTrue('comp' in result.output, 'computer name should be included')
 
     def test_code_list_hide(self):
+        # pylint: disable=protected-access
         self.code._hide()
         options = ['-A']
         result = self.runner.invoke(code_list, options)
@@ -200,4 +201,3 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.runner.invoke(show, [str(self.code.pk)])
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
-

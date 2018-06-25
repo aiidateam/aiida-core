@@ -41,7 +41,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_remote'
         user_input = '\n'.join(
-            [label, 'description', 'yes', 'simpleplugins.arithmetic.add', self.comp.name, '/remote/abs/path'])
+            [label, 'description', 'simpleplugins.arithmetic.add', 'yes', self.comp.name, '/remote/abs/path'])
         result = self.runner.invoke(setup_code, input=user_input)
         self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
@@ -51,9 +51,8 @@ class TestVerdiCodeSetup(AiidaTestCase):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_upload'
-        user_input = '\n'.join([
-            label, 'description', 'no', 'simpleplugins.arithmetic.add', self.comp.name, self.this_folder, self.this_file
-        ])
+        user_input = '\n'.join(
+            [label, 'description', 'simpleplugins.arithmetic.add', 'no', self.this_folder, self.this_file])
         result = self.runner.invoke(setup_code, input=user_input)
         self.assertIsNone(result.exception, result.output)
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
@@ -62,8 +61,8 @@ class TestVerdiCodeSetup(AiidaTestCase):
         from aiida.orm import Code
         label = 'noninteractive_remote'
         options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description', '--on-computer',
-            '--input-plugin=simpleplugins.arithmetic.add', '--computer={}'.format(self.comp.name),
+            '--non-interactive', '--label={}'.format(label), '--description=description',
+            '--input-plugin=simpleplugins.arithmetic.add', '--on-computer', '--computer={}'.format(self.comp.name),
             '--remote-abs-path=/remote/abs/path'
         ]
         result = self.runner.invoke(setup_code, options)
@@ -74,8 +73,8 @@ class TestVerdiCodeSetup(AiidaTestCase):
         from aiida.orm import Code
         label = 'noninteractive_upload'
         options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description', '--store-in-db',
-            '--input-plugin=simpleplugins.arithmetic.add', '--code-folder={}'.format(self.this_folder),
+            '--non-interactive', '--label={}'.format(label), '--description=description',
+            '--input-plugin=simpleplugins.arithmetic.add', '--store-in-db', '--code-folder={}'.format(self.this_folder),
             '--code-rel-path={}'.format(self.this_file)
         ]
         result = self.runner.invoke(setup_code, options)

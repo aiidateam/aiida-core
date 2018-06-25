@@ -244,13 +244,13 @@ def ensure_scripts(pre, post, summary):
 @verdi_code.command('setup')
 @options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
+@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
 @click.option(
     '--on-computer/--store-in-db',
     is_eager=False,
     default=True,
     prompt='Installed on target computer?',
     cls=InteractiveOption)
-@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
 @options.COMPUTER(
     prompt='Computer',
     cls=InteractiveOption,

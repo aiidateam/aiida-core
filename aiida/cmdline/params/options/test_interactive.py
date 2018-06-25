@@ -80,7 +80,7 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, [], input='?\nTEST\n')
         expected = "Opt: ?\n\tExpecting text\nOpt: TEST\nTEST\n"
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
 
     def test_prompt_help_custom(self):
         """
@@ -92,7 +92,7 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, [], input='?\nTEST\n')
         expected = "Opt: ?\n\tPlease enter some text\nOpt: TEST\nTEST\n"
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
 
     def test_prompt_simple(self):
         """
@@ -107,7 +107,7 @@ class InteractiveOptionTest(unittest.TestCase):
             expected = 'Opt: \nOpt: ?\n\thelp msg\n'
             expected += self.prompt_output(cli_input, output)
             self.assertIsNone(result.exception)
-            self.assertEqual(result.output, expected)
+            self.assertIn(expected, result.output)
 
     def strip_line(self, text):
         """returns text without the last line"""
@@ -123,10 +123,10 @@ class InteractiveOptionTest(unittest.TestCase):
             cmd = self.simple_command(type=ptype, help='help msg')
             runner = CliRunner()
             result = runner.invoke(cmd, [], input='\n?\n{}\n'.format(cli_input))
-            expected_beginning = 'Opt: \nOpt: ?\n\thelp msg\n'
-            expected_beginning += self.strip_line(self.prompt_output(cli_input))
+            expected_output = 'Opt: \nOpt: ?\n\thelp msg\n'
+            expected_output += self.strip_line(self.prompt_output(cli_input))
             self.assertIsNone(result.exception)
-            self.assertTrue(result.output.startswith(expected_beginning))
+            self.assertIn(expected_output, result.output)
 
     def test_default_value_prompt(self):
         """
@@ -277,7 +277,8 @@ class InteractiveOptionTest(unittest.TestCase):
         cmd = self.simple_command(callback=self.user_callback, type=Only42IntParamType())
         result = self.runner.invoke(cmd, [], input='23\n42\n')
         self.assertIsNone(result.exception)
-        self.assertIn('Opt: 23\nType validation: invalid', result.output)
+        self.assertIn('Opt: 23\n', result.output)
+        self.assertIn('Type validation: invalid', result.output)
         self.assertIn('Opt: 42\n42\n', result.output)
 
     def test_after_callback_default_noninteractive(self):

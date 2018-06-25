@@ -14,7 +14,7 @@ class AbsolutePathParamType(click.Path):
     def convert(self, value, param, ctx):
         newval = super(AbsolutePathParamType, self).convert(value, param, ctx)
         if not os.path.isabs(newval):
-            self.fail('Please provide an absolute path.')
+            raise click.BadParameter('path must be absolute')
         return newval
 
     def __repr__(self):

@@ -157,6 +157,9 @@ class InteractiveOption(ConditionalOption):
 
     def simple_prompt_loop(self, ctx, param, value):
         """prompt until successful conversion. dispatch control sequences"""
+        if not hasattr(ctx, 'prompt_loop_info_printed'):
+            echo.echo_info('enter "?" for help')
+            ctx.prompt_loop_info_printed = True
         while 1:
             # prompt
             value = self.prompt_func(ctx)

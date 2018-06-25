@@ -17,6 +17,7 @@ import datetime
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.common.utils import Prettifier
 from aiida.cmdline.commands.data.export import _export
+from aiida.cmdline.params import arguments
 
 @verdi_data.group('cif')
 @click.pass_context
@@ -275,3 +276,68 @@ def _export_tcod_parameters(self, parser, **kwargs):
     """
     from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
     extend_with_cmdline_parameters(parser, self.dataclass.__name__)
+
+
+import_formats = ['cif']
+@cif.command('import')
+@click.option('-f', '--format',
+              type=click.Choice(import_formats),
+              default=import_formats[0],
+              help="Type of the imported file.")
+@click.option('--file',
+              type=click.STRING,
+              default="/dev/stdin",
+              help="Path of the imported file. Reads from standard input if "
+                   "not specified.")
+def importfile(format, file):
+    import os.path
+    try:
+        node, _ = CifData.get_or_create(os.path.abspath(file))
+        print node
+    except ValueError as e:
+        print e
+
+
+def _deposit_tcod(node, parameter_data=None, **kwargs):
+    """
+    Deposition plugin for TCOD.
+    """
+    from aiida.tools.dbexporters.tcod import deposit
+
+    parameters = None
+    if parameter_data is not None:
+        from aiida.orm import DataFactory
+        ParameterData = DataFactory('parameter')
+        parameters = load_node(parameter_data, sub_class=ParameterData)
+    return deposit(node, parameters=parameters, **kwargs)
+
+
+def _deposit_tcod_parameters(self, parser, **kwargs):
+    """
+    Command line parameters deposition plugin for TCOD.
+    """
+    from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                              extend_with_cmdline_parameters)
+    deposition_cmdline_parameters(parser, self.dataclass.__name__)
+    extend_with_cmdline_parameters(parser, self.dataclass.__name__)
+
+
+databases = {'tcod': _deposit_tcod, 'tcod_parameters': _deposit_tcod_parameters}
+@cif.command('deposit')
+@arguments.NODE()
+
+@click.option('--database', '-d',
+              type=databases.keys(),
+              default=databases.keys()[0],
+              help="Label of the database for deposition.")
+def deposit(node, database):
+    try:
+        if not isinstance(n, CifData):
+            echo.echo_critical("Node {} is of class {} instead "
+                                  "of {}".format(node, type(node), CifData))
+    except AttributeError:
+        pass
+
+    calc = databases[database](n, **parsed_args)
+    echo.echo(calc)
+

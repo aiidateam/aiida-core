@@ -8,6 +8,7 @@
 import click
 
 from aiida.cmdline.params.options.conditional import ConditionalOption
+from aiida.cmdline.utils import echo
 
 
 def noninteractive(ctx):
@@ -55,6 +56,7 @@ class InteractiveOption(ConditionalOption):
         def foo(label):
             click.echo('Labeling with label: {}'.format(label))
     """
+    PROMPT_COLOR = 'yellow'
 
     def __init__(self, param_decls=None, switch=None, prompt_fn=None, **kwargs):
         """
@@ -103,14 +105,15 @@ class InteractiveOption(ConditionalOption):
     def prompt_func(self, ctx):
         """prompt function with args set"""
         return click.prompt(
-            self._prompt,
+            click.style(self._prompt, fg=self.PROMPT_COLOR),
+            prompt_suffix = click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,
             confirmation_prompt=self.confirmation_prompt)
 
     def ctrl_help(self):
         """control behaviour when help is requested from the prompt"""
-        click.echo(self.format_help_message())
+        echo.echo_info(self.format_help_message())
 
     def format_help_message(self):
         """
@@ -121,10 +124,9 @@ class InteractiveOption(ConditionalOption):
         msg = self.help or 'Expecting {}'.format(self.type.name)
         choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
         if choices:
-            msg += '\n\tone of:\n'
-            choice_table = ['\t\t{:<12} {}'.format(*choice) for choice in choices]
+            msg += '\none of:\n'
+            choice_table = ['\t{:<12} {}'.format(*choice) for choice in choices]
             msg += '\n'.join(choice_table)
-        msg = click.style('\t' + msg, fg='green')
         return msg
 
     def full_process_value(self, ctx, value):
@@ -149,7 +151,8 @@ class InteractiveOption(ConditionalOption):
             value = self.type.convert(value, param, ctx)
             successful = True
         except click.BadParameter as err:
-            click.echo(err.message)
+            echo.echo_error(err.message)
+            self.ctrl_help()
         return successful, value
 
     def simple_prompt_loop(self, ctx, param, value):

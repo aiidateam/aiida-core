@@ -18,7 +18,7 @@ from aiida.cmdline.commands import verdi, verdi_code
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import edit_pre_post
 from aiida.control.code import CodeBuilder
 
@@ -794,15 +794,13 @@ def reveal(codes):
 @verdi_code.command()
 @arguments.CODE()
 @with_dbenv()
+@deprecated_command("Updating codes breaks data provenance. Use 'duplicate' instead.")
 # pylint: disable=unused-argument
 def update(code):
     """
     Update an existing code.
-
-    Warning: This function is deprecated, since updating existing codes breaks data proevenance.
-    Use 'duplicate' instead.
     """
-    echo.echo_deprecated("Please use 'duplicate' instead.", exit=True)
+    pass
 
 
 @verdi_code.command()
@@ -828,12 +826,12 @@ def relabel(old_label, new_label):
 @arguments.LABEL('NEW_LABEL')
 @with_dbenv()
 @click.pass_context
+@deprecated_command("This command may be removed in a future release. Use 'relabel' instead.")
 # pylint: disable=unused-argument
 def rename(ctx, old_label, new_label):
     """
     Rename a code (change its label).
     """
-    echo.echo_deprecated("Use 'relabel' instead")
     ctx.forward(relabel)
 
 
@@ -844,8 +842,7 @@ def rename(ctx, old_label, new_label):
 @options.ALL_USERS(help="Include codes from all users.")
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
-# pylint: disable=redefined-builtin
-def code_list(computer, input_plugin, all, all_users, show_owner):
+def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the codes in the database."""
     from aiida.orm.backend import construct_backend
     backend = construct_backend()
@@ -868,8 +865,8 @@ def code_list(computer, input_plugin, all, all_users, show_owner):
     if input_plugin is not None:
         qb_code_filters['attributes.input_plugin'] = input_plugin.name
 
-    # If not all, hide codes with HIDDEN_KEY extra set to True
-    if not all:
+    # If not all_entries, hide codes with HIDDEN_KEY extra set to True
+    if not all_entries:
         qb_code_filters['or'] = [{
             'extras': {
                 '!has_key': Code.HIDDEN_KEY

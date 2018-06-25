@@ -16,6 +16,8 @@ from aiida.utils import timezone
 import datetime
 from aiida.common.exceptions import MultipleObjectsError
 from aiida.common.utils import Prettifier
+from aiida.cmdline.commands.data.export import _export
+from aiida.cmdline.params import arguments
 
 @verdi_data.group('cif')
 @click.pass_context
@@ -215,9 +217,10 @@ def _show_vesta(exec_name, structure_list):
             else:
                 raise
 
+export_formats = ['cif', 'tcod', 'tcod_parameters']
 @cif.command('export')
 @click.option('-y', '--format',
-              type=click.Choice(['cif', 'tcod', 'tcod_parameters']),
+              type=click.Choice(export_formats),
               default='json',
               help="Type of the exported file.")
 @click.option('-o', '--output', type=click.STRING,
@@ -226,65 +229,36 @@ def _show_vesta(exec_name, structure_list):
               "with the given name. It is essential to use this option "
               "if more than one file needs to be created.")
 @options.FORCE(help="If passed, overwrite files without checking.")
-@click.option('--prettify-format', default=None,
-                type=click.Choice(Prettifier.get_prettifiers()),
-                help='The style of labels for the prettifier')
 @arguments.NODE()
 def export(format, output, force, prettify_format, node):
     """
     Export the data node to a given format.
     """
-    if format is None:
-        print >> sys.stderr, (
-            "Default format is not defined, please specify.\n"
-            "Valid formats are:")
-        for i in sorted(self.get_export_plugins().keys()):
-            print >> sys.stderr, "  {}".format(i)
-        sys.exit(1)
-
-    output_fname = parsed_args.pop('output')
-    if not output:
-        output = ""
-
-    overwrite = parsed_args.pop('overwrite')
-
-    # if parsed_args:
-    #    raise InternalError(
-    #        "Some command line parameters were not properly parsed: {}".format(
-    #            parsed_args.keys()
-    #        ))
-
     try:
-        func = self.get_export_plugins()[format]
-    except KeyError:
-        print >> sys.stderr, "Not implemented; implemented plugins are:"
-        print >> sys.stderr, "{}.".format(
-            ",".join(self.get_export_plugins()))
-        sys.exit(1)
-
-    if not is_dbenv_loaded():
-        load_dbenv()
-
-    n = load_node(data_id)
-
-    try:
-        if not isinstance(n, self.dataclass):
-            print >> sys.stderr, ("Node {} is of class {} instead "
-                                  "of {}".format(n, type(n), self.dataclass))
-            sys.exit(1)
+        if not isinstance(n, CifData):
+            echo.echo_critical("Node {} is of class {} instead "
+                                  "of {}".format(n, type(n), CifData))
     except AttributeError:
         pass
 
-    func(n, output_fname=output_fname, overwrite=force, **parsed_args)
+    if format == 'cif':
+        func = _export_cif
+    elif format == 'tcod':
+        func = _export_tcod
+    elif format == 'tcod_parameters':
+        func = _export_tcod_parameters
 
-def _export_cif(self, node, output_fname, overwrite, **kwargs):
+    func(node, output_fname=output, overwrite=force)
+
+
+def _export_cif(node, output_fname, overwrite, **kwargs):
     """
     Exporter to CIF.
     """
-    self.print_or_store(node, output_fname, fileformat='cif', overwrite=overwrite,
+    _export(node, output_fname, fileformat='cif', overwrite=overwrite,
                         other_args=kwargs)
 
-def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwargs):
+def _export_tcod(node, output_fname, overwrite, parameter_data=None, **kwargs):
     """
     Plugin for TCOD
     """
@@ -293,7 +267,7 @@ def _export_tcod(self, node, output_fname, overwrite, parameter_data=None, **kwa
         from aiida.orm import DataFactory
         ParameterData = DataFactory('parameter')
         parameters = load_node(parameter_data, sub_class=ParameterData)
-    self.print_or_store(node, output_fname, fileformat='tcod', overwrite=overwrite,
+    _export(node, output_fname, fileformat='tcod', overwrite=overwrite,
                         other_args=kwargs)
 
 def _export_tcod_parameters(self, parser, **kwargs):
@@ -302,3 +276,68 @@ def _export_tcod_parameters(self, parser, **kwargs):
     """
     from aiida.tools.dbexporters.tcod import extend_with_cmdline_parameters
     extend_with_cmdline_parameters(parser, self.dataclass.__name__)
+
+
+import_formats = ['cif']
+@cif.command('import')
+@click.option('-f', '--format',
+              type=click.Choice(import_formats),
+              default=import_formats[0],
+              help="Type of the imported file.")
+@click.option('--file',
+              type=click.STRING,
+              default="/dev/stdin",
+              help="Path of the imported file. Reads from standard input if "
+                   "not specified.")
+def importfile(format, file):
+    import os.path
+    try:
+        node, _ = CifData.get_or_create(os.path.abspath(file))
+        print node
+    except ValueError as e:
+        print e
+
+
+def _deposit_tcod(node, parameter_data=None, **kwargs):
+    """
+    Deposition plugin for TCOD.
+    """
+    from aiida.tools.dbexporters.tcod import deposit
+
+    parameters = None
+    if parameter_data is not None:
+        from aiida.orm import DataFactory
+        ParameterData = DataFactory('parameter')
+        parameters = load_node(parameter_data, sub_class=ParameterData)
+    return deposit(node, parameters=parameters, **kwargs)
+
+
+def _deposit_tcod_parameters(self, parser, **kwargs):
+    """
+    Command line parameters deposition plugin for TCOD.
+    """
+    from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                              extend_with_cmdline_parameters)
+    deposition_cmdline_parameters(parser, self.dataclass.__name__)
+    extend_with_cmdline_parameters(parser, self.dataclass.__name__)
+
+
+databases = {'tcod': _deposit_tcod, 'tcod_parameters': _deposit_tcod_parameters}
+@cif.command('deposit')
+@arguments.NODE()
+
+@click.option('--database', '-d',
+              type=databases.keys(),
+              default=databases.keys()[0],
+              help="Label of the database for deposition.")
+def deposit(node, database):
+    try:
+        if not isinstance(n, CifData):
+            echo.echo_critical("Node {} is of class {} instead "
+                                  "of {}".format(node, type(node), CifData))
+    except AttributeError:
+        pass
+
+    calc = databases[database](n, **parsed_args)
+    echo.echo(calc)
+

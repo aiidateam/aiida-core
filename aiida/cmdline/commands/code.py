@@ -353,8 +353,7 @@ def hide(codes):
     Hide one or more codes from the verdi show command
     """
     for code in codes:
-        # pylint: disable=protected-access
-        code._hide()
+        code.hide()
         echo.echo_success("Code '{}' hidden.".format(code.pk))
 
 

@@ -245,12 +245,12 @@ def ensure_scripts(pre, post, summary):
 @options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
 @click.option(
-    '--on-computer/--store-upload',
+    '--on-computer/--store-in-db',
     is_eager=False,
     default=True,
-    prompt='Installed on remote Computer?',
+    prompt='Installed on target computer?',
     cls=InteractiveOption)
-@options.INPUT_PLUGIN(prompt='Default input plugin', cls=InteractiveOption)
+@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
 @options.COMPUTER(
     prompt='Computer',
     cls=InteractiveOption,
@@ -267,20 +267,20 @@ def ensure_scripts(pre, post, summary):
     help=('[if --on-computer]: the absolute path to the executable on the remote machine'))
 @click.option(
     '--code-folder',
-    prompt='Folder containing the code',
+    prompt='Local directory containing the code',
     type=click.Path(file_okay=False, exists=True, readable=True),
     required_fn=is_not_on_computer,
     prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --store-upload]: code-folder containing the executable and all other files necessary for execution'))
+    help=('[if --store-in-db]: directory the executable and all other files necessary for running it'))
 @click.option(
     '--code-rel-path',
-    prompt='Relative path of the executable',
+    prompt='Relative path of executable inside directory',
     type=click.Path(dir_okay=False),
     required_fn=is_not_on_computer,
     prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --store-upload]: the relative path of the executable ' + \
+    help=('[if --store-in-db]: relative path of the executable ' + \
           'inside the code-folder'))
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
@@ -395,8 +395,7 @@ def relabel(old_label, new_label):
     old_label = code.full_label
     code.relabel(new_label)
 
-    echo.echo_success("Relabeled code with ID={} from '{}' to '{}'".format(
-        code.pk, old_label, code.get_label(full=True)))
+    echo.echo_success("Relabeled code with ID={} from '{}' to '{}'".format(code.pk, old_label, code.full_label))
 
 
 @verdi_code.command()

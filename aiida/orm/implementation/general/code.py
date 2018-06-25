@@ -104,7 +104,7 @@ class AbstractCode(Node):
         
         Returns label of the form <code-label>@<computer-name>.
         """
-        return '{}@{}'.format(self.label, self.computer.name)
+        return '{}@{}'.format(self.label, self.get_computer_name())
 
     def relabel(self, new_label, raise_error=True):
         """Relabel this code.

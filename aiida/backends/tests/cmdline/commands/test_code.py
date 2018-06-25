@@ -74,9 +74,9 @@ class TestVerdiCodeSetup(AiidaTestCase):
         from aiida.orm import Code
         label = 'noninteractive_upload'
         options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--store-upload', '--input-plugin=simpleplugins.arithmetic.add', '--code-folder={}'.format(
-                self.this_folder), '--code-rel-path={}'.format(self.this_file)
+            '--non-interactive', '--label={}'.format(label), '--description=description', '--store-in-db',
+            '--input-plugin=simpleplugins.arithmetic.add', '--code-folder={}'.format(self.this_folder),
+            '--code-rel-path={}'.format(self.this_file)
         ]
         result = self.runner.invoke(setup_code, options)
         self.assertIsNone(result.exception, result.output[-1000:])

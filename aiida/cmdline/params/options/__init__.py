@@ -125,7 +125,7 @@ DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metava
 
 
 
-INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string',
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='calculation input plugin string',
     type=types.PluginParamType(group='calculations'))
 
 

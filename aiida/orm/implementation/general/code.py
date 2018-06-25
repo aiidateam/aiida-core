@@ -98,19 +98,13 @@ class AbstractCode(Node):
 
         return computer_str
 
-    def get_label(self, full=True):
-        """Get (full) label of this code.
+    @property
+    def full_label(self):
+        """Get full label of this code.
         
-        Same as Code.label by default, use full=True to get the full label <code-label>@<computer-name>.
-
-        :param full: If True, return <code-label>@<computer-name>
+        Returns label of the form <code-label>@<computer-name>.
         """
-        label = self.label
-
-        if full:
-            label += '@' + self.get_computer_name()
-
-        return label
+        return '{}@{}'.format(self.label, self.computer.name)
 
     def relabel(self, new_label, raise_error=True):
         """Relabel this code.

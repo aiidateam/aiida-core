@@ -392,7 +392,7 @@ def relabel(old_label, new_label):
     # Note: old_label actually holds a code but we need to
     # specify it that way for the click help message
     code = old_label
-    old_label = code.get_label(full=True)
+    old_label = code.full_label
     code.relabel(new_label)
 
     echo.echo_success("Relabeled code with ID={} from '{}' to '{}'".format(

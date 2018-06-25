@@ -187,12 +187,12 @@ class TestVerdiCodeCommands(AiidaTestCase):
         options = ['-A']
         result = self.runner.invoke(code_list, options)
         self.assertIsNone(result.exception)
-        self.assertTrue(self.code.get_label(full=True) not in result.output, 'code should be hidden')
+        self.assertTrue(self.code.full_label not in result.output, 'code should be hidden')
 
         options = ['-a']
         result = self.runner.invoke(code_list, options)
         self.assertIsNone(result.exception)
-        self.assertTrue(self.code.get_label(full=True) in result.output, 'code should be shown')
+        self.assertTrue(self.code.full_label in result.output, 'code should be shown')
 
     def test_code_show(self):
         result = self.runner.invoke(show, [str(self.code.pk)])

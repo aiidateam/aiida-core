@@ -56,7 +56,7 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, [], input='TEST\n')
         expected = self.prompt_output('TEST')
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
 
     def test_prompt_empty_input(self):
         """
@@ -68,7 +68,7 @@ class InteractiveOptionTest(unittest.TestCase):
         result = runner.invoke(cmd, [], input='\nTEST\n')
         expected = "Opt: \nOpt: TEST\nTEST\n"
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
 
     def test_prompt_help_default(self):
         """
@@ -78,9 +78,13 @@ class InteractiveOptionTest(unittest.TestCase):
         cmd = self.simple_command(type=str)
         runner = CliRunner()
         result = runner.invoke(cmd, [], input='?\nTEST\n')
-        expected = "Opt: ?\n\tExpecting text\nOpt: TEST\nTEST\n"
+        expected_1 = 'Opt: ?\n'
+        expected_2 = 'Expecting text\n'
+        expected_3 = 'Opt: TEST\nTEST\n'
         self.assertIsNone(result.exception)
-        self.assertIn(expected, result.output)
+        self.assertIn(expected_1, result.output)
+        self.assertIn(expected_2, result.output)
+        self.assertIn(expected_3, result.output)
 
     def test_prompt_help_custom(self):
         """
@@ -90,9 +94,13 @@ class InteractiveOptionTest(unittest.TestCase):
         cmd = self.simple_command(type=str, help='Please enter some text')
         runner = CliRunner()
         result = runner.invoke(cmd, [], input='?\nTEST\n')
-        expected = "Opt: ?\n\tPlease enter some text\nOpt: TEST\nTEST\n"
+        expected_1 = 'Opt: ?\n'
+        expected_2 = 'Please enter some text\n'
+        expected_3 = 'Opt: TEST\nTEST\n'
         self.assertIsNone(result.exception)
-        self.assertIn(expected, result.output)
+        self.assertIn(expected_1, result.output)
+        self.assertIn(expected_2, result.output)
+        self.assertIn(expected_3, result.output)
 
     def test_prompt_simple(self):
         """
@@ -104,10 +112,12 @@ class InteractiveOptionTest(unittest.TestCase):
             cmd = self.simple_command(type=ptype, help='help msg')
             runner = CliRunner()
             result = runner.invoke(cmd, [], input='\n?\n{}\n'.format(cli_input))
-            expected = 'Opt: \nOpt: ?\n\thelp msg\n'
-            expected += self.prompt_output(cli_input, output)
+            expected_1 = 'Opt: \nOpt: ?\n'
+            expected_2 = 'help msg\n'
+            expected_2 += self.prompt_output(cli_input, output)
             self.assertIsNone(result.exception)
-            self.assertIn(expected, result.output)
+            self.assertIn(expected_1, result.output)
+            self.assertIn(expected_2, result.output)
 
     def strip_line(self, text):
         """returns text without the last line"""
@@ -123,10 +133,12 @@ class InteractiveOptionTest(unittest.TestCase):
             cmd = self.simple_command(type=ptype, help='help msg')
             runner = CliRunner()
             result = runner.invoke(cmd, [], input='\n?\n{}\n'.format(cli_input))
-            expected_output = 'Opt: \nOpt: ?\n\thelp msg\n'
-            expected_output += self.strip_line(self.prompt_output(cli_input))
+            expected_1 = 'Opt: \nOpt: ?\n'
+            expected_2 = 'help msg\n'
+            expected_2 += self.strip_line(self.prompt_output(cli_input))
             self.assertIsNone(result.exception)
-            self.assertIn(expected_output, result.output)
+            self.assertIn(expected_1, result.output)
+            self.assertIn(expected_2, result.output)
 
     def test_default_value_prompt(self):
         """
@@ -139,12 +151,12 @@ class InteractiveOptionTest(unittest.TestCase):
         returns.append(result)
         expected = 'Opt [default]: \ndefault\n'
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
         result = self.runner.invoke(cmd, [], input='TEST\n')
         returns.append(result)
         expected = 'Opt [default]: TEST\nTEST\n'
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, expected)
+        self.assertIn(expected, result.output)
         return returns
 
     def test_default_value_empty_opt(self):
@@ -308,8 +320,9 @@ class InteractiveOptionTest(unittest.TestCase):
         """Test that default="" allows to pass an empty cli option."""
         cmd = self.simple_command(default="", type=str)
         result = self.runner.invoke(cmd, input='\n')
+        expected = 'Opt []: \n\n'
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'Opt []: \n\n')
+        self.assertIn(expected, result.output)
 
     def test_default_empty_noninteractive(self):
         """Test that empty_ok=True allows to pass an empty cli option also in non interactive mode."""
@@ -331,8 +344,9 @@ class InteractiveOptionTest(unittest.TestCase):
     def test_not_required_interactive(self):
         cmd = self.simple_command(required=False)
         result = self.runner.invoke(cmd, input='value\n')
+        expected = 'Opt: value\nvalue\n'
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'Opt: value\nvalue\n')
+        self.assertIn(expected, result.output)
 
     def test_not_required_noninteractive_default(self):
         cmd = self.simple_command(required=False, default='')
@@ -343,5 +357,6 @@ class InteractiveOptionTest(unittest.TestCase):
     def test_not_required_interactive_default(self):
         cmd = self.simple_command(required=False, default='')
         result = self.runner.invoke(cmd, input='\nnot needed\n')
+        expected = 'Opt []: \n\n'
         self.assertIsNone(result.exception)
-        self.assertEqual(result.output, 'Opt []: \n\n')
+        self.assertIn(expected, result.output)

@@ -14,7 +14,7 @@ from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm import load_node
 from aiida.orm.calculation.function import FunctionCalculation
-from aiida.work import run, run_get_node, submit, workfunction, Process, Exit
+from aiida.work import run, run_get_node, submit, workfunction, Process, ExitCode
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -64,8 +64,8 @@ class TestWf(AiidaTestCase):
             return a
 
         @workfunction
-        def wf_exit(exit_code):
-            raise Exit(exit_code.value)
+        def wf_exit_code(exit_status, exit_message):
+            return ExitCode(exit_status.value, exit_message.value)
 
         @workfunction
         def wf_excepts(exception):
@@ -79,7 +79,7 @@ class TestWf(AiidaTestCase):
         self.wf_args_and_kwargs = wf_args_and_kwargs
         self.wf_args_and_default = wf_args_and_default
         self.wf_default_label_description = wf_default_label_description
-        self.wf_exit = wf_exit
+        self.wf_exit_code = wf_exit_code
         self.wf_excepts = wf_excepts
 
     def tearDown(self):
@@ -217,13 +217,13 @@ class TestWf(AiidaTestCase):
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
-    def test_finish_status(self):
+    def test_exit_status(self):
         """
         If a workfunction reaches the FINISHED process state, it has to have been successful
-        which means that the finish status always has to be 0
+        which means that the exit status always has to be 0
         """
         result, node = self.wf_args_with_default.run_get_node()
-        self.assertEquals(node.finish_status, 0)
+        self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
 
@@ -242,15 +242,17 @@ class TestWf(AiidaTestCase):
         with self.assertRaises(AssertionError):
             submit(self.wf_return_true)
 
-    def test_exit_exception(self):
+    def test_return_exit_code(self):
         """
-        A workfunction that raises the Exit exception should not EXCEPT but be FINISHED
+        A workfunction that returns an ExitCode namedtuple should have its exit status and message set FINISHED
         """
-        finish_status = 418
-        result, node = self.wf_exit.run_get_node(exit_code=Int(finish_status))
+        exit_status = 418
+        exit_message = 'I am a teapot'
+        result, node = self.wf_exit_code.run_get_node(exit_status=Int(exit_status), exit_message=Str(exit_message))
         self.assertTrue(node.is_finished)
         self.assertFalse(node.is_finished_ok)
-        self.assertEquals(node.finish_status, finish_status)
+        self.assertEquals(node.exit_status, exit_status)
+        self.assertEquals(node.exit_message, exit_message)
 
     def test_normal_exception(self):
         """

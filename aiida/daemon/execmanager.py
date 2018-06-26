@@ -393,34 +393,43 @@ def parse_results(job, retrieved_temporary_folder=None):
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.orm.calculation.job import JobCalculationFinishStatus
+    from aiida.orm.calculation.job import JobCalculationExitStatus
+    from aiida.work import ExitCode
 
     logger_extra = get_dblogger_extra(job)
 
     job._set_state(calc_states.PARSING)
 
     Parser = job.get_parserclass()
-    exit_code = None
+    exit_code = ExitCode()
 
     if Parser is not None:
 
         parser = Parser(job)
         exit_code, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
 
-        # Some implementations of parse_from_calc may still return a boolean for the exit_code
-        # If we get True we convert to 0, for false we simply use the generic value that
-        # maps to the calculation state FAILED
+        # Some implementations of parse_from_calc may still return a plain boolean or integer for the exit_code.
+        # In the case of a boolean: True should be mapped to the default ExitCode which corresponds to an exit
+        # status of 0. False values are mapped to the value that is mapped onto the FAILED calculation state
+        # throught the JobCalculationExitStatus. Plain integers are directly used to construct an ExitCode tuple
         if isinstance(exit_code, bool) and exit_code is True:
-            exit_code = 0
+            exit_code = ExitCode(0)
         elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = JobCalculationFinishStatus[calc_states.FAILED]
+            exit_code = ExitCode(JobCalculationExitStatus[calc_states.FAILED].value)
+        elif isinstance(exit_code, int):
+            exit_code = ExitCode(exit_code)
+        elif isinstance(exit_code, ExitCode):
+            pass
+        else:
+            raise ValueError("parse_from_calc returned an 'exit_code' of invalid_type: {}. It should "
+                "return a boolean, integer or ExitCode instance".format(type(exit_code)))
 
         for label, n in new_nodes_tuple:
             n.add_link_from(job, label=label, link_type=LinkType.CREATE)
             n.store()
 
     try:
-        if exit_code == 0:
+        if exit_code.status == 0:
             job._set_state(calc_states.FINISHED)
         else:
             job._set_state(calc_states.FAILED)
@@ -429,7 +438,7 @@ def parse_results(job, retrieved_temporary_folder=None):
         # in order to avoid useless error messages, I just ignore
         pass
 
-    if exit_code is not 0:
+    if exit_code.status is not 0:
         execlogger.error("[parsing of calc {}] "
                          "The parser returned an error, but it should have "
                          "created an output node with some partial results "

@@ -15,7 +15,7 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 from aiida.orm.implementation.general.calculation.job import _input_subfolder
-from aiida.orm.implementation.general.calculation.job import JobCalculationFinishStatus
+from aiida.orm.implementation.general.calculation.job import JobCalculationExitStatus
 
 
 if BACKEND == BACKEND_SQLA:

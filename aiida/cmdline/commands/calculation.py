@@ -175,10 +175,10 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.set_defaults(all_states=False)
         parser.add_argument('-S', '--process-state', choices=([e.value for e in ProcessState]),
                             help='Only include entries with this process state')
-        parser.add_argument('-f', '--finish-status', type=int,
-                            help='Only include entries with this finish status')
+        parser.add_argument('-E', '--exit-status', type=int,
+                            help='Only include entries with this exit status')
         parser.add_argument('-n', '--failed', dest='failed', action='store_true',
-                            help='Only include entries that are failed, i.e. whose finish status is non-zero')
+                            help='Only include entries that are failed, i.e. whose exit status is non-zero')
         parser.add_argument('-A', '--all-users',
                             dest='all_users', action='store_true',
                             help="Show calculations for all users, rather than only for the current user")
@@ -216,7 +216,7 @@ class Calculation(VerdiCommandWithSubcommands):
             parsed_args.states = None
 
         PROCESS_STATE_KEY = 'attributes.{}'.format(C.PROCESS_STATE_KEY)
-        FINISH_STATUS_KEY = 'attributes.{}'.format(C.FINISH_STATUS_KEY)
+        EXIT_STATUS_KEY = 'attributes.{}'.format(C.EXIT_STATUS_KEY)
 
         filters = {}
 
@@ -227,12 +227,12 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.failed:
             parsed_args.states = None
             filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-            filters[FINISH_STATUS_KEY] = {'!==': 0}
+            filters[EXIT_STATUS_KEY] = {'!==': 0}
 
-        if parsed_args.finish_status:
+        if parsed_args.exit_status:
             parsed_args.states = None
             filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-            filters[FINISH_STATUS_KEY] = {'==': parsed_args.finish_status}
+            filters[EXIT_STATUS_KEY] = {'==': parsed_args.exit_status}
 
         C._list_calculations(
             states=parsed_args.states,

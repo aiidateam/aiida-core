@@ -125,7 +125,7 @@ DESCRIPTION = OverridableOption('-D', '--description', type=click.STRING, metava
 
 
 
-INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='input plugin string',
+INPUT_PLUGIN = OverridableOption('-P', '--input-plugin', help='calculation input plugin string',
     type=types.PluginParamType(group='calculations'))
 
 
@@ -171,8 +171,7 @@ ALL = OverridableOption('-a', '--all', 'all_entries', is_flag=True, default=Fals
 ALL_STATES = OverridableOption('-A', '--all-states', is_flag=True, help='do not limit to items in running state')
 
 ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, default=False,
-    help='include all entries regardless of the owner')
-
+    help='include entries regardless of the owner')
 
 RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
     help='display only raw query results, without any headers or footers')

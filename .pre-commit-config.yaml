@@ -13,18 +13,21 @@
         aiida/backends/tests/cmdline/commands/test_graph.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/calculation.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
         aiida/cmdline/commands/workflow.py|
         aiida/cmdline/options/types/legacy_workflow.py|
+        aiida/cmdline/params/types/path.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|
@@ -55,6 +58,7 @@
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_graph.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
@@ -62,12 +66,14 @@
         aiida/cmdline/tests/.*.py|
         aiida/cmdline/commands/calculation.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
         aiida/cmdline/commands/workflow.py|
         aiida/cmdline/options/types/legacy_workflow.py|
+        aiida/cmdline/params/types/path.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|

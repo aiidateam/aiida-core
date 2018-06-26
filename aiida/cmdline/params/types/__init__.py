@@ -11,11 +11,12 @@ from .node import NodeParamType
 from .multiple import MultipleValueParamType
 from .nonemptystring import NonemptyStringParamType
 from .shebang import ShebangParamType
+from .path import AbsolutePathParamType
 from .plugin import PluginParamType
 from .legacy_workflow import LegacyWorkflowParamType
 
 __all__ = [
     'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
     'GroupParamType', 'NodeParamType', 'MultipleValueParamType', 'NonemptyStringParamType', 'PluginParamType',
-    'ShebangParamType', 'LegacyWorkflowParamType'
+    'ShebangParamType', 'AbsolutePathParamType', 'LegacyWorkflowParamType'
 ]

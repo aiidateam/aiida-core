@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import warnings
-from distutils.version import StrictVersion
 
 from aiida.common.log import configure_logging
 from aiida.common.setup import get_property
@@ -61,6 +60,7 @@ def get_strict_version():
 
     :returns: StrictVersion instance with the current version
     """
+    from distutils.version import StrictVersion
     return StrictVersion(__version__)
 
 

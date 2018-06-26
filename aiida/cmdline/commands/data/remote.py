@@ -24,7 +24,9 @@ if not is_dbenv_loaded():
 @verdi_data.group('remote')
 @click.pass_context
 def remote(ctx):
-    """help"""
+    """
+    Managing Remote_Data data types
+    """
     pass
     
 

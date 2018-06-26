@@ -21,22 +21,20 @@ def _export(node, output_fname, fileformat, other_args={}, overwrite=False):
     :note: this function calls directly sys.exit(1) when an error occurs (or e.g. if
         check_overwrite is True and a file already exists).
     """
+    print other_args
     try:
         if output_fname:
             try:
                 node.export(
                     output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as e:
-                print >> sys.stderr, "verdi: ERROR while exporting file:"
-                print >> sys.stderr, e.message
-                sys.exit(1)
+                echo.echo_critical ("verdi: ERROR while exporting file:\n" + e.message)
         else:
             filetext, extra_files = node._exportstring(
                 fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
-                print >> sys.stderr, "This format requires to write more than one file."
-                print >> sys.stderr, "You need to pass the -o option to specify a file name."
-                sys.exit(1)
+                echo.echo_critical ("This format requires to write more than one file.\n"
+                                    "You need to pass the -o option to specify a file name.")
             else:
                 print filetext
     except TypeError as e:

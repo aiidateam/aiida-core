@@ -1,4 +1,3 @@
-from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.implementation import Group
 from aiida.orm.user import User
 from aiida.orm.backend import construct_backend
@@ -44,6 +43,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     """
     Perform the query
     """
+    from aiida.orm.querybuilder import QueryBuilder
     backend = construct_backend()
 
     qb = QueryBuilder()
@@ -53,7 +53,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     else:
         qb.append(User, tag="creator")
 
-    data_filters = dict()
+    data_filters = {}
     query_past_days(data_filters, past_days)
     qb.append(datatype, tag="data", created_by="creator",
                 filters=data_filters, project=project)
@@ -71,7 +71,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     entry_list = []
     for [id, ctime, label, formula] in object_list.all():
         entry_list.append([str(id), str(ctime), str(label), str(formula)])
-    return entry_list
+    return object_list.all()
 
 def query_past_days(filters, past_days):
     """
@@ -103,25 +103,19 @@ def _list(datatype, columns, elements, elements_only, formulamode,
     """
     List stored objects
     """
-    column_length = 19
     columns_dict = {
         'ID'        : 'id',
+        'Id'        : 'id',
         'Ctime'     : 'ctime',
         'Label'     : 'label',
-        'Formula'   : 'attributes.formula'
+        'Formula'   : 'attributes.formula',
+        'Kinds'     : 'attributes.kinds',
+        'Sites'     : 'attributes.sites',
         }
     project = [columns_dict[k] for k in columns] 
     try:
         group_pks = [g.pk for g in groups]
     except:
         group_pks=None
-    entry_list = query(datatype, project, past_days, group_pks, all_users)
-    vsep = " "
-    if entry_list:
-        to_print = ""
-        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in columns]) + "\n"
-        for entry in sorted(entry_list, key=lambda x: int(x[0])):
-            to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in entry]) + "\n"
-        echo.echo(to_print)
-    else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(datatype))
+    return query(datatype, project, past_days, group_pks, all_users)
+    

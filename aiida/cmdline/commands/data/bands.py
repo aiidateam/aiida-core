@@ -68,7 +68,7 @@ def show_xmgrace(exec_name, list_bands):
 @click.pass_context
 def bands(ctx):
     """
-    Manipulation on the bands
+    Manipulation of the bands
     """
     pass
 
@@ -82,16 +82,14 @@ def bands(ctx):
               "a pseudo for each of the specified elements")
 def show(nodes, format):
     """
-    Visualize bands object
+    Visualize bands objects
     """
-    default_database = None
-    from aiida.orm import load_node
     for n in nodes:
         if not isinstance(n, BandsData):
             echo.echo_critical("Node {} is of class {} instead "
                                 "of {}".format(n, type(n), BandsData))
     
-    show_xmgrace(format, nodes)
+        show_xmgrace(format, nodes)
 
 
 @bands.command('list')
@@ -122,7 +120,17 @@ def list_bands(elements, elements_only, formulamode, past_days, groups, all_user
     List stored BandData objects
     """
     project = ['ID', 'Ctime', 'Label', 'Formula']
-    _list(BandsData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+    lst = _list(BandsData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+    column_length = 19
+    vsep = " "
+    if lst:
+        to_print = ""
+        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project]) + "\n"
+        for entry in sorted(lst, key=lambda x: int(x[0])):
+            to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
+        echo.echo(to_print)
+    else:
+        echo.echo_warning("No nodes of type {} where found in the database".format(datatype))
 
 
 
@@ -153,9 +161,16 @@ def export(format, y_min_lim, y_max_lim, output, force, prettify_format, node):
     """
     Export bands
     """
+    args = {}
+    if y_min_lim is not None:
+        args['y_min_lim'] = y_min_lim
+    if y_max_lim is not None:
+        args['y_max_lim'] = y_max_lim
+    if prettify_format is not None:
+        args['prettify_format'] = prettify_format
     
     if not isinstance(node, BandsData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), BandsData))
-    _export(node, output, format, overwrite=force)
+    _export(node, output, format, other_args=args, overwrite=force)
 
 

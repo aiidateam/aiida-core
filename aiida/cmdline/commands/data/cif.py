@@ -325,11 +325,48 @@ def _deposit_tcod_parameters(self, parser, **kwargs):
 databases = {'tcod': _deposit_tcod, 'tcod_parameters': _deposit_tcod_parameters}
 @cif.command('deposit')
 @arguments.NODE()
-
 @click.option('--database', '-d',
-              type=databases.keys(),
+              type=click.Choice(databases.keys()),
               default=databases.keys()[0],
               help="Label of the database for deposition.")
+# deposition_cmdline_parameters
+# Provides descriptions of command line options, that are used to control
+# the process of deposition to TCOD.
+#
+# :param parser: an argparse.Parser instance
+# :param expclass: name of the exported class to be shown in help string
+#     for the command line options
+#
+# .. note:: This method must not set any default values for command line
+#     options in order not to clash with any other data deposition plugins.
+@click.option('--type', '--deposition-type',
+              type=click.Choice(['published','prepublication','personal']),
+              help="Type of the deposition.")
+@click.option('-u', '--username', type=click.STRING, default=str(),
+              help="Depositor's username.")
+@click.option('-p', '--password', is_flag=True, default=False,
+              help="Depositor's password.")
+@click.option('--user-email', type=click.STRING, default=str(),
+              help="Depositor's e-mail address.")
+@click.option('--title', type=click.STRING, default=str(),
+              help="Title of the publication.")
+@click.option('--author-name', type=click.STRING, default=str(),
+              help="Full name of the publication author.")
+@click.option('--author-email', type=click.STRING, default=str(),
+              help="E-mail address of the publication author.")
+@click.option('--url', type=click.STRING,
+              help="URL of the deposition API.")
+@click.option('--code', 'code_label', type=click.STRING, default=str(),
+              help="Label of the code to be used for the deposition. "
+                   "Default: cif_cod_deposit.")
+@click.option('--computer', 'computer_name', type=click.STRING,
+              help="Name of the computer to be used for deposition. Default "
+                   "computer is used if not specified.")
+@click.option('--replace', type=click.STRING,
+              help="ID of the structure to be redeposited replaced), if any.")
+@click.option('-m', '--message', type=click.STRING,
+              help="Description of the change (relevant for redepositions "
+                   "only.")
 def deposit(node, database):
     try:
         if not isinstance(n, CifData):

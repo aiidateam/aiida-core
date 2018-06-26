@@ -11,6 +11,7 @@ import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands.data.list import _list
 from aiida.cmdline.commands.data.export import _export
+from aiida.cmdline.commands.data.deposit import deposit_tcod
 from aiida.cmdline.commands import verdi, verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
@@ -255,7 +256,7 @@ def list_structures(elements, elements_only, formulamode, past_days, groups, all
             to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
         echo.echo(to_print)
     else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(datatype))
+        echo.echo_warning("No nodes of type {} where found in the database".format(StructureData))
 
 @structure.command('export')
 @click.option('-y', '--format',
@@ -318,18 +319,7 @@ def export(format, reduce_symmetry, parameter_data, dump_aiida_database, exclude
     _export(node, output, format, other_args=args, overwrite=force)
 
 
-def deposit_tcod(node, parameter_data=None, **kwargs):
-    """
-    Deposition plugin for TCOD.
-    """
-    from aiida.orm.data.structure import StructureData
-    from aiida.tools.dbexporters.tcod import deposit
-    parameters = None
-    if parameter_data is not None:
-        from aiida.orm import DataFactory
-        ParameterData = DataFactory('parameter')
-        parameters = load_node(parameter_data, sub_class=ParameterData)
-    return deposit(node, StructureData, parameters, **kwargs)
+
 
 @structure.command('deposit')
 @click.option('-d', '--database', 'database',

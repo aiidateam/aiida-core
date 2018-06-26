@@ -68,9 +68,6 @@ def query(datatype, project, past_days, group_pks, all_users):
 
     object_list = qb.distinct()
 
-    entry_list = []
-    for [id, ctime, label, formula] in object_list.all():
-        entry_list.append([str(id), str(ctime), str(label), str(formula)])
     return object_list.all()
 
 def query_past_days(filters, past_days):

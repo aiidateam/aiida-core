@@ -53,6 +53,12 @@ The first thing to know is how to chose entities that you want to query::
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
     qb.append(JobCalculation) # Setting first vertice of path
 
+You can also pass a tuple, list or set of classes, if you are interested in instances of different classes.
+However, they have to be of the same ORM-type (I.e. all have to be subclasses of Node:
+
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
+    qb.append([JobCalculation, WorkCalculation]) # Setting first vertice of path, either Work or Job.
 
 
 Retrieving results

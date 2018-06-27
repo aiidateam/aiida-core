@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=cell-var-from-loop
+"""Convenience classes to help building the input dictionaries for Processes."""
 from collections import Mapping
 from aiida.work.ports import PortNamespace
 
@@ -12,20 +14,35 @@ class ProcessBuilderNamespace(Mapping):
     """
 
     def __init__(self, port_namespace):
-        self._valid_fields = port_namespace.keys()
+        """
+        Dynamically construct the get and set properties for the ports of the given port namespace
+
+        For each port in the given port namespace a get and set property will be constructed dynamically
+        and added to the ProcessBuilderNamespace. The docstring for these properties will be defined
+        by calling str() on the Port, which should return the description of the Port.
+
+        :param port_namespace: the inputs PortNamespace for which to construct the builder
+        """
+        # pylint: disable=super-init-not-called
         self._port_namespace = port_namespace
+        self._valid_fields = []
         self._data = {}
 
         for name, port in port_namespace.items():
 
+            self._valid_fields.append(name)
+
             if isinstance(port, PortNamespace):
                 self._data[name] = ProcessBuilderNamespace(port)
+
                 def fgetter(self, name=name):
                     return self._data.get(name)
             elif port.has_default():
+
                 def fgetter(self, name=name, default=port.default):
                     return self._data.get(name, default)
             else:
+
                 def fgetter(self, name=name):
                     return self._data.get(name, None)
 
@@ -50,6 +67,7 @@ class ProcessBuilderNamespace(Mapping):
             except KeyError:
                 raise AttributeError('Unknown builder parameter: {}'.format(attr))
 
+            value = port.serialize(value)
             is_valid, message = port.validate(value)
             if not is_valid:
                 raise ValueError('invalid attribute value: {}'.format(message))
@@ -60,11 +78,11 @@ class ProcessBuilderNamespace(Mapping):
         return self._data.__repr__()
 
     def __dir__(self):
-        return sorted(set(self._valid_fields + [n for n in self.__dict__.keys() if n.startswith('_')]))
+        return sorted(set(self._valid_fields + [key for key, _ in self.__dict__ if key.startswith('_')]))
 
     def __iter__(self):
-       for k, v in self._data.items():
-          yield k
+        for key in self._data:
+            yield key
 
     def __len__(self):
         return len(self._data)
@@ -77,10 +95,15 @@ class ProcessBuilder(ProcessBuilderNamespace):
     """
     A process builder that helps creating a new calculation
     """
+
     def __init__(self, process_class):
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
         super(ProcessBuilder, self).__init__(port_namespace=self._process_spec.inputs)
+
+    @property
+    def process_class(self):
+        return self._process_class
 
 
 class JobProcessBuilder(ProcessBuilder):
@@ -88,6 +111,7 @@ class JobProcessBuilder(ProcessBuilder):
     A process builder specific to JobCalculation classes, that provides
     also the submit_test functionality
     """
+
     def __dir__(self):
         return super(JobProcessBuilder, self).__dir__() + ['submit_test']
 
@@ -103,10 +127,8 @@ class JobProcessBuilder(ProcessBuilder):
             default a unique string will be generated based on the current datetime with the format ``yymmdd-``
             followed by an auto incrementing index
         """
-        inputs = {
-            'store_provenance': False
-        }
+        inputs = {'store_provenance': False}
         inputs.update(**self)
         process = self._process_class(inputs=inputs)
 
-        return process._calc.submit_test(folder, subfolder_name)
+        return process.calc.submit_test(folder, subfolder_name)

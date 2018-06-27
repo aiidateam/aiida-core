@@ -1,18 +1,26 @@
 # -*- coding: utf-8 -*-
-import json
+# pylint: disable=too-few-public-methods
+"""Components to communicate tasks to RabbitMQ."""
 import collections
-import plumpy
-import plumpy.rmq
+
 import tornado.ioloop
+import yaml
+
+import plumpy
+from plumpy.rmq import RmqCommunicator, RmqConnector
+from plumpy.process_comms import PID_KEY
 
 from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.work.exceptions import PastException
 from aiida.work.persistence import AiiDAPersister
 
 from . import persistence
 from . import utils
 
-__all__ = ['new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel',
-           'RemoteException', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel']
+__all__ = [
+    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException',
+    'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel'
+]
 
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
@@ -74,11 +82,7 @@ def get_rmq_config(prefix=None):
     if prefix is None:
         prefix = get_rmq_prefix()
 
-    rmq_config = {
-        'url': get_rmq_url(),
-        'prefix': prefix,
-        'task_prefetch_count': _RMQ_TASK_PREFETCH_COUNT
-    }
+    rmq_config = {'url': get_rmq_url(), 'prefix': prefix, 'task_prefetch_count': _RMQ_TASK_PREFETCH_COUNT}
 
     return rmq_config
 
@@ -123,7 +127,7 @@ def encode_response(response):
     :rtype: str
     """
     serialized = serialize_data(response)
-    return json.dumps(serialized)
+    return yaml.dump(serialized)
 
 
 def decode_response(response):
@@ -137,7 +141,7 @@ def decode_response(response):
     :param response: The response string to decode
     :return: A data structure containing deserialized node instances
     """
-    response = json.loads(response)
+    response = yaml.load(response)
     return deserialize_data(response)
 
 
@@ -166,6 +170,8 @@ def _store_inputs(inputs):
 
 
 class LaunchProcessAction(plumpy.LaunchProcessAction):
+    """Sub classing plumpy.LaunchProcessAction to ensure that inputs are stored and serialized."""
+
     def __init__(self, *args, **kwargs):
         """
         Calls through to the constructor of the plum LaunchProcessAction while making sure that
@@ -177,8 +183,15 @@ class LaunchProcessAction(plumpy.LaunchProcessAction):
 
 
 class ExecuteProcessAction(plumpy.Action):
+    """
+    A sub class of plumpy.Action to execute a Process.
+
+    First the Process is instantiated with the provided inputs, after which a checkpoint is saved.is
+    Subsequenctly the Process is cloesd and a ContinueProcessAction will be sent to RabbitMQ.
+    """
 
     def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False, persister=None):
+        """Store the construction arguments, setting defaults if they are not provided."""
         super(ExecuteProcessAction, self).__init__()
         self._process_class = process_class
         self._args = init_args or ()
@@ -191,6 +204,12 @@ class ExecuteProcessAction(plumpy.Action):
             self._persister = AiiDAPersister()
 
     def execute(self, publisher):
+        """
+        Instantiate the Process, create a checkpoint and sent a ContinueProcessAction task over the publisher
+
+        :param publisher: the published to use to send the continuation task
+        :returns: the completed future with the value set to the pk of the instantiated calculation node
+        """
         proc = self._process_class(*self._args, **self._kwargs)
         self._persister.save_checkpoint(proc)
         proc.close()
@@ -202,11 +221,46 @@ class ExecuteProcessAction(plumpy.Action):
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
-    def _launch(self, task):
-        from plumpy.process_comms import KWARGS_KEY
-        kwargs = task.get(KWARGS_KEY, {})
-        task[KWARGS_KEY] = kwargs
-        return super(ProcessLauncher, self)._launch(task)
+    """
+    A sub class of plumpy.ProcessLauncher to launch a Process
+
+    It overrides the _continue method to make sure the node corresponding to the task can be loaded and
+    that if it is already marked as terminated, it is not continued but the future is reconstructed and returned
+    """
+
+    def _continue(self, task):
+        """
+        Continue the task
+
+        Note that the task may already have been completed, as indicated from the corresponding the node, in which
+        case it is not continued, but the corresponding future is reconstructed and returned. This scenario may
+        occur when the Process was already completed by another worker that however failed to send the acknowledgment.
+
+        :param task: the task to continue
+        :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
+        """
+        from aiida.common import exceptions
+        from aiida.orm import load_node, Data
+
+        try:
+            node = load_node(pk=task[PID_KEY])
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+            raise plumpy.TaskRejected('Cannot continue process: {}'.format(exception))
+
+        if node.is_terminated:
+
+            future = plumpy.Future()
+
+            if node.is_finished:
+                future.set_result(dict(node.get_outputs(node_type=Data, also_labels=True)))
+            elif node.is_excepted:
+                future.set_exception(PastException(node.exception))
+            elif node.is_killed:
+                future.set_exception(plumpy.KilledError())
+
+            return future
+
+        return super(ProcessLauncher, self)._continue(task)
 
 
 class ProcessControlPanel(object):
@@ -222,7 +276,7 @@ class ProcessControlPanel(object):
         task_exchange = get_task_exchange_name(prefix)
 
         task_queue = get_launch_queue_name(prefix)
-        self._communicator = plumpy.rmq.RmqCommunicator(
+        self._communicator = RmqCommunicator(
             rmq_connector,
             exchange_name=message_exchange,
             task_exchange=task_exchange,
@@ -230,14 +284,17 @@ class ProcessControlPanel(object):
             encoder=encode_response,
             decoder=decode_response,
             testing_mode=testing_mode,
-            task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT
-        )
+            task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    @property
+    def communicator(self):
+        return self._communicator
 
     def close(self):
         self._communicator.disconnect()
@@ -252,7 +309,7 @@ class ProcessControlPanel(object):
         return self.execute_action(plumpy.PlayAction(pid))
 
     def kill_process(self, pid, msg=None):
-        return self.execute_action(plumpy.KillAction(pid))
+        return self.execute_action(plumpy.KillAction(pid, msg))
 
     def request_status(self, pid):
         return self.execute_action(plumpy.StatusAction(pid))
@@ -335,12 +392,26 @@ def new_blocking_control_panel():
 
 
 def create_rmq_connector(loop=None):
+    """
+    Create an RmqConnector
+
+    :param loop: optional event loop to set for the connector, by default will get the current event loop
+    :returns: the instantiated RmqConnector
+    """
     if loop is None:
         loop = tornado.ioloop.IOLoop.current()
-    return plumpy.rmq.RmqConnector(amqp_url=get_rmq_url(), loop=loop)
+    return RmqConnector(amqp_url=get_rmq_url(), loop=loop)
 
 
 def create_communicator(loop=None, prefix=None, testing_mode=False):
+    """
+    Create and RmqCommunicator
+
+    :param loop: optionally a specific event loop to use
+    :param prefix: optionally a specific prefix to use for the RMQ connection
+    :param testing_mode: whether to create a communicator in testing mode
+    :returns: the instantiated RmqCommunicator
+    """
     if prefix is None:
         prefix = get_rmq_prefix()
 
@@ -348,10 +419,10 @@ def create_communicator(loop=None, prefix=None, testing_mode=False):
     task_queue = get_launch_queue_name(prefix)
 
     connector = create_rmq_connector(loop)
-    return plumpy.rmq.RmqCommunicator(
+
+    return RmqCommunicator(
         connector,
         exchange_name=message_exchange,
         task_queue=task_queue,
         testing_mode=testing_mode,
-        task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT
-    )
+        task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT)

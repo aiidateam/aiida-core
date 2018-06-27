@@ -11,9 +11,10 @@ from aiida.common.links import LinkType
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.orm import load_node
 from aiida.orm.calculation.function import FunctionCalculation
-from aiida.work import run, run_get_node, submit, workfunction, Process
+from aiida.work import run, run_get_node, submit, workfunction, Process, ExitCode
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -62,6 +63,14 @@ class TestWf(AiidaTestCase):
         def wf_default_label_description(a=Int(DEFAULT_INT), label=DEFAULT_LABEL, description=DEFAULT_DESCRIPTION):
             return a
 
+        @workfunction
+        def wf_exit_code(exit_status, exit_message):
+            return ExitCode(exit_status.value, exit_message.value)
+
+        @workfunction
+        def wf_excepts(exception):
+            raise RuntimeError(exception.value)
+
         self.wf_return_input = wf_return_input
         self.wf_return_true = wf_return_true
         self.wf_args = wf_args
@@ -70,6 +79,8 @@ class TestWf(AiidaTestCase):
         self.wf_args_and_kwargs = wf_args_and_kwargs
         self.wf_args_and_default = wf_args_and_default
         self.wf_default_label_description = wf_default_label_description
+        self.wf_exit_code = wf_exit_code
+        self.wf_excepts = wf_excepts
 
     def tearDown(self):
         super(TestWf, self).tearDown()
@@ -206,13 +217,13 @@ class TestWf(AiidaTestCase):
         self.assertEquals(node.label, CUSTOM_LABEL)
         self.assertEquals(node.description, CUSTOM_DESCRIPTION)
 
-    def test_finish_status(self):
+    def test_exit_status(self):
         """
         If a workfunction reaches the FINISHED process state, it has to have been successful
-        which means that the finish status always has to be 0
+        which means that the exit status always has to be 0
         """
         result, node = self.wf_args_with_default.run_get_node()
-        self.assertEquals(node.finish_status, 0)
+        self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
 
@@ -230,6 +241,29 @@ class TestWf(AiidaTestCase):
 
         with self.assertRaises(AssertionError):
             submit(self.wf_return_true)
+
+    def test_return_exit_code(self):
+        """
+        A workfunction that returns an ExitCode namedtuple should have its exit status and message set FINISHED
+        """
+        exit_status = 418
+        exit_message = 'I am a teapot'
+        result, node = self.wf_exit_code.run_get_node(exit_status=Int(exit_status), exit_message=Str(exit_message))
+        self.assertTrue(node.is_finished)
+        self.assertFalse(node.is_finished_ok)
+        self.assertEquals(node.exit_status, exit_status)
+        self.assertEquals(node.exit_message, exit_message)
+
+    def test_normal_exception(self):
+        """
+        If a process, for example a FunctionProcess, excepts, the exception should be stored in the node
+        """
+        exception = 'This workfunction excepted'
+
+        with self.assertRaises(RuntimeError):
+            result, node = self.wf_excepts.run_get_node(exception=Str(exception))
+            self.assertTrue(node.is_excepted)
+            self.assertEquals(node.exception, exception)
 
     def test_default_linkname(self):
         """

@@ -1,0 +1,5 @@
+Configuration files to run Jenkins
+
+Note that it (re)uses many files from the ../.ci folder!
+The doubler.sh is copied here because the Dockerfile requires the
+file to be in the same folder (or a subfolder) and it cannot be a symlink

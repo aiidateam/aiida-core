@@ -68,7 +68,7 @@ As the name suggests, this construct is a way to chain multiple logical steps of
 The workchain is therefore the preferred solution for parts of the workflow that involve more expensive and complex calculations.
 To define a workchain, AiiDA implements the ``WorkChain`` class.
 
-If we were to reimplement our workfunction solution of the simple example problem of the previous section, but this time using a workchain, it would look something like the following: 
+If we were to reimplement our workfunction solution of the simple example problem of the previous section, but this time using a workchain, it would look something like the following:
 
 .. include:: include/snippets/workflows/workchains/example_problem_workchain.py
     :code: python
@@ -171,7 +171,7 @@ One can also define the inputs in a dictionary and then use the standard python 
 
 After the workchain's execution is finished, the result is returned, which is a dictionary of its outputs.
 In this example the variable ``result`` will therefore be equal to ``{'result': 9}``.
-If you would also like to get a reference of the node that represents the ``WorkChain`` in the database, one can use the ``run_get_node`` or ``run_get_pid`` functions: 
+If you would also like to get a reference of the node that represents the ``WorkChain`` in the database, one can use the ``run_get_node`` or ``run_get_pid`` functions:
 
 .. include:: include/snippets/workflows/workchains/run_workchain_get_node_pid.py
     :code: python
@@ -261,7 +261,7 @@ A typical example may look something like the following:
 
     Total results: 2
 
-The 'State' column is a concatenation of the ``process_state`` and the ``finish_status`` of the ``WorkCalculation``.
+The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkCalculation``.
 By default, the command will only show active items, i.e. ``WorkCalculations`` that have not yet reached a terminal state.
 If you want to also show the nodes in a terminal states, you can use the ``-a`` flag and call ``verdi work list -a``:
 
@@ -278,7 +278,7 @@ If you want to also show the nodes in a terminal states, you can use the ``-a`` 
     Total results: 4
 
 For more information on the meaning of the 'state' column, please refer to the documentation of the :ref:`process state <process_state>`.
-The ``-s`` flag let's you query for specific process states, i.e. issuing ``verdi work list -s created`` will return:
+The ``-S`` flag let's you query for specific process states, i.e. issuing ``verdi work list -S created`` will return:
 
 .. code-block:: bash
 
@@ -289,7 +289,7 @@ The ``-s`` flag let's you query for specific process states, i.e. issuing ``verd
 
     Total results: 1
 
-To query for a specific finish status, one can use ``verdi work list -f 0``:
+To query for a specific exit status, one can use ``verdi work list -E 0``:
 
 .. code-block:: bash
 
@@ -365,7 +365,7 @@ An example output for a ``PwBaseWorkChain`` would look like the following:
     ctime          2018-04-08 21:18:50.850361+02:00
     mtime          2018-04-08 21:18:50.850372+02:00
     process state  ProcessState.FINISHED
-    finish status  0
+    exit status    0
     code           pw-v6.1
 
     Inputs            PK  Type
@@ -546,7 +546,7 @@ To use these in your workchain design, you will have to import them:
 
 The following example shows how to use these logical constructs to define the outline of a workchain:
 
-.. code:: python 
+.. code:: python
 
     spec.outline(
         cls.intialize_to_zero,
@@ -590,6 +590,42 @@ The actual implementation of the outline steps themselves is now trivial:
 
 The intention of this example is to show that with a well designed outline, a user only has to look at the outline to have a good idea *what* the workchain does and *how* it does it.
 One should not have to look at the implementation of the outline steps as all the important information is captured by the outline itself.
+
+.. _exit_codes:
+
+Exit codes
+^^^^^^^^^^
+Any ``WorkChain`` most likely will have one or multiple expected failure modes.
+To clearly communicate to the caller what went wrong, the ``WorkChain`` supports setting its ``exit_status``.
+This ``exit_status``, a positive integer, is an attribute of the calculation node and by convention, when it is zero means the process was successful, whereas any other value indicates failure.
+This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://shapeshed.com/unix-exit-codes/>`_ and a standard way for programs to communicate the result of their execution.
+
+Potential exit codes for the ``WorkChain`` can be defined through the ``ProcessSpec``, just like inputs and ouputs.
+Any exit code consists of a positive non-zero integer, a string label to reference it and a more detailed description of the problem that triggers the exit code.
+Consider the following example:
+
+.. code:: python
+
+    spec.exit_code(418, 'ERROR_I_AM_A_TEAPOT', 'the workchain had an identity crisis')
+
+This defines an exit code for the ``WorkChain`` with exit status ``418`` and exit message ``the workchain had an identity crisis``.
+The string ``ERROR_I_AM_A_TEAPOT`` is a label that the developer can use to reference this particular exit code somewhere in the ``WorkChain`` code itself.
+A detailed explanation of how this is accomplished `will be explained in a later section <aborting_and_exit_codes>`_.
+
+Whenever a ``WorkChain`` exits through a particular error code, the caller will be able to introspect it through the ``exit_status`` and ``exit_message`` attributes of the node.
+Assume for example that we ran a ``WorkChain`` that threw the exit code described above, the caller would be able to do the following:
+
+.. code:: python
+
+    in[1] workchain = load_node(<pk>)
+    in[2] workchain.exit_status
+    out[2] 418
+    in[2] workchain.exit_message
+    out[2] 'the workchain had an identity crisis'
+
+This is useful, because the caller can now programmatically, based on the ``exit_status``, decide how to proceed.
+This is an infinitely more robust way of communcating specific errors to a non-human then parsing text based logs or reports (see the section on :ref:`reporting <reporting>`).
+
 
 .. _reporting:
 
@@ -689,7 +725,7 @@ How this can be achieved is explained in the next section.
 Appending
 ^^^^^^^^^
 When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.work.context.append_` function.
-Consider the example from the previous section, but now we will use the ``append_`` function instead: 
+Consider the example from the previous section, but now we will use the ``append_`` function instead:
 
 .. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
     :code: python
@@ -702,13 +738,24 @@ The ``self.ctx.workchains`` now contains a list with the nodes of the completed 
 Note that the use of ``append_`` is not just limited to the ``to_context`` method.
 You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
 
+.. _aborting_and_exit_codes:
+
 Aborting and exit codes
 -----------------------
 At the end of every outline step, the return value will be inspected by the workflow engine.
 If a non-zero integer value is detected, the workflow engine will interpret this as an exit code and will stop the execution of the workchain, while setting its process state to ``Finished``.
-In addition, the integer return value will be set as the ``finish_status`` of the workchain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <process_state>`.
+In addition, the integer return value will be set as the ``exit_status`` of the workchain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <process_state>`.
 This is useful because it allows a workflow designer to easily exit from a workchain and use the return value to communicate programmatically the reason for the workchain stopping.
-Consider the following example, where we launch a calculation and in the next step check whether it finished successfully, and if not we exit the workchain:
+
+We assume that you have read the `section on how to define exit code <exit_codes>`_ through the process specification of the workchain.
+Consider the following example workchain that defines such an exit code:
+
+.. code:: python
+
+    spec.exit_code(400, 'ERROR_CALCULATION_FAILED', 'the child calculation did not finish successfully')
+
+Now imagine that in the outline, we launch a calculation and in the next step check whether it finished successfully.
+In the event that the calculation did not finish successfully, the following snippet shows how you can retrieve the corresponding exit code and abort the ``WorkChain`` by returning it:
 
 .. code:: python
 
@@ -720,39 +767,43 @@ Consider the following example, where we launch a calculation and in the next st
     def inspect_calculation(self):
         if not self.ctx.calculation.is_finished_ok:
             self.report('the calculation did not finish successfully, there is nothing we can do')
-            return 256
+            return self.exit_codes.ERROR_CALCULATION_FAILED
 
         self.report('the calculation finished successfully')
 
 In the ``inspect_calculation`` outline, we retrieve the calculation that was submitted and added to the context in the previous step and check if it finished successfully through the property ``is_finished_ok``.
-If this returns ``False``, in this example we simply fire a report message and return the integer ``256``.
-Note that this value was randomly chosen for the example, but any non-zero integer will do.
-A good practice would be to define constants in your workchain class with the various potential exit codes that can be returned in the workchains execution and use those instead.
-For example:
+If this returns ``False``, in this example we simply fire a report message and return the exit code corresponding to the label ``ERROR_CALCULATION_FAILED``.
+Note that the specific exit code can be retrieved through the ``WorkChain`` property ``exit_codes``.
+This will return a collection of exit codes that have been defined for that ``WorkChain`` and any specific exit code can then be retrieved by accessing it as an attribute.
+Returning this exit code, which will be an instance of the :py:class:`~aiida.work.exit_code.ExitCode` named tuple, will cause the workchain to be aborted and the ``exit_status`` and ``exit_message`` to be set on the node, which were defined in the spec.
 
-.. code:: python
+.. note:: The notation ``self.exit_codes.ERROR_CALCULATION_FAILED`` is just syntactic sugar to retrieve the ``ExitCode`` tuple that was defined in the spec with that error label.
+    Constructing your own ``ExitCode`` directly and returning that from the outline step will have exactly the same effect in terms of aborting the workchain execution and setting the exit status and message.
+    However, it is strongly advised to define the exit code through the spec and retrieve it through the ``self.exit_codes`` collection, as that makes it easily retrievable through the spec by the caller of the workchain.
 
-    class SomeWorkChain(WorkChain):
-
-        ERROR_CALCULATION_FAILED = 256
-
-        def inspect_calculation(self):
-            if not self.ctx.calculation.is_finished_ok:
-                self.report('the calculation did not finish successfully, there is nothing we can do')
-                return self.ERROR_CALCULATION_FAILED
-
-.. note::
-
-    Make sure that you do not define these in the constructor of the ``WorkChain`` class, as that code will not be reexecuted when the workchain is persisted and subsequently loaded again, which happen for example if it is submitted to the daemon.
-    Instead, as in the example above, define these constants as class variables.
-    This will guarantee that they will always be defined, even when the workchain is loaded from a persisted state
-
-The best part about this method of aborting a workchains execution, is that the finish status can now be used programmatically, by for example a parent workchain.
+The best part about this method of aborting a workchains execution, is that the exit status can now be used programmatically, by for example a parent workchain.
 Imagine that a parent workchain submitted this workchain.
 After it has terminated its execution, the parent workchain will want to know what happened to the child workchain.
 As already noted in the :ref:`report<reporting>` section, the report messages of the workchain should not be used.
-The finish status, however, is a perfect way.
-The parent workchain can easily request the finish status of the child workchain through the ``finish_status`` property, and based on its value determine how to continue.
+The exit status, however, is a perfect way.
+The parent workchain can easily request the exit status of the child workchain through the ``exit_status`` property, and based on its value determine how to proceed.
+
+Workfunction exit codes
+^^^^^^^^^^^^^^^^^^^^^^^
+The method of setting the exit status for a ``WorkChain`` by returning an ``ExitCode``, as explained in the previous section, works almost exactly the same for ``workfunctions``.
+The only difference is that for a workfunction, we do not have access to the convenience ``exit_codes`` property of then ``WorkChain``, but rather we have to import and return an ``ExitCode`` ourselves.
+This named tuple can be constructed with an integer, to denote the desired exit status and an optional message, and when returned, the workflow engine will mark the node of the workfunction as ``Finished`` and set the exit status and message to the value of the tuple.
+Consider the following example:
+
+.. code:: python
+
+    @workfunction
+    def exiting_workfunction():
+        from aiida.work import ExitCode
+        return ExitCode(418, 'I am a teapot')
+
+The execution of the workfunction will be immediately terminated as soon as the tuple is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
+Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs and the value returned from the function call will be an empty dictionary.
 
 Modular workflow design
 -----------------------
@@ -777,7 +828,7 @@ As a first example, we will implement a thin wrapper workflow, which simply forw
 .. include:: include/snippets/workflows/expose_inputs/simple_parent.py
     :code: python
 
-In the ``define`` method of this simple parent workchain, we use the :meth:`.expose_inputs` and :meth:`.expose_outputs`.
+In the ``define`` method of this simple parent workchain, we use the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs`.
 This creates the corresponding input and output ports in the parent workchain.
 Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class.
 This is used when calling the child in the ``run_child`` method.
@@ -806,9 +857,9 @@ In the next section, we will explain each of the steps.
     :code: python
 
 First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.
-For this, we again use :meth:`.expose_inputs` and :meth:`.expose_outputs`, but with the optional keyword ``include``.
+For this, we again use :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
 This specifies a list of keys, and only inputs or outputs which are in that list will be exposed.
-So by passing ``include=['a']`` to :meth:`.expose_inputs`, only the input ``a`` is exposed.
+So by passing ``include=['a']`` to :meth:`~plumpy.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
 
 Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children.
 For this purpose, we pass the ``namespace`` parameter to the expose functions.
@@ -824,6 +875,27 @@ Of course, we then need to explicitly pass the input ``a``.
 
 Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent.
 Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.
+
+.. _serialize_inputs:
+
+Automatic input serialization
+-----------------------------
+
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a workflow. Doing this manually can be cumbersome, so you can define a function which does this automatically when defining the input spec. This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+
+For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type. For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
+
+The following example workchain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`.to_aiida_type` function is used as serialization function.
+
+.. include:: serialize_examples/serialize_workchain.py
+    :code: python
+
+This workchain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`.to_aiida_type`.
+
+.. include:: serialize_examples/run_serialize.py
+    :code: python
+
+Of course, you can also use the serialization feature to perform a more complex serialization of the inputs.
 
 .. _upgrading_workchains_beta_release:
 

@@ -10,15 +10,32 @@
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/daemon.py|
         docs/update_req_for_rtd.py| # a|b -> match a OR b
-        .travis_data/test_setup.py|
+        .ci/test_setup.py|
         aiida/transport/.*.py|
         aiida/scheduler/.*.py|
-        .travis-data/test_plugin_testcase.py|
+        .ci/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/work/awaitable.py|
+        aiida/work/context.py|
+        aiida/work/exceptions.py|
+        aiida/work/exit_code.py|
+        aiida/work/futures.py|
+        aiida/work/launch.py|
+        aiida/work/persistence.py|
+        aiida/work/ports.py|
+        aiida/work/process_builder.py|
+        aiida/work/process_spec.py|
+        aiida/work/rmq.py|
+        aiida/work/runners.py|
+        aiida/work/test_utils.py|
+        aiida/work/transports.py|
+        aiida/work/utils.py|
+        aiida/work/workchain.py|
+        aiida/work/workfunctions.py
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 
 # prospector: collection of linters
@@ -35,13 +52,30 @@
         aiida/cmdline/tests/.*.py|
         aiida/cmdline/commands/daemon.py|
         docs/update_req_for_rtd.py|
-        .travis_data/test_setup.py|
-        .travis-data/test_plugin_testcase.py|
+        .ci/test_setup.py|
+        .ci/test_plugin_testcase.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/orm/data/cif.py|
         aiida/restapi/translator/data/cif.py|
         aiida/restapi/resources.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/work/awaitable.py|
+        aiida/work/context.py|
+        aiida/work/exceptions.py|
+        aiida/work/exit_code.py|
+        aiida/work/futures.py|
+        aiida/work/launch.py|
+        aiida/work/persistence.py|
+        aiida/work/ports.py|
+        aiida/work/process_builder.py|
+        aiida/work/process_spec.py|
+        aiida/work/rmq.py|
+        aiida/work/runners.py|
+        aiida/work/test_utils.py|
+        aiida/work/transports.py|
+        aiida/work/utils.py|
+        aiida/work/workchain.py|
+        aiida/work/workfunctions.py
       )$
 
 - repo: local

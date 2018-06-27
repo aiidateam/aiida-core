@@ -29,10 +29,12 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
+    CHECKPOINT_KEY = 'checkpoints'
+    EXCEPTION_KEY = 'exception'
+    EXIT_MESSAGE_KEY = 'exit_message'
+    EXIT_STATUS_KEY = 'exit_status'
     PROCESS_LABEL_KEY = '_process_label'
     PROCESS_STATE_KEY = 'process_state'
-    FINISH_STATUS_KEY = 'finish_status'
-    CHECKPOINT_KEY = 'checkpoints'
 
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL']
@@ -41,10 +43,12 @@ class AbstractCalculation(Sealable):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractCalculation, cls)._updatable_attributes + (
+            cls.CHECKPOINT_KEY,
+            cls.EXCEPTION_KEY,
+            cls.EXIT_MESSAGE_KEY,
+            cls.EXIT_STATUS_KEY,
             cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
-            cls.FINISH_STATUS_KEY,
-            cls.CHECKPOINT_KEY,
         )
 
     @classproperty
@@ -286,12 +290,12 @@ class AbstractCalculation(Sealable):
     def is_finished_ok(self):
         """
         Returns whether the Calculation has finished successfully, which means that it
-        terminated nominally and had a zero exit code indicating a successful execution
+        terminated nominally and had a zero exit status indicating a successful execution
 
         :return: True if the calculation has finished successfully, False otherwise
         :rtype: bool
         """
-        return self.is_finished and self.finish_status == 0
+        return self.is_finished and self.exit_status == 0
 
     @property
     def is_failed(self):
@@ -302,20 +306,20 @@ class AbstractCalculation(Sealable):
         :return: True if the calculation has failed, False otherwise
         :rtype: bool
         """
-        return self.is_finished and self.finish_status != 0
+        return self.is_finished and self.exit_status != 0
 
     @property
-    def finish_status(self):
+    def exit_status(self):
         """
-        Return the finish status of the Calculation
+        Return the exit status of the Calculation
 
-        :returns: the finish status, an integer exit code or None
+        :returns: the exit status, an integer exit code or None
         """
-        return self.get_attr(self.FINISH_STATUS_KEY, None)
+        return self.get_attr(self.EXIT_STATUS_KEY, None)
 
-    def _set_finish_status(self, status):
+    def _set_exit_status(self, status):
         """
-        Set the finish status of the Calculation
+        Set the exit status of the Calculation
 
         :param state: an integer exit code or None, which will be interpreted as zero
         """
@@ -326,9 +330,54 @@ class AbstractCalculation(Sealable):
             status = status.value
 
         if not isinstance(status, int):
-            raise ValueError('finish status has to be an integer, got {}'.format(status))
+            raise ValueError('exit status has to be an integer, got {}'.format(status))
 
-        return self._set_attr(self.FINISH_STATUS_KEY, status)
+        return self._set_attr(self.EXIT_STATUS_KEY, status)
+
+    @property
+    def exit_message(self):
+        """
+        Return the exit message of the Calculation
+
+        :returns: the exit message
+        """
+        return self.get_attr(self.EXIT_MESSAGE_KEY, None)
+
+    def _set_exit_message(self, message):
+        """
+        Set the exit message of the Calculation, if None nothing will be done
+
+        :param message: a string message
+        """
+        if message is None:
+            return
+
+        if not isinstance(message, basestring):
+            raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
+
+        return self._set_attr(self.EXIT_MESSAGE_KEY, message)
+
+    @property
+    def exception(self):
+        """
+        Return the exception of the Calculation or None if the calculation is not EXCEPTED. If the calculation
+        is marked as EXCEPTED yet there is no exception attribute, an empty string will be returned
+
+        :returns: the exception message or None
+        """
+        if self.is_excepted:
+            return self.get_attr(self.EXCEPTION_KEY, '')
+
+    def _set_exception(self, exception):
+        """
+        Set the exception of the Calculation
+
+        :param exception: the exception message
+        """
+        if not isinstance(exception, basestring):
+            raise ValueError('exception message has to be a string type, got {}'.format(type(exception)))
+
+        return self._set_attr(self.EXCEPTION_KEY, exception)
 
     @property
     def checkpoint(self):
@@ -339,7 +388,7 @@ class AbstractCalculation(Sealable):
         """
         return self.get_attr(self.CHECKPOINT_KEY, None)
 
-    def _set_checkpoint(self, checkpoint):
+    def set_checkpoint(self, checkpoint):
         """
         Set the checkpoint bundle set for the Calculation
 
@@ -347,7 +396,7 @@ class AbstractCalculation(Sealable):
         """
         return self._set_attr(self.CHECKPOINT_KEY, checkpoint)
 
-    def _del_checkpoint(self):
+    def del_checkpoint(self):
         """
         Delete the checkpoint bundle set for the Calculation
         """

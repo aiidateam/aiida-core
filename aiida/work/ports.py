@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
 from plumpy import ports
 
 
@@ -20,21 +21,75 @@ class WithNonDb(object):
     def non_db(self):
         return self._non_db
 
+
+class WithSerialize(object):
+    """
+    A mixin that adds support for a serialization function which is automatically applied on inputs
+    that are not AiiDA data types.
+    """
+
+    def __init__(self, *args, **kwargs):
+        serializer = kwargs.pop('serializer', None)
+        super(WithSerialize, self).__init__(*args, **kwargs)
+        self._serializer = serializer
+
+    def serialize(self, value):
+        """
+        Serialize the given value if it is not already a Data type and a serializer function is defined
+
+        :param value: the value to be serialized
+        :returns: a serialized version of the value or the unchanged value
+        """
+        from aiida.orm import Data
+
+        if self._serializer is None or isinstance(value, Data):
+            return value
+
+        return self._serializer(value)
+
+
+class InputPort(WithSerialize, WithNonDb, ports.InputPort):
+    """
+    Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
+    value serialization to database storable types and support non database storable input types as well.
+    """
+
     def get_description(self):
         """
         Return a description of the InputPort, which will be a dictionary of its attributes
 
         :returns: a dictionary of the stringified InputPort attributes
         """
-        description = super(WithNonDb, self).get_description()
+        description = super(InputPort, self).get_description()
         description['non_db'] = '{}'.format(self.non_db)
 
         return description
 
 
-class InputPort(WithNonDb, ports.InputPort):
-    pass
-
-
 class PortNamespace(ports.PortNamespace):
-    pass
+    """
+    Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
+    serialization of a given mapping onto the ports of the PortNamespace.
+    """
+
+    def serialize(self, mapping):
+        """
+        Serialize the given mapping onto this Portnamespace. It will recursively call this function on any
+        nested PortNamespace or the serialize function on any Ports.
+
+        :param mapping: a mapping of values to be serialized
+        :returns: the serialized mapping
+        """
+        if mapping is None:
+            return None
+
+        result = {}
+
+        for name, value in mapping.items():
+            if name in self:
+                port = self[name]
+                result[name] = port.serialize(value)
+            else:
+                result[name] = value
+
+        return result

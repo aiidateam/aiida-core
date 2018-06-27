@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import inspect
 import plumpy
 import plumpy.test_utils
-import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
@@ -24,6 +22,7 @@ from aiida.utils.capturing import Capturing
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import Process
+from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
 
 from . import utils
@@ -116,13 +115,17 @@ class Wf(work.WorkChain):
         self.finished_steps[function_name] = True
 
 
-class ReturnWorkChain(WorkChain):
-    FAILURE_STATUS = 1
+class PotentialFailureWorkChain(WorkChain):
+
+    EXIT_STATUS = 1
+    EXIT_MESSAGE = 'Well you did ask for it'
 
     @classmethod
     def define(cls, spec):
-        super(ReturnWorkChain, cls).define(spec)
+        super(PotentialFailureWorkChain, cls).define(spec)
         spec.input('success', valid_type=Bool)
+        spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
+        spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(
             cls.failure,
             cls.success
@@ -130,24 +133,36 @@ class ReturnWorkChain(WorkChain):
 
     def failure(self):
         if self.inputs.success.value is False:
-            return self.FAILURE_STATUS
+            if self.inputs.through_exit_code.value is False:
+                return self.EXIT_STATUS
+            else:
+                return self.exit_codes.EXIT_STATUS
 
     def success(self):
         return
 
 
-class TestFinishStatus(AiidaTestCase):
+class TestExitStatus(AiidaTestCase):
 
     def test_failing_workchain(self):
-        result, node = work.run_get_node(ReturnWorkChain, success=Bool(False))
-        self.assertEquals(node.finish_status, ReturnWorkChain.FAILURE_STATUS)
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False))
+        self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
+        self.assertEquals(node.exit_message, None)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, False)
+        self.assertEquals(node.is_failed, True)
+
+    def test_failing_workchain_with_message(self):
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
+        self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
+        self.assertEquals(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
 
     def test_successful_workchain(self):
-        result, node = work.run_get_node(ReturnWorkChain, success=Bool(True))
-        self.assertEquals(node.finish_status, 0)
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True))
+        self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
@@ -546,6 +561,41 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(TestWorkChain, namespace={'value': value})
 
+    def test_exit_codes(self):
+        status = 418
+        label = 'SOME_EXIT_CODE'
+        message = 'I am a teapot'
+
+        class ExitCodeWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(ExitCodeWorkChain, cls).define(spec)
+                spec.outline(cls.run)
+                spec.exit_code(status, label, message)
+
+            def run(self):
+                pass
+
+        wc = ExitCodeWorkChain()
+
+        # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
+        self.assertEquals(wc.exit_codes(status).status, status)
+        self.assertEquals(wc.exit_codes(label).status, status)
+        self.assertEquals(wc.exit_codes.SOME_EXIT_CODE.status, status)
+
+        with self.assertRaises(AttributeError):
+            wc.exit_codes.NON_EXISTENT_ERROR
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message, message)
+
+        self.assertEquals(ExitCodeWorkChain.exit_codes[label].status, status)
+        self.assertEquals(ExitCodeWorkChain.exit_codes[label].message, message)
+
     def _run_with_checkpoints(self, wf_class, inputs=None):
         if inputs is None:
             inputs = {}
@@ -854,6 +904,59 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         x = Int(1)
         y = Int(2)
         run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
+
+
+class SerializeWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super(SerializeWorkChain, cls).define(spec)
+
+        spec.input(
+            'test',
+            valid_type=Str,
+            serializer=lambda x: Str(ObjectLoader().identify_object(x)),
+        )
+        spec.input('reference', valid_type=Str)
+
+        spec.outline(cls.do_test)
+
+    def do_test(self):
+        assert isinstance(self.inputs.test, Str)
+        assert self.inputs.test == self.inputs.reference
+
+class TestSerializeWorkChain(AiidaTestCase):
+    """
+    Test workchains with serialized input / output.
+    """
+    def setUp(self):
+        super(TestSerializeWorkChain, self).setUp()
+        self.assertIsNone(Process.current())
+        self.runner = utils.create_test_runner()
+
+    def tearDown(self):
+        super(TestSerializeWorkChain, self).tearDown()
+        work.set_runner(None)
+        self.assertIsNone(Process.current())
+
+    def test_serialize(self):
+        """
+        Test a simple serialization of a class to its identifier.
+        """
+        run_and_check_success(
+            SerializeWorkChain,
+            test=Int,
+            reference=Str(ObjectLoader().identify_object(Int))
+        )
+
+    def test_serialize_builder(self):
+        """
+        Test serailization when using a builder.
+        """
+        builder = SerializeWorkChain.get_builder()
+        builder.test = Int
+        builder.reference = Str(ObjectLoader().identify_object(Int))
+
+        work.launch.run(builder)
 
 
 class GrandParentExposeWorkChain(work.WorkChain):

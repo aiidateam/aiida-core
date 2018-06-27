@@ -1,0 +1,209 @@
+// Note: this part might happen on a different node than
+// the one that will run the pipeline below, see
+// https://stackoverflow.com/questions/44805076
+// but it should be ok for us as we only have one node
+def user_id
+def group_id
+node {
+  user_id = sh(returnStdout: true, script: 'id -u').trim()
+  group_id = sh(returnStdout: true, script: 'id -g').trim()
+}
+
+pipeline {
+    /* The tutorial was setting here agent none, and setting the 
+       agent in each stage, using therefore different agents in each
+       stage. I think that for what we are trying to achieve, having
+       a single agent and running all in the same docker image is better,
+       but we need to check this for more advanced usages. */
+    // agent none
+    agent {
+        // Documentation: https://jenkins.io/doc/book/pipeline/syntax/#agent
+        // Note: we reuse the pip cache for speed
+        // TMPFS: we make sure that postgres is different for every run,
+        //   but also runs fast
+        dockerfile {
+            filename 'Dockerfile'
+            dir '.ci'
+            args '-v jenkins-pip-cache:/home/jenkins/.cache/pip/ --tmpfs /var/lib/postgresql-tmp --tmpfs /tmp:exec'
+            additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
+        }
+    }
+    environment {
+        // I define some environment variables that are used
+        // internally by the travis scripts that I call
+        TEST_TYPE="tests"
+        // To mock what TRAVIS WOULD USE
+        TRAVIS_BUILD_DIR="."
+        COMPUTER_SETUP_TYPE="jenkins"
+        // The following two variables allow to run selectively tests only for one backend
+        RUN_ALSO_DJANGO="true"
+        RUN_ALSO_SQLALCHEMY="true"
+        // To avoid that different pipes (stderr, stdout, different processes) get in the wrong order
+        PYTHONUNBUFFERED="yes"
+    }
+    stages {
+        stage('Pre-build') {
+            steps {
+                sh 'sudo /etc/init.d/ssh restart'
+                sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
+                // (re)start rabbitmq (both to start it or to reload the configuration)
+                sh 'sudo /etc/init.d/rabbitmq-server restart'
+                
+                // Make sure the tmpfs folder is owned by postgres, and that it
+                // contains the right data
+                sh 'sudo chown postgres:postgres /var/lib/postgresql-tmp'
+                sh 'sudo mv /var/lib/postgresql/* /var/lib/postgresql-tmp/'
+                sh 'sudo rmdir /var/lib/postgresql/'
+                sh 'sudo ln -s /var/lib/postgresql-tmp/ /var/lib/postgresql'
+
+                // (re)start postgres (both to start it or to reload the configuration)
+                sh 'sudo /etc/init.d/postgresql restart'
+
+                // rerun updatedb otherwise 'locate' prints a warning that the DB is old...
+                sh 'sudo updatedb'
+
+                // Debug: check that I can connect without password
+                sh 'echo "SELECT datname FROM pg_database" | psql -h localhost -U postgres -w'
+
+                // We skip the creation of a docker image
+                // to ssh into, as it is done in travis. Here, in Jenkins,
+                // we instead ssh to localhost to investigate.
+
+                // Add the line to the .bashrc, but before it stops when non-interactive
+                // So it can find the location of 'verdi'
+                sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
+                // Add path needed by the daemon to find the workchains
+                sh "sed -i '/interactively/iexport PYTHONPATH=\${PYTHONPATH}:'`pwd`'/.ci/' ~/.bashrc"
+                sh "cat ~/.bashrc"
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'pip install --user .[all]'
+                // To be able to do ssh localhost
+                sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
+                sh 'cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys'
+                sh 'ssh-keyscan -H localhost >> ~/.ssh/known_hosts'
+            }
+            post {
+                always {
+                    sh 'pip freeze > pip-freeze.txt'
+                    archiveArtifacts artifacts: 'pip-freeze.txt', fingerprint: true
+                }
+            }
+        }
+        stage('Test') {
+            failFast false // It is the default, but I still put it for future reference
+                           // failFast would stop as soon as there is a failing test
+            parallel {
+                stage('Test-Django') {
+                    environment {
+                        TEST_AIIDA_BACKEND="django"
+                        // I run the two tests in two different folders, otherwise 
+                        // they might get at the point of writing the config.json at the 
+                        // same time and one of the two would crash
+                        AIIDA_PATH="/tmp/aiida-django-folder"
+                        // To collect coverage info for each backend in a different file
+                        // and avoiding potential problems
+                        COVERAGE_FILE=".coverage.django"
+                    }
+                    when {
+                        // This allows to selectively run only one backend
+                        environment name: 'RUN_ALSO_DJANGO', value: 'true'
+                    }
+                    steps {
+                        // An empty .aiida folder must be present in the AIIDA_PATH
+                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
+                        sh '.ci/setup_profiles.sh'
+                        sh '.ci/before_script.sh'
+                        sh '.ci/test_script.sh'
+                        sh '.ci/test_rpn.sh'
+                    }
+                }
+                stage('Test-SQLAlchemy') {
+                    environment {
+                        TEST_AIIDA_BACKEND="sqlalchemy"
+                        AIIDA_PATH="/tmp/aiida-sqla-folder"
+                        COVERAGE_FILE=".coverage.sqlalchemy"
+                    }
+                    when {
+                        // This allows to selectively run only one backend
+                        environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
+                    }
+                    steps {
+                        // An empty .aiida folder must be present in the AIIDA_PATH
+                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
+                        sh '.ci/setup_profiles.sh'
+                        sh '.ci/before_script.sh'
+                        sh '.ci/test_script.sh'
+                        sh '.ci/test_rpn.sh'
+                    }
+                }
+            }
+        }
+        stage('Final') {
+            steps {
+                // create the final coverage info, summed over the various backends
+                sh '.ci/create_coverage_info.sh'
+            }
+            // post {
+            //    always {
+            //        // note: junit does not like the XML output, it says
+            //        // 'None of the test reports contained any result'
+            //        // (maybe because it's coverage and not testing?)
+            //        // For now I'm not doing it as it's ~3 MB every time
+            //        // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
+            //        // coverage folder, first
+            //        archiveArtifacts artifacts: 'coverage/html.zip', fingerprint: true
+            //    }
+            // }
+        }
+    }
+    post {
+        always {
+            // Some debug stuff
+            sh 'whoami ; pwd; echo $TEST_AIIDA_BACKEND'
+        }
+        success {
+            echo 'The run finished successfully!'
+        }
+        unstable {
+            echo 'This run is unstable...'
+        }
+        failure {
+            echo "This run failed..."
+        }
+        //  You can trigger actions when the status change (e.g. it starts failing,
+        // or it starts working again - e.g. sending emails or similar)
+        // possible variables: see e.g. https://qa.nuxeo.org/jenkins/pipeline-syntax/globals
+        // Other valid names: fixed, regression (opposite of fixed), aborted (by user, typically)
+        // Note that I had problems with email, I don't know if it is a configuration problem
+        // or a missing plugin.
+        changed {
+            script {
+                if (currentBuild.getPreviousBuild()) {
+                    echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.currentResult}."
+                }
+                else {
+                    echo "This is the first build, and its status is: ${currentBuild.currentResult}."
+                }
+            }
+        } 
+    } 
+    options {
+        // we do not want the whole run to hang forever - 
+ 	// we set a total timeout of 1 hour
+        timeout(time: 60, unit: 'MINUTES')
+    }
+}
+
+
+// Other things to add possibly:
+// global options (or per-stage options) with timeout: https://jenkins.io/doc/book/pipeline/syntax/#options-example
+// retry-on-failure for some specific tasks: https://jenkins.io/doc/book/pipeline/syntax/#available-stage-options
+// parameters: https://jenkins.io/doc/book/pipeline/syntax/#parameters
+// input: interesting for user input before continuing: https://jenkins.io/doc/book/pipeline/syntax/#input
+// when conditions, e.g. to depending on details on the commit (e.g. only when specific 
+//     files are changed, where there is a string in the commit log, for a specific branch,
+//     for a Pull Request,for a specific environment variable, ...): 
+//     https://jenkins.io/doc/book/pipeline/syntax/#when

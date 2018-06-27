@@ -19,7 +19,8 @@
 *\,cover
 coverage/
 .cache
+.pytest_cache
 .coverage
 
-# Files created by Jenkins tests
-.jenkins-data/polish/polish_workchains/polish*
+# Files created by RPN tests
+.ci/polish/polish_workchains/polish*

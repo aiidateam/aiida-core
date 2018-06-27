@@ -15,7 +15,6 @@ from aiida.orm.data.cif import CifData
 from aiida.utils import timezone
 import datetime
 from aiida.common.exceptions import MultipleObjectsError
-from aiida.common.utils import Prettifier
 from aiida.cmdline.commands.data.export import _export
 from aiida.cmdline.params import arguments
 
@@ -33,14 +32,13 @@ def cif(ctx):
          "enabled.")
 @click.option('-p', '--past-days', type=click.INT,
              default=None,
-             help="Add a filter to show only bandsdatas"
-                  " created in the past N days")
+             help="Add a filter to show only Cifs created in the past N days")
 @click.option('-A', '--all-users', is_flag=True, default=False,
-             help="show groups for all users, rather than only for the"
+             help="show Cif data for all users, rather than only for the"
                   "current user")
 @options.GROUPS()
 @cif.command('list')
-def list(vseparator, header, past_days, all_users, groups):
+def cif_list(vseparator, header, past_days, all_users, groups):
 
     entry_list = query(past_days, all_users, groups)
 
@@ -340,7 +338,7 @@ databases = {'tcod': _deposit_tcod, 'tcod_parameters': _deposit_tcod_parameters}
 #
 # .. note:: This method must not set any default values for command line
 #     options in order not to clash with any other data deposition plugins.
-@click.option('--type', '--deposition-type', 'deposition_type',
+@click.option('--type', '--deposition-type', '§',
               type=click.Choice(['published','prepublication','personal']),
               help="Type of the deposition.")
 @click.option('-u', '--username', type=click.STRING, default=None,
@@ -401,39 +399,40 @@ databases = {'tcod': _deposit_tcod, 'tcod_parameters': _deposit_tcod_parameters}
               help="Specify the minimum size of exported file which should be "
                    "gzipped. Default {}."
               .format(default_options['gzip_threshold']))
-def deposit(node, database, deposition_type, username, password, user_email,
-            title, author_name, author_email, url, code_label, computer_name,
-            replace, message, reduce_symmetry, parameter_data,
-            dump_aiida_database, exclude_external_contents, gzip,
-            gzip_threshold):
+def deposit(node, parameter_data, deposition_type,  **kwargs):
+
+
+    print kwargs
     echo.echo("node: " + str(node))
-    echo.echo("database: " + str(database))
-    echo.echo("deposition_type: " + str(deposition_type))
-    echo.echo("username: " + str(username))
-    echo.echo("password: " + str(password))
-    echo.echo("user_email: " + str(user_email))
-    echo.echo("title: " + str(title))
-    echo.echo("author_name: " + str(author_name))
-    echo.echo("author_email: " + str(author_email))
-    echo.echo("url: " + str(url))
-    echo.echo("code_label: " + str(code_label))
-    echo.echo("computer_name: " + str(computer_name))
-    echo.echo("replace: " + str(replace))
-    echo.echo("message: " + str(message))
-    
-    echo.echo("reduce_symmetry: " + str(reduce_symmetry))
-    # echo.echo(node, database, deposition_type, username, password, user_email,
-    #         title, author_name, author_email, url, code_label, computer_name, replace,
-    #         message, reduce_symmetry)
-
-
-    # try:
-    #     if not isinstance(n, CifData):
-    #         echo.echo_critical("Node {} is of class {} instead "
-    #                               "of {}".format(node, type(node), CifData))
-    # except AttributeError:
-    #     pass
+    # echo.echo("database: " + str(database))
+    # echo.echo("deposition_type: " + str(deposition_type))
+    # echo.echo("username: " + str(username))
+    # echo.echo("password: " + str(password))
+    # echo.echo("user_email: " + str(user_email))
+    # echo.echo("title: " + str(title))
+    # echo.echo("author_name: " + str(author_name))
+    # echo.echo("author_email: " + str(author_email))
+    # echo.echo("url: " + str(url))
+    # echo.echo("code_label: " + str(code_label))
+    # echo.echo("computer_name: " + str(computer_name))
+    # echo.echo("replace: " + str(replace))
+    # echo.echo("message: " + str(message))
     #
-    # calc = databases[database](n, **parsed_args)
-    # echo.echo(calc)
+    # echo.echo("reduce_symmetry: " + str(reduce_symmetry))
+    echo.echo("parameter_data: " + str(parameter_data))
+    # echo.echo("dump_aiida_database: " + str(dump_aiida_database))
+    # echo.echo("exclude_external_contents: " + str(exclude_external_contents))
+    # echo.echo("gzip: " + str(gzip))
+    # echo.echo("gzip_threshold: " + str(gzip_threshold))
+
+    try:
+        if not isinstance(node, CifData):
+            echo.echo_critical("Node {} is of class {} instead "
+                                  "of {}".format(node, type(node), CifData))
+    except AttributeError:
+        pass
+
+    from aiida.cmdline.commands.data.deposit import deposit_tcod
+
+    print deposit_tcod(node, deposition_type , kwargs)
 

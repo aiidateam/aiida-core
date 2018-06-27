@@ -80,6 +80,9 @@ def deposit_options(func):
 
     return func
 
+
+from aiida.cmdline import delayed_load_node as load_node
+
 def deposit_tcod(node, deposit_type, parameter_data=None, **kwargs):
     """
     Deposition plugin for TCOD.
@@ -90,4 +93,5 @@ def deposit_tcod(node, deposit_type, parameter_data=None, **kwargs):
         from aiida.orm import DataFactory
         ParameterData = DataFactory('parameter')
         parameters = load_node(parameter_data, sub_class=ParameterData)
+
     return deposit(node, deposit_type, parameters, **kwargs)

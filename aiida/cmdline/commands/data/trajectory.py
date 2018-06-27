@@ -50,8 +50,6 @@ def list_trajections(elements, elements_only, formulamode, past_days, groups, al
     else:
         echo.echo_warning("No nodes of type {} where found in the database".format(TrajectoryData))
 
-
-
 @trajectory.command('show')
 @show_options
 def show (**kwargs):

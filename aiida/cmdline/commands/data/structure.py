@@ -17,7 +17,7 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
+from aiida.cmdline.utils import echo
 
 @verdi_data.group('structure')
 @click.pass_context
@@ -168,7 +168,7 @@ def deposit(**kwargs):
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
-    calc = deposit_tcod(node, deposition_type, parameter_data, **kwargs)
+    echo.echo(deposit_tcod(node, deposition_type, parameter_data, **kwargs))
 
 
 def _import_xyz(filename, **kwargs):
@@ -217,9 +217,8 @@ def _import_pwi(filename, **kwargs):
     try:
         from qe_tools.parsers.pwinputparser import PwInputFile
     except ImportError:
-        echo.echo ("You have not installed the package qe-tools. \n"
+        echo.echo_critical ("You have not installed the package qe-tools. \n"
                 "You can install it with: pip install qe-tools")
-        sys.exit(1)
 
     store = kwargs.pop('store')
     view_in_ase = kwargs.pop('view')
@@ -254,9 +253,8 @@ def _import_ase(filename, **kwargs):
     try:
         import ase.io
     except ImportError:
-        echo.echo ("You have not installed the package ase. \n"
+        echo.echo_critical ("You have not installed the package ase. \n"
                 "You can install it with: pip install ase")
-        sys.exit(1)
 
     store = kwargs.pop('store')
     view_in_ase = kwargs.pop('view')

@@ -436,5 +436,5 @@ def deposit(node, parameter_data, deposition_type,  **kwargs):
 
     from aiida.cmdline.commands.data.deposit import deposit_tcod
 
-    print deposit_tcod(node, deposition_type , **kwargs)
+    print deposit_tcod(node, deposition_type , kwargs)
 

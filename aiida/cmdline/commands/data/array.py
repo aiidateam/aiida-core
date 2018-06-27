@@ -8,12 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_data
+from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
-from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
 
 
         

@@ -1,33 +1,32 @@
 from aiida.orm.implementation import Group
 from aiida.orm.user import User
 from aiida.orm.backend import construct_backend
-from aiida.cmdline.utils import echo
 from aiida.cmdline.params import options
 import click
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 
 _list_options = [
-    # click.option('-e', '--elements', type=click.STRING,
-    #           cls=MultipleValueOption,
-    #           default=None,
-    #           help="Print all bandsdatas from structures "
-    #           "containing desired elements"),
-    # click.option('-eo', '--elements-only', type=click.STRING,
-    #           cls=MultipleValueOption,
-    #           default=None,
-    #           help="Print all bandsdatas from structures "
-    #           "containing only the selected elements"),
+    click.option('-e', '--elements', type=click.STRING,
+              cls=MultipleValueOption,
+              default=None,
+              help="Print only the objects that"
+              " contain desired elements"),
+    click.option('-eo', '--elements-only', type=click.STRING,
+              cls=MultipleValueOption,
+              default=None,
+              help="Print only the objects that"
+              " contain only the selected elements"),
     click.option('-f', '--formulamode',
               type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
               default='hill',
               help="Formula printing mode (if None, does not print the formula)"),
     click.option('-p', '--past-days', type=click.INT,
               default=None,
-              help="Add a filter to show only bandsdatas"
+              help="Add a filter to show only datas"
               " created in the past N days"),
     click.option('-A', '--all-users', is_flag=True, default=False,
-              help="show groups for all users, rather than only for the"
+              help="show for all users, rather than only for the"
               "current user"),
     options.GROUPS(),
 ]

@@ -107,6 +107,8 @@ def _list(datatype, columns, elements, elements_only, formulamode,
         'Formula'   : 'attributes.formula',
         'Kinds'     : 'attributes.kinds',
         'Sites'     : 'attributes.sites',
+        'Formulae'  : 'attributes.formulae',
+        'Source'    : 'attributes.source',
         }
     project = [columns_dict[k] for k in columns] 
     try:

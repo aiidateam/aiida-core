@@ -36,7 +36,7 @@ def structure(ctx):
               help="Type of the visualization format/tool")
 def show(nodes, format):
     """
-    Visualize structure objects
+    Visualize StructureData objects
     """
     from aiida.cmdline.commands.data.show import _show_jmol
     from aiida.cmdline.commands.data.show import _show_ase

@@ -10,15 +10,13 @@
 import sys
 import click
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline.commands.data.list import _list
+from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export
-from aiida.cmdline.commands import verdi, verdi_data
+from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
 from aiida.orm.data.array.bands import BandsData
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.common.utils import Prettifier
 
 if not is_dbenv_loaded():
@@ -88,33 +86,11 @@ def show(nodes, format):
         if not isinstance(n, BandsData):
             echo.echo_critical("Node {} is of class {} instead "
                                 "of {}".format(n, type(n), BandsData))
-    
         show_xmgrace(format, nodes)
 
 
 @bands.command('list')
-@click.option('-e', '--elements', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all bandsdatas from structures "
-              "containing desired elements")
-@click.option('-eo', '--elements-only', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all bandsdatas from structures "
-              "containing only the selected elements")
-@click.option('-f', '--formulamode',
-              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-              default='hill',
-              help="Formula printing mode (if None, does not print the formula)")
-@click.option('-p', '--past-days', type=click.INT,
-              default=None,
-              help="Add a filter to show only bandsdatas"
-              " created in the past N days")
-@options.GROUPS()
-@click.option('-A', '--all-users', is_flag=True, default=False,
-              help="show groups for all users, rather than only for the"
-              "current user")
+@list_options
 def list_bands(elements, elements_only, formulamode, past_days, groups, all_users):
     """
     List stored BandData objects
@@ -172,5 +148,3 @@ def export(format, y_min_lim, y_max_lim, output, force, prettify_format, node):
     if not isinstance(node, BandsData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), BandsData))
     _export(node, output, format, other_args=args, overwrite=force)
-
-

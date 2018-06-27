@@ -41,6 +41,7 @@ def ls(long, path, node):
     """
     List directory content on remote RemoteData objects.
     """
+    import datetime
     try:
         content = node.listdir_withattributes(path=path)
     except (IOError, OSError) as e:

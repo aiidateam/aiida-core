@@ -9,13 +9,10 @@
 ###########################################################################
 import click
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.cmdline.params.arguments.overridable import OverridableArgument
-from aiida.common.exceptions import DanglingLinkError
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 if not is_dbenv_loaded():
@@ -25,7 +22,9 @@ if not is_dbenv_loaded():
 @verdi_data.group('upf')
 @click.pass_context
 def upf(ctx):
-    """help"""
+    """
+    Manipulation of the upf families
+    """
     pass
 
 
@@ -122,7 +121,7 @@ def exportfamily(folder, group_name):
     try:
         group = UpfData.get_upf_group(group_name)
     except NotExistent:
-        echo_critical("upf family {} not found".format(group_name))
+        echo.echo_critical("upf family {} not found".format(group_name))
 
     for u in group.nodes:
         dest_path = os.path.join(folder, u.filename)

@@ -8,139 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands.data.list import _list
-from aiida.cmdline.commands.data.export import _export
-from aiida.cmdline.commands.data.deposit import deposit_tcod
-from aiida.cmdline.commands import verdi, verdi_data
+from aiida.cmdline.commands.data.list import _list, list_options
+from aiida.cmdline.commands.data.export import _export, export_options
+from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
+from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-
-def _show_ase(exec_name, structure_list):
-    """
-    Plugin to show the structure with the ASE visualizer
-    """
-    try:
-        from ase.visualize import view
-        for structure in structure_list:
-            view(structure.get_ase())
-    except ImportError:
-        raise
-
-def _show_jmol(exec_name, structure_list):
-    """
-    Plugin for jmol
-    """
-    import tempfile, subprocess
-
-    with tempfile.NamedTemporaryFile() as f:
-        for structure in structure_list:
-            f.write(structure._exportstring('cif')[0])
-        f.flush()
-
-        try:
-            subprocess.check_output([exec_name, f.name])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(
-                exec_name))
-        except OSError as e:
-            if e.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                        "or try with an absolute path.".format(
-                    exec_name))
-            else:
-                raise
-def _show_vesta(exec_name, structure_list):
-    """
-    Plugin for VESTA
-    This VESTA plugin was added by Yue-Wen FANG and Abel Carreras
-    at Kyoto University in the group of Prof. Isao Tanaka's lab
-
-    """
-    import sys
-    import tempfile, subprocess
-
-    with tempfile.NamedTemporaryFile(suffix='.cif') as f:
-        for structure in structure_list:
-            f.write(structure._exportstring('cif')[0])
-        f.flush()
-
-        try:
-            subprocess.check_output([exec_name, f.name])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(
-                exec_name))
-        except OSError as e:
-            if e.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                        "or try with an absolute path.".format(exec_name))
-            else:
-                raise
-
-def _show_vmd(exec_name, structure_list):
-    """
-    Plugin for vmd
-    """
-    import tempfile, subprocess
-
-    if len(structure_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple objects "
-                                    "is not implemented")
-    structure = structure_list[0]
-
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
-        f.write(structure._exportstring('xsf')[0])
-        f.flush()
-
-        try:
-            subprocess.check_output([exec_name, f.name])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(
-                exec_name))
-        except OSError as e:
-            if e.errno == 2:
-                echo.echo_critical ("No executable '{}' found. Add to the path, "
-                        "or try with an absolute path.".format(
-                    exec_name))
-            else:
-                raise
-def _show_xcrysden(exec_name, structure_list):
-    """
-    Plugin for xcrysden
-    """
-    import sys
-    import tempfile, subprocess
-
-    if len(structure_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple objects "
-                                    "is not implemented")
-    structure = structure_list[0]
-
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
-        f.write(structure._exportstring('xsf')[0])
-        f.flush()
-
-        try:
-            subprocess.check_output([exec_name, '--xsf', f.name])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(
-                exec_name))
-        except OSError as e:
-            if e.errno == 2:
-                echo_critical("No executable '{}' found. Add to the path, "
-                        "or try with an absolute path.".format(
-                    exec_name))
-            else:
-                raise
 
 @verdi_data.group('structure')
 @click.pass_context
@@ -161,6 +38,11 @@ def show(nodes, format):
     """
     Visualize structure objects
     """
+    from aiida.cmdline.commands.data.show import _show_jmol
+    from aiida.cmdline.commands.data.show import _show_ase
+    from aiida.cmdline.commands.data.show import _show_vesta
+    from aiida.cmdline.commands.data.show import _show_vmd
+    from aiida.cmdline.commands.data.show import _show_xcrysden
     from aiida.orm.data.structure import StructureData
     for n in nodes:
         if not isinstance(n, StructureData):
@@ -180,28 +62,7 @@ def show(nodes, format):
         raise
 
 @structure.command('list')
-@click.option('-e', '--elements', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all structures"
-              "containing desired elements")
-@click.option('-eo', '--elements-only', type=click.STRING,
-              cls=MultipleValueOption,
-              default=None,
-              help="Print all structures "
-              "containing only the selected elements")
-@click.option('-f', '--formulamode',
-              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-              default='hill',
-              help="Formula printing mode (if None, does not print the formula)")
-@click.option('-p', '--past-days', type=click.INT,
-              default=None,
-              help="Add a filter to show only structures"
-              " created in the past N days")
-@options.GROUPS()
-@click.option('-A', '--all-users', is_flag=True, default=False,
-              help="show groups for all users, rather than only for the"
-              "current user")
+@list_options
 def list_structures(elements, elements_only, formulamode, past_days, groups, all_users):
     """
     List stored StructureData objects
@@ -263,184 +124,51 @@ def list_structures(elements, elements_only, formulamode, past_days, groups, all
               type=click.Choice(['cif', 'tcod', 'xsf', 'xyz']),
               default='xyz',
               help="Type of the exported file.")
-@click.option('--reduce-symmetry/--no-reduce-symmetry', 'reduce_symmetry', is_flag=True,
-              default=None,
-              help='Do (default) or do not perform symmetry reduction.')
-@click.option('--parameter-data', type=click.INT,
-              default=None,
-              help="ID of the ParameterData to be exported alongside the"
-                    " StructureData instance. By default, if StructureData"
-                    " originates from a calculation with single"
-                    " ParameterData in the output, aforementioned"
-                    " ParameterData is picked automatically. Instead, the"
-                    " option is used in the case the calculation produces"
-                    " more than a single instance of ParameterData.")
-@click.option('--dump-aiida-database/--no-dump-aiida-database', 'dump_aiida_database', is_flag=True,
-              default=None,
-              help='Export (default) or do not export AiiDA database to the CIF file.')
-@click.option('--exclude-external-contents/--no-exclude-external-contents', 'exclude_external_contents', is_flag=True,
-              default=None,
-              help='Do not (default) or do save the contents for external resources even if URIs are provided')
-@click.option('--gzip/--no-gzip', is_flag=True,   
-              default=None,
-              help='Do or do not (default) gzip large files.')
-@click.option('--gzip-threshold', type=click.INT,
-              default=None,
-              help="Specify the minimum size of exported file which should"
-              " be gzipped.")
-@click.option('-o', '--output', type=click.STRING,
-              default=None,
-              help="If present, store the output directly on a file "
-              "with the given name. It is essential to use this option "
-              "if more than one file needs to be created.")
-@options.FORCE(help="If passed, overwrite files without checking.")
-@arguments.NODE()
-def export(format, reduce_symmetry, parameter_data, dump_aiida_database, exclude_external_contents, gzip, gzip_threshold, output, force, node):
+@export_options
+def export(**kwargs):
     """
     Export structure
     """
     from aiida.orm.data.structure import StructureData
-    args = {}
-    if reduce_symmetry is not None:
-        args['reduce_symmetry'] = reduce_symmetry
-    if parameter_data is not None:
-        args['parameter_data'] = parameter_data
-    if dump_aiida_database is not None:
-        args['dump_aiida_database'] = dump_aiida_database
-    if exclude_external_contents is not None:
-        args['exclude_external_contents'] = exclude_external_contents
-    if gzip is not None:
-        args['gzip'] = gzip
-    if gzip_threshold is not None:
-        args['gzip_threshold'] = gzip_threshold
+
+    node = kwargs.pop('node')
+    output = kwargs.pop('output')
+    format = kwargs.pop('format')
+    force = kwargs.pop('force')
+
+    for key,value in kwargs.items():
+        if value is None:
+            kwargs.pop(key)  
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
-    _export(node, output, format, other_args=args, overwrite=force)
-
-
+    _export(node, output, format, other_args=kwargs, overwrite=force)
 
 
 @structure.command('deposit')
-@click.option('-d', '--database', 'database',
-              type=click.Choice(['tcod']),
-              default='tcod',
-              help="Label of the database for deposition.")
-@click.option('--deposition-type',
-              type=click.Choice(['published', 'prepublication', 'personal']),
-              default='published',
-              help="Type of the deposition.")
-@click.option('-u', '--username', type=click.STRING,
-              default=None,
-              help="Depositor's username.")
-@click.option('-p', '--password', type=click.STRING,
-              default=None,
-              help="Depositor's password.")
-@click.option('--user-email', type=click.STRING,
-              default=None,
-              help="Depositor's e-mail address.")
-@click.option('--title', type=click.STRING,
-              default=None,
-              help="Title of the publication.")
-@click.option('--author-name', type=click.STRING,
-              default=None,
-              help="Full name of the publication author.")
-@click.option('--author-email', type=click.STRING,
-              default=None,
-              help="E-mail address of the publication author.")
-@click.option('--url', type=click.STRING,
-              default=None,
-              help="URL of the deposition API.")
-@click.option('--code', type=click.STRING,
-              default=None,
-              help="Label of the code to be used for the deposition."
-              " Default: cif_cod_deposit.")
-@click.option('--computer', type=click.STRING,
-              default=None,
-              help="Name of the computer to be used for deposition.")
-@click.option('--replace', type=click.INT,
-              default=None,
-              help="ID of the structure to be redeposited (replaced), if any.")
-@click.option('-m', '--message', type=click.STRING,
-              default=None,
-              help="Description of the change (relevant for redepositions only).")
-@click.option('--reduce-symmetry/--no-reduce-symmetry', 'reduce_symmetry', is_flag=True,
-              default=None,
-              help='Do (default) or do not perform symmetry reduction.')
-@click.option('--parameter-data', type=click.INT,
-              default=None,
-              help="ID of the ParameterData to be exported alongside the"
-                    " StructureData instance. By default, if StructureData"
-                    " originates from a calculation with single"
-                    " ParameterData in the output, aforementioned"
-                    " ParameterData is picked automatically. Instead, the"
-                    " option is used in the case the calculation produces"
-                    " more than a single instance of ParameterData.")
-@click.option('--dump-aiida-database/--no-dump-aiida-database', 'dump_aiida_database', is_flag=True,
-              default=None,
-              help='Export (default) or do not export AiiDA database to the CIF file.')
-@click.option('--exclude-external-contents/--no-exclude-external-contents', 'exclude_external_contents', is_flag=True,
-              default=None,
-              help='Do not (default) or do save the contents for external resources even if URIs are provided')
-@click.option('--gzip/--no-gzip', 'gzip', is_flag=True,   
-              default=None,
-              help='Do or do not (default) gzip large files.')
-@click.option('--gzip-threshold', type=click.INT,
-              default=None,
-              help="Specify the minimum size of exported file which should"
-              " be gzipped.")
-@arguments.NODE()
-def deposit(database, deposition_type, username, password, user_email, title, author_name, author_email, url, code, computer, replace, message, reduce_symmetry, parameter_data, dump_aiida_database, exclude_external_contents, gzip, gzip_threshold, node):
+@deposit_options
+def deposit(**kwargs):
     """
-    Deposit data object
+    Deposit StructureData object
     """
     from aiida.orm.data.structure import StructureData
     if not is_dbenv_loaded():
         load_dbenv()
-    if database is None:
-        echo_critical("Default database is not defined, please specify.")
+    node = kwargs.pop('node')
+    deposition_type = kwargs.pop('deposition_type')
+    parameter_data = kwargs.pop('parameter_data')
+
+    #if kwargs['database'] is None:
+        #echo.echo_critical("Default database is not defined, please specify.")
+    kwargs.pop('database') # looks like a bug, but deposit function called inside deposit_tcod complains about the 'database' keywords argument
     
-    args = {}
-    if deposition_type is not None:
-        args['deposition_type'] = deposition_type
-    if username is not None:
-        args['username'] = username
-    if password is not None:
-        args['password'] = password
-    if user_email is not None:
-        args['user_email'] = user_email
-    if title is not None:
-        args['title'] = title
-    if author_name is not None:
-        args['author_name'] = author_name
-    if author_email is not None:
-        args['author_email'] = author_email
-    if url is not None:
-        args['url'] = url
-    if code is not None:
-        args['code'] = code
-    if code is not None:
-        args['computer'] = computer
-    if replace is not None:
-        args['replace'] = replace
-    if message is not None:
-        args['message'] = message
-    if reduce_symmetry is not None:
-        args['reduce_symmetry'] = reduce_symmetry
-    if parameter_data is not None:
-        args['parameter_data'] = parameter_data
-    if dump_aiida_database is not None:
-        args['dump_aiida_database'] = dump_aiida_database
-    if exclude_external_contents is not None:
-        args['exclude_external_contents'] = exclude_external_contents
-    if gzip is not None:
-        args['gzip'] = gzip
-    if gzip_threshold is not None:
-        args['gzip_threshold'] = gzip_threshold
+    for key,value in kwargs.items():
+        if value is None:
+            kwargs.pop(key) 
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
-    calc = deposit_tcod(node, parameter_data, **args)
+    calc = deposit_tcod(node, deposition_type, parameter_data, **kwargs)
 
 
 def _import_xyz(filename, **kwargs):
@@ -582,7 +310,7 @@ def _import_ase(filename, **kwargs):
               help='View resulting structure using ASE.')
 @click.option('--dont-store', 'store', is_flag=True,
               default=True,
-              help='View resulting structure using ASE.')
+              help='Do not store the structure in AiiDA database.')
 def structure_import(filename, format, vacuum_factor, vacuum_addition, pbc, view, store):
     """
     Import structure

@@ -106,7 +106,7 @@ class InteractiveOption(ConditionalOption):
         """prompt function with args set"""
         return click.prompt(
             click.style(self._prompt, fg=self.PROMPT_COLOR),
-            prompt_suffix = click.style(': ', fg=self.PROMPT_COLOR),
+            prompt_suffix=click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,
             confirmation_prompt=self.confirmation_prompt)

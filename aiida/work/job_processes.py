@@ -88,9 +88,13 @@ class UpdateSchedulerState(TransportTask):
 
         job_id = self._calc.get_job_id()
 
-        kwargs = {'jobs': [job_id], 'as_dict': True}
+        kwargs = {'as_dict': True}
         if scheduler.get_feature('can_query_by_user'):
             kwargs['user'] = "$USER"
+        else:
+            # In general schedulers can either query by user or by jobs, but not both
+            # (see also docs of the Scheduler class)
+            kwargs['jobs'] = [job_id]
         found_jobs = scheduler.getJobs(**kwargs)
 
         info = found_jobs.get(job_id, None)

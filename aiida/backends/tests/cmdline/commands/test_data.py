@@ -50,6 +50,63 @@ class TestVerdiData(AiidaTestCase):
                 'Usage:', output,
                 "Sub-command verdi data {} --help failed.". format(sub_cmd))
 
+    def test_data_cif_list(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        valid_sample_cif_str = '''
+            data_test
+            _cell_length_a    10
+            _cell_length_b    10
+            _cell_length_c    10
+            _cell_angle_alpha 90
+            _cell_angle_beta  90
+            _cell_angle_gamma 90
+            _chemical_formula_sum 'C O2'
+            loop_
+            _atom_site_label
+            _atom_site_fract_x
+            _atom_site_fract_y
+            _atom_site_fract_z
+            _atom_site_attached_hydrogens
+            C 0 0 0 0
+            O 0.5 0.5 0.5 .
+            H 0.75 0.75 0.75 0
+        '''
+
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            f.write(valid_sample_cif_str)
+            f.flush()
+            a = CifData(file=filename,
+                        source={'version': '1234',
+                                'db_name': 'COD',
+                                'id': '0000001'})
+            a.store()
+
+        # Check that the normal listing works as expected
+        output = sp.check_output(['verdi', 'data', 'cif', 'list'])
+        self.assertIn('C O2', output, 'The Cif formula was not found in '
+                                      'the listing')
+
+        # Check that the past days filter works as expected
+        past_days_flags = ['-p', '--past-days']
+        for flag in past_days_flags:
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', '-p', '1'])
+            self.assertIn('C O2', output, 'The Cif formula was not found in '
+                                          'the listing')
+
+            # Check that the normal listing works as expected
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', '-p', '0'])
+            self.assertNotIn('C O2', output, 'A not expected Cif formula was '
+                                             'found in the listing')
+
+
+
+
+
     # def test_interactive_remote(self):
     #     from aiida.orm import Code
     #     os.environ['VISUAL'] = 'vim -cwq'

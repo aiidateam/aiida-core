@@ -32,14 +32,13 @@ def cif(ctx):
          "enabled.")
 @click.option('-p', '--past-days', type=click.INT,
              default=None,
-             help="Add a filter to show only bandsdatas"
-                  " created in the past N days")
+             help="Add a filter to show only Cifs created in the past N days")
 @click.option('-A', '--all-users', is_flag=True, default=False,
-             help="show groups for all users, rather than only for the"
+             help="show Cif data for all users, rather than only for the"
                   "current user")
 @options.GROUPS()
 @cif.command('list')
-def list(vseparator, header, past_days, all_users, groups):
+def cif_list(vseparator, header, past_days, all_users, groups):
 
     entry_list = query(past_days, all_users, groups)
 

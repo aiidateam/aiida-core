@@ -26,8 +26,8 @@ from aiida.cmdline.params import arguments
 def cif(ctx):
     """help"""
     pass
-    
-@cif.command()
+
+@cif.command('show')
 @arguments.NODES()
 @click.option('-f', '--format', 'format',
               type=click.Choice(['jmol', 'vesta']),
@@ -113,6 +113,9 @@ def export(**kwargs):
               help="Path of the imported file. Reads from standard input if "
                    "not specified.")
 def importfile(format, file):
+    """
+    Import structure into CifData object
+    """
     import os
     from aiida.orm.data.cif import CifData
 

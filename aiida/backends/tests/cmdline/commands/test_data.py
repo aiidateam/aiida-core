@@ -55,6 +55,7 @@ class TestVerdiData(AiidaTestCase):
         import tempfile
 
         from aiida.orm.data.cif import CifData
+        from aiida.orm.group import Group
 
         valid_sample_cif_str = '''
             data_test
@@ -86,6 +87,13 @@ class TestVerdiData(AiidaTestCase):
                                 'id': '0000001'})
             a.store()
 
+            g_ne = Group(name='non_empty_group')
+            g_ne.store()
+            g_ne.add_nodes(a)
+
+            g_e = Group(name='empty_group')
+            g_e.store()
+
         # Check that the normal listing works as expected
         output = sp.check_output(['verdi', 'data', 'cif', 'list'])
         self.assertIn('C O2', output, 'The Cif formula was not found in '
@@ -94,18 +102,47 @@ class TestVerdiData(AiidaTestCase):
         # Check that the past days filter works as expected
         past_days_flags = ['-p', '--past-days']
         for flag in past_days_flags:
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', '-p', '1'])
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '1'])
             self.assertIn('C O2', output, 'The Cif formula was not found in '
                                           'the listing')
 
             # Check that the normal listing works as expected
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', '-p', '0'])
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '0'])
             self.assertNotIn('C O2', output, 'A not expected Cif formula was '
                                              'found in the listing')
 
+        # Check that the group filter works as expected
+        group_flags = ['-G', '--groups']
+        for flag in group_flags:
+            # Non empty group
+            for non_empty in ['non_empty_group', str(g_ne.id)]:
+                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, non_empty])
+                self.assertIn('C O2', output, 'The Cif formula was not found in '
+                                              'the listing')
+            # Empty group
+            for empty in ['empty_group', str(g_e.id)]:
+                # Check that the normal listing works as expected
+                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, empty])
+                self.assertNotIn('C O2', output, 'A not expected Cif formula was '
+                                                 'found in the listing')
 
+            # Group combination
+            for non_empty in ['non_empty_group', str(g_ne.id)]:
+                for empty in ['empty_group', str(g_e.id)]:
+                    output = sp.check_output(
+                        ['verdi', 'data', 'cif', 'list', flag, non_empty,
+                         empty])
+                    self.assertIn('C O2', output,
+                                  'The Cif formula was not found in '
+                                  'the listing')
 
+        # Check no-header flag
+        output = sp.check_output(['verdi', 'data', 'cif', 'list', '--no-header'])
+        self.assertNotIn('ID	formulae	source_uri', output)
 
+        # Check v-separator flag
+        output = sp.check_output(['verdi', 'data', 'cif', 'list', '--vseparator', "----"])
+        self.assertIn('ID----formulae----source_uri', output)
 
     # def test_interactive_remote(self):
     #     from aiida.orm import Code

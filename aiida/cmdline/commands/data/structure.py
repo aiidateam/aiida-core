@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
+import sys
+
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands.data.list import _list
 from aiida.cmdline.commands.data.export import _export
@@ -19,7 +21,7 @@ from aiida.cmdline.utils import echo
 from aiida.common.exceptions import DanglingLinkError
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
+from aiida.cmdline.utils import echo
 
 def _show_ase(exec_name, structure_list):
     """
@@ -398,7 +400,7 @@ def deposit(database, deposition_type, username, password, user_email, title, au
     if not is_dbenv_loaded():
         load_dbenv()
     if database is None:
-        echo_critical("Default database is not defined, please specify.")
+        echo.echo_critical("Default database is not defined, please specify.")
     
     args = {}
     if deposition_type is not None:
@@ -440,7 +442,7 @@ def deposit(database, deposition_type, username, password, user_email, title, au
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
-    calc = deposit_tcod(node, parameter_data, **args)
+    print deposit_tcod(node, parameter_data, **args)
 
 
 def _import_xyz(filename, **kwargs):

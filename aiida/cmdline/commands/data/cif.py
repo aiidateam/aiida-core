@@ -15,7 +15,6 @@ from aiida.orm.data.cif import CifData
 from aiida.utils import timezone
 import datetime
 from aiida.common.exceptions import MultipleObjectsError
-from aiida.common.utils import Prettifier
 from aiida.cmdline.commands.data.export import _export
 from aiida.cmdline.params import arguments
 

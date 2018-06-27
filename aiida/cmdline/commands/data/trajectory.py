@@ -103,6 +103,7 @@ def _show_xcrysden(exec_name, trajectory_list, **kwargs):
     Plugin for xcrysden
     """
     import tempfile, subprocess
+    from aiida.common.exceptions import MultipleObjectsError
 
     if len(trajectory_list) > 1:
         raise MultipleObjectsError("Visualization of multiple trajectories "

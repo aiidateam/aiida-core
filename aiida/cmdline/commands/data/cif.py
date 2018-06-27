@@ -94,7 +94,7 @@ def query(past_days, all_users, groups):
 
     if groups is not None and len(groups) != 0:
         group_filters = {}
-        group_filters.update({"name": {"in": [g.pk for g in groups]}})
+        group_filters.update({"id": {"in": [g.pk for g in groups]}})
         qb.append(Group, tag="group", filters=group_filters, group_of="struc")
 
     qb.order_by({CifData: {'ctime': 'asc'}})

@@ -40,7 +40,7 @@ class OverridableOption(object):
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, **kwargs):
         """
         Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option
         """

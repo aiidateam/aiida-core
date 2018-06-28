@@ -4,6 +4,7 @@ from aiida.cmdline.params import types
 
 
 class MultipleValueOption(click.Option):
+# class MultipleValueOption():
     """
     An option that can handle multiple values with a single flag. For example::
 

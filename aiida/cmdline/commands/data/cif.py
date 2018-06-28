@@ -51,26 +51,35 @@ def show(nodes, given_format):
         raise NotImplementedError ("The format {} is not yet implemented"
                                    .format(given_format))
 
-
-@list_options
 @cif.command('list')
-def cif_list(elements, elements_only, formulamode, past_days, groups, all_users):
+@list_options
+def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
+             all_users):
     """
     List store CifData objects
     """
     from aiida.orm.data.cif import CifData
+    from tabulate import tabulate
 
-    project = ["Id", "Formulae", "Source"]
+    project = ["Id", "Formulae", "Source.URI"]
+
     entry_list = _list(CifData, project, elements,
                 elements_only, formulamode, past_days,
                 groups, all_users)
-    column_length = 19
-    vsep = " "
-    if entry_list:
-        to_print = ""
-        for entry in sorted(entry_list, key=lambda x: int(x[0])):
-            to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + '\n'
-        echo.echo(to_print)
+
+    cif_list_data = list([project])
+    for entry in entry_list:
+        # Formulate Formulae (second column) for printing
+        if entry[1] is None:
+            entry[1] = '?'
+        elif isinstance(entry[1], list):
+            entry[1] = ",".join(entry[1])
+
+        # Formulate Source.URI (third column) for printing
+        if entry[2] is None:
+            entry[2] = '?'
+    cif_list_data.extend(entry_list)
+    echo.echo(tabulate(cif_list_data, headers="firstrow"))
 
 
 @cif.command('export')

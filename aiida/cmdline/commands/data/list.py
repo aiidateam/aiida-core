@@ -28,12 +28,18 @@ _list_options = [
     click.option('-A', '--all-users', is_flag=True, default=False,
               help="show for all users, rather than only for the"
               "current user"),
-    options.GROUPS(),
+    options.RAW(),
 ]
 
 def list_options(func):
     for option in reversed(_list_options):
         func = option(func)
+
+    # Additional options
+    # For some weird reason, if the following options are added to the above
+    # list they don't perform as expected (i.e. they stop being
+    # MultipleValueOption)
+    func = options.GROUPS()(func)
 
     return func
 
@@ -42,7 +48,11 @@ def query(datatype, project, past_days, group_pks, all_users):
     """
     Perform the query
     """
+    import datetime
+
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.utils import timezone
+
     backend = construct_backend()
 
     qb = QueryBuilder()
@@ -52,47 +62,28 @@ def query(datatype, project, past_days, group_pks, all_users):
     else:
         qb.append(User, tag="creator")
 
+    # If there is a time restriction
     data_filters = {}
-    query_past_days(data_filters, past_days)
+    if past_days is not None:
+        now = timezone.now()
+        n_days_ago = now - datetime.timedelta(days=past_days)
+        data_filters.update({"ctime": {'>=': n_days_ago}})
+
     qb.append(datatype, tag="data", created_by="creator",
                 filters=data_filters, project=project)
 
-    group_filters = {}
-    query_group(group_filters, group_pks)
-    if group_filters:
+    # If there is a group restriction
+    if group_pks is not None:
+        group_filters = dict()
+        group_filters.update({"id": {"in": group_pks}})
         qb.append(Group, tag="group", filters=group_filters,
                     group_of="data")
 
     qb.order_by({datatype: {'ctime': 'asc'}})
 
     object_list = qb.distinct()
-
     return object_list.all()
 
-def query_past_days(filters, past_days):
-    """
-    Subselect to filter data nodes by their age.
-
-    :param filters: the filters to be enriched.
-    :param args: a namespace with parsed command line parameters.
-    """
-    from aiida.utils import timezone
-    import datetime
-    if past_days is not None:
-        now = timezone.now()
-        n_days_ago = now - datetime.timedelta(days=past_days)
-        filters.update({"ctime": {'>=': n_days_ago}})
-    return filters
-
-def query_group(filters, group_pks):
-    """
-    Subselect to filter data nodes by their group.
-
-    :param q_object: a query object
-    :param args: a namespace with parsed command line parameters.
-    """
-    if group_pks is not None:
-        filters.update({"id": {"in": group_pks}})
  
 def _list(datatype, columns, elements, elements_only, formulamode,
           past_days, groups, all_users):
@@ -109,11 +100,11 @@ def _list(datatype, columns, elements, elements_only, formulamode,
         'Sites'     : 'attributes.sites',
         'Formulae'  : 'attributes.formulae',
         'Source'    : 'attributes.source',
+        'Source.URI'    : 'attributes.source.uri',
         }
-    project = [columns_dict[k] for k in columns] 
-    try:
+    project = [columns_dict[k] for k in columns]
+    group_pks = None
+    if groups is not None:
         group_pks = [g.pk for g in groups]
-    except:
-        group_pks=None
     return query(datatype, project, past_days, group_pks, all_users)
     

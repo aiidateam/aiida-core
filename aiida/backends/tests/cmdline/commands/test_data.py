@@ -100,6 +100,7 @@ class TestVerdiData(AiidaTestCase):
 
         # Check that the past days filter works as expected
         past_days_flags = ['-p', '--past-days']
+        # past_days_flags = ['-p']
         for flag in past_days_flags:
             output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '1'])
             self.assertIn('C O2', output, 'The Cif formula was not found in '
@@ -135,13 +136,13 @@ class TestVerdiData(AiidaTestCase):
                                   'The Cif formula was not found in '
                                   'the listing')
 
-        # Check no-header flag
-        output = sp.check_output(['verdi', 'data', 'cif', 'list', '--no-header'])
-        self.assertNotIn('ID	formulae	source_uri', output)
-
-        # Check v-separator flag
-        output = sp.check_output(['verdi', 'data', 'cif', 'list', '--vseparator', "----"])
-        self.assertIn('ID----formulae----source_uri', output)
+        # Check raw flag
+        raw_flags = ['-r', '--raw']
+        for flag in raw_flags:
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
+            self.assertNotIn('ID', output)
+            self.assertNotIn('formulae', output)
+            self.assertNotIn('source_uri', output)
 
     # def test_interactive_remote(self):
     #     from aiida.orm import Code

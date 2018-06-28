@@ -10,7 +10,7 @@ import click
 class ConditionalOption(click.Option):
     """
     This cli option takes an additional callable parameter and uses that
-    to determine weather a MissingParam should be raised if the option is
+    to determine wether a MissingParam should be raised if the option is
     not given on the cli.
 
     The callable takes the context as an argument and can look up any

@@ -48,130 +48,6 @@ class Group(VerdiCommandWithSubcommands):
     def cli(*args):  # pylint: disable=unused-argument
         verdi.main()
 
-    def group_list(self, *args):
-        """
-        Print a list of groups in the DB.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import datetime
-        from aiida.utils import timezone
-        from aiida.orm.group import get_group_type_mapping
-        from aiida.orm.backend import construct_backend
-        from tabulate import tabulate
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List AiiDA user-defined groups.')
-        exclusive_group = parser.add_mutually_exclusive_group()
-        exclusive_group.add_argument('-A', '--all-users',
-                                     dest='all_users', action='store_true',
-                                     help="Show groups for all users, rather than only for the current user")
-        exclusive_group.add_argument('-u', '--user', metavar='USER_EMAIL',
-                                     help="Add a filter to show only groups belonging to a specific user",
-                                     action='store', type=str)
-        parser.add_argument('-t', '--type', metavar='TYPE',
-                            help="Show groups of a specific type, instead of user-defined groups",
-                            action='store', type=str)
-        parser.add_argument('-d', '--with-description',
-                            dest='with_description', action='store_true',
-                            help="Show also the group description")
-        parser.add_argument('-C', '--count', action='store_true',
-                            help="Show also the number of nodes in the group")
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="add a filter to show only groups created in the past N days",
-                            action='store', type=int)
-        parser.add_argument('-s', '--startswith', metavar='STRING',
-                            default=None,
-                            help="add a filter to show only groups for which the name begins with STRING",
-                            action='store', type=str)
-        parser.add_argument('-e', '--endswith', metavar='STRING', default=None,
-                            help="add a filter to show only groups for which the name ends with STRING",
-                            action='store', type=str)
-        parser.add_argument('-c', '--contains', metavar='STRING', default=None,
-                            help="add a filter to show only groups for which the name contains STRING",
-                            action='store', type=str)
-        parser.add_argument('-n', '--node', metavar='PK', default=None,
-                            help="Show only the groups that contain the node specified by PK",
-                            action='store', type=int)
-        parser.set_defaults(all_users=False)
-        parser.set_defaults(with_description=False)
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        backend = construct_backend()
-
-        if parsed_args.all_users:
-            user = None
-        else:
-            if parsed_args.user:
-                user = parsed_args.user
-            else:
-                # By default: only groups of this user
-                user = backend.users.get_automatic_user()
-
-        type_string = ""
-        if parsed_args.type is not None:
-            try:
-                type_string = get_group_type_mapping()[parsed_args.type]
-            except KeyError:
-                print >> sys.stderr, "Invalid group type. Valid group types are:"
-                print >> sys.stderr, ",".join(sorted(
-                    get_group_type_mapping().keys()))
-                sys.exit(1)
-
-        name_filters = dict((k, getattr(parsed_args, k))
-                            for k in ['startswith', 'endswith', 'contains'])
-
-        n_days_ago = None
-        if parsed_args.past_days:
-            n_days_ago = (timezone.now() -
-                          datetime.timedelta(days=parsed_args.past_days))
-
-        # Depending on --nodes option use or not key "nodes"
-        from aiida.orm.implementation import Group
-        from aiida.orm import load_node
-
-        node_pk = parsed_args.node
-        if node_pk is not None:
-            try:
-                node = load_node(node_pk)
-            except NotExistent as e:
-                print >> sys.stderr, "Error: {}.".format(e.message)
-                sys.exit(1)
-            result = Group.query(user=user, type_string=type_string, nodes=node,
-                              past_days=n_days_ago, name_filters=name_filters)
-        else:
-            result = Group.query(user=user, type_string=type_string,
-                              past_days=n_days_ago, name_filters=name_filters)
-
-        projection_lambdas = {
-            'pk': lambda group: str(group.pk),
-            'name': lambda group: group.name,
-            'count': lambda group: len(group.nodes),
-            'user': lambda group: group.user.email.strip(),
-            'description': lambda group: group.description
-        }
-
-        table = []
-        projection_header = ['PK', 'Name', 'User']
-        projection_fields = ['pk', 'name', 'user']
-
-        if parsed_args.with_description:
-            projection_header.append('Description')
-            projection_fields.append('description')
-
-        if parsed_args.count:
-            projection_header.append('Node count')
-            projection_fields.append('count')
-
-        for group in result:
-            table.append([projection_lambdas[field](group) for field in projection_fields])
-
-        print(tabulate(table, headers=projection_header))
-
 
 @verdi_group.command("removenodes")
 @options.GROUP()
@@ -329,8 +205,9 @@ def group_show(group, raw, uuid, *args):
 @click.option('-u', '--user', 'user_email', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
 @click.option('-t', '--type', 'type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
 @click.option('-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
-@click.option('-C', '--count', type=click.INT, help="Show also the number of nodes in the group")
-@options.PAST_DAYS(help="add a filter to show only groups created in the past N days")
+@click.option('-C', '--count', is_flag=True, default=False,
+              help="Show also the number of nodes in the group")
+@options.PAST_DAYS(help="add a filter to show only groups created in the past N days", default=None)
 @click.option('-s', '--startswith', type=click.STRING, default=None,
               help="add a filter to show only groups for which the name begins with STRING")
 @click.option('-e', '--endswith', type=click.STRING, default=None,
@@ -350,6 +227,9 @@ def group_list(all_users, user_email, type, with_description, count,
     from aiida.orm.group import get_group_type_mapping
     from aiida.orm.backend import construct_backend
     from tabulate import tabulate
+
+    if all_users and user_email is not None:
+        echo.echo_critical("argument -A/--all-users: not allowed with argument -u/--user")
 
     backend = construct_backend()
 
@@ -382,7 +262,6 @@ def group_list(all_users, user_email, type, with_description, count,
 
     # Depending on --nodes option use or not key "nodes"
     from aiida.orm.implementation import Group
-    from aiida.orm import load_node
 
     if node:
         result = Group.query(user=user, type_string=type_string, nodes=node,

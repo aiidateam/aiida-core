@@ -53,7 +53,7 @@ class Group(VerdiCommandWithSubcommands):
 @options.GROUP()
 @arguments.NODES()
 @with_dbenv()
-def group_addnodes(group, nodes, *args):
+def group_removenodes(group, nodes, *args):
     """
     Remove NODES from a given AiiDA group.
     """
@@ -123,7 +123,7 @@ def group_delete(group, force, *args):
 @arguments.GROUP()
 @click.argument("name", nargs=1, type=click.STRING)
 @with_dbenv()
-def group_description(group, name, *args):
+def group_rename(group, name, *args):
     """
     Rename an existing group. Pass the GROUP for which you want to rename and its
     new NAME.

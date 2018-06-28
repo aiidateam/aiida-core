@@ -24,7 +24,9 @@
         aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/cmdline/commands/graph.py|
+        aiida/backends/tests/cmdline/commands/test_group.py
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 
 # prospector: collection of linters
@@ -51,7 +53,9 @@
         aiida/orm/data/cif.py|
         aiida/restapi/translator/data/cif.py|
         aiida/restapi/resources.py|
-        aiida/utils/fixtures.py
+        aiida/utils/fixtures.py|
+        aiida/cmdline/commands/graph.py|
+        aiida/backends/tests/cmdline/commands/test_group.py
       )$
 
 - repo: local

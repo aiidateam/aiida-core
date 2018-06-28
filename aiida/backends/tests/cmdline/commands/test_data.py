@@ -51,7 +51,6 @@ class TestVerdiData(AiidaTestCase):
                 "Sub-command verdi data {} --help failed.". format(sub_cmd))
 
     def test_data_cif_list(self):
-        import os
         import tempfile
 
         from aiida.orm.data.cif import CifData

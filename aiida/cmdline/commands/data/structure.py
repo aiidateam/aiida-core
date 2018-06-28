@@ -13,9 +13,6 @@ from aiida.cmdline.commands.data.export import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
-from aiida.cmdline.params import options
-from aiida.cmdline.utils import echo
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.utils import echo
 
@@ -30,11 +27,11 @@ def structure(ctx):
 
 @structure.command('show')
 @arguments.NODES()
-@click.option('-f', '--format', 'format',
+@click.option('-f', '--format', 'given_format',
               type=click.Choice(['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']),
               default='ase',
               help="Type of the visualization format/tool")
-def show(nodes, format):
+def show(nodes, given_format):
     """
     Visualize StructureData objects
     """
@@ -48,18 +45,19 @@ def show(nodes, format):
         if not isinstance(n, StructureData):
             echo.echo_critical("Node {} is of class {} instead "
                                 "of {}".format(n, type(n), StructureData))
-    if format == "ase":
-        _show_ase(format, nodes)
-    elif format == "jmol":
-        _show_jmol(format, nodes)
-    elif format == "vesta":
-        _show_vesta(format, nodes)
-    elif format == "vmd":
-        _show_vmd(format, nodes)
-    elif format == "xcrysden":
-        _show_xcrysden(format, nodes)
+    if given_format == "ase":
+        _show_ase(given_format, nodes)
+    elif given_format == "jmol":
+        _show_jmol(given_format, nodes)
+    elif given_format == "vesta":
+        _show_vesta(given_format, nodes)
+    elif given_format == "vmd":
+        _show_vmd(given_format, nodes)
+    elif given_format == "xcrysden":
+        _show_xcrysden(given_format, nodes)
     else:
-        raise
+        raise NotImplementedError("The format {} is not yet implemented"
+                                  .format(given_format))
 
 @structure.command('list')
 @list_options
@@ -82,8 +80,8 @@ def list_structures(elements, elements_only, formulamode, past_days, groups, all
             if not any([s in elements for s in all_symbols]):
                 continue
 
-            if elementonly:
-                echo.echo_critical("Not implemented elementonly search")
+            if elements_only:
+                echo.echo_critical("Not implemented elements-only search")
 
         # We want only the StructureData that have attributes
         if akinds is None or asites is None:
@@ -284,7 +282,7 @@ def _import_ase(filename, **kwargs):
               type=click.Path(exists=True, dir_okay=False, resolve_path=True),
               help="Path of the imported file. Reads from standard"
               " input if not specified")
-@click.option('-f', '--format',
+@click.option('-f', '--format', 'given_format',
               type=click.Choice(['ase', 'pwi', 'xyz']),
               default='xyz',
               help="Type of the imported file.")
@@ -309,7 +307,8 @@ def _import_ase(filename, **kwargs):
 @click.option('--dont-store', 'store', is_flag=True,
               default=True,
               help='Do not store the structure in AiiDA database.')
-def structure_import(filename, format, vacuum_factor, vacuum_addition, pbc, view, store):
+def structure_import(filename, given_format, vacuum_factor, vacuum_addition,
+                     pbc, view, store):
     """
     Import structure
     """
@@ -330,11 +329,12 @@ def structure_import(filename, format, vacuum_factor, vacuum_addition, pbc, view
     if store is not None:
         args['store'] = store
 
-    if format == "ase":
+    if given_format == "ase":
         _import_ase(filename, **args)
-    elif format == "pwi":
+    elif given_format == "pwi":
         _import_pwi(filename, **args)
-    elif format == "xyz":
+    elif given_format == "xyz":
         _import_xyz(filename, **args)
     else:
-        raise
+        raise NotImplementedError("The format {} is not yet implemented"
+                                  .format(given_format))

@@ -12,14 +12,12 @@ from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
-from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.utils import timezone
-import datetime
-from aiida.common.exceptions import MultipleObjectsError
-from aiida.cmdline.commands.data.export import _export
 from aiida.cmdline.params import arguments
+
+from aiida.orm.data.structure import StructureData
+
 
 @verdi_data.group('cif')
 @click.pass_context
@@ -29,11 +27,11 @@ def cif(ctx):
 
 @cif.command('show')
 @arguments.NODES()
-@click.option('-f', '--format', 'format',
+@click.option('-f', '--format', 'given_format',
               type=click.Choice(['jmol', 'vesta']),
               default='jmol',
               help="Type of the visualization format/tool.")
-def show(nodes, format):
+def show(nodes, given_format):
     """
     Visualize CifData objects
     """
@@ -45,12 +43,13 @@ def show(nodes, format):
         if not isinstance(n, CifData):
             echo.echo_critical("Node {} is of class {} instead "
                                 "of {}".format(n, type(n), StructureData))
-    if format == "jmol":
-        _show_jmol(format, nodes)
-    elif format == "vesta":
-        _show_vesta(format, nodes)
+    if given_format == "jmol":
+        _show_jmol(given_format, nodes)
+    elif given_format == "vesta":
+        _show_vesta(given_format, nodes)
     else:
-        raise
+        raise NotImplementedError ("The format {} is not yet implemented"
+                                   .format(given_format))
 
 
 @list_options
@@ -72,8 +71,6 @@ def cif_list(elements, elements_only, formulamode, past_days, groups, all_users)
         for entry in sorted(entry_list, key=lambda x: int(x[0])):
             to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + '\n'
         echo.echo(to_print)
-
-
 
 
 @cif.command('export')

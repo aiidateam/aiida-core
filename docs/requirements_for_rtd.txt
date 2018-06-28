@@ -43,7 +43,6 @@ mock==2.0.0
 numpy==1.14.3
 paramiko==2.4.1
 passlib==1.7.1
-pathlib2
 pathlib2==2.3.0
 pgtest==1.1.0
 plumpy==0.7.12

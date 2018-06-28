@@ -8,6 +8,7 @@
 import click
 
 from aiida.cmdline.params.options.conditional import ConditionalOption
+from aiida.cmdline.utils import echo
 
 
 def noninteractive(ctx):
@@ -34,6 +35,18 @@ class InteractiveOption(ConditionalOption):
     Intercepts certain keyword arguments to circumvent :mod:`click`'s prompting
     behaviour and define a more feature-rich one
 
+    .. note:: This class has a parameter ``required_fn`` that can be passed to its ``__init__`` (inherited
+        from the superclass :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`) and a
+        ``prompt_fn``.
+
+        - ``required_fn`` is about "is this parameter required" depending on the value of other params.
+        - ``prompt_fn`` is about "should I prompt for this value if in interactive mode" and only makes sense
+          in this class and not in :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`.
+
+        In most usecases, if I have a ``prompt_fn``, then I would like to have also (the same) ``required_fn``.
+        The implementation still makes them independent for usecases where they might be different functions
+        (e.g. if the variable is anyway not required, but you want to decide whether to prompt for it or not).
+
     Usage::
 
         import click
@@ -43,31 +56,39 @@ class InteractiveOption(ConditionalOption):
         def foo(label):
             click.echo('Labeling with label: {}'.format(label))
     """
+    PROMPT_COLOR = 'yellow'
 
-    def __init__(self, param_decls=None, switch=None, empty_ok=False, **kwargs):
+    def __init__(self, param_decls=None, switch=None, prompt_fn=None, **kwargs):
         """
         :param param_decls: relayed to :class:`click.Option`
-        :param switch: sequence of parameter names
+        :param switch: sequence of parameter
+        :param prompt_fn: callable(ctx) -> True | False, returns True
+            if the option should be prompted for in interactive mode.
         """
-        # intercept prompt kwarg
-        self._prompt = kwargs.pop('prompt', None)
-        if kwargs.get('required', None):
-            required_fn = kwargs.get('required_fn', lambda ctx: True)
-            kwargs['required_fn'] = lambda ctx: noninteractive(ctx) and required_fn(ctx)
 
-        # super
+        # intercept prompt kwarg; I need to pop it before calling super
+        self._prompt = kwargs.pop('prompt', None)
+
+        # call super class here, after removing `prompt` from the kwargs.
         super(InteractiveOption, self).__init__(param_decls=param_decls, **kwargs)
+
+        self.prompt_fn = prompt_fn
+
+        # I check that a prompt was actually defined.
+        # I do it after calling super so e.g. 'self.name' is defined
+        if not self._prompt:
+            raise TypeError(
+                "Interactive options need to have a prompt specified, but '{}' does not have a prompt defined".format(
+                    self.name))
 
         # other kwargs
         self.switch = switch
-        self.empty_ok = empty_ok
 
         # set callback
-        if self._prompt:
-            self._after_callback = self.callback
-            self.callback = self.prompt_callback
+        self._after_callback = self.callback
+        self.callback = self.prompt_callback
 
-        # set controll strings that trigger special features from the input prompt
+        # set control strings that trigger special features from the input prompt
         self._ctrl = {'?': self.ctrl_help}
 
         # set prompting type
@@ -84,14 +105,15 @@ class InteractiveOption(ConditionalOption):
     def prompt_func(self, ctx):
         """prompt function with args set"""
         return click.prompt(
-            self._prompt,
+            click.style(self._prompt, fg=self.PROMPT_COLOR),
+            prompt_suffix=click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,
             confirmation_prompt=self.confirmation_prompt)
 
     def ctrl_help(self):
         """control behaviour when help is requested from the prompt"""
-        click.echo(self.format_help_message())
+        echo.echo_info(self.format_help_message())
 
     def format_help_message(self):
         """
@@ -102,18 +124,10 @@ class InteractiveOption(ConditionalOption):
         msg = self.help or 'Expecting {}'.format(self.type.name)
         choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
         if choices:
-            msg += '\n\tone of:\n'
-            choice_table = ['\t\t{:<12} {}'.format(*choice) for choice in choices]
+            msg += '\none of:\n'
+            choice_table = ['\t{:<12} {}'.format(*choice) for choice in choices]
             msg += '\n'.join(choice_table)
-        msg = click.style('\t' + msg, fg='green')
         return msg
-
-    def unacceptably_empty(self, value):
-        """check if the value is empty and should not be passed on to conversion"""
-        result = not value and not isinstance(value, bool)
-        if self.empty_ok:
-            return False
-        return result
 
     def full_process_value(self, ctx, value):
         """
@@ -137,19 +151,21 @@ class InteractiveOption(ConditionalOption):
             value = self.type.convert(value, param, ctx)
             successful = True
         except click.BadParameter as err:
-            click.echo(err.message)
+            echo.echo_error(err.message)
+            self.ctrl_help()
         return successful, value
 
     def simple_prompt_loop(self, ctx, param, value):
         """prompt until successful conversion. dispatch control sequences"""
+        if not hasattr(ctx, 'prompt_loop_info_printed'):
+            echo.echo_info('enter "?" for help')
+            ctx.prompt_loop_info_printed = True
         while 1:
             # prompt
             value = self.prompt_func(ctx)
             if value in self._ctrl:
-                # dispatch
+                # dispatch - e.g. show help
                 self._ctrl[value]()
-            elif self.unacceptably_empty(value):
-                # repeat prompting without trying to convert
                 continue
             else:
                 # try to convert, if unsuccessful continue prompting
@@ -166,42 +182,40 @@ class InteractiveOption(ConditionalOption):
     def prompt_callback(self, ctx, param, value):
         """decide wether to initiate the prompt_loop or not"""
 
-        # a value was given
+        # a value was given on the command line: then  just go with validation
         if value is not None:
             return self.after_callback(ctx, param, value)
 
-        # parameter is not reqired anyway
-        if not self.is_required(ctx):
-            return self.after_callback(ctx, param, value)
+        # The same if the user specified --non-interactive
+        if noninteractive(ctx):
+            # Check if it is required
 
-        # help option was passed on the cmdline
-        if ctx.params.get('help'):
-            return self.after_callback(ctx, param, value)
+            default = self._get_default(ctx) or self.default
 
-        # no value was given
-        try:
-            # try to convert None
-            value = self.after_callback(ctx, param, self.type.convert('', param, ctx))
-            # if conversion comes up empty, make sure empty is acceptable
-            if self.unacceptably_empty(value):
-                raise click.MissingParameter(param=param)
-
-        except (click.MissingParameter, click.BadParameter):
-            # no value was given but a value is required
-            # check for BadParameter too, because convert might not check for None specifically
-
-            # no prompting allowed
-            if noninteractive(ctx):
-                # either get a default value and return ...
-                default = self._get_default(ctx) or self.default
-                if default is not None:
-                    return self.type.convert(default, param, ctx)
-                else:
-                    # ... or raise Missing Parameter
+            if default is not None:
+                # There is a default
+                value = self.type.convert(default, param, ctx)
+            else:
+                # There is no default.
+                # If required
+                if self.is_required(ctx):
                     raise click.MissingParameter()
-            # prompting allowed
+                # In the else case: no default, not required: value is None, it's just  passed to the after_callback
+            return self.after_callback(ctx, param, value)
+
+        if self.prompt_fn is None or (self.prompt_fn is not None and self.prompt_fn(ctx)):
+            # There is no prompt_fn function, or a prompt_fn function and it says we should ask for the value
+
+            # If we are here, we are in interactive mode and the parameter is not specified
+            # We enter the prompt loop
             value = self.prompt_loop(ctx, param, value)
-        return value
+        else:
+            # There is a prompt_fn function and returns False (i.e. should not ask for this value
+            # We then set the value to None
+            value = None
+
+        # And then we call the callback
+        return self.after_callback(ctx, param, value)
 
 
 def opt_prompter(ctx, cmd, givenkwargs, oldvalues=None):

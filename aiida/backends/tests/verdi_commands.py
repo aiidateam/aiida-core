@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=missing-docstring,invalid-name
+# pylint: disable=missing-docstring,invalid-name,protected-access
 
 import mock
 from click.testing import CliRunner
@@ -92,140 +92,6 @@ user_2 = {
 }
 
 
-# pylint: disable=protected-access
-class TestVerdiCalculationCommands(AiidaTestCase):
-
-    # pylint: disable=no-member
-    # pylint says: Method 'computer' has no 'name' / 'id' member
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create some calculations with various states
-        """
-        super(TestVerdiCalculationCommands, cls).setUpClass()
-
-        from aiida.orm import JobCalculation
-
-        # Create some calculation
-        calc1 = JobCalculation(
-            computer=cls.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc1._set_state(calc_states.TOSUBMIT)
-        calc2 = JobCalculation(
-            computer=cls.computer.name, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc2._set_state(calc_states.COMPUTED)
-        calc3 = JobCalculation(
-            computer=cls.computer.id, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc3._set_state(calc_states.FINISHED)
-
-    def test_calculation_list(self):
-        """
-        Do some calculation listing to ensure that verdi calculation list
-        works and gives at least to some extent the expected results.
-        """
-        from aiida.cmdline.commands.calculation import Calculation
-        calc_cmd = Calculation()
-
-        with Capturing() as output:
-            calc_cmd.calculation_list()
-
-        out_str = ''.join(output)
-        self.assertTrue(calc_states.TOSUBMIT in out_str, 'TOSUBMIT state not found in: {}'.format(out_str))
-        self.assertTrue(calc_states.COMPUTED in out_str, 'COMPUTED state not found in: {}'.format(out_str))
-        self.assertFalse(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
-
-        with Capturing() as output:
-            calc_cmd.calculation_list(*['-a'])
-
-        out_str = ''.join(output)
-        self.assertTrue(calc_states.FINISHED in out_str, 'FINISHED state not found in: {}'.format(out_str))
-
-
-class TestVerdiCodeCommands(AiidaTestCase):
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create the computers and setup a codes
-        """
-        super(TestVerdiCodeCommands, cls).setUpClass()
-
-        # Setup computer #1
-        from aiida.cmdline.commands.computer import Computer
-        cmd_comp = Computer()
-        with mock.patch('__builtin__.raw_input', side_effect=computer_setup_input_1):
-            with Capturing():
-                cmd_comp.computer_setup()
-
-        # Setup a code for computer #1
-        from aiida.cmdline.commands.code import setup_code
-        from aiida.orm import Code
-        runner = CliRunner()
-        runner.invoke(setup_code, CODE_SETUP_OPTS_1)
-        cls.code1 = Code.get_from_string('{}@{}'.format(CODE_NAME_1, computer_name_1))
-
-        # Setup computer #2
-        with mock.patch('__builtin__.raw_input', side_effect=computer_setup_input_2):
-            with Capturing():
-                cmd_comp.computer_setup()
-
-        # Setup a code for computer #2
-        runner.invoke(setup_code, CODE_SETUP_OPTS_2)
-        cls.code2 = Code.get_from_string('{}@{}'.format(CODE_NAME_2, computer_name_2))
-
-    def test_code_list(self):
-        """
-        Do some code listing test to ensure the correct behaviour of
-        verdi code list
-        """
-        from aiida.cmdline.commands.code import Code
-        code_cmd = Code()
-
-        # Run a simple verdi code list, capture the output and check the result
-        with Capturing() as output:
-            code_cmd.code_list()
-        out_str_1 = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str_1, "The computer 1 name should be included into this list")
-        self.assertTrue(CODE_NAME_1 in out_str_1, "The code 1 name should be included into this list")
-        self.assertTrue(computer_name_2 in out_str_1, "The computer 2 name should be included into this list")
-        self.assertTrue(CODE_NAME_2 in out_str_1, "The code 2 name should be included into this list")
-
-        # Run a verdi code list -a, capture the output and check if the result
-        # is the same as the previous one
-        with Capturing() as output:
-            code_cmd.code_list(*['-a'])
-        out_str_2 = ''.join(output)
-        self.assertEqual(out_str_1, out_str_2, "verdi code list & verdi code list -a should provide "
-                         "the same output in this experiment.")
-
-        # Run a verdi code list -c, capture the output and check the result
-        with Capturing() as output:
-            code_cmd.code_list(*['-c', computer_name_1])
-        out_str = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str, "The computer 1 name should be included into this list")
-        self.assertFalse(computer_name_2 in out_str, "The computer 2 name should not be included into this list")
-
-        # Hide code 2
-        self.code2._hide()
-
-        # Run verdi code list again, checking that code 2 is now not shown
-        with Capturing() as output:
-            code_cmd.code_list()
-        out_str_3 = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str_3, "The computer 1 name should be included into this list")
-        self.assertTrue(CODE_NAME_1 in out_str_3, "The code 1 name should be included into this list")
-        self.assertFalse(computer_name_2 in out_str_3, "The computer 2 name should not be included into this list")
-        self.assertFalse(CODE_NAME_2 in out_str_3, "The code 2 name should not be included into this list")
-
-
 # pylint: disable=abstract-method
 class Wf(WorkChain):
     """
@@ -240,48 +106,6 @@ class Wf(WorkChain):
 
     def create_logs(self):
         self.report(self.TEST_STRING)
-
-
-class TestVerdiWorkCommands(AiidaTestCase):
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create a simple workchain and run it.
-        """
-        super(TestVerdiWorkCommands, cls).setUpClass()
-        from aiida.work.launch import run_get_pid
-
-        cls.test_string = Wf.TEST_STRING
-
-        _, cls.workchain_pid = run_get_pid(Wf)
-
-    def test_report(self):
-        """
-        Test that 'verdi work report' contains the report message.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid)], catch_exceptions=False)
-        self.assertTrue(self.test_string in result.output)
-
-    def test_report_debug(self):
-        """
-        Test that 'verdi work report' contains the report message when called with levelname DEBUG.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'DEBUG'], catch_exceptions=False)
-        self.assertTrue(self.test_string in result.output)
-
-    def test_report_error(self):
-        """
-        Test that 'verdi work report' does not contain the report message when called with levelname ERROR.
-        """
-        from aiida.cmdline.commands.work import report
-
-        result = CliRunner().invoke(report, [str(self.workchain_pid), '--levelname', 'ERROR'], catch_exceptions=False)
-        self.assertTrue(self.test_string not in result.output)
 
 
 # pylint: disable=no-self-use

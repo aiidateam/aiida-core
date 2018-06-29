@@ -11,6 +11,7 @@
         aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_graph.py|
+        aiida/backends/tests/cmdline/commands/test_group.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
@@ -22,6 +23,7 @@
         aiida/cmdline/commands/daemon.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
+        aiida/cmdline/commands/group.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
@@ -58,6 +60,7 @@
         aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_graph.py|
+        aiida/backends/tests/cmdline/commands/test_group.py|
         aiida/backends/tests/cmdline/commands/test_rehash.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
@@ -69,6 +72,7 @@
         aiida/cmdline/commands/daemon.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
+        aiida/cmdline/commands/group.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|

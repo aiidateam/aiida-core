@@ -8,11 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import argparse
-import sys
+"""
+It defines subcommands for verdi group command.
+"""
+
 import click
 
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import NotExistent, UniquenessError
 from aiida.cmdline.commands import verdi, verdi_group
@@ -33,6 +34,8 @@ class Group(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         list.
         """
+        super(Group, self).__init__()
+
         self.valid_subcommands = {
             'list': (self.cli, self.complete_none),
             'show': (self.cli, self.complete_none),
@@ -92,8 +95,6 @@ def group_delete(group, force):
     """
     Pass the GROUP to delete an existing group.
     """
-    from aiida.cmdline import wait_for_confirmation
-
     group_pk = group.pk
     group_name = group.name
 
@@ -131,7 +132,7 @@ def group_rename(group, name):
 @arguments.GROUP()
 @click.argument("description", type=click.STRING)
 @with_dbenv()
-def group_description(group, description, *args):
+def group_description(group, description):
     """
     Change the description of a given group.
     Pass the GROUP for which you want to edit the description and its
@@ -179,13 +180,13 @@ def group_show(group, raw, uuid):
             header.append('UUID')
         header.extend(['PK', 'Type', 'Created'])
         echo.echo("# Nodes:")
-        for n in group.nodes:
+        for node in group.nodes:
             row = []
             if uuid:
-                row.append(n.uuid)
-            row.append(n.pk)
-            row.append(get_plugin_type_from_type_string(n.type).rsplit(".", 1)[1])
-            row.append(str_timedelta(now - n.ctime, short=True, negative_to_zero=True))
+                row.append(node.uuid)
+            row.append(node.pk)
+            row.append(get_plugin_type_from_type_string(node.type).rsplit(".", 1)[1])
+            row.append(str_timedelta(now - node.ctime, short=True, negative_to_zero=True))
             table.append(row)
         echo.echo(tabulate(table, headers=header))
 

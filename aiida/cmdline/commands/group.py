@@ -52,43 +52,35 @@ class Group(VerdiCommandWithSubcommands):
 @verdi_group.command("removenodes")
 @options.GROUP()
 @arguments.NODES()
+@options.FORCE(help="Force to remove the nodes from group.")
 @with_dbenv()
-def group_removenodes(group, nodes, *args):
+def group_removenodes(group, nodes, force):
     """
     Remove NODES from a given AiiDA group.
     """
-    from aiida.cmdline import wait_for_confirmation
-
-    group_pk = group.pk
-    group_name = group.name
-
-    echo.echo("Are you sure to remove {} nodes from the group with PK = {} "
-            "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
-    if not wait_for_confirmation():
-        sys.exit(0)
+    if not force:
+        click.confirm("Are you sure to remove {} nodes from the group with PK = {} "
+                "({})?".format(len(nodes), group.pk, group.name), abort=True)
 
     group.remove_nodes(nodes)
 
 
 @verdi_group.command("addnodes")
 @options.GROUP()
+@options.FORCE(help="Force to add nodes in the group.")
 @arguments.NODES()
 @with_dbenv()
-def group_addnodes(group, nodes, *args):
+def group_addnodes(group, force, nodes):
     """
     Add NODES to a given AiiDA group.
     """
-    from aiida.cmdline import wait_for_confirmation
 
-    group_pk = group.pk
-    group_name = group.name
-
-    echo.echo("Are you sure to add {} nodes the group with PK = {} "
-            "({})? [Y/N] ".format(len(nodes), group_pk, group_name))
-    if not wait_for_confirmation():
-        sys.exit(0)
+    if not force:
+        click.confirm("Are you sure to add {} nodes the group with PK = {} "
+                  "({})?".format(len(nodes), group.pk, group.name), abort=True)
 
     group.add_nodes(nodes)
+
 
 @verdi_group.command("delete")
 @arguments.GROUP()
@@ -96,7 +88,7 @@ def group_addnodes(group, nodes, *args):
                     "is not empty. Note that this deletes only the "
                     "group and not the nodes.")
 @with_dbenv()
-def group_delete(group, force, *args):
+def group_delete(group, force):
     """
     Pass the GROUP to delete an existing group.
     """
@@ -111,19 +103,18 @@ def group_delete(group, force, *args):
                               "nodes). Pass the -f option if you really want to delete "
                               "it.".format(group_name, num_nodes)))
 
-    echo.echo("Are you sure to kill the group with PK = {} ({})? "
-                     "[Y/N] ".format(group_pk, group_name))
-    if not wait_for_confirmation():
-        sys.exit(0)
+    if not force:
+        click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_pk, group_name), abort=True)
 
     group.delete()
     echo.echo_success("Group '{}' (PK={}) deleted.".format(group_name, group_pk))
+
 
 @verdi_group.command("rename")
 @arguments.GROUP()
 @click.argument("name", nargs=1, type=click.STRING)
 @with_dbenv()
-def group_rename(group, name, *args):
+def group_rename(group, name):
     """
     Rename an existing group. Pass the GROUP for which you want to rename and its
     new NAME.
@@ -149,14 +140,14 @@ def group_description(group, description, *args):
     """
     group.description = description
 
+
 @verdi_group.command("show")
-@click.option('-r', '--raw', is_flag=True, default=False,
-              help="Show only a space-separated list of PKs of the calculations in the group")
+@options.RAW(help="Show only a space-separated list of PKs of the calculations in the group")
 @click.option('-u', '--uuid', is_flag=True, default=False,
               help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
 @arguments.GROUP()
 @with_dbenv()
-def group_show(group, raw, uuid, *args):
+def group_show(group, raw, uuid):
     """
     Show information on a given group. Pass the GROUP as a parameter.
     """
@@ -200,8 +191,7 @@ def group_show(group, raw, uuid, *args):
 
 
 @verdi_group.command("list")
-@click.option('-A', '--all-users', 'all_users', is_flag=True, default=False,
-              help="Show groups for all users, rather than only for the current user")
+@options.ALL_USERS(help="Show groups for all users, rather than only for the current user")
 @click.option('-u', '--user', 'user_email', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
 @click.option('-t', '--type', 'type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
 @click.option('-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
@@ -218,7 +208,7 @@ def group_show(group, raw, uuid, *args):
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
 def group_list(all_users, user_email, type, with_description, count,
-               past_days, startswith, endswith, contains, node, *args):
+               past_days, startswith, endswith, contains, node):
     """
     List AiiDA user-defined groups.
     """
@@ -299,7 +289,7 @@ def group_list(all_users, user_email, type, with_description, count,
 @verdi_group.command("create")
 @click.argument('group_name', nargs=1, type=click.STRING)
 @with_dbenv()
-def group_create(group_name, *args):
+def group_create(group_name):
     """
     Create a new empty group with the name GROUP_NAME
     """

@@ -111,6 +111,31 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertNotIn("dummygroup1", result.output)
         self.assertIn("changedgroup", result.output)
 
+        ## delete group
+        result = self.runner.invoke(group_delete, ["--force", "changedgroup"])
+        self.assertIsNone(result.exception)
+
+        result = self.runner.invoke(group_list)
+        self.assertIsNone(result.exception)
+        self.assertNotIn("changedgroup", result.output)
+
+        ## add and remove nodes
+        from aiida.orm.calculation import Calculation
+        calc = Calculation()
+        calc._set_attr("attr1", "OK")
+        calc._set_attr("attr2", "OK")
+        calc.store()
+
+        result = self.runner.invoke(group_addnodes, ["--force", "--group=dummygroup2", calc.uuid])
+        self.assertIsNone(result.exception)
+        self.assertIn("Calculation", result.output)
+        self.assertIn(str(calc.pk), result.output)
+
+        result = self.runner.invoke(group_removenodes, ["--force", "--group=dummygroup2", calc.uuid])
+        self.assertIsNone(result.exception)
+        self.assertNotIn("Calculation", result.output)
+        self.assertNotIn(str(calc.pk), result.output)
+
 
 
 

@@ -6,6 +6,22 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.data.cif import cif
 
+from unittest import skip
+
+import sys
+from contextlib import contextmanager
+from StringIO import StringIO
+
+@contextmanager
+def captured_output():
+    new_out, new_err = StringIO(), StringIO()
+    old_out, old_err = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = new_out, new_err
+        yield sys.stdout, sys.stderr
+    finally:
+        sys.stdout, sys.stderr = old_out, old_err
+
 
 class TestVerdiData(AiidaTestCase):
 
@@ -30,6 +46,7 @@ class TestVerdiData(AiidaTestCase):
     def test_help(self):
         result = self.runner.invoke(cif, ['--help'])
 
+    @skip("")
     def test_reachable(self):
         """
         Testing reachability of the following commands:
@@ -50,7 +67,12 @@ class TestVerdiData(AiidaTestCase):
                 'Usage:', output,
                 "Sub-command verdi data {} --help failed.". format(sub_cmd))
 
+    @skip("")
     def test_data_cif_list(self):
+        """
+        This method tests that the Cif listing works as expected with all
+        possible flags and arguments.
+        """
         import tempfile
 
         from aiida.orm.data.cif import CifData
@@ -144,54 +166,44 @@ class TestVerdiData(AiidaTestCase):
             self.assertNotIn('formulae', output)
             self.assertNotIn('source_uri', output)
 
-    # def test_interactive_remote(self):
-    #     from aiida.orm import Code
-    #     os.environ['VISUAL'] = 'vim -cwq'
-    #     os.environ['EDITOR'] = 'vim -cwq'
-    #     label = 'interactive_remote'
-    #     user_input = '\n'.join([
-    #         label, 'description', 'yes', 'simpleplugins.arithmetic.add', self.comp.name,
-    #         '/remote/abs/path'])
-    #     result = self.runner.invoke(setup_code, input=user_input)
-    #     self.assertIsNone(result.exception)
-    #     self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
-    #
-    # def test_interactive_upload(self):
-    #     from aiida.orm import Code
-    #     os.environ['VISUAL'] = 'vim -cwq'
-    #     os.environ['EDITOR'] = 'vim -cwq'
-    #     label = 'interactive_upload'
-    #     user_input = '\n'.join([
-    #         label, 'description', 'no', 'simpleplugins.arithmetic.add', self.this_folder, self.this_file])
-    #     result = self.runner.invoke(setup_code, input=user_input)
-    #     self.assertIsNone(result.exception, result.output)
-    #     self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
-    #
-    # def test_noninteractive_remote(self):
-    #     from aiida.orm import Code
-    #     label = 'noninteractive_remote'
-    #     options = ['--non-interactive', '--label={}'.format(label), '--description=description',
-    #                '--on-computer', '--input-plugin=simpleplugins.arithmetic.add',
-    #                '--computer={}'.format(self.comp.name), '--remote-abs-path=/remote/abs/path']
-    #     result = self.runner.invoke(setup_code, options)
-    #     self.assertIsNone(result.exception, result.output[-1000:])
-    #     self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
-    #
-    # def test_noninteractive_upload(self):
-    #     from aiida.orm import Code
-    #     label = 'noninteractive_upload'
-    #     options = ['--non-interactive', '--label={}'.format(label), '--description=description',
-    #                '--store-upload', '--input-plugin=simpleplugins.arithmetic.add',
-    #                '--code-folder={}'.format(self.this_folder), '--code-rel-path={}'.format(self.this_file)]
-    #     result = self.runner.invoke(setup_code, options)
-    #     self.assertIsNone(result.exception, result.output[-1000:])
-    #     self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
-    #
-    # def test_mixed(self):
-    #     from aiida.orm import Code
-    #     label = 'mixed_remote'
-    #     options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    #     user_input = '\n'.join([label, 'simpleplugins.arithmetic.add', self.comp.name])
-    #     result = self.runner.invoke(setup_code, options, input=user_input)
-    #     self.assertIsNone(result.exception, result.output[-1000:])
-    #     self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+
+    def test_data_cif_import(self):
+        """
+        This method tests that the Cif import works as expected with all
+        possible flags and arguments.
+        """
+        import tempfile
+        from cStringIO import StringIO
+
+        # Check format flag
+        format_flags = ['-f', '--format']
+        for flag in format_flags:
+            #  Check invalid format
+            self.assertRaises(
+                Exception, sp.check_output,
+                ['verdi', 'data', 'cif', 'import', flag, 'not_supported'],
+                stderr=sp.STDOUT)
+
+        # Check that a file is parsed correctly if passed as an argument
+        format_flags = ['-f', '--format']
+        for flag in format_flags:
+            file_content = "data_test _cell_length_a 10(1)"
+
+            # Check that you can load a Cif from a file.
+            # with captured_output() as (out, err):
+            with tempfile.NamedTemporaryFile() as f:
+                f.write(file_content)
+                f.flush()
+                sp.check_call(
+                    ['verdi', 'data', 'cif', 'import', flag,
+                     'cif', '--file', f.name])
+
+                # Check that you can load a Cif from STDIN
+                sp.check_call(
+                    ['verdi', 'data', 'cif', 'import', flag,
+                     'cif', '--file', f.name], stdin=f)
+
+
+
+
+

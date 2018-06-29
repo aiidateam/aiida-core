@@ -127,9 +127,9 @@ def importfile(format, file):
 
     try:
         node, _ = CifData.get_or_create(os.path.abspath(file))
-        print node
+        echo.echo(str(node))
     except ValueError as e:
-        print e
+        echo.echo_critical(e)
 
 
 @cif.command('deposit')

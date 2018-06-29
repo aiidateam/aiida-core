@@ -128,10 +128,14 @@ class TestVerdiGroupSetup(AiidaTestCase):
 
         result = self.runner.invoke(group_addnodes, ["--force", "--group=dummygroup2", calc.uuid])
         self.assertIsNone(result.exception)
+        result = self.runner.invoke(group_show, ["dummygroup2"])
+        self.assertIsNone(result.exception)
         self.assertIn("Calculation", result.output)
         self.assertIn(str(calc.pk), result.output)
 
         result = self.runner.invoke(group_removenodes, ["--force", "--group=dummygroup2", calc.uuid])
+        self.assertIsNone(result.exception)
+        result = self.runner.invoke(group_show, ["dummygroup2"])
         self.assertIsNone(result.exception)
         self.assertNotIn("Calculation", result.output)
         self.assertNotIn(str(calc.pk), result.output)

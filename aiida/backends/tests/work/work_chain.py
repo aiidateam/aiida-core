@@ -1133,3 +1133,21 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
             }
         )
+
+
+class TestWorkChainReturnDict(AiidaTestCase):
+
+    class PointlessWorkChain(WorkChain):
+
+        @classmethod
+        def define(cls, spec):
+            super(TestWorkChainReturnDict.PointlessWorkChain, cls).define(spec)
+            spec.outline(cls.return_dict)
+
+        def return_dict(self):
+            """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
+            return {}
+
+    def test_run_pointless_workchain(self):
+        """Running the pointless workchain should not incur any exceptions"""
+        result = work.run(TestWorkChainReturnDict.PointlessWorkChain)

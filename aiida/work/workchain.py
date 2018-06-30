@@ -21,6 +21,7 @@ from aiida.utils.serialize import serialize_data, deserialize_data
 
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
 from .context import ToContext, assign_, append_
+from .exit_code import ExitCode
 from .process_spec import ProcessSpec
 from .processes import Process, ProcessState
 
@@ -139,28 +140,37 @@ class WorkChain(Process):
 
     def _do_step(self):
         """
-        Execute the next step in the outline, if the stepper returns a non-finished status
-        and the return value is of type ToContext, it will be added to the awaitables.
-        If the stepper returns that the process is finished, we return the return value
+        Execute the next step in the outline and return the result.
+
+        If the stepper returns a non-finished status and the return value is of type ToContext, the contents of the
+        ToContext container will be turned into awaitables if necessary. If any awaitables were created, the process
+        will enter in the Wait state, otherwise it will go to Continue. When the stepper returns that it is done, the
+        stepper result will be converted to None and returned, unless it is an integer or instance of ExitCode.
         """
         self._awaitables = []
+        result = None
 
         try:
-            finished, return_value = self._stepper.step()
+            finished, stepper_result = self._stepper.step()
         except _PropagateReturn as exception:
-            finished, return_value = True, exception.exit_code
+            finished, result = True, exception.exit_code
+        else:
+            if isinstance(stepper_result, (int, ExitCode)):
+                result = stepper_result
+            else:
+                result = None
 
-        if not finished and (return_value is None or isinstance(return_value, ToContext)):
+        if not finished and (stepper_result is None or isinstance(stepper_result, ToContext)):
 
-            if isinstance(return_value, ToContext):
-                self.to_context(**return_value)
+            if isinstance(stepper_result, ToContext):
+                self.to_context(**stepper_result)
 
             if self._awaitables:
                 return Wait(self._do_step, 'Waiting before next step')
 
             return Continue(self._do_step)
 
-        return return_value
+        return result
 
     def on_wait(self, awaitables):
         super(WorkChain, self).on_wait(awaitables)

@@ -5,6 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.data.cif import cif
+from aiida.backends.settings import AIIDADB_PROFILE
 
 from unittest import skip
 
@@ -23,11 +24,31 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
-class TestVerdiData(AiidaTestCase):
+class TestVerdiDataCif(AiidaTestCase):
+
+    valid_sample_cif_str = '''
+        data_test
+        _cell_length_a    10
+        _cell_length_b    10
+        _cell_length_c    10
+        _cell_angle_alpha 90
+        _cell_angle_beta  90
+        _cell_angle_gamma 90
+        _chemical_formula_sum 'C O2'
+        loop_
+        _atom_site_label
+        _atom_site_fract_x
+        _atom_site_fract_y
+        _atom_site_fract_z
+        _atom_site_attached_hydrogens
+        C 0 0 0 0
+        O 0.5 0.5 0.5 .
+        H 0.75 0.75 0.75 0
+    '''
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiData, cls).setUpClass()
+        super(TestVerdiDataCif, cls).setUpClass()
         from aiida.orm import Computer
         new_comp = Computer(name='comp',
                                 hostname='localhost',
@@ -42,6 +63,8 @@ class TestVerdiData(AiidaTestCase):
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
+
+        self.cli_runner = CliRunner()
 
     def test_help(self):
         result = self.runner.invoke(cif, ['--help'])
@@ -78,29 +101,9 @@ class TestVerdiData(AiidaTestCase):
         from aiida.orm.data.cif import CifData
         from aiida.orm.group import Group
 
-        valid_sample_cif_str = '''
-            data_test
-            _cell_length_a    10
-            _cell_length_b    10
-            _cell_length_c    10
-            _cell_angle_alpha 90
-            _cell_angle_beta  90
-            _cell_angle_gamma 90
-            _chemical_formula_sum 'C O2'
-            loop_
-            _atom_site_label
-            _atom_site_fract_x
-            _atom_site_fract_y
-            _atom_site_fract_z
-            _atom_site_attached_hydrogens
-            C 0 0 0 0
-            O 0.5 0.5 0.5 .
-            H 0.75 0.75 0.75 0
-        '''
-
         with tempfile.NamedTemporaryFile() as f:
             filename = f.name
-            f.write(valid_sample_cif_str)
+            f.write(self.valid_sample_cif_str)
             f.flush()
             a = CifData(file=filename,
                         source={'version': '1234',
@@ -166,7 +169,7 @@ class TestVerdiData(AiidaTestCase):
             self.assertNotIn('formulae', output)
             self.assertNotIn('source_uri', output)
 
-
+    @skip("")
     def test_data_cif_import(self):
         """
         This method tests that the Cif import works as expected with all
@@ -204,6 +207,77 @@ class TestVerdiData(AiidaTestCase):
                      'cif', '--file', f.name], stdin=f)
 
 
+    def test_data_cif_export(self):
+        """
+        This method checks if the Cif export works as expected with all
+        possible flags and arguments.
+        """
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.group import Group
+        from aiida.cmdline.commands.data.cif import export
+
+        # Create a valid CifNode
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+            a = CifData(file=filename,
+                        source={'version': '1234',
+                                'db_name': 'COD',
+                                'id': '0000001'})
+            a.store()
+
+        # Check that the simple command works as expected
+        options = [str(a.id)]
+        res = self.cli_runner.invoke(export, options, catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0, "The command did not finish "
+                                            "correctly")
+
+        # Check that you can export the various formats
+        format_flags = ['-y', '--format']
+        supported_formats = ['cif', 'tcod']
+        for flag in format_flags:
+            for format in supported_formats:
+                # with captured_output() as (out, err):
+                options = [flag, format, str(a.id)]
+                res = self.cli_runner.invoke(export, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                  "The command did not finish "
+                                  "correctly")
+
+        # The following flags fail.
+        # We have to see why. The --reduce-symmetry seems to work in
+        # the original code. The other one not.
+
+        # symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
+        # for flag in symmetry_flags:
+        #     # with captured_output() as (out, err):
+        #     options = [flag, str(a.id)]
+        #     res = self.cli_runner.invoke(export, options,
+        #                                  catch_exceptions=False)
+        #     self.assertEquals(res.exit_code, 0,
+        #                       "The command did not finish "
+        #                       "correctly")
+        #
+        #     self.assertRaises(
+        #                     Exception, sp.check_output,
+        #                     ['verdi', 'data', 'cif', 'import', flag, 'not_supported'],
+        #                     stderr=sp.STDOUT)
 
 
+        # # Check that you can export the various formats
+        # format_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
+        # supported_formats = ['cif', 'tcod']
+        # for flag in format_flags:
+        #     for format in supported_formats:
+        #         # with captured_output() as (out, err):
+        #         options = [flag, format, str(a.id)]
+        #         res = self.cli_runner.invoke(export, options,
+        #                                      catch_exceptions=False)
+        #         self.assertEquals(res.exit_code, 0,
+        #                           "The command did not finish "
+        #                           "correctly")
 

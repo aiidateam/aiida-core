@@ -139,8 +139,8 @@ def deposit(**kwargs):
     Deposit CifData object
     """
     from aiida.orm.data.cif import CifData
-    if not is_dbenv_loaded():
-        load_dbenv()
+    # if not is_dbenv_loaded():
+    #     load_dbenv()
     node = kwargs.pop('node')
     deposition_type = kwargs.pop('deposition_type')
     parameter_data = kwargs.pop('parameter_data')

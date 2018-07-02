@@ -62,7 +62,7 @@ def show (**kwargs):
     from aiida.cmdline.commands.data.show import _show_mpl_pos
     from aiida.cmdline.commands.data.show import _show_mpl_heatmap
     nodes = kwargs.pop('nodes')
-    format = kwargs.pop('format')
+    given_format = kwargs.pop('format')
     for n in nodes:
         if not isinstance(n, TrajectoryData):
             echo.echo_critical("Node {} is of class {} instead "
@@ -72,16 +72,17 @@ def show (**kwargs):
         if value is None:
             kwargs.pop(key)
 
-    if format == "jmol":
-        _show_jmol(format, nodes, **kwargs)
-    elif format == "xcrysden":
-        _show_xcrysden(format, nodes, **kwargs)
-    elif format == "mpl_pos":
-        _show_mpl_pos(format, nodes, **kwargs)
-    elif format == "mpl_heatmap":
-        _show_mpl_heatmap(format, nodes, **kwargs)
+    if given_format == "jmol":
+        _show_jmol(given_format, nodes, **kwargs)
+    elif given_format == "xcrysden":
+        _show_xcrysden(given_format, nodes, **kwargs)
+    elif given_format == "mpl_pos":
+        _show_mpl_pos(given_format, nodes, **kwargs)
+    elif given_format == "mpl_heatmap":
+        _show_mpl_heatmap(given_format, nodes, **kwargs)
     else:
-        raise
+        raise NotImplementedError ("The format {} is not yet implemented"
+                                   .format(given_format))
 
 
 @trajectory.command('export')

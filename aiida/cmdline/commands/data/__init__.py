@@ -7,22 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import click
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands import verdi, verdi_data
-from aiida.cmdline.params import arguments
-from aiida.cmdline.params import options
-from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
-
-from aiida.cmdline.commands.data import upf
-from aiida.cmdline.commands.data import structure
-from aiida.cmdline.commands.data import bands
-from aiida.cmdline.commands.data import cif
-from aiida.cmdline.commands.data import trajectory
-from aiida.cmdline.commands.data import parameter
-from aiida.cmdline.commands.data import array
-from aiida.cmdline.commands.data import remote
 
 
 class Data(VerdiCommandWithSubcommands):
@@ -34,6 +20,19 @@ class Data(VerdiCommandWithSubcommands):
     """
 
     def __init__(self):
+        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
+
+        from aiida.cmdline.commands.data import upf
+        from aiida.cmdline.commands.data import structure
+        from aiida.cmdline.commands.data import bands
+        from aiida.cmdline.commands.data import cif
+        from aiida.cmdline.commands.data import trajectory
+        from aiida.cmdline.commands.data import parameter
+        from aiida.cmdline.commands.data import array
+        from aiida.cmdline.commands.data import remote
+
         self.valid_subcommands = {
             'upf': (self.cli, self.complete_none),
             'structure': (self.cli, self.complete_none),

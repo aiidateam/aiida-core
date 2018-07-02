@@ -19,8 +19,8 @@ from aiida.cmdline.utils import echo
 from aiida.orm.data.array.bands import BandsData
 from aiida.common.utils import Prettifier
 
-if not is_dbenv_loaded():
-    load_dbenv()
+# if not is_dbenv_loaded():
+#     load_dbenv()
 
 def show_xmgrace(exec_name, list_bands):
     """

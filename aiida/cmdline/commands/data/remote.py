@@ -18,8 +18,8 @@ from aiida.common.exceptions import DanglingLinkError
 from aiida.common.utils import get_mode_string
 
 
-if not is_dbenv_loaded():
-    load_dbenv()
+# if not is_dbenv_loaded():
+#     load_dbenv()
         
 @verdi_data.group('remote')
 @click.pass_context

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 """
 It defines subcommands for verdi group command.
 """
@@ -15,7 +14,7 @@ It defines subcommands for verdi group command.
 import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.exceptions import NotExistent, UniquenessError
+from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands import verdi, verdi_group
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -62,8 +61,10 @@ def group_removenodes(group, nodes, force):
     Remove NODES from a given AiiDA group.
     """
     if not force:
-        click.confirm("Are you sure to remove {} nodes from the group with PK = {} "
-                "({})?".format(len(nodes), group.pk, group.name), abort=True)
+        click.confirm(
+            "Are you sure to remove {} nodes from the group with PK = {} "
+            "({})?".format(len(nodes), group.pk, group.name),
+            abort=True)
 
     group.remove_nodes(nodes)
 
@@ -79,8 +80,10 @@ def group_addnodes(group, force, nodes):
     """
 
     if not force:
-        click.confirm("Are you sure to add {} nodes the group with PK = {} "
-                  "({})?".format(len(nodes), group.pk, group.name), abort=True)
+        click.confirm(
+            "Are you sure to add {} nodes the group with PK = {} "
+            "({})?".format(len(nodes), group.pk, group.name),
+            abort=True)
 
     group.add_nodes(nodes)
 
@@ -88,8 +91,8 @@ def group_addnodes(group, force, nodes):
 @verdi_group.command("delete")
 @arguments.GROUP()
 @options.FORCE(help="Force deletion of the group even if it "
-                    "is not empty. Note that this deletes only the "
-                    "group and not the nodes.")
+               "is not empty. Note that this deletes only the "
+               "group and not the nodes.")
 @with_dbenv()
 def group_delete(group, force):
     """
@@ -101,8 +104,8 @@ def group_delete(group, force):
     num_nodes = len(group.nodes)
     if num_nodes > 0 and not force:
         echo.echo_critical(("Group '{}' is not empty (it contains {} "
-                              "nodes). Pass the -f option if you really want to delete "
-                              "it.".format(group_name, num_nodes)))
+                            "nodes). Pass the -f option if you really want to delete "
+                            "it.".format(group_name, num_nodes)))
 
     if not force:
         click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_pk, group_name), abort=True)
@@ -144,8 +147,12 @@ def group_description(group, description):
 
 @verdi_group.command("show")
 @options.RAW(help="Show only a space-separated list of PKs of the calculations in the group")
-@click.option('-u', '--uuid', is_flag=True, default=False,
-              help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
+@click.option(
+    '-u',
+    '--uuid',
+    is_flag=True,
+    default=False,
+    help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
@@ -193,23 +200,43 @@ def group_show(group, raw, uuid):
 
 @verdi_group.command("list")
 @options.ALL_USERS(help="Show groups for all users, rather than only for the current user")
-@click.option('-u', '--user', 'user_email', type=click.STRING, help="Add a filter to show only groups belonging to a specific user")
-@click.option('-t', '--type', 'type', type=click.STRING, help="Show groups of a specific type, instead of user-defined groups")
-@click.option('-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
-@click.option('-C', '--count', is_flag=True, default=False,
-              help="Show also the number of nodes in the group")
+@click.option(
+    '-u',
+    '--user',
+    'user_email',
+    type=click.STRING,
+    help="Add a filter to show only groups belonging to a specific user")
+@click.option(
+    '-t',
+    '--type',
+    'group_type',
+    type=click.STRING,
+    help="Show groups of a specific type, instead of user-defined groups")
+@click.option(
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
+@click.option('-C', '--count', is_flag=True, default=False, help="Show also the number of nodes in the group")
 @options.PAST_DAYS(help="add a filter to show only groups created in the past N days", default=None)
-@click.option('-s', '--startswith', type=click.STRING, default=None,
-              help="add a filter to show only groups for which the name begins with STRING")
-@click.option('-e', '--endswith', type=click.STRING, default=None,
-              help="add a filter to show only groups for which the name ends with STRING")
-@click.option('-c', '--contains', type=click.STRING, default=None,
-              help="add a filter to show only groups for which the name contains STRING")
-
+@click.option(
+    '-s',
+    '--startswith',
+    type=click.STRING,
+    default=None,
+    help="add a filter to show only groups for which the name begins with STRING")
+@click.option(
+    '-e',
+    '--endswith',
+    type=click.STRING,
+    default=None,
+    help="add a filter to show only groups for which the name ends with STRING")
+@click.option(
+    '-c',
+    '--contains',
+    type=click.STRING,
+    default=None,
+    help="add a filter to show only groups for which the name contains STRING")
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
-def group_list(all_users, user_email, type, with_description, count,
-               past_days, startswith, endswith, contains, node):
+def group_list(**kwargs):
     """
     List AiiDA user-defined groups.
     """
@@ -218,48 +245,46 @@ def group_list(all_users, user_email, type, with_description, count,
     from aiida.orm.group import get_group_type_mapping
     from aiida.orm.backend import construct_backend
     from tabulate import tabulate
+    from aiida.common.extendeddicts import AttributeDict
 
-    if all_users and user_email is not None:
+    kwargs = AttributeDict(kwargs)
+
+    if kwargs.all_users and kwargs.user_email is not None:
         echo.echo_critical("argument -A/--all-users: not allowed with argument -u/--user")
 
     backend = construct_backend()
 
-    if all_users:
+    if kwargs.all_users:
         user = None
     else:
-        if user_email:
-            user = user_email
+        if kwargs.user_email:  # pylint: disable=no-member
+            user = kwargs.user_email  # pylint: disable=no-member
         else:
             # By default: only groups of this user
             user = backend.users.get_automatic_user()
 
     type_string = ""
-    if type is not None:
+    if kwargs.group_type is not None:
         try:
-            type_string = get_group_type_mapping()[type]
+            type_string = get_group_type_mapping()[kwargs.group_type]  # pylint: disable=no-member
         except KeyError:
             echo.echo_critical("Invalid group type. Valid group types are: {}".format(
                 ",".join(sorted(get_group_type_mapping().keys()))))
 
     n_days_ago = None
-    if past_days:
-        n_days_ago = (timezone.now() - datetime.timedelta(days=past_days))
+    if kwargs.past_days:
+        n_days_ago = (timezone.now() - datetime.timedelta(days=kwargs.past_days))  # pylint: disable=no-member
 
-    name_filters = {
-        'startswith': startswith,
-        'endswith': endswith,
-        'contains': contains
-    }
+    name_filters = {'startswith': kwargs.startswith, 'endswith': kwargs.endswith, 'contains': kwargs.contains}
 
     # Depending on --nodes option use or not key "nodes"
-    from aiida.orm.implementation import Group
+    from aiida.orm.implementation import Group as OrmGroup
 
-    if node:
-        result = Group.query(user=user, type_string=type_string, nodes=node,
-                              past_days=n_days_ago, name_filters=name_filters)
+    if kwargs.node:
+        result = OrmGroup.query(
+            user=user, type_string=type_string, nodes=kwargs.node, past_days=n_days_ago, name_filters=name_filters)  # pylint: disable=no-member
     else:
-        result = Group.query(user=user, type_string=type_string,
-                              past_days=n_days_ago, name_filters=name_filters)
+        result = OrmGroup.query(user=user, type_string=type_string, past_days=n_days_ago, name_filters=name_filters)
 
     projection_lambdas = {
         'pk': lambda group: str(group.pk),
@@ -273,11 +298,11 @@ def group_list(all_users, user_email, type, with_description, count,
     projection_header = ['PK', 'Name', 'User']
     projection_fields = ['pk', 'name', 'user']
 
-    if with_description:
+    if kwargs.with_description:
         projection_header.append('Description')
         projection_fields.append('description')
 
-    if count:
+    if kwargs.count:
         projection_header.append('Node count')
         projection_fields.append('count')
 
@@ -295,9 +320,9 @@ def group_create(group_name):
     Create a new empty group with the name GROUP_NAME
     """
 
-    from aiida.orm import Group as G
+    from aiida.orm import Group as OrmGroup
 
-    group, created = G.get_or_create(name=group_name)
+    group, created = OrmGroup.get_or_create(name=group_name)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.pk, group.name))

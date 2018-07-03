@@ -237,8 +237,8 @@ def group_show(group, raw, uuid):
     help="add a filter to show only groups for which the name contains STRING")
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
-def group_list(all_users, user_email, group_type, with_description, count,
-               past_days, startswith, endswith, contains, node):
+def group_list(all_users, user_email, group_type, with_description, count, past_days, startswith, endswith, contains,
+               node):
     """
     List AiiDA user-defined groups.
     """

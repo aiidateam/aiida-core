@@ -10,12 +10,12 @@
 from stat import S_ISDIR, S_ISREG
 import StringIO
 
-import aiida.transport.transport
-import paramiko
 import os
+import paramiko
 import glob
 
 import aiida.transport
+import aiida.transport.transport
 from aiida.common.utils import escape_for_bash
 from aiida.transport.util import FileAttribute
 from aiida.common import aiidalogger

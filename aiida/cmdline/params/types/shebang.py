@@ -1,7 +1,14 @@
+"""
+Module for shebang custom click type
+"""
+
 from click.types import StringParamType
 
 
 class ShebangParamType(StringParamType):
+    """
+    Custom click param type for shbang line
+    """
     name = 'shebangline'
 
     def convert(self, value, param, ctx):

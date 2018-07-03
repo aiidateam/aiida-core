@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Module to define custom click param type for multiple values
+"""
 import click
 
 

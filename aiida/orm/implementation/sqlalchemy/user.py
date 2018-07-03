@@ -15,15 +15,14 @@ from . import utils
 
 
 class SqlaUserCollection(UserCollection):
-    def create(self, email):
+    def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
 
-        :param email: An email address for the user
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return SqlaUser(self, normalize_email(email))
+        return SqlaUser(self, normalize_email(email), first_name, last_name, institution)
 
     def _from_dbmodel(self, dbuser):
         return SqlaUser._from_dbmodel(self, dbuser)
@@ -59,9 +58,13 @@ class SqlaUser(User):
         user._dbuser = utils.ModelWrapper(dbuser)
         return user
 
-    def __init__(self, backend, email):
+    def __init__(self, backend, email, first_name, last_name, institution):
         super(SqlaUser, self).__init__(backend)
-        self._dbuser = utils.ModelWrapper(DbUser(email=email))
+        self._dbuser = utils.ModelWrapper(DbUser(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution))
 
     @property
     def dbuser(self):

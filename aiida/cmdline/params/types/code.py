@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Module to define the custom click type for code
+"""
+
 from .identifier import IdentifierParamType
 
 
@@ -13,7 +17,7 @@ class CodeParamType(IdentifierParamType):
     def orm_class_loader(self):
         """
         Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
-        to be used to load the entity for a given identifier 
+        to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
         """

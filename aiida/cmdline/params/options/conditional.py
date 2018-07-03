@@ -40,7 +40,7 @@ class ConditionalOption(click.Option):
             if self.required_fn and self.value_is_missing(value):
                 if self.is_required(ctx):
                     raise click.MissingParameter(ctx=ctx, param=self)
-        except click.MissingParameter as err:
+        except click.MissingParameter:
             if self.is_required(ctx):
                 raise
         return value
@@ -50,5 +50,5 @@ class ConditionalOption(click.Option):
 
         if self.required_fn:
             return self.required_fn(ctx)
-        else:
-            return self.required
+
+        return self.required

@@ -58,12 +58,15 @@ class InteractiveOption(ConditionalOption):
     """
     PROMPT_COLOR = 'yellow'
 
-    def __init__(self, param_decls=None, switch=None, prompt_fn=None, **kwargs):
+    def __init__(self, param_decls=None, switch=None, prompt_fn=None, contextual_default=None, **kwargs):
         """
         :param param_decls: relayed to :class:`click.Option`
         :param switch: sequence of parameter
         :param prompt_fn: callable(ctx) -> True | False, returns True
             if the option should be prompted for in interactive mode.
+        :param contextual_default: An optional callback function to get a default which is
+            passed the click context
+
         """
 
         # intercept prompt kwarg; I need to pop it before calling super
@@ -83,6 +86,7 @@ class InteractiveOption(ConditionalOption):
 
         # other kwargs
         self.switch = switch
+        self._contextual_default = contextual_default
 
         # set callback
         self._after_callback = self.callback
@@ -100,6 +104,9 @@ class InteractiveOption(ConditionalOption):
 
     def _get_default(self, ctx):
         """provides the functionality of :func:`click.Option.get_default`"""
+        if self._contextual_default is not None:
+            return self._contextual_default(ctx)
+
         return super(InteractiveOption, self).get_default(ctx)
 
     def prompt_func(self, ctx):

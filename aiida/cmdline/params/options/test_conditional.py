@@ -22,11 +22,15 @@ class ConditionalOptionTest(unittest.TestCase):
             * --opt, ConditionalOption with required_fn from kwargs
         """
 
+        # pylint: disable=no-self-use
+
         @click.command()
         @click.option(pname, **kwargs)
         @click.option('--opt', required_fn=required_fn, cls=ConditionalOption)
         def cmd(on, opt):
             """dummy command for testing"""
+            # pylint: disable=unused-argument, invalid-name
+
             click.echo(opt)
 
         return cmd
@@ -87,12 +91,16 @@ class ConditionalOptionTest(unittest.TestCase):
             * opt-b required if a_or_b == False
         """
 
+        # pylint: disable=no-self-use
+
         @click.command()
         @click.option('--a/--b', 'a_or_b')
         @click.option('--opt-a', required_fn=lambda c: c.params.get('a_or_b'), cls=ConditionalOption)
         @click.option('--opt-b', required_fn=lambda c: not c.params.get('a_or_b'), cls=ConditionalOption)
         def cmd(a_or_b, opt_a, opt_b):
             """test command for scenario a-or-b"""
+            # pylint: disable=unused-argument
+
             click.echo('{} / {}'.format(opt_a, opt_b))
 
         runner = CliRunner()
@@ -143,7 +151,11 @@ class ConditionalOptionTest(unittest.TestCase):
         self.assertIsNotNone(result_rev.exception)
         self.assertIn('Error: Missing option "--opt-b".', result_rev.output)
 
-    def user_callback(self, ctx, param, value):
+    @staticmethod
+    def user_callback(_ctx, param, value):
+        """
+        Testing callback that does not accept 42 and transforms a missing value to -1
+        """
         if not value:
             return -1
         elif value != 42:
@@ -151,13 +163,17 @@ class ConditionalOptionTest(unittest.TestCase):
         else:
             return value
 
-    def setup_flag_cond(self, **kwargs):
+    @staticmethod
+    def setup_flag_cond(**kwargs):
         """Set up a command with a flag and a customizable option that depends on it."""
 
         @click.command()
         @click.option('--flag', is_flag=True)
         @click.option('--opt-a', required_fn=lambda c: c.params.get('flag'), cls=ConditionalOption, **kwargs)
         def cmd(flag, opt_a):
+            """ A command with a flag and customizable options that dependon it """
+            # pylint: disable=unused-argument
+
             click.echo('{}'.format(opt_a))
 
         return cmd

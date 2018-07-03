@@ -4,17 +4,11 @@
   hooks:
   - id: yapf
     language: system
-    files: >-  # begin multiline string
+    files: &check_files >-  # begin multiline string
       (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
         .ci/test_plugin_testcase.py|
         .ci/test_setup.py|
-        aiida/backends/tests/cmdline/commands/test_calculation.py|
-        aiida/backends/tests/cmdline/commands/test_export.py|
-        aiida/backends/tests/cmdline/commands/test_graph.py|
-        aiida/backends/tests/cmdline/commands/test_group.py|
-        aiida/backends/tests/cmdline/commands/test_rehash.py|
-        aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/cmdline/commands/test_code.py|
+        aiida/backends/tests/cmdline/commands/*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/control/.*.py|        # must match the whole path, therefore
@@ -27,23 +21,25 @@
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
+        aiida/cmdline/commands/user.py|
         aiida/cmdline/commands/workflow.py|
         aiida/cmdline/options/types/legacy_workflow.py|
         aiida/cmdline/options/interactive.py|
         aiida/cmdline/params/types/path.py|
+        aiida/cmdline/params/.*.py|
+        aiida/cmdline/optiontypes/.*.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|
         aiida/cmdline/utils/echo.py|
-        aiida/scheduler/.*.py|
-        aiida/transport/.*.py|
-        aiida/backends/tests/cmdline/params/types/workflow.py|
+        aiida/transport/__init__.py|
         aiida/orm/data/cif.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|
         docs/update_req_for_rtd.py # a|b -> match a OR b
       )$  # $ -> end of file path, to add a directory, give full/path/.*
+
 
 # prospector: collection of linters
 - repo: git://github.com/guykisel/prospector-mirror
@@ -53,43 +49,7 @@
     language: system
     exclude: ^(tests/|examples/)
     types: [file, python]
-    files: >-
-      (?x)^(
-        .ci/test_plugin_testcase.py|
-        .ci/test_setup.py|
-        aiida/backends/tests/cmdline/commands/test_calculation.py|
-        aiida/backends/tests/cmdline/commands/test_export.py|
-        aiida/backends/tests/cmdline/commands/test_graph.py|
-        aiida/backends/tests/cmdline/commands/test_group.py|
-        aiida/backends/tests/cmdline/commands/test_rehash.py|
-        aiida/backends/tests/cmdline/commands/test_code.py|
-        aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/cmdline/params/types/workflow.py|
-        aiida/backends/tests/verdi_commands.py|
-        aiida/control/.*.py|
-        aiida/cmdline/tests/.*.py|
-        aiida/cmdline/commands/calculation.py|
-        aiida/cmdline/commands/daemon.py|
-        aiida/cmdline/commands/code.py|
-        aiida/cmdline/commands/graph.py|
-        aiida/cmdline/commands/group.py|
-        aiida/cmdline/commands/node.py|
-        aiida/cmdline/commands/rehash.py|
-        aiida/cmdline/commands/restapi.py|
-        aiida/cmdline/commands/workflow.py|
-        aiida/cmdline/options/types/legacy_workflow.py|
-        aiida/cmdline/options/interactive.py|
-        aiida/cmdline/params/types/path.py|
-        aiida/cmdline/utils/multi_line_input.py|
-        aiida/cmdline/utils/test_multiline.py|
-        aiida/cmdline/utils/templates.py|
-        aiida/cmdline/utils/echo.py|
-        aiida/orm/data/cif.py|
-        aiida/restapi/resources.py|
-        aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py|
-        docs/update_req_for_rtd.py
-      )$
+    files: *check_files
 
 - repo: local
   hooks:

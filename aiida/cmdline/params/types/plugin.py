@@ -1,4 +1,4 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 """Click parameter type for AiiDA Plugins."""
 import click
 
@@ -33,6 +33,7 @@ class PluginParamType(click.ParamType):
         Validate that group is either a string or a tuple of valid entry point groups, or if it
         is not specified use the tuple of all recognized entry point groups.
         """
+        # pylint: disable=keyword-arg-before-vararg
         valid_entry_point_groups = get_entry_point_groups()
 
         if group is None:
@@ -47,25 +48,31 @@ class PluginParamType(click.ParamType):
 
             groups = []
 
-            for group in invalidated_groups:
+            for grp in invalidated_groups:
 
-                if not group.startswith(ENTRY_POINT_GROUP_PREFIX):
-                    group = ENTRY_POINT_GROUP_PREFIX + group
+                if not grp.startswith(ENTRY_POINT_GROUP_PREFIX):
+                    grp = ENTRY_POINT_GROUP_PREFIX + grp
 
-                if group not in valid_entry_point_groups:
-                    raise ValueError('entry point group {} is not recognized'.format(group))
+                if grp not in valid_entry_point_groups:
+                    raise ValueError('entry point group {} is not recognized'.format(grp))
 
-                groups.append(group)
+                groups.append(grp)
 
             self._groups = tuple(groups)
 
-        # Since the groups should not be changed after instantiation we should create these lists only once
-        self._entry_points = [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
-        self._entry_point_names = [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
-
+        self._init_entry_points()
         self.load = load
 
         super(PluginParamType, self).__init__(*args, **kwargs)
+
+    def _init_entry_points(self):
+        """
+        Populate entry point information that will be used later on.  This should only be called
+        once in the constructor after setting self.groups because the groups should not be changed
+        after instantiation
+        """
+        self._entry_points = [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
+        self._entry_point_names = [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
 
     @property
     def groups(self):
@@ -90,8 +97,8 @@ class PluginParamType(click.ParamType):
         if self.has_potential_ambiguity:
             fmt = EntryPointFormat.FULL
             return sorted([format_entry_point_string(group, ep.name, fmt=fmt) for group, ep in self._entry_points])
-        else:
-            return sorted(self._entry_point_names)
+
+        return sorted(self._entry_point_names)
 
     def get_possibilities(self, incomplete=''):
         """
@@ -161,7 +168,7 @@ class PluginParamType(click.ParamType):
             if len(matching_groups) > 1:
                 raise ValueError("entry point '{}' matches more than one valid entry point group [{}], "
                                  "please specify an explicit group prefix".format(name, ' '.join(matching_groups)))
-            elif len(matching_groups) == 0:
+            elif not matching_groups:
                 raise ValueError("entry point '{}' is not valid for any of the allowed "
                                  "entry point groups: {}".format(name, ' '.join(self.groups)))
             else:

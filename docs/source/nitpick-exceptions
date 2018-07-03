@@ -177,5 +177,6 @@ py:class  aiida.orm.node.Node
 py:meth   aiida.orm.group.Group.get_from_string
 
 py:mod    click
+py:class  click.Choice
 
 py:func   click.Option.get_default

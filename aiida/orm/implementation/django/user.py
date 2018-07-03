@@ -17,15 +17,18 @@ from . import utils
 
 
 class DjangoUserCollection(UserCollection):
-    def create(self, email):
+    def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
 
-        :param email: An email address for the user
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return DjangoUser(self, email=normalize_email(email))
+        return DjangoUser(self,
+                          email=normalize_email(email),
+                          first_name=first_name,
+                          last_name=last_name,
+                          institution=institution)
 
     def _from_dbmodel(self, dbuser):
         return DjangoUser._from_dbmodel(self, dbuser)
@@ -73,9 +76,13 @@ class DjangoUser(User):
         user._dbuser = utils.ModelWrapper(dbuser)
         return user
 
-    def __init__(self, backend, email):
+    def __init__(self, backend, email, first_name, last_name, institution):
         super(DjangoUser, self).__init__(backend)
-        self._dbuser = utils.ModelWrapper(DbUser(email=email))
+        self._dbuser = utils.ModelWrapper(DbUser(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution))
 
     @property
     def dbuser(self):

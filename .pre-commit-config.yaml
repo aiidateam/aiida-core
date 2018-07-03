@@ -17,6 +17,7 @@
         aiida/cmdline/commands/daemon.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
+        aiida/cmdline/commands/group.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|

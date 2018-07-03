@@ -57,6 +57,7 @@ db_test_list = {
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.work': ['aiida.backends.tests.cmdline.commands.test_work'],
+        'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],

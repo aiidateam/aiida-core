@@ -198,6 +198,7 @@ def group_show(group, raw, uuid):
         echo.echo(tabulate(table, headers=header))
 
 
+# pylint: disable=too-many-arguments, too-many-locals
 @verdi_group.command("list")
 @options.ALL_USERS(help="Show groups for all users, rather than only for the current user")
 @click.option(
@@ -236,7 +237,8 @@ def group_show(group, raw, uuid):
     help="add a filter to show only groups for which the name contains STRING")
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
-def group_list(**kwargs):
+def group_list(all_users, user_email, group_type, with_description, count,
+               past_days, startswith, endswith, contains, node):
     """
     List AiiDA user-defined groups.
     """
@@ -245,44 +247,41 @@ def group_list(**kwargs):
     from aiida.orm.group import get_group_type_mapping
     from aiida.orm.backend import construct_backend
     from tabulate import tabulate
-    from aiida.common.extendeddicts import AttributeDict
 
-    kwargs = AttributeDict(kwargs)
-
-    if kwargs.all_users and kwargs.user_email is not None:
+    if all_users and user_email is not None:
         echo.echo_critical("argument -A/--all-users: not allowed with argument -u/--user")
 
     backend = construct_backend()
 
-    if kwargs.all_users:
+    if all_users:
         user = None
     else:
-        if kwargs.user_email:  # pylint: disable=no-member
-            user = kwargs.user_email  # pylint: disable=no-member
+        if user_email:
+            user = user_email
         else:
             # By default: only groups of this user
             user = backend.users.get_automatic_user()
 
     type_string = ""
-    if kwargs.group_type is not None:
+    if group_type is not None:
         try:
-            type_string = get_group_type_mapping()[kwargs.group_type]  # pylint: disable=no-member
+            type_string = get_group_type_mapping()[group_type]
         except KeyError:
             echo.echo_critical("Invalid group type. Valid group types are: {}".format(
                 ",".join(sorted(get_group_type_mapping().keys()))))
 
     n_days_ago = None
-    if kwargs.past_days:
-        n_days_ago = (timezone.now() - datetime.timedelta(days=kwargs.past_days))  # pylint: disable=no-member
+    if past_days:
+        n_days_ago = (timezone.now() - datetime.timedelta(days=past_days))
 
-    name_filters = {'startswith': kwargs.startswith, 'endswith': kwargs.endswith, 'contains': kwargs.contains}
+    name_filters = {'startswith': startswith, 'endswith': endswith, 'contains': contains}
 
     # Depending on --nodes option use or not key "nodes"
     from aiida.orm.implementation import Group as OrmGroup
 
-    if kwargs.node:
+    if node:
         result = OrmGroup.query(
-            user=user, type_string=type_string, nodes=kwargs.node, past_days=n_days_ago, name_filters=name_filters)  # pylint: disable=no-member
+            user=user, type_string=type_string, nodes=node, past_days=n_days_ago, name_filters=name_filters)
     else:
         result = OrmGroup.query(user=user, type_string=type_string, past_days=n_days_ago, name_filters=name_filters)
 
@@ -298,11 +297,11 @@ def group_list(**kwargs):
     projection_header = ['PK', 'Name', 'User']
     projection_fields = ['pk', 'name', 'user']
 
-    if kwargs.with_description:
+    if with_description:
         projection_header.append('Description')
         projection_fields.append('description')
 
-    if kwargs.count:
+    if count:
         projection_header.append('Node count')
         projection_fields.append('count')
 

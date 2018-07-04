@@ -320,6 +320,10 @@ class JobTemplate(DefaultFieldsAttributeDict):
         file (the one specified for stdout)
       * ``queue_name``: the name of the scheduler queue (sometimes also called
         partition), on which the job will be submitted.
+      * ``account``: the name of the scheduler account (sometimes also called
+        projectid), on which the job will be submitted.
+      * ``qos``: the quality of service of the scheduler account,
+        on which the job will be submitted.
       * ``job_resource``: a suitable :py:class:`JobResource`
         subclass with information on how many
         nodes and cpus it should use. It must be an instance of the
@@ -388,6 +392,8 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'sched_error_path',
         'sched_join_files',
         'queue_name',
+        'account',
+        'qos',
         'job_resource',
         #        'num_machines',
         #        'num_mpiprocs_per_machine',
@@ -461,6 +467,10 @@ class JobInfo(DefaultFieldsAttributeDict):
          attribute can be used to know at least the number of machines.
        * ``queue_name``: The name of the queue in which the job is queued or
          running.
+       * ``account``: The account/projectid in which the job is queued or
+         running in.
+       * ``qos``: The quality of service in which the job is queued or
+         running in.
        * ``wallclock_time_seconds``: the accumulated wallclock time, in seconds
        * ``requested_wallclock_time_seconds``: the requested wallclock time,
          in seconds
@@ -474,7 +484,7 @@ class JobInfo(DefaultFieldsAttributeDict):
     """
     _default_fields = ('job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state',
                        'job_substate', 'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines',
-                       'queue_name', 'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time',
+                       'queue_name', 'account', 'qos', 'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time',
                        'submission_time', 'dispatch_time', 'finish_time')
 
     # If some fields require special serializers, specify them here.

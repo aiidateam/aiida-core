@@ -372,6 +372,10 @@ class JobProcess(processes.Process):
                      ' any non-scheduler command')
             spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
                 help='Set the name of the queue on the remote computer')
+            spec.input('{}.account'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the account to use in for the queue on the remote computer')
+            spec.input('{}.qos'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the quality of service to use in for the queue on the remote computer')
             spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
                 help='Set the computer to be used by the calculation')
             spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,

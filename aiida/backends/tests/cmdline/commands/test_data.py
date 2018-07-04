@@ -4,12 +4,17 @@ import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.data.cif import cif
+# from aiida.cmdline.commands.data.cif import cif
 from aiida.backends.settings import AIIDADB_PROFILE
+from aiida.cmdline.commands.data import cif
 
 from unittest import skip
 
 import sys
+import os
+import shutil
+
+
 from contextlib import contextmanager
 from StringIO import StringIO
 
@@ -215,8 +220,6 @@ class TestVerdiDataCif(AiidaTestCase):
         import tempfile
 
         from aiida.orm.data.cif import CifData
-        from aiida.orm.group import Group
-        from aiida.cmdline.commands.data.cif import export
 
         # Create a valid CifNode
         with tempfile.NamedTemporaryFile() as f:
@@ -231,53 +234,137 @@ class TestVerdiDataCif(AiidaTestCase):
 
         # Check that the simple command works as expected
         options = [str(a.id)]
-        res = self.cli_runner.invoke(export, options, catch_exceptions=False)
+        res = self.cli_runner.invoke(cif.export, options, catch_exceptions=False)
         self.assertEquals(res.exit_code, 0, "The command did not finish "
                                             "correctly")
 
         # Check that you can export the various formats
-        format_flags = ['-y', '--format']
+        # TODO: Why do we also have tcod_parameters as export format?
+        dump_flags = ['-y', '--format']
         supported_formats = ['cif', 'tcod']
-        for flag in format_flags:
+        for flag in dump_flags:
             for format in supported_formats:
                 # with captured_output() as (out, err):
                 options = [flag, format, str(a.id)]
-                res = self.cli_runner.invoke(export, options,
+                res = self.cli_runner.invoke(cif.export, options,
                                              catch_exceptions=False)
                 self.assertEquals(res.exit_code, 0,
                                   "The command did not finish "
                                   "correctly")
 
+
+        # The --parameter-data flag is not implemented and it should fail
+        options = ['--parameter-data', '0', str(a.id)]
+        res = self.cli_runner.invoke(cif.export, options,
+                                     catch_exceptions=False)
+        self.assertNotEquals(res.exit_code, 0,
+                          "The command should not finish correctly and"
+                          "return normal termination exit status.")
+
         # The following flags fail.
         # We have to see why. The --reduce-symmetry seems to work in
         # the original code. The other one not.
-
-        # symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
-        # for flag in symmetry_flags:
-        #     # with captured_output() as (out, err):
-        #     options = [flag, str(a.id)]
-        #     res = self.cli_runner.invoke(export, options,
-        #                                  catch_exceptions=False)
-        #     self.assertEquals(res.exit_code, 0,
-        #                       "The command did not finish "
-        #                       "correctly")
-        #
-        #     self.assertRaises(
-        #                     Exception, sp.check_output,
-        #                     ['verdi', 'data', 'cif', 'import', flag, 'not_supported'],
-        #                     stderr=sp.STDOUT)
+        symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
+        for flag in symmetry_flags:
+            options = [flag, str(a.id)]
+            res = self.cli_runner.invoke(cif.export, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
 
 
-        # # Check that you can export the various formats
-        # format_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
-        # supported_formats = ['cif', 'tcod']
-        # for flag in format_flags:
-        #     for format in supported_formats:
-        #         # with captured_output() as (out, err):
-        #         options = [flag, format, str(a.id)]
-        #         res = self.cli_runner.invoke(export, options,
-        #                                      catch_exceptions=False)
-        #         self.assertEquals(res.exit_code, 0,
-        #                           "The command did not finish "
-        #                           "correctly")
+        # The following two flags are not implemented and should return
+        # an error:
+        # --dump-aiida-database / --no-dump-aiida-database
+        dump_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
+        for flag in dump_flags:
+            options = [flag, str(a.id)]
+            res = self.cli_runner.invoke(cif.export, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
 
+
+        # The following two flags are not implemented and should return
+        # an error:
+        # --exclude-external-contents / --no-exclude-external-contents
+        external_cont_flags = ['--exclude-external-contents' ,
+                               '--no-exclude-external-contents']
+        for flag in external_cont_flags:
+            options = [flag, str(a.id)]
+            res = self.cli_runner.invoke(cif.export, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+
+        # The following two flags are not implemented and should return
+        # an error:
+        # --gzip / --no-gzip
+        gzip_flags = ['--gzip' , '--no-gzip']
+        for flag in gzip_flags:
+            options = [flag, str(a.id)]
+            res = self.cli_runner.invoke(cif.export, options,
+                                         catch_exceptions=False)
+
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+        # The --gzip-threshold flag is not implemented and it should fail
+        options = ['--gzip-threshold', '1', str(a.id)]
+        res = self.cli_runner.invoke(cif.export, options,
+                                     catch_exceptions=False)
+        self.assertNotEquals(res.exit_code, 0,
+                          "The command should not finish correctly and"
+                          "return normal termination exit status.")
+
+        # Check that the output to file flags work correctly:
+        # -o, --output
+        output_flags = ['-o', '--output']
+        for flag in output_flags:
+            try:
+                tmpd = tempfile.mkdtemp()
+                filepath = os.path.join(tmpd, 'output_file.txt')
+                options = [flag, filepath, str(a.id)]
+                res = self.cli_runner.invoke(cif.export, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                     "The command should finish correctly."
+                                     "Output: {}".format(res.output_bytes))
+
+                # Check that the file contents are correct
+                with file(filepath) as f:
+                    s = f.read()
+                    self.assertEquals(s, self.valid_sample_cif_str,
+                                      "The stored data are not the expected.")
+
+                # Try to export it again. It should fail because the
+                # file exists
+                res = self.cli_runner.invoke(cif.export, options,
+                                             catch_exceptions=False)
+                self.assertNotEquals(res.exit_code, 0,
+                                     "The command should fail because the "
+                                     "file already exists")
+
+                # Now we force the export of the file and it should overwrite
+                # existing files
+                options = [flag, filepath, '-f', str(a.id)]
+                res = self.cli_runner.invoke(cif.export, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                     "The command should finish correctly."
+                                     "Output: {}".format(res.output_bytes))
+
+                # Check that the file contents are correct
+                with file(filepath) as f:
+                    s = f.read()
+                    self.assertEquals(s, self.valid_sample_cif_str,
+                                      "The stored data are not the expected.")
+
+
+            finally:
+                shutil.rmtree(tmpd)

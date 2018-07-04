@@ -61,14 +61,18 @@ def show(nodes, given_format):
 
 @structure.command('list')
 @list_options
-def list_structures(elements, elements_only, formulamode, past_days, groups, all_users):
+def list_structures(elements, elements_only, raw, formulamode, past_days,
+                    groups, all_users):
     """
     List stored StructureData objects
     """
     from aiida.orm.data.structure import StructureData
     from aiida.orm.data.structure import (get_formula, get_symbols_string)
+    from tabulate import tabulate
+
     project = ["Id", "Label", "Kinds", "Sites"]
     lst = _list(StructureData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+
     entry_list = []
     for [id, label, akinds, asites] in lst:
         # If symbols are defined there is a filtering of the structures
@@ -106,16 +110,24 @@ def list_structures(elements, elements_only, formulamode, past_days, groups, all
             formula = "<<UNKNOWN>>"
         entry_list.append([str(id), str(formula), label])
     
-    column_length = 19
-    vsep = " "
-    if entry_list:
-        to_print = ""
-        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project]) + "\n"
-        for entry in sorted(entry_list, key=lambda x: int(x[0])):
-            to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
-        echo.echo(to_print)
+    counter = 0
+    struct_list_data = list()
+    if not raw:
+        struct_list_data.append(project)
+    for entry in entry_list:
+        for i in range(0, len(entry)):
+            if isinstance(entry[i], list):
+                entry[i] = ",".join(entry[i])
+        for i in range(len(entry), len(project)):
+                entry.append(None)
+        counter += 1
+    struct_list_data.extend(entry_list)
+    if raw:
+        echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(StructureData))
+        echo.echo(tabulate(struct_list_data, headers="firstrow"))
+        echo.echo("\nTotal results: {}\n".format(counter))
+
 
 @structure.command('export')
 @click.option('-y', '--format',

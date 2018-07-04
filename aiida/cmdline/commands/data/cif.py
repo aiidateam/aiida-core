@@ -69,15 +69,11 @@ def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
 
     cif_list_data = list([project])
     for entry in entry_list:
-        # Formulate Formulae (second column) for printing
-        if entry[1] is None:
-            entry[1] = '?'
-        elif isinstance(entry[1], list):
-            entry[1] = ",".join(entry[1])
-
-        # Formulate Source.URI (third column) for printing
-        if entry[2] is None:
-            entry[2] = '?'
+        for i in range(0, len(entry)):
+            if isinstance(entry[i], list):
+                entry[i] = ",".join(entry[i])
+        for i in range(len(entry), len(project)):
+                entry.append(None)
     cif_list_data.extend(entry_list)
     echo.echo(tabulate(cif_list_data, headers="firstrow"))
 

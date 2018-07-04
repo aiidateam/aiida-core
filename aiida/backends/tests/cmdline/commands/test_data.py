@@ -1,12 +1,9 @@
-import os
 import subprocess as sp
-import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-# from aiida.cmdline.commands.data.cif import cif
-from aiida.backends.settings import AIIDADB_PROFILE
 from aiida.cmdline.commands.data import cif
+from aiida.cmdline.commands.data import structure
 
 from unittest import skip
 
@@ -28,6 +25,62 @@ def captured_output():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
+
+class TestVerdiDataStructure(AiidaTestCase):
+
+    @staticmethod
+    def create_structure_data():
+        import numpy as np
+        from aiida.orm.data.structure import StructureData, Site, Kind
+
+        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+
+        struc = StructureData(cell=cell)
+        struc.append_atom(symbols='Ba', position=(0, 0, 0))
+        struc.append_atom(symbols='Ti', position=(1, 2, 3))
+        struc.append_atom(symbols='O', position=(-1, -2, -4))
+        struc.append_kind(Kind(name='Ba2', symbols="Ba", mass=100.))
+        struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
+        struc.append_kind(
+            Kind(
+                name='Test',
+                symbols=["Ba", "Ti"],
+                weights=[0.2, 0.4],
+                mass=120.))
+        struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
+        struc.store()
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataStructure, cls).setUpClass()
+        from aiida.orm import Computer
+        new_comp = Computer(name='comp',
+                                hostname='localhost',
+                                transport_type='local',
+                                scheduler_type='direct',
+                                workdir='/tmp/aiida')
+        new_comp.store()
+
+    def setUp(self):
+        from aiida.orm import Computer
+        self.comp = Computer.get('comp')
+        self.runner = CliRunner()
+        self.this_folder = os.path.dirname(__file__)
+        self.this_file = os.path.basename(__file__)
+
+        self.cli_runner = CliRunner()
+
+    def test_help(self):
+        self.runner.invoke(cif, ['--help'])
+
+    def test_data_structure_list(self):
+        self.__class__.create_structure_data()
+        res = self.cli_runner.invoke(structure.list_structures,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command should finish correctly."
+                          "Output: {}".format(res.output_bytes))
+        print "=======> ", res.output_bytes
 
 class TestVerdiDataCif(AiidaTestCase):
 
@@ -71,8 +124,9 @@ class TestVerdiDataCif(AiidaTestCase):
 
         self.cli_runner = CliRunner()
 
+    @skip("")
     def test_help(self):
-        result = self.runner.invoke(cif, ['--help'])
+        self.runner.invoke(cif, ['--help'])
 
     @skip("")
     def test_reachable(self):
@@ -211,7 +265,7 @@ class TestVerdiDataCif(AiidaTestCase):
                     ['verdi', 'data', 'cif', 'import', flag,
                      'cif', '--file', f.name], stdin=f)
 
-
+    @skip("")
     def test_data_cif_export(self):
         """
         This method checks if the Cif export works as expected with all

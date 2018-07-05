@@ -73,7 +73,7 @@ class UserCollection(object):
         Get a user using the email address
         :param email: The user's email address
         :return: The corresponding user object
-        :raises: :class:`exceptions.MultipleObjectsError`, :class:`exceptions.NotExistent`
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
         """
         results = self.find(email=email)
         if not results:
@@ -89,7 +89,7 @@ class UserCollection(object):
         Get the existing user with a given email address or create an unstored one
         :param email: The user's email address
         :return: The corresponding user object
-        :raises: :class:`exceptions.MultipleObjectsError`, :class:`exceptions.NotExistent`
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
         """
         try:
             return False, self.get(email)

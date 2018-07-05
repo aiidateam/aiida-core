@@ -403,15 +403,15 @@ class Node(AbstractNode):
                                         user=user.dbuser,
                                         content=content).id
 
-    def get_comment_obj(self, id=None, user=None):
+    def get_comment_obj(self, comment_id=None, user=None):
         from aiida.backends.djsite.db.models import DbComment
         import operator
         from django.db.models import Q
         query_list = []
 
         # If an id is specified then we add it to the query
-        if id is not None:
-            query_list.append(Q(pk=id))
+        if comment_id is not None:
+            query_list.append(Q(pk=comment_id))
 
         # If a user is specified then we add it to the query
         if user is not None:

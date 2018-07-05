@@ -613,7 +613,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                                          len(this_job.allocated_machines), this_job.num_machines))
+                        len(this_job.allocated_machines), this_job.num_machines))
 
             # I append to the list of jobs to return
             job_list.append(this_job)

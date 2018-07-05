@@ -293,7 +293,7 @@ class Scheduler(object):
         'qstat' command, and instead sometimes it is useful to know some
         more detailed information about the job exit status, etc.
 
-        :raises: :class:`FeatureNotAvailable`
+        :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
         # pylint: disable=no-self-use, not-callable, unused-argument
         raise FeatureNotAvailable("Cannot get detailed job info")
@@ -305,7 +305,7 @@ class Scheduler(object):
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
 
-        :raises: :class:`FeatureNotAvailable`
+        :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
         # pylint: disable=fixme
         # TODO: Parsing?

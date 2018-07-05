@@ -147,14 +147,13 @@ Querying data
     ../querying/index.rst
 
 
-=========
-Workflows
-=========
+================
+Legacy workflows
+================
 
 .. toctree::
     :maxdepth: 4
 
-    ../work/index.rst
     ../old_workflows/index.rst
 
 

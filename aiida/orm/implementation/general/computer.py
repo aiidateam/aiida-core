@@ -677,6 +677,13 @@ class AbstractComputer(object):
     def name(self):
         pass
 
+    @property
+    def label(self):
+        """
+        The computer label
+        """
+        return self.name
+
     @abstractproperty
     def description(self):
         pass

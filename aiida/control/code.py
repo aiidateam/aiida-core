@@ -37,9 +37,8 @@ class CodeBuilder(object):
             ]
             code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
         else:
-            code = Code(
-                remote_computer_exec=(self._get_and_count('computer', used),
-                                      self._get_and_count('remote_abs_path', used)))
+            code = Code(remote_computer_exec=(self._get_and_count('computer', used), self._get_and_count(
+                'remote_abs_path', used)))
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)

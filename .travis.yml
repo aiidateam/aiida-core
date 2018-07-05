@@ -35,6 +35,9 @@ before_install:
     - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
     - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
 
+    # Needed to have 'locate' work properly
+    - sudo updatedb
+
     # Build the docker image if needed
     - .ci/before_install.sh
 

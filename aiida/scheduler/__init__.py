@@ -7,11 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Module for all scheduler related things
+"""
 
 from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import escape_for_bash
-from aiida.common.exceptions import AiidaException
+from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate
 
@@ -22,6 +25,7 @@ def SchedulerFactory(entry_point):
 
     :param entry_point: the entry point name of the Scheduler plugin
     """
+    # pylint: disable=invalid-name
     return BaseFactory('aiida.schedulers', entry_point)
 
 
@@ -79,8 +83,8 @@ class Scheduler(object):
         doclines = [i for i in docstring.splitlines() if i.strip()]
         if doclines:
             return doclines[0].strip()
-        else:
-            return "No documentation available"
+
+        return "No documentation available"
 
     def get_feature(self, feature_name):
         try:
@@ -105,10 +109,12 @@ class Scheduler(object):
         """
         Create a suitable job resource from the kwargs specified
         """
+        # pylint: disable=not-callable
+
         if cls._job_resource_class is None:
             raise NotImplementedError
-        else:
-            return cls._job_resource_class(**kwargs)
+
+        return cls._job_resource_class(**kwargs)
 
     def get_submit_script(self, job_tmpl):
         """
@@ -125,6 +131,7 @@ class Scheduler(object):
         postpend_code
         postpend_computer
         """
+        # pylint: disable=fixme
         # TODO: understand if, in the future, we want to pass more
         # than one calculation, e.g. for job arrays.
         # and from scheduler_requirements e.g. for OpenMP? or maybe
@@ -167,11 +174,10 @@ class Scheduler(object):
             script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
-        try:
-            script_lines.append(self._get_submit_script_footer(job_tmpl))
+        footer = self._get_submit_script_footer(job_tmpl)
+        if footer:
+            script_lines.append(footer)
             script_lines.append(empty_line)
-        except NotImplementedError:
-            pass
 
         return "\n".join(script_lines)
 
@@ -192,7 +198,8 @@ class Scheduler(object):
 
         :param job_tmpl: a JobTemplate instance with relevant parameters set.
         """
-        raise NotImplementedError
+        # pylint: disable=no-self-use, unused-argument
+        return None
 
     def _get_run_line(self, codes_info, codes_run_mode):
         """
@@ -286,8 +293,10 @@ class Scheduler(object):
         'qstat' command, and instead sometimes it is useful to know some
         more detailed information about the job exit status, etc.
 
+        :raises: :class:`FeatureNotAvailable`
         """
-        raise NotImplementedError
+        # pylint: disable=no-self-use, not-callable, unused-argument
+        raise FeatureNotAvailable("Cannot get detailed job info")
 
     def get_detailed_jobinfo(self, jobid):
         """
@@ -295,7 +304,10 @@ class Scheduler(object):
 
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
+
+        :raises: :class:`FeatureNotAvailable`
         """
+        # pylint: disable=fixme
         # TODO: Parsing?
 
         command = self._get_detailed_jobinfo_command(jobid=jobid)
@@ -339,6 +351,7 @@ stderr:
         Note: typically, only either jobs or user can be specified. See also
         comments in _get_joblist_command.
         """
+        # pylint: disable=invalid-name
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
 
@@ -357,7 +370,7 @@ stderr:
         Return the transport set for this scheduler.
         """
         if self._transport is None:
-            raise SchedulerError("Use the set_transport function to set the " "transport for the scheduler first.")
+            raise SchedulerError("Use the set_transport function to set the transport for the scheduler first.")
         else:
             return self._transport
 

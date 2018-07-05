@@ -36,7 +36,9 @@
         aiida/orm/data/cif.py|
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/user.py|
-        aiida/scheduler/.*.py|
+        # Unfortunately scheduler plugins cause lint problems that I can't fix, so disable
+        # anything deeper than .../scheduler/ for now
+        aiida/scheduler/[^/]+.py|
         aiida/transport/__init__.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
@@ -51,9 +53,13 @@
   hooks:
   - id: prospector
     language: system
-    exclude: ^(tests/|examples/)
     types: [file, python]
     files: *check_files
+    exclude: >
+           (?x)^(
+                tests/|
+                examples/
+            )$
 
 - repo: local
   hooks:

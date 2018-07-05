@@ -23,7 +23,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.orm import load_node, DataFactory
 from aiida.orm.data.folder import FolderData
-from aiida.scheduler.datastructures import job_states
+from aiida.scheduler.datastructures import JOB_STATES
 
 
 execlogger = aiidalogger.getChild('execmanager')
@@ -42,7 +42,7 @@ def update_job_calc_from_job_info(calc, job_info):
     calc._set_scheduler_state(job_info.job_state)
     calc._set_last_jobinfo(job_info)
 
-    return job_info.job_state in job_states.DONE
+    return job_info.job_state in JOB_STATES.DONE
 
 
 def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
@@ -60,7 +60,7 @@ def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
     if last_jobinfo is None:
         last_jobinfo = JobInfo()
         last_jobinfo.job_id = calc.get_job_id()
-        last_jobinfo.job_state = job_states.DONE
+        last_jobinfo.job_state = JOB_STATES.DONE
 
     last_jobinfo.detailedJobinfo = detailed_job_info
     calc._set_last_jobinfo(last_jobinfo)

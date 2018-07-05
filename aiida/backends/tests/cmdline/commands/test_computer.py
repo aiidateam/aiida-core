@@ -6,9 +6,8 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.computer import (disable_computer, enable_computer)
 from aiida.common.exceptions import NotExistent
+from aiida.utils.capturing import Capturing
 
-
-# pylint: disable=missing-docstring
 class TestVerdiComputerCommands(AiidaTestCase):
     """Testing verdi computer commands.
 
@@ -17,18 +16,27 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
+        """Create a new computer> I create a new one because I want to configure it and I don't want to 
+        interfere with other tests"""
+        from aiida.orm.backend import construct_backend
+
         super(TestVerdiComputerCommands, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Computer
-        new_comp = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        backend = construct_backend()
+        cls.computer_name = "comp_cli_test_computer"
+        cls.comp = Computer(
+            name=cls.computer_name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        cls.comp.store()
 
     def setUp(self):
+        """
+        Prepare the computer and user
+        """
         from aiida.cmdline.commands.computer import Computer as ComputerCmd
-        from aiida.utils.capturing import Capturing
-
-        from aiida.orm import Computer
-        self.comp = Computer.get('comp')
 
         self.user = self.backend.users.get_automatic_user()
 
@@ -104,3 +112,21 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertTrue(self.comp.is_user_enabled(self.user))
         # enable and disable the computer globally as well
         enable_disable_globally_loop(self, self.user, user_enabled_state=True)
+
+    def test_computer_test(self):
+        """
+        Test if the 'verdi computer test' command works
+
+        It should work as it is a local connection
+        """
+        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+
+        # Check that indeed, if there is a problem, we detect it as such
+        with self.assertRaises(SystemExit):
+            with Capturing(capture_stderr=True):
+                ComputerCmd().run('test', "not_existent_computer_name")
+
+        # Test the computer
+        with Capturing():
+            ComputerCmd().run('test', self.computer_name)
+

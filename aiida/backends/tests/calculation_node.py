@@ -49,19 +49,6 @@ class TestCalcNode(AiidaTestCase):
         self.assertEquals(calculation.is_finished_ok, False)
         self.assertEquals(calculation.is_failed, False)
 
-    def test_calculation_updatable_not_copied(self):
-        """
-        Check that updatable attributes of Calculation are not copied
-        """
-        a = Calculation()
-        a._set_attr(Calculation.PROCESS_STATE_KEY, self.stateval)
-        a.store()
-        b = a.copy()
-
-        # updatable attributes are not copied
-        with self.assertRaises(AttributeError):
-            b.get_attr(Calculation.PROCESS_STATE_KEY)
-
     def test_calculation_updatable_attribute(self):
         """
         Check that updatable attributes and only those can be mutated for a stored but unsealed Calculation

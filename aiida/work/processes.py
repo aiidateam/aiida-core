@@ -267,7 +267,7 @@ class Process(plumpy.Process):
             self.calc._set_exit_status(result.status)
             self.calc._set_exit_message(result.message)
         else:
-            raise ValueError('the result should be an integer, ExitCode or None, got {}'.format(type(result)))
+            raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(type(result), result, self.pid))
 
     @override
     def on_output_emitting(self, output_port, value):

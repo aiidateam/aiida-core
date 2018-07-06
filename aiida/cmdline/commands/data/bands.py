@@ -91,7 +91,7 @@ def show(nodes, format):
 
 @bands.command('list')
 @list_options
-def list_bands(elements, elements_only, formulamode, past_days, groups, all_users):
+def list_bands(elements, elements_only, raw, formulamode, past_days, groups, all_users):
     """
     List stored BandData objects
     """
@@ -106,7 +106,7 @@ def list_bands(elements, elements_only, formulamode, past_days, groups, all_user
             to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
         echo.echo(to_print)
     else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(datatype))
+        echo.echo_warning("No nodes of type {} where found in the database".format(BandsData))
 
 
 

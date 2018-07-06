@@ -10,6 +10,7 @@ from unittest import skip
 import sys
 import os
 import shutil
+import unittest
 
 
 from contextlib import contextmanager
@@ -25,8 +26,169 @@ def captured_output():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
+class TTTestVerdiDataListable():
+    def tttest_data_list(self, datatype, search_string):
+    # def test_data_list(self, datatype, search_string, header):
+        """
+        This method tests that the Cif listing works as expected with all
+        possible flags and arguments.
+        """
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.cif import CifData
 
-class TestVerdiDataStructure(AiidaTestCase):
+        from aiida.cmdline.commands.data.cif import cif_list
+        from aiida.cmdline.commands.data.structure import list_structures
+
+        datatype_mapping = {
+            CifData: cif_list,
+            StructureData: list_structures
+        }
+
+        if datatype is None or datatype not in datatype_mapping.keys():
+            raise Exception("The listing of the objects {} is not supported"
+                            .format(datatype))
+        listing_cmd = datatype_mapping[datatype]
+
+        # Check that the normal listing works as expected
+        res = self.cli_runner.invoke(listing_cmd, [],
+                                     catch_exceptions=False)
+        print "=====> ", res.output_bytes
+
+        self.assertIn(search_string, res.output_bytes,
+                      'The string {} was not found in the listing'
+                      .format(search_string))
+
+        # Check that the past days filter works as expected
+        past_days_flags = ['-p', '--past-days']
+        # past_days_flags = ['-p']
+        for flag in past_days_flags:
+            options = [flag, '1', str(a.id)]
+            res = self.cli_runner.invoke(listing_cmd, options,
+                                         catch_exceptions=False)
+            self.assertIn(search_string, res.output_bytes,
+                          'The string {} was not found in the listing'
+                          .format(search_string))
+
+            options = [flag, '0', str(a.id)]
+            res = self.cli_runner.invoke(listing_cmd, options,
+                                         catch_exceptions=False)
+            self.assertNotIn(search_string, res.output_bytes,
+                          'A not expected string {} was found in the listing'
+                          .format(search_string))
+
+
+            # output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '0'])
+            # self.assertNotIn('C O2', output, 'A not expected Cif formula was '
+            #                                  'found in the listing')
+
+        return
+
+
+        # Check that the group filter works as expected
+        group_flags = ['-G', '--groups']
+        for flag in group_flags:
+            # Non empty group
+            for non_empty in ['non_empty_group', str(g_ne.id)]:
+                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, non_empty])
+                self.assertIn('C O2', output, 'The Cif formula was not found in '
+                                              'the listing')
+            # Empty group
+            for empty in ['empty_group', str(g_e.id)]:
+                # Check that the normal listing works as expected
+                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, empty])
+                self.assertNotIn('C O2', output, 'A not expected Cif formula was '
+                                                 'found in the listing')
+
+            # Group combination
+            for non_empty in ['non_empty_group', str(g_ne.id)]:
+                for empty in ['empty_group', str(g_e.id)]:
+                    output = sp.check_output(
+                        ['verdi', 'data', 'cif', 'list', flag, non_empty,
+                         empty])
+                    self.assertIn('C O2', output,
+                                  'The Cif formula was not found in '
+                                  'the listing')
+
+        # Check raw flag
+        raw_flags = ['-r', '--raw']
+        for flag in raw_flags:
+            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
+            self.assertNotIn('ID', output)
+            self.assertNotIn('formulae', output)
+            self.assertNotIn('source_uri', output)
+
+
+class TestVerdiDataBands(AiidaTestCase):
+
+    @staticmethod
+    def create_bands_data():
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+
+        b = BandsData()
+        b.set_kpointsdata(k)
+
+        k.store()
+        b.store()
+
+
+class TestVerdiDataTrajectory(AiidaTestCase):
+
+    @staticmethod
+    def create_trajectory_data():
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        import numpy
+
+        # Create a node with two arrays
+        n = TrajectoryData()
+
+        # I create sample data
+        stepids = numpy.array([60, 70])
+        times = stepids * 0.01
+        cells = numpy.array([
+            [[2., 0., 0., ],
+             [0., 2., 0., ],
+             [0., 0., 2., ]],
+            [[3., 0., 0., ],
+             [0., 3., 0., ],
+             [0., 0., 3., ]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]],
+            [[0., 0., 0.],
+             [0.5, 0.5, 0.5],
+             [1.5, 1.5, 1.5]]])
+        velocities = numpy.array([
+            [[0., 0., 0.],
+             [0., 0., 0.],
+             [0., 0., 0.]],
+            [[0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5],
+             [-0.5, -0.5, -0.5]]])
+
+        # I set the node
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols,
+                         positions=positions, times=times,
+                         velocities=velocities)
+
+        n.store()
+
+
+class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
 
     @staticmethod
     def create_structure_data():
@@ -49,6 +211,8 @@ class TestVerdiDataStructure(AiidaTestCase):
                 mass=120.))
         struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
         struc.store()
+
+        return struc
 
     @classmethod
     def setUpClass(cls):
@@ -74,13 +238,18 @@ class TestVerdiDataStructure(AiidaTestCase):
         self.runner.invoke(cif, ['--help'])
 
     def test_data_structure_list(self):
+        from aiida.orm.data.structure import StructureData
+
         self.__class__.create_structure_data()
-        res = self.cli_runner.invoke(structure.list_structures,
-                                     catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0,
-                          "The command should finish correctly."
-                          "Output: {}".format(res.output_bytes))
-        print "=======> ", res.output_bytes
+        self.tttest_data_list(StructureData, 'Ba2OTi')
+
+
+        # res = self.cli_runner.invoke(structure.list_structures,
+        #                              catch_exceptions=False)
+        # self.assertEquals(res.exit_code, 0,
+        #                   "The command should finish correctly."
+        #                   "Output: {}".format(res.output_bytes))
+        # print "=======> ", res.output_bytes
 
 class TestVerdiDataCif(AiidaTestCase):
 
@@ -288,7 +457,8 @@ class TestVerdiDataCif(AiidaTestCase):
 
         # Check that the simple command works as expected
         options = [str(a.id)]
-        res = self.cli_runner.invoke(cif.export, options, catch_exceptions=False)
+        res = self.cli_runner.invoke(cif.export, options,
+                                     catch_exceptions=False)
         self.assertEquals(res.exit_code, 0, "The command did not finish "
                                             "correctly")
 

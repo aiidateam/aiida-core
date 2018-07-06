@@ -32,7 +32,7 @@ def trajectory(ctx):
 
 @trajectory.command('list')
 @list_options
-def list_trajections(elements, elements_only, formulamode, past_days, groups, all_users):
+def list_trajections(elements, elements_only, raw, formulamode, past_days, groups, all_users):
     """
     List trajectories stored in database.
     """

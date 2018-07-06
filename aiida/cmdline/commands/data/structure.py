@@ -109,7 +109,7 @@ def list_structures(elements, elements_only, raw, formulamode, past_days,
         except KeyError:
             formula = "<<UNKNOWN>>"
         entry_list.append([str(id), str(formula), label])
-    
+
     counter = 0
     struct_list_data = list()
     if not raw:

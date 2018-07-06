@@ -52,6 +52,7 @@ db_test_list = {
         'examplehelpers': ['aiida.backends.tests.example_helpers'],
         'cmdline.commands.calculation': ['aiida.backends.tests.cmdline.commands.test_calculation'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
+        'cmdline.commands.computer': ['aiida.backends.tests.cmdline.commands.test_computer'],
         'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],

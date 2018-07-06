@@ -4,6 +4,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.data import cif
 from aiida.cmdline.commands.data import structure
+from aiida.cmdline.commands.data import trajectory
 
 from unittest import skip
 
@@ -26,7 +27,8 @@ def captured_output():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
-class TTTestVerdiDataListable():
+
+class TestVerdiDataListable():
 
     NODE_ID_STR = "node_id"
     EMPTY_GROUP_ID_STR = 'empty_group_id'
@@ -34,29 +36,33 @@ class TTTestVerdiDataListable():
     NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
     NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
 
-    def tttest_data_list(self, datatype, search_string, ids):
-    # def test_data_list(self, datatype, search_string, header):
+    def data_listing_test(self, datatype, search_string, ids):
         """
-        This method tests that the Cif listing works as expected with all
-        possible flags and arguments.
+        This method tests that the data listing works as expected with all
+        possible flags and arguments for different datatypes.
         """
-        from aiida.orm.data.structure import StructureData
         from aiida.orm.data.cif import CifData
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.array.trajectory import TrajectoryData
 
         from aiida.cmdline.commands.data.cif import cif_list
         from aiida.cmdline.commands.data.structure import list_structures
+        from aiida.cmdline.commands.data.trajectory import list_trajections
 
         from aiida.cmdline.commands.data.structure import project_headers as p_str
         from aiida.cmdline.commands.data.cif import project_headers as p_cif
+        from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
 
         headers_mapping = {
             CifData: p_cif,
-            StructureData: p_str
+            StructureData: p_str,
+            TrajectoryData: p_tr
         }
 
         datatype_mapping = {
             CifData: cif_list,
-            StructureData: list_structures
+            StructureData: list_structures,
+            TrajectoryData: list_trajections
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
@@ -136,16 +142,13 @@ class TTTestVerdiDataListable():
                 self.assertNotIn(header, res.output_bytes)
 
 
-
-
-
-
 class TestVerdiDataBands(AiidaTestCase):
 
     @staticmethod
     def create_bands_data():
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.array.kpoints import KpointsData
+        from aiida.orm.group import Group
         import numpy
 
         # define a cell
@@ -165,12 +168,27 @@ class TestVerdiDataBands(AiidaTestCase):
         k.store()
         b.store()
 
+        # Create 2 groups and add the data to one of them
+        g_ne = Group(name='non_empty_group')
+        g_ne.store()
+        g_ne.add_nodes(b)
 
-class TestVerdiDataTrajectory(AiidaTestCase):
+        g_e = Group(name='empty_group')
+        g_e.store()
+
+        return {
+            TestVerdiDataListable.NODE_ID_STR: b.id,
+            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+        }
+
+
+class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
 
     @staticmethod
     def create_trajectory_data():
         from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.group import Group
         import numpy
 
         # Create a node with two arrays
@@ -209,8 +227,52 @@ class TestVerdiDataTrajectory(AiidaTestCase):
 
         n.store()
 
+        # Create 2 groups and add the data to one of them
+        g_ne = Group(name='non_empty_group')
+        g_ne.store()
+        g_ne.add_nodes(n)
 
-class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
+        g_e = Group(name='empty_group')
+        g_e.store()
+
+        return {
+            TestVerdiDataListable.NODE_ID_STR: n.id,
+            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+        }
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataTrajectory, cls).setUpClass()
+        from aiida.orm import Computer
+        new_comp = Computer(name='comp',
+                                hostname='localhost',
+                                transport_type='local',
+                                scheduler_type='direct',
+                                workdir='/tmp/aiida')
+        new_comp.store()
+
+    def setUp(self):
+        from aiida.orm import Computer
+        self.comp = Computer.get('comp')
+        self.runner = CliRunner()
+        self.this_folder = os.path.dirname(__file__)
+        self.this_file = os.path.basename(__file__)
+
+        self.cli_runner = CliRunner()
+
+    def test_help(self):
+        self.runner.invoke(trajectory, ['--help'])
+
+    def test_data_trajectory_list(self):
+        from aiida.orm.data.array.trajectory import TrajectoryData
+
+        ids = self.__class__.create_trajectory_data()
+        self.data_listing_test(TrajectoryData,
+                               str(ids[TestVerdiDataListable.NODE_ID_STR]), ids)
+
+
+class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
 
     @staticmethod
     def create_structure_data():
@@ -244,9 +306,9 @@ class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
         g_e.store()
 
         return {
-            TTTestVerdiDataListable.NODE_ID_STR: struc.id,
-            TTTestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TTTestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            TestVerdiDataListable.NODE_ID_STR: struc.id,
+            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
         }
 
     @classmethod
@@ -276,7 +338,7 @@ class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
         from aiida.orm.data.structure import StructureData
 
         ids = self.__class__.create_structure_data()
-        self.tttest_data_list(StructureData, 'Ba2OTi', ids)
+        self.data_listing_test(StructureData, 'Ba2OTi', ids)
 
 class TestVerdiDataCif(AiidaTestCase):
 

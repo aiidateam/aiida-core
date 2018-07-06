@@ -30,6 +30,7 @@ def trajectory(ctx):
     """
     pass
 
+project_headers = ["Id"]
 @trajectory.command('list')
 @list_options
 def list_trajections(elements, elements_only, raw, formulamode, past_days, groups, all_users):
@@ -37,13 +38,12 @@ def list_trajections(elements, elements_only, raw, formulamode, past_days, group
     List trajectories stored in database.
     """
     from aiida.orm.data.array.trajectory import TrajectoryData
-    project = ["Id"]
-    lst = _list(TrajectoryData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+    lst = _list(TrajectoryData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
     column_length = 19
     vsep = " "
     if lst:
         to_print = ""
-        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project]) + "\n"
+        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project_headers]) + "\n"
         for entry in sorted(lst, key=lambda x: int(x[0])):
             to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
         echo.echo(to_print)

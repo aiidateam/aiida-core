@@ -18,6 +18,7 @@ addons:
 
     apt:
         packages:
+            - postgresql-server-dev-9.5
             - texlive-base
             - texlive-generic-recommended
             - texlive-fonts-recommended

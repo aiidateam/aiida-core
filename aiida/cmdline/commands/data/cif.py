@@ -51,6 +51,7 @@ def show(nodes, given_format):
         raise NotImplementedError ("The format {} is not yet implemented"
                                    .format(given_format))
 
+project_headers = ["Id", "Formulae", "Source.URI"]
 @cif.command('list')
 @list_options
 def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
@@ -60,8 +61,6 @@ def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
     """
     from aiida.orm.data.cif import CifData
     from tabulate import tabulate
-
-    project = ["Id", "Formulae", "Source.URI"]
 
     entry_list = _list(CifData, project, elements,
                 elements_only, formulamode, past_days,

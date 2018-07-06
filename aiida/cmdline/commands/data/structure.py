@@ -59,6 +59,7 @@ def show(nodes, given_format):
         raise NotImplementedError("The format {} is not yet implemented"
                                   .format(given_format))
 
+project_headers = ["Id", "Label", "Kinds", "Sites"]
 @structure.command('list')
 @list_options
 def list_structures(elements, elements_only, raw, formulamode, past_days,
@@ -70,8 +71,8 @@ def list_structures(elements, elements_only, raw, formulamode, past_days,
     from aiida.orm.data.structure import (get_formula, get_symbols_string)
     from tabulate import tabulate
 
-    project = ["Id", "Label", "Kinds", "Sites"]
-    lst = _list(StructureData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+
+    lst = _list(StructureData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
 
     entry_list = []
     for [id, label, akinds, asites] in lst:
@@ -113,12 +114,12 @@ def list_structures(elements, elements_only, raw, formulamode, past_days,
     counter = 0
     struct_list_data = list()
     if not raw:
-        struct_list_data.append(project)
+        struct_list_data.append(project_headers)
     for entry in entry_list:
         for i in range(0, len(entry)):
             if isinstance(entry[i], list):
                 entry[i] = ",".join(entry[i])
-        for i in range(len(entry), len(project)):
+        for i in range(len(entry), len(project_headers)):
                 entry.append(None)
         counter += 1
     struct_list_data.extend(entry_list)

@@ -27,7 +27,14 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 class TTTestVerdiDataListable():
-    def tttest_data_list(self, datatype, search_string):
+
+    NODE_ID_STR = "node_id"
+    EMPTY_GROUP_ID_STR = 'empty_group_id'
+    EMPTY_GROUP_NAME_STR = 'empty_group'
+    NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
+    NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
+
+    def tttest_data_list(self, datatype, search_string, ids):
     # def test_data_list(self, datatype, search_string, header):
         """
         This method tests that the Cif listing works as expected with all
@@ -39,6 +46,14 @@ class TTTestVerdiDataListable():
         from aiida.cmdline.commands.data.cif import cif_list
         from aiida.cmdline.commands.data.structure import list_structures
 
+        from aiida.cmdline.commands.data.structure import project_headers as p_str
+        from aiida.cmdline.commands.data.cif import project_headers as p_cif
+
+        headers_mapping = {
+            CifData: p_cif,
+            StructureData: p_str
+        }
+
         datatype_mapping = {
             CifData: cif_list,
             StructureData: list_structures
@@ -47,12 +62,13 @@ class TTTestVerdiDataListable():
         if datatype is None or datatype not in datatype_mapping.keys():
             raise Exception("The listing of the objects {} is not supported"
                             .format(datatype))
+
         listing_cmd = datatype_mapping[datatype]
+        project_headers = headers_mapping[datatype]
 
         # Check that the normal listing works as expected
         res = self.cli_runner.invoke(listing_cmd, [],
                                      catch_exceptions=False)
-        print "=====> ", res.output_bytes
 
         self.assertIn(search_string, res.output_bytes,
                       'The string {} was not found in the listing'
@@ -62,60 +78,66 @@ class TTTestVerdiDataListable():
         past_days_flags = ['-p', '--past-days']
         # past_days_flags = ['-p']
         for flag in past_days_flags:
-            options = [flag, '1', str(a.id)]
+            options = [flag, '1']
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
             self.assertIn(search_string, res.output_bytes,
                           'The string {} was not found in the listing'
                           .format(search_string))
 
-            options = [flag, '0', str(a.id)]
+            options = [flag, '0']
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
             self.assertNotIn(search_string, res.output_bytes,
                           'A not expected string {} was found in the listing'
                           .format(search_string))
 
-
-            # output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '0'])
-            # self.assertNotIn('C O2', output, 'A not expected Cif formula was '
-            #                                  'found in the listing')
-
-        return
-
-
         # Check that the group filter works as expected
         group_flags = ['-G', '--groups']
         for flag in group_flags:
             # Non empty group
-            for non_empty in ['non_empty_group', str(g_ne.id)]:
-                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, non_empty])
-                self.assertIn('C O2', output, 'The Cif formula was not found in '
-                                              'the listing')
+            for non_empty in [self.NON_EMPTY_GROUP_NAME_STR,
+                              str(ids[self.NON_EMPTY_GROUP_ID_STR])]:
+                options = [flag, non_empty]
+                res = self.cli_runner.invoke(listing_cmd, options,
+                                             catch_exceptions=False)
+                self.assertIn(search_string, res.output_bytes,
+                              'The string {} was not found in the listing')
+
             # Empty group
-            for empty in ['empty_group', str(g_e.id)]:
-                # Check that the normal listing works as expected
-                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, empty])
-                self.assertNotIn('C O2', output, 'A not expected Cif formula was '
-                                                 'found in the listing')
+            for empty in [self.EMPTY_GROUP_NAME_STR,
+                          str(ids[self.EMPTY_GROUP_ID_STR])]:
+                options = [flag, empty]
+                res = self.cli_runner.invoke(listing_cmd, options,
+                                             catch_exceptions=False)
+                self.assertNotIn(
+                    search_string, res.output_bytes,
+                    'A not expected string {} was found in the listing')
 
             # Group combination
-            for non_empty in ['non_empty_group', str(g_ne.id)]:
-                for empty in ['empty_group', str(g_e.id)]:
-                    output = sp.check_output(
-                        ['verdi', 'data', 'cif', 'list', flag, non_empty,
-                         empty])
-                    self.assertIn('C O2', output,
-                                  'The Cif formula was not found in '
-                                  'the listing')
+            for non_empty in [self.NON_EMPTY_GROUP_NAME_STR,
+                              str(ids[self.NON_EMPTY_GROUP_ID_STR])]:
+                for empty in [self.EMPTY_GROUP_NAME_STR,
+                          str(ids[self.EMPTY_GROUP_ID_STR])]:
+                    options = [flag, non_empty, empty]
+                    res = self.cli_runner.invoke(listing_cmd, options,
+                                                 catch_exceptions=False)
+                    self.assertIn(search_string, res.output_bytes,
+                                  'The string {} was not found in the listing')
 
         # Check raw flag
         raw_flags = ['-r', '--raw']
         for flag in raw_flags:
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
-            self.assertNotIn('ID', output)
-            self.assertNotIn('formulae', output)
-            self.assertNotIn('source_uri', output)
+            options = [flag]
+            res = self.cli_runner.invoke(listing_cmd, options,
+                                         catch_exceptions=False)
+            # output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
+            for header in project_headers:
+                self.assertNotIn(header, res.output_bytes)
+
+
+
+
 
 
 class TestVerdiDataBands(AiidaTestCase):
@@ -194,6 +216,7 @@ class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
     def create_structure_data():
         import numpy as np
         from aiida.orm.data.structure import StructureData, Site, Kind
+        from aiida.orm.group import Group
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
 
@@ -212,7 +235,19 @@ class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
         struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
         struc.store()
 
-        return struc
+        # Create 2 groups and add the data to one of them
+        g_ne = Group(name='non_empty_group')
+        g_ne.store()
+        g_ne.add_nodes(struc)
+
+        g_e = Group(name='empty_group')
+        g_e.store()
+
+        return {
+            TTTestVerdiDataListable.NODE_ID_STR: struc.id,
+            TTTestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TTTestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -240,16 +275,8 @@ class TestVerdiDataStructure(AiidaTestCase, TTTestVerdiDataListable):
     def test_data_structure_list(self):
         from aiida.orm.data.structure import StructureData
 
-        self.__class__.create_structure_data()
-        self.tttest_data_list(StructureData, 'Ba2OTi')
-
-
-        # res = self.cli_runner.invoke(structure.list_structures,
-        #                              catch_exceptions=False)
-        # self.assertEquals(res.exit_code, 0,
-        #                   "The command should finish correctly."
-        #                   "Output: {}".format(res.output_bytes))
-        # print "=======> ", res.output_bytes
+        ids = self.__class__.create_structure_data()
+        self.tttest_data_list(StructureData, 'Ba2OTi', ids)
 
 class TestVerdiDataCif(AiidaTestCase):
 

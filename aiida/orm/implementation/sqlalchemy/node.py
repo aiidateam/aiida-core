@@ -541,25 +541,6 @@ class Node(AbstractNode):
             session.rollback()
             raise
 
-    def copy(self, **kwargs):
-        # Make sure we have the latest version from the database
-        self._ensure_model_uptodate()
-        newobject = self.__class__()
-        newobject._dbnode.type = self._dbnode.type  # Inherit type
-        newobject._dbnode.label = self._dbnode.label  # Inherit label
-        # TODO: add to the description the fact that this was a copy?
-        newobject._dbnode.description = self._dbnode.description  # Inherit description
-        newobject._dbnode.dbcomputer = self._dbnode.dbcomputer  # Inherit computer
-
-        for k, v in self.iterattrs():
-            if k != Sealable.SEALED_KEY:
-                newobject._set_attr(k, v)
-
-        for path in self.get_folder_list():
-            newobject.add_path(self.get_abs_path(path), path)
-
-        return newobject
-
     @property
     def pk(self):
         return self._dbnode.id

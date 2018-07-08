@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.mixins import Sealable
 
 
 class TestSealable(AiidaTestCase):
 
-    def test_copy_not_include_updatable_attrs(self):
-    	"""
-    	Verify that a node with an updatable attribute, e.g. 'sealed' from the
-    	Sealable mixin, can be copied successfully
-    	"""
-    	from aiida.orm.calculation.job import JobCalculation
+    def test_change_updatable_attrs_after_store(self):
+        """
+        Verify that a Sealable node can alter updatable attributes even after storing
+        """
+        from aiida.orm.calculation.job import JobCalculation
 
-    	job = JobCalculation()
-    	job.seal()
-    	job.copy(include_updatable_attrs=False)
+        resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+        job = JobCalculation(computer=self.computer, resources=resources)
+        job.store()
+
+        for attr in JobCalculation._updatable_attributes:
+            if attr != Sealable.SEALED_KEY:
+                job._set_attr(attr, 'a')

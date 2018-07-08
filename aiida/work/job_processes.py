@@ -161,10 +161,7 @@ class KillJob(TransportTask):
         calc_state = calc.get_state()
 
         if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
-            calc._set_state(calc_states.FAILED)
-            calc._set_scheduler_state(job_states.DONE)
-            calc.logger.warning("Calculation {} killed by the user "
-                                "(it was in {} state)".format(calc.pk, calc_state))
+            calc.logger.warning("Calculation {} killed by the user (it was in {} state)".format(calc.pk, calc_state))
             return True
 
         if calc_state != calc_states.WITHSCHEDULER:
@@ -183,8 +180,6 @@ class KillJob(TransportTask):
                 "An error occurred while trying to kill calculation {} (jobid {}), see log "
                 "(maybe the calculation already finished?)".format(calc.pk, job_id))
         else:
-            calc._set_state(calc_states.FAILED)
-            calc._set_scheduler_state(job_states.DONE)
             calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
 
         return result
@@ -433,6 +428,20 @@ class JobProcess(processes.Process):
         return states_map
 
     # region Process overrides
+    @override
+    def on_excepted(self):
+        """The Process excepted so we set the calculation and scheduler state."""
+        super(JobProcess, self).on_excepted()
+        self.calc._set_state(calc_states.FAILED)
+        self.calc._set_scheduler_state(job_states.DONE)
+
+    @override
+    def on_killed(self):
+        """The Process was killed so we set the calculation and scheduler state."""
+        super(JobProcess, self).on_excepted()
+        self.calc._set_state(calc_states.FAILED)
+        self.calc._set_scheduler_state(job_states.DONE)
+
     @override
     def update_outputs(self):
         # DO NOT REMOVE:

@@ -12,6 +12,7 @@ import click
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
@@ -89,15 +90,55 @@ def show(nodes, format):
         show_xmgrace(format, nodes)
 
 
+
 @bands.command('list')
-@list_options
-def list_bands(elements, elements_only, raw, formulamode, past_days, groups, all_users):
+@click.option('-e', '--elements', type=click.STRING,
+          cls=MultipleValueOption,
+          default=None,
+          help="Print only the objects that"
+          " contain desired elements")
+@click.option('-eo', '--elements-only', type=click.STRING,
+          cls=MultipleValueOption,
+          default=None,
+          help="Print only the objects that"
+          " contain only the selected elements")
+@click.option('-f', '--formulamode',
+          type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+          default='hill',
+          help="Formula printing mode (if None, does not print the formula)")
+@click.option('-p', '--past-days', type=click.INT,
+          default=None,
+          help="Add a filter to show only datas"
+          " created in the past N days")
+@click.option('-A', '--all-users', is_flag=True, default=False,
+          help="show for all users, rather than only for the"
+          "current user")
+@options.GROUPS()
+def list(elements, elements_only, formulamode, past_days, groups, all_users):
     """
-    List stored BandData objects
+    List bands objects
     """
-    project = ['ID', 'Ctime', 'Label', 'Formula']
-    lst = _list(BandsData, project, elements, elements_only, formulamode, past_days, groups, all_users)
+    from aiida.backends.utils import QueryFactory
+    from argparse import Namespace 
+    args = Namespace()
+    args.element = elements
+    args.element_only = elements_only
+    args.formulamode = formulamode
+    args.past_days = past_days
+    args.group_name = None
+    if groups is not None:
+        args.group_pk = groups.pk
+    else:
+        args.group_pk = None
+    args.all_users = all_users
+    
+    if not is_dbenv_loaded():
+        load_dbenv()
+
+    q = QueryFactory()()
+    lst = q.get_bands_and_parents_structure(args)
     column_length = 19
+    project = ['ID', 'Formula', 'Ctime', 'Label']
     vsep = " "
     if lst:
         to_print = ""
@@ -107,7 +148,6 @@ def list_bands(elements, elements_only, raw, formulamode, past_days, groups, all
         echo.echo(to_print)
     else:
         echo.echo_warning("No nodes of type {} where found in the database".format(BandsData))
-
 
 
 @bands.command('export')

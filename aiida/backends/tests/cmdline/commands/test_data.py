@@ -1,17 +1,30 @@
+import sys
+import os
+import shutil
+import unittest
+import numpy as np
 import subprocess as sp
+
 from click.testing import CliRunner
 
+from aiida.cmdline.utils import echo
+from aiida.orm.data.array import ArrayData
+from aiida.orm.data.array.bands import BandsData
+from aiida.orm.data.array.kpoints import KpointsData
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.structure import StructureData
+from aiida.orm.data.array.trajectory import TrajectoryData
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.cmdline.commands.data import array
+from aiida.cmdline.commands.data import bands 
 from aiida.cmdline.commands.data import cif
 from aiida.cmdline.commands.data import structure
 from aiida.cmdline.commands.data import trajectory
 
 from unittest import skip
 
-import sys
-import os
-import shutil
-import unittest
+from aiida.work.workfunctions import workfunction as wf
 
 
 from contextlib import contextmanager
@@ -41,9 +54,6 @@ class TestVerdiDataListable():
         This method tests that the data listing works as expected with all
         possible flags and arguments for different datatypes.
         """
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.structure import StructureData
-        from aiida.orm.data.array.trajectory import TrajectoryData
 
         from aiida.cmdline.commands.data.cif import cif_list
         from aiida.cmdline.commands.data.structure import list_structures
@@ -141,46 +151,155 @@ class TestVerdiDataListable():
             for header in project_headers:
                 self.assertNotIn(header, res.output_bytes)
 
+class TestVerdiData(AiidaTestCase):
+    """
+    Testing reachability of the verdi data subcommands
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiData, cls).setUpClass()
+        
+    def setUp(self):
+        pass
+
+    def test_reachable(self):
+        """
+        Testing reachability of the following commands:
+        verdi data array
+        verdi data bands
+        verdi data cif
+        verdi data parameter
+        verdi data remote
+        verdi data structure
+        verdi data trajectory
+        verdi data upf
+        """
+        subcommands = ['array', 'bands', 'cif', 'parameter', 'remote',
+                'structure', 'trajectory', 'upf']
+        for sub_cmd in subcommands:
+            output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
+            self.assertIn(
+                'Usage:', output,
+                "Sub-command verdi data {} --help failed.". format(sub_cmd))
+
+class TestVerdiDataArray(AiidaTestCase):
+    """
+    Testing verdi data array
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataArray, cls).setUpClass()
+
+        
+    def setUp(self):
+        self.a = ArrayData()
+        self.a.set_array('test_array', np.array([0, 1, 3]))
+        self.a.store()
+
+        self.cli_runner = CliRunner()
+
+    def test_arrayshowhelp(self):
+        output = sp.check_output(['verdi', 'data', 'array', 'show', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data array show --help failed.")
+
+    def test_arrayshow(self):
+        dump_flags = ['-f', '--format']
+        supported_formats = ['json_date']
+        for flag in dump_flags:
+            for format in supported_formats:
+                # with captured_output() as (out, err):
+                options = [flag, format, str(self.a.id)]
+                res = self.cli_runner.invoke(array.show, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                  "The command did not finish "
+                                  "correctly")
+
+@wf
+def connect_structure_bands(structure):
+    alat = 4.
+    cell = np.array([[alat, 0., 0.],
+                        [0., alat, 0.],
+                        [0., 0., alat],
+                        ])
+
+    k = KpointsData()
+    k.set_cell(cell)
+    k.set_kpoints_path([('G','M',2)])
+
+    b = BandsData()
+    b.set_kpointsdata(k)
+    b.set_bands([[1.0,2.0],[3.0,4.0]])
+
+    k.store()
+    b.store()
+    return b
 
 class TestVerdiDataBands(AiidaTestCase):
+    """
+    Testing verdi data bands 
+    """
 
-    @staticmethod
-    def create_bands_data():
-        from aiida.orm.data.array.bands import BandsData
-        from aiida.orm.data.array.kpoints import KpointsData
-        from aiida.orm.group import Group
-        import numpy
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataBands, cls).setUpClass()
 
-        # define a cell
-        alat = 4.
-        cell = numpy.array([[alat, 0., 0.],
-                            [0., alat, 0.],
-                            [0., 0., alat],
-                            ])
+    def setUp(self):
+        self.cli_runner = CliRunner()
+        
+        alat = 4. # angstrom
+        cell = [[alat, 0., 0.,],
+                [0., alat, 0.,],
+                [0., 0., alat,],
+               ]
+        s = StructureData(cell=cell)
+        s.append_atom(position=(0.,0.,0.), symbols='Fe')
+        s.append_atom(position=(alat/2.,alat/2.,alat/2.), symbols='O')
 
-        k = KpointsData()
-        k.set_cell(cell)
-        k.set_kpoints_path()
+        s.store()
+        
+        self.b = connect_structure_bands(s)
 
-        b = BandsData()
-        b.set_kpointsdata(k)
+    def test_bandsshowhelp(self):
+        output = sp.check_output(['verdi', 'data', 'bands', 'show', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data bands show --help failed.")
+    
+    def test_bandlistshelp(self):
+        output = sp.check_output(['verdi', 'data', 'bands', 'list', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data bands show --help failed.")
 
-        k.store()
-        b.store()
+    def test_bandslist(self):
+        res = self.cli_runner.invoke(bands.list, "",
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command did not finish "
+                          "correctly")
+        self.assertIn("Fe", res.output_bytes,
+                      'The string Fe was not found in the listing')
+ 
+    
+    def test_bandexporthelp(self):
+        output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data bands export --help failed.")
 
-        # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
-        g_ne.store()
-        g_ne.add_nodes(b)
-
-        g_e = Group(name='empty_group')
-        g_e.store()
-
-        return {
-            TestVerdiDataListable.NODE_ID_STR: b.id,
-            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
-        }
+    def test_bandsexport(self):
+        options = [str(self.b.id)]
+        res = self.cli_runner.invoke(bands.export, options, 
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command did not finish "
+                          "correctly")
+        self.assertIn("[1.0, 3.0]", res.output_bytes,
+                      'The string [1.0, 3.0] was not found in the bands'
+                      'export')
 
 
 class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
@@ -340,6 +459,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
         ids = self.__class__.create_structure_data()
         self.data_listing_test(StructureData, 'Ba2OTi', ids)
 
+
 class TestVerdiDataCif(AiidaTestCase):
 
     valid_sample_cif_str = '''
@@ -387,25 +507,6 @@ class TestVerdiDataCif(AiidaTestCase):
         self.runner.invoke(cif, ['--help'])
 
     @skip("")
-    def test_reachable(self):
-        """
-        Testing reachability of the following commands:
-        verdi data remote
-        verdi data cif
-        verdi data upf
-        verdi data trajectory
-        verdi data bands
-        verdi data array
-        verdi data parameter
-        verdi data structure
-        """
-        subcommands = ['remote', 'cif', 'upf', 'trajectory', 'bands', 'array',
-                       'parameter', 'structure']
-        for sub_cmd in subcommands:
-            output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
-            self.assertIn(
-                'Usage:', output,
-                "Sub-command verdi data {} --help failed.". format(sub_cmd))
 
     @skip("")
     def test_data_cif_list(self):

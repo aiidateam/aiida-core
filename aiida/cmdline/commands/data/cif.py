@@ -93,9 +93,10 @@ def cif_list(raw, formulamode, past_days, groups, all_users):
         echo.echo("\nTotal results: {}\n".format(counter))
 
 
+supported_formats = ['cif', 'tcod']
 @cif.command('export')
 @click.option('-y', '--format',
-              type=click.Choice(['cif', 'tcod', 'tcod_parameters']),
+              type=click.Choice(supported_formats),
               default='cif',
               help="Type of the exported file.")
 @export_options

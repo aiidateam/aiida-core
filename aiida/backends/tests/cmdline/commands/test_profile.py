@@ -33,19 +33,23 @@ class TestVerdiProfileSetup(AiidaTestCase):
         aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
         aiida_cfg.create_base_dirs()
 
-        for profile in ['dummy_profile1', 'dummy_profile2', 'dummy_profile3', 'dummy_profile4', 'dummy_profile5']:
+        dummy_profile_list = ['dummy_profile1', 'dummy_profile2', 'dummy_profile3', 'dummy_profile4', 'dummy_profile5']
+        dummy_profile_list = ["{}_{}".format(profile_name, get_random_string(4)) for profile_name in dummy_profile_list]
+
+        for profile_name in dummy_profile_list:
             dummy_profile = {}
             dummy_profile['backend'] = 'django'
             dummy_profile['db_host'] = 'localhost'
             dummy_profile['db_port'] = '5432'
             dummy_profile['email'] = 'dummy@localhost'
-            dummy_profile['db_name'] = profile
+            dummy_profile['db_name'] = profile_name
             dummy_profile['db_user'] = 'dummy_user'
             dummy_profile['db_pass'] = 'dummy_pass'
-            dummy_profile['repo'] = aiida_cfg.AIIDA_CONFIG_FOLDER + '/repository_' + profile
-            aiida_cfg.create_config_noninteractive(profile=profile, **dummy_profile)
+            dummy_profile['repo'] = aiida_cfg.AIIDA_CONFIG_FOLDER + '/repository_' + profile_name
+            aiida_cfg.create_config_noninteractive(profile=profile_name, **dummy_profile)
 
-        aiida_cfg.set_default_profile('dummy_profile1', force_rewrite=True)
+        aiida_cfg.set_default_profile(dummy_profile_list[0], force_rewrite=True)
+        cls.dummy_profile_list = dummy_profile_list
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
@@ -96,15 +100,15 @@ class TestVerdiProfileSetup(AiidaTestCase):
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertIn('Configuration folder: ' + self._new_aiida_config_folder, result.output)
-        self.assertIn('* dummy_profile1', result.output)
-        self.assertIn('dummy_profile2', result.output)
+        self.assertIn('* {}'.format(self.dummy_profile_list[0]), result.output)
+        self.assertIn(self.dummy_profile_list[1], result.output)
 
     def test_setdefault(self):
         """
         Test for verdi profile setdefault command
         """
         from aiida.cmdline.commands.profile import profile_setdefault
-        result = self.runner.invoke(profile_setdefault, ["dummy_profile2"])
+        result = self.runner.invoke(profile_setdefault, [self.dummy_profile_list[1]])
         self.assertIsNone(result.exception)
 
         from aiida.cmdline.commands.profile import profile_list
@@ -112,7 +116,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         self.assertIsNone(result.exception)
         self.assertIn('Configuration folder: ' + self._new_aiida_config_folder, result.output)
-        self.assertIn('* dummy_profile2', result.output)
+        self.assertIn('* {}'.format(self.dummy_profile_list[1]), result.output)
         self.assertIsNone(result.exception)
 
     def test_delete(self):
@@ -122,7 +126,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         from aiida.cmdline.commands.profile import profile_delete, profile_list
 
         ### delete single profile
-        result = self.runner.invoke(profile_delete, ["--force", "dummy_profile3"])
+        result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
         self.assertIsNone(result.exception)
         print "delete output: ", result.output
 
@@ -130,15 +134,21 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.assertIsNone(result.exception)
         print "list output: ", result.output
 
-        self.assertNotIn('dummy_profile3', result.output)
+        self.assertNotIn(self.dummy_profile_list[2], result.output)
         self.assertIsNone(result.exception)
 
         ### delete multiple profile
-        result = self.runner.invoke(profile_delete, ["--force", "dummy_profile4", "dummy_profile5"])
+        result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[3], self.dummy_profile_list[4]])
         self.assertIsNone(result.exception)
 
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
-        self.assertNotIn('dummy_profile4', result.output)
-        self.assertNotIn('dummy_profile5', result.output)
+        self.assertNotIn(self.dummy_profile_list[3], result.output)
+        self.assertNotIn(self.dummy_profile_list[4], result.output)
         self.assertIsNone(result.exception)
+
+def get_random_string(length):
+    import string
+    import random
+
+    return ''.join(random.choice(string.ascii_letters) for m in range(length))

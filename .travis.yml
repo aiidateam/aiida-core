@@ -29,12 +29,7 @@ addons:
            - dvidvi
 
 before_install:
-    # This is needed for the SSH tests (being able to ssh to localhost)
-    # And will also be used for the docker test
-    - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
-    - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
-    - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
-
+    - .travis-data/prep_ssh.sh
     # Build the docker image if needed
     - .travis-data/before_install.sh
 

@@ -391,7 +391,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         self.r = RemoteData()
         p = tempfile.mkdtemp()
         self.r.set_remote_path(p)
-        with open(p+'/fite.txt', 'w') as f:
+        with open(p+'/file.txt', 'w') as f:
             f.write("test string")
         self.r.set_computer(comp)
         self.r.store()
@@ -404,6 +404,19 @@ class TestVerdiDataRemote(AiidaTestCase):
             'Usage:', output,
             "Sub-command verdi data remote show --help failed.")
 
+    def test_remoteshow(self):
+        options = [str(self.r.id)]
+        res = self.cli_runner.invoke(remote.show, options,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command verdi data remote show did not"
+                          " finish correctly")
+        self.assertIn('Remote computer name:', res.output_bytes,
+                      'The string "Remote computer name:" was not found in the'
+                      ' output of verdi data remote show')
+        self.assertIn('Remote folder full path:', res.output_bytes,
+                      'The string "Remote folder full path:" was not found in the'
+                      ' output of verdi data remote show')
     
     def test_remotelshelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'ls', '--help'])
@@ -411,17 +424,16 @@ class TestVerdiDataRemote(AiidaTestCase):
             'Usage:', output,
             "Sub-command verdi data remote ls --help failed.")
 
-    @skip("")
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
         res = self.cli_runner.invoke(remote.ls, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
-                          "The command verdi data parameter show did not"
+                          "The command verdi data remote ls did not"
                           " finish correctly")
         self.assertIn('file.txt', res.output_bytes,
-                      'The string "a": 1 was not found in the output'
-                      ' of verdi data parameter show')
+                      'The file "file.txt" was not found in the output'
+                      ' of verdi data remote ls')
 
     def test_remotecathelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'cat', '--help'])
@@ -429,18 +441,17 @@ class TestVerdiDataRemote(AiidaTestCase):
             'Usage:', output,
             "Sub-command verdi data remote cat --help failed.")
 
-#    def test_parametershow(self):
-#        supported_formats = ['json_date']
-#        for format in supported_formats:
-#            options = ['--format', format, str(self.p.id)]
-#            res = self.cli_runner.invoke(parameter.show, options,
-#                                         catch_exceptions=False)
-#            self.assertEquals(res.exit_code, 0,
-#                              "The command verdi data parameter show did not"
-#                              " finish correctly")
-#        self.assertIn('"a": 1', res.output_bytes,
-#                      'The string "a": 1 was not found in the output'
-#                      ' of verdi data parameter show')
+    def test_remotecat(self):
+        options = [str(self.r.id), 'file.txt']
+        res = self.cli_runner.invoke(remote.cat, options,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command verdi data parameter cat did not"
+                          " finish correctly")
+        self.assertIn('test string', res.output_bytes,
+                      'The string "test string" was not found in the output'
+                      ' of verdi data remote cat file.txt')
+
 
 class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
 

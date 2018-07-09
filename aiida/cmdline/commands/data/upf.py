@@ -15,9 +15,6 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
-# if not is_dbenv_loaded():
-#     load_dbenv()
-
 
 @verdi_data.group('upf')
 @click.pass_context

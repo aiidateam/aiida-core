@@ -48,10 +48,6 @@ def export_options(func):
 
     return func
 
-
-# if not is_dbenv_loaded():
-#     load_dbenv()
-
 def _export(node, output_fname, fileformat, other_args={}, overwrite=False):
     """
     Depending on the parameters, either print the (single) output file on

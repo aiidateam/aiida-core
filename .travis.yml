@@ -14,6 +14,7 @@ services:
     - docker
 
 addons:
+    # make sure the path in .ci/test_script.sh matches the version requested here
     postgresql: "9.5"
 
     apt:

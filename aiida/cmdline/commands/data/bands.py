@@ -95,6 +95,16 @@ project_headers = ['ID', 'Formula', 'Ctime', 'Label']
 
 @bands.command('list')
 @list_options
+@click.option('-e', '--elements', type=click.STRING,
+          cls=MultipleValueOption,
+          default=None,
+          help="Print only the objects that"
+          " contain desired elements")
+@click.option('-eo', '--elements-only', type=click.STRING,
+          cls=MultipleValueOption,
+          default=None,
+          help="Print only the objects that"
+          " contain only the selected elements")
 def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all_users):
     """
     List bands objects

@@ -54,13 +54,14 @@ def show(nodes, given_format):
 project_headers = ["Id", "Formulae", "Source.URI"]
 @cif.command('list')
 @list_options
-def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
-             all_users):
+def cif_list(raw, formulamode, past_days, groups, all_users):
     """
     List store CifData objects
     """
     from aiida.orm.data.cif import CifData
     from tabulate import tabulate
+    elements = None
+    elements_only = False
 
     entry_list = _list(CifData, project_headers, elements,
                 elements_only, formulamode, past_days,
@@ -116,12 +117,11 @@ def export(**kwargs):
               type=click.Choice(['cif']),
               default='cif',
               help="Type of the imported file.")
-@click.option('--file',
-              type=click.STRING,
-              default="/dev/stdin",
-              help="Path of the imported file. Reads from standard input if "
-                   "not specified.")
-def importfile(format, file):
+@click.argument('filename',
+                type=click.Path(exists=True,
+                    dir_okay=False,
+                    resolve_path=True))
+def importfile(format, filename):
     """
     Import structure into CifData object
     """
@@ -129,7 +129,7 @@ def importfile(format, file):
     from aiida.orm.data.cif import CifData
 
     try:
-        node, _ = CifData.get_or_create(os.path.abspath(file))
+        node, _ = CifData.get_or_create(os.path.abspath(filename))
         echo.echo(str(node))
     except ValueError as e:
         echo.echo_critical(e)
@@ -159,117 +159,4 @@ def deposit(**kwargs):
     if not isinstance(node, CifData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), CifData))
     echo.echo(deposit_tcod(node, deposition_type, parameter_data, **kwargs))
-
-#@cif.command('deposit')
-#@arguments.NODE()
-#@click.option('--database', '-d',
-              #type=['', '  '],
-              #default='',
-              #help="Label of the database for deposition.")
-## deposition_cmdline_parameters
-## Provides descriptions of command line options, that are used to control
-## the process of deposition to TCOD.
-##
-## :param parser: an argparse.Parser instance
-## :param expclass: name of the exported class to be shown in help string
-##     for the command line options
-##
-## .. note:: This method must not set any default values for command line
-##     options in order not to clash with any other data deposition plugins.
-#@click.option('--type', '--deposition-type', '§',
-              #type=click.Choice(['published','prepublication','personal']),
-              #help="Type of the deposition.")
-#@click.option('-u', '--username', type=click.STRING, default=None,
-              #help="Depositor's username.")
-#@click.option('-p', '--password', is_flag=True, default=None,
-              #help="Depositor's password.")
-#@click.option('--user-email', 'user_email', type=click.STRING, default=None,
-              #help="Depositor's e-mail address.")
-#@click.option('--title', type=click.STRING, default=None,
-              #help="Title of the publication.")
-#@click.option('--author-name', 'author_name', type=click.STRING, default=None,
-              #help="Full name of the publication author.")
-#@click.option('--author-email', type=click.STRING, default=None,
-              #help="E-mail address of the publication author.")
-#@click.option('--url', type=click.STRING,
-              #help="URL of the deposition API.")
-#@click.option('--code', 'code_label', type=click.STRING, default=None,
-              #help="Label of the code to be used for the deposition. "
-                   #"Default: cif_cod_deposit.")
-#@click.option('--computer', 'computer_name', type=click.STRING,
-              #help="Name of the computer to be used for deposition. Default "
-                   #"computer is used if not specified.")
-#@click.option('--replace', type=click.STRING,
-              #help="ID of the structure to be redeposited replaced), if any.")
-#@click.option('-m', '--message', type=click.STRING,
-              #help="Description of the change (relevant for redepositions "
-                   #"only.")
-## extend_with_cmdline_parameters
-## Provides descriptions of command line options, that are used to control
-## the process of exporting data to TCOD CIF files.
-##
-## :param parser: an argparse.Parser instance
-## :param expclass: name of the exported class to be shown in help string
-##     for the command line options
-##
-## .. note:: This method must not set any default values for command line
-##     options in order not to clash with any other data export plugins.
-#@click.option('--no-reduce-symmetry', '--dont-reduce-symmetry',
-              #'reduce_symmetry', is_flag=True, default=True,
-              #help="Do not perform symmetry reduction.")
-##@click.option('--parameter-data', type=click.INT, default=None,
-              ##help="ID of the ParameterData to be exported alongside the {} "
-                   ##"instance. By default, if {} originates from a calculation "
-                   ##"with single ParameterData in the output, aforementioned "
-                   ##"ParameterData is picked automatically. Instead, the "
-                   ##"option is used in the case the calculation produces more "
-                   ##"than a single instance of ParameterData."
-              ##.format(CifData, CifData))
-#@click.option('--no-dump-aiida-database', '--dont-dump-aiida-database',
-              #'dump_aiida_database', is_flag=True, default=True,
-              #help="Do not export AiiDA database to the CIF file.")
-#@click.option('--no-exclude-external-contents', '--dont-exclude-external-contents',
-              #'exclude_external_contents', is_flag=True, default=True,
-              #help="Do not export AiiDA database to the CIF file.")
-#@click.option('--gzip', is_flag=True, default=True,
-              #help="Gzip large files.")
-#@click.option('--gzip-threshold', type=click.INT, default=None,
-              #help="Specify the minimum size of exported file which should be "
-                   #"gzipped. Default 1024.")
-#def deposit(node, parameter_data, deposition_type,  **kwargs):
-
-
-    #print kwargs
-    #echo.echo("node: " + str(node))
-    ## echo.echo("database: " + str(database))
-    ## echo.echo("deposition_type: " + str(deposition_type))
-    ## echo.echo("username: " + str(username))
-    ## echo.echo("password: " + str(password))
-    ## echo.echo("user_email: " + str(user_email))
-    ## echo.echo("title: " + str(title))
-    ## echo.echo("author_name: " + str(author_name))
-    ## echo.echo("author_email: " + str(author_email))
-    ## echo.echo("url: " + str(url))
-    ## echo.echo("code_label: " + str(code_label))
-    ## echo.echo("computer_name: " + str(computer_name))
-    ## echo.echo("replace: " + str(replace))
-    ## echo.echo("message: " + str(message))
-    ##
-    ## echo.echo("reduce_symmetry: " + str(reduce_symmetry))
-    #echo.echo("parameter_data: " + str(parameter_data))
-    ## echo.echo("dump_aiida_database: " + str(dump_aiida_database))
-    ## echo.echo("exclude_external_contents: " + str(exclude_external_contents))
-    ## echo.echo("gzip: " + str(gzip))
-    ## echo.echo("gzip_threshold: " + str(gzip_threshold))
-
-    #try:
-        #if not isinstance(node, CifData):
-            #echo.echo_critical("Node {} is of class {} instead "
-                                  #"of {}".format(node, type(node), CifData))
-    #except AttributeError:
-        #pass
-
-    #from aiida.cmdline.commands.data.deposit import deposit_tcod
-
-    #print deposit_tcod(node, deposition_type , kwargs)
 

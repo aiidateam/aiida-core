@@ -11,6 +11,7 @@ import click
 from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -62,7 +63,12 @@ def show(nodes, given_format):
 project_headers = ["Id", "Label", "Kinds", "Sites"]
 @structure.command('list')
 @list_options
-def list_structures(elements, elements_only, raw, formulamode, past_days,
+@click.option('-e', '--elements', type=click.STRING,
+          cls=MultipleValueOption,
+          default=None,
+          help="Print only the objects that"
+          " contain desired elements")
+def list_structures(elements, raw, formulamode, past_days,
                     groups, all_users):
     """
     List stored StructureData objects
@@ -71,7 +77,7 @@ def list_structures(elements, elements_only, raw, formulamode, past_days,
     from aiida.orm.data.structure import (get_formula, get_symbols_string)
     from tabulate import tabulate
 
-
+    elements_only = False
     lst = _list(StructureData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
 
     entry_list = []

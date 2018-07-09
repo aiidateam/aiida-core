@@ -33,13 +33,14 @@ def trajectory(ctx):
 project_headers = ["Id", "Label"]
 @trajectory.command('list')
 @list_options
-def list_trajections(elements, elements_only, raw, formulamode, past_days, groups, all_users):
+def list_trajections(raw, formulamode, past_days, groups, all_users):
     """
     List trajectories stored in database.
     """
     from aiida.orm.data.array.trajectory import TrajectoryData
     from tabulate import tabulate
-
+    elements = None
+    elements_only = False
     entry_list = _list(TrajectoryData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
 
     counter = 0

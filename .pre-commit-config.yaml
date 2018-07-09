@@ -22,6 +22,7 @@
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|
         aiida/cmdline/commands/restapi.py|
+        aiida/cmdline/commands/shell.py|
         aiida/cmdline/commands/user.py|
         aiida/cmdline/commands/workflow.py|
         aiida/cmdline/options/types/legacy_workflow.py|

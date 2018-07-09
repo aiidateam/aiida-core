@@ -116,12 +116,15 @@ extras_require = {
     'dev_sphinxext': [
         'pytest==3.5.1',
         'pytest-cov==2.5.1',
+    ],
+    'bpython': [
+        'bpython==0.17.1',
     ]
 }
 
 extras_require['dev_sphinxext'] += extras_require['docs']
 extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools'] + extras_require['dev_sphinxext']
-extras_require['all'] = [item for sublist in extras_require.values() for item in sublist]
+extras_require['all'] = [item for sublist in extras_require.values() for item in sublist if item != 'bpython']
 
 # There are a number of optional dependencies that are not
 # listed even as optional dependencies as they are quite

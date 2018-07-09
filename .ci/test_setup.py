@@ -67,7 +67,6 @@ class QuicksetupTestCase(unittest.TestCase):
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
 
-@unittest.skip('wait until #1722 is fixed')
 class SetupTestCase(unittest.TestCase):
     """Test ``verdi setup``"""
 

@@ -30,6 +30,7 @@ from aiida.cmdline.commands.data import parameter
 from aiida.cmdline.commands.data import remote
 from aiida.cmdline.commands.data import structure
 from aiida.cmdline.commands.data import trajectory
+from aiida.cmdline.commands.data import upf
 
 from aiida.backends.utils import get_backend_type
 
@@ -906,3 +907,117 @@ class TestVerdiDataCif(AiidaTestCase):
 
             finally:
                 shutil.rmtree(tmpd)
+
+class TestVerdiDataUpf(AiidaTestCase):
+    """
+    Testing verdi data upf
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataUpf, cls).setUpClass()
+
+    def setUp(self):
+        self.this_folder = os.path.dirname(__file__)
+        self.this_file = os.path.basename(__file__)
+        self.pseudos_dir = "../../../../../examples/testdata/qepseudos/"
+
+        self.cli_runner = CliRunner()
+
+    def upload_family(self):
+        options = [self.this_folder+'/'+self.pseudos_dir,
+                "test_group",
+                "test description"]
+        res = self.cli_runner.invoke(upf.uploadfamily, options,
+                                     catch_exceptions=False)
+        self.assertIn('UPF files found: 3', res.output_bytes,
+                      'The string "UPF files found: 3" was not found in the'
+                      ' output of verdi data upf uploadfamily')
+
+    
+    def test_uploadfamilyhelp(self):
+        output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data upf uploadfamily --help failed.")
+
+    def test_uploadfamily(self):
+        self.upload_family()
+        options = [self.this_folder+'/'+self.pseudos_dir,
+                "test_group",
+                "test description",
+                "--stop-if-existing"]
+        with self.assertRaises(ValueError):
+            res = self.cli_runner.invoke(upf.uploadfamily, options,
+                                         catch_exceptions=False)
+
+
+    def test_exportfamilyhelp(self):
+        output = sp.check_output(['verdi', 'data', 'upf', 'exportfamily', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data upf exportfamily --help failed.")
+
+
+    def test_exportfamily(self):
+        self.upload_family()
+        
+        p = tempfile.mkdtemp()
+        options = [p, 'test_group']
+        res = self.cli_runner.invoke(upf.exportfamily, options,
+                                     catch_exceptions=False)
+        output = sp.check_output(['ls', p ])
+        self.assertIn(
+            'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
+            "Sub-command verdi data upf exportfamily --help failed.")
+        self.assertIn(
+            'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,
+            "Sub-command verdi data upf exportfamily --help failed.")
+        self.assertIn(
+            'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
+            "Sub-command verdi data upf exportfamily --help failed.")
+
+
+    def test_listfamilieshelp(self):
+        output = sp.check_output(['verdi', 'data', 'upf', 'listfamilies', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data upf listfamilies --help failed.")
+
+    def test_listfamilies(self):
+        self.upload_family()
+
+        options = ['-d', '-e', 'Ba']
+        res = self.cli_runner.invoke(upf.listfamilies, options,
+                                     catch_exceptions=False)
+        
+        self.assertIn('test_group', res.output_bytes,
+                      'The string "test_group" was not found in the'
+                      ' output of verdi data upf listfamilies')
+
+        self.assertIn('test description', res.output_bytes,
+                      'The string "test_group" was not found in the'
+                      ' output of verdi data upf listfamilies')
+        
+        
+        options = ['-d', '-e', 'Fe']
+        res = self.cli_runner.invoke(upf.listfamilies, options,
+                                     catch_exceptions=False)
+        self.assertIn('No valid UPF pseudopotential', res.output_bytes,
+                      'The string "No valid UPF pseudopotential" was not'
+                      ' found in the output of verdi data upf listfamilies')
+    def test_importhelp(self):
+        output = sp.check_output(['verdi', 'data', 'upf', 'import', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data upf listfamilies --help failed.")
+    def test_import(self):
+        options = [self.this_folder + '/'+self.pseudos_dir + '/' +
+                'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF',
+                '--format',
+                'upf']
+        res = self.cli_runner.invoke(upf.import_upf, options,
+                                     catch_exceptions=False)
+
+        self.assertIn('Imported', res.output_bytes,
+                      'The string "Imported" was not'
+                      ' found in the output of verdi data import' )

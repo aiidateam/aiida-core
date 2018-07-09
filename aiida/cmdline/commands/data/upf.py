@@ -15,9 +15,6 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
-# if not is_dbenv_loaded():
-#     load_dbenv()
-
 
 @verdi_data.group('upf')
 @click.pass_context
@@ -132,3 +129,18 @@ def exportfamily(folder, group_name):
         else:
             echo.echo_warning ("File {} is already present in the "
                                "destination folder".format(u.filename))
+
+@upf.command('import')
+@click.argument('filename',
+                type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('-f', '--format', 'given_format',
+              type=click.Choice(['upf']),
+              default='upf',
+              help="Format of the pseudopotential file")
+def import_upf(filename, given_format):
+    """
+    Import upf data object
+    """
+    from aiida.orm.data.upf import UpfData
+    node, _ = UpfData.get_or_create(filename)
+    echo.echo_success("Imported: {}".format(node))

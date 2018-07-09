@@ -151,7 +151,7 @@ ALL_USERS = OverridableOption('-A', '--all-users', 'all_users', is_flag=True, de
 RAW = OverridableOption('-r', '--raw', 'raw', is_flag=True, default=False,
                         help='display only raw query results, without any headers or footers')
 
-HOSTNAME = OverridableOption('-H', '--hostname', help='hostname')
+HOSTNAME = OverridableOption('-H', '--hostname', help='the computer hostname')
 
 TRANSPORT = OverridableOption('-T', '--transport', help='transport type',
                               type=types.PluginParamType(group='transports'), required=True)

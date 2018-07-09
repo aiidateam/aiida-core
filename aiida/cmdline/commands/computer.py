@@ -19,7 +19,8 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import types
 from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.types import ShebangParamType, NonemptyStringParamType
+from aiida.cmdline.params.types import (
+    ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
 from aiida.control.computer import ComputerBuilder
 
 
@@ -35,64 +36,49 @@ def get_computer_names():
     else:
         return []
 
-# TODO  fix the computer validator (in the options: do we want to have them?)!!!
 
-## Todo: reenable interactive and mixed tests
-
-
-
-## Todo: check that the scheduler is always asked first and that it is never None (it is required, now not working)
-
-
-##  TODO: REMOVE THIS, MOVE TO TYPE
-def validate_mpirun_command(ctx, param, value):
+def shouldcall_default_mpiprocs_per_machine(ctx):
     """
-    Validate that the provided 'mpirun' command only contains replacement fields
-    (e.g. ``{tot_num_mpiprocs}``) that are known.
+    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
+    False otherwise.
 
-    Return a list of arguments (by using 'value.strip().split(" ") on the input string)
+    If there is a problem in determining the scheduler, return True to
+    avoid exceptions.
     """
-    from aiida.common.exceptions import MissingPluginError
-
-    converted_cmd = value.strip().split(" ")
-    if converted_cmd == ['']:
-        converted_cmd = []
-
     scheduler_ep = ctx.params['scheduler']
     if scheduler_ep is not None:
         try:
-            job_resource_keys = scheduler_ep.load()._job_resource_class.get_valid_keys()
+            SchedulerClass = scheduler_ep.load()
         except ImportError:
-            raise ValidationError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
     else:
-        raise ValidationError("Scheduler not specified for this computer! This should not happen due to the order in which we call things.")
+        raise ValidationError(
+            "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
 
-    # Prepare some substitution values to check if it is all ok
-    subst = {i: 'value' for i in job_resource_keys}
-    subst['tot_num_mpiprocs'] = 'value'
+    JobResourceClass = SchedulerClass._job_resource_class
+    if JobResourceClass is None:
+        # Odd situation...
+        return False
 
-    try:
-        for arg in converted_cmd:
-            arg.format(**subst)
-    except KeyError as e:
-        raise ValidationError("In workdir there is an unknown replacement "
-                              "field '{}'".format(e.message))
-    except ValueError as e:
-        raise ValidationError("Error in the string: '{}'".format(e.message))
+    return JobResourceClass.accepts_default_mpiprocs_per_machine()
 
-    return converted_cmd
-
+## Todo: reenable interactive and mixed tests
 
 @verdi_computer.command('setup')
 @click.pass_context
 @options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption)
-@options.HOSTNAME(prompt='Hostname', cls=InteractiveOption, required=True)
+@options.HOSTNAME(prompt='Hostname', cls=InteractiveOption, required=True,
+    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption,
+                     help="A human-readable description of this computer")
 @click.option('-d', '--disabled', is_flag=True, default=False,
-    help='create it, but keep it disabled',
+    help='if created with the disabled flag, calculations '
+         'associated with it will not be submitted',
     prompt="Keep the computer disabled?",
     cls=InteractiveOption,
-    type=click.BOOL)
+    # IMPORTANT! Do not specify explicitly type=click.BOOL,
+    # Otherwise you would not get a default value when prompting
+ )
 @options.TRANSPORT(prompt="Transport plugin", cls=InteractiveOption)
 @options.SCHEDULER(prompt="Scheduler plugin", cls=InteractiveOption)
 @click.option(
@@ -102,26 +88,36 @@ def validate_mpirun_command(ctx, param, value):
     cls=InteractiveOption,
     help='this line specifies the first line of the submission script for this computer',
     type=ShebangParamType())
-#@click.option(
-#    '-w', '--work-dir',
-##    callback=validate_mpirun_command,
-##    prompt="mpirun command",
-##    default="mpirun -np {tot_num_mpiprocs}",
-##    cls=InteractiveOption,
-##    help="command to run an executable using MPI")
+@click.option(
+    '-w', '--work-dir',
+    prompt='work directory on the computer',
+    default="/scratch/{username}/aiida/",
+    cls=InteractiveOption,
+    help="The absolute path of the directory on the computer where AiiDA will "
+         "run the calculations (typically, the scratch of the computer). You "
+         "can use the {username} replacement, that will be replaced by your "
+         "username on the remote computer")
 @click.option(
     '-m', '--mpirun-command',
-    #callback=validate_mpirun_command,
     prompt="mpirun command",
     default="mpirun -np {tot_num_mpiprocs}",
     cls=InteractiveOption,
-    help="command to run an executable using MPI")
-
-## TODO: Add default # of MPIPROCS, with logic from shouldcall
-## Check the old logic in the scratch file
-
-
-
+    help="The mpirun command needed on the cluster to run parallel MPI "
+         "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+         "replaced by the total number of cpus, or the other scheduler-dependent "
+         "replacement fields (see the scheduler docs for more information)",
+    type=MpirunCommandParamType())
+@click.option(
+    '--mpiprocs-per-machine',
+    prompt="default number of CPUs per machine",
+    cls=InteractiveOption,
+    help="Enter here the default number of MPI processes per machine (node) that "
+         "should be used if nothing is otherwise specified. Pass the digit 0 "
+         "if you do not want to provide a default value.",
+    prompt_fn=shouldcall_default_mpiprocs_per_machine,
+    required_fn=False,
+    type=click.INT,
+) # Note: this can still be passed from the command line in non-interactive mode
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -143,7 +139,11 @@ def setup_computer(ctx, non_interactive, **kwargs):
         kwargs['append_text'] = post
 
     computer_builder = ComputerBuilder(**kwargs)
-    computer = computer_builder.new()
+    try:
+        computer = computer_builder.new()
+    except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
+        echo.echo_critical('{}: {}'.format(type(e).__name__, e))
+
 
     try:
         computer.store()
@@ -157,12 +157,6 @@ def setup_computer(ctx, non_interactive, **kwargs):
     echo.echo_info("  verdi computer configure {}".format(computer.name))
     echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
     echo.echo_info("the command-line interface at the moment)")
-
-
-
-
-
-
 
 
 @verdi_computer.command('enable')

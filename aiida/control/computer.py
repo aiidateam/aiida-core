@@ -38,6 +38,21 @@ class ComputerBuilder(object):
         computer.set_transport_type(self._get_and_count('transport', used).name)
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
+        computer.set_workdir(self._get_and_count('work_dir', used))
+        mpiprocs_per_machine = self._get_and_count('mpiprocs_per_machine', used)
+        # In the command line, 0 means unspecified
+        if mpiprocs_per_machine == 0:
+            mpiprocs_per_machine = None
+        if mpiprocs_per_machine is not None:
+            try:
+                mpiprocs_per_machine = int(mpiprocs_per_machine)
+            except ValueError:
+                raise self.ComputerValidationError("Invalid value provided for mpiprocs_per_machine, "
+                                                   "must be a valid integer")
+            if mpiprocs_per_machine <= 0:
+                raise self.ComputerValidationError("Invalid value provided for mpiprocs_per_machine, "
+                                                   "must be positive")
+            computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
 
         mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(" ")
         if mpirun_command_internal == ['']:

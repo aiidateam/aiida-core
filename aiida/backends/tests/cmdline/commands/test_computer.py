@@ -32,10 +32,12 @@ def generate_setup_options_dict(replace_args={}):
     valid_noninteractive_options['transport'] = "local"
     valid_noninteractive_options['scheduler'] = "direct"
     valid_noninteractive_options['shebang'] = "#!/bin/bash"
+    valid_noninteractive_options['work-dir'] = "/scratch/{username}/aiida_run"
     valid_noninteractive_options['mpirun-command'] = "mpirun -np {tot_num_mpiprocs}"
+    valid_noninteractive_options['mpiprocs-per-machine'] = "2"
     # Make them multiline to test also multiline options
     valid_noninteractive_options['prepend-text'] = "date\necho 'second line'"
-    valid_noninteractive_options['append-text'] =  "env\necho '2'\necho 'third line'"
+    valid_noninteractive_options['append-text'] =  "env\necho '444'\necho 'third line'"
 
     # I replace kwargs here, so that if they are known, they go at the right order
     for k in replace_args:
@@ -76,6 +78,8 @@ class TestVerdiComputerSetup(AiidaTestCase):
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
         self.assertIn('Usage:', output)
 
+    # TODO: test that mpiprocs-per-machine is not requested e.g. for SGE
+
     #def test_interactive(self):
     #    from aiida.orm import Computer
     #    os.environ['VISUAL'] = 'sleep 1; vim -cwq'
@@ -88,6 +92,9 @@ class TestVerdiComputerSetup(AiidaTestCase):
     #    self.assertIsInstance(Computer.get(label), Computer)
 
     def test_noninteractive(self):
+        """
+        Main test to check if the non-interactive command works
+        """
         from aiida.orm import Computer
 
         options_dict = generate_setup_options_dict()
@@ -106,6 +113,8 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertTrue(new_computer.is_enabled())
         self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
+        self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
+        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(), int(options_dict['mpiprocs-per-machine']))
         self.assertEqual(new_computer.get_prepend_text(), options_dict['prepend-text'])
         self.assertEqual(new_computer.get_append_text(), options_dict['append-text'])
 
@@ -123,6 +132,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         from aiida.orm import Computer
 
         options_dict = generate_setup_options_dict({'label': 'computer_disabled',
+                                                    ## Pass the '--disabled' option
                                                     'disabled': None})
         options = generate_setup_options(options_dict)
 
@@ -132,6 +142,52 @@ class TestVerdiComputerSetup(AiidaTestCase):
         new_computer = Computer.get(options_dict['label'])
         self.assertIsInstance(new_computer, Computer)
         self.assertFalse(new_computer.is_enabled())
+
+    def test_noninteractive_optional_default_mpiprocs(self):
+        """
+        Test 'verdi setup' and check that if is ok not to specify mpiprocs-per-machine
+        """
+        from aiida.orm import Computer
+
+        options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
+        options_dict.pop('mpiprocs-per-machine')
+        options = generate_setup_options(options_dict)
+        result = self.runner.invoke(setup_computer, options)
+
+        self.assertIsNone(result.exception, result.output[-1000:])
+
+        new_computer = Computer.get(options_dict['label'])
+        self.assertIsInstance(new_computer, Computer)
+        self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
+
+    def test_noninteractive_optional_default_mpiprocs_2(self):
+        """
+        Test 'verdi setup' and check that if is the specified value is zero, it means unspecified
+        """
+        from aiida.orm import Computer
+
+        options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
+        options_dict['mpiprocs-per-machine'] = 0
+        options = generate_setup_options(options_dict)
+        result = self.runner.invoke(setup_computer, options)
+
+        self.assertIsNone(result.exception, result.output[-1000:])
+
+        new_computer = Computer.get(options_dict['label'])
+        self.assertIsInstance(new_computer, Computer)
+        self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
+
+    def test_noninteractive_optional_default_mpiprocs_3(self):
+        """
+        Test 'verdi setup' and check that it fails for a negative number of mpiprocs
+        """
+        options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_3'})
+        options_dict['mpiprocs-per-machine'] = -1
+        options = generate_setup_options(options_dict)
+        result = self.runner.invoke(setup_computer, options)
+
+        self.assertIsInstance(result.exception, SystemExit)
+        self.assertIn("mpiprocs_per_machine, must be positive", result.output)
 
     def test_noninteractive_wrong_transport_fail(self):
         """
@@ -183,8 +239,8 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options = generate_setup_options(options_dict)
         result = self.runner.invoke(setup_computer, options)
 
-        self.assertIsInstance(result.exception, ValidationError)
-        self.assertIn("unknown replacement field 'unknown_key'", str(result.exception))
+        self.assertIsInstance(result.exception, SystemExit)
+        self.assertIn("unknown replacement field 'unknown_key'", str(result.output))
 
 
 #def test_mixed(self):

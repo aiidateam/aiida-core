@@ -790,7 +790,7 @@ class Run(VerdiCommand):
         if not is_dbenv_loaded():
             load_dbenv()
         import argparse
-        from aiida.cmdline.commands.shell import default_modules_list
+        from aiida.cmdline.commands.shell import DEFAULT_MODULES_LIST
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -839,7 +839,7 @@ class Run(VerdiCommand):
 
         ## dynamically load modules (the same of verdi shell) - but in
         ## globals_dict, not in the current environment
-        for app_mod, model_name, alias in default_modules_list:
+        for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
             globals_dict["{}".format(alias)] = getattr(
                 __import__(app_mod, {}, {}, model_name), model_name)
 

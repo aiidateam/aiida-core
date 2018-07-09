@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""The verdi shell command"""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -17,7 +18,7 @@ from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.commands import verdi_shell
 from aiida.cmdline.utils import decorators, echo
 
-default_modules_list = [
+DEFAULT_MODULES_LIST = [
     ("aiida.orm", "Node", "Node"),
     ("aiida.orm.utils", "load_node", "load_node"),
     ("aiida.orm", "Calculation", "Calculation"),
@@ -51,7 +52,7 @@ def get_start_namespace():
     from aiida.common.setup import get_property
     user_ns = {}
     # load default modules
-    for app_mod, model_name, alias in default_modules_list:
+    for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
     # load custom modules
@@ -73,19 +74,19 @@ def get_start_namespace():
 
 def _ipython_pre_011():
     """Start IPython pre-0.11"""
-    from IPython.Shell import IPShell
+    from IPython.Shell import IPShell  # pylint: disable=import-error,no-name-in-module
 
     user_ns = get_start_namespace()
     if user_ns:
-        shell = IPShell(argv=[], user_ns=user_ns)
+        ipy_shell = IPShell(argv=[], user_ns=user_ns)
     else:
-        shell = IPShell(argv=[])
-    shell.mainloop()
+        ipy_shell = IPShell(argv=[])
+    ipy_shell.mainloop()
 
 
 def _ipython_pre_100():
     """Start IPython pre-1.0.0"""
-    from IPython.frontend.terminal.ipapp import TerminalIPythonApp
+    from IPython.frontend.terminal.ipapp import TerminalIPythonApp  # pylint: disable=import-error,no-name-in-module
 
     app = TerminalIPythonApp.instance()
     app.initialize(argv=[])
@@ -97,7 +98,7 @@ def _ipython_pre_100():
 
 def _ipython():
     """Start IPython >= 1.0"""
-    from IPython import start_ipython
+    from IPython import start_ipython  # pylint: disable=import-error
 
     user_ns = get_start_namespace()
     if user_ns:
@@ -108,10 +109,10 @@ def _ipython():
 
 def ipython():
     """Start any version of IPython"""
-    for ip in (_ipython, _ipython_pre_100, _ipython_pre_011):
+    for ipy_version in (_ipython, _ipython_pre_100, _ipython_pre_011):
         try:
-            ip()
-        except ImportError as ie:
+            ipy_version()
+        except ImportError:
             pass
         else:
             return
@@ -120,16 +121,17 @@ def ipython():
 
 
 def bpython():
-    import bpython
+    """Start a bpython shell."""
+    import bpython as bpy_shell  # pylint: disable=import-error
 
     user_ns = get_start_namespace()
     if user_ns:
-        bpython.embed(user_ns)
+        bpy_shell.embed(user_ns)
     else:
-        bpython.embed()
+        bpy_shell.embed()
 
 
-shells = {'ipython': ipython, 'bpython': bpython}
+SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 
 @verdi_shell.command('shell')
@@ -141,16 +143,18 @@ shells = {'ipython': ipython, 'bpython': bpython}
     help='When using plain Python, ignore the PYTHONSTARTUP environment '
     'variable and ~/.pythonrc.py script.')
 @click.option(
-    '-i', '--interface', type=click.Choice(shells.keys()), help='Specify an interactive interpreter interface.')
+    '-i', '--interface', type=click.Choice(SHELLS.keys()), help='Specify an interactive interpreter interface.')
 def shell(plain, no_startup, interface):
+    """Start a python shell with preloaded AiiDA environment."""
 
-    def run_shell(shell=None):
+    def run_shell(interface=None):
+        """Start the chosen external shell."""
 
         # Check that there is at least one type of shell declared
-        if len(shells) == 0:
+        if not SHELLS:
             echo.echo_critical("No shells are available")
 
-        available_shells = [shells[shell]] if shell else shells.values()
+        available_shells = [SHELLS[interface]] if interface else SHELLS.values()
 
         # Try the specified or the available shells one by one until you
         # find one that is available. If the wanted shell is not available
@@ -169,7 +173,7 @@ def shell(plain, no_startup, interface):
             # Don't bother loading IPython, because the user wants plain Python.
             raise ImportError
 
-        run_shell(shell=interface)
+        run_shell(interface=interface)
     except ImportError:
         import code
 
@@ -200,7 +204,9 @@ def shell(plain, no_startup, interface):
                     continue
                 try:
                     with open(pythonrc) as handle:
-                        exec (compile(handle.read(), pythonrc, 'exec'), imported_objects)
+                        exec (compile(handle.read(), pythonrc, 'exec'), imported_objects)  # pylint: disable=exec-used
                 except NameError:
                     pass
-        code.interact(local=imported_objects)
+        # The pylint disabler is necessary because the builtin code module
+        # clashes with the local commands.code module here.
+        code.interact(local=imported_objects)  # pylint: disable=no-member

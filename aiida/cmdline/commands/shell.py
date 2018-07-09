@@ -17,7 +17,6 @@ from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.commands import verdi_shell
 from aiida.cmdline.utils import decorators, echo
 
-
 default_modules_list = [
     ("aiida.orm", "Node", "Node"),
     ("aiida.orm.utils", "load_node", "load_node"),
@@ -39,14 +38,13 @@ default_modules_list = [
 
 
 class Shell(VerdiCommand):
-    """
-    Re-hash nodes filtered by identifier and or node class
-    """
+    """Open a shell (ipython / bpython) with aiida env preloaded."""
 
     def run(self, *args):
         ctx = shell.make_context('shell', list(args))
         with ctx:
             shell.invoke(ctx)
+
 
 def get_start_namespace():
     """Load all default and custom modules"""
@@ -54,20 +52,18 @@ def get_start_namespace():
     user_ns = {}
     # load default modules
     for app_mod, model_name, alias in default_modules_list:
-        user_ns[alias] = getattr(__import__(app_mod, {}, {},
-                                            model_name), model_name)
+        user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
     # load custom modules
-    custom_modules_list = [(str(e[0]), str(e[2])) for e in
-                           [p.rpartition('.') for p in get_property(
-                               'verdishell.modules', default="").split(
-                               ':')]
-                           if e[1] == '.']
+    custom_modules_list = [
+        (str(e[0]), str(e[2]))
+        for e in [p.rpartition('.') for p in get_property('verdishell.modules', default="").split(':')]
+        if e[1] == '.'
+    ]
 
     for app_mod, model_name in custom_modules_list:
         try:
-            user_ns[model_name] = getattr(
-                __import__(app_mod, {}, {}, model_name), model_name)
+            user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
         except AttributeError:
             # if the module does not exist, we ignore it
             pass
@@ -132,22 +128,22 @@ def bpython():
     else:
         bpython.embed()
 
-shells = {'ipython': ipython , 'bpython': bpython}
-@verdi_shell.   command('shell')
+
+shells = {'ipython': ipython, 'bpython': bpython}
+
+
+@verdi_shell.command('shell')
 @decorators.with_dbenv()
+@click.option('--plain', is_flag=True, help='Tells Django to use plain Python, not IPython or bpython.)')
 @click.option(
-    '--plain', is_flag=True,
-    help='Tells Django to use plain Python, not IPython or bpython.)'
-)
-@click.option(
-    '--no-startup', is_flag=True,
+    '--no-startup',
+    is_flag=True,
     help='When using plain Python, ignore the PYTHONSTARTUP environment '
-         'variable and ~/.pythonrc.py script.'
-)
-@click.option('-i', '--interface', type=click.Choice(shells.keys()),
-              help='Specify an interactive interpreter interface. Available '
-                   'options: "ipython" and "bpython"')
+    'variable and ~/.pythonrc.py script.')
+@click.option(
+    '-i', '--interface', type=click.Choice(shells.keys()), help='Specify an interactive interpreter interface.')
 def shell(plain, no_startup, interface):
+
     def run_shell(shell=None):
 
         # Check that there is at least one type of shell declared
@@ -190,15 +186,13 @@ def shell(plain, no_startup, interface):
             # we already know 'readline' was imported successfully.
             import rlcompleter
 
-            readline.set_completer(
-                rlcompleter.Completer(imported_objects).complete)
+            readline.set_completer(rlcompleter.Completer(imported_objects).complete)
             readline.parse_and_bind("tab:complete")
 
         # We want to honor both $PYTHONSTARTUP and .pythonrc.py, so follow system
         # conventions and get $PYTHONSTARTUP first then .pythonrc.py.
         if not no_startup:
-            for pythonrc in (
-                    os.environ.get("PYTHONSTARTUP"), '~/.pythonrc.py'):
+            for pythonrc in (os.environ.get("PYTHONSTARTUP"), '~/.pythonrc.py'):
                 if not pythonrc:
                     continue
                 pythonrc = os.path.expanduser(pythonrc)
@@ -206,8 +200,7 @@ def shell(plain, no_startup, interface):
                     continue
                 try:
                     with open(pythonrc) as handle:
-                        exec (compile(handle.read(), pythonrc, 'exec'),
-                              imported_objects)
+                        exec (compile(handle.read(), pythonrc, 'exec'), imported_objects)
                 except NameError:
                     pass
         code.interact(local=imported_objects)

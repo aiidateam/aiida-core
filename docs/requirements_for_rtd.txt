@@ -18,6 +18,7 @@ aldjemy==0.8.0
 alembic==0.9.9
 anyjson==0.3.3
 ase==3.12.0
+bpython==0.17.1
 chainmap
 circus==0.14.0
 click-plugins==1.0.3

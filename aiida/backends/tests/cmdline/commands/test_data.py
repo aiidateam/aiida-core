@@ -2,27 +2,42 @@ import sys
 import os
 import shutil
 import unittest
+import tempfile
 import numpy as np
 import subprocess as sp
 
 from click.testing import CliRunner
 
+
+from aiida.orm import Computer
 from aiida.cmdline.utils import echo
+from aiida.orm.group import Group
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.trajectory import TrajectoryData
 
+from aiida.orm.backend import construct_backend
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.data import array
 from aiida.cmdline.commands.data import bands 
 from aiida.cmdline.commands.data import cif
 from aiida.cmdline.commands.data import parameter
+from aiida.cmdline.commands.data import remote
 from aiida.cmdline.commands.data import structure
 from aiida.cmdline.commands.data import trajectory
+
+from aiida.backends.utils import get_backend_type
+
+if get_backend_type() == 'sqlalchemy':
+    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+else:
+    from aiida.backends.djsite.db.models import DbAuthInfo
+
 
 from unittest import skip
 
@@ -305,7 +320,7 @@ class TestVerdiDataBands(AiidaTestCase):
 
 class TestVerdiDataParameter(AiidaTestCase):
     """
-    Testing verdi data array
+    Testing verdi data parameter 
     """
     @classmethod
     def setUpClass(cls):
@@ -318,7 +333,7 @@ class TestVerdiDataParameter(AiidaTestCase):
 
         self.cli_runner = CliRunner()
 
-    def test_parameterhelp(self):
+    def test_parametershowhelp(self):
         output = sp.check_output(['verdi', 'data', 'parameter', 'show', '--help'])
         self.assertIn(
             'Usage:', output,
@@ -336,6 +351,81 @@ class TestVerdiDataParameter(AiidaTestCase):
         self.assertIn('"a": 1', res.output_bytes,
                       'The string "a": 1 was not found in the output'
                       ' of verdi data parameter show')
+
+class TestVerdiDataRemote(AiidaTestCase):
+    """
+    Testing verdi data remote 
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataRemote, cls).setUpClass()
+        new_comp = Computer(name='comp',
+                            hostname='localhost',
+                            transport_type='local',
+                            scheduler_type='direct',
+                            workdir=tempfile.mkdtemp())
+        new_comp.store()
+        b = construct_backend()
+        aiidauser = b.users.get_automatic_user()
+        authinfo = DbAuthInfo(dbcomputer=new_comp.dbcomputer,
+                aiidauser=aiidauser.dbuser)
+        authinfo.save()
+
+    def setUp(self):
+        comp = Computer.get('comp')
+        self.r = RemoteData()
+        p = tempfile.mkdtemp()
+        self.r.set_remote_path(p)
+        with open(p+'/fite.txt', 'w') as f:
+            f.write("test string")
+        self.r.set_computer(comp)
+        self.r.store()
+
+        self.cli_runner = CliRunner()
+
+    def test_remoteshowhelp(self):
+        output = sp.check_output(['verdi', 'data', 'remote', 'show', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data remote show --help failed.")
+
+    
+    def test_remotelshelp(self):
+        output = sp.check_output(['verdi', 'data', 'remote', 'ls', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data remote ls --help failed.")
+
+    @skip("")
+    def test_remotels(self):
+        options = ['--long', str(self.r.id)]
+        res = self.cli_runner.invoke(remote.ls, options,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command verdi data parameter show did not"
+                          " finish correctly")
+        self.assertIn('file.txt', res.output_bytes,
+                      'The string "a": 1 was not found in the output'
+                      ' of verdi data parameter show')
+
+    def test_remotecathelp(self):
+        output = sp.check_output(['verdi', 'data', 'remote', 'cat', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data remote cat --help failed.")
+
+#    def test_parametershow(self):
+#        supported_formats = ['json_date']
+#        for format in supported_formats:
+#            options = ['--format', format, str(self.p.id)]
+#            res = self.cli_runner.invoke(parameter.show, options,
+#                                         catch_exceptions=False)
+#            self.assertEquals(res.exit_code, 0,
+#                              "The command verdi data parameter show did not"
+#                              " finish correctly")
+#        self.assertIn('"a": 1', res.output_bytes,
+#                      'The string "a": 1 was not found in the output'
+#                      ' of verdi data parameter show')
 
 class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
 
@@ -398,7 +488,6 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataTrajectory, cls).setUpClass()
-        from aiida.orm import Computer
         new_comp = Computer(name='comp',
                                 hostname='localhost',
                                 transport_type='local',
@@ -407,7 +496,6 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer
         self.comp = Computer.get('comp')
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -520,7 +608,6 @@ class TestVerdiDataCif(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataCif, cls).setUpClass()
-        from aiida.orm import Computer
         new_comp = Computer(name='comp',
                                 hostname='localhost',
                                 transport_type='local',
@@ -529,7 +616,6 @@ class TestVerdiDataCif(AiidaTestCase):
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer
         self.comp = Computer.get('comp')
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -549,10 +635,6 @@ class TestVerdiDataCif(AiidaTestCase):
         This method tests that the Cif listing works as expected with all
         possible flags and arguments.
         """
-        import tempfile
-
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.group import Group
 
         with tempfile.NamedTemporaryFile() as f:
             filename = f.name
@@ -628,7 +710,6 @@ class TestVerdiDataCif(AiidaTestCase):
         This method tests that the Cif import works as expected with all
         possible flags and arguments.
         """
-        import tempfile
         from cStringIO import StringIO
 
         # Check format flag
@@ -665,9 +746,6 @@ class TestVerdiDataCif(AiidaTestCase):
         This method checks if the Cif export works as expected with all
         possible flags and arguments.
         """
-        import tempfile
-
-        from aiida.orm.data.cif import CifData
 
         # Create a valid CifNode
         with tempfile.NamedTemporaryFile() as f:

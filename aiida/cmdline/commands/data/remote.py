@@ -9,18 +9,13 @@
 ###########################################################################
 import click
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_data
+from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
 from aiida.common.utils import get_mode_string
 
 
-# if not is_dbenv_loaded():
-#     load_dbenv()
-        
 @verdi_data.group('remote')
 @click.pass_context
 def remote(ctx):

@@ -101,7 +101,7 @@ class CodeBuilder(object):
             try:
                 return self._code_spec[key]
             except KeyError:
-                raise self.CodeValidationError(key + ' not set')
+                raise self.CodeValidationError("Attribute '{}' not set".format(key))
         return None
 
     def _get(self, key):
@@ -156,7 +156,7 @@ class CodeBuilder(object):
     def validate_upload(self):
         """If the code is stored and uploaded, catch invalid on-computer attributes"""
         messages = []
-        if self._get('code_type') == self.CodeType.STORE_AND_UPLOAD:
+        if self.is_local():
             if self._get('computer'):
                 messages.append('invalid option for store-and-upload code: "computer"')
             if self._get('remote_abs_path'):
@@ -192,6 +192,10 @@ class CodeBuilder(object):
 
         def __repr__(self):
             return '<CodeValidationError: {}>'.format(self)
+
+    def is_local(self):
+        """Analogous to Code.is_local()"""
+        return self.__getattr__('code_type') == self.CodeType.STORE_AND_UPLOAD
 
     # pylint: disable=too-few-public-methods
     class CodeType(enum.Enum):

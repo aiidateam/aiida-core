@@ -704,10 +704,21 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
 
     def test_data_trajectory_export(self):
         from aiida.cmdline.commands.data.trajectory import supported_formats
+        from aiida.cmdline.commands.data.trajectory import export
+
         new_supported_formats = list(supported_formats)
         # TCOD export needs special arguments
         new_supported_formats.remove('tcod')
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
+        # Check independently the TCOD export that needs special arguments
+        dump_flags = ['-y', '--format']
+        for flag in dump_flags:
+            options = [flag, 'tcod', '--step', '0',str(self.ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(export, options,
+                                         catch_exceptions=False)
+            self.assertEquals(res.exit_code, 0,
+                              "The command did not finish "
+                              "correctly")
 
 
 class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,

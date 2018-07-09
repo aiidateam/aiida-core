@@ -68,12 +68,19 @@ def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
 
     counter = 0
     cif_list_data = list()
+
     if not raw:
         cif_list_data.append(project_headers)
     for entry in entry_list:
         for i in range(0, len(entry)):
             if isinstance(entry[i], list):
-                entry[i] = ",".join(entry[i])
+                new_entry = list()
+                for e in entry[i]:
+                    if e is None:
+                        new_entry.append('')
+                    else:
+                        new_entry.append(e)
+                entry[i] = ",".join(new_entry)
         for i in range(len(entry), len(project_headers)):
                 entry.append(None)
         counter += 1

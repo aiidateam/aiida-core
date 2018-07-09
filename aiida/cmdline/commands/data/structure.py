@@ -130,10 +130,14 @@ def list_structures(elements, elements_only, raw, formulamode, past_days,
         echo.echo("\nTotal results: {}\n".format(counter))
 
 
+supported_formats = ['cif', 'tcod', 'xsf', 'xyz']
+# XYZ for alloys or systems with vacancies not implemented.
+# supported_formats = ['cif', 'tcod', 'xsf']
 @structure.command('export')
 @click.option('-y', '--format',
-              type=click.Choice(['cif', 'tcod', 'xsf', 'xyz']),
+              type=click.Choice(supported_formats),
               default='xyz',
+              # default='cif',
               help="Type of the exported file.")
 @export_options
 def export(**kwargs):

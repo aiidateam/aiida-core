@@ -58,7 +58,169 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
-class TestVerdiDataListable():
+class TestVerdiDataExportable:
+
+    def __init__(self):
+        pass
+
+    NODE_ID_STR = "node_id"
+    EMPTY_GROUP_ID_STR = 'empty_group_id'
+    EMPTY_GROUP_NAME_STR = 'empty_group'
+    NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
+    NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
+
+    def data_export_test(self, datatype, ids, supported_formats):
+        """
+        This method tests that the data listing works as expected with all
+        possible flags and arguments for different datatypes.
+        """
+
+        from aiida.cmdline.commands.data.cif import export as export_cif
+        from aiida.cmdline.commands.data.structure import export as export_str
+        from aiida.cmdline.commands.data.trajectory import export as export_tr
+        # from aiida.cmdline.commands.data.bands import bands_list
+
+        datatype_mapping = {
+            CifData: export_cif,
+            StructureData: export_str,
+            TrajectoryData: export_tr,
+            # BandsData: bands_list
+        }
+
+        if datatype is None or datatype not in datatype_mapping.keys():
+            raise Exception("The listing of the objects {} is not supported"
+                            .format(datatype))
+
+        export_cmd = datatype_mapping[datatype]
+
+        # Check that the simple command works as expected
+        options = [str(ids[self.NODE_ID_STR])]
+        res = self.cli_runner.invoke(export_cmd, options,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0, "The command did not finish "
+                                            "correctly")
+
+        # Check that you can export the various formats
+        # TODO: Why do we also have tcod_parameters as export format?
+        dump_flags = ['-y', '--format']
+        for flag in dump_flags:
+            for format in supported_formats:
+                # with captured_output() as (out, err):
+                options = [flag, format, str(ids[self.NODE_ID_STR])]
+                res = self.cli_runner.invoke(export_cmd, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                  "The command did not finish "
+                                  "correctly")
+
+
+        # The --parameter-data flag is not implemented and it should fail
+        options = ['--parameter-data', '0', str(ids[self.NODE_ID_STR])]
+        res = self.cli_runner.invoke(export_cmd, options,
+                                     catch_exceptions=False)
+        self.assertNotEquals(res.exit_code, 0,
+                          "The command should not finish correctly and"
+                          "return normal termination exit status.")
+
+        # The following flags fail.
+        # We have to see why. The --reduce-symmetry seems to work in
+        # the original code. The other one not.
+        symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
+        for flag in symmetry_flags:
+            options = [flag, str(ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(export_cmd, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+
+        # The following two flags are not implemented and should return
+        # an error:
+        # --dump-aiida-database / --no-dump-aiida-database
+        dump_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
+        for flag in dump_flags:
+            options = [flag, str(ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(export_cmd, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+
+        # The following two flags are not implemented and should return
+        # an error:
+        # --exclude-external-contents / --no-exclude-external-contents
+        external_cont_flags = ['--exclude-external-contents' ,
+                               '--no-exclude-external-contents']
+        for flag in external_cont_flags:
+            options = [flag, str(ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(export_cmd, options,
+                                         catch_exceptions=False)
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+
+        # The following two flags are not implemented and should return
+        # an error:
+        # --gzip / --no-gzip
+        gzip_flags = ['--gzip' , '--no-gzip']
+        for flag in gzip_flags:
+            options = [flag, str(ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(export_cmd, options,
+                                         catch_exceptions=False)
+
+            self.assertNotEquals(res.exit_code, 0,
+                              "The command should not finish correctly and"
+                              "return normal termination exit status.")
+
+        # The --gzip-threshold flag is not implemented and it should fail
+        options = ['--gzip-threshold', '1', str(ids[self.NODE_ID_STR])]
+        res = self.cli_runner.invoke(export_cmd, options,
+                                     catch_exceptions=False)
+        self.assertNotEquals(res.exit_code, 0,
+                          "The command should not finish correctly and"
+                          "return normal termination exit status.")
+
+        # Check that the output to file flags work correctly:
+        # -o, --output
+        output_flags = ['-o', '--output']
+        for flag in output_flags:
+            try:
+                tmpd = tempfile.mkdtemp()
+                filepath = os.path.join(tmpd, 'output_file.txt')
+                options = [flag, filepath, str(ids[self.NODE_ID_STR])]
+                res = self.cli_runner.invoke(export_cmd, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                     "The command should finish correctly."
+                                     "Output: {}".format(res.output_bytes))
+
+                # Try to export it again. It should fail because the
+                # file exists
+                res = self.cli_runner.invoke(export_cmd, options,
+                                             catch_exceptions=False)
+                self.assertNotEquals(res.exit_code, 0,
+                                     "The command should fail because the "
+                                     "file already exists")
+
+                # Now we force the export of the file and it should overwrite
+                # existing files
+                options = [flag, filepath, '-f', str(ids[self.NODE_ID_STR])]
+                res = self.cli_runner.invoke(export_cmd, options,
+                                             catch_exceptions=False)
+                self.assertEquals(res.exit_code, 0,
+                                     "The command should finish correctly."
+                                     "Output: {}".format(res.output_bytes))
+            finally:
+                shutil.rmtree(tmpd)
+
+
+class TestVerdiDataListable:
+
+    def __init__(self):
+        pass
 
     NODE_ID_STR = "node_id"
     EMPTY_GROUP_ID_STR = 'empty_group_id'
@@ -453,7 +615,8 @@ class TestVerdiDataRemote(AiidaTestCase):
                       ' of verdi data remote cat file.txt')
 
 
-class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
+class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
+                              TestVerdiDataExportable):
 
     @staticmethod
     def create_trajectory_data():
@@ -520,6 +683,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
                                 scheduler_type='direct',
                                 workdir='/tmp/aiida')
         new_comp.store()
+        cls.ids = cls.create_trajectory_data()
 
     def setUp(self):
         self.comp = Computer.get('comp')
@@ -533,36 +697,39 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
         self.runner.invoke(trajectory, ['--help'])
 
     def test_data_trajectory_list(self):
-        from aiida.orm.data.array.trajectory import TrajectoryData
+        self.data_listing_test(
+            TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]),
+            self.ids)
 
-        ids = self.__class__.create_trajectory_data()
-        self.data_listing_test(TrajectoryData,
-                               str(ids[TestVerdiDataListable.NODE_ID_STR]), ids)
+    def test_data_trajectory_export(self):
+        from aiida.cmdline.commands.data.trajectory import supported_formats
+        new_supported_formats = list(supported_formats)
+        # TCOD export needs special arguments
+        new_supported_formats.remove('tcod')
+        self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
 
 
-class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
+class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
+                             TestVerdiDataExportable):
 
     @staticmethod
     def create_structure_data():
-        import numpy as np
         from aiida.orm.data.structure import StructureData, Site, Kind
         from aiida.orm.group import Group
 
-        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+        alat = 4.  # angstrom
+        cell = [[alat, 0., 0., ],
+                [0., alat, 0., ],
+                [0., 0., alat, ],
+                ]
 
+        # BaTiO3 cubic structure
         struc = StructureData(cell=cell)
-        struc.append_atom(symbols='Ba', position=(0, 0, 0))
-        struc.append_atom(symbols='Ti', position=(1, 2, 3))
-        struc.append_atom(symbols='O', position=(-1, -2, -4))
-        struc.append_kind(Kind(name='Ba2', symbols="Ba", mass=100.))
-        struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
-        struc.append_kind(
-            Kind(
-                name='Test',
-                symbols=["Ba", "Ti"],
-                weights=[0.2, 0.4],
-                mass=120.))
-        struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
+        struc.append_atom(position=(0., 0., 0.), symbols='Ba')
+        struc.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='Ti')
+        struc.append_atom(position=(alat / 2., alat / 2., 0.), symbols='O')
+        struc.append_atom(position=(alat / 2., 0., alat / 2.), symbols='O')
+        struc.append_atom(position=(0., alat / 2., alat / 2.), symbols='O')
         struc.store()
 
         # Create 2 groups and add the data to one of them
@@ -589,6 +756,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
                                 scheduler_type='direct',
                                 workdir='/tmp/aiida')
         new_comp.store()
+        cls.ids = cls.create_structure_data()
 
     def setUp(self):
         from aiida.orm import Computer
@@ -603,10 +771,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
         self.runner.invoke(cif, ['--help'])
 
     def test_data_structure_list(self):
-        from aiida.orm.data.structure import StructureData
+        self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
-        ids = self.__class__.create_structure_data()
-        self.data_listing_test(StructureData, 'Ba2OTi', ids)
+    def test_data_structure_export(self):
+        from aiida.cmdline.commands.data.structure import supported_formats
+        self.data_export_test(StructureData, self.ids, supported_formats)
 
 
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable):
@@ -694,8 +863,6 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable):
         This method tests that the Cif import works as expected with all
         possible flags and arguments.
         """
-        from cStringIO import StringIO
-
         # Check format flag
         format_flags = ['-f', '--format']
         for flag in format_flags:
@@ -724,7 +891,6 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable):
                     ['verdi', 'data', 'cif', 'import', flag,
                      'cif', '--file', f.name], stdin=f)
 
-    @skip("")
     def test_data_cif_export(self):
         """
         This method checks if the Cif export works as expected with all

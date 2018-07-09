@@ -95,13 +95,13 @@ def show (**kwargs):
         raise NotImplementedError ("The format {} is not yet implemented"
                                    .format(given_format))
 
-
+supported_formats = ['cif', 'tcod', 'xsf']
 @trajectory.command('export')
 @click.option('-y', '--format',
-              type=click.Choice(['cif', 'tcod', 'xsf']),
+              type=click.Choice(supported_formats),
               default='cif',
               help="Type of the exported file.")
-@click.option('--step', type=click.INT,
+@click.option('--step', 'trajectory_index', type=click.INT,
               default=None,
               help="ID of the trajectory step. If none is supplied, all"
               " steps are explored.")

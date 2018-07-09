@@ -75,21 +75,25 @@ class TestVerdiDataListable():
         from aiida.cmdline.commands.data.cif import cif_list
         from aiida.cmdline.commands.data.structure import list_structures
         from aiida.cmdline.commands.data.trajectory import list_trajections
+        from aiida.cmdline.commands.data.bands import bands_list
 
         from aiida.cmdline.commands.data.structure import project_headers as p_str
         from aiida.cmdline.commands.data.cif import project_headers as p_cif
         from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
+        from aiida.cmdline.commands.data.bands import project_headers as p_bands
 
         headers_mapping = {
             CifData: p_cif,
             StructureData: p_str,
-            TrajectoryData: p_tr
+            TrajectoryData: p_tr,
+            BandsData: p_bands
         }
 
         datatype_mapping = {
             CifData: cif_list,
             StructureData: list_structures,
-            TrajectoryData: list_trajections
+            TrajectoryData: list_trajections,
+            BandsData: bands_list
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
@@ -102,7 +106,6 @@ class TestVerdiDataListable():
         # Check that the normal listing works as expected
         res = self.cli_runner.invoke(listing_cmd, [],
                                      catch_exceptions=False)
-
         self.assertIn(search_string, res.output_bytes,
                       'The string {} was not found in the listing'
                       .format(search_string))
@@ -233,50 +236,67 @@ class TestVerdiDataArray(AiidaTestCase):
                                   "The command did not finish "
                                   "correctly")
 
-@wf
-def connect_structure_bands(structure):
-    alat = 4.
-    cell = np.array([[alat, 0., 0.],
-                        [0., alat, 0.],
-                        [0., 0., alat],
-                        ])
-
-    k = KpointsData()
-    k.set_cell(cell)
-    k.set_kpoints_path([('G','M',2)])
-
-    b = BandsData()
-    b.set_kpointsdata(k)
-    b.set_bands([[1.0,2.0],[3.0,4.0]])
-
-    k.store()
-    b.store()
-    return b
-
-class TestVerdiDataBands(AiidaTestCase):
+class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     """
     Testing verdi data bands 
     """
 
+    @staticmethod
+    def create_structure_bands():
+        alat = 4.  # angstrom
+        cell = [[alat, 0., 0., ],
+                [0., alat, 0., ],
+                [0., 0., alat, ],
+                ]
+        s = StructureData(cell=cell)
+        s.append_atom(position=(0., 0., 0.), symbols='Fe')
+        s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
+        s.store()
+
+        @wf
+        def connect_structure_bands(structure):
+            alat = 4.
+            cell = np.array([[alat, 0., 0.],
+                             [0., alat, 0.],
+                             [0., 0., alat],
+                             ])
+
+            k = KpointsData()
+            k.set_cell(cell)
+            k.set_kpoints_path([('G', 'M', 2)])
+
+            b = BandsData()
+            b.set_kpointsdata(k)
+            b.set_bands([[1.0, 2.0], [3.0, 4.0]])
+
+            k.store()
+            b.store()
+
+            return b
+
+        b = connect_structure_bands(s)
+
+        # Create 2 groups and add the data to one of them
+        g_ne = Group(name='non_empty_group')
+        g_ne.store()
+        g_ne.add_nodes(b)
+
+        g_e = Group(name='empty_group')
+        g_e.store()
+
+        return {
+            TestVerdiDataListable.NODE_ID_STR: b.id,
+            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+        }
+
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataBands, cls).setUpClass()
+        cls.ids = cls.create_structure_bands()
 
     def setUp(self):
         self.cli_runner = CliRunner()
-        
-        alat = 4. # angstrom
-        cell = [[alat, 0., 0.,],
-                [0., alat, 0.,],
-                [0., 0., alat,],
-               ]
-        s = StructureData(cell=cell)
-        s.append_atom(position=(0.,0.,0.), symbols='Fe')
-        s.append_atom(position=(alat/2.,alat/2.,alat/2.), symbols='O')
-
-        s.store()
-        
-        self.b = connect_structure_bands(s)
 
     def test_bandsshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'show', '--help'])
@@ -291,15 +311,11 @@ class TestVerdiDataBands(AiidaTestCase):
             "Sub-command verdi data bands show --help failed.")
 
     def test_bandslist(self):
-        res = self.cli_runner.invoke(bands.list, "",
-                                     catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0,
-                          "The command did not finish "
-                          "correctly")
-        self.assertIn("Fe", res.output_bytes,
-                      'The string Fe was not found in the listing')
- 
-    
+        from aiida.orm.data.array.bands import BandsData
+
+        self.data_listing_test(BandsData, 'FeO', self.ids)
+
+
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
         self.assertIn(
@@ -307,7 +323,7 @@ class TestVerdiDataBands(AiidaTestCase):
             "Sub-command verdi data bands export --help failed.")
 
     def test_bandsexport(self):
-        options = [str(self.b.id)]
+        options = [str(self.ids[TestVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(bands.export, options, 
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,

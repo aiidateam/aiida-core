@@ -295,7 +295,6 @@ class LsfScheduler(aiida.scheduler.Scheduler):
 
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        # pylint: disable=too-many-statements, too-many-branches, fixme
         import string
         import re
 
@@ -454,7 +453,6 @@ fi
 
         :param job_tmpl: a JobTemplate instance with relevant parameters set.
         """
-        # pylint: disable=fixme
         # line to retrieve back the output of the computation (rather than
         # the -f option of bsub that does not always work...)
         # TODO: implement the case when LSB_OUTDIR is not properly defined...
@@ -498,7 +496,6 @@ fi
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=too-many-locals, too-many-statements, too-many-branches
         num_fields = len(self._joblist_fields)
 
         if retval != 0:
@@ -602,7 +599,6 @@ fi
                             year=new_year, month=old_month, day=old_day, hour=old_hour, minute=old_minute)
                         requested_walltime = psd_finish_time - psd_start_time
 
-                    # pylint: disable=invalid-name
                     this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
                 except (TypeError, ValueError):
                     self.logger.warning("Error parsing the time limit " "for job id {}".format(this_job.job_id))

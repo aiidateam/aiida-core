@@ -147,7 +147,6 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements, too-many-branches
         import re
         import string
 
@@ -294,7 +293,6 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        # pylint: disable=too-many-statements, too-many-branches
         if retval != 0:
             self.logger.error("Error in _parse_joblist_output: retval={}; "
                               "stdout={}; stderr={}".format(retval, stdout, stderr))

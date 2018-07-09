@@ -7,8 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=missing-docstring, protected-access, invalid-name, unused-wildcard-import, line-too-long,
-# pylint: disable=fixme, too-many-locals, too-many-lines, wildcard-import
 
 import unittest
 import uuid

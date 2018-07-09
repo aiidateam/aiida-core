@@ -131,14 +131,6 @@ class Scheduler(object):
         postpend_code
         postpend_computer
         """
-        # pylint: disable=fixme
-        # TODO: understand if, in the future, we want to pass more
-        # than one calculation, e.g. for job arrays.
-        # and from scheduler_requirements e.g. for OpenMP? or maybe
-        # TODO: in the future: environment_variables [from calcinfo, possibly,
-        #        and from scheduler_requirements e.g. for OpenMP? or maybe
-        #        the openmp part is better managed in the scheduler_dependent
-        #        part above since it will be machine-dependent]
 
         from aiida.common.exceptions import InternalError
 
@@ -307,8 +299,6 @@ class Scheduler(object):
 
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
-        # pylint: disable=fixme
-        # TODO: Parsing?
 
         command = self._get_detailed_jobinfo_command(jobid=jobid)
         with self.transport:
@@ -336,7 +326,7 @@ stderr:
         """
         raise NotImplementedError
 
-    def getJobs(self, jobs=None, user=None, as_dict=False):
+    def getJobs(self, jobs=None, user=None, as_dict=False):  # pylint: disable=invalid-name
         """
         Get the list of jobs and return it.
 
@@ -351,13 +341,12 @@ stderr:
         Note: typically, only either jobs or user can be specified. See also
         comments in _get_joblist_command.
         """
-        # pylint: disable=invalid-name
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
-            jobdict = {j.job_id: j for j in joblist}
+            jobdict = {job.job_id: job for job in joblist}
             if None in jobdict:
                 raise SchedulerError("Found at least one job without jobid")
             return jobdict

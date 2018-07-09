@@ -111,7 +111,6 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         Args:
            job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        # pylint: disable=too-many-branches, fixme
 
         lines = []
         empty_line = ""

@@ -244,7 +244,6 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements, too-many-branches, fixme
         import string
 
         empty_line = ""
@@ -459,7 +458,6 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=invalid-name, too-many-statements, too-many-branches, fixme
         num_fields = len(self.fields)
 
         # I don't raise because if I pass a list of jobs,
@@ -577,7 +575,6 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             this_job.queue_name = thisjob_dict['partition']
 
             try:
-                # pylint: disable=invalid-name
                 this_job.requested_wallclock_time_seconds = (self._convert_time(thisjob_dict['time_limit']))
             except ValueError:
                 self.logger.warning("Error parsing the time limit " "for job id {}".format(this_job.job_id))

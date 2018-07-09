@@ -14,7 +14,7 @@ import unittest
 
 
 class TestNodeNumberJobResource(unittest.TestCase):
-    # pylint: disable=missing-docstring
+    """Unit tests for the NodeNumberJobResource class."""
 
     def test_init(self):
         """

@@ -127,7 +127,6 @@ class NodeNumberJobResource(JobResource):
 
         Should raise only ValueError or TypeError on invalid parameters.
         """
-        # pylint: disable=too-many-statements, too-many-branches
         super(NodeNumberJobResource, self).__init__()
 
         try:
@@ -376,8 +375,6 @@ class JobTemplate(DefaultFieldsAttributeDict):
         Values are given by aiida.common.datastructures.code_run_modes.
     """
 
-    # pylint: disable=too-many-instance-attributes, fixme
-
     # #TODO: validation key? also call the validate function in the proper
     #        place then.
 
@@ -479,7 +476,6 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``finish_time``: the absolute time at which the job first entered the
          'finished' state, of type datetime.datetime
     """
-    # pylint: disable=too-many-instance-attributes
 
     _default_fields = ('job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state',
                        'job_substate', 'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines',
@@ -502,7 +498,6 @@ class JobInfo(DefaultFieldsAttributeDict):
         :param value: The value to serialise
         :return: The serialised value
         """
-        # pylint: disable=fixme
 
         import datetime
         import pytz

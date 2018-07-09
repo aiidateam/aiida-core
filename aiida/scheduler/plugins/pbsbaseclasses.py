@@ -19,7 +19,6 @@ from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, MachineInfo, No
 
 _LOGGER = logging.getLogger(__name__)
 
-# pylint: disable=fixme, logging-format-interpolation
 
 # This maps PbsPro status letters to our own status list
 
@@ -195,7 +194,6 @@ class PbsBaseClass(Scheduler):
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements, too-many-branches
         import re
         import string
 
@@ -352,8 +350,6 @@ class PbsBaseClass(Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=too-many-locals, too-many-statements, too-many-branches, broad-except,
-        # pylint: disable=too-many-nested-blocks
 
         # I don't raise because if I pass a list of jobs, I get a non-zero status
         # if one of the job is not in the list anymore
@@ -517,10 +513,10 @@ class PbsBaseClass(Scheduler):
                         node.name, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
-                            node.jobIndex = int(data[0])  # pylint: disable=invalid-name
+                            node.jobIndex = int(data[0])
                             node.num_cpus = 1
                         elif len(data) == 2:
-                            node.jobIndex = int(data[0])  # pylint: disable=invalid-name
+                            node.jobIndex = int(data[0])
                             node.num_cpus = int(data[1])
                         else:
                             raise ValueError("Wrong number of pieces: {} "

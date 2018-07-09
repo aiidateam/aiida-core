@@ -27,7 +27,6 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         cls._old_aiida_config_folder = None
         cls._new_aiida_config_folder = tempfile.mkdtemp()
-        print ":", cls._new_aiida_config_folder
 
         cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER
         aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
@@ -128,11 +127,9 @@ class TestVerdiProfileSetup(AiidaTestCase):
         ### delete single profile
         result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
         self.assertIsNone(result.exception)
-        print "delete output: ", result.output
 
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
-        print "list output: ", result.output
 
         self.assertNotIn(self.dummy_profile_list[2], result.output)
         self.assertIsNone(result.exception)

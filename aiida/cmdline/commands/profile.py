@@ -128,6 +128,8 @@ def profile_delete(force, profiles_to_delete):
             continue
 
         postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
+        postgres.dbinfo["user"] = profile.get('AIIDADB_USER')
+        postgres.dbinfo["host"] = profile.get('AIIDADB_HOST')
         postgres.determine_setup()
 
         import json

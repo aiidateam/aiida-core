@@ -90,36 +90,20 @@ def show(nodes, format):
         show_xmgrace(format, nodes)
 
 
+project_headers = ['ID', 'Formula', 'Ctime', 'Label']
+
 
 @bands.command('list')
-@click.option('-e', '--elements', type=click.STRING,
-          cls=MultipleValueOption,
-          default=None,
-          help="Print only the objects that"
-          " contain desired elements")
-@click.option('-eo', '--elements-only', type=click.STRING,
-          cls=MultipleValueOption,
-          default=None,
-          help="Print only the objects that"
-          " contain only the selected elements")
-@click.option('-f', '--formulamode',
-          type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-          default='hill',
-          help="Formula printing mode (if None, does not print the formula)")
-@click.option('-p', '--past-days', type=click.INT,
-          default=None,
-          help="Add a filter to show only datas"
-          " created in the past N days")
-@click.option('-A', '--all-users', is_flag=True, default=False,
-          help="show for all users, rather than only for the"
-          "current user")
-@options.GROUPS()
-def list(elements, elements_only, formulamode, past_days, groups, all_users):
+@list_options
+def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all_users):
     """
     List bands objects
     """
+    # from aiida.orm.data.cif import CifData
     from aiida.backends.utils import QueryFactory
-    from argparse import Namespace 
+    from tabulate import tabulate
+
+    from argparse import Namespace
     args = Namespace()
     args.element = elements
     args.element_only = elements_only
@@ -127,27 +111,31 @@ def list(elements, elements_only, formulamode, past_days, groups, all_users):
     args.past_days = past_days
     args.group_name = None
     if groups is not None:
-        args.group_pk = groups.pk
+        args.group_pk = [group.id for group in groups]
     else:
         args.group_pk = None
     args.all_users = all_users
-    
-    if not is_dbenv_loaded():
-        load_dbenv()
 
     q = QueryFactory()()
-    lst = q.get_bands_and_parents_structure(args)
-    column_length = 19
-    project = ['ID', 'Formula', 'Ctime', 'Label']
-    vsep = " "
-    if lst:
-        to_print = ""
-        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project]) + "\n"
-        for entry in sorted(lst, key=lambda x: int(x[0])):
-            to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
-        echo.echo(to_print)
+    entry_list = q.get_bands_and_parents_structure(args)
+
+    counter = 0
+    bands_list_data = list()
+    if not raw:
+        bands_list_data.append(project_headers)
+    for entry in entry_list:
+        for i in range(0, len(entry)):
+            if isinstance(entry[i], list):
+                entry[i] = ",".join(entry[i])
+        for i in range(len(entry), len(project_headers)):
+            entry.append(None)
+        counter += 1
+    bands_list_data.extend(entry_list)
+    if raw:
+        echo.echo(tabulate(bands_list_data, tablefmt='plain'))
     else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(BandsData))
+        echo.echo(tabulate(bands_list_data, headers="firstrow"))
+        echo.echo("\nTotal results: {}\n".format(counter))
 
 
 @bands.command('export')

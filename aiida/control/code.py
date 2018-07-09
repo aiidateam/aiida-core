@@ -11,8 +11,10 @@ class CodeBuilder(object):
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
-        self._code_spec = kwargs
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
+        self._code_spec = {}
+        for key, value in kwargs.iteritems():
+            self.__setattr__(key, value)
 
     def validate(self, raise_error=True):
         self._err_acc.run(self.validate_code_type)
@@ -57,16 +59,24 @@ class CodeBuilder(object):
 
     @staticmethod
     def from_code(code):
-        """Create CodeBuilder instance from existing code.
+        """Create CodeBuilder from existing code instance.
 
-        Uses set_from_code method.
+        See also :py:func:`~CodeBuilder.get_code_spec`
         """
-        spec = CodeBuilder.get_codespec(code)
+        spec = CodeBuilder.get_code_spec(code)
         return CodeBuilder(**spec)
 
     @staticmethod
-    def get_codespec(code):
-        """Set code attributes from an existing code instance"""
+    def get_code_spec(code):
+        """Get code attributes from existing code instance.
+
+        These attributes can be used to create a new CodeBuilder::
+
+            spec = CodeBuilder.get_code_spec(old_code)
+            builder = CodeBuilder(**spec)
+            new_code = builder.new()
+
+        """
         spec = {}
         spec['label'] = code.label
         spec['description'] = code.description
@@ -118,14 +128,18 @@ class CodeBuilder(object):
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):
-            # store only string of input plugin
-            if key == 'input_plugin' and isinstance(value, PluginParamType):
-                value = value.name
             self._set_code_attr(key, value)
         super(CodeBuilder, self).__setattr__(key, value)
 
     def _set_code_attr(self, key, value):
-        """Set a code attribute if it passes validation."""
+        """Set a code attribute, if it passes validation.
+
+        Checks compatibility with other code attributes.
+        """
+        # store only string of input plugin
+        if key == 'input_plugin' and isinstance(value, PluginParamType):
+            value = value.name
+
         backup = self._code_spec.copy()
         self._code_spec[key] = value
         success, _ = self.validate(raise_error=False)

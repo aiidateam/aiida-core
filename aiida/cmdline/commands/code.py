@@ -297,7 +297,7 @@ def setup_code(non_interactive, **kwargs):
         code.store()
         code.reveal()  # newly setup code shall not be hidden
     except ValidationError as err:
-        echo.echo_critical('unable to store the code: {}. Exiting...'.format(err))
+        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
 
     echo.echo_success('code "{}" stored in DB.'.format(code.label))
     echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
@@ -305,7 +305,7 @@ def setup_code(non_interactive, **kwargs):
 
 @verdi_code.command('duplicate')
 @arguments.CODE()
-@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
+@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to the new code')
 @options.NON_INTERACTIVE()
 @with_dbenv()
 # pylint: disable=unused-argument
@@ -314,10 +314,18 @@ def code_duplicate(code, non_interactive, **kwargs):
     Create duplicate of existing code.
     """
 
-    code_builder = CodeBuilder.from_code(code)
-    new_code = code_builder.new()
-    echo.echo_success("Duplicated code '{}'. New code:".format(code.full_label))
-    echo.echo_success(str(new_code))
+    code_spec = CodeBuilder.get_code_spec(code)
+    code_spec.update(kwargs)
+    new_code = CodeBuilder(**code_spec).new()
+
+    #try:
+    #    code.store()
+    #    code.reveal()  # newly setup code shall not be hidden
+    #except ValidationError as err:
+    #    echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
+
+    echo.echo_success("Duplicated code '{}'.".format(code.full_label))
+    echo.echo_info('New Code: ' + str(new_code))
 
 
 @verdi_code.command()

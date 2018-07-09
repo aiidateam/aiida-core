@@ -32,7 +32,7 @@ class ComputerBuilder(object):
 
         computer.set_name(self._get_and_count('label', used))
         computer.set_description(self._get_and_count('description', used))
-        computer.set_enabled_state(not self._get_and_count('disabled', used))
+        computer.set_enabled_state(self._get_and_count('enabled', used))
         computer.set_hostname(self._get_and_count('hostname', used))
         computer.set_scheduler_type(self._get_and_count('scheduler', used).name)
         computer.set_transport_type(self._get_and_count('transport', used).name)

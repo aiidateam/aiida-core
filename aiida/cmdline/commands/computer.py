@@ -71,10 +71,11 @@ def shouldcall_default_mpiprocs_per_machine(ctx):
     help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
 @options.DESCRIPTION(prompt='Description', cls=InteractiveOption,
                      help="A human-readable description of this computer")
-@click.option('-d', '--disabled', is_flag=True, default=False,
+@click.option('-e/-d', '--enabled/--disabled', is_flag=True, default=True,
     help='if created with the disabled flag, calculations '
-         'associated with it will not be submitted',
-    prompt="Keep the computer disabled?",
+         'associated with it will not be submitted until when it is '
+         're-enabled',
+    prompt="Enable the computer?",
     cls=InteractiveOption,
     # IMPORTANT! Do not specify explicitly type=click.BOOL,
     # Otherwise you would not get a default value when prompting

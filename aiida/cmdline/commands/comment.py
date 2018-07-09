@@ -10,12 +10,14 @@
 """
 This allows to manage comments from command line.
 """
-import sys
+import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline import delayed_load_node as load_node
+from aiida.cmdline.commands import verdi_comment, verdi
+from aiida.cmdline.params import arguments, options
+from aiida.cmdline.utils import decorators, echo, multi_line_input
 
+# pylint: disable=superfluous-parens
 
 
 class Comment(VerdiCommandWithSubcommands):
@@ -27,220 +29,154 @@ class Comment(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        super(Comment, self).__init__()
+
         self.valid_subcommands = {
-            'add': (self.comment_add, self.complete_none),
-            'remove': (self.comment_remove, self.complete_none),
-            'show': (self.comment_show, self.complete_none),
-            'update': (self.comment_update, self.complete_none),
+            'add': (self.cli, self.complete_none),
+            'remove': (self.cli, self.complete_none),
+            'show': (self.cli, self.complete_none),
+            'update': (self.cli, self.complete_none),
         }
 
-    def comment_add(self, *args):
-        """
-        Add comment to a node
-        """
-        import argparse
-        
-        if not is_dbenv_loaded():
-            load_dbenv()
+    def cli(self, *args):
+        # pylint: disable=unused-argument, no-value-for-parameter, no-self-use
+        verdi()
 
-        from aiida.orm.backend import construct_backend
 
-        backend = construct_backend()
-        user = backend.users.get_automatic_user()
+@verdi_comment.command()
+@click.option('--comment', '-c', type=str, required=False)
+@arguments.NODES(required=True)
+@decorators.with_dbenv()
+def add(comment, nodes):
+    """
+    Add comment to one or more nodes in the database
+    """
+    from aiida.orm.backend import construct_backend
 
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Add a comment to a node in the database.')
-        parser.add_argument('pk', metavar='PK', type=int,
-                            help='The pk (an integer) of the node')
-        parser.add_argument('-c', '--comment', type=str, default="",
-                            help='The comment (a string) to be added to the node')
-        parsed_args = parser.parse_args(args)
+    backend = construct_backend()
+    user = backend.users.get_automatic_user()
 
-        comment = parsed_args.comment
+    if not comment:
+        comment = multi_line_input.edit_comment()
 
-        if not comment:
-            print "Write below the comment to be added to the node."
-            print "   # This is a multiline input, press CTRL+D on a"
-            print "   # empty line when you finish"
-            try:
-                newlines = []
-                while True:
-                    input_txt = raw_input()
-                    if input_txt.strip() == '?':
-                        print "\n".join(["  > {}".format(descl) for descl
-                                         in "HELP: {}".format(desc).split('\n')])
-                        continue
-                    else:
-                        newlines.append(input_txt)
-            except EOFError:
-                # Ctrl+D pressed: end of input.
-                pass
-            comment = "\n".join(newlines)
-
-        node = load_node(parsed_args.pk)
+    for node in nodes:
         node.add_comment(comment, user)
 
-    def comment_show(self, *args):
-        """
-        Show the comments of a node
-        """
-        import argparse
+    echo.echo_info("Comment added to node(s) '{}'".format(", ".join([str(node.pk) for node in nodes])))
 
-        if not is_dbenv_loaded():
-            load_dbenv()
 
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Show the comments of a node in the database.')
-        parser.add_argument('-u', '--user', type=str, default=None,
-                            help='Show only the comments of a given user (optional).')
-        parser.add_argument('pk', metavar='PK', type=int,
-                            help='The pk (an integer) of the node.')
-        parser.add_argument('id', metavar='ID', type=int, default=None, nargs='?',
-                            help='The id (an integer) of the comment.')
-        # Note that this is a false description, I'm using the DBComment.pk
-        parsed_args = parser.parse_args(args)
+@verdi_comment.command()
+@options.USER()
+@arguments.NODES()
+@decorators.with_dbenv()
+def show(user, nodes):
+    """
+    Show the comments of (a) node(s) in the database
+    """
+    for node in nodes:
+        all_comments = node.get_comments()
 
-        node = load_node(parsed_args.pk)
-        all_comments = node.get_comments(pk=parsed_args.id)
-
-        if parsed_args.user is not None:
-            to_print = [i for i in all_comments if i['user__email'] == parsed_args.user]
+        if user is not None:
+            to_print = [i for i in all_comments if i['user__email'] == user.email]
             if not to_print:
-                print "Nothing found for user '{}'.".format(parsed_args.user)
-                print "Valid users found for Node {} are: {}.".format(parsed_args.pk,
-                                                                      ", ".join(set(
-                                                                          ["'" + i['user__email'] + "'" for i in
-                                                                           all_comments])))
+                valid_users = ", ".join(set(["'" + i['user__email'] + "'" for i in all_comments]))
+                echo.echo_info("Nothing found for user '{}'.\n"
+                               "Valid users found for Node {} are: {}.".format(user, node.pk, valid_users))
+
         else:
             to_print = all_comments
 
-        if parsed_args.id is not None:
-            to_print = [i for i in to_print if i['pk'] == parsed_args.id]
-
         for i in to_print:
-            print "***********************************************************"
-            print "Comment of '{}' on {}".format(i['user__email'],
-                                                 i['ctime'].strftime("%Y-%m-%d %H:%M"))
-            print "ID: {}. Last modified on {}".format(i['pk'],
-                                                       i['mtime'].strftime("%Y-%m-%d %H:%M"))
-            print ""
-            print "{}".format(i['content'])
-            print ""
+            comment_msg = [
+                "***********************************************************", "Comment of '{}' on {}".format(
+                    i['user__email'], i['ctime'].strftime("%Y-%m-%d %H:%M")), "PK {} ID {}. Last modified on {}".format(
+                        node.pk, i['pk'], i['mtime'].strftime("%Y-%m-%d %H:%M")), "", "{}".format(i['content']), ""
+            ]
+            echo.echo_info("\n".join(comment_msg))
 
         # If there is nothing to print, print a message
         if not to_print:
-            print "No comment found."
+            echo.echo_info("No comments found.")
 
-    def comment_remove(self, *args):
-        """
-        Remove comments. The user can only remove its own comments
-        """
-        # Note: in fact, the user can still manually delete any comment
-        import argparse
 
-        if not is_dbenv_loaded():
-            load_dbenv()
+@verdi_comment.command()
+@click.option(
+    '--all',
+    '-a',
+    'remove_all',
+    default=False,
+    is_flag=True,
+    help='If used, deletes all the comments of the active user attached to the node')
+@options.FORCE()
+@arguments.NODE()
+@click.argument('comment_id', type=int, required=False, metavar='COMMENT_ID')
+@decorators.with_dbenv()
+def remove(remove_all, force, node, comment_id):
+    """
+    Remove comment(s) of a node. The user can only remove their own comments.
 
-        from aiida.orm.backend import construct_backend
+    pk = The pk (an integer) of the node
 
-        backend = construct_backend()
-        user = backend.users.get_automatic_user()
+    id = #ID of the comment to be removed from node #PK
+    """
+    # Note: in fact, the user can still manually delete any comment
+    from aiida.orm.backend import construct_backend
 
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Remove comments of a node.')
-        parser.add_argument('pk', metavar='PK', type=int,
-                            help='The pk (an integer) of the node')
-        parser.add_argument('id', metavar='ID', type=int, default=None, nargs='?',
-                            help='#ID of the comment to be removed from node #PK')
-        parser.add_argument('-a', '--all', action='store_true', default=False,
-                            help='If used, deletes all the comments of the active user attached to the node')
-        parsed_args = parser.parse_args(args)
+    backend = construct_backend()
+    user = backend.users.get_automatic_user()
 
-        if parsed_args.id is None and not parsed_args.all:
-            print "One argument between -a and ID must be provided"
-            sys.exit(1)
-        if parsed_args.id is not None and parsed_args.all:
-            print "Only one between -a and ID should be provided"
-            sys.exit(1)
+    if comment_id is None and not remove_all:
+        echo.echo_error("One argument between -a and ID must be provided")
+        return 101
 
-        node = load_node(parsed_args.pk)
+    if comment_id is not None and remove_all:
+        echo.echo_error("Cannot use -a together with a comment id")
+        return 102
 
-        allowed_trues = ['1', 't', 'true', 'y', 'yes']
-        if parsed_args.all:
-            sys.stdout.write("Delete all comments of user {}? ".format(user))
-            inpread = sys.stdin.readline()
-            do_I_delete = True if inpread.strip().lower() in allowed_trues else False
+    if remove_all:
+        comment_id = None
 
-            if not do_I_delete:
-                print "Not deleting comment. Aborting."
-                sys.exit(1)
-            else:
-                comments = node.get_comment_obj(user=user)
-                for comment in comments:
-                    comment.delete()
-                print("Deleted {} comments.".format(len(comments)))
-
+    if not force:
+        if remove_all:
+            click.confirm("Delete all comments of user {} on node <{}>? ".format(user, node.pk), abort=True)
         else:
-            sys.stdout.write("Delete comment? ")
-            inpread = sys.stdin.readline()
-            do_I_delete = True if inpread.strip().lower() in allowed_trues else False
+            click.confirm("Delete comment? ", abort=True)
 
-            if not do_I_delete:
-                print "Not deleting comment. Aborting."
-                sys.exit(1)
-            else:
-                from aiida.orm.implementation import Comment as CommentOrm
-                c = CommentOrm(id=parsed_args.id, user=user)
-                c.delete()
+    comments = node.get_comment_obj(comment_id=comment_id, user=user)
+    for comment in comments:
+        comment.delete()
+    echo.echo_info("Deleted {} comments.".format(len(comments)))
 
-    def comment_update(self, *args):
-        """
-        Update a comment
-        """
-        import argparse
+    return 0
 
-        if not is_dbenv_loaded():
-            load_dbenv()
 
-        from aiida.orm.backend import construct_backend
-        backend = construct_backend()
-        user = backend.users.get_automatic_user()
+@verdi_comment.command()
+@click.option('--comment', '-c', type=str, required=False)
+@arguments.NODE()
+@click.argument('comment_id', type=int, metavar='COMMENT_ID')
+@decorators.with_dbenv()
+def update(comment, node, comment_id):
+    """
+    Update a comment.
 
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Add a comment to a node in the database.')
-        parser.add_argument('pk', metavar='PK', type=int,
-                            help='The pk (an integer) of the node')
-        parser.add_argument('id', metavar='ID', type=int,
-                            help='Identify the comment to update by ID')
-        parser.add_argument('-c', '--comment', type=str, default=None,
-                            help='The comment (a string) to be added to the node')
-        parsed_args = parser.parse_args(args)
+    id      = The id of the comment
+    comment = The comment (a string) to be added to the node(s)
+    """
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+    user = backend.users.get_automatic_user()
 
-        # read the comment from terminal if it is not on command line
-        if parsed_args.comment is None:
-            print "Write below the comment that you want to save in the database."
-            print "   # This is a multiline input, press CTRL+D on a"
-            print "   # empty line when you finish"
-            try:
-                newlines = []
-                while True:
-                    input_txt = raw_input()
-                    if input_txt.strip() == '?':
-                        print "\n".join(["  > {}".format(descl) for descl
-                                         in "HELP: {}".format(desc).split('\n')])
-                        continue
-                    else:
-                        newlines.append(input_txt)
-            except EOFError:
-                # Ctrl+D pressed: end of input.
-                pass
-            the_comment = "\n".join(newlines)
-        else:
-            the_comment = parsed_args.comment
+    # read the comment from terminal if it is not on command line
+    if comment is None:
+        try:
+            current_comment = node.get_comments(comment_id)[0]
+        except IndexError:
+            echo.echo_error("Comment with id '{}' not found".format(comment_id))
+            return 1
 
-        node = load_node(parsed_args.pk)
-        node._update_comment(the_comment, parsed_args.id, user)
+        comment = multi_line_input.edit_comment(current_comment['content'])
+
+    # pylint: disable=protected-access
+    node._update_comment(comment, comment_id, user)
+
+    return 0

@@ -219,6 +219,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
 
         See if we want that setting a default field to None means deleting it.
     """
+    # pylint: disable=invalid-name
     _default_fields = tuple()
 
     def validate(self):

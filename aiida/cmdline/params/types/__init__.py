@@ -14,7 +14,6 @@ from .nonemptystring import NonemptyStringParamType
 from .path import AbsolutePathParamType
 from .user import UserParamType
 from .plugin import PluginParamType
-
 from .legacy_workflow import LegacyWorkflowParamType
 
 __all__ = [

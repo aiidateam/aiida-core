@@ -119,7 +119,7 @@ class SqlaAuthInfo(AuthInfo):
 
     @property
     def user(self):
-        return self._backend.users._from_dbmodel(self._dbauthinfo.aiidauser)
+        return self._backend.users.from_dbmodel(self._dbauthinfo.aiidauser)
 
     def get_auth_params(self):
         """

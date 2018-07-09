@@ -24,7 +24,7 @@ class SqlaUserCollection(UserCollection):
         """
         return SqlaUser(self, normalize_email(email), first_name, last_name, institution)
 
-    def _from_dbmodel(self, dbuser):
+    def from_dbmodel(self, dbuser):
         return SqlaUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
@@ -42,7 +42,7 @@ class SqlaUserCollection(UserCollection):
         dbusers = dbuser_query.all()
         users = []
         for dbuser in dbusers:
-            users.append(self._from_dbmodel(dbuser))
+            users.append(self.from_dbmodel(dbuser))
         return users
 
 

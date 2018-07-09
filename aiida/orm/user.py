@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Module for the ORM user classes yo
+"""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -43,13 +46,22 @@ class UserCollection(object):
     def find(self, email=None, id=None):
         """
         Final all users matching the given criteria
+
         :param email: An email address to search for
         :return: A collection of users matching the criteria
         """
+        # pylint: disable=no-self-use, invalid-name, redefined-builtin
         from .querybuilder import QueryBuilder
 
         qb = QueryBuilder()
-        qb.append(User, filters={'email': {'==': email}})
+
+        filters = {}
+        if id is not None:
+            filters['id'] = {'==': id}
+        if email is not None:
+            filters['email'] = {'==': email}
+
+        qb.append(User, filters=filters)
         res = [_[0] for _ in qb.all()]
         if res is None:
             return []
@@ -57,6 +69,12 @@ class UserCollection(object):
         return res
 
     def get(self, email):
+        """
+        Get a user using the email address
+        :param email: The user's email address
+        :return: The corresponding user object
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
+        """
         results = self.find(email=email)
         if not results:
             raise exceptions.NotExistent()
@@ -67,12 +85,22 @@ class UserCollection(object):
                 return results[0]
 
     def get_or_create(self, email):
+        """
+        Get the existing user with a given email address or create an unstored one
+        :param email: The user's email address
+        :return: The corresponding user object
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
+        """
         try:
             return False, self.get(email)
         except exceptions.NotExistent:
             return True, self.create(email)
 
     def get_automatic_user(self):
+        """
+        Get the current automatic (default) user
+        :return: The automatic user
+        """
         from aiida.common.utils import get_configured_user_email
 
         email = get_configured_user_email()
@@ -87,14 +115,14 @@ class UserCollection(object):
     def all(self):
         """
         Final all users matching the given criteria
-        :param email:
         :return: A collection of users matching the criteria
         """
+        # pylint: disable=no-self-use
         from .querybuilder import QueryBuilder
 
-        qb = QueryBuilder()
-        qb.append(User)
-        return [_[0] for _ in qb.all()]
+        query = QueryBuilder()
+        query.append(User)
+        return [_[0] for _ in query.all()]
 
 
 class User(object):
@@ -102,12 +130,17 @@ class User(object):
     This is the base class for User information in AiiDA.  An implementing
     backend needs to provide a concrete version.
     """
+    # pylint: disable=invalid-name
+
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, backend):
         self._backend = backend
+
+    def __str__(self):
+        return self.email
 
     @property
     def backend(self):
@@ -236,14 +269,13 @@ class User(object):
         :return: the user full name
         """
         if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name,
-                                       self.email)
+            return "{} {} ({})".format(self.first_name, self.last_name, self.email)
         elif self.first_name:
             return "{} ({})".format(self.first_name, self.email)
         elif self.last_name:
             return "{} ({})".format(self.last_name, self.email)
-        else:
-            return "{}".format(self.email)
+
+        return "{}".format(self.email)
 
     def get_short_name(self):
         """

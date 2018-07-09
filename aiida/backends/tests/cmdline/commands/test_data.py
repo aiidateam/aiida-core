@@ -12,6 +12,7 @@ from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.cif import CifData
+from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.trajectory import TrajectoryData
 
@@ -19,6 +20,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.data import array
 from aiida.cmdline.commands.data import bands 
 from aiida.cmdline.commands.data import cif
+from aiida.cmdline.commands.data import parameter
 from aiida.cmdline.commands.data import structure
 from aiida.cmdline.commands.data import trajectory
 
@@ -301,6 +303,39 @@ class TestVerdiDataBands(AiidaTestCase):
                       'The string [1.0, 3.0] was not found in the bands'
                       'export')
 
+class TestVerdiDataParameter(AiidaTestCase):
+    """
+    Testing verdi data array
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataParameter, cls).setUpClass()
+
+    def setUp(self):
+        self.p = ParameterData()
+        self.p.set_dict({'a':1, 'b':2})
+        self.p.store()
+
+        self.cli_runner = CliRunner()
+
+    def test_parameterhelp(self):
+        output = sp.check_output(['verdi', 'data', 'parameter', 'show', '--help'])
+        self.assertIn(
+            'Usage:', output,
+            "Sub-command verdi data parameter show --help failed.")
+
+    def test_parametershow(self):
+        supported_formats = ['json_date']
+        for format in supported_formats:
+            options = ['--format', format, str(self.p.id)]
+            res = self.cli_runner.invoke(parameter.show, options,
+                                         catch_exceptions=False)
+            self.assertEquals(res.exit_code, 0,
+                              "The command verdi data parameter show did not"
+                              " finish correctly")
+        self.assertIn('"a": 1', res.output_bytes,
+                      'The string "a": 1 was not found in the output'
+                      ' of verdi data parameter show')
 
 class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable):
 

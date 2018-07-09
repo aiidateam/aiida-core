@@ -10,6 +10,7 @@
 """
 This allows to setup and configure a code from command line.
 """
+from functools import partial
 import click
 import tabulate
 
@@ -310,26 +311,122 @@ def setup_code(non_interactive, **kwargs):
     echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
 
 
+def get_default(key, ctx):
+    """
+    Get the default argument using a user instance property
+    :param value: The name of the property to use
+    :param ctx: The click context (which will be used to get the user)
+    :return: The default value, or None
+    """
+    value = getattr(ctx.code_builder, key)
+
+    if value == "":
+        return None
+    return value
+
+
+def get_computer_name(ctx):
+    return getattr(ctx.code_builder, 'computer').name
+
+
+def get_on_computer(ctx):
+    return not getattr(ctx.code_builder, 'is_local')()
+
+
+#pylint: disable=unused-argument
+def set_code_builder(ctx, param, value):
+    """Set the code spec for defaults of following options."""
+    ctx.code_builder = CodeBuilder.from_code(value)
+    return value
+
+
 @verdi_code.command('duplicate')
-@arguments.CODE()
-@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to the new code')
+@arguments.CODE(callback=set_code_builder)
+@options.LABEL(
+    prompt='Label', cls=InteractiveOption, help='Label for new code', contextual_default=partial(get_default, 'label'))
+@options.DESCRIPTION(
+    prompt='Description',
+    cls=InteractiveOption,
+    help='A human-readable description of this code',
+    contextual_default=partial(get_default, 'description'))
+@options.INPUT_PLUGIN(
+    prompt='Default calculation input plugin',
+    cls=InteractiveOption,
+    contextual_default=partial(get_default, 'input_plugin'))
+@click.option(
+    '--on-computer/--store-in-db',
+    is_eager=False,
+    prompt='Installed on target computer?',
+    cls=InteractiveOption,
+    contextual_default=get_on_computer)
+@options.COMPUTER(
+    prompt='Computer',
+    cls=InteractiveOption,
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    help='Name of the computer, on which the code resides',
+    contextual_default=get_computer_name)
+@click.option(
+    '--remote-abs-path',
+    prompt='Remote absolute path',
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    type=types.AbsolutePathParamType(dir_okay=False),
+    cls=InteractiveOption,
+    help=('[if --on-computer]: the absolute path to the executable on the remote machine'),
+    contextual_default=partial(get_default, 'remote_abs_path'))
+@click.option(
+    '--code-folder',
+    prompt='Local directory containing the code',
+    type=click.Path(file_okay=False, exists=True, readable=True),
+    required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
+    cls=InteractiveOption,
+    help=('[if --store-in-db]: directory the executable and all other files necessary for running it'),
+    contextual_default=partial(get_default, 'code_folder'))
+@click.option(
+    '--code-rel-path',
+    prompt='Relative path of executable inside directory',
+    type=click.Path(dir_okay=False),
+    required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
+    cls=InteractiveOption,
+    help=('[if --store-in-db]: relative path of the executable ' + \
+          'inside the code-folder'),
+    contextual_default=partial(get_default, 'code_rel_path'))
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@click.pass_context
 @with_dbenv()
 # pylint: disable=unused-argument
-def code_duplicate(code, non_interactive, **kwargs):
+def code_duplicate(ctx, code, non_interactive, **kwargs):
     """
     Create duplicate of existing code.
     """
+    from aiida.common.exceptions import ValidationError
 
-    code_spec = CodeBuilder.get_code_spec(code)
-    code_spec.update(kwargs)
-    new_code = CodeBuilder(**code_spec).new()
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
 
-    #try:
-    #    code.store()
-    #    code.reveal()  # newly setup code shall not be hidden
-    #except ValidationError as err:
-    #    echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
+    if kwargs.pop('on_computer'):
+        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+    else:
+        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+
+    code_builder = ctx.code_builder
+    for key, value in kwargs.iteritems():
+        if value is not None:
+            setattr(code_builder, key, value)
+    new_code = code_builder.new()
+
+    try:
+        new_code.store()
+        new_code.reveal()  # newly setup code shall not be hidden
+    except ValidationError as err:
+        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
 
     echo.echo_success("Duplicated code '{}'.".format(code.full_label))
     echo.echo_info('New Code: ' + str(new_code))

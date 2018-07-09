@@ -3,6 +3,7 @@ import enum
 import os
 
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.utils.error_accumulator import ErrorAccumulator
 
 
@@ -43,7 +44,7 @@ class CodeBuilder(object):
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
-        code.set_input_plugin_name(self._get_and_count('input_plugin', used).name)
+        code.set_input_plugin_name(self._get_and_count('input_plugin', used))
         code.set_prepend_text(self._get_and_count('prepend_text', used))
         code.set_append_text(self._get_and_count('append_text', used))
 
@@ -53,6 +54,36 @@ class CodeBuilder(object):
                 ", ".join(sorted(passed_keys - used))))
 
         return code
+
+    @staticmethod
+    def from_code(code):
+        """Create CodeBuilder instance from existing code.
+
+        Uses set_from_code method.
+        """
+        spec = CodeBuilder.get_codespec(code)
+        return CodeBuilder(**spec)
+
+    @staticmethod
+    def get_codespec(code):
+        """Set code attributes from an existing code instance"""
+        spec = {}
+        spec['label'] = code.label
+        spec['description'] = code.description
+        spec['input_plugin'] = code.get_input_plugin_name()
+        spec['prepend_text'] = code.get_prepend_text()
+        spec['append_text'] = code.get_append_text()
+
+        if code.is_local():
+            spec['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+            spec['code_folder'] = code.get_code_folder()
+            spec['code_rel_path'] = code.get_code_rel_path()
+        else:
+            spec['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+            spec['computer'] = code.get_remote_computer()
+            spec['remote_abs_path'] = code.get_remote_exec_path()
+
+        return spec
 
     def __getattr__(self, key):
         """Access code attributes used to build the code"""
@@ -87,6 +118,9 @@ class CodeBuilder(object):
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):
+            # store only string of input plugin
+            if key == 'input_plugin' and isinstance(value, PluginParamType):
+                value = value.name
             self._set_code_attr(key, value)
         super(CodeBuilder, self).__setattr__(key, value)
 

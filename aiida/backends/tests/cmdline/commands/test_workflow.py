@@ -13,6 +13,11 @@ def debug_msg(result):
 def format_pk(workflow):
     return '(pk: {})'.format(workflow.pk)
 
+
+def format_wf_for_list(workflow):
+    return '{} {}'.format(workflow.__class__.__name__, format_pk(workflow))
+
+
 class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     @classmethod
@@ -36,23 +41,23 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
     def test_workflow_list_default(self):
         result = self.runner.invoke(workflow_list, [])
         self.assertIsNone(result.exception, msg=debug_msg(result))
-        self.assertIn(format_pk(self.workflow), result.output)
-        self.assertIn(format_pk(self.other_workflow), result.output)
-        self.assertNotIn(format_pk(self.done_workflow), result.output)
+        self.assertIn(format_wf_for_list(self.workflow), result.output)
+        self.assertIn(format_wf_for_list(self.other_workflow), result.output)
+        self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_workflows(self):
         result = self.runner.invoke(workflow_list, ['--workflows={}'.format(self.workflow.pk)])
         self.assertIsNone(result.exception, msg=debug_msg(result))
-        self.assertIn(format_pk(self.workflow), result.output)
-        self.assertNotIn(format_pk(self.other_workflow), result.output)
-        self.assertNotIn(format_pk(self.done_workflow), result.output)
+        self.assertIn(format_wf_for_list(self.workflow), result.output)
+        self.assertNotIn(format_wf_for_list(self.other_workflow), result.output)
+        self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_states(self):
         result = self.runner.invoke(workflow_list, ['--all-states'])
         self.assertIsNone(result.exception, msg=debug_msg(result))
-        self.assertIn(format_pk(self.workflow), result.output)
-        self.assertIn(format_pk(self.other_workflow), result.output)
-        self.assertIn(format_pk(self.done_workflow), result.output)
+        self.assertIn(format_wf_for_list(self.workflow), result.output)
+        self.assertIn(format_wf_for_list(self.other_workflow), result.output)
+        self.assertIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_depth(self):
         results = []

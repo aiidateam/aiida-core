@@ -16,7 +16,7 @@ class ShebangParamType(StringParamType):
         if newval is None:
             return None
         if not newval.startswith('#!'):
-            self.fail('The shebang line should start with the two caracters #!')
+            self.fail('The shebang line should start with the two caracters #!, it is instead: {}'.format(newval))
         return newval
 
     def __repr__(self):

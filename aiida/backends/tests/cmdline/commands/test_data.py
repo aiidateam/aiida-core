@@ -609,7 +609,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable):
         self.data_listing_test(StructureData, 'Ba2OTi', ids)
 
 
-class TestVerdiDataCif(AiidaTestCase):
+class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable):
 
     valid_sample_cif_str = '''
         data_test
@@ -630,6 +630,31 @@ class TestVerdiDataCif(AiidaTestCase):
         O 0.5 0.5 0.5 .
         H 0.75 0.75 0.75 0
     '''
+
+    def create_cif_data(self):
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+            a = CifData(file=filename,
+                        source={'version': '1234',
+                                'db_name': 'COD',
+                                'id': '0000001'})
+            a.store()
+
+            g_ne = Group(name='non_empty_group')
+            g_ne.store()
+            g_ne.add_nodes(a)
+
+            g_e = Group(name='empty_group')
+            g_e.store()
+
+        return {
+            TestVerdiDataListable.NODE_ID_STR: a.id,
+            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+        }
+
 
     @classmethod
     def setUpClass(cls):
@@ -653,82 +678,15 @@ class TestVerdiDataCif(AiidaTestCase):
     def test_help(self):
         self.runner.invoke(cif, ['--help'])
 
-    @skip("")
-
-    @skip("")
     def test_data_cif_list(self):
         """
         This method tests that the Cif listing works as expected with all
         possible flags and arguments.
         """
+        from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
-            filename = f.name
-            f.write(self.valid_sample_cif_str)
-            f.flush()
-            a = CifData(file=filename,
-                        source={'version': '1234',
-                                'db_name': 'COD',
-                                'id': '0000001'})
-            a.store()
-
-            g_ne = Group(name='non_empty_group')
-            g_ne.store()
-            g_ne.add_nodes(a)
-
-            g_e = Group(name='empty_group')
-            g_e.store()
-
-        # Check that the normal listing works as expected
-        output = sp.check_output(['verdi', 'data', 'cif', 'list'])
-        self.assertIn('C O2', output, 'The Cif formula was not found in '
-                                      'the listing')
-
-        # Check that the past days filter works as expected
-        past_days_flags = ['-p', '--past-days']
-        # past_days_flags = ['-p']
-        for flag in past_days_flags:
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '1'])
-            self.assertIn('C O2', output, 'The Cif formula was not found in '
-                                          'the listing')
-
-            # Check that the normal listing works as expected
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, '0'])
-            self.assertNotIn('C O2', output, 'A not expected Cif formula was '
-                                             'found in the listing')
-
-        # Check that the group filter works as expected
-        group_flags = ['-G', '--groups']
-        for flag in group_flags:
-            # Non empty group
-            for non_empty in ['non_empty_group', str(g_ne.id)]:
-                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, non_empty])
-                self.assertIn('C O2', output, 'The Cif formula was not found in '
-                                              'the listing')
-            # Empty group
-            for empty in ['empty_group', str(g_e.id)]:
-                # Check that the normal listing works as expected
-                output = sp.check_output(['verdi', 'data', 'cif', 'list', flag, empty])
-                self.assertNotIn('C O2', output, 'A not expected Cif formula was '
-                                                 'found in the listing')
-
-            # Group combination
-            for non_empty in ['non_empty_group', str(g_ne.id)]:
-                for empty in ['empty_group', str(g_e.id)]:
-                    output = sp.check_output(
-                        ['verdi', 'data', 'cif', 'list', flag, non_empty,
-                         empty])
-                    self.assertIn('C O2', output,
-                                  'The Cif formula was not found in '
-                                  'the listing')
-
-        # Check raw flag
-        raw_flags = ['-r', '--raw']
-        for flag in raw_flags:
-            output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
-            self.assertNotIn('ID', output)
-            self.assertNotIn('formulae', output)
-            self.assertNotIn('source_uri', output)
+        ids = self.create_cif_data()
+        self.data_listing_test(CifData, 'C O2', ids)
 
     @skip("")
     def test_data_cif_import(self):

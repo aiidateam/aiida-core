@@ -110,7 +110,7 @@ class UpdateSchedulerState(TransportTask):
             # If the job is done, also get detailed job info
             try:
                 detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-            except NotImplementedError:
+            except exceptions.FeatureNotAvailable:
                 detailed_job_info = (
                     u"AiiDA MESSAGE: This scheduler does not implement "
                     u"the routine get_detailed_jobinfo to retrieve "

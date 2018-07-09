@@ -30,7 +30,7 @@ def trajectory(ctx):
     """
     pass
 
-project_headers = ["Id"]
+project_headers = ["Id", "Label"]
 @trajectory.command('list')
 @list_options
 def list_trajections(elements, elements_only, raw, formulamode, past_days, groups, all_users):
@@ -38,17 +38,28 @@ def list_trajections(elements, elements_only, raw, formulamode, past_days, group
     List trajectories stored in database.
     """
     from aiida.orm.data.array.trajectory import TrajectoryData
-    lst = _list(TrajectoryData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
-    column_length = 19
-    vsep = " "
-    if lst:
-        to_print = ""
-        to_print += vsep.join([ s.ljust(column_length)[:column_length] for s in project_headers]) + "\n"
-        for entry in sorted(lst, key=lambda x: int(x[0])):
-            to_print += vsep.join([ str(s).ljust(column_length)[:column_length] for s in entry]) + "\n"
-        echo.echo(to_print)
+    from tabulate import tabulate
+
+    entry_list = _list(TrajectoryData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
+
+    counter = 0
+    struct_list_data = list()
+    if not raw:
+        struct_list_data.append(project_headers)
+    for entry in entry_list:
+        for i in range(0, len(entry)):
+            if isinstance(entry[i], list):
+                entry[i] = ",".join(entry[i])
+        for i in range(len(entry), len(project_headers)):
+                entry.append(None)
+        counter += 1
+    struct_list_data.extend(entry_list)
+    if raw:
+        echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
-        echo.echo_warning("No nodes of type {} where found in the database".format(TrajectoryData))
+        echo.echo(tabulate(struct_list_data, headers="firstrow"))
+        echo.echo("\nTotal results: {}\n".format(counter))
+
 
 @trajectory.command('show')
 @show_options

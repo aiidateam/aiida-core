@@ -62,16 +62,16 @@ def cif_list(elements, elements_only, raw, formulamode, past_days, groups,
     from aiida.orm.data.cif import CifData
     from tabulate import tabulate
 
-    entry_list = _list(CifData, project, elements,
+    entry_list = _list(CifData, project_headers, elements,
                 elements_only, formulamode, past_days,
                 groups, all_users)
 
-    cif_list_data = list([project])
+    cif_list_data = list([project_headers])
     for entry in entry_list:
         for i in range(0, len(entry)):
             if isinstance(entry[i], list):
                 entry[i] = ",".join(entry[i])
-        for i in range(len(entry), len(project)):
+        for i in range(len(entry), len(project_headers)):
                 entry.append(None)
     cif_list_data.extend(entry_list)
     echo.echo(tabulate(cif_list_data, headers="firstrow"))

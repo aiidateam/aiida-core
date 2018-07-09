@@ -164,7 +164,6 @@ class TestVerdiDataListable():
             options = [flag]
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
-            # output = sp.check_output(['verdi', 'data', 'cif', 'list', flag])
             for header in project_headers:
                 self.assertNotIn(header, res.output_bytes)
 

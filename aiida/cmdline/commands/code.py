@@ -109,19 +109,17 @@ class Code(VerdiCommandWithSubcommands):
         """
         super(Code, self).__init__()
         self.valid_subcommands = {
-            'list': (self.cli, self.complete_none),
-            'show': (self.cli, self.complete_none),
-            'setup': (self.cli, self.complete_none),
-            'rename': (self.cli, self.complete_none),
-            'relabel': (self.cli, self.complete_none),
-            'update': (self.cli, self.complete_none),
-            'delete': (self.cli, self.complete_none),
-            'hide': (self.cli, self.complete_none),
-            'reveal': (self.cli, self.complete_none),
+            'list': (verdi, self.complete_none),
+            'show': (verdi, self.complete_none),
+            'setup': (verdi, self.complete_none),
+            'rename': (verdi, self.complete_none),
+            'duplicate': (verdi, self.complete_none),
+            'relabel': (verdi, self.complete_none),
+            'update': (verdi, self.complete_none),
+            'delete': (verdi, self.complete_none),
+            'hide': (verdi, self.complete_none),
+            'reveal': (verdi, self.complete_none),
         }
-
-    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
-        verdi.main()
 
     # pylint: disable=fixme
     #TODO: This may be partly used in verdi code duplicate
@@ -310,6 +308,23 @@ def setup_code(non_interactive, **kwargs):
 
     echo.echo_success('code "{}" stored in DB.'.format(code.label))
     echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
+
+
+@verdi_code.command('duplicate')
+@arguments.CODE()
+@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
+@options.NON_INTERACTIVE()
+@with_dbenv()
+# pylint: disable=unused-argument
+def code_duplicate(code, non_interactive, **kwargs):
+    """
+    Create duplicate of existing code.
+    """
+
+    code_builder = CodeBuilder.from_code(code)
+    new_code = code_builder.new()
+    echo.echo_success("Duplicated code '{}'. New code:".format(code.full_label))
+    echo.echo_success(str(new_code))
 
 
 @verdi_code.command()

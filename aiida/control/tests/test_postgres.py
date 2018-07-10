@@ -21,7 +21,6 @@ def _try_connect_always_fail(**kwargs):  # pylint: disable=unused-argument
     return False
 
 
-@unittest.skip('wait until #1722 is fixed')
 class PostgresTest(unittest.TestCase):
     """Test the public API provided by the `Postgres` class"""
 

@@ -18,7 +18,6 @@ from aiida.utils.capturing import Capturing
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 
-@unittest.skip('wait until #1722 is fixed')
 class FixtureManagerTestCase(unittest.TestCase):
     """Test the FixtureManager class"""
 

@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Local transport
+"""
+
 ###
 ### GP: a note on the local transport:
 ### I believe that we must not use os.chdir to keep track of the folder
@@ -15,14 +19,15 @@
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+import errno
 import os
 import shutil
 import subprocess
-from aiida.transport.transport import Transport, TransportInternalError
-from aiida.transport.util import FileAttribute
 import StringIO
 import glob
-from aiida.common import aiidalogger
+
+from aiida.transport.transport import Transport, TransportInternalError
+from aiida.transport.util import FileAttribute
 
 
 class LocalTransport(Transport):
@@ -118,7 +123,10 @@ class LocalTransport(Transport):
 
         self._internal_dir = os.path.normpath(new_path)
 
-    def normalize(self, path):
+    def chown(self, path, uid, gid):
+        os.chown(path, uid, gid)
+
+    def normalize(self, path='.'):
         """
         Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
@@ -131,7 +139,8 @@ class LocalTransport(Transport):
         """
         return self.curdir
 
-    def _os_path_split_asunder(self, path):
+    @staticmethod
+    def _os_path_split_asunder(path):
         """
         Used by makedirs. Takes path (a str)
         and returns a list deconcatenating the path
@@ -142,7 +151,8 @@ class LocalTransport(Transport):
             newpath, tail = os.path.split(path)
             if newpath == path:
                 assert not tail
-                if path: parts.append(path)
+                if path:
+                    parts.append(path)
                 break
             parts.append(tail)
             path = newpath
@@ -205,8 +215,8 @@ class LocalTransport(Transport):
         """
         if not path:
             return False
-        else:
-            return os.path.isdir(os.path.join(self.curdir, path))
+
+        return os.path.isdir(os.path.join(self.curdir, path))
 
     def chmod(self, path, mode):
         """
@@ -264,30 +274,31 @@ class LocalTransport(Transport):
                 else:  # the remote path is a directory
                     rename_remote = True
 
-            for s in to_copy_list:
-                if os.path.isfile(s):
+            for source_path in to_copy_list:
+                if os.path.isfile(source_path):
                     if rename_remote:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
-                        r = os.path.join(destination, os.path.split(s)[1])
-                        self.putfile(s, r, overwrite)
+                        r = os.path.join(destination, os.path.split(source_path)[1])
+                        self.putfile(source_path, r, overwrite)
 
                     elif self.isdir(destination):  # one file to copy in '.'
-                        r = os.path.join(destination, os.path.split(s)[1])
-                        self.putfile(s, r, overwrite)
+                        r = os.path.join(destination, os.path.split(source_path)[1])
+                        self.putfile(source_path, r, overwrite)
                     else:  # one file to copy on one file
-                        self.putfile(s, destination, overwrite)
+                        self.putfile(source_path, destination, overwrite)
                 else:
-                    self.puttree(s, destination, dereference, overwrite)
+                    self.puttree(source_path, destination, dereference, overwrite)
 
         else:
             if os.path.isdir(source):
                 self.puttree(source, destination, dereference, overwrite)
             elif os.path.isfile(source):
                 if self.isdir(destination):
-                    r = os.path.join(destination, os.path.split(source)[1])
-                    self.putfile(source, r, overwrite)
+                    full_destination = os.path.join(destination, os.path.split(source)[1])
                 else:
-                    self.putfile(source, destination, overwrite)
+                    full_destination = destination
+
+                self.putfile(source, full_destination, overwrite)
             else:
                 if ignore_nonexisting:
                     pass
@@ -373,11 +384,13 @@ class LocalTransport(Transport):
         the_path = os.path.join(self.curdir, path)
         try:
             shutil.rmtree(the_path)
-        except OSError as e:
-            if e.errno == 20:
+        except OSError as exception:
+            if exception.errno == errno.ENOENT:
+                pass
+            elif exception.errno == errno.ENOTDIR:
                 os.remove(the_path)
             else:
-                raise e
+                raise IOError(exception)
 
     def get(self, source, destination, dereference=True, overwrite=True, ignore_nonexisting=False):
         """
@@ -723,6 +736,7 @@ class LocalTransport(Transport):
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
             preexec_fn=os.setsid)
+
         return proc.stdin, proc.stdout, proc.stderr, proc
 
     def exec_command_wait(self, command, stdin=None):

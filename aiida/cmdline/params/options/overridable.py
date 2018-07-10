@@ -1,9 +1,10 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 """
 .. py:module::overridable
     :synopsis: Convenience class which can be used to defined a set of commonly used options that
         can be easily reused and which improves consistency across the command line interface
 """
+
 import click
 
 
@@ -32,6 +33,8 @@ class OverridableOption(object):
         def ls(folder)
             click.echo(os.listdir(folder))
     """
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, *args, **kwargs):
         """

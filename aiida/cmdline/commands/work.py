@@ -63,7 +63,7 @@ class Work(VerdiCommandWithSubcommands):
 @options.ALL()
 @options.RAW()
 @decorators.with_dbenv()
-def do_list(past_days, all, process_state, finish_status, failed, limit, project, raw):
+def work_list(past_days, all_entries, process_state, finish_status, failed, limit, project, raw):
     """
     Return a list of work calculations that are still running
     """
@@ -79,7 +79,6 @@ def do_list(past_days, all, process_state, finish_status, failed, limit, project
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
     PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
     FINISH_STATUS_KEY = 'attributes.{}'.format(Calculation.FINISH_STATUS_KEY)
-    TERMINAL_STATES = [ProcessState.FINISHED.value, ProcessState.KILLED.value, ProcessState.EXCEPTED.value]
 
     now = timezone.now()
 
@@ -130,11 +129,8 @@ def do_list(past_days, all, process_state, finish_status, failed, limit, project
     table = []
     filters = {}
 
-    if not all:
-        filters[PROCESS_STATE_KEY] = {'!in': TERMINAL_STATES}
-
-    if process_state:
-        filters[PROCESS_STATE_KEY] = {'==': process_state}
+    if process_state and not all_entries:
+        filters[PROCESS_STATE_KEY] = {'in': process_state}
 
     if failed:
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
@@ -195,7 +191,7 @@ def do_list(past_days, all, process_state, finish_status, failed, limit, project
     '-m', '--max-depth', 'max_depth', type=int, default=None,
     help='limit the number of levels to be printed'
 )
-def report(calculations, levelname, order_by, indent_size, max_depth):
+def work_report(calculations, levelname, order_by, indent_size, max_depth):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -281,7 +277,7 @@ def report(calculations, levelname, order_by, indent_size, max_depth):
 
 @verdi_work.command('kill')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def kill(calculations):
+def work_kill(calculations):
     """
     Kill work calculations
     """
@@ -305,7 +301,7 @@ def kill(calculations):
 
 @verdi_work.command('pause')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def pause(calculations):
+def work_pause(calculations):
     """
     Pause running work calculations
     """
@@ -329,7 +325,7 @@ def pause(calculations):
 
 @verdi_work.command('play')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def play(calculations):
+def work_play(calculations):
     """
     Play paused work calculations
     """
@@ -353,7 +349,7 @@ def play(calculations):
 
 @verdi_work.command('watch')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def watch(calculations):
+def work_watch(calculations):
     """
     Watch the state transitions for work calculations
     """
@@ -382,7 +378,7 @@ def watch(calculations):
 
 @verdi_work.command('status')
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def status(calculations):
+def work_status(calculations):
     """
     Print the status of work calculations
     """
@@ -396,7 +392,7 @@ def status(calculations):
 @verdi_work.command('plugins')
 @click.argument('entry_point', type=click.STRING, required=False)
 @decorators.with_dbenv()
-def plugins(entry_point):
+def work_plugins(entry_point):
     """
     Print a list of registered workflow plugins or details of a specific workflow plugin
     """
@@ -418,7 +414,8 @@ def plugins(entry_point):
             for entry_point in entry_points:
                 echo.echo("* {}".format(entry_point))
 
-            echo.echo_info('Pass the entry point as an argument to display detailed information', prefix='\n')
+            echo.echo('')
+            echo.echo_info('Pass the entry point as an argument to display detailed information')
         else:
             echo.echo_error('No workflow plugins found')
 

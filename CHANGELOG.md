@@ -1,5 +1,9 @@
 ## v1.0.0
 
+### Schedulers
+- renamed aiida.daemon.execmanager.job_states to JOB_STATES (conforming to python conventions).
+- abstract method `aiida.scheduler.Scheduler._get_detailed_jobinfo_command()` raises `aiida.common.exceptions.FeatureNotAvailable` (was `NotImplemented`).
+
 ### Daemon
 - Each profile now has its own daemon that can be run completely independently in parallel [[#1217]](https://github.com/aiidateam/aiida_core/pull/1217)
 - Polling based daemon has been replaced with a much faster event-based daemon [[#1067]](https://github.com/aiidateam/aiida_core/pull/1067)
@@ -44,6 +48,19 @@
 - Restored a proper implementation of mutability for `Node` attributes [[#1181]](https://github.com/aiidateam/aiida_core/pull/1181)
 - Restore the correct plugin type string based on the module path of the base `Data` types [[#1192]](https://github.com/aiidateam/aiida_core/pull/1192)
 - Fix bug in `verdi export create` when only exporting computers [[#1448]](https://github.com/aiidateam/aiida_core/pull/1448)
+
+
+## v0.12.1
+
+### Improvements
+- Always use a bash login shell to execute all remote SSH commands, overriding any system default shell [[#1502]](https://github.com/aiidateam/aiida_core/pull/1502)
+- Reduced the size of the distributed package by almost half by removing test fixtures and generating the data on the fly [[#1645]](https://github.com/aiidateam/aiida_core/pull/1645)
+- Removed the explicit dependency upper limit for `scipy` [[#1492]](https://github.com/aiidateam/aiida_core/pull/1492)
+- Resolved various dependency requirement conflicts [[#1488]](https://github.com/aiidateam/aiida_core/pull/1488)
+
+### Minor bug fixes
+- Fixed a bug in `verdi node delete` that would throw an exception for certain cases [[#1564]](https://github.com/aiidateam/aiida_core/pull/1564)
+- Fixed a bug in the `cif` endpoint of the REST API [[#1490]](https://github.com/aiidateam/aiida_core/pull/1490)
 
 
 ## v0.12.0

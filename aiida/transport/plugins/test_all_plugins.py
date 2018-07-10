@@ -120,6 +120,22 @@ def run_for_all_plugins(actual_test_method):
 #        print custom_transport, type(custom_transport)
 
 
+class TestBasicFunctionality(unittest.TestCase):
+    """
+    Tests to check basic functionality of transports.
+    """
+
+    @run_for_all_plugins
+    def test_is_open(self, custom_transport):
+        """Test that the is_open property works."""
+        self.assertFalse(custom_transport.is_open)
+
+        with custom_transport:
+            self.assertTrue(custom_transport.is_open)
+
+        self.assertFalse(custom_transport.is_open)
+
+
 class TestDirectoryManipulation(unittest.TestCase):
     """
     Tests to check, create and delete folders.

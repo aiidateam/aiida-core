@@ -11,10 +11,10 @@ def edit_pre_post(pre=None, post=None, summary=None):
     execution scripts for both codes and computers
     """
     from aiida.cmdline.utils.templates import env
-    t = env.get_template('prepost.bash.tpl')
+    template = env.get_template('prepost.bash.tpl')
     summary = summary or {}
     summary = {k: v for k, v in summary.iteritems() if v}
-    content = t.render(default_pre=pre or '', default_post=post or '', summary=summary)
+    content = template.render(default_pre=pre or '', default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
     if mlinput:
         import re
@@ -30,8 +30,8 @@ def edit_comment(old_cmt=''):
     call up an editor to edit comments to nodes in the database
     """
     from aiida.cmdline.utils.templates import env
-    t = env.get_template('new_cmt.txt.tpl')
-    content = t.render(old_comment=old_cmt)
+    template = env.get_template('new_cmt.txt.tpl')
+    content = template.render(old_comment=old_cmt)
     mlinput = click.edit(content, extension='.txt')
     if mlinput:
         import re

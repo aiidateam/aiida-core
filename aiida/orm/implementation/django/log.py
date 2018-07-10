@@ -76,7 +76,7 @@ class DjangoLog(Log):
         if not filter:
             DbLog.objects.all().delete()
         else:
-            raise NotImplemented(
+            raise NotImplementedError(
                 "Only deleting all by passing an empty filer dictionary is "
                 "currently supported")
 

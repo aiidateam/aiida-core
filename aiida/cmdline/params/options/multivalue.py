@@ -1,3 +1,7 @@
+"""
+Module to define multi value options for click.
+"""
+
 import click
 
 from aiida.cmdline.params import types
@@ -29,9 +33,22 @@ class MultipleValueOption(click.Option):
         self._eat_all_parser = None
 
     def add_to_parser(self, parser, ctx):
+        """
+        Override built in click method that allows us to specify a custom parser
+        to eat up parameters until the following flag or 'endopt' (i.e. --)
+        """
+        # pylint: disable=protected-access
+
         result = super(MultipleValueOption, self).add_to_parser(parser, ctx)
 
         def parser_process(value, state):
+            """
+            The actual function that parses the options
+
+            :param value: The value to parse
+            :param state: The state of the parser
+            """
+            # pylint: disable=invalid-name
             ENDOPTS = '--'
             done = False
             value = [value]

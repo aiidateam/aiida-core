@@ -11,7 +11,6 @@
 This allows to hook-up the AiiDA built-in RESTful API.
 Main advantage of doing this by means of a verdi command is that different
 profiles can be selected at hook-up (-p flag).
-
 """
 import os
 
@@ -20,7 +19,6 @@ import click
 import aiida.restapi
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.cmdline.commands import verdi_restapi
-
 
 DEFAULT_CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
 
@@ -37,11 +35,13 @@ class Restapi(VerdiCommand):
 
 
 @verdi_restapi.command('restapi')
-@click.option('-H', '--host', type=click.STRING, default='127.0.0.1',
-    help='the hostname to use')
-@click.option('-p', '--port', type=click.INT, default=5000,
-    help='the port to use')
-@click.option('-c', '--config-dir', type=click.Path(exists=True), default=DEFAULT_CONFIG_DIR,
+@click.option('-H', '--host', type=click.STRING, default='127.0.0.1', help='the hostname to use')
+@click.option('-p', '--port', type=click.INT, default=5000, help='the port to use')
+@click.option(
+    '-c',
+    '--config-dir',
+    type=click.Path(exists=True),
+    default=DEFAULT_CONFIG_DIR,
     help='the path of the configuration directory')
 def restapi(host, port, config_dir):
     """

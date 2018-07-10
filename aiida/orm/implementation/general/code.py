@@ -10,7 +10,7 @@
 import os
 from abc import abstractmethod
 from aiida.orm.implementation import Node
-from aiida.common.exceptions import (ValidationError, MissingPluginError)
+from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 
@@ -43,20 +43,20 @@ class AbstractCode(Node):
         """
         self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
 
-    def _hide(self):
+    def hide(self):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
         self.set_extra(self.HIDDEN_KEY, True)
 
-    def _reveal(self):
+    def reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
         self.set_extra(self.HIDDEN_KEY, False)
 
-    def _is_hidden(self):
+    def is_hidden(self):
         """
         Determines whether the Code is hidden or not
         """
@@ -79,6 +79,15 @@ class AbstractCode(Node):
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
+        computer_str = self.get_computer_name()
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
+                                                             self.label,
+                                                             computer_str,
+                                                             self.pk, self.uuid)
+
+    def get_computer_name(self):
+        """Get name of this code's computer."""
+
         if self.is_local():
             computer_str = "repository"
         else:
@@ -87,10 +96,36 @@ class AbstractCode(Node):
             else:
                 computer_str = "[unknown]"
 
-        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
-                                                             self.label,
-                                                             computer_str,
-                                                             self.pk, self.uuid)
+        return computer_str
+
+    @property
+    def full_label(self):
+        """Get full label of this code.
+        
+        Returns label of the form <code-label>@<computer-name>.
+        """
+        return '{}@{}'.format(self.label, self.get_computer_name())
+
+    def relabel(self, new_label, raise_error=True):
+        """Relabel this code.
+
+        :param new_label: new code label
+        :param raise_error: Set to False in order to return a list of errors
+            instead of raising them.
+        """
+        suffix = '@{}'.format(self.get_computer_name())
+        if new_label.endswith(suffix):
+            new_label = new_label[:-len(suffix)]
+
+        if '@' in new_label:
+            msg = "Code labels must not contain the '@' symbol"
+            if raise_error:
+                raise InputValidationError(msg)
+            else:
+                return InputValidationError(msg)
+
+        self.label = new_label
+
 
     def get_desc(self):
         """
@@ -541,6 +576,8 @@ class AbstractCode(Node):
             raise ValidationError(
                 "Unable to store the computer: {}.".format(e.message))
         return code
+
+
 
 
 def delete_code(code):

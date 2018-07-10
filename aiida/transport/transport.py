@@ -34,8 +34,8 @@ class Transport(object):
         __init__ method of the Transport base class.
         """
         self._logger = aiida.common.aiidalogger.getChild('transport').getChild(self.__class__.__name__)
-
         self._logger_extra = None
+        self._is_open = False
         self._enters = 0
 
     def __enter__(self):
@@ -56,7 +56,7 @@ class Transport(object):
         >>> # ...closed
 
         """
-        # Keep track od how many times enter has been called
+        # Keep track of how many times enter has been called
         if self._enters == 0:
             self.open()
         self._enters += 1
@@ -69,6 +69,10 @@ class Transport(object):
         self._enters -= 1
         if self._enters == 0:
             self.close()
+
+    @property
+    def is_open(self):
+        return self._is_open
 
     def open(self):
         """

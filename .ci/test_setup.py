@@ -67,6 +67,7 @@ class QuicksetupTestCase(unittest.TestCase):
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
 
+@unittest.skip('wait until #1722 is fixed')
 class SetupTestCase(unittest.TestCase):
     """Test ``verdi setup``"""
 
@@ -96,11 +97,10 @@ class SetupTestCase(unittest.TestCase):
         """
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(_setup_cmd, [
-            'radames_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(
-                self.backend), '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi',
-            '--institution=Scala', '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(
-                self.pg_test.port), '--db_name={}'.format(self.dbname), '--db_user={}'.format(
-                    self.dbuser), '--db_pass={}'.format(self.dbpass), '--no-password'
+            'radames_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(self.backend),
+            '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi', '--institution=Scala',
+            '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(self.pg_test.port),
+            '--db_name={}'.format(self.dbname), '--db_user={}'.format(self.dbuser), '--db_pass={}'.format(self.dbpass)
         ])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
@@ -110,11 +110,10 @@ class SetupTestCase(unittest.TestCase):
         """
         backend_settings.AIIDADB_PROFILE = None
         self.runner.invoke(_setup_cmd, [
-            'radames2_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(
-                self.backend), '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi',
-            '--institution=Scala', '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(
-                self.pg_test.port), '--db_name={}'.format(self.dbname), '--db_user={}'.format(
-                    self.dbuser), '--db_pass={}'.format(self.dbpass), '--no-password'
+            'radames2_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(self.backend),
+            '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi', '--institution=Scala',
+            '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(self.pg_test.port),
+            '--db_name={}'.format(self.dbname), '--db_user={}'.format(self.dbuser), '--db_pass={}'.format(self.dbpass)
         ])
 
         backend_settings.AIIDADB_PROFILE = None

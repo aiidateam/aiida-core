@@ -270,12 +270,12 @@ def _try_subcmd(**kwargs):
 
 
 def _pg_execute_psyco(command, **kwargs):
-    '''
+    """
     executes a postgres commandline through psycopg2
 
     :param command: A psql command line as a str
     :param kwargs: will be forwarded to psycopg2.connect
-    '''
+    """
     from psycopg2 import connect, ProgrammingError
     conn = connect(**kwargs)
     conn.autocommit = True

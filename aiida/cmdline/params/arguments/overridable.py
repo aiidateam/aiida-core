@@ -1,4 +1,4 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 """
 .. py:module::overridable
     :synopsis: Convenience class which can be used to defined a set of commonly used arguments that
@@ -30,6 +30,8 @@ class OverridableArgument(object):
     the function argument name is determined, can be overriden
     """
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(self, *args, **kwargs):
         """
         Store the default args and kwargs
@@ -49,5 +51,5 @@ class OverridableArgument(object):
 
         if args:
             return click.argument(*args, **kw_copy)
-        else:
-            return click.argument(*self.args, **kw_copy)
+
+        return click.argument(*self.args, **kw_copy)

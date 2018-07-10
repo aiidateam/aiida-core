@@ -7,10 +7,6 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 
 _list_options = [
-    click.option('-f', '--formulamode',
-              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-              default='hill',
-              help="Formula printing mode (if None, does not print the formula)"),
     click.option('-p', '--past-days', type=click.INT,
               default=None,
               help="Add a filter to show only datas"

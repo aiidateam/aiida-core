@@ -53,6 +53,10 @@ def show(nodes, given_format):
 
 project_headers = ["Id", "Formulae", "Source.URI"]
 @cif.command('list')
+@click.option('-f', '--formulamode',
+              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+              default='hill',
+              help="Formula printing mode (if None, does not print the formula)")
 @list_options
 def cif_list(raw, formulamode, past_days, groups, all_users):
     """
@@ -138,7 +142,7 @@ def importfile(format, filename):
 
     try:
         node, _ = CifData.get_or_create(os.path.abspath(filename))
-        echo.echo(str(node))
+        echo.echo_success("imported {}".format(str(node)))
     except ValueError as e:
         echo.echo_critical(e)
 

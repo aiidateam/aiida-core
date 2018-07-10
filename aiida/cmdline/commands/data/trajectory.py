@@ -33,7 +33,7 @@ def trajectory(ctx):
 project_headers = ["Id", "Label"]
 @trajectory.command('list')
 @list_options
-def list_trajections(raw, formulamode, past_days, groups, all_users):
+def list_trajections(raw, past_days, groups, all_users):
     """
     List trajectories stored in database.
     """
@@ -41,6 +41,7 @@ def list_trajections(raw, formulamode, past_days, groups, all_users):
     from tabulate import tabulate
     elements = None
     elements_only = False
+    formulamode = None
     entry_list = _list(TrajectoryData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
 
     counter = 0

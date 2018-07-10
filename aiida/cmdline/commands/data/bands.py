@@ -105,6 +105,10 @@ project_headers = ['ID', 'Formula', 'Ctime', 'Label']
           default=None,
           help="Print only the objects that"
           " contain only the selected elements")
+@click.option('-f', '--formulamode',
+              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+              default='hill',
+              help="Formula printing mode (if None, does not print the formula)")
 def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all_users):
     """
     List bands objects

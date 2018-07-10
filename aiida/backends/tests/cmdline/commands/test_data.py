@@ -111,74 +111,74 @@ class TestVerdiDataExportable:
                                   "correctly")
 
 
-        # The --parameter-data flag is not implemented and it should fail
-        options = ['--parameter-data', '0', str(ids[self.NODE_ID_STR])]
-        res = self.cli_runner.invoke(export_cmd, options,
-                                     catch_exceptions=False)
-        self.assertNotEquals(res.exit_code, 0,
-                          "The command should not finish correctly and"
-                          "return normal termination exit status.")
-
-        # The following flags fail.
-        # We have to see why. The --reduce-symmetry seems to work in
-        # the original code. The other one not.
-        symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
-        for flag in symmetry_flags:
-            options = [flag, str(ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(export_cmd, options,
-                                         catch_exceptions=False)
-            self.assertNotEquals(res.exit_code, 0,
-                              "The command should not finish correctly and"
-                              "return normal termination exit status.")
-
-
-        # The following two flags are not implemented and should return
-        # an error:
-        # --dump-aiida-database / --no-dump-aiida-database
-        dump_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
-        for flag in dump_flags:
-            options = [flag, str(ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(export_cmd, options,
-                                         catch_exceptions=False)
-            self.assertNotEquals(res.exit_code, 0,
-                              "The command should not finish correctly and"
-                              "return normal termination exit status.")
-
-
-        # The following two flags are not implemented and should return
-        # an error:
-        # --exclude-external-contents / --no-exclude-external-contents
-        external_cont_flags = ['--exclude-external-contents' ,
-                               '--no-exclude-external-contents']
-        for flag in external_cont_flags:
-            options = [flag, str(ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(export_cmd, options,
-                                         catch_exceptions=False)
-            self.assertNotEquals(res.exit_code, 0,
-                              "The command should not finish correctly and"
-                              "return normal termination exit status.")
-
-
-        # The following two flags are not implemented and should return
-        # an error:
-        # --gzip / --no-gzip
-        gzip_flags = ['--gzip' , '--no-gzip']
-        for flag in gzip_flags:
-            options = [flag, str(ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(export_cmd, options,
-                                         catch_exceptions=False)
-
-            self.assertNotEquals(res.exit_code, 0,
-                              "The command should not finish correctly and"
-                              "return normal termination exit status.")
-
-        # The --gzip-threshold flag is not implemented and it should fail
-        options = ['--gzip-threshold', '1', str(ids[self.NODE_ID_STR])]
-        res = self.cli_runner.invoke(export_cmd, options,
-                                     catch_exceptions=False)
-        self.assertNotEquals(res.exit_code, 0,
-                          "The command should not finish correctly and"
-                          "return normal termination exit status.")
+#        # The --parameter-data flag is not implemented and it should fail
+#        options = ['--parameter-data', '0', str(ids[self.NODE_ID_STR])]
+#        res = self.cli_runner.invoke(export_cmd, options,
+#                                     catch_exceptions=False)
+#        self.assertNotEquals(res.exit_code, 0,
+#                          "The command should not finish correctly and"
+#                          "return normal termination exit status.")
+#
+#        # The following flags fail.
+#        # We have to see why. The --reduce-symmetry seems to work in
+#        # the original code. The other one not.
+#        symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
+#        for flag in symmetry_flags:
+#            options = [flag, str(ids[self.NODE_ID_STR])]
+#            res = self.cli_runner.invoke(export_cmd, options,
+#                                         catch_exceptions=False)
+#            self.assertNotEquals(res.exit_code, 0,
+#                              "The command should not finish correctly and"
+#                              "return normal termination exit status.")
+#
+#
+#        # The following two flags are not implemented and should return
+#        # an error:
+#        # --dump-aiida-database / --no-dump-aiida-database
+#        dump_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
+#        for flag in dump_flags:
+#            options = [flag, str(ids[self.NODE_ID_STR])]
+#            res = self.cli_runner.invoke(export_cmd, options,
+#                                         catch_exceptions=False)
+#            self.assertNotEquals(res.exit_code, 0,
+#                              "The command should not finish correctly and"
+#                              "return normal termination exit status.")
+#
+#
+#        # The following two flags are not implemented and should return
+#        # an error:
+#        # --exclude-external-contents / --no-exclude-external-contents
+#        external_cont_flags = ['--exclude-external-contents' ,
+#                               '--no-exclude-external-contents']
+#        for flag in external_cont_flags:
+#            options = [flag, str(ids[self.NODE_ID_STR])]
+#            res = self.cli_runner.invoke(export_cmd, options,
+#                                         catch_exceptions=False)
+#            self.assertNotEquals(res.exit_code, 0,
+#                              "The command should not finish correctly and"
+#                              "return normal termination exit status.")
+#
+#
+#        # The following two flags are not implemented and should return
+#        # an error:
+#        # --gzip / --no-gzip
+#        gzip_flags = ['--gzip' , '--no-gzip']
+#        for flag in gzip_flags:
+#            options = [flag, str(ids[self.NODE_ID_STR])]
+#            res = self.cli_runner.invoke(export_cmd, options,
+#                                         catch_exceptions=False)
+#
+#            self.assertNotEquals(res.exit_code, 0,
+#                              "The command should not finish correctly and"
+#                              "return normal termination exit status.")
+#
+#        # The --gzip-threshold flag is not implemented and it should fail
+#        options = ['--gzip-threshold', '1', str(ids[self.NODE_ID_STR])]
+#        res = self.cli_runner.invoke(export_cmd, options,
+#                                     catch_exceptions=False)
+#        self.assertNotEquals(res.exit_code, 0,
+#                          "The command should not finish correctly and"
+#                          "return normal termination exit status.")
 
         # Check that the output to file flags work correctly:
         # -o, --output
@@ -690,15 +690,24 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
 
         self.cli_runner = CliRunner()
 
-    def test_help(self):
-        self.runner.invoke(trajectory, ['--help'])
+    def test_deposithelp(self):
+        res = self.runner.invoke(trajectory.deposit, ['--help'])
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data trajectory deposit --help')
 
-    def test_data_trajectory_list(self):
+    def test_showhelp(self):
+        res = self.runner.invoke(trajectory.show, ['--help'])
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data trajecotry show --help')
+
+    def test_list(self):
         self.data_listing_test(
             TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]),
             self.ids)
 
-    def test_data_trajectory_export(self):
+    def test_export(self):
         from aiida.cmdline.commands.data.trajectory import supported_formats
         from aiida.cmdline.commands.data.trajectory import export
 
@@ -775,13 +784,57 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
 
         self.cli_runner = CliRunner()
 
-    def test_help(self):
-        self.runner.invoke(cif, ['--help'])
+    def test_importhelp(self):
+        res = self.runner.invoke(structure.structure_import, ['--help'])
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data import --help')
 
-    def test_data_structure_list(self):
+    def test_import(self):
+        xyzcontent = '''
+        2
+
+        Fe     0.0 0.0 0.0
+        O      2.0 2.0 2.0
+        '''
+        with tempfile.NamedTemporaryFile() as f:
+
+            f.write(xyzcontent)
+            f.flush()
+            options = [f.name,
+                    '--format', 'xyz',
+                    '--vacuum-factor', '1.0',
+                    '--vacuum-addition', '10.0',
+                    '--pbc', '1', '1', '1',
+                    ]
+            res = self.cli_runner.invoke(structure.structure_import,
+                    options, catch_exceptions=False)
+            self.assertIn('Succesfully imported', res.output_bytes,
+                'The string "Succesfully imported" was not found in the output'
+                ' of verdi data structure import.')
+            options.append('--dont-store')
+            res = self.cli_runner.invoke(structure.structure_import,
+                    options, catch_exceptions=False)
+            self.assertIn('PK = None', res.output_bytes,
+                'The string "PK = None" was not found in the output'
+                ' of verdi data structure import with --dont-store option.')
+
+    def test_showhelp(self):
+        res = self.runner.invoke(structure.structure_import, ['--help'])
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data show --help')
+
+    def test_deposithelp(self):
+        res = self.runner.invoke(structure.structure_import, ['--help'])
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data show --help')
+
+    def test_list(self):
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
-    def test_data_structure_export(self):
+    def test_export(self):
         from aiida.cmdline.commands.data.structure import supported_formats
         self.data_export_test(StructureData, self.ids, supported_formats)
 
@@ -855,11 +908,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
 
         self.cli_runner = CliRunner()
 
-    @skip("")
-    def test_help(self):
-        self.runner.invoke(cif, ['--help'])
-
-    def test_data_cif_list(self):
+    def test_list(self):
         """
         This method tests that the Cif listing works as expected with all
         possible flags and arguments.
@@ -868,41 +917,42 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
 
         self.data_listing_test(CifData, 'C O2', self.ids)
 
-    @skip("")
-    def test_data_cif_import(self):
-        """
-        This method tests that the Cif import works as expected with all
-        possible flags and arguments.
-        """
-        # Check format flag
-        format_flags = ['-f', '--format']
-        for flag in format_flags:
-            #  Check invalid format
-            self.assertRaises(
-                Exception, sp.check_output,
-                ['verdi', 'data', 'cif', 'import', flag, 'not_supported'],
-                stderr=sp.STDOUT)
+    def test_showhelp(self):
+        options = ['--help']
+        res = self.cli_runner.invoke(cif.show, options,
+                                     catch_exceptions=False)
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data show help')
 
-        # Check that a file is parsed correctly if passed as an argument
-        format_flags = ['-f', '--format']
-        for flag in format_flags:
-            file_content = "data_test _cell_length_a 10(1)"
+    def test_deposithelp(self):
+        options = ['--help']
+        res = self.cli_runner.invoke(cif.deposit, options,
+                                     catch_exceptions=False)
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data show deposit')
 
-            # Check that you can load a Cif from a file.
-            # with captured_output() as (out, err):
-            with tempfile.NamedTemporaryFile() as f:
-                f.write(file_content)
-                f.flush()
-                sp.check_call(
-                    ['verdi', 'data', 'cif', 'import', flag,
-                     'cif', '--file', f.name])
+    def test_importhelp(self):
+        options = ['--help']
+        res = self.cli_runner.invoke(cif.importfile, options,
+                                     catch_exceptions=False)
+        self.assertIn('Usage:', res.output_bytes,
+                'The string "Usage: " was not found in the output'
+                ' of verdi data import help')
 
-                # Check that you can load a Cif from STDIN
-                sp.check_call(
-                    ['verdi', 'data', 'cif', 'import', flag,
-                     'cif', '--file', f.name], stdin=f)
+    def test_import(self):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.valid_sample_cif_str)
+            f.flush()
+            options = [f.name, '--format', 'cif']
+            res = self.cli_runner.invoke(cif.importfile, options,
+                                         catch_exceptions=False)
+            self.assertIn('imported uuid', res.output_bytes,
+                'The string "imported uuid" was not found in the output'
+                ' of verdi data import.')
 
-    def test_data_cif_export(self):
+    def test_export(self):
         """
         This method checks if the Cif export works as expected with all
         possible flags and arguments.
@@ -1007,11 +1057,13 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.assertIn('No valid UPF pseudopotential', res.output_bytes,
                       'The string "No valid UPF pseudopotential" was not'
                       ' found in the output of verdi data upf listfamilies')
+
     def test_importhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'import', '--help'])
         self.assertIn(
             'Usage:', output,
             "Sub-command verdi data upf listfamilies --help failed.")
+
     def test_import(self):
         options = [self.this_folder + '/'+self.pseudos_dir + '/' +
                 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF',

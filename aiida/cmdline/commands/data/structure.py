@@ -63,6 +63,10 @@ def show(nodes, given_format):
 project_headers = ["Id", "Label", "Kinds", "Sites"]
 @structure.command('list')
 @list_options
+@click.option('-f', '--formulamode',
+              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+              default='hill',
+              help="Formula printing mode (if None, does not print the formula)")
 @click.option('-e', '--elements', type=click.STRING,
           cls=MultipleValueOption,
           default=None,
@@ -301,10 +305,10 @@ def _import_ase(filename, **kwargs):
         echo.echo_critical(e)
 
 @structure.command('import')
-@click.option('--file', 'filename',
-              type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-              help="Path of the imported file. Reads from standard"
-              " input if not specified")
+@click.argument('filename',
+                type=click.Path(exists=True,
+                    dir_okay=False,
+                    resolve_path=True))
 @click.option('-f', '--format', 'given_format',
               type=click.Choice(['ase', 'pwi', 'xyz']),
               default='xyz',
@@ -335,11 +339,6 @@ def structure_import(filename, given_format, vacuum_factor, vacuum_addition,
     """
     Import structure
     """
-    if not is_dbenv_loaded():
-        load_dbenv()
-    if not filename:
-        filename = "/dev/stdin"
-    
     args = {}
     if vacuum_factor is not None:
         args['vacuum_factor'] = vacuum_factor

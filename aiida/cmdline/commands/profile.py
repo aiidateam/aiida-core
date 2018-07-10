@@ -104,27 +104,27 @@ def profile_setdefault(profile_name):
 
 @verdi_profile.command("delete")
 @options.FORCE(help='to skip any questions/warnings about loss of data')
-@click.argument('profiles_to_delete', nargs=-1, type=click.STRING)
-def profile_delete(force, profiles_to_delete):
+@click.argument('profiles', nargs=-1, type=click.STRING)
+def profile_delete(force, profiles):
     """
-    Delete profile from aiida config file along with its associated
-    database and repository.
-
-    :param profiles_to_delete: list of profiles separated by space
+    Delete PROFILES separated by space from aiida config file
+    along with its associated database and repository.
     """
     from aiida.common.setup import get_or_create_config, update_config
     import os.path
     from urlparse import urlparse
 
-    confs = get_or_create_config()
-    profiles = confs.get('profiles', {})
-    users = [profiles[name].get('AIIDADB_USER', '') for name in profiles.keys()]
+    print "profiles:", profiles
 
-    for profile_to_delete in profiles_to_delete:
+    confs = get_or_create_config()
+    available_profiles = confs.get('profiles', {})
+    users = [available_profiles[name].get('AIIDADB_USER', '') for name in available_profiles.keys()]
+
+    for profile_name in profiles:
         try:
-            profile = profiles[profile_to_delete]
+            profile = available_profiles[profile_name]
         except KeyError:
-            echo.echo_info("Profile '{}' does not exist".format(profile_to_delete))
+            echo.echo_info("Profile '{}' does not exist".format(profile_name))
             continue
 
         postgres = Postgres(port=profile.get('AIIDADB_PORT'), interactive=True, quiet=False)
@@ -170,7 +170,7 @@ def profile_delete(force, profiles_to_delete):
 
         if force or click.confirm("Delete configuration for profile '{}'?\n" \
                                   "WARNING: Permanently removes profile from the list of AiiDA profiles." \
-                                          .format(profile_to_delete)):
-            echo.echo_info("Deleting configuration for profile '{}'.".format(profile_to_delete))
-            del profiles[profile_to_delete]
+                                          .format(profile_name)):
+            echo.echo_info("Deleting configuration for profile '{}'.".format(profile_name))
+            del available_profiles[profile_name]
             update_config(confs)

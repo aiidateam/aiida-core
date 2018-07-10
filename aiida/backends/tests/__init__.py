@@ -62,6 +62,7 @@ db_test_list = {
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
         'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
         'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],
+        'cmdline.commands.profile': ['aiida.backends.tests.cmdline.commands.test_profile'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],

@@ -62,8 +62,6 @@ def shouldcall_default_mpiprocs_per_machine(ctx):
 
     return JobResourceClass.accepts_default_mpiprocs_per_machine()
 
-## Todo: reenable interactive and mixed tests
-
 @verdi_computer.command('setup')
 @click.pass_context
 @options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())

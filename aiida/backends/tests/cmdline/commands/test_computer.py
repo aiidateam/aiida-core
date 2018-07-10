@@ -94,14 +94,12 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.runner = CliRunner()
 
     def test_help(self):
-        self.runner.invoke(setup_computer, ['--help'])
+        self.runner.invoke(setup_computer, ['--help'], catch_exceptions=False)
 
     def test_reachable(self):
         import subprocess as sp
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
         self.assertIn('Usage:', output)
-
-    # TODO: test that mpiprocs-per-machine is not requested e.g. for SGE
 
     def test_interactive(self):
         from aiida.orm import Computer
@@ -254,7 +252,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_optional_default_mpiprocs(self):
         """
-        Test 'verdi setup' and check that if is ok not to specify mpiprocs-per-machine
+        Check that if is ok not to specify mpiprocs-per-machine
         """
         from aiida.orm import Computer
 
@@ -271,7 +269,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_optional_default_mpiprocs_2(self):
         """
-        Test 'verdi setup' and check that if is the specified value is zero, it means unspecified
+        Check that if is the specified value is zero, it means unspecified
         """
         from aiida.orm import Computer
 
@@ -288,7 +286,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_optional_default_mpiprocs_3(self):
         """
-        Test 'verdi setup' and check that it fails for a negative number of mpiprocs
+        Check that it fails for a negative number of mpiprocs
         """
         options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_3'})
         options_dict['mpiprocs-per-machine'] = -1
@@ -300,8 +298,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_wrong_transport_fail(self):
         """
-        Test 'verdi setup' and check that if fails as expected
-        for an unknown transport
+        Check that if fails as expected for an unknown transport
         """
         options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
         options_dict['transport'] = 'unknown_transport'
@@ -314,8 +311,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_wrong_scheduler_fail(self):
         """
-        Test 'verdi setup' and check that if fails as expected
-        for an unknown transport
+        Check that if fails as expected for an unknown transport
         """
         options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
         options_dict['scheduler'] = 'unknown_scheduler'
@@ -327,8 +323,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_invalid_shebang_fail(self):
         """
-        Test 'verdi setup' and check that if fails as expected
-        for an unknown transport
+        Check that if fails as expected for an unknown transport
         """
         options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
         options_dict['shebang'] = '/bin/bash' # Missing #! in front
@@ -340,8 +335,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_invalid_mpirun_fail(self):
         """
-        Test 'verdi setup' and check that if fails as expected
-        for an unknown transport
+        Check that if fails as expected for an unknown transport
         """
         options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
         options_dict['mpirun-command'] = 'mpirun -np {unknown_key}'

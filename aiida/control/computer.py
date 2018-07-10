@@ -7,8 +7,11 @@ class ComputerBuilder(object):
     """Build a computer with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
-        self._computer_spec = kwargs
+        self._computer_spec = {}
         self._err_acc = ErrorAccumulator(self.ComputerValidationError)
+
+        for key, value in kwargs.items():
+            self.__setattr__(key, value)
 
     def validate(self, raise_error=True):
         """

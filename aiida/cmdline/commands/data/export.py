@@ -5,8 +5,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 
 
-_export_options = [
-    click.option('--reduce-symmetry/--no-reduce-symmetry', 'reduce_symmetry',
+_export_options = [ click.option('--reduce-symmetry/--no-reduce-symmetry', 'reduce_symmetry',
                  is_flag=True,
                  default=None,
                  help='Do (default) or do not perform symmetry reduction.'),
@@ -55,7 +54,7 @@ def _export(node, output_fname, fileformat, other_args={}, overwrite=False):
 
     :param node: the Data node to print or store on disk
     :param output_fname: The filename to store the main file. If empty or
-    None, print instead
+            None, print instead
     :param fileformat: a string to pass to the _exportstring method
     :param other_args: a dictionary with additional kwargs to pass to _exportstring
     :param overwrite: if False, stops if any file already exists (when output_fname

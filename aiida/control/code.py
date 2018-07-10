@@ -49,8 +49,8 @@ class CodeBuilder(object):
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(
-                ", ".join(sorted(passed_keys - used))))
+            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(", ".join(
+                sorted(passed_keys - used))))
 
         return code
 

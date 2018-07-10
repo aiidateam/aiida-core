@@ -361,8 +361,7 @@ class NodeTreePrinter(object):
 @click.option('-c', '--follow-calls', is_flag=True, help='follow call links downwards when deleting')
 # Commenting also the option for follow returns. This is dangerous for the inexperienced user.
 #@click.option('-r', '--follow-returns', is_flag=True, help='follow return links downwards when deleting')
-@click.option(
-    '-n', '--dry-run', is_flag=True, help='dry run, does not delete')
+@click.option('-n', '--dry-run', is_flag=True, help='dry run, does not delete')
 @click.option('-v', '--verbose', is_flag=True, help='print individual nodes marked for deletion.')
 @options.NON_INTERACTIVE()
 @with_dbenv()

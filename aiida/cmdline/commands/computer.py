@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import click
+"""`verdi computer` commands"""
 import sys
+import click
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -260,7 +261,6 @@ def computer_list(only_usable, parsable, all_comps):
     List available computers
     """
     from aiida.orm.computer import Computer as AiiDAOrmComputer
-    from aiida.orm import backend
     from aiida.orm.backend import construct_backend
 
     backend = construct_backend()
@@ -317,7 +317,7 @@ def computer_list(only_usable, parsable, all_comps):
             else:
                 if (not only_usable) or is_usable:
                     echo.echo(click.style("{} ".format(symbol), fg=color), nl=False)
-                    echo.echo(click.style("{} ".format(name), bold=True, fg=color), nl=False),
+                    echo.echo(click.style("{} ".format(name), bold=True, fg=color), nl=False)
                     echo.echo(click.style("{}{}".format(enabled_str, configured_str), fg=color))
 
     else:
@@ -331,45 +331,36 @@ def computer_show(computer):
     """
     Show information on a given computer
     """
-    from aiida.common.exceptions import NotExistent
-
-    try:
-        computer = get_computer(computer)
-    except NotExistent:
-        echo.echo_critical("No computer in the DB with name {}.".format(computer))
-    echo.echo(computer.full_text_info)
+    return echo.echo(computer.full_text_info)
 
 
 @verdi_computer.command('rename')
-@arguments.COMPUTER('OLD-NAME')
-@arguments.LABEL('NEW-NAME')
+@arguments.COMPUTER()
+@arguments.LABEL('NEW_NAME')
 @with_dbenv()
-def computer_rename(oldname, newname):
+def computer_rename(computer, new_name):
     """
     Rename a computer
     """
-    from aiida.common.exceptions import (NotExistent, UniquenessError, ValidationError)
+    from aiida.common.exceptions import UniquenessError, ValidationError
 
-    if oldname == newname:
-        echo.echo_critical("The initial and final name are the same.")
+    old_name = computer.get_name()
 
-    try:
-        computer = self.get_computer(name=oldname)
-    except NotExistent:
-        echo.echo_critical("No computer exists with name '{}'".format(oldname))
+    if old_name == new_name:
+        echo.echo_critical("The old and new names are the same.")
 
     try:
-        computer.set_name(newname)
+        computer.set_name(new_name)
         computer.store()
-    except ValidationError as e:
-        echo.echo_critical("Invalid input! {}".format(e.message))
-    except UniquenessError as e:
+    except ValidationError as error:
+        echo.echo_critical("Invalid input! {}".format(error.message))
+    except UniquenessError as error:
         echo.echo_critical("Uniqueness error encountered! Probably a "
                            "computer with name '{}' already exists"
-                           "".format(newname))
-        echo.echo_critical("(Message was: {})".format(e.message))
+                           "".format(new_name))
+        echo.echo_critical("(Message was: {})".format(error.message))
 
-    echo.echo_success("Computer '{}' renamed to '{}'".format(oldname, newname))
+    echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
 
 @verdi_computer.command('test')
@@ -378,8 +369,8 @@ def computer_rename(oldname, newname):
     '--user',
     type=types.UserParamType(),
     required=False,
-    help="Test the connection for a given AiiDA user."
-    "If not specified, uses the current "
+    help="Test the connection for a given AiiDA user, specified by"
+    "their email address. If not specified, uses the current "
     "default user.",
 )
 @click.option(
@@ -398,37 +389,23 @@ def computer_test(user, print_traceback, computer):
     It tries to connect, to get the list of calculations on the queue and
     to perform other tests.
     """
-    import argparse
     import traceback
     from aiida.common.exceptions import NotExistent
     from aiida.orm.backend import construct_backend
 
     backend = construct_backend()
 
-    user_email = user
-
-    try:
-        computer = get_computer(name=computer)
-    except NotExistent:
-        echo.echo_critical("No computer exists with name '{}'".format(computer))
-
-    if user_email is None:
+    # Set a user automatically if one is not specified in the command line
+    if user is None:
         user = backend.users.get_automatic_user()
-    else:
-        user_list = backend.users.find(email=user_email)
-        # If no user is found
-        if not user_list:
-            echo.echo_critical("No user with email '{}' in the " "database.".format(user_email))
-        user = user_list[0]
 
-    echo.echo("Testing computer '{}' for user {}...".format(computer, user.email))
+    echo.echo("Testing computer '{}' for user {}...".format(computer.get_name(), user.email))
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
         echo.echo_critical("User with email '{}' is not yet configured "
-                           "for computer '{}' yet.".format(user.email, computer))
+                           "for computer '{}' yet.".format(user.email, computer.get_name()))
 
-    # Correct way to do this with click.echo?
     warning_string = None
     if not authinfo.enabled:
         warning_string = ("** NOTE! Computer is disabled for the "
@@ -451,60 +428,131 @@ def computer_test(user, print_traceback, computer):
         with trans:
             sched.set_transport(trans)
             num_tests += 1
-            for test in [self._computer_test_get_jobs, self._computer_create_temp_file]:
+            for test in [_computer_test_get_jobs, _computer_create_temp_file]:
                 num_tests += 1
                 try:
                     succeeded = test(transport=trans, scheduler=sched, authinfo=authinfo)
-                except Exception as e:
-                    print "* The test raised an exception!"
+                # pylint:disable=broad-except
+                except Exception as error:
+                    echo.echo_error("* The test raised an exception!")
                     if print_traceback:
-                        print "** Full traceback:"
+                        echo.echo("** Full traceback:")
                         # Indent
-                        print "\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()])
+                        echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
-                        print "** {}: {}".format(e.__class__.__name__, e.message)
-                        print("** (use the --traceback option to see the " "full traceback)")
+                        echo.echo("** {}: {}".format(error.__class__.__name__, error.message))
+                        echo.echo("** (use the --traceback option to see the " "full traceback)")
                     succeeded = False
 
                 if not succeeded:
                     num_failures += 1
 
         if num_failures:
-            print "Some tests failed! ({} out of {} failed)".format(num_failures, num_tests)
+            echo.echo("Some tests failed! ({} out of {} failed)".format(num_failures, num_tests))
         else:
-            print "Test completed (all {} tests succeeded)".format(num_tests)
-    except Exception as e:
-        print "** Error while trying to connect to the computer! Cannot "
-        print "   perform following tests, stopping."
+            echo.echo("Test completed (all {} tests succeeded)".format(num_tests))
+    # pylint:disable=broad-except
+    except Exception as error:
+        echo.echo_error("** Error while trying to connect to the computer! Cannot "
+                        "   perform following tests, stopping.")
         if print_traceback:
-            print "** Full traceback:"
+            echo.echo("** Full traceback:")
             # Indent
-            print "\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()])
+            echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
-            print "{}: {}".format(e.__class__.__name__, e.message)
-            print("(use the --traceback option to see the " "full traceback)")
+            echo.echo("{}: {}".format(error.__class__.__name__, error.message))
+            echo.echo("(use the --traceback option to see the " "full traceback)")
         succeeded = False
 
+    def _computer_test_get_jobs(scheduler):
+        """
+        Internal test to check if it is possible to check the queue state.
+        
+        :note: exceptions could be raised
 
-def _computer_test_get_jobs(self, transport, scheduler, authinfo):
-    """
-    Internal test to check if it is possible to check the queue state.
+        :param transport: an open transport
+        :param scheduler: the corresponding scheduler class
+        :param authinfo: the authinfo object (from which one can get
+          computer and aiidauser)
+        :return: True if the test succeeds, False if it fails.
+        """
+        echo.echo("> Getting job list...")
+        found_jobs = scheduler.getJobs(as_dict=True)
+        # For debug
+        # for jid, data in found_jobs.iteritems():
+        #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
+        echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
+        return True
 
-    :note: exceptions could be raised
+    def _computer_create_temp_file(self, transport, scheduler, authinfo):
+        """
+        Internal test to check if it is possible to create a temporary file
+        and then delete it in the work directory
 
-    :param transport: an open transport
-    :param scheduler: the corresponding scheduler class
-    :param authinfo: the authinfo object (from which one can get
-      computer and aiidauser)
-    :return: True if the test succeeds, False if it fails.
-    """
-    print "> Getting job list..."
-    found_jobs = scheduler.getJobs(as_dict=True)
-    # For debug
-    # for jid, data in found_jobs.iteritems():
-    #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
-    print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
-    return True
+        :note: exceptions could be raised
+
+        :param transport: an open transport
+        :param scheduler: the corresponding scheduler class
+        :param authinfo: the AuthInfo object (from which one can get
+          computer and aiidauser)
+        :return: True if the test succeeds, False if it fails.
+        """
+        import tempfile
+        import datetime
+        import os
+
+        file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
+        echo.echo("> Creating a temporary file in the work directory...")
+        echo.echo("  `-> Getting the remote user name...")
+        remote_user = transport.whoami()
+        echo.echo("      [remote username: {}]".format(remote_user))
+        workdir = authinfo.get_workdir().format(username=remote_user)
+        echo.echo("      [Checking/creating work directory: {}]".format(workdir))
+
+        try:
+            transport.chdir(workdir)
+        except IOError:
+            transport.makedirs(workdir)
+            transport.chdir(workdir)
+
+        with tempfile.NamedTemporaryFile() as tempf:
+            fname = os.path.split(tempf.name)[1]
+            echo.echo("  `-> Creating the file {}...".format(fname))
+            remote_file_path = os.path.join(workdir, fname)
+            tempf.write(file_content)
+            tempf.flush()
+            transport.putfile(tempf.name, remote_file_path)
+        echo.echo("  `-> Checking if the file has been created...")
+        if not transport.path_exists(remote_file_path):
+            echo.echo_error("* ERROR! The file was not found!")
+            return False
+        else:
+            echo.echo("      [OK]")
+        echo.echo("  `-> Retrieving the file and checking its content...")
+
+        handle, destfile = tempfile.mkstemp()
+        os.close(handle)
+        try:
+            transport.getfile(remote_file_path, destfile)
+            with open(destfile) as dfile:
+                read_string = dfile.read()
+            echo.echo("      [Retrieved]")
+            if read_string != file_content:
+                echo.echo_error("* ERROR! The file content is different from what was " "expected!")
+                echo.echo("** Expected:")
+                echo.echo(file_content)
+                echo.echo("** Found:")
+                echo.echo(read_string)
+                return False
+            else:
+                print "      [Content OK]"
+        finally:
+            os.remove(destfile)
+
+        echo.echo("  `-> Removing the file...")
+        transport.remove(remote_file_path)
+        echo.echo("  [Deleted successfully]")
+        return True
 
 
 @verdi_computer.command('delete')
@@ -520,11 +568,6 @@ def computer_delete(computername):
 
     from aiida.common.exceptions import (NotExistent, InvalidOperation)
     from aiida.orm.computer import delete_computer
-
-    try:
-        computer = self.get_computer(name=computername)
-    except NotExistent:
-        echo.echo_critical("No computer exists with name '{}'".format(computername))
 
     try:
         delete_computer(computer)
@@ -751,73 +794,3 @@ class Computer(VerdiCommandWithSubcommands):
         authinfo.set_auth_params(new_authparams)
         authinfo.store()
         print "Configuration stored for your user on computer '{}'.".format(computername)
-
-    def _computer_create_temp_file(self, transport, scheduler, authinfo):
-        """
-        Internal test to check if it is possible to create a temporary file
-        and then delete it in the work directory
-
-        :note: exceptions could be raised
-
-        :param transport: an open transport
-        :param scheduler: the corresponding scheduler class
-        :param authinfo: the AuthInfo object (from which one can get
-          computer and aiidauser)
-        :return: True if the test succeeds, False if it fails.
-        """
-        import tempfile
-        import datetime
-        import os
-
-        file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-        print "> Creating a temporary file in the work directory..."
-        print "  `-> Getting the remote user name..."
-        remote_user = transport.whoami()
-        print "      [remote username: {}]".format(remote_user)
-        workdir = authinfo.get_workdir().format(username=remote_user)
-        print "      [Checking/creating work directory: {}]".format(workdir)
-
-        try:
-            transport.chdir(workdir)
-        except IOError:
-            transport.makedirs(workdir)
-            transport.chdir(workdir)
-
-        with tempfile.NamedTemporaryFile() as f:
-            fname = os.path.split(f.name)[1]
-            print "  `-> Creating the file {}...".format(fname)
-            remote_file_path = os.path.join(workdir, fname)
-            f.write(file_content)
-            f.flush()
-            transport.putfile(f.name, remote_file_path)
-        print "  `-> Checking if the file has been created..."
-        if not transport.path_exists(remote_file_path):
-            print "* ERROR! The file was not found!"
-            return False
-        else:
-            print "      [OK]"
-        print "  `-> Retrieving the file and checking its content..."
-
-        fd, destfile = tempfile.mkstemp()
-        os.close(fd)
-        try:
-            transport.getfile(remote_file_path, destfile)
-            with open(destfile) as f:
-                read_string = f.read()
-            print "      [Retrieved]"
-            if read_string != file_content:
-                print("* ERROR! The file content is different from what was " "expected!")
-                print "** Expected:"
-                print file_content
-                print "** Found:"
-                print read_string
-                return False
-            else:
-                print "      [Content OK]"
-        finally:
-            os.remove(destfile)
-
-        print "  `-> Removing the file..."
-        transport.remove(remote_file_path)
-        print "  [Deleted successfully]"
-        return True

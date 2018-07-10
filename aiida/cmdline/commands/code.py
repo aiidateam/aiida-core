@@ -14,12 +14,11 @@ import click
 import tabulate
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_code
+from aiida.cmdline.commands import verdi, verdi_code, ensure_scripts
 from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
-from aiida.cmdline.utils.multi_line_input import edit_pre_post
 from aiida.control.code import CodeBuilder
 
 # pylint: disable=fixme
@@ -233,12 +232,6 @@ def is_on_computer(ctx):
 
 def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
-
-
-def ensure_scripts(pre, post, summary):
-    if (not pre) or (not post):
-        return edit_pre_post(pre, post, summary)
-    return pre, post
 
 
 @verdi_code.command('setup')

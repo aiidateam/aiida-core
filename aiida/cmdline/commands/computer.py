@@ -13,109 +13,149 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
-from aiida.cmdline.commands import verdi, verdi_computer
+from aiida.cmdline.commands import verdi, verdi_computer, ensure_scripts
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import types
+from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types import (
+    ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
+from aiida.control.computer import ComputerBuilder
 
 
-def prompt_for_computer_configuration(computer):
-    import inspect, readline
-    from aiida.orm.computer import Computer
+def get_computer_names():
+    """
+    Retrieve the list of computers in the DB.
+    """
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder()
+    qb.append(type='computer', project=['name'])
+    if qb.count() > 0:
+        return zip(*qb.all())[0]
+    else:
+        return []
+
+
+def shouldcall_default_mpiprocs_per_machine(ctx):
+    """
+    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
+    False otherwise.
+
+    If there is a problem in determining the scheduler, return True to
+    avoid exceptions.
+    """
+    scheduler_ep = ctx.params['scheduler']
+    if scheduler_ep is not None:
+        try:
+            SchedulerClass = scheduler_ep.load()
+        except ImportError:
+            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+    else:
+        raise ValidationError(
+            "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
+
+    JobResourceClass = SchedulerClass._job_resource_class
+    if JobResourceClass is None:
+        # Odd situation...
+        return False
+
+    return JobResourceClass.accepts_default_mpiprocs_per_machine()
+
+@verdi_computer.command('setup')
+@click.pass_context
+@options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())
+@options.HOSTNAME(prompt='Hostname', cls=InteractiveOption, required=True,
+    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption,
+                     help="A human-readable description of this computer")
+@click.option('-e/-d', '--enabled/--disabled', is_flag=True, default=True,
+    help='if created with the disabled flag, calculations '
+         'associated with it will not be submitted until when it is '
+         're-enabled',
+    prompt="Enable the computer?",
+    cls=InteractiveOption,
+    # IMPORTANT! Do not specify explicitly type=click.BOOL,
+    # Otherwise you would not get a default value when prompting
+ )
+@options.TRANSPORT(prompt="Transport plugin", cls=InteractiveOption)
+@options.SCHEDULER(prompt="Scheduler plugin", cls=InteractiveOption)
+@click.option(
+   '--shebang',
+    prompt='Shebang line (first line of each script, starting with #!)',
+    default="#!/bin/bash",
+    cls=InteractiveOption,
+    help='this line specifies the first line of the submission script for this computer',
+    type=ShebangParamType())
+@click.option(
+    '-w', '--work-dir',
+    prompt='work directory on the computer',
+    default="/scratch/{username}/aiida/",
+    cls=InteractiveOption,
+    help="The absolute path of the directory on the computer where AiiDA will "
+         "run the calculations (typically, the scratch of the computer). You "
+         "can use the {username} replacement, that will be replaced by your "
+         "username on the remote computer")
+@click.option(
+    '-m', '--mpirun-command',
+    prompt="mpirun command",
+    default="mpirun -np {tot_num_mpiprocs}",
+    cls=InteractiveOption,
+    help="The mpirun command needed on the cluster to run parallel MPI "
+         "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+         "replaced by the total number of cpus, or the other scheduler-dependent "
+         "replacement fields (see the scheduler docs for more information)",
+    type=MpirunCommandParamType())
+@click.option(
+    '--mpiprocs-per-machine',
+    prompt="default number of CPUs per machine",
+    cls=InteractiveOption,
+    help="Enter here the default number of MPI processes per machine (node) that "
+         "should be used if nothing is otherwise specified. Pass the digit 0 "
+         "if you do not want to provide a default value.",
+    prompt_fn=shouldcall_default_mpiprocs_per_machine,
+    required_fn=False,
+    type=click.INT,
+) # Note: this can still be passed from the command line in non-interactive mode
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@with_dbenv()
+def setup_computer(ctx, non_interactive, **kwargs):
+    """Add a Computer."""
     from aiida.common.exceptions import ValidationError
+    #from aiida.cmdline.utils.echo import ExitCode
 
-    for internal_name, name, desc, multiline in (Computer._conf_attributes):
-        # Check if I should skip this entry
-        shouldcall_name = '_shouldcall_{}'.format(internal_name)
-        try:
-            shouldcallfunc = dict(inspect.getmembers(computer))[shouldcall_name]
-            shouldcall = shouldcallfunc()
-        except KeyError:
-            shouldcall = True
-        if not shouldcall:
-            # Call cleanup code, if present
-            cleanup_name = '_cleanup_{}'.format(internal_name)
-            try:
-                cleanup = dict(inspect.getmembers(computer))[cleanup_name]
-                cleanup()
-            except KeyError:
-                # No cleanup function: this is not a problem, simply
-                # no cleanup is needed
-                pass
+    if kwargs['label'] in get_computer_names():
+        echo.echo_critical('A computer called {} already exists.\n'
+            'Use "verdi computer update" to update it, and be '
+            'careful if you really want to modify a database '
+            'entry!'.format(kwargs['label']))
 
-            # Skip this question
-            continue
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
 
-        getter_name = '_get_{}_string'.format(internal_name)
-        try:
-            getter = dict(inspect.getmembers(computer))[getter_name]
-        except KeyError:
-            print >> sys.stderr, ("Internal error! " "No {} getter defined in Computer".format(getter_name))
-            sys.exit(1)
-        previous_value = getter()
+    computer_builder = ComputerBuilder(**kwargs)
+    try:
+        computer = computer_builder.new()
+    except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
+        echo.echo_critical('{}: {}'.format(type(e).__name__, e))
 
-        setter_name = '_set_{}_string'.format(internal_name)
-        try:
-            setter = dict(inspect.getmembers(computer))[setter_name]
-        except KeyError:
-            print >> sys.stderr, ("Internal error! " "No {} setter defined in Computer".format(setter_name))
-            sys.exit(1)
 
-        valid_input = False
-        while not valid_input:
-            if multiline:
-                newlines = []
-                print "=> {}: ".format(name)
-                print "   # This is a multiline input, press CTRL+D on a"
-                print "   # empty line when you finish"
+    try:
+        computer.store()
+    except ValidationError as err:
+        echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
 
-                try:
-                    for l in previous_value.splitlines():
-                        while True:
-                            readline.set_startup_hook(lambda: readline.insert_text(l))
-                            input_txt = raw_input()
-                            if input_txt.strip() == '?':
-                                print ["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')]
-                                continue
-                            else:
-                                newlines.append(input_txt)
-                                break
+    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
+    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
 
-                    # Reset the hook (no default text printed)
-                    readline.set_startup_hook()
-
-                    print "   # ------------------------------------------"
-                    print "   # End of old input. You can keep adding     "
-                    print "   # lines, or press CTRL+D to store this value"
-                    print "   # ------------------------------------------"
-
-                    while True:
-                        input_txt = raw_input()
-                        if input_txt.strip() == '?':
-                            print "\n".join(["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')])
-                            continue
-                        else:
-                            newlines.append(input_txt)
-                except EOFError:
-                    # Ctrl+D pressed: end of input.
-                    pass
-
-                input_txt = "\n".join(newlines)
-
-            else:  # No multiline
-                readline.set_startup_hook(lambda: readline.insert_text(previous_value))
-                input_txt = raw_input("=> {}: ".format(name))
-                if input_txt.strip() == '?':
-                    print "HELP:", desc
-                    continue
-
-            try:
-                setter(input_txt)
-                valid_input = True
-            except ValidationError as e:
-                print >> sys.stderr, "Invalid input: {}".format(e.message)
-                print >> sys.stderr, "Enter '?' for help".format(e.message)
+    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
+    echo.echo_info("  verdi computer configure {}".format(computer.name))
+    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
+    echo.echo_info("the command-line interface at the moment)")
 
 
 @verdi_computer.command('enable')
@@ -204,7 +244,7 @@ class Computer(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'list': (self.computer_list, self.complete_none),
             'show': (self.computer_show, self.complete_computers),
-            'setup': (self.computer_setup, self.complete_none),
+            'setup': (verdi, self.complete_none),
             'update': (self.computer_update, self.complete_computers),
             'enable': (verdi, self.complete_computers),
             'disable': (verdi, self.complete_computers),
@@ -437,58 +477,6 @@ class Computer(VerdiCommandWithSubcommands):
 
         print "OK"
         pass
-
-    def computer_setup(self, *args):
-        """
-        Setup a new or existing computer
-        """
-        import readline
-
-        if len(args) != 0:
-            print >> sys.stderr, ("after 'computer setup' there cannot be any " "argument.")
-            sys.exit(1)
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm.computer import Computer as AiidaOrmComputer
-
-        print "At any prompt, type ? to get some help."
-        print "---------------------------------------"
-
-        # get the new computer name
-        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
-        input_txt = raw_input("=> Computer name: ")
-        if input_txt.strip() == '?':
-            print "HELP:", "The computer name"
-        computer_name = input_txt.strip()
-
-        try:
-            computer = self.get_computer(name=computer_name)
-            print "A computer called {} already exists.".format(computer_name)
-            print "Use 'verdi computer update' to update it, and be careful if"
-            print "you really want to modify a database entry!"
-            print "Now exiting..."
-            sys.exit(1)
-        except NotExistent:
-            computer = AiidaOrmComputer(name=computer_name)
-            print "Creating new computer with name '{}'".format(computer_name)
-
-        prompt_for_computer_configuration(computer)
-
-        try:
-            computer.store()
-        except ValidationError as e:
-            print "Unable to store the computer: {}. Exiting...".format(e.message)
-            sys.exit(1)
-
-        print "Computer '{}' successfully stored in DB.".format(computer_name)
-        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
-        print "Note: before using it with AiiDA, configure it using the command"
-        print "  verdi computer configure {}".format(computer_name)
-        print "(Note: machine_dependent transport parameters cannot be set via "
-        print "the command-line interface at the moment)"
 
     def computer_rename(self, *args):
         """

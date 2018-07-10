@@ -1,8 +1,0 @@
-doubler
-simple script that doubles a number and sleeps for a given number of seconds
-False
-simpleplugins.templatereplacer
-torquessh
-/usr/local/bin/d"o'ub ler.sh
-
-

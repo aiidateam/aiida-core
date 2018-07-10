@@ -29,7 +29,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.this_file = os.path.basename(__file__)
 
     def test_help(self):
-        self.runner.invoke(setup_code, ['--help'])
+        self.runner.invoke(setup_code, ['--help'], catch_exceptions=False)
 
     def test_reachable(self):
         output = sp.check_output(['verdi', 'code', 'setup', '--help'])

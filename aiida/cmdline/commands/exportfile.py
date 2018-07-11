@@ -53,15 +53,15 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     Export nodes and groups of nodes to an archive file for backup or sharing purposes
     """
     import sys
-    from aiida.backends.utils import load_dbenv
-    load_dbenv()
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv()
     from aiida.orm import Group, Node, Computer
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.importexport import export, export_zip
 
     node_id_set = set(nodes)
     group_dict = dict()
-    groups_list = list()
 
     if group_names:
         qb = QueryBuilder()
@@ -69,7 +69,8 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        groups_list.append(group['group']['*'] for group in res)
+        group_dict.update(
+            {group['group']['*'].id: group['group']['*'] for group in res})
         node_id_set.update([node['node']['id'] for node in res])
 
     if groups:
@@ -78,8 +79,11 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        groups_list.append(group['group']['*'] for group in res)
+        group_dict.update(
+            {group['group']['*'].id: group['group']['*'] for group in res})
         node_id_set.update([node['node']['id'] for node in res])
+
+    groups_list = group_dict.values()
 
     # Getting the nodes that correspond to the ids that were found above
     if len(node_id_set) > 0:

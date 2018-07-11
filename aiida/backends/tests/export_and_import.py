@@ -200,10 +200,8 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
-        from aiida.orm import DataFactory
         from aiida.orm import load_node
         from aiida.orm.data.base import Str, Int, Float, Bool
-        from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.importexport import export
 
         # Creating a folder for the import/export files
@@ -1870,5 +1868,85 @@ class TestLinks(AiidaTestCase):
 
 
 
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_input_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.common.links import LinkType
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.code import Code
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            jc = JobCalculation()
+            jc.set_computer(self.computer)
+            jc.set_resources(
+                {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc.store()
+
+            jc.add_link_from(code, 'code', link_type=LinkType.INPUT)
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([jc], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            self.assertEquals(load_node(code_uuid).label, code_label)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_solo_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.orm.code import Code
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([code], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            self.assertEquals(load_node(code_uuid).label, code_label)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

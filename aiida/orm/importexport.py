@@ -1643,7 +1643,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False):
+                return_reversed=False, call_reversed=False, **kwargs):
     """
     Export the DB entries passed in the 'what' list to a file tree.
 
@@ -1669,7 +1669,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     import json
     import aiida
 
-    from aiida.orm import Node, Calculation, Data, Group
+    from aiida.orm import Node, Calculation, Data, Group, Code
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -1677,6 +1677,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         print "STARTING EXPORT..."
 
     EXPORT_VERSION = '0.3'
+
+    print "The following karguments passed" + str(kwargs)
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -1696,11 +1698,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Node):
-            # given_node_entry_ids.add(entry.pk)
-            # We also add to the to_be_exported, to_be_visited structures the
-            # node provided
-            # to_be_exported.add(entry.pk)
-            if issubclass(entry.__class__, Data):
+            # The Code node should be treated as a Data node
+            if (issubclass(entry.__class__, Data) or
+                    issubclass(entry.__class__, Code)):
                 to_be_visited[Data].add(entry.pk)
             elif issubclass(entry.__class__, Calculation):
                 to_be_visited[Calculation].add(entry.pk)
@@ -1734,6 +1734,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.INPUT.value}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Code, tag='predecessor', project=['id'])
+            qb.append(Calculation, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.INPUT.value}})
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Data].update(res - to_be_exported)
+
 
             # INPUT(Data, Calculation) - Forward
             if input_forward:
@@ -1746,6 +1757,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                   '==': LinkType.INPUT.value}})
                 res = {_[0] for _ in qb.all()}
                 to_be_visited[Data].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Code, tag='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
 
             # CREATE/RETURN(Calculation, Data) - Forward
             qb = QueryBuilder()
@@ -1758,6 +1780,18 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                      LinkType.RETURN.value]}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Code, output_of='predecessor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              'in': [LinkType.CREATE.value,
+                                     LinkType.RETURN.value]}})
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Data].update(res - to_be_exported)
+
 
             # CREATE(Calculation, Data) - Reversed
             if create_reversed:
@@ -1770,6 +1804,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                   'in': [LinkType.CREATE.value]}})
                 res = {_[0] for _ in qb.all()}
                 to_be_visited[Data].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Code, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.CREATE.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
 
             # RETURN(Calculation, Data) - Reversed
             if return_reversed:
@@ -1782,6 +1827,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                   'in': [LinkType.RETURN.value]}})
                 res = {_[0] for _ in qb.all()}
                 to_be_visited[Data].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Code, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+
 
             # CALL(Calculation, Calculation) - Forward
             qb = QueryBuilder()
@@ -1793,6 +1849,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.CALL.value}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Calculation].update(res - to_be_exported)
+
 
             # CALL(Calculation, Calculation) - Reversed
             if call_reversed:
@@ -1829,7 +1886,16 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.CREATE.value}})
             res = {_[0] for _ in qb.all()}
             to_be_visited[Calculation].update(res - to_be_exported)
-            # to_be_exported.update(res)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor', project=['id'])
+            qb.append(Code, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CREATE.value}})
+            res = {_[0] for _ in qb.all()}
+            to_be_visited[Calculation].update(res - to_be_exported)
 
     given_node_entry_ids.update(to_be_exported)
 

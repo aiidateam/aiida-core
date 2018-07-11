@@ -8,14 +8,13 @@
       (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
         .ci/test_plugin_testcase.py|
         .ci/test_setup.py|
-        aiida/backends/tests/cmdline/commands/*.py|
+        #aiida/backends/tests/cmdline/commands/.*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/backends/tests/verdi_commands.py|
         aiida/control/.*.py|        # must match the whole path, therefore
         aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
         aiida/cmdline/commands/calculation.py|
         aiida/cmdline/commands/comment.py|
-        aiida/cmdline/commands/computer.py|
         aiida/cmdline/commands/daemon.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|

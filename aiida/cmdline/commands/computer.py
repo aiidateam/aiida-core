@@ -74,6 +74,94 @@ def shouldcall_default_mpiprocs_per_machine(ctx):
         return False
 
     return JobResourceClass.accepts_default_mpiprocs_per_machine()
+    
+def _computer_test_get_jobs(transport,scheduler,authinfo):
+    """
+    Internal test to check if it is possible to check the queue state.
+
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object (from which one can get
+      computer and aiidauser)
+    :return: True if the test succeeds, False if it fails.
+    """
+    echo.echo("> Getting job list...")
+    found_jobs = scheduler.getJobs(as_dict=True)
+    # For debug
+    # for jid, data in found_jobs.iteritems():
+    #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
+    echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
+    return True
+
+def _computer_create_temp_file(transport, scheduler, authinfo):
+    """
+    Internal test to check if it is possible to create a temporary file
+    and then delete it in the work directory
+
+    :note: exceptions could be raised
+
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object (from which one can get
+      computer and aiidauser)
+    :return: True if the test succeeds, False if it fails.
+    """
+    import tempfile
+    import datetime
+    import os
+
+    file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
+    echo.echo("> Creating a temporary file in the work directory...")
+    echo.echo("  `-> Getting the remote user name...")
+    remote_user = transport.whoami()
+    echo.echo("      [remote username: {}]".format(remote_user))
+    workdir = authinfo.get_workdir().format(username=remote_user)
+    echo.echo("      [Checking/creating work directory: {}]".format(workdir))
+
+    try:
+        transport.chdir(workdir)
+    except IOError:
+        transport.makedirs(workdir)
+        transport.chdir(workdir)
+
+    with tempfile.NamedTemporaryFile() as tempf:
+        fname = os.path.split(tempf.name)[1]
+        echo.echo("  `-> Creating the file {}...".format(fname))
+        remote_file_path = os.path.join(workdir, fname)
+        tempf.write(file_content)
+        tempf.flush()
+        transport.putfile(tempf.name, remote_file_path)
+    echo.echo("  `-> Checking if the file has been created...")
+    if not transport.path_exists(remote_file_path):
+        echo.echo_error("* ERROR! The file was not found!")
+        return False
+    else:
+        echo.echo("      [OK]")
+    echo.echo("  `-> Retrieving the file and checking its content...")
+
+    handle, destfile = tempfile.mkstemp()
+    os.close(handle)
+    try:
+        transport.getfile(remote_file_path, destfile)
+        with open(destfile) as dfile:
+            read_string = dfile.read()
+        echo.echo("      [Retrieved]")
+        if read_string != file_content:
+            echo.echo_error("* ERROR! The file content is different from what was " "expected!")
+            echo.echo("** Expected:")
+            echo.echo(file_content)
+            echo.echo("** Found:")
+            echo.echo(read_string)
+            return False
+        else:
+            print "      [Content OK]"
+    finally:
+        os.remove(destfile)
+
+    echo.echo("  `-> Removing the file...")
+    transport.remove(remote_file_path)
+    echo.echo("  [Deleted successfully]")
+    return True
 
 @verdi_computer.command('setup')
 @click.pass_context
@@ -464,117 +552,29 @@ def computer_test(user, print_traceback, computer):
             echo.echo("(use the --traceback option to see the " "full traceback)")
         succeeded = False
 
-    def _computer_test_get_jobs(scheduler):
-        """
-        Internal test to check if it is possible to check the queue state.
-        
-        :note: exceptions could be raised
-
-        :param transport: an open transport
-        :param scheduler: the corresponding scheduler class
-        :param authinfo: the authinfo object (from which one can get
-          computer and aiidauser)
-        :return: True if the test succeeds, False if it fails.
-        """
-        echo.echo("> Getting job list...")
-        found_jobs = scheduler.getJobs(as_dict=True)
-        # For debug
-        # for jid, data in found_jobs.iteritems():
-        #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
-        echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
-        return True
-
-    def _computer_create_temp_file(self, transport, scheduler, authinfo):
-        """
-        Internal test to check if it is possible to create a temporary file
-        and then delete it in the work directory
-
-        :note: exceptions could be raised
-
-        :param transport: an open transport
-        :param scheduler: the corresponding scheduler class
-        :param authinfo: the AuthInfo object (from which one can get
-          computer and aiidauser)
-        :return: True if the test succeeds, False if it fails.
-        """
-        import tempfile
-        import datetime
-        import os
-
-        file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-        echo.echo("> Creating a temporary file in the work directory...")
-        echo.echo("  `-> Getting the remote user name...")
-        remote_user = transport.whoami()
-        echo.echo("      [remote username: {}]".format(remote_user))
-        workdir = authinfo.get_workdir().format(username=remote_user)
-        echo.echo("      [Checking/creating work directory: {}]".format(workdir))
-
-        try:
-            transport.chdir(workdir)
-        except IOError:
-            transport.makedirs(workdir)
-            transport.chdir(workdir)
-
-        with tempfile.NamedTemporaryFile() as tempf:
-            fname = os.path.split(tempf.name)[1]
-            echo.echo("  `-> Creating the file {}...".format(fname))
-            remote_file_path = os.path.join(workdir, fname)
-            tempf.write(file_content)
-            tempf.flush()
-            transport.putfile(tempf.name, remote_file_path)
-        echo.echo("  `-> Checking if the file has been created...")
-        if not transport.path_exists(remote_file_path):
-            echo.echo_error("* ERROR! The file was not found!")
-            return False
-        else:
-            echo.echo("      [OK]")
-        echo.echo("  `-> Retrieving the file and checking its content...")
-
-        handle, destfile = tempfile.mkstemp()
-        os.close(handle)
-        try:
-            transport.getfile(remote_file_path, destfile)
-            with open(destfile) as dfile:
-                read_string = dfile.read()
-            echo.echo("      [Retrieved]")
-            if read_string != file_content:
-                echo.echo_error("* ERROR! The file content is different from what was " "expected!")
-                echo.echo("** Expected:")
-                echo.echo(file_content)
-                echo.echo("** Found:")
-                echo.echo(read_string)
-                return False
-            else:
-                print "      [Content OK]"
-        finally:
-            os.remove(destfile)
-
-        echo.echo("  `-> Removing the file...")
-        transport.remove(remote_file_path)
-        echo.echo("  [Deleted successfully]")
-        return True
 
 
 @verdi_computer.command('delete')
 @arguments.COMPUTER()
 @with_dbenv()
-def computer_delete(computername):
+def computer_delete(computer):
     """
     Configure the authentication information for a given computer
 
     Does not delete the computer if there are calculations that are using
     it.
     """
-
     from aiida.common.exceptions import (NotExistent, InvalidOperation)
     from aiida.orm.computer import delete_computer
 
+    compname = computer.get_name()
+
     try:
         delete_computer(computer)
-    except InvalidOperation as e:
-        echo.echo_critical(e.message)
+    except InvalidOperation as error:
+        echo.echo_critical(error.message)
 
-    echo.echo_successful("Computer '{}' deleted.".format(computername))
+    echo.echo_success("Computer '{}' deleted.".format(compname))
 
 
 class Computer(VerdiCommandWithSubcommands):
@@ -593,7 +593,7 @@ class Computer(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'list': (verdi, self.complete_none),
             'show': (verdi, self.complete_computers),
-            'setup': (self.computer_setup, self.complete_none),
+            'setup': (verdi, self.complete_none),
             'update': (self.computer_update, self.complete_computers),
             'enable': (verdi, self.complete_computers),
             'disable': (verdi, self.complete_computers),
@@ -606,7 +606,7 @@ class Computer(VerdiCommandWithSubcommands):
     def complete_computers(self, subargs_idx, subargs):
         if not is_dbenv_loaded():
             load_dbenv()
-        computer_names = self.get_computer_names()
+        computer_names = get_computer_names()
         print computer_names
         return "\n".join(computer_names)
 
@@ -706,7 +706,7 @@ class Computer(VerdiCommandWithSubcommands):
         computername = parsed_args.computer
 
         try:
-            computer = self.get_computer(name=computername)
+            computer = get_computer(name=computername)
         except NotExistent:
             print >> sys.stderr, "No computer exists with name '{}'".format(computername)
             sys.exit(1)

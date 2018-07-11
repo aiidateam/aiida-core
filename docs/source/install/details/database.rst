@@ -4,7 +4,7 @@ Database
 ========
 AiiDA needs a database backend to store the nodes, node attributes and other
 information, allowing the end user to perform very fast queries of the results.
-Currently, only `postgresql`_ is allowed as a database backend.
+Currently, only `PostgreSQL`_ is allowed as a database backend.
 
 
 Setup instructions
@@ -15,7 +15,7 @@ On Ubuntu and other Debian derivative distributions this can be accomplished wit
 
     $ sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
 
-For Mac OS X, binary packages can be downloaded from the official website of `postgresql`_ or you can use ``brew``::
+For Mac OS X, binary packages can be downloaded from the official website of `PostgreSQL`_ or you can use ``brew``::
 
     $ brew install postgresql
     $ pg_ctl -D /usr/local/var/postgres start
@@ -113,4 +113,43 @@ If you uses the same names used in the example commands above, during the ``verd
 .. _here: https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug
 
 
-.. _postgresql: https://www.postgresql.org/downloads
+Alternative setup instructions
+------------------------------
+
+Instead of using passwords which could be used by users on the same machine to access the database,
+PostgreSQL allows password-less logins via unix sockets. In this scenario PostgreSQL compares the
+user connecting to the socket with its own database of users and will allow a connection if a matching
+user exists.
+
+First install the packages as described above and make sure that the PostgreSQL daemon is running, 
+then assume the role of ``postgres`` by running the following as root::
+
+    $ su - postgres
+
+Create a database user with the **same name** as the user you are using to run AiiDA (usually your login name)::
+
+    $ createuser <username>
+
+replacing ``<username>`` with your username.
+
+Next create the database itself making sure that your user is the owner::
+
+    $ createdb -O <username> aiidadb
+
+To test if the database was created successfully, you can run the following command as your user in a bash terminal::
+
+    $ psql aiidadb
+
+
+Make sure to leave the host, port and password empty when specifiying the parameters during the ``verdi setup`` phase
+and specify your username as the *AiiDA Database user*::
+
+    Database engine: postgresql_psycopg2
+    PostgreSQL host: 
+    PostgreSQL port: 
+    AiiDA Database name: aiidadb
+    AiiDA Database user: <username>
+    AiiDA Database password:
+
+
+.. _PostgreSQL: https://www.postgresql.org/downloads

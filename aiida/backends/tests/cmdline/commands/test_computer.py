@@ -468,3 +468,100 @@ class TestVerdiComputerCommands(AiidaTestCase):
         with Capturing():
             ComputerCmd().run('test', self.computer_name)
 
+    def test_computer_list(self):
+        """
+        Test if 'verdi computer list' command works
+        """
+        for opt in ['', '-o', '--only-usable', '-p', '--parsable', '-a', '--all-comps']:
+            options = [opt]
+            result = self.cli_runner.invoke(computer.list, options)
+            # No exceptions should arise
+            self.assertIsNone(result.exception)
+            # Something should be printed to stdout
+            self.assertIsNotNone(result.output)
+    
+    def test_computer_list(self):
+        """
+        Test if 'verdi computer list' command works
+        """
+        for opt in ['', '-o', '--only-usable', '-p', '--parsable', '-a', '--all-comps']:
+            options = [opt]
+            result = self.cli_runner.invoke(computer.list, options)
+            # No exceptions should arise
+            self.assertIsNone(result.exception)
+            # Something should be printed to stdout
+            self.assertIsNotNone(result.output)
+    
+    def test_computer_show(self):
+        """
+        Test if 'verdi computer show' command works
+        """
+        
+        # See if we can display info about the test computer.
+        result = self.cli_runner.invoke(computer.show, 'comp_cli_test_computer')
+        # No exceptions should arise
+        self.assertIsNone(result.exception)
+        # Something should be printed to stdout
+        self.assertIsNotNone(result.output)
+        
+        # See if a non-existant computer will raise an error.
+        result = self.cli_runner.invoke(computer.show, 'not_a_valid_computer')
+        # Exceptions should arise
+        self.assertIsNotNone(result.exception)
+    
+    def test_computer_rename(self):
+        """
+        Test if 'verdi computer rename' command works
+        """
+        from aiida.orm.computer import Computer as AiidaOrmComputer
+    
+        # See if the command complains about not getting an invalid computer
+        options = ['not_a_valid_computer']
+        result = self.cli_runner.invoke(computer.rename, options)
+        # Exception should be raised
+        self.assertIsNotNone(result.exception)
+        
+        # See if the command complains about not getting both names
+        options = ['comp_cli_test_computer']
+        result = self.cli_runner.invoke(computer.rename, options)
+        # Exception should be raised
+        self.assertIsNotNone(result.exception)
+
+        # The new name must be different to the old one
+        options = ['comp_cli_test_computer', 'comp_cli_test_computer']
+        result = self.cli_runner.invoke(computer.rename, options)
+        # Exception should be raised
+        self.assertIsNotNone(result.exception)
+
+        # Change a computer name successully.
+        options = ['comp_cli_test_computer', 'renamed_test_computer']
+        result = self.cli_runner.invoke(computer.rename, options)
+        # Exception should be not be raised
+        self.assertIsNone(result.exception)
+        # Check that the name really was changed
+        try:
+            computer = AiidaOrmComputer.get('renamed_test_computer')
+            self.assertIsNone(computer)
+            computer = AiidaOrmComputer.get('comp_cli_test_computer')
+    
+    def test_computer_delete(self):
+        """
+        Test if 'verdi computer delete' command works
+        """
+        from aiida.orm.computer import Computer as AiidaOrmComputer
+    
+        # See if the command complains about not getting an invalid computer
+        options = ['not_a_valid_computer']
+        result = self.cli_runner.invoke(computer.show, options)
+        # Exception should be raised
+        self.assertIsNotNone(result.exception)
+        
+        # Delete a computer name successully.
+        options = ['comp_cli_test_computer']
+        result = self.cli_runner.invoke(computer.delete, options)
+        # Exception should be not be raised
+        self.assertIsNone(result.exception)
+        # Check that the computer really was deleted
+        try:
+            computer = AiidaOrmComputer.get('comp_cli_test_computer')
+            self.assertIsNone(computer)

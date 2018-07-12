@@ -38,7 +38,7 @@ We would like to thank the following people for their contibution
 * Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
 * Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
   the extension of the PW plugin to the ENVIRON code
-* Dominik Gresch (ETHZ): for contributions to the workflow engine
+* Dominik Gresch (ETHZ): for the caching mechanism and contributions to the workflow engine
 * Eric Hontz (MIT, USA): for the Quantum Espresso pwimmigrant plugin
 * Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins 
   for PP, PROJWFC, and the first version of the Wannier90 plugin

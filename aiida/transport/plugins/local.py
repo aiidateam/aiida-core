@@ -704,21 +704,29 @@ class LocalTransport(aiida.transport.Transport):
 
     def _exec_command_internal(self, command):
         """
-        Executes the specified command, first changing directory to the
-        current working directory as returned by self.getcwd().
-        Does not wait for the calculation to finish.
+        Executes the specified command in bash login shell.
+        
+        Before the command is executed, changes directory to the current
+        working directory as returned by self.getcwd().
 
-        For a higher-level exec_command that automatically waits for the
-        job to finish, use exec_command_wait.
+        For executing commands and waiting for them to finish, use
+        exec_command_wait.
         Otherwise, to end the process, use the proc.wait() method.
 
-        :param command: the command to execute
+        :param  command: the command to execute. The command is assumed to be
+            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
         
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
+        from aiida.common.utils import escape_for_bash
+
+        # Note: The outer shell will eat one level of escaping, while
+        # 'bash -l -c ...' will eat another. Thus, we need to escape again.
+        command = 'bash -l -c ' + escape_for_bash(command)
+
         proc = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 cwd=self.getcwd())

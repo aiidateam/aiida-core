@@ -8,13 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # Requirements for core AiiDA functionalities
-REENTRY_PINNED = 'reentry == 1.1.2'
 
 install_requires = [
-    'pip==9.0.1',
-    'setuptools==36.6.0',
-    REENTRY_PINNED,
-    'wheel==0.29.0',
+    'reentry==1.2.0',
     'python-dateutil==2.6.0',
     'python-mimeparse==0.1.4',
     'django==1.7.11',  # upgrade to Django 1.9 does prevent AiiDA functioning
@@ -42,7 +38,7 @@ install_requires = [
     'anyjson==0.3.3',
     'psutil==5.4.0',
     'meld3==1.0.0',
-    'numpy==1.12.0',
+    'numpy==1.14.3',
     'plumpy==0.7.12',
     'portalocker==1.1.0',
     'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
@@ -67,8 +63,7 @@ install_requires = [
     'pycrypto==2.6.1',
     # Requirements for verdi shell (version of ipython non enforced, because
     # there are people who still prefer version 4 rather than the latest)
-    'ipython<6.0',
-    'scipy<1.0.0'  # At this moment the install of 1.0.0 release is broken
+    'ipython<6.0'
 ]
 
 extras_require = {
@@ -90,7 +85,7 @@ extras_require = {
         'pyparsing==2.1.10',
         'Pattern==2.6',
         'Flask-SQLAlchemy==2.1',
-        'sqlalchemy-migrate==0.10.0',
+        'sqlalchemy-migrate==0.11.0',
         'marshmallow-sqlalchemy==0.10.0',
         'flask-marshmallow==0.7.0',
         'itsdangerous==0.24',
@@ -137,7 +132,8 @@ extras_require = {
         'pre-commit==1.3.0',
         'yapf==0.19.0',
         'prospector==0.12.7',
-        'pylint==1.7.4'
+        'pylint==1.8.4',
+        'toml'
     ]
 }
 

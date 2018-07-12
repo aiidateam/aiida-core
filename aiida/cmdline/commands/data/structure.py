@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This allows to manage StructureData objects from command line.
+"""
 import click
 from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export, export_options
@@ -17,6 +20,8 @@ from aiida.cmdline.params import arguments
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.cmdline.utils import echo
 
+
+# pylint: disable=unused-argument
 @verdi_data.group('structure')
 @click.pass_context
 def structure(ctx):
@@ -24,14 +29,17 @@ def structure(ctx):
     Manipulation of the structures
     """
     pass
-    
+
 
 @structure.command('show')
 @arguments.NODES()
-@click.option('-f', '--format', 'given_format',
-              type=click.Choice(['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']),
-              default='ase',
-              help="Type of the visualization format/tool")
+@click.option(
+    '-f',
+    '--format',
+    'given_format',
+    type=click.Choice(['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']),
+    default='ase',
+    help="Type of the visualization format/tool")
 def show(nodes, given_format):
     """
     Visualize StructureData objects
@@ -42,10 +50,9 @@ def show(nodes, given_format):
     from aiida.cmdline.commands.data.show import _show_vmd
     from aiida.cmdline.commands.data.show import _show_xcrysden
     from aiida.orm.data.structure import StructureData
-    for n in nodes:
-        if not isinstance(n, StructureData):
-            echo.echo_critical("Node {} is of class {} instead "
-                                "of {}".format(n, type(n), StructureData))
+    for node in nodes:
+        if not isinstance(node, StructureData):
+            echo.echo_critical("Node {} is of class {} instead " "of {}".format(node, type(node), StructureData))
     if given_format == "ase":
         _show_ase(given_format, nodes)
     elif given_format == "jmol":
@@ -57,23 +64,30 @@ def show(nodes, given_format):
     elif given_format == "xcrysden":
         _show_xcrysden(given_format, nodes)
     else:
-        raise NotImplementedError("The format {} is not yet implemented"
-                                  .format(given_format))
+        raise NotImplementedError("The format {} is not yet implemented".format(given_format))
 
-project_headers = ["Id", "Label", "Kinds", "Sites"]
+
+PROJECT_HEADERS = ["Id", "Label", "Kinds", "Sites"]
+
+
+# pylint: disable=too-many-locals,too-many-branches
 @structure.command('list')
 @list_options
-@click.option('-f', '--formulamode',
-              type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-              default='hill',
-              help="Formula printing mode (if None, does not print the formula)")
-@click.option('-e', '--elements', type=click.STRING,
-          cls=MultipleValueOption,
-          default=None,
-          help="Print only the objects that"
-          " contain desired elements")
-def list_structures(elements, raw, formulamode, past_days,
-                    groups, all_users):
+@click.option(
+    '-f',
+    '--formulamode',
+    type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+    default='hill',
+    help="Formula printing mode (if None, does not print the formula)")
+@click.option(
+    '-e',
+    '--elements',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    default=None,
+    help="Print only the objects that"
+    " contain desired elements")
+def list_structures(elements, raw, formulamode, past_days, groups, all_users):
     """
     List stored StructureData objects
     """
@@ -82,10 +96,10 @@ def list_structures(elements, raw, formulamode, past_days,
     from tabulate import tabulate
 
     elements_only = False
-    lst = _list(StructureData, project_headers, elements, elements_only, formulamode, past_days, groups, all_users)
+    lst = _list(StructureData, PROJECT_HEADERS, elements, elements_only, formulamode, past_days, groups, all_users)
 
     entry_list = []
-    for [id, label, akinds, asites] in lst:
+    for [pid, label, akinds, asites] in lst:
         # If symbols are defined there is a filtering of the structures
         # based on the element
         # When QueryBuilder will support this (attribute)s filtering,
@@ -106,31 +120,29 @@ def list_structures(elements, raw, formulamode, past_days,
         for k in akinds:
             symbols = k['symbols']
             weights = k['weights']
-            symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                        weights)
+            symbol_dict[k['name']] = get_symbols_string(symbols, weights)
 
         try:
             symbol_list = []
-            for s in asites:
-                symbol_list.append(symbol_dict[s['kind_name']])
-            formula = get_formula(symbol_list,
-                                    mode=formulamode)
+            for site in asites:
+                symbol_list.append(symbol_dict[site['kind_name']])
+            formula = get_formula(symbol_list, mode=formulamode)
         # If for some reason there is no kind with the name
         # referenced by the site
         except KeyError:
             formula = "<<UNKNOWN>>"
-        entry_list.append([str(id), str(formula), label])
+        entry_list.append([str(pid), str(formula), label])
 
     counter = 0
     struct_list_data = list()
     if not raw:
-        struct_list_data.append(project_headers)
+        struct_list_data.append(PROJECT_HEADERS)
     for entry in entry_list:
-        for i in range(0, len(entry)):
-            if isinstance(entry[i], list):
-                entry[i] = ",".join(entry[i])
-        for i in range(len(entry), len(project_headers)):
-                entry.append(None)
+        for i, value in enumerate(entry):
+            if isinstance(value, list):
+                entry[i] = ",".join(value)
+        for i in range(len(entry), len(PROJECT_HEADERS)):
+            entry.append(None)
         counter += 1
     struct_list_data.extend(entry_list)
     if raw:
@@ -140,15 +152,19 @@ def list_structures(elements, raw, formulamode, past_days,
         echo.echo("\nTotal results: {}\n".format(counter))
 
 
-supported_formats = ['cif', 'tcod', 'xsf', 'xyz']
+SUPPORTED_FORMATS = ['cif', 'tcod', 'xsf', 'xyz']
+
+
 # XYZ for alloys or systems with vacancies not implemented.
 # supported_formats = ['cif', 'tcod', 'xsf']
 @structure.command('export')
-@click.option('-y', '--format',
-              type=click.Choice(supported_formats),
-              default='xyz',
-              # default='cif',
-              help="Type of the exported file.")
+@click.option(
+    '-y',
+    '--format',
+    type=click.Choice(SUPPORTED_FORMATS),
+    default='xyz',
+    # default='cif',
+    help="Type of the exported file.")
 @export_options
 def export(**kwargs):
     """
@@ -158,16 +174,16 @@ def export(**kwargs):
 
     node = kwargs.pop('node')
     output = kwargs.pop('output')
-    format = kwargs.pop('format')
+    export_format = kwargs.pop('format')
     force = kwargs.pop('force')
 
-    for key,value in kwargs.items():
+    for key, value in kwargs.items():
         if value is None:
-            kwargs.pop(key)  
+            kwargs.pop(key)
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
-    _export(node, output, format, other_args=kwargs, overwrite=force)
+    _export(node, output, export_format, other_args=kwargs, overwrite=force)
 
 
 @structure.command('deposit')
@@ -184,12 +200,13 @@ def deposit(**kwargs):
     parameter_data = kwargs.pop('parameter_data')
 
     #if kwargs['database'] is None:
-        #echo.echo_critical("Default database is not defined, please specify.")
-    kwargs.pop('database') # looks like a bug, but deposit function called inside deposit_tcod complains about the 'database' keywords argument
-    
-    for key,value in kwargs.items():
+    #echo.echo_critical("Default database is not defined, please specify.")
+    kwargs.pop('database')  # looks like a bug, but deposit function called inside
+    # deposit_tcod complains about the 'database' keywords argument
+
+    for key, value in kwargs.items():
         if value is None:
-            kwargs.pop(key) 
+            kwargs.pop(key)
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
@@ -211,27 +228,24 @@ def _import_xyz(filename, **kwargs):
 
     echo.echo('importing XYZ-structure from: \n  {}'.format(abspath(filename)))
     filepath = abspath(filename)
-    with open(filepath) as f:
-        xyz_txt = f.read()
+    with open(filepath) as fobj:
+        xyz_txt = fobj.read()
     new_structure = StructureData()
+    # pylint: disable=protected-access
     try:
         new_structure._parse_xyz(xyz_txt)
-        new_structure._adjust_default_cell(vacuum_addition=vacuum_addition,
-                                            vacuum_factor=vacuum_factor,
-                                            pbc=pbc)
+        new_structure._adjust_default_cell(vacuum_addition=vacuum_addition, vacuum_factor=vacuum_factor, pbc=pbc)
 
         if store:
             new_structure.store()
         if view_in_ase:
             from ase.visualize import view
             view(new_structure.get_ase())
-        echo.echo(
-            '  Succesfully imported structure {}, '
-            '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
-        )
+        echo.echo('  Succesfully imported structure {}, '
+                  '(PK = {})'.format(new_structure.get_formula(), new_structure.pk))
 
-    except ValueError as e:
-        echo.echo_critical(e)
+    except ValueError as err:
+        echo.echo_critical(err)
 
 
 def _import_pwi(filename, **kwargs):
@@ -242,8 +256,8 @@ def _import_pwi(filename, **kwargs):
     try:
         from qe_tools.parsers.pwinputparser import PwInputFile
     except ImportError:
-        echo.echo_critical ("You have not installed the package qe-tools. \n"
-                "You can install it with: pip install qe-tools")
+        echo.echo_critical("You have not installed the package qe-tools. \n"
+                           "You can install it with: pip install qe-tools")
 
     store = kwargs.pop('store')
     view_in_ase = kwargs.pop('view')
@@ -260,13 +274,12 @@ def _import_pwi(filename, **kwargs):
         if view_in_ase:
             from ase.visualize import view
             view(new_structure.get_ase())
-        echo.echo(
-            '  Succesfully imported structure {}, '
-            '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
-        )
+        echo.echo('  Succesfully imported structure {}, '
+                  '(PK = {})'.format(new_structure.get_formula(), new_structure.pk))
 
-    except ValueError as e:
-        echo.echo_critical(e)
+    except ValueError as err:
+        echo.echo_critical(err)
+
 
 def _import_ase(filename, **kwargs):
     """
@@ -278,13 +291,12 @@ def _import_ase(filename, **kwargs):
     try:
         import ase.io
     except ImportError:
-        echo.echo_critical ("You have not installed the package ase. \n"
-                "You can install it with: pip install ase")
+        echo.echo_critical("You have not installed the package ase. \n" "You can install it with: pip install ase")
 
     store = kwargs.pop('store')
     view_in_ase = kwargs.pop('view')
 
-    echo.echo( 'importing structure from: \n  {}'.format(abspath(filename)))
+    echo.echo('importing structure from: \n  {}'.format(abspath(filename)))
     filepath = abspath(filename)
 
     try:
@@ -296,46 +308,47 @@ def _import_ase(filename, **kwargs):
         if view_in_ase:
             from ase.visualize import view
             view(new_structure.get_ase())
-        echo.echo(
-            '  Succesfully imported structure {}, '
-            '(PK = {})'.format(new_structure.get_formula(), new_structure.pk)
-        )
+        echo.echo('  Succesfully imported structure {}, '
+                  '(PK = {})'.format(new_structure.get_formula(), new_structure.pk))
 
-    except ValueError as e:
-        echo.echo_critical(e)
+    except ValueError as err:
+        echo.echo_critical(err)
 
+
+# pylint: disable=too-many-arguments
 @structure.command('import')
-@click.argument('filename',
-                type=click.Path(exists=True,
-                    dir_okay=False,
-                    resolve_path=True))
-@click.option('-f', '--format', 'given_format',
-              type=click.Choice(['ase', 'pwi', 'xyz']),
-              default='xyz',
-              help="Type of the imported file.")
-@click.option('--vacuum-factor', type=click.FLOAT,
-              default=1.0,
-              help="The factor by which the cell accomodating the"
-              " structure should be increased, default: 1.0")
-@click.option('--vacuum-addition', type=click.FLOAT,
-              default=10.0,
-              help="The distance to add to the unit cell after"
-              " vacuum factor was applied to expand in each"
-              " dimension, default: 10.0")
-@click.option('--pbc', type=click.INT,
-              nargs=3,
-              default=[0, 0, 0],
-              help="Set periodic boundary conditions for each"
-              " lattice direction, 0 for no periodicity, any"
-              " other integer for periodicity")
-@click.option('--view', is_flag=True,
-              default=False,
-              help='View resulting structure using ASE.')
-@click.option('--dont-store', 'store', is_flag=True,
-              default=True,
-              help='Do not store the structure in AiiDA database.')
-def structure_import(filename, given_format, vacuum_factor, vacuum_addition,
-                     pbc, view, store):
+@click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option(
+    '-f',
+    '--format',
+    'given_format',
+    type=click.Choice(['ase', 'pwi', 'xyz']),
+    default='xyz',
+    help="Type of the imported file.")
+@click.option(
+    '--vacuum-factor',
+    type=click.FLOAT,
+    default=1.0,
+    help="The factor by which the cell accomodating the"
+    " structure should be increased, default: 1.0")
+@click.option(
+    '--vacuum-addition',
+    type=click.FLOAT,
+    default=10.0,
+    help="The distance to add to the unit cell after"
+    " vacuum factor was applied to expand in each"
+    " dimension, default: 10.0")
+@click.option(
+    '--pbc',
+    type=click.INT,
+    nargs=3,
+    default=[0, 0, 0],
+    help="Set periodic boundary conditions for each"
+    " lattice direction, 0 for no periodicity, any"
+    " other integer for periodicity")
+@click.option('--view', is_flag=True, default=False, help='View resulting structure using ASE.')
+@click.option('--dont-store', 'store', is_flag=True, default=True, help='Do not store the structure in AiiDA database.')
+def structure_import(filename, given_format, vacuum_factor, vacuum_addition, pbc, view, store):
     """
     Import structure
     """
@@ -358,5 +371,4 @@ def structure_import(filename, given_format, vacuum_factor, vacuum_addition,
     elif given_format == "xyz":
         _import_xyz(filename, **args)
     else:
-        raise NotImplementedError("The format {} is not yet implemented"
-                                  .format(given_format))
+        raise NotImplementedError("The format {} is not yet implemented".format(given_format))

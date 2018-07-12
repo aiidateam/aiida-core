@@ -236,7 +236,7 @@ class TestVerdiDataListable:
         from aiida.cmdline.commands.data.trajectory import list_trajections
         from aiida.cmdline.commands.data.bands import bands_list
 
-        from aiida.cmdline.commands.data.structure import project_headers as p_str
+        from aiida.cmdline.commands.data.structure import PROJECT_HEADERS as p_str
         from aiida.cmdline.commands.data.cif import PROJECT_HEADERS as p_cif
         from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
         from aiida.cmdline.commands.data.bands import PROJECT_HEADERS as p_bands
@@ -831,8 +831,8 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
     def test_export(self):
-        from aiida.cmdline.commands.data.structure import supported_formats
-        self.data_export_test(StructureData, self.ids, supported_formats)
+        from aiida.cmdline.commands.data.structure import SUPPORTED_FORMATS
+        self.data_export_test(StructureData, self.ids, SUPPORTED_FORMATS)
 
 
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,

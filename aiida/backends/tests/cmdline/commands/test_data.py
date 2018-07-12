@@ -512,7 +512,7 @@ class TestVerdiDataParameter(AiidaTestCase):
     def test_parametershow(self):
         supported_formats = ['json_date']
         for format in supported_formats:
-            options = ['--format', format, str(self.p.id)]
+            options = [str(self.p.id)]
             res = self.cli_runner.invoke(parameter.show, options,
                                          catch_exceptions=False)
             self.assertEquals(res.exit_code, 0,

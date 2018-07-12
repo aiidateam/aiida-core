@@ -7,12 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This allows to manage ParameterData objects from command line.
+"""
 import click
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
-        
+
+# pylint: disable=unused-argument
 @verdi_data.group('parameter')
 @click.pass_context
 def parameter(ctx):
@@ -20,16 +24,11 @@ def parameter(ctx):
     View and manipulate Parameter data classes.
     """
     pass
-    
+
 
 @parameter.command('show')
 @arguments.NODES()
-@click.option('-f', '--format', 'format',
-              type=click.Choice(['json_date']),
-              default='json_date',
-              help="Filter the families only to those containing "
-              "a pseudo for each of the specified elements")
-def show(nodes, format):
+def show(nodes):
     """
     Show contents of ParameterData nodes.
     """

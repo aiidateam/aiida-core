@@ -581,7 +581,7 @@ class TestVerdiDataRemote(AiidaTestCase):
 
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
-        res = self.cli_runner.invoke(remote.ls, options,
+        res = self.cli_runner.invoke(remote.lsfunction, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
                           "The command verdi data remote ls did not"

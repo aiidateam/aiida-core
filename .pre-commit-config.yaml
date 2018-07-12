@@ -26,6 +26,7 @@
         aiida/cmdline/commands/data/remote.py|
         aiida/cmdline/commands/data/show.py|
         aiida/cmdline/commands/data/structure.py|
+        aiida/cmdline/commands/data/trajectory.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|

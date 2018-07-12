@@ -238,7 +238,7 @@ class TestVerdiDataListable:
 
         from aiida.cmdline.commands.data.structure import PROJECT_HEADERS as p_str
         from aiida.cmdline.commands.data.cif import PROJECT_HEADERS as p_cif
-        from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
+        from aiida.cmdline.commands.data.trajectory import PROJECT_HEADERS as p_tr
         from aiida.cmdline.commands.data.bands import PROJECT_HEADERS as p_bands
 
         headers_mapping = {
@@ -704,10 +704,10 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
             self.ids)
 
     def test_export(self):
-        from aiida.cmdline.commands.data.trajectory import supported_formats
+        from aiida.cmdline.commands.data.trajectory import SUPPORTED_FORMATS
         from aiida.cmdline.commands.data.trajectory import export
 
-        new_supported_formats = list(supported_formats)
+        new_supported_formats = list(SUPPORTED_FORMATS)
         # TCOD export needs special arguments
         new_supported_formats.remove('tcod')
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)

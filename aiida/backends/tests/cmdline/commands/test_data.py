@@ -237,7 +237,7 @@ class TestVerdiDataListable:
         from aiida.cmdline.commands.data.bands import bands_list
 
         from aiida.cmdline.commands.data.structure import project_headers as p_str
-        from aiida.cmdline.commands.data.cif import project_headers as p_cif
+        from aiida.cmdline.commands.data.cif import PROJECT_HEADERS as p_cif
         from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
         from aiida.cmdline.commands.data.bands import PROJECT_HEADERS as p_bands
 
@@ -941,7 +941,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
-            options = [f.name, '--format', 'cif']
+            options = [f.name]
             res = self.cli_runner.invoke(cif.importfile, options,
                                          catch_exceptions=False)
             self.assertIn('imported uuid', res.output_bytes,
@@ -953,8 +953,8 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
         This method checks if the Cif export works as expected with all
         possible flags and arguments.
         """
-        from aiida.cmdline.commands.data.cif import supported_formats
-        self.data_export_test(CifData, self.ids, supported_formats)
+        from aiida.cmdline.commands.data.cif import SUPPORTED_FORMATS
+        self.data_export_test(CifData, self.ids, SUPPORTED_FORMATS)
 
 class TestVerdiDataUpf(AiidaTestCase):
     """

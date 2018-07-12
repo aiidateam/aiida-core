@@ -7,29 +7,29 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This allows to manage ArrayData objects from command line.
+"""
 import click
+
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-        
+# pylint: disable=unused-argument
 @verdi_data.group('array')
 @click.pass_context
 def array(ctx):
     """
-    Visualize array object
+    Manipulate ArrayData objects
     """
     pass
-    
+
 
 @array.command('show')
 @arguments.NODES()
-@click.option('-f', '--format', 'format',
-              type=click.Choice(['json_date']),
-              default='json_date',
-              help="Type of the visualization format/tool.")
-def show(format, nodes):
+def show(nodes):
     """
     Visualize array object
     """
@@ -37,7 +37,7 @@ def show(format, nodes):
     from aiida.cmdline import print_dictionary
     for node in nodes:
         if not isinstance(node, ArrayData):
-            echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), ArrayData))
+            echo.echo_critical("Node {} is of class {} instead of" " {}".format(node, type(node), ArrayData))
         the_dict = {}
         for arrayname in node.arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()

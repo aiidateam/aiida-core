@@ -16,6 +16,8 @@
         aiida/cmdline/commands/calculation.py|
         aiida/cmdline/commands/comment.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/data/array.py|
+        aiida/cmdline/commands/data/bands.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|

@@ -239,7 +239,7 @@ class TestVerdiDataListable:
         from aiida.cmdline.commands.data.structure import project_headers as p_str
         from aiida.cmdline.commands.data.cif import project_headers as p_cif
         from aiida.cmdline.commands.data.trajectory import project_headers as p_tr
-        from aiida.cmdline.commands.data.bands import project_headers as p_bands
+        from aiida.cmdline.commands.data.bands import PROJECT_HEADERS as p_bands
 
         headers_mapping = {
             CifData: p_cif,
@@ -383,17 +383,13 @@ class TestVerdiDataArray(AiidaTestCase):
             "Sub-command verdi data array show --help failed.")
 
     def test_arrayshow(self):
-        dump_flags = ['-f', '--format']
-        supported_formats = ['json_date']
-        for flag in dump_flags:
-            for format in supported_formats:
-                # with captured_output() as (out, err):
-                options = [flag, format, str(self.a.id)]
-                res = self.cli_runner.invoke(array.show, options,
-                                             catch_exceptions=False)
-                self.assertEquals(res.exit_code, 0,
-                                  "The command did not finish "
-                                  "correctly")
+        # with captured_output() as (out, err):
+        options = [str(self.a.id)]
+        res = self.cli_runner.invoke(array.show, options,
+                                     catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0,
+                          "The command did not finish "
+                          "correctly")
 
 class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     """

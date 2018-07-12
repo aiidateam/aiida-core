@@ -96,7 +96,7 @@ class Sealable(object):
 
         # Remove the updatable attributes
         if not include_updatable_attrs:
-            for key, value in self._iter_updatable_attributes():
+            for key, value in clone._iter_updatable_attributes():
                 clone._del_attr(key)
 
         return clone

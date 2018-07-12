@@ -66,8 +66,8 @@ def reset_session(config):
 
     engine_url = (
         "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-    ).format(**config)
+        "{AIIDADB_HOST}{sep}{AIIDADB_PORT}/{AIIDADB_NAME}"
+        ).format(sep=':' if config['AIIDADB_PORT'] else '', **config)
 
     sa.engine = create_engine(engine_url, json_serializer=dumps_json,
                               json_deserializer=loads_json)

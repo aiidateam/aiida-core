@@ -28,7 +28,6 @@ def determine_backend():
     return BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
 
 
-@unittest.skip('wait until #1722 is fixed')
 class PluginTestCase1(PluginTestCase):
     """
     Test the PluginTestCase from utils.fixtures
@@ -89,7 +88,6 @@ class PluginTestCase1(PluginTestCase):
         shutil.rmtree(self.temp_dir)
 
 
-@unittest.skip('wait until #1722 is fixed')
 class PluginTestCase2(PluginTestCase):
     """
     Second PluginTestCase.
@@ -108,7 +106,4 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    # wait until #1722 is fixed
-    # circumvent unused-import, remove when obsolete
-    RUNNER = TestRunner()
-    # ~ TestRunner().run(SUITE, backend=determine_backend())
+    TestRunner().run(SUITE, backend=determine_backend())

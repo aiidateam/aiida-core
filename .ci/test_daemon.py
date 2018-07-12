@@ -152,6 +152,11 @@ def validate_cached(cached_calcs):
             print_logshow(pk)
             valid = False
 
+        if 'raw_input' not in calc.folder.get_content_list():
+            print "Cached calculation <{}> does not have a 'raw_input' folder".format(pk)
+            print_logshow(pk)
+            valid=False
+
     return valid
 
 

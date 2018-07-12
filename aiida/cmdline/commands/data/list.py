@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-This module provides list functionality to all data types
+This module provides list functionality to all data types.
 """
 import click
 from aiida.orm.implementation import Group

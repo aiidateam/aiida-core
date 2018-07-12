@@ -1709,7 +1709,7 @@ class AbstractNode(object):
                 self._set_attr(key, value)
 
         self.folder.replace_with_folder(
-            cache_node.folder.get_abs_path(''),
+            cache_node.folder.abspath,
             overwrite=True
         )
 

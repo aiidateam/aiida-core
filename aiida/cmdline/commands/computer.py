@@ -37,6 +37,7 @@ def get_computer_names():
     else:
         return []
 
+@with_dbenv()
 def get_computer(name):
     """
     Get a Computer object with given name, or raise NotExistent
@@ -45,6 +46,7 @@ def get_computer(name):
     return AiidaOrmComputer.get(name)
 
 
+@with_dbenv()
 def prompt_for_computer_configuration(computer):
     import inspect, readline
     from aiida.orm.computer import Computer
@@ -452,10 +454,7 @@ def computer_rename(computer, new_name):
 
 
 @verdi_computer.command('test')
-@click.option(
-    '-u',
-    '--user',
-    type=types.UserParamType(),
+@options.USER(
     required=False,
     help="Test the connection for a given AiiDA user, specified by"
     "their email address. If not specified, uses the current "

@@ -582,19 +582,26 @@ class TestVerdiComputerCommands(AiidaTestCase):
         from aiida.orm.computer import Computer as AiidaOrmComputer
         from aiida.common.exceptions import NotExistent
 
+        # Setup a computer to delete during the test
+        comp = AiidaOrmComputer(
+            name='computer_for_test_delete',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        comp.store()
+
         # See if the command complains about not getting an invalid computer
-        options = ['not_existent_computer_name']
+        options = ['non_existent_computer_name']
         result = self.runner.invoke(computer_delete, options)
         # Exception should be raised
         self.assertIsNotNone(result.exception)
 
         # Delete a computer name successully.
-        options = ['comp_cli_test_computer']
+        options = ['computer_for_test_delete']
         result = self.runner.invoke(computer_delete, options)
         # Exception should be not be raised
         self.assertIsNone(result.exception)
         # Check that the computer really was deleted
         with self.assertRaises(NotExistent):
-            AiidaOrmComputer.get('comp_cli_test_computer')
-        # Restore the computer
-        TestVerdiComputerCommands.setUpClass()
+            AiidaOrmComputer.get('computer_for_test_delete')

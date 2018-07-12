@@ -9,7 +9,6 @@
 ###########################################################################
 
 from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.config import custom_schema
 
 class GroupTranslator(BaseTranslator):
     """
@@ -31,11 +30,29 @@ class GroupTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    # Extract the default projections from custom_schema if they are defined
-    if 'columns' in custom_schema:
-        _default_projections = custom_schema['columns'][__label__]
-    else:
-        _default_projections = ['**']
+    ## group schema
+    # All the values from column_order must present in additional info dict
+    # Note: final schema will contain details for only the fields present in column order
+    _schema_projections = {
+        "column_order": [
+            "id",
+            "name",
+            "type",
+            "description",
+            "user_id",
+            "user_email",
+            "uuid"
+        ],
+        "additional_info": {
+            "id": {"is_display": True},
+            "name": {"is_display": True},
+            "type": {"is_display": True},
+            "description": {"is_display": False},
+            "user_id": {"is_display": False},
+            "user_email": {"is_display": True},
+            "uuid": {"is_display": False}
+        }
+    }
 
 
     def __init__(self, **kwargs):

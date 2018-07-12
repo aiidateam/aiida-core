@@ -1290,15 +1290,16 @@ class SshTransport(aiida.transport.Transport):
 
     def _exec_command_internal(self,command,combine_stderr=False,bufsize=-1):
         """
-        Executes the specified command, first changing directory to the
-        current working directory are returned by
-        self.getcwd().
-        Does not wait for the calculation to finish.
+        Executes the specified command in bash login shell.
+        
+        Before the command is executed, changes directory to the current
+        working directory as returned by self.getcwd().
 
-        For a higher-level _exec_command_internal that automatically waits for the
-        job to finish, use exec_command_wait.
+        For executing commands and waiting for them to finish, use
+        exec_command_wait.
 
-        :param  command: the command to execute
+        :param  command: the command to execute. The command is assumed to be
+            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
         :param combine_stderr: (default False) if True, combine stdout and
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
@@ -1324,7 +1325,9 @@ class SshTransport(aiida.transport.Transport):
         self.logger.debug("Command to be executed: {}".format(
                 command_to_execute))
 
-        channel.exec_command(command_to_execute)
+        # Note: The default shell will eat one level of escaping, while 
+        # 'bash -l -c ...' will eat another. Thus, we need to escape again.
+        channel.exec_command('bash -l -c ' + escape_for_bash(command_to_execute))
         
         stdin = channel.makefile('wb',bufsize) 
         stdout = channel.makefile('rb',bufsize) 

@@ -41,11 +41,6 @@ class Node(AbstractNode):
                 uuid, cls.__name__))
         return node
 
-    @staticmethod
-    def get_db_columns():
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbNode
-        return get_db_columns(DbNode)
-
     @classmethod
     def get_subclass_from_pk(cls, pk):
         from aiida.backends.djsite.db.models import DbNode

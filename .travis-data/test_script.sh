@@ -13,6 +13,11 @@ case "$TEST_TYPE" in
         ;;
     tests)
         DATA_DIR=${TRAVIS_BUILD_DIR}/.travis-data
+
+        # make sure we have the correct pg_ctl in our path for pgtest, to prevent issue #1722
+        # this must match the version request in travis.yml
+        export PATH="/usr/lib/postgresql/9.5/bin:${PATH}"
+
         # Add the .travis-data folder to the python path such that defined workchains can be found by the daemon
         export PYTHONPATH=${PYTHONPATH}:${DATA_DIR}
 

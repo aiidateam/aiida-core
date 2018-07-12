@@ -484,6 +484,11 @@ class CifData(SinglefileData):
             self._get_folder_pathsubfolder.open(self.filename), **kwargs)
 
     def set_ase(self, aseatoms):
+        """
+        Set the contents of the CifData starting from an ASE atoms object
+
+        :param aseatoms: the ASE atoms object
+        """
         import tempfile
         cif = cif_from_ase(aseatoms)
         with tempfile.NamedTemporaryFile() as f:

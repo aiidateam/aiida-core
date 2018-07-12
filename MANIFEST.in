@@ -8,3 +8,4 @@ include fastentrypoints.py
 include setup_requirements.py
 include AUTHORS.txt
 include CHANGELOG.md
+include pyproject.toml

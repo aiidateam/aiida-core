@@ -25,7 +25,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
         print "READING DATA AND METADATA..."
 
     try:
-        with zipfile.ZipFile(infile, "r") as zip:
+        with zipfile.ZipFile(infile, "r", allowZip64=True) as zip:
 
             zip.extract(path=folder.abspath,
                    member='metadata.json')

@@ -1874,7 +1874,8 @@ class TestLinks(AiidaTestCase):
     def test_that_input_code_is_exported_correctly(self):
         """
         This test checks that when a calculation is exported then the
-        corresponding code is also exported.
+        corresponding code is also exported. It also checks that the links
+        are also in place after the import.
         """
         import os, shutil, tempfile
 
@@ -1883,6 +1884,7 @@ class TestLinks(AiidaTestCase):
         from aiida.common.links import LinkType
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.code import Code
+        from aiida.orm.querybuilder import QueryBuilder
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -1912,7 +1914,18 @@ class TestLinks(AiidaTestCase):
 
             import_data(export_file, silent=True)
 
+            # Check that the node is there
             self.assertEquals(load_node(code_uuid).label, code_label)
+            # Check that the link is in place
+            qb = QueryBuilder()
+            qb.append(Code, project='uuid')
+            qb.append(JobCalculation, project='uuid',
+                edge_project=['label', 'type'],
+                edge_filters={'type': {'==': LinkType.INPUT.value}})
+            self.assertEquals(qb.count(), 1,
+                              "Expected to find one and only one link from "
+                              "code to the calculation node. {} found."
+                              .format(qb.count()))
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 

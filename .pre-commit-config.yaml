@@ -20,6 +20,7 @@
         aiida/cmdline/commands/data/bands.py|
         aiida/cmdline/commands/data/cif.py|
         aiida/cmdline/commands/data/deposit.py|
+        aiida/cmdline/commands/data/export.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|

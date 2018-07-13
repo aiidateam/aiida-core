@@ -1708,8 +1708,11 @@ class AbstractNode(object):
             if key != Sealable.SEALED_KEY:
                 self._set_attr(key, value)
 
-        for path in cache_node.get_folder_list():
-            self.add_path(cache_node.get_abs_path(path), path)
+        self.folder.replace_with_folder(
+            cache_node.folder.abspath,
+            move=False,
+            overwrite=True
+        )
 
         # Make sure the node doesn't have any RETURN links
         if cache_node.get_outputs(link_type=LinkType.RETURN):

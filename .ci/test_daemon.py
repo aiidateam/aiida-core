@@ -19,6 +19,7 @@ from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
+from aiida.orm.calculation import JobCalculation
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (
@@ -151,6 +152,16 @@ def validate_cached(cached_calcs):
             print 'Cached calculation<{}> has invalid hash'.format(pk)
             print_logshow(pk)
             valid = False
+
+        if isinstance(calc, JobCalculation):
+            if 'raw_input' not in calc.folder.get_content_list():
+                print "Cached calculation <{}> does not have a 'raw_input' folder".format(pk)
+                print_logshow(pk)
+                valid = False
+            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
+            if 'raw_input' not in original_calc.folder.get_content_list():
+                print "Original calculation <{}> does not have a 'raw_input' folder after being cached from.".format(original_calc.pk)
+                valid = False
 
     return valid
 

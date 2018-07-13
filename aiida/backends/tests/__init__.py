@@ -71,6 +71,8 @@ db_test_list = {
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
+        'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
+        'cmdline.commands.data': ['aiida.backends.tests.cmdline.commands.test_data'],
         'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
@@ -94,7 +96,6 @@ db_test_list = {
         'work.job_processes': ['aiida.backends.tests.work.job_processes'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'daemon': ['aiida.backends.tests.daemon'],
-        'verdi_commands': ['aiida.backends.tests.verdi_commands'],
         'caching_config': ['aiida.backends.tests.test_caching_config'],
         'inline_calculation': ['aiida.backends.tests.inline_calculation'],
     }

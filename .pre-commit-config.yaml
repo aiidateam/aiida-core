@@ -16,6 +16,18 @@
         aiida/cmdline/commands/calculation.py|
         aiida/cmdline/commands/comment.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/data/array.py|
+        aiida/cmdline/commands/data/bands.py|
+        aiida/cmdline/commands/data/cif.py|
+        aiida/cmdline/commands/data/deposit.py|
+        aiida/cmdline/commands/data/export.py|
+        aiida/cmdline/commands/data/list.py|
+        aiida/cmdline/commands/data/parameter.py|
+        aiida/cmdline/commands/data/remote.py|
+        aiida/cmdline/commands/data/show.py|
+        aiida/cmdline/commands/data/structure.py|
+        aiida/cmdline/commands/data/trajectory.py|
+        aiida/cmdline/commands/data/upf.py|
         aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|

@@ -403,6 +403,21 @@ def parse_results(job, retrieved_temporary_folder=None):
     Parser = job.get_parserclass()
     exit_code = ExitCode()
 
+    if retrieved_temporary_folder:
+        files = []
+        for root, directories, filenames in os.walk(retrieved_temporary_folder):
+            for directory in directories:
+                files.append("- [D] {}".format(os.path.join(root, directory)))
+            for filename in filenames:
+                files.append("- [F] {}".format(os.path.join(root, filename)))
+
+        execlogger.debug("[parsing of calc {}] "
+            "Content of the retrieved_temporary_folder: \n"
+            "{}".format(job.pk, "\n".join(files)), extra=logger_extra)
+    else:
+        execlogger.debug("[parsing of calc {}] "
+            "No retrieved_temporary_folder.".format(job.pk), extra=logger_extra)
+
     if Parser is not None:
 
         parser = Parser(job)

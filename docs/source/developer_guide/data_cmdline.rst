@@ -114,10 +114,7 @@ separate methods, that can be individually overridden:
 * :py:class:`~aiida.cmdline.commands.data.list.query`:
     takes the parsed command line arguments and performs a query on the
     database, returns table of unformatted strings, representing the hits;
-    :py:class:`~aiida.cmdline.commands.data.listable.query` function;
-* :py:class:`~aiida.cmdline.commands.data.Listable.get_column_names`:
-    returns the names of columns to be printed by
-    :py:class:`~aiida.cmdline.commands.data.Listable.list` method.
+    :py:class:`~aiida.cmdline.commands.data.list.query` function;
 
 
 Adding a ``verdi`` command

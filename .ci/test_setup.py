@@ -44,8 +44,8 @@ class QuicksetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(quicksetup, [
             '--profile=giuseppe-{}'.format(self.backend), '--backend={}'.format(
-                self.backend), '--email=giuseppe.verdi@ope.ra', '--first-name=Giuseppe', '--last-name=Verdi',
-            '--institution=Scala', '--db-name=aiida_giuseppe_{}'.format(
+                self.backend), '--email=giuseppe.verdi@ope.ra',
+            '--first-name=Giuseppe', '--last-name=Verdi', '--institution=Scala', '--db-name=aiida_giuseppe_{}'.format(
                 self.backend), '--repo=aiida_giuseppe_{}'.format(self.backend), '--no-set-default'
         ])
         self.assertFalse(result.exception, msg=get_debug_msg(result))

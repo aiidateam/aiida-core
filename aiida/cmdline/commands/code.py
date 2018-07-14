@@ -394,6 +394,12 @@ def set_code_builder(ctx, param, value):
     help=('[if --store-in-db]: relative path of the executable ' + \
           'inside the code-folder'),
     contextual_default=partial(get_default, 'code_rel_path'))
+@click.option(
+    '--hide-original',
+    is_flag=True,
+    default=False,
+    help=('Hide the code being copied.'),
+)
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -415,6 +421,9 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
     else:
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+
+    if kwargs.pop('hide_original'):
+        code.hide()
 
     code_builder = ctx.code_builder
     for key, value in kwargs.iteritems():

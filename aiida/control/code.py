@@ -13,6 +13,12 @@ class CodeBuilder(object):
     def __init__(self, **kwargs):
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
         self._code_spec = {}
+
+        # code_type must go first
+        for key in ['code_type']:
+            self.__setattr__(key, kwargs.pop(key))
+
+        # then set the rest
         for key, value in kwargs.iteritems():
             self.__setattr__(key, value)
 

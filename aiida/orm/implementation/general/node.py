@@ -1698,6 +1698,7 @@ class AbstractNode(object):
         return self
 
     def _store_from_cache(self, cache_node, with_transaction):
+        from aiida.orm.mixins import Sealable
         new_node = type(cache_node)()
         new_node._dbnode.type = cache_node._dbnode.type  # Inherit type
         new_node.label = cache_node.label  # Inherit label

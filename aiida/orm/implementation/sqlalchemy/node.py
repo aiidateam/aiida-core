@@ -550,7 +550,8 @@ class Node(AbstractNode):
             if k != Sealable.SEALED_KEY:
                 newobject._set_attr(k, v)
 
-        newobject.folder.replace_with_folder(self.folder.abspath, move=False, overwrite=True)
+        for path in self.get_folder_list():
+            newobject.add_path(self.get_abs_path(path), path)
 
         return newobject
 

@@ -109,11 +109,21 @@ def validate_cached(cached_calcs):
     """
     Check that the calculations with created with caching are indeed cached.
     """
-    return all(
-        '_aiida_cached_from' in calc.extras() and
-        calc.get_hash() == calc.get_extra('_aiida_hash')
-        for calc in cached_calcs
-    )
+    valid = True
+    for calc in cached_calcs:
+        if not ('_aiida_cached_from' in calc.extras() and calc.get_hash() == calc.get_extra('_aiida_hash')):
+            valid = False
+
+        if isinstance(calc, JobCalculation):
+            if 'raw_input' not in calc.folder.get_content_list():
+                print "Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk)
+                print_logshow(calc.pk)
+                valid = False
+            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
+            if 'raw_input' not in original_calc.folder.get_content_list():
+                print "Original calculation <{}> does not have a 'raw_input' folder after being cached from.".format(original_calc.pk)
+                valid = False
+    return valid
 
 
 def create_calculation(code, counter, inputval, use_cache=False):

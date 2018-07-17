@@ -371,8 +371,13 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                 extract_tar(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path,folder,silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
+                try:
+                    extract_zip(in_path,folder,silent=silent,
+                                nodes_export_subfolder=nodes_export_subfolder)
+                except ValueError as ve:
+                    print("The following problem occured while processing the "
+                          "provided file: {}".format(ve.message))
+                    return
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
                 extract_cif(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
@@ -380,6 +385,10 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                 raise ValueError("Unable to detect the input file format, it "
                                  "is neither a (possibly compressed) tar file, "
                                  "nor a zip file.")
+
+        if not os.listdir(folder):
+            print "The provided file/folder is empty. Exiting silently"
+            return
 
         try:
             with open(folder.get_abs_path('metadata.json')) as f:

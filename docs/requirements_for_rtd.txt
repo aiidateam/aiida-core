@@ -47,7 +47,6 @@ pgtest==1.1.0
 plumpy==0.7.12
 portalocker==1.1.0
 psutil==5.4.0
-pycrypto==2.6.1
 pymatgen==4.5.3
 pyparsing==2.1.10
 python-dateutil==2.6.0

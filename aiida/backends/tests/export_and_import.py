@@ -54,7 +54,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
 
-            nodes = [parameters.dbnode]
+            nodes = [parameters]
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
@@ -124,7 +124,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
 
-            nodes = [structure.dbnode, child_calculation.dbnode, parent_calculation.dbnode, remote_folder.dbnode]
+            nodes = [structure, child_calculation, parent_calculation, remote_folder]
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database

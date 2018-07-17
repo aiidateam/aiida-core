@@ -22,7 +22,7 @@ class Data(VerdiCommandWithSubcommands):
     def __init__(self):
         super(Data, self).__init__()
 
-        # import to actually populate the subcommands
+        # import to populate the click subcommands
         from aiida.cmdline.commands.data import (
             upf,
             structure,

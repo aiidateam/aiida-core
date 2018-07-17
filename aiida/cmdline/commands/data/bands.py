@@ -50,17 +50,17 @@ def show_xmgrace(exec_name, list_bands):
 
     try:
         subprocess.check_output([exec_name] + [f.name for f in list_files])
-        _ = [f.close() for f in list_files]
     except subprocess.CalledProcessError:
         print("Note: the call to {} ended with an error.".format(exec_name))
-        _ = [f.close() for f in list_files]
     except OSError as err:
-        _ = [f.close() for f in list_files]
         if err.errno == 2:
             print("No executable '{}' found. Add to the path," " or try with an absolute path.".format(exec_name))
             sys.exit(1)
         else:
             raise
+    finally:
+        for fhandle in list_files:
+            fhandle.close()
 
 
 # pylint: disable=unused-argument

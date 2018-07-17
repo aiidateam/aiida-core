@@ -12,8 +12,8 @@ This allows to manage CifData objects from command line.
 """
 import click
 from aiida.cmdline.commands import verdi_data
-from aiida.cmdline.commands.data.list import _list, list_options
-from aiida.cmdline.commands.data.export import _export, export_options
+from aiida.cmdline.commands.data.list_functions import _list, list_options
+from aiida.cmdline.commands.data.export_functions import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.params import arguments

@@ -16,6 +16,11 @@ from aiida.orm.importexport import import_data
 
 class TestSpecificImport(AiidaTestCase):
 
+    def setUp(self):
+        super(TestSpecificImport, self).setUp()
+        self.clean_db()
+        self.insert_data()
+
     def test_simple_import(self):
         """
         This is a very simple test which checks that an export file with nodes
@@ -25,166 +30,144 @@ class TestSpecificImport(AiidaTestCase):
         associated with the exported nodes. When an empty computer set is
         found at the export file (when imported to an SQLA profile), the SQLA
         import code used to crash. This test demonstrates this problem.
-        :return:
         """
-        import inspect
-        import os
-
-        curr_path = inspect.getfile(inspect.currentframe())
-        folder_path = os.path.dirname(curr_path)
-        relative_folder_path = ("export_import_test_files/"
-                                "SSSP_parameters_2.aiida")
-        test_file_path = os.path.join(folder_path, relative_folder_path)
-
-        # Clean the database
-        self.clean_db()
-
-        # Insert the default data to the database
-        self.insert_data()
-
-        # Import the needed data
-        import_data(test_file_path, silent=True)
-
-    def test_import(self):
-        from aiida.orm.querybuilder import QueryBuilder
+        import tempfile
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.importexport import export, import_data
         from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        parameters = ParameterData(dict={
+            'Pr': {
+                'cutoff': 50.0,
+                'pseudo_type': 'Wentzcovitch',
+                'dual': 8,
+                'cutoff_units': 'Ry'
+            },
+            'Ru': {
+                'cutoff': 40.0,
+                'pseudo_type': 'SG15',
+                'dual': 4,
+                'cutoff_units': 'Ry'
+            },
+        }).store()
+
+        with tempfile.NamedTemporaryFile() as handle:
+
+            nodes = [parameters.dbnode]
+            export(nodes, outfile=handle.name, overwrite=True, silent=True)
+
+            # Check that we have the expected number of nodes in the database
+            self.assertEquals(QueryBuilder().append(Node).count(), len(nodes))
+
+            # Clean the database and verify there are no nodes left
+            self.clean_db()
+            self.assertEquals(QueryBuilder().append(Node).count(), 0)
+
+            # After importing we should have the original number of nodes again
+            import_data(handle.name, silent=True)
+            self.assertEquals(QueryBuilder().append(Node).count(), len(nodes))
+
+    def test_cycle_structure_data(self):
+        """
+        Create an export with some Calculation and Data nodes and import it after having
+        cleaned the database. Verify that the nodes and their attributes are restored
+        properly after importing the created export archive
+        """
+        import tempfile
+        from aiida.common.links import LinkType
         from aiida.orm.calculation import Calculation
         from aiida.orm.data.structure import StructureData
-        import inspect
-        import os
-
-        curr_path = inspect.getfile(inspect.currentframe())
-        folder_path = os.path.dirname(curr_path)
-        relative_folder_path = ("export_import_test_files/"
-                                "parents_of_6537645.aiida")
-        test_file_path = os.path.join(folder_path, relative_folder_path)
-
-        # Clean the database
-        self.clean_db()
-
-        # Insert the default data to the database
-        self.insert_data()
-
-        # Import the needed data
-        import_data(test_file_path, silent=True)
-
-        # Check that the number of nodes if correct
-        qb = QueryBuilder()
-        qb.append(Node, project=["id"])
-        self.assertEquals(qb.count(), 83, "The number of Nodes is not the "
-                                          "expected one.")
-
-        # Check the number of calculations and that the attributes were
-        # imported correctly
-        qb = QueryBuilder()
-        qb.append(Calculation, project=["*"])
-        self.assertEquals(qb.count(), 19, "The number of Calculations is not "
-                                          "the expected one.")
-        for [calc] in qb.all():
-            attr = calc.get_attrs()
-            self.assertIsInstance(attr, dict, "A dictionary should be "
-                                              "returned")
-            self.assertNotEquals(len(attr), 0, "The attributes should not be "
-                                               "empty.")
-
-        # Check the number of the structure data and that the label is the
-        # expected one
-        qb = QueryBuilder()
-        qb.append(StructureData, project=["*"])
-        self.assertEquals(qb.count(), 7, "The number of StructureData is not "
-                                          "the expected one.")
-        for [struct] in qb.all():
-            self.assertEquals(struct.label, "3D_with_2D_substructure",
-                              "A label is not correct")
-
-
-        # TO BE SEEN WITH MOUNET
-        # print "<================= ParameterData attributes.energy ====================>"
-        #
-        # from aiida.orm.data.parameter import ParameterData
-        # qb = QueryBuilder()
-        # # qb.append(Calculation, filters={
-        # #     'id': {"==": 6525492}}, project=["id"], tag="res")
-        # qb.append(ParameterData, project=["attributes"], tag="res")
-        # print qb.all()
-        # for [struct] in qb.all():
-        #     print struct
-        #     # print struct.get_attrs()
-        #     # print struct.uuid
-        #     # print struct.label
-        #     print "=============="
-        # TO BE SEEN WITH MOUNET
-
-        # Check that the cell attributes of the structure data is not empty.
-        qb = QueryBuilder()
-        qb.append(StructureData, project=["attributes.cell"])
-        for [cell] in qb.all():
-            self.assertNotEquals(len(cell), 0, "There should be cells.")
-
-        # Check that the cell of specific structure data is the expected one
-        qb = QueryBuilder()
-        qb.append(StructureData, project=["attributes.cell"], filters={
-            'uuid': {"==": "45670237-dc1e-4300-8e0b-4d3639dc77cf"}})
-        for [cell] in qb.all():
-            #print cell
-            self.assertEquals(cell,
-                              [[8.34, 0.0, 0.0], [0.298041701839357,
-                                                  8.53479766274308, 0.0],
-                               [0.842650688117053, 0.47118495164127,
-                                10.6965192730702]],
-                              "The cell is not the expected one.")
-
-        # Check that the kind attributes are the correct ones.
-        qb = QueryBuilder()
-        qb.append(StructureData, project=["attributes.kinds"], tag="res")
-        for [kinds] in qb.all():
-            self.assertEqual(len(kinds), 2, "Attributes kinds should be of "
-                                            "length 2")
-            self.assertIn(
-                {u'symbols': [u'Fe'], u'weights': [1.0], u'mass': 55.847,
-                 u'name': u'Fe'}, kinds)
-            self.assertIn(
-                {u'symbols': [u'S'], u'weights': [1.0], u'mass': 32.066,
-                 u'name': u'S'}, kinds)
-
-        # Check that there are StructureData that are outputs of Calculations
-        qb = QueryBuilder()
-        qb.append(Calculation, project=["uuid"], tag="res")
-        qb.append(StructureData, output_of="res")
-        self.assertGreater(len(qb.all()), 0, "There should be results for the"
-                                             "query.")
-
-        # Check that there are RemoteData that are children and
-        # parents of Calculations
         from aiida.orm.data.remote import RemoteData
-        qb = QueryBuilder()
-        qb.append(Calculation, tag="c1")
-        qb.append(RemoteData, project=["uuid"], output_of="c1", tag='r1')
-        qb.append(Calculation, output_of="r1", tag="c2")
+        from aiida.orm.importexport import export, import_data
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
 
-        self.assertGreater(len(qb.all()), 0, "There should be results for the"
-                                             "query.")
+        test_label = 'Test structure'
+        test_cell = [
+            [8.34, 0.0, 0.0],
+            [0.298041701839357, 8.53479766274308, 0.0],
+            [0.842650688117053, 0.47118495164127, 10.6965192730702]
+        ]
+        test_kinds = [
+            {
+                'symbols': [u'Fe'],
+                'weights': [1.0],
+                'mass': 55.845,
+                'name': u'Fe'
+            },
+            {
+                'symbols': [u'S'],
+                'weights': [1.0],
+                'mass': 32.065,
+                'name': u'S'
+            }
+        ]
 
-        # TO BE SEEN WITH MOUNET
-        # from aiida.orm.data.array.trajectory import TrajectoryData
-        # qb = QueryBuilder()
-        # qb.append(TrajectoryData, project=["*"], tag="res")
-        # print qb.all()
-        # for [struct] in qb.all():
-        #     print struct
-        #     print struct.get_attrs()
-        #     # print struct.uuid
-        #     # print struct.label
-        #     print "=============="
-        # TO BE SEEN WITH MOUNET
+        structure = StructureData(cell=test_cell)
+        structure.append_atom(symbols=['Fe'], position=[0, 0, 0])
+        structure.append_atom(symbols=['S'], position=[2, 2, 2])
+        structure.label = test_label
+        structure.store()
 
-        # Check that a specific UUID exists
-        qb = QueryBuilder()
-        qb.append(Node, filters={
-            'uuid': {"==": "45670237-dc1e-4300-8e0b-4d3639dc77cf"}},
-                  project=["*"], tag="res")
-        self.assertGreater(len(qb.all()), 0, "There should be results for the"
-                                             "query.")
+        parent_calculation = Calculation()
+        parent_calculation._set_attr('key', 'value')
+        parent_calculation.store()
+        child_calculation = Calculation()
+        child_calculation._set_attr('key', 'value')
+        child_calculation.store()
+        remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
+
+        remote_folder.add_link_from(parent_calculation, link_type=LinkType.CREATE)
+        child_calculation.add_link_from(remote_folder, link_type=LinkType.INPUT)
+        structure.add_link_from(child_calculation, link_type=LinkType.CREATE)
+
+        with tempfile.NamedTemporaryFile() as handle:
+
+            nodes = [structure.dbnode, child_calculation.dbnode, parent_calculation.dbnode, remote_folder.dbnode]
+            export(nodes, outfile=handle.name, overwrite=True, silent=True)
+
+            # Check that we have the expected number of nodes in the database
+            self.assertEquals(QueryBuilder().append(Node).count(), len(nodes))
+
+            # Clean the database and verify there are no nodes left
+            self.clean_db()
+            self.assertEquals(QueryBuilder().append(Node).count(), 0)
+
+            # After importing we should have the original number of nodes again
+            import_data(handle.name, silent=True)
+            self.assertEquals(QueryBuilder().append(Node).count(), len(nodes))
+
+            # Verify that Calculations have non-empty attribute dictionaries
+            qb = QueryBuilder().append(Calculation)
+            for [calculation] in qb.iterall():
+                self.assertIsInstance(calculation.get_attrs(), dict)
+                self.assertNotEquals(len(calculation.get_attrs()), 0)
+
+            # Verify that the structure data maintained its label, cell and kinds
+            qb = QueryBuilder().append(StructureData)
+            for [structure] in qb.iterall():
+                self.assertEquals(structure.label, test_label)
+                self.assertEquals(structure.cell, test_cell)
+
+            qb = QueryBuilder().append(StructureData, project=['attributes.kinds'])
+            for [kinds] in qb.iterall():
+                self.assertEqual(len(kinds), 2)
+                for kind in kinds:
+                    self.assertIn(kind, test_kinds)
+
+            # Check that there is a StructureData that is an output of a Calculation
+            qb = QueryBuilder()
+            qb.append(Calculation, project=['uuid'], tag='calculation')
+            qb.append(StructureData, output_of='calculation')
+            self.assertGreater(len(qb.all()), 0)
+
+            # Check that there is a RemoteData that is a child and parent of a Calculation
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='parent')
+            qb.append(RemoteData, project=['uuid'], output_of='parent', tag='remote')
+            qb.append(Calculation, output_of='remote')
+            self.assertGreater(len(qb.all()), 0)
 
 class TestSimple(AiidaTestCase):
 

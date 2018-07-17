@@ -62,12 +62,6 @@ class Group(AbstractGroup):
                                  "unknown parameters are: {}".format(
                     ", ".join(kwargs.keys())))
 
-    @staticmethod
-    def get_db_columns():
-        # from aiida.backends.djsite.db.models import DbGroup
-        from aiida.backends.djsite.querybuilder_django.dummy_model import DbGroup
-        return get_db_columns(DbGroup)
-
     @property
     def name(self):
         return self.dbgroup.name

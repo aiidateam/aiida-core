@@ -11,16 +11,57 @@ from stat import S_ISDIR, S_ISREG
 import StringIO
 
 import os
+import click
 import paramiko
 import glob
 
 import aiida.transport
 import aiida.transport.transport
+from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common import aiidalogger
 from aiida.common.utils import escape_for_bash
 from aiida.transport.util import FileAttribute
-from aiida.common import aiidalogger
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
+
+
+@click.command('ssh')
+@options.USER()
+@options.PORT_NR(prompt='Port Nr', cls=InteractiveOption)
+@click.option('--look-for-keys/--no-look-for-keys', default=True, prompt='Look for keys', cls=InteractiveOption, help='On: Try to discover key file automatically')
+#@click.option('--key-filename', type=click.Path(dir_okay=False, exists=True), prompt='SSH key file', cls=InteractiveOption, help='Manually pass a key file')
+#@click.option('--timeout', type=int, prompt='Timeout in s', cls=InteractiveOption, help='Time to wait for connection before giving up in seconds')
+#@click.option('--allow-agent/--disallow-agent', default=True, prompt='Allow ssh agent', cls=InteractiveOption, help='Allow or disallow ssh agent')
+#@click.option('--proxy_command', prompt='SSH proxy command', cls=InteractiveOption, help='SSH proxy command')
+#@click.option('--comptress/--no-compress', default=True, prompt='Compress file transfers', cls=InteractiveOption, help='Compress or do not compress file transfers')
+#@click.option('--gss-auth', prompt='GSS auth', cls=InteractiveOption, help='GSS authentication ??')
+#@click.option('--gss-kex', prompt='GSS kex', cls=InteractiveOption, help='GSS key ??')
+#@click.option('--gss-deleg-creds', prompt='GSS delegate credentials', cls=InteractiveOption, help='GSS delegate credits ??')
+#@click.option('--gss-host', prompt='GSS host', cls=InteractiveOption, help='GSS host ??')
+#@click.option('--load-system-host-keys/--no-load-system-host-keys', prompt='Load system host keys', cls=InteractiveOption, help='load or do not load system host keys')
+#@click.option('--key-policy', prompt='Key policy', cls=InteractiveOption, help='SSH key policy')
+@options.NON_INTERACTIVE()
+@arguments.COMPUTER()
+@with_dbenv()
+def configure_ssh(computer, user, non_interactive, **kwargs):
+    from aiida.orm.backend import construct_backend
+    from aiida.control.computer import configure_computer
+    from aiida.common.utils import get_configured_user_email
+    backend = construct_backend()
+    user = user or backend.users.get_automatic_user()
+
+    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
+    if user.email != get_configured_user_email():
+        echo.echo_info('Configuring different user, defaults may not be appropriate.')
+
+    if computer.get_transport_type() != 'ssh':
+        echo.echo_critical('Computer {} has transport of type "{}", not "ssh"!'.format(computer.name, computer.get_transport_type()))
+
+    configure_computer(computer, user=user, **kwargs)
+    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
@@ -1252,7 +1293,7 @@ class SshTransport(aiida.transport.Transport):
     def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
         """
         Executes the specified command in bash login shell.
-        
+
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
 

@@ -71,6 +71,9 @@ if __name__ == '__main__':
                 'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',
                 'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
             ],
+            'aiida.cmdline.computer.configure': [
+                'ssh = aiida.transport.plugins.ssh:configure_ssh',
+            ],
             'aiida.code': [
                 'code = aiida.orm.code:Code'
             ],

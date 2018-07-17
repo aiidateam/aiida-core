@@ -161,3 +161,5 @@ SCHEDULER = OverridableOption('-S', '--scheduler', help='scheduler type',
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(),
                          help='the email address of the user')
+
+PORT_NR = OverridableOption('-P', '--port', 'port', type=int, help='Port number')

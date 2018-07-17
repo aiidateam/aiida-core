@@ -1,6 +1,32 @@
 """Manage computer objects with lazy loading of the db env"""
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.exceptions import NotExistent
 from aiida.utils.error_accumulator import ErrorAccumulator
+
+
+def configure_computer(computer, user=None, **kwargs):
+    from aiida.orm.backend import construct_backend
+
+    transport_cls = computer.get_transport_class()
+    backend = construct_backend()
+    user = user or backend.users.get_automatic_user()
+
+    try:
+        authinfo = backend.authinfos.get(computer, user)
+    except NotExistent:
+        authinfo = backend.authinfos.create(computer, user)
+
+    auth_params = authinfo.get_auth_params()
+    valid_keys = set(transport_cls.get_valid_auth_params())
+
+    if not set(kwargs.keys()).issubset(valid_keys):
+        invalid_keys = [key for key in kwargs.keys() if key not in valid_keys]
+        raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(transport=transport_cls, invalid=invalid_keys))
+
+    if valid_keys:
+        auth_params.update(kwargs)
+        authinfo.set_auth_params(auth_params)
+    authinfo.store()
 
 
 class ComputerBuilder(object):
@@ -37,8 +63,8 @@ class ComputerBuilder(object):
         computer.set_description(self._get_and_count('description', used))
         computer.set_enabled_state(self._get_and_count('enabled', used))
         computer.set_hostname(self._get_and_count('hostname', used))
-        computer.set_scheduler_type(self._get_and_count('scheduler', used).name)
-        computer.set_transport_type(self._get_and_count('transport', used).name)
+        computer.set_scheduler_type(self._get_and_count('scheduler', used))
+        computer.set_transport_type(self._get_and_count('transport', used))
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))

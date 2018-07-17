@@ -10,6 +10,7 @@
 """`verdi computer` commands"""
 import sys
 import click
+from click_plugins import with_plugins
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -23,6 +24,7 @@ from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types import (
     ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
 from aiida.control.computer import ComputerBuilder
+from aiida.plugins.entry_point import get_entry_points
 
 
 def get_computer_names():
@@ -76,7 +78,7 @@ def shouldcall_default_mpiprocs_per_machine(ctx):
         return False
 
     return JobResourceClass.accepts_default_mpiprocs_per_machine()
-    
+
 def _computer_test_get_jobs(transport,scheduler,authinfo):
     """
     Internal test to check if it is possible to check the queue state.
@@ -239,6 +241,9 @@ def setup_computer(ctx, non_interactive, **kwargs):
         pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
+
+    kwargs['transport'] = kwargs['transport'].name
+    kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
     try:
@@ -576,6 +581,13 @@ def computer_delete(computer):
     echo.echo_success("Computer '{}' deleted.".format(compname))
 
 
+
+@with_plugins(get_entry_points('aiida.cmdline.computer.configure'))
+@verdi_computer.group('configure-poc')
+def computer_configure_poc():
+    """Configure a computer with one of the available transport types."""
+    pass
+
 class Computer(VerdiCommandWithSubcommands):
     """
     Setup and manage computers to be used
@@ -600,6 +612,7 @@ class Computer(VerdiCommandWithSubcommands):
             'configure': (self.computer_configure, self.complete_computers),
             'test': (verdi, self.complete_computers),
             'delete': (verdi, self.complete_computers),
+            'configure-poc': (verdi, self.complete_none),
         }
 
     def complete_computers(self, subargs_idx, subargs):

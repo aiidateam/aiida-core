@@ -707,6 +707,28 @@ class Transport(object):
     def has_magic(self, s):
         return self._MAGIC_CHECK.search(s) is not None
 
+    @classmethod
+    def configure_computer(cls, computer, user=None, **kwargs):
+        from aiida.orm.backends import construct_backend
+        backend = construct_backend()
+
+        user = user or backend.users.get_automatic_user()
+
+        try:
+            authinfo = backend.authinfos.get(computer, user)
+        except NotExistent:
+            authinfo = backend.authinfos.create(computer, user)
+
+        auth_params = authinfo.get_auth_params()
+        valid_keys = set(cls.get_valid_auth_params())
+
+        if not set(kwargs.keys).issubset(valid_keys):
+            raise ValueError('{cls_}: does not take authentication parameter "{key}"'.format(cls_=cls, key=key))
+
+        if valid_keys:
+            auth_params.update(kwargs)
+            authinfo.set_auth_params(auth_params)
+
 
 class TransportInternalError(InternalError):
     """

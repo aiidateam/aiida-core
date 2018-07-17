@@ -26,18 +26,6 @@ class Data(VerdiCommandWithSubcommands):
     def __init__(self):
         super(Data, self).__init__()
 
-        # import to populate the click subcommands
-        from aiida.cmdline.commands.data import (
-            upf,
-            structure,
-            bands,
-            cif,
-            trajectory,
-            parameter,
-            array,
-            remote,
-            )
-
         self.valid_subcommands = {
             'upf': (self.cli, self.complete_none),
             'structure': (self.cli, self.complete_none),
@@ -94,3 +82,16 @@ def data_plugins(entry_point):
             echo.echo_info('Pass the entry point as an argument to display detailed information')
         else:
             echo.echo_error('No data plugins found')
+
+
+# import to populate the click subcommands
+from aiida.cmdline.commands.data import (
+    upf,
+    structure,
+    bands,
+    cif,
+    trajectory,
+    parameter,
+    array,
+    remote,
+    )

@@ -20,18 +20,19 @@ class Data(VerdiCommandWithSubcommands):
     """
 
     def __init__(self):
-        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-        if not is_dbenv_loaded():
-            load_dbenv()
+        super(Data, self).__init__()
 
-        from aiida.cmdline.commands.data import upf
-        from aiida.cmdline.commands.data import structure
-        from aiida.cmdline.commands.data import bands
-        from aiida.cmdline.commands.data import cif
-        from aiida.cmdline.commands.data import trajectory
-        from aiida.cmdline.commands.data import parameter
-        from aiida.cmdline.commands.data import array
-        from aiida.cmdline.commands.data import remote
+        # import to actually populate the subcommands
+        from aiida.cmdline.commands.data import (
+            upf,
+            structure,
+            bands,
+            cif,
+            trajectory,
+            parameter,
+            array,
+            remote,
+            )
 
         self.valid_subcommands = {
             'upf': (self.cli, self.complete_none),

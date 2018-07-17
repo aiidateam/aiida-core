@@ -11,9 +11,6 @@
 This module provides list functionality to all data types.
 """
 import click
-from aiida.orm.implementation import Group
-from aiida.orm.user import User
-from aiida.orm.backend import construct_backend
 from aiida.cmdline.params import options
 
 LIST_OPTIONS = [
@@ -57,6 +54,9 @@ def query(datatype, project, past_days, group_pks, all_users):
     """
     import datetime
 
+    from aiida.orm.implementation import Group
+    from aiida.orm.user import User
+    from aiida.orm.backend import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.utils import timezone
 

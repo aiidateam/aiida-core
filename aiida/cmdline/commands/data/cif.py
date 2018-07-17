@@ -15,10 +15,8 @@ from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.commands.data.list import _list, list_options
 from aiida.cmdline.commands.data.export import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.params import arguments
-
-from aiida.orm.data.structure import StructureData
 
 
 # pylint: disable=unused-argument
@@ -30,6 +28,7 @@ def cif(ctx):
 
 
 @cif.command('show')
+@decorators.with_dbenv()
 @arguments.NODES()
 @click.option(
     '-f',
@@ -42,6 +41,7 @@ def show(nodes, given_format):
     """
     Visualize CifData objects
     """
+    from aiida.orm.data.structure import StructureData
     from aiida.orm.data.cif import CifData
     from aiida.cmdline.commands.data.show import _show_jmol
     from aiida.cmdline.commands.data.show import _show_vesta
@@ -109,6 +109,7 @@ SUPPORTED_FORMATS = ['cif', 'tcod']
 
 
 @cif.command('export')
+@decorators.with_dbenv()
 @click.option('-y', '--format', type=click.Choice(SUPPORTED_FORMATS), default='cif', help="Type of the exported file.")
 @export_options
 def export(**kwargs):
@@ -132,6 +133,7 @@ def export(**kwargs):
 
 
 @cif.command('import')
+@decorators.with_dbenv()
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 def importfile(filename):
     """
@@ -148,20 +150,20 @@ def importfile(filename):
 
 
 @cif.command('deposit')
+@decorators.with_dbenv()
 @deposit_options
 def deposit(**kwargs):
     """
     Deposit CifData object
     """
     from aiida.orm.data.cif import CifData
-    # if not is_dbenv_loaded():
-    #     load_dbenv()
+
     node = kwargs.pop('node')
     deposition_type = kwargs.pop('deposition_type')
     parameter_data = kwargs.pop('parameter_data')
 
-    #if kwargs['database'] is None:
-    #echo.echo_critical("Default database is not defined, please specify.")
+    # if kwargs['database'] is None:
+    # echo.echo_critical("Default database is not defined, please specify.")
     kwargs.pop('database')  # looks like a bug, but deposit function called inside deposit_tcod
     # complains about the 'database' keywords argument
 

@@ -386,7 +386,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                  "is neither a (possibly compressed) tar file, "
                                  "nor a zip file.")
 
-        if not os.listdir(folder):
+        if not folder.get_content_list():
             print "The provided file/folder is empty. Exiting silently"
             return
 

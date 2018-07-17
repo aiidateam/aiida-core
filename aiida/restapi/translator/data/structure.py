@@ -83,7 +83,7 @@ class StructureDataTranslator(DataTranslator):
     def get_visualization_data(node, format=None, supercell_factors=[1, 1, 1]):
         """
         Returns: data in specified format. If format is not specified returns data
-        in a format required by chemdoodle to visualize a structure.
+        in xsf format in order to visualize the structure with JSmol.
         """
         response = {}
         response["str_viz_info"] = {}
@@ -95,7 +95,7 @@ class StructureDataTranslator(DataTranslator):
             except LicensingException as e:
                 response = e.message
 
-        else:
+        elif format == "chemdoodle":
             import numpy as np
             from itertools import product
 
@@ -171,7 +171,14 @@ class StructureDataTranslator(DataTranslator):
                             "m": [{"a": atoms_json}],
                             "units": '&Aring;'
                             }
-            response["str_viz_info"]["format"] = "default (ChemDoodle)"
+            response["str_viz_info"]["format"] = "chemdoodle"
+
+        else:
+            try:
+                response["str_viz_info"]["data"] = node._exportstring("xsf")[0]
+                response["str_viz_info"]["format"] = "xsf"
+            except LicensingException as e:
+                response = e.message
 
         # Add extra information
         response["dimensionality"] = node.get_dimensionality()

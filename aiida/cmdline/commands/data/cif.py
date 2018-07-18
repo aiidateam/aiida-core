@@ -23,7 +23,7 @@ from aiida.cmdline.params import arguments
 @verdi_data.group('cif')
 @click.pass_context
 def cif(ctx):
-    """help"""
+    """Manipulation of CIF data objects"""
     pass
 
 

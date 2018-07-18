@@ -231,6 +231,11 @@ class VerdiCommandWithSubcommands(VerdiCommand):
         return {k: v for k, v in self.valid_subcommands.iteritems() if not k.startswith('_')}
 
     def run(self, *args):
+        if hasattr(self, '_ctx'):
+            # if there is a _ctx, then forward everything directly to click
+            # this command will terminate the control flow in any case
+            self._ctx(args=args, resilient_parsing=True).command(args)
+
         try:
             function_to_call = self.valid_subcommands[args[0]][0]
         except IndexError:

@@ -43,6 +43,10 @@ class Data(VerdiCommandWithSubcommands):
         verdi()  # pylint: disable=no-value-for-parameter
 
     @staticmethod
+    def _ctx(args, info_name='verdi data', **kwargs):
+        return verdi_data.make_context(info_name, list(args), **kwargs)
+
+    @staticmethod
     @decorators.with_dbenv()
     def complete_plugins(subargs_idx, subargs):
         """Return the list of plugins registered under the 'data' category."""

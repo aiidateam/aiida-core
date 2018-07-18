@@ -13,6 +13,7 @@ from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
 
 
 TRANSPORT_PARAMS = [
+    options.USER(),
     options.FREQUENCY(default=5, prompt='Connection frequency in sec', cls=InteractiveOption, help='how often the transport tries to connect in sec'),
     options.NON_INTERACTIVE(),
     arguments.COMPUTER()
@@ -39,11 +40,11 @@ def configure_computer_main(computer, user, **kwargs):
 
 
 def common_params(command_func):
-    for option in TRANSPORT_PARAMS:
-        command_func = option(command_func)
+    params = [i for i in TRANSPORT_PARAMS]
+    params.reverse()
+    for param in params:
+        command_func = param(command_func)
     return command_func
-
-
 
 
 class Transport(object):

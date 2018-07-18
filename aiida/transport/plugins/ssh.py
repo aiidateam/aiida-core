@@ -15,6 +15,7 @@ import os
 import click
 import paramiko
 import glob
+from collections import OrderedDict
 
 import aiida.transport
 import aiida.transport.transport
@@ -57,20 +58,30 @@ def interactive_default(transport_type, key, also_noninteractive=False):
     return get_default
 
 
-def create_option(transport_type, name):
+def create_option(name, spec):
     from aiida.transport import TransportFactory
-    optional = TransportFactory(transport_type).auth_options[name]
     option_name = '--{}'.format(name.replace('_', '-'))
-    existing_option = optional.pop('option', None)
-    if optional.pop('switch', False):
+    existing_option = spec.pop('option', None)
+    if spec.pop('switch', False):
         option_name = '{name}/--no-{name}'.format(name=option_name)
     kwargs = {}
-    kwargs['contextual_default'] = interactive_default('ssh', name, also_noninteractive=optional.pop('non_interactive_default', False))
+    kwargs['contextual_default'] = interactive_default('ssh', name, also_noninteractive=spec.pop('non_interactive_default', False))
     kwargs['cls'] = InteractiveOption
-    kwargs.update(optional)
+    kwargs.update(spec)
     if existing_option:
         return existing_option(**kwargs)
     return click.option(option_name, **kwargs)
+
+
+def transport_options(transport_type):
+    def apply_options(func):
+        from aiida.transport import TransportFactory
+        options = [item for item in TransportFactory(transport_type).auth_options.items()]
+        options.reverse()
+        for name, spec in options:
+            func = create_option(name, spec)(func)
+        return func
+    return apply_options
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
@@ -103,21 +114,21 @@ class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
-    _valid_connect_options = {
-        'username': {'prompt': 'User name', 'help': 'user name for the computer'},
-        'port': {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True},
-        'look_for_keys': {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True},
-        'key_filename': {'type': click.Path(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True},
-        'timeout': {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True},
-        'allow_agent': {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent'},
-        'proxy_command': {'prompt': 'SSH proxy command', 'help': 'SSH proxy command'},  # Managed 'manually' in connect
-        'compress': {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off'},
-        'gss_auth': {'prompt': 'GSS auth', 'help': 'GSS auth for kerberos'},
-        'gss_kex': {'prompt': 'GSS kex', 'help': 'GSS kex for kerberos'},
-        'gss_deleg_creds': {'prompt': 'GSS deleg_creds', 'help': 'GSS deleg_creds for kerberos'},
-        'gss_host': {'prompt': 'GSS host', 'help': 'GSS host for kerberos'},
+    _valid_connect_options = OrderedDict([
+        ('username', {'prompt': 'User name', 'help': 'user name for the computer'}),
+        ('port', {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True}),
+        ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
+        ('key_filename', {'type': click.Path(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
+        ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
+        ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent'}),
+        ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command'}),  # Managed 'manually' in connect
+        ('compress', {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off'}),
+        ('gss_auth', {'prompt': 'GSS auth', 'help': 'GSS auth for kerberos'}),
+        ('gss_kex', {'prompt': 'GSS kex', 'help': 'GSS kex for kerberos'}),
+        ('gss_deleg_creds', {'prompt': 'GSS deleg_creds', 'help': 'GSS deleg_creds for kerberos'}),
+        ('gss_host', {'prompt': 'GSS host', 'help': 'GSS host for kerberos'}),
         # for Kerberos support through python-gssapi
-    }
+    ])
 
     # Valid parameters for the ssh transport
     # For each param, a class method with name
@@ -130,10 +141,10 @@ class SshTransport(aiida.transport.Transport):
     # to return a suggestion; it must accept only one parameter, being a Computer
     # instance
     _valid_auth_options = _valid_connect_options
-    _valid_auth_options.update({
-        'load_system_host_keys': {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off'},
-        'key_policy': {'type': click.Choice(['RejectPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy'}
-    })
+    _valid_auth_options.update(OrderedDict([
+        ('load_system_host_keys', {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off'}),
+        ('key_policy', {'type': click.Choice(['RejectPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy'})
+    ]))
     _valid_auth_params = _valid_auth_options.keys()
 
     # I set the (default) value here to 5 secs between consecutive SSH checks.
@@ -1479,21 +1490,7 @@ class _DetachedProxyCommand(paramiko.ProxyCommand):
 
 
 @click.command('ssh')
-@options.USER()
-@create_option('ssh', 'username')
-@create_option('ssh', 'port')
-@create_option('ssh', 'look_for_keys')
-@create_option('ssh', 'key_filename')
-@create_option('ssh', 'timeout')
-@create_option('ssh', 'allow_agent')
-@create_option('ssh', 'proxy_command')
-@create_option('ssh', 'compress')
-@create_option('ssh', 'gss_auth')
-@create_option('ssh', 'gss_kex')
-@create_option('ssh', 'gss_deleg_creds')
-@create_option('ssh', 'gss_host')
-@create_option('ssh', 'load_system_host_keys')
-@create_option('ssh', 'key_policy')
+@transport_options('ssh')
 @transport.common_params
 def configure_ssh(computer, user, non_interactive, **kwargs):
     """Configure a computer for connecting via SSH."""

@@ -3,48 +3,12 @@ import os
 import re
 import fnmatch
 import sys
-from functools import wraps
+from collections import OrderedDict
+
 import aiida.common
 from aiida.common.exceptions import InternalError
-from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.params import options, arguments
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.common.utils import classproperty
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
-
-
-TRANSPORT_PARAMS = [
-    options.USER(),
-    options.FREQUENCY(default=5, prompt='Connection frequency in sec', cls=InteractiveOption, help='how often the transport tries to connect in sec'),
-    options.NON_INTERACTIVE(),
-    arguments.COMPUTER()
-]
-
-
-@with_dbenv()
-def configure_computer_main(computer, user, **kwargs):
-    from aiida.orm.backend import construct_backend
-    from aiida.control.computer import configure_computer
-    from aiida.common.utils import get_configured_user_email
-    backend = construct_backend()
-    user = user or backend.users.get_automatic_user()
-
-    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
-    if user.email != get_configured_user_email():
-        echo.echo_info('Configuring different user, defaults may not be appropriate.')
-
-    if computer.get_transport_type() != 'ssh':
-        echo.echo_critical('Computer {} has transport of type "{}", not "ssh"!'.format(computer.name, computer.get_transport_type()))
-
-    configure_computer(computer, user=user, **kwargs)
-    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
-
-
-def common_params(command_func):
-    params = [i for i in TRANSPORT_PARAMS]
-    params.reverse()
-    for param in params:
-        command_func = param(command_func)
-    return command_func
 
 
 class Transport(object):
@@ -58,6 +22,9 @@ class Transport(object):
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
+    _common_auth_options = [
+        ('safe_interval', {'default': 5, 'type': int, 'prompt': 'Connection cooldown time (sec)', 'help': 'Minimum time between connections in sec'})
+    ]
 
     # Time in seconds between consecutive checks
     # Set to a non-zero value to be safe e.g. in the case of transports with a connection limit,
@@ -176,10 +143,14 @@ class Transport(object):
         """
         Return the internal list of valid auth_params
         """
-        if cls._valid_auth_params is None:
+        if cls._valid_auth_options is None:
             raise NotImplementedError
         else:
-            return cls._valid_auth_params
+            return cls.auth_options.keys()
+
+    @classproperty
+    def auth_options(cls):
+        return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
 
     @property
     def logger(self):

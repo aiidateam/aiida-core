@@ -5,6 +5,7 @@ from aiida.utils.error_accumulator import ErrorAccumulator
 
 
 def configure_computer(computer, user=None, **kwargs):
+    """Configure a computer for a user with valid auth params passed via kwargs."""
     from aiida.orm.backend import construct_backend
 
     transport_cls = computer.get_transport_class()
@@ -20,13 +21,30 @@ def configure_computer(computer, user=None, **kwargs):
     valid_keys = set(transport_cls.get_valid_auth_params())
 
     if not set(kwargs.keys()).issubset(valid_keys):
-        invalid_keys = [key for key in kwargs.keys() if key not in valid_keys]
-        raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(transport=transport_cls, invalid=invalid_keys))
+        invalid_keys = [key for key in kwargs if key not in valid_keys]
+        raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
+            transport=transport_cls, invalid=invalid_keys))
 
     if valid_keys:
         auth_params.update(kwargs)
         authinfo.set_auth_params(auth_params)
     authinfo.store()
+
+
+def get_computer_configuration(computer, user=None):
+    """Get the configuratio of computer for user as a dictionary."""
+    from aiida.orm.backend import construct_backend
+
+    backend = construct_backend()
+    user = user or backend.users.get_automatic_user()
+
+    config = {}
+    try:
+        authinfo = backend.authinfos.get(computer, user)
+        config = authinfo.get_auth_params()
+    except NotExistent:
+        pass
+    return config
 
 
 class ComputerBuilder(object):

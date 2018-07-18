@@ -15,6 +15,7 @@ from click_plugins import with_plugins
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
+from aiida.common.utils import escape_for_bash
 from aiida.cmdline.commands import verdi, verdi_computer, ensure_scripts
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
@@ -23,8 +24,9 @@ from aiida.cmdline.params import types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types import (
     ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
-from aiida.control.computer import ComputerBuilder
+from aiida.control.computer import ComputerBuilder, get_computer_configuration
 from aiida.plugins.entry_point import get_entry_points
+from aiida import transport
 
 
 def get_computer_names():
@@ -582,11 +584,39 @@ def computer_delete(computer):
 
 
 
-@with_plugins(get_entry_points('aiida.cmdline.computer.configure'))
-@verdi_computer.group('configure-poc')
-def computer_configure_poc():
+# ~ @with_plugins(get_entry_points('aiida.cmdline.computer.configure'))
+@verdi_computer.group('configure')
+def computer_configure():
     """Configure a computer with one of the available transport types."""
     pass
+
+@computer_configure.command('show')
+@click.option('--current/--defaults')
+@click.option('--as-option-string', is_flag=True)
+@options.USER()
+@arguments.COMPUTER()
+def computer_config_show(computer, user, current, as_option_string):
+    """Show the current or default configuration for COMPUTER."""
+    import tabulate
+    config = {}
+    table = []
+    transport_cls = computer.get_transport_class()
+    option_list = [param for param in transport.cli.create_configure_cmd(computer.get_transport_type()).params if isinstance(param, click.core.Option)]
+    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+    if current:
+        config = get_computer_configuration(computer, user)
+    else:
+        config = {option.name: transport.cli.transport_option_default(option.name, computer) for option in option_list}
+
+    if as_option_string:
+        opt_string = ' '.join(['{}=={}'.format(option.opts[-1], config[option.name]) for option in option_list if config[option.name]])
+        echo.echo(escape_for_bash(opt_string))
+    else:
+        table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]
+        echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+
+for ep in get_entry_points('aiida.transports'):
+    computer_configure.add_command(transport.cli.create_configure_cmd(ep.name))
 
 class Computer(VerdiCommandWithSubcommands):
     """
@@ -609,10 +639,9 @@ class Computer(VerdiCommandWithSubcommands):
             'enable': (verdi, self.complete_computers),
             'disable': (verdi, self.complete_computers),
             'rename': (verdi, self.complete_computers),
-            'configure': (self.computer_configure, self.complete_computers),
             'test': (verdi, self.complete_computers),
             'delete': (verdi, self.complete_computers),
-            'configure-poc': (verdi, self.complete_none),
+            'configure': (verdi, self.complete_none),
         }
 
     def complete_computers(self, subargs_idx, subargs):
@@ -685,124 +714,3 @@ class Computer(VerdiCommandWithSubcommands):
         pass
 
 
-    def computer_configure(self, *args):
-        """
-        Configure the authentication information for a given computer
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import readline
-        import inspect
-
-        from aiida.common.exceptions import (NotExistent, ValidationError, MultipleObjectsError)
-        from aiida.common.utils import get_configured_user_email
-
-        import argparse
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(), description='Configure a computer for a given AiiDA user.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument(
-            '-u',
-            '--user',
-            type=str,
-            metavar='EMAIL',
-            help="Configure the computer for the given AiiDA user (otherwise, configure the current default user)",
-        )
-        parser.add_argument('computer', type=str, help="The name of the computer that you want to configure")
-
-        parsed_args = parser.parse_args(args)
-
-        user_email = parsed_args.user
-        computername = parsed_args.computer
-
-        try:
-            computer = get_computer(name=computername)
-        except NotExistent:
-            print >> sys.stderr, "No computer exists with name '{}'".format(computername)
-            sys.exit(1)
-        if user_email is None:
-            user = self.backend.users.get_automatic_user()
-        else:
-            try:
-                user = self.backend.users.get(email=user_email)
-            except (NotExistent, MultipleObjectsError) as e:
-                print >> sys.stderr, ("{}".format(e))
-                sys.exit(1)
-
-        try:
-            authinfo = self.backend.authinfos.get(computer=computer, user=user)
-        except NotExistent:
-            authinfo = self.backend.authinfos.create(computer=computer, user=user)
-        old_authparams = authinfo.get_auth_params()
-
-        Transport = computer.get_transport_class()
-
-        print("Configuring computer '{}' for the AiiDA user '{}'".format(computername, user.email))
-
-        print "Computer {} has transport of type {}".format(computername, computer.get_transport_type())
-
-        if user.email != get_configured_user_email():
-            print "*" * 72
-            print "** {:66s} **".format("WARNING!")
-            print "** {:66s} **".format("  You are configuring a different user.")
-            print "** {:66s} **".format("  Note that the default suggestions are taken from your")
-            print "** {:66s} **".format("  local configuration files, so they may be incorrect.")
-            print "*" * 72
-
-        valid_keys = Transport.get_valid_auth_params()
-
-        default_authparams = {}
-        for k in valid_keys:
-            if k in old_authparams:
-                default_authparams[k] = old_authparams.pop(k)
-        if old_authparams:
-            print("WARNING: the following keys were previously in the " "authorization parameters,")
-            print "but have not been recognized and have been deleted:"
-            print ", ".join(old_authparams.keys())
-
-        print ""
-        print "Note: to leave a field unconfigured, leave it empty and press [Enter]"
-
-        # I strip out the old auth_params that are not among the valid keys
-        new_authparams = {}
-
-        for k in valid_keys:
-            key_set = False
-            while not key_set:
-                try:
-                    converter_name = '_convert_{}_fromstring'.format(k)
-                    try:
-                        converter = dict(inspect.getmembers(Transport))[converter_name]
-                    except KeyError:
-                        print >> sys.stderr, ("Internal error! "
-                                              "No {} defined in Transport {}".format(
-                                                  converter_name, computer.get_transport_type()))
-                        sys.exit(1)
-
-                    if k in default_authparams:
-                        readline.set_startup_hook(lambda: readline.insert_text(str(default_authparams[k])))
-                    else:
-                        # Use suggestion only if parameters were not already set
-                        suggester_name = '_get_{}_suggestion_string'.format(k)
-                        try:
-                            suggester = dict(inspect.getmembers(Transport))[suggester_name]
-                            suggestion = suggester(computer)
-                            readline.set_startup_hook(lambda: readline.insert_text(suggestion))
-                        except KeyError:
-                            readline.set_startup_hook()
-
-                    txtval = raw_input("=> {} = ".format(k))
-                    if txtval:
-                        new_authparams[k] = converter(txtval)
-                    key_set = True
-                except ValidationError as e:
-                    print "Error in the inserted value: {}".format(e.message)
-
-        if not valid_keys:
-            print "There are no special keys to be configured. Configuration completed."
-
-        authinfo.set_auth_params(new_authparams)
-        authinfo.store()
-        print "Configuration stored for your user on computer '{}'.".format(computername)

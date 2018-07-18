@@ -25,9 +25,11 @@ import shutil
 import subprocess
 import StringIO
 import glob
+import click
 
 from aiida.transport.transport import Transport, TransportInternalError
 from aiida.transport.util import FileAttribute
+from aiida import transport
 
 
 class LocalTransport(Transport):
@@ -40,7 +42,8 @@ class LocalTransport(Transport):
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
     # There are no valid parameters for the local transport
-    _valid_auth_params = []
+    _valid_auth_options = [
+    ]
 
     # There is no real limit on how fast you can connect to localhost
     # you should not be banned (as instead it is the case in SSH).
@@ -703,7 +706,7 @@ class LocalTransport(Transport):
     def _exec_command_internal(self, command):
         """
         Executes the specified command in bash login shell.
-        
+
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
 
@@ -716,7 +719,7 @@ class LocalTransport(Transport):
 
         :param  command: the command to execute. The command is assumed to be
             already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
-        
+
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
@@ -844,3 +847,6 @@ class LocalTransport(Transport):
         Check if path exists
         """
         return os.path.exists(os.path.join(self.curdir, path))
+
+
+CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')

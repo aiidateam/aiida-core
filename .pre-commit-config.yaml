@@ -57,6 +57,7 @@
         aiida/scheduler/__init__.py|
         aiida/scheduler/test_datastructures.py|
         aiida/transport/__init__.py|
+        aiida/transport/cli.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|

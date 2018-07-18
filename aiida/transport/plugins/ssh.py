@@ -10,6 +10,7 @@
 from stat import S_ISDIR, S_ISREG
 import StringIO
 
+import inspect
 import os
 import click
 import paramiko
@@ -17,51 +18,59 @@ import glob
 
 import aiida.transport
 import aiida.transport.transport
+from aiida.transport import transport
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import aiidalogger
-from aiida.common.utils import escape_for_bash
+from aiida.common.utils import escape_for_bash, classproperty
+from aiida.common.exceptions import NotExistent
 from aiida.transport.util import FileAttribute
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
 
 
-@click.command('ssh')
-@options.USER()
-@options.PORT_NR(prompt='Port Nr', cls=InteractiveOption)
-@click.option('--look-for-keys/--no-look-for-keys', default=True, prompt='Look for keys', cls=InteractiveOption, help='On: Try to discover key file automatically')
-#@click.option('--key-filename', type=click.Path(dir_okay=False, exists=True), prompt='SSH key file', cls=InteractiveOption, help='Manually pass a key file')
-#@click.option('--timeout', type=int, prompt='Timeout in s', cls=InteractiveOption, help='Time to wait for connection before giving up in seconds')
-#@click.option('--allow-agent/--disallow-agent', default=True, prompt='Allow ssh agent', cls=InteractiveOption, help='Allow or disallow ssh agent')
-#@click.option('--proxy_command', prompt='SSH proxy command', cls=InteractiveOption, help='SSH proxy command')
-#@click.option('--comptress/--no-compress', default=True, prompt='Compress file transfers', cls=InteractiveOption, help='Compress or do not compress file transfers')
-#@click.option('--gss-auth', prompt='GSS auth', cls=InteractiveOption, help='GSS authentication ??')
-#@click.option('--gss-kex', prompt='GSS kex', cls=InteractiveOption, help='GSS key ??')
-#@click.option('--gss-deleg-creds', prompt='GSS delegate credentials', cls=InteractiveOption, help='GSS delegate credits ??')
-#@click.option('--gss-host', prompt='GSS host', cls=InteractiveOption, help='GSS host ??')
-#@click.option('--load-system-host-keys/--no-load-system-host-keys', prompt='Load system host keys', cls=InteractiveOption, help='load or do not load system host keys')
-#@click.option('--key-policy', prompt='Key policy', cls=InteractiveOption, help='SSH key policy')
-@options.NON_INTERACTIVE()
-@arguments.COMPUTER()
 @with_dbenv()
-def configure_ssh(computer, user, non_interactive, **kwargs):
-    from aiida.orm.backend import construct_backend
-    from aiida.control.computer import configure_computer
-    from aiida.common.utils import get_configured_user_email
-    backend = construct_backend()
-    user = user or backend.users.get_automatic_user()
+def interactive_default(transport_type, key, also_noninteractive=False):
+    def get_default(ctx):
+        from aiida.transport import TransportFactory
+        from aiida.orm.backend import construct_backend
+        backend = construct_backend()
+        user = ctx.params['user'] or backend.users.get_automatic_user()
+        computer = ctx.params['computer']
+        try:
+            authinfo = backend.authinfos.get(computer=computer, user=user)
+        except NotExistent:
+            authinfo = backend.authinfos.create(computer=computer, user=user)
+        non_interactive = ctx.params['non_interactive']
+        suggester_name = '_get_{}_suggestion_string'.format(key)
+        members = dict(inspect.getmembers(TransportFactory(transport_type)))
+        suggester = members.get(suggester_name, None)
+        old_authparams = authinfo.get_auth_params()
+        if non_interactive and not also_noninteractive:
+            raise click.MissingParameter()
+        suggestion = old_authparams.get(key)
+        if suggester:
+            suggestion = suggestion or suggester(computer)
+        return suggestion
+    return get_default
 
-    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
-    if user.email != get_configured_user_email():
-        echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
-    if computer.get_transport_type() != 'ssh':
-        echo.echo_critical('Computer {} has transport of type "{}", not "ssh"!'.format(computer.name, computer.get_transport_type()))
-
-    configure_computer(computer, user=user, **kwargs)
-    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
+def create_option(transport_type, name):
+    from aiida.transport import TransportFactory
+    optional = TransportFactory(transport_type).auth_options[name]
+    option_name = '--{}'.format(name.replace('_', '-'))
+    existing_option = optional.pop('option', None)
+    if optional.pop('switch', False):
+        option_name = '{name}/--no-{name}'.format(name=option_name)
+    kwargs = {}
+    kwargs['contextual_default'] = interactive_default('ssh', name, also_noninteractive=optional.pop('non_interactive_default', False))
+    kwargs['cls'] = InteractiveOption
+    kwargs.update(optional)
+    if existing_option:
+        return existing_option(**kwargs)
+    return click.option(option_name, **kwargs)
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
@@ -94,21 +103,21 @@ class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
-    _valid_connect_params = [
-        'username',
-        'port',
-        'look_for_keys',
-        'key_filename',
-        'timeout',
-        'allow_agent',
-        'proxy_command',  # Managed 'manually' in connect
-        'compress',
-        'gss_auth',
-        'gss_kex',
-        'gss_deleg_creds',
-        'gss_host',
+    _valid_connect_options = {
+        'username': {'prompt': 'User name', 'help': 'user name for the computer'},
+        'port': {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True},
+        'look_for_keys': {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True},
+        'key_filename': {'type': click.Path(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True},
+        'timeout': {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True},
+        'allow_agent': {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent'},
+        'proxy_command': {'prompt': 'SSH proxy command', 'help': 'SSH proxy command'},  # Managed 'manually' in connect
+        'compress': {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off'},
+        'gss_auth': {'prompt': 'GSS auth', 'help': 'GSS auth for kerberos'},
+        'gss_kex': {'prompt': 'GSS kex', 'help': 'GSS kex for kerberos'},
+        'gss_deleg_creds': {'prompt': 'GSS deleg_creds', 'help': 'GSS deleg_creds for kerberos'},
+        'gss_host': {'prompt': 'GSS host', 'help': 'GSS host for kerberos'},
         # for Kerberos support through python-gssapi
-    ]
+    }
 
     # Valid parameters for the ssh transport
     # For each param, a class method with name
@@ -120,14 +129,20 @@ class SshTransport(aiida.transport.Transport):
     # define a _get_PARAMNAME_suggestion_string
     # to return a suggestion; it must accept only one parameter, being a Computer
     # instance
-    _valid_auth_params = _valid_connect_params + [
-        'load_system_host_keys',
-        'key_policy',
-    ]
+    _valid_auth_options = _valid_connect_options
+    _valid_auth_options.update({
+        'load_system_host_keys': {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off'},
+        'key_policy': {'type': click.Choice(['RejectPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy'}
+    })
+    _valid_auth_params = _valid_auth_options.keys()
 
     # I set the (default) value here to 5 secs between consecutive SSH checks.
     # This should be incremented to 30, probably.
     _DEFAULT_SAFE_OPEN_INTERVAL = 5.
+
+    @classproperty
+    def auth_options(cls):
+        return cls._valid_connect_options
 
     @classmethod
     def _convert_username_fromstring(cls, string):
@@ -1461,3 +1476,27 @@ class _DetachedProxyCommand(paramiko.ProxyCommand):
         self.cmd = shlsplit(command_line)
         self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
         self.timeout = None
+
+
+@click.command('ssh')
+@options.USER()
+@create_option('ssh', 'username')
+@create_option('ssh', 'port')
+@create_option('ssh', 'look_for_keys')
+@create_option('ssh', 'key_filename')
+@create_option('ssh', 'timeout')
+@create_option('ssh', 'allow_agent')
+@create_option('ssh', 'proxy_command')
+@create_option('ssh', 'compress')
+@create_option('ssh', 'gss_auth')
+@create_option('ssh', 'gss_kex')
+@create_option('ssh', 'gss_deleg_creds')
+@create_option('ssh', 'gss_host')
+@create_option('ssh', 'load_system_host_keys')
+@create_option('ssh', 'key_policy')
+@transport.common_params
+def configure_ssh(computer, user, non_interactive, **kwargs):
+    """Configure a computer for connecting via SSH."""
+    transport.configure_computer_main(computer, user, **kwargs)
+
+

@@ -3,9 +3,47 @@ import os
 import re
 import fnmatch
 import sys
+from functools import wraps
 import aiida.common
 from aiida.common.exceptions import InternalError
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
+
+
+TRANSPORT_PARAMS = [
+    options.FREQUENCY(default=5, prompt='Connection frequency in sec', cls=InteractiveOption, help='how often the transport tries to connect in sec'),
+    options.NON_INTERACTIVE(),
+    arguments.COMPUTER()
+]
+
+
+@with_dbenv()
+def configure_computer_main(computer, user, **kwargs):
+    from aiida.orm.backend import construct_backend
+    from aiida.control.computer import configure_computer
+    from aiida.common.utils import get_configured_user_email
+    backend = construct_backend()
+    user = user or backend.users.get_automatic_user()
+
+    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
+    if user.email != get_configured_user_email():
+        echo.echo_info('Configuring different user, defaults may not be appropriate.')
+
+    if computer.get_transport_type() != 'ssh':
+        echo.echo_critical('Computer {} has transport of type "{}", not "ssh"!'.format(computer.name, computer.get_transport_type()))
+
+    configure_computer(computer, user=user, **kwargs)
+    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
+
+
+def common_params(command_func):
+    for option in TRANSPORT_PARAMS:
+        command_func = option(command_func)
+    return command_func
+
+
 
 
 class Transport(object):

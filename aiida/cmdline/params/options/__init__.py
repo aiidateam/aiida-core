@@ -163,3 +163,6 @@ USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(),
                          help='the email address of the user')
 
 PORT_NR = OverridableOption('-P', '--port', 'port', type=int, help='Port number')
+
+
+FREQUENCY = OverridableOption('-F', '--frequency', 'frequency', type=int)

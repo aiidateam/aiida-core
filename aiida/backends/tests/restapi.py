@@ -796,7 +796,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.backends.tests.dataclasses import simplify
         node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(
-            node_uuid) + '/content/visualization'
+            node_uuid) + '/content/visualization?visformat=xsf'
         with self.app.test_client() as client:
             rv = client.get(url)
             response = json.loads(rv.data)

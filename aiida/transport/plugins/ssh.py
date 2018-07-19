@@ -52,6 +52,7 @@ def convert_to_bool(string):
         raise ValueError("Invalid boolean value provided")
 
 
+
 class SshTransport(aiida.transport.Transport):
     """
     Support connection, command execution and data transfer to remote computers via SSH+SFTP.
@@ -1413,6 +1414,7 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
+
 
 
 class _DetachedProxyCommand(paramiko.ProxyCommand):

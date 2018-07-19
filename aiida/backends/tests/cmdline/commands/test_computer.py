@@ -4,7 +4,7 @@ from collections import OrderedDict
 from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.computer import (disable_computer, enable_computer)
-from aiida.cmdline.commands.computer import setup_computer
+from aiida.cmdline.commands.computer import setup_computer, computer_configure
 from aiida.cmdline.commands.computer import (computer_show, computer_list, computer_rename, computer_delete,
                                              computer_test)
 from aiida.utils.capturing import Capturing
@@ -350,6 +350,130 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIn("unknown replacement field 'unknown_key'", str(result.output))
 
 
+class TestVerdiComputerSetup(AiidaTestCase):
+
+    def setUp(self):
+        """Prepare computer builder with common properties."""
+        from aiida.orm.backend import construct_backend
+        from aiida.control.computer import ComputerBuilder
+        self.backend = construct_backend()
+        self.user = self.backend.users.get_automatic_user()
+        self.runner = CliRunner()
+        self.comp_builder = ComputerBuilder(label='test_comp_setup')
+        self.comp_builder.hostname = 'localhost'
+        self.comp_builder.description = 'Test Computer'
+        self.comp_builder.enabled = True
+        self.comp_builder.scheduler = 'direct'
+        self.comp_builder.work_dir = '/tmp/aiida'
+        self.comp_builder.prepend_text = ''
+        self.comp_builder.append_text = ''
+        self.comp_builder.mpiprocs_per_machine = 8
+        self.comp_builder.mpirun_command = 'mpirun'
+        self.comp_builder.shebang = '#!xonsh'
+
+    def test_top_help(self):
+        """Test help option of verdi computer configure."""
+        result = self.runner.invoke(computer_configure, ['--help'], catch_exceptions=False)
+        self.assertIn('ssh', result.output)
+        self.assertIn('local', result.output)
+
+    def test_reachable(self):
+        """Test reachability of top level and sub commands."""
+        import subprocess as sp
+        output = sp.check_output(['verdi', 'computer', 'configure', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'local', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'ssh', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
+
+    def test_local_ni_empty(self):
+        """
+        Test verdi computer configure local <comp>
+
+        Test twice, with comp setup for local or ssh.
+
+         * with computer setup for local: should succeed
+         * with computer setup for ssh: should fail
+        """
+        self.comp_builder.label = 'test_local_ni_empty'
+        self.comp_builder.transport = 'local'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        result = self.runner.invoke(computer_configure, ['local', comp.label, '--non-interactive'], catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
+        self.comp_builder.label = 'test_local_ni_empty_mismatch'
+        self.comp_builder.transport = 'ssh'
+        comp_mismatch = self.comp_builder.new()
+        comp_mismatch.store()
+        result = self.runner.invoke(computer_configure, ['local', comp_mismatch.label, '--non-interactive'], catch_exceptions=False)
+        self.assertIsNotNone(result.exception)
+        self.assertIn('ssh', result.output)
+        self.assertIn('local', result.output)
+
+    def test_ssh_ni_empty(self):
+        """
+        Test verdi computer configure ssh <comp>
+
+        Test twice, with comp setup for ssh or local.
+
+         * with computer setup for ssh: should succeed
+         * with computer setup for local: should fail
+        """
+        self.comp_builder.label = 'test_ssh_ni_empty'
+        self.comp_builder.transport = 'ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        result = self.runner.invoke(computer_configure, ['ssh', comp.label, '--non-interactive'], catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
+        self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
+        self.comp_builder.transport = 'local'
+        comp_mismatch = self.comp_builder.new()
+        comp_mismatch.store()
+        result = self.runner.invoke(computer_configure, ['ssh', comp_mismatch.label, '--non-interactive'], catch_exceptions=False)
+        self.assertIsNotNone(result.exception)
+        self.assertIn('local', result.output)
+        self.assertIn('ssh', result.output)
+
+    def test_ssh_ni_username(self):
+        """Test verdi computer configure ssh <comp> --username=<username>."""
+        self.comp_builder.label ='test_ssh_ni_username'
+        self.comp_builder.transport = 'ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        username = 'TEST'
+        result = self.runner.invoke(computer_configure, ['ssh', comp.label, '--non-interactive', '--username={}'.format(username)], catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+        self.assertEqual(self.backend.authinfos.get(comp, self.user).get_auth_params()['username'], username)
+
+    def test_show(self):
+        """Test verdi computer configure show <comp>."""
+        self.comp_builder.label ='test_show'
+        self.comp_builder.transport = 'ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        result = self.runner.invoke(computer_configure, ['show', comp.label], catch_exceptions=False)
+
+        result = self.runner.invoke(computer_configure, ['show', comp.label, '--defaults'], catch_exceptions=False)
+        self.assertIn('* username', result.output)
+
+        result = self.runner.invoke(computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], catch_exceptions=False)
+        self.assertIn('--username=', result.output)
+
+        config_cmd = ['ssh', comp.label, '--non-interactive']
+        config_cmd.extend(result.output.replace("'", '').split(' '))
+        result_config = self.runner.invoke(computer_configure, config_cmd, catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result_config.output)
+
+        result_cur = self.runner.invoke(computer_configure, ['show', comp.label, '--as-option-string'], catch_exceptions=False)
+        self.assertIn('--username=', result.output)
+        self.assertEqual(result_cur.output, result.output)
+
+
 class TestVerdiComputerCommands(AiidaTestCase):
     """Testing verdi computer commands.
 
@@ -375,18 +499,17 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Prepare the computer and user
         """
-        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.control.computer import configure_computer
 
         self.user = self.backend.users.get_automatic_user()
 
         # I need to configure the computer here; being 'local',
         # there should not be any options asked here
-        with Capturing():
-            ComputerCmd().run('configure', self.comp.name)
+        configure_computer(self.comp)
 
         assert self.comp.is_user_configured(self.user), "There was a problem configuring the test computer"
-
         self.runner = CliRunner()
+
 
     def test_enable_disable_globally(self):
         """

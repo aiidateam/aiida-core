@@ -90,10 +90,13 @@ def interactive_default(transport_type, key, also_noninteractive=False):
 
 def create_option(name, spec):
     """Create a click option from a name and partial specs as used in transport auth_options."""
-    option_name = '--{}'.format(name.replace('_', '-'))
+    from copy import deepcopy
+    spec = deepcopy(spec)
+    name_dashed = name.replace('_', '-')
+    option_name = '--{}'.format(name_dashed)
     existing_option = spec.pop('option', None)
     if spec.pop('switch', False):
-        option_name = '{name}/--no-{name}'.format(name=option_name)
+        option_name = '--{name}/--no-{name}'.format(name=name_dashed)
     kwargs = {}
     if 'default' not in spec:
         kwargs['contextual_default'] = interactive_default(

@@ -598,8 +598,10 @@ def computer_configure():
 def computer_config_show(computer, user, current, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
+    from pprint import pformat
     config = {}
     table = []
+
     transport_cls = computer.get_transport_class()
     option_list = [param for param in transport.cli.create_configure_cmd(computer.get_transport_type()).params if isinstance(param, click.core.Option)]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
@@ -608,8 +610,20 @@ def computer_config_show(computer, user, current, as_option_string):
     else:
         config = {option.name: transport.cli.transport_option_default(option.name, computer) for option in option_list}
 
+    option_items = []
     if as_option_string:
-        opt_string = ' '.join(['{}=={}'.format(option.opts[-1], config[option.name]) for option in option_list if config[option.name]])
+        for option in option_list:
+            t_opt = transport_cls.auth_options[option.name]
+            if config.get(option.name) or config.get(option.name) is False:
+                if t_opt.get('switch'):
+                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(option.name.replace('_', '-'))
+                elif t_opt.get('is_flag'):
+                    is_default = config.get(option.name) == transport_option_default(option.name, computer)
+                    option_value = option.opts[-1] if is_default else ''
+                else:
+                    option_value = '{}={}'.format(option.opts[-1], config[option.name])
+                option_items.append(option_value)
+        opt_string = ' '.join(option_items)
         echo.echo(escape_for_bash(opt_string))
     else:
         table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]

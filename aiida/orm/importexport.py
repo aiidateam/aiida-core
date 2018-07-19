@@ -1658,8 +1658,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     :todo: limit the export to finished or failed calculations.
 
-    :param what: a list of Django database entries; they can belong to different
-      models.
+    :param what: a list of Django database entries; they can belong to
+    different models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
     :param input_forward: Follow forward INPUT links (recursively) when
     calculating the node set to export.

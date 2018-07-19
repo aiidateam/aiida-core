@@ -411,6 +411,15 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIn('ssh', result.output)
         self.assertIn('local', result.output)
 
+    def test_local_interactive(self):
+        self.comp_builder.label = 'test_local_interactive'
+        self.comp_builder.transport = 'local'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        result = self.runner.invoke(computer_configure, ['local', comp.label], input='\n', catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
     def test_ssh_ni_empty(self):
         """
         Test verdi computer configure ssh <comp>

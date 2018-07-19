@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-LATEST_MIGRATION = '0023_calc_job_option_attribute_keys'
+LATEST_MIGRATION = '0024_dblog_update'
 
 
 def _update_schema_version(version, apps, schema_editor):

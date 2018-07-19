@@ -119,6 +119,7 @@ class Collection(typing.Generic[EntityType]):
             query.order_by({self.entity_type: order_by})
         if limit:
             query.limit(limit)
+
         return [_[0] for _ in query.all()]
 
     def all(self):

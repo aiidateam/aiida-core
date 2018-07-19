@@ -8,17 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ORM Log tests"""
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
+
 import logging
 
+import six
 from six.moves import range
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida import orm
+from aiida.common.utils import get_new_uuid
 from aiida.orm.node.process.calculation import CalculationNode
 from aiida.common.timezone import now
 
@@ -33,7 +36,7 @@ class TestBackendLog(AiidaTestCase):
             'loggername': 'loggername',
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
             'objname': 'objname',
-            'objpk': 0,
+            'objuuid': get_new_uuid(),
             'message': 'This is a template record message',
             'metadata': {
                 'content': 'test'
@@ -57,7 +60,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(entry.loggername, self.record['loggername'])
         self.assertEqual(entry.levelname, self.record['levelname'])
         self.assertEqual(entry.objname, self.record['objname'])
-        self.assertEqual(entry.objpk, self.record['objpk'])
+        self.assertEqual(six.text_type(entry.objuuid), self.record['objuuid'])
         self.assertEqual(entry.message, self.record['message'])
         self.assertEqual(entry.metadata, self.record['metadata'])
 
@@ -93,9 +96,9 @@ class TestBackendLog(AiidaTestCase):
 
     def test_objects_find(self):
         """Put logs in and find them"""
-        for pk in range(10):
+        for _ in range(10):
             record = self.record
-            record['objpk'] = pk
+            record['objuuid'] = get_new_uuid()
             orm.Log(**record)
 
         entries = orm.Log.objects.all()
@@ -108,20 +111,26 @@ class TestBackendLog(AiidaTestCase):
         """
         from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
 
-        for pk in range(10):
+        first_time, last_time = None, None
+        for counter in range(10):
             record = self.record
-            record['objpk'] = pk
+            record['time'] = now()
             orm.Log(**record)
 
-        order_by = [OrderSpecifier('objpk', ASCENDING)]
+            if counter == 0:
+                first_time = record['time']
+            elif counter == 9:
+                last_time = record['time']
+
+        order_by = [OrderSpecifier('time', ASCENDING)]
         entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEqual(entries[0].objpk, 0)
+        self.assertEqual(six.text_type(entries[0].time), six.text_type(first_time))
 
-        order_by = [OrderSpecifier('objpk', DESCENDING)]
+        order_by = [OrderSpecifier('time', DESCENDING)]
         entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEqual(entries[0].objpk, 9)
+        self.assertEqual(six.text_type(entries[0].time), six.text_type(last_time))
 
     def test_find_limit(self):
         """
@@ -138,15 +147,18 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the filter option of log.find
         """
-        target_pk = 5
-        for pk in range(10):
+        target_uuid = get_new_uuid()
+        for counter in range(10):
             record = self.record
-            record['objpk'] = pk
+            if counter == 5:
+                record['objuuid'] = target_uuid
+            else:
+                record['objuuid'] = get_new_uuid()
             orm.Log(**record)
 
-        entries = orm.Log.objects.find(filters={'objpk': target_pk})
+        entries = orm.Log.objects.find(filters={'objuuid': target_uuid})
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].objpk, target_pk)
+        self.assertEqual(six.text_type(entries[0].objuuid), target_uuid)
 
     def test_db_log_handler(self):
         """
@@ -154,6 +166,8 @@ class TestBackendLog(AiidaTestCase):
         by firing a log message through the regular logging module
         attached to a calculation node
         """
+        from aiida.orm.logs import OrderSpecifier, ASCENDING
+
         message = 'Testing logging of critical failure'
         node = CalculationNode()
 
@@ -171,3 +185,15 @@ class TestBackendLog(AiidaTestCase):
 
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].message, message)
+
+        # Launching a second log message ensuring that both messages are correctly stored
+        message2 = message + " - Second message"
+        node.logger.critical(message2)
+        # logs = orm.Log.objects.find()
+
+        order_by = [OrderSpecifier('time', ASCENDING)]
+        logs = orm.Log.objects.find(order_by=order_by)
+
+        self.assertEqual(len(logs), 2)
+        self.assertEqual(logs[0].message, message)
+        self.assertEqual(logs[1].message, message2)

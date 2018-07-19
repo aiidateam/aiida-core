@@ -231,12 +231,14 @@ class DbLog(Base):
 
     id = Column(Integer, primary_key=True)
 
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+
     time = Column(DateTime(timezone=True), default=timezone.now)
     loggername = Column(String(255), index=True)
     levelname = Column(String(255), index=True)
 
     objname = Column(String(255), index=True)
-    objpk = Column(Integer, index=True, nullable=True)
+    objuuid = Column(UUID(as_uuid=True), default=uuid_func)
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', String(255), default="{}")

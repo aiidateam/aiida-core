@@ -19,6 +19,9 @@ from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import ValidationError
 
+from sqlalchemy.dialects.postgresql import UUID
+
+from .utils import uuid_func
 
 
 class DbLog(Base):
@@ -26,28 +29,31 @@ class DbLog(Base):
 
     id = Column(Integer, primary_key=True)
 
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+
     time = Column(DateTime(timezone=True), default=timezone.now)
     loggername = Column(String(255), index=True)
     levelname = Column(String(255), index=True)
 
     objname = Column(String(255), index=True)
-    objpk = Column(Integer, index=True, nullable=True)
+    objuuid = Column(UUID(as_uuid=True), default=uuid_func, unique=False, index=True)
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', JSONB)
 
-    def __init__(self, time, loggername="", levelname="", objname="", objpk=None,
+    def __init__(self, time, uuid=None, loggername="", levelname="", objname="", objuuid=None,
                  message=None, metadata=None):
 
         if not loggername or not levelname:
             raise ValidationError(
                 "The loggername and levelname can't be empty")
 
+        self.uuid = uuid
         self.time = time
         self.loggername = loggername
         self.levelname = levelname
         self.objname = objname
-        self.objpk = objpk
+        self.objuuid = objuuid
         self.message = message
         self._metadata = metadata or {}
 

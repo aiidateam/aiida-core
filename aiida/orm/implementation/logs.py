@@ -27,6 +27,15 @@ class BackendLog(backends.BackendEntity):
     """
 
     @abc.abstractproperty
+    def uuid(self):
+        """
+        Get the UUID of the log entry
+
+        :return: The entry's UUID
+        :rtype: uuid.UUID
+        """
+
+    @abc.abstractproperty
     def time(self):
         """
         Get the time corresponding to the entry
@@ -54,12 +63,12 @@ class BackendLog(backends.BackendEntity):
         """
 
     @abc.abstractproperty
-    def objpk(self):
+    def objuuid(self):
         """
-        Get the id of the object that created the log entry
+        Get the UUID of the object that created the log entry
 
-        :return: The entry timestamp
-        :rtype: int
+        :return: The UUID of the object that created the log entry
+        :rtype: uuid.UUID
         """
 
     @abc.abstractproperty
@@ -67,7 +76,7 @@ class BackendLog(backends.BackendEntity):
         """
         Get the name of the object that created the log entry
 
-        :return: The entry object name
+        :return: The name of the object
         :rtype: basestring
         """
 

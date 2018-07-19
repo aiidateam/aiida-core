@@ -11,9 +11,10 @@
 Tests for the export and import routines.
 """
 
+import unittest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
-
 
 class TestSpecificImport(AiidaTestCase):
 
@@ -1656,6 +1657,7 @@ class TestLinks(AiidaTestCase):
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
 
+    @unittest.skip("This test should be activated after PR #1764 is merged")
     def test_double_return_links_for_workflows(self):
         """
         This test checks that double return links to a node can be exported
@@ -1667,6 +1669,9 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
         tmp_folder = tempfile.mkdtemp()
 
         try:
@@ -1682,23 +1687,25 @@ class TestLinks(AiidaTestCase):
             o1.add_link_from(w2, 'return', link_type=LinkType.RETURN)
 
             uuids_wanted = set(_.uuid for _ in (w1,o1,i1,w2))
-            links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in
+                            ('createlink', 'inputlink', 'returnlink')]
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([o1.dbnode, w1.dbnode, w2.dbnode, i1.dbnode], outfile=export_file, silent=True)
+            export([o1.dbnode, w1.dbnode, w2.dbnode, i1.dbnode],
+                   outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
 
             import_data(export_file, silent=True)
-            links_in_db = self.get_all_node_links()
-            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.node import Node
             uuids_in_db = [str(uuid) for [uuid] in
                            QueryBuilder().append(Node, project='uuid').all()]
             self.assertEquals(sorted(uuids_wanted), sorted(uuids_in_db))
+
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

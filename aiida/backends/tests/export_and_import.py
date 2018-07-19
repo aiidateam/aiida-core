@@ -1496,7 +1496,6 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -1546,13 +1545,11 @@ class TestLinks(AiidaTestCase):
         import os, shutil, tempfile
 
         from aiida.orm.data.base import Int
-        from aiida.orm import Node, Data
+        from aiida.orm import Data
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
         from aiida.orm.calculation.inline import InlineCalculation
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
@@ -1614,14 +1611,9 @@ class TestLinks(AiidaTestCase):
         import os, shutil, tempfile
 
         from aiida.orm.data.base import Int
-        from aiida.orm import Node, Data
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.calculation.inline import InlineCalculation
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
@@ -1659,6 +1651,54 @@ class TestLinks(AiidaTestCase):
             self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
 
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+
+    def test_double_return_links_for_workflows(self):
+        """
+        This test checks that double return links to a node can be exported
+        and imported without problems,
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            w1 = WorkCalculation().store()
+            w2 = WorkCalculation().store()
+            i1 = Int(1).store()
+            o1 = Int(2).store()
+
+            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
+            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
+            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
+            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
+            o1.add_link_from(w2, 'return', link_type=LinkType.RETURN)
+
+            uuids_wanted = set(_.uuid for _ in (w1,o1,i1,w2))
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([o1.dbnode, w1.dbnode, w2.dbnode, i1.dbnode], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
+            from aiida.orm.querybuilder import QueryBuilder
+            from aiida.orm.node import Node
+            uuids_in_db = [str(uuid) for [uuid] in
+                           QueryBuilder().append(Node, project='uuid').all()]
+            self.assertEquals(sorted(uuids_wanted), sorted(uuids_in_db))
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

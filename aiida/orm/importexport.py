@@ -1655,9 +1655,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 return_reversed=False, call_reversed=False, **kwargs):
     """
     Export the DB entries passed in the 'what' list to a file tree.
-
     :todo: limit the export to finished or failed calculations.
-
     :param what: a list of Django database entries; they can belong to
     different models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
@@ -1670,16 +1668,16 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     :param call_reversed: Follow reversed CALL links (recursively) when
     calculating the node set to export.
     :param allowed_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param forbidden_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
-      license
+    license
     """
     import json
     import aiida

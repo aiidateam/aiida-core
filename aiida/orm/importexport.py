@@ -1661,8 +1661,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     :param what: a list of Django database entries; they can belong to different
       models.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param also_parents: if True, also all the parents are stored (from the transitive closure)
-    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param input_forward: Follow forward INPUT links (recursively) when
+    calculating the node set to export.
+    :param create_reversed: Follow reversed CREATE links (recursively) when
+    calculating the node set to export.
+    :param return_reversed: Follow reversed RETURN links (recursively) when
+    calculating the node set to export.
+    :param call_reversed: Follow reversed CALL links (recursively) when
+    calculating the node set to export.
     :param allowed_licenses: a list or a function. If a list, then checks
       whether all licenses of Data nodes are in the list. If a function,
       then calls function for licenses of Data nodes expecting True if
@@ -1686,8 +1692,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         print "STARTING EXPORT..."
 
     EXPORT_VERSION = '0.3'
-
-    print "The following karguments passed" + str(kwargs)
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -2266,34 +2270,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 links_uuid_dict[frozenset(val.items())] = val
 
     links_uuid = links_uuid_dict.values()
-    # print "WWWWWWWWWWWWWWWWWWW", links_uuid_dict
-    # OLD CODE
-
-
-    # ## All 'parent' links (in this way, I can automatically export a node
-    # ## that will get automatically attached to a parent node in the end DB,
-    # ## if the parent node is already present in the DB)
-    # links_uuid = list()
-    # # Export links only if there are nodes to be extracted
-    # if len(all_nodes_pk) > 0:
-    #     links_qb = QueryBuilder()
-    #     links_qb.append(Node, project=['uuid'], tag='input')
-    #     links_qb.append(Node,
-    #                     project=['uuid'], tag='output',
-    #                     filters={'id': {'in': all_nodes_pk}},
-    #                     edge_filters={'type':{'in':(LinkType.CREATE.value,
-    #                                                 LinkType.INPUT.value,
-    #                                                 LinkType.RETURN.value,
-    #                                                 LinkType.CALL.value)}},
-    #                     edge_project=['label', 'type'], output_of='input')
-    #
-    #     for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-    #         links_uuid.append({
-    #             'input': str(input_uuid),
-    #             'output': str(output_uuid),
-    #             'label': str(link_label),
-    #             'type':str(link_type)
-    #         })
 
     if not silent:
         print "STORING GROUP ELEMENTS..."

@@ -41,14 +41,26 @@ class Export(VerdiCommandWithSubcommands):
     help='Export the given groups by pk')
 @click.option('-g', '--group_names', multiple=True, type=str,
     help='Export the given groups by group name')
-@click.option('-P', '--no-parents', is_flag=True, default=False,
-    help='Store only the nodes that are explicitly given, without exporting the parents')
-@click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
-    help='If a calculation is included in the list of nodes to export, do not export its outputs')
+@click.option('-IF', '--input_forward', is_flag=True, default=False,
+    help='Follow forward INPUT links (recursively) when calculating the node '
+         "set to export. By default this is switched off.")
+@click.option('-CrR', '--create_reversed', is_flag=True, default=True,
+    help='Follow reverse CREATE links (recursively) when calculating the node '
+         'set to export. By default this is switched on.')
+@click.option('-RR', '--return_reversed', is_flag=True, default=False,
+    help='Follow reverse RETURN links (recursively) when calculating the node '
+         'set to export. By default this is switched off.')
+@click.option('-CaR', '--call_reversed', is_flag=True, default=False,
+    help='Follow reverse CALL links (recursively) when calculating the node '
+         'set to export. By default this is switched off.')
 @click.option('-f', '--overwrite', is_flag=True, default=False,
     help='Overwrite the output file, if it exists')
-@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
-def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_outputs, overwrite, archive_format):
+@click.option('-a', '--archive-format',
+              type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
+              default='zip')
+def create(outfile, computers, groups, nodes, group_names, input_forward,
+           create_reversed, return_reversed, call_reversed, overwrite,
+           archive_format):
     """
     Export nodes and groups of nodes to an archive file for backup or sharing purposes
     """
@@ -121,14 +133,19 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     elif archive_format == 'tar.gz':
         export_function = export
     else:
-        print >> sys.stderr, 'invalid --archive-format value {}'.format(archive_format)
+        print >> sys.stderr, 'invalid --archive-format value {}'.format(
+            archive_format)
         sys.exit(1)
 
     try:
         export_function(
-            what=what_list, also_parents=not no_parents, also_calc_outputs=not no_calc_outputs,
-            outfile=outfile, overwrite=overwrite, **additional_kwargs
+            what=what_list, input_forward=input_forward,
+            create_reversed=create_reversed,
+            return_reversed=return_reversed,
+            call_reversed=call_reversed, outfile=outfile,
+            overwrite=overwrite, **additional_kwargs
         )
+
     except IOError as e:
         print >> sys.stderr, 'IOError: {}'.format(e.message)
         sys.exit(1)

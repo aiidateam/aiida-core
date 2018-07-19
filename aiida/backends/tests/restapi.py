@@ -789,6 +789,28 @@ class RESTApiTestSuite(RESTApiTestCase):
                                                         url,
                                                         response, uuid=node_uuid)
 
+    def test_xsf_visualization(self):
+        """
+        Get the list of given calculation inputs
+        """
+        from aiida.backends.tests.dataclasses import simplify
+        node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
+        url = self.get_url_prefix() + '/structures/' + str(
+            node_uuid) + '/content/visualization?visformat=xsf'
+        with self.app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            expected_visdata = "CRYSTAL\nPRIMVEC 1\n      2.0000000000       0.0000000000       0.0000000000\n      0.0000000000       2.0000000000       0.0000000000\n      0.0000000000       0.0000000000       2.0000000000\nPRIMCOORD 1\n1 1\n56       0.0000000000       0.0000000000       0.0000000000\n"
+            self.assertEquals(simplify(response["data"]["visualization"]["str_viz_info"]["data"]),simplify(expected_visdata))
+            self.assertEquals(response["data"]["visualization"]["str_viz_info"]["format"],"xsf")
+            self.assertEquals(response["data"]["visualization"]["dimensionality"],
+                              {u'dim': 3, u'value': 8.0, u'label': u'volume'})
+            self.assertEquals(response["data"]["visualization"]["pbc"], [True,True,True])
+            self.assertEquals(response["data"]["visualization"]["formula"], "Ba")
+            RESTApiTestCase.compare_extra_response_data(self, "structures",
+                                                        url,
+                                                        response, uuid=node_uuid)
+
     def test_cif(self):
         """
         Test download of cif file

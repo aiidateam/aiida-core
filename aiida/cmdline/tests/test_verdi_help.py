@@ -36,4 +36,4 @@ class VerdiHelpTest(unittest.TestCase):
             except SystemExit:
                 pass
 
-        self.assertIn('  * import        Import nodes and group of nodes', output, fail_msg)
+        self.assertIn('  * import        Import AiiDA export archives', output, fail_msg)

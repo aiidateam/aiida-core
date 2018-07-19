@@ -31,6 +31,7 @@
         aiida/cmdline/commands/data/upf.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|
+        aiida/cmdline/commands/importfile.py|
         aiida/cmdline/commands/profile.py|
         aiida/cmdline/commands/node.py|
         aiida/cmdline/commands/rehash.py|

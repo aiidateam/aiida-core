@@ -10,12 +10,13 @@
         .ci/test_setup.py|
         #aiida/backends/tests/cmdline/commands/.*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
-        aiida/backends/tests/verdi_commands.py|
-        aiida/control/.*.py|        # must match the whole path, therefore
-        aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
+        aiida/control/.*.py|
+        aiida/cmdline/tests/.*.py|
         aiida/cmdline/commands/calculation.py|
+        aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/comment.py|
         aiida/cmdline/commands/daemon.py|
+        aiida/cmdline/commands/devel.py|
         aiida/cmdline/commands/data/array.py|
         aiida/cmdline/commands/data/bands.py|
         aiida/cmdline/commands/data/cif.py|
@@ -28,7 +29,6 @@
         aiida/cmdline/commands/data/structure.py|
         aiida/cmdline/commands/data/trajectory.py|
         aiida/cmdline/commands/data/upf.py|
-        aiida/cmdline/commands/code.py|
         aiida/cmdline/commands/graph.py|
         aiida/cmdline/commands/group.py|
         aiida/cmdline/commands/profile.py|
@@ -50,7 +50,7 @@
         aiida/orm/data/cif.py|
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/user.py|
-        # Unfortunately scheduler plugins and datastructures need to be refactored thorougly
+        # Unfortunately scheduler plugins and datastructures need to be refactored thoroughly
         # to pass the linters, so enable only __init__ and test_datastructures for now
         # aiida/scheduler/[^/]+.py|
         aiida/scheduler/__init__.py|

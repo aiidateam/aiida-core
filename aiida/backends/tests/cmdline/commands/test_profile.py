@@ -1,8 +1,7 @@
-"""
-Test suite to test verdi profile command
-"""
-
+# -*- coding: utf-8 -*-
+"""Test suite to test the `verdi profile` commands."""
 from click.testing import CliRunner
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import setup as aiida_cfg
 
@@ -143,6 +142,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.assertNotIn(self.dummy_profile_list[3], result.output)
         self.assertNotIn(self.dummy_profile_list[4], result.output)
         self.assertIsNone(result.exception)
+
 
 def get_random_string(length):
     import string

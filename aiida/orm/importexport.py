@@ -703,6 +703,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
             #~ print foreign_ids_reverse_mappings
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
                 #~ get_class_string(models.DbNode)]
+
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -730,13 +731,26 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                         # the correct name
                 except KeyError:
                     try:
-                        existing_input = existing_input_links[out_id, link['label']]
-                        # If existing_input were the correct one, I would have found
-                        # it already in the previous step!
-                        raise ValueError("There exists already an input link "
-                                         "to node {} with label {} but it "
-                                         "does not come the expected input {}"
-                                         .format(out_id, link['label'], in_id))
+                        # We try to get the existing input of the link that
+                        # points to "out" and has label link['label'].
+                        # If there is no existing_input, it means that the
+                        # link doesn't exist and it has to be created. If
+                        # it exists, then the only case that we can have more
+                        # than one links with the same name entering a node
+                        # is the case of the RETURN links of workflows/
+                        # workchains. If it is not this case, then it is
+                        # an error.
+                        existing_input = existing_input_links[out_id,
+                                                              link['label']]
+
+                        if link['type'] != LinkType.RETURN:
+                            raise ValueError(
+                                "There exists already an input link to node "
+                                "with UUID {} with label {} but it does not "
+                                "come from the expected input with UUID {} "
+                                "but from a node with UUID {}."
+                                    .format(link['output'], link['label'],
+                                            link['input'], existing_input))
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
@@ -860,6 +874,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.common.links import LinkType
 
     # Backend specific imports
     from aiida.backends.sqlalchemy.models.node import DbCalcState
@@ -1289,8 +1304,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = session.query(DbLink.input, DbLink.output,
-                                               DbLink.label).all()
+            existing_links_raw = session.query(
+                DbLink.input_id, DbLink.output_id,DbLink.label).all()
             existing_links_labels = {(l[0], l[1]): l[2]
                                      for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0]
@@ -1324,14 +1339,26 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         # the correct name
                 except KeyError:
                     try:
+                        # We try to get the existing input of the link that
+                        # points to "out" and has label link['label'].
+                        # If there is no existing_input, it means that the
+                        # link doesn't exist and it has to be created. If
+                        # it exists, then the only case that we can have more
+                        # than one links with the same name entering a node
+                        # is the case of the RETURN links of workflows/
+                        # workchains. If it is not this case, then it is
+                        # an error.
                         existing_input = existing_input_links[out_id,
                                                               link['label']]
-                        # If existing_input were the correct one, I would have
-                        # it already in the previous step!
-                        raise ValueError("There exists already an input link "
-                                         "to node {} with label {} but it "
-                                         "does not come the expected input {}"
-                                         .format(out_id, link['label'], in_id))
+
+                        if link['type'] != LinkType.RETURN:
+                            raise ValueError(
+                                "There exists already an input link to node "
+                                "with UUID {} with label {} but it does not "
+                                "come from the expected input with UUID {} "
+                                "but from a node with UUID {}."
+                                    .format(link['output'], link['label'],
+                                            link['input'], existing_input))
                     except KeyError:
                         # New link
                         links_to_store.append(DbLink(
@@ -1415,6 +1442,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if not silent:
                     print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
 
+            if not silent:
+                print "COMMITTING EVERYTHING..."
             session.commit()
         except:
             print "Rolling back"

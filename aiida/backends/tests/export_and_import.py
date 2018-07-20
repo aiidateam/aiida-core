@@ -896,11 +896,8 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-# class TestComputer():
 class TestComplex(AiidaTestCase):
-    import unittest
 
-    # @unittest.skip("")
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -984,8 +981,7 @@ class TestComplex(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-class TestComputer():
-# class TestComputer(AiidaTestCase):
+class TestComputer(AiidaTestCase):
 
     def setUp(self):
         self.clean_db()
@@ -1496,7 +1492,6 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -1607,7 +1602,6 @@ class TestLinks(AiidaTestCase):
 
         return graph_nodes, export_list[export_combination]
 
-    # @unittest.skip("")
     def test_complex_workflow_graph_links(self):
         """
         This test checks that all the needed links are correctly exported and
@@ -1653,7 +1647,6 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    # @unittest.skip("")
     def test_complex_workflow_graph_export_set_expansion(self):
         import os, shutil, tempfile
         from aiida.orm.importexport import export
@@ -1800,12 +1793,8 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.calculation.inline import InlineCalculation
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
@@ -1851,6 +1840,92 @@ class TestLinks(AiidaTestCase):
 
 
 
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_double_return_links_for_workflows(self):
+        """
+        This test checks that double return links to a node can be exported
+        and imported without problems,
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            w1 = WorkCalculation().store()
+            w2 = WorkCalculation().store()
+            i1 = Int(1).store()
+            o1 = Int(2).store()
+
+            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
+            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
+            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
+            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
+            o1.add_link_from(w2, 'return', link_type=LinkType.RETURN)
+
+            uuids_wanted = set(_.uuid for _ in (w1,o1,i1,w2))
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in (
+                'createlink', 'inputlink', 'returnlink', 'calllink')]
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([o1, w1, w2, i1],
+                   outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            uuids_in_db = [str(uuid) for [uuid] in
+                           QueryBuilder().append(Node, project='uuid').all()]
+            self.assertEquals(sorted(uuids_wanted), sorted(uuids_in_db))
+
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_solo_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.orm.code import Code
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([code], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            self.assertEquals(load_node(code_uuid).label, code_label)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
@@ -1909,40 +1984,5 @@ class TestLinks(AiidaTestCase):
                               "Expected to find one and only one link from "
                               "code to the calculation node. {} found."
                               .format(qb.count()))
-        finally:
-            shutil.rmtree(tmp_folder, ignore_errors=True)
-
-    def test_that_solo_code_is_exported_correctly(self):
-        """
-        This test checks that when a calculation is exported then the
-        corresponding code is also exported.
-        """
-        import os, shutil, tempfile
-
-        from aiida.orm.utils import load_node
-        from aiida.orm.importexport import export
-        from aiida.orm.code import Code
-
-        tmp_folder = tempfile.mkdtemp()
-
-        try:
-            code_label = 'test_code1'
-
-            code = Code()
-            code.set_remote_computer_exec((self.computer, '/bin/true'))
-            code.label = code_label
-            code.store()
-
-            code_uuid = code.uuid
-
-            export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([code], outfile=export_file, silent=True)
-
-            self.clean_db()
-            self.insert_data()
-
-            import_data(export_file, silent=True)
-
-            self.assertEquals(load_node(code_uuid).label, code_label)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

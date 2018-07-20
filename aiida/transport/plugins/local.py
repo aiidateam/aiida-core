@@ -42,8 +42,7 @@ class LocalTransport(Transport):
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
     # There are no valid parameters for the local transport
-    _valid_auth_options = [
-    ]
+    _valid_auth_options = []
 
     # There is no real limit on how fast you can connect to localhost
     # you should not be banned (as instead it is the case in SSH).
@@ -632,7 +631,7 @@ class LocalTransport(Transport):
         if self.isdir(destination):
             the_destination = os.path.join(the_destination, os.path.split(source)[1])
 
-        shutil.copytree(the_source, the_destination, symlinks=not (dereference))
+        shutil.copytree(the_source, the_destination, symlinks=not dereference)
 
     def get_attribute(self, path):
         """
@@ -644,12 +643,12 @@ class LocalTransport(Transport):
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:
+        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
-    def _local_listdir(self, path, pattern=None):
-        # acts on the local folder, for the rest, same as listdir
+    def _local_listdir(self, path, pattern=None):  # pylint: disable=no-self-use
+        """Act on the local folder, for the rest, same as listdir."""
         if not pattern:
             return os.listdir(path)
         else:
@@ -676,9 +675,9 @@ class LocalTransport(Transport):
         if not pattern:
             try:
                 return os.listdir(the_path)
-            except OSError as e:
-                exc = IOError(str(e))
-                exc.errno = e.errno
+            except OSError as err:
+                exc = IOError(str(err))
+                exc.errno = err.errno
                 raise exc
         else:
             import re
@@ -701,10 +700,9 @@ class LocalTransport(Transport):
         """
         if not path:
             return False
-        else:
-            return os.path.isfile(os.path.join(self.curdir, path))
+        return os.path.isfile(os.path.join(self.curdir, path))
 
-    def _exec_command_internal(self, command):
+    def _exec_command_internal(self, command, **kwargs):  # pylint: disable=unused-argument
         """
         Executes the specified command in bash login shell.
 
@@ -743,7 +741,7 @@ class LocalTransport(Transport):
 
         return proc.stdin, proc.stdout, proc.stderr, proc
 
-    def exec_command_wait(self, command, stdin=None):
+    def exec_command_wait(self, command, **kwargs):
         """
         Executes the specified command and waits for it to finish.
 
@@ -752,7 +750,8 @@ class LocalTransport(Transport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and
                  stderr are strings.
         """
-        local_stdin, local_stdout, local_stderr, local_proc = self._exec_command_internal(command)
+        stdin = kwargs.get('stdin')
+        local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
             if isinstance(stdin, basestring):
@@ -761,16 +760,14 @@ class LocalTransport(Transport):
                 filelike_stdin = stdin
 
             try:
-                for l in filelike_stdin.readlines():
-                    local_proc.stdin.write(l)
+                for line in filelike_stdin.readlines():
+                    local_proc.stdin.write(line)
             except AttributeError:
                 raise ValueError("stdin can only be either a string of a " "file-like object!")
         else:
             filelike_stdin = None
 
         local_stdin.flush()
-        # TODO : instead of stringIO use cstringIO
-        # TODO : use input option of communicate()
         output_text, stderr_text = local_proc.communicate()
 
         retval = local_proc.returncode
@@ -789,12 +786,15 @@ class LocalTransport(Transport):
 
         :param str remotedir: the full path of the remote directory
         """
-        # return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="'"\[\033[01;31m\][AiiDA] \033[00m\]$PS1"'"') ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-        #        escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
-        return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        script = ' ; '.join([
+            'if [ -d {escaped_remotedir} ]', 'then cd {escaped_remotedir}', 'bash', "else echo ' ** The directory'",
+            "echo ' ** {remotedir}'", "echo ' ** seems to have been deleted, I logout...'", 'fi'
+        ]).format(
             escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+        cmd = 'bash -c "{}"'.format(script)
+        return cmd
 
-    def rename(self, src, dst):
+    def rename(self, oldpath, newpath):
         """
         Rename a file or folder from oldpath to newpath.
 
@@ -804,16 +804,16 @@ class LocalTransport(Transport):
         :raises IOError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
-        if not src:
-            raise ValueError("Source {} is not a valid string".format(src))
-        if not dst:
-            raise ValueError("Destination {} is not a valid string".format(dst))
-        if not os.path.exists(src):
-            raise IOError("Source {} does not exist".format(src))
-        if not os.path.exists(dst):
-            raise IOError("Destination {} does not exist".format(dst))
+        if not oldpath:
+            raise ValueError("Source {} is not a valid string".format(oldpath))
+        if not newpath:
+            raise ValueError("Destination {} is not a valid string".format(newpath))
+        if not os.path.exists(oldpath):
+            raise IOError("Source {} does not exist".format(oldpath))
+        if not os.path.exists(newpath):
+            raise IOError("Destination {} does not exist".format(newpath))
 
-        shutil.move(src, dst)
+        shutil.move(oldpath, newpath)
 
     def symlink(self, remotesource, remotedestination):
         """
@@ -849,9 +849,9 @@ class LocalTransport(Transport):
         """
         return os.path.exists(os.path.join(self.curdir, path))
 
-
     @classmethod
     def _get_safe_interval_suggestion_string(cls, computer):
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
+
 
 CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')

@@ -59,6 +59,7 @@
         aiida/transport/__init__.py|
         aiida/transport/cli.py|
         aiida/transport/util.py|
+        aiida/transport/transport.py|
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|

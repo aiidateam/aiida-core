@@ -13,6 +13,9 @@
 - Convention of leading underscores for non-storable inputs has been replaced with a proper `non_db` attribute of the `Port` class [[#1105]](https://github.com/aiidateam/aiida_core/pull/1105)
 - Implemented a Sphinx extension for the `WorkChain` class to automatically generate documentation from the workchain definition [[#1155]](https://github.com/aiidateam/aiida_core/pull/1155)
 - Added new feature for a `WorkChain` to expose the inputs and outputs of another `WorkChain`, which is perfect for writing modular workflows [[#1170]](https://github.com/aiidateam/aiida_core/pull/1170)
+- Add built-in support and API for exit codes in WorkChains [[#1640]](https://github.com/aiidateam/aiida_core/pull/1640), [[#1704]](https://github.com/aiidateam/aiida_core/pull/1704), [[#1681]](https://github.com/aiidateam/aiida_core/pull/1681)
+- Overload PortNamespace mutable properties upon exposing [[#1635]](https://github.com/aiidateam/aiida_core/pull/1635)
+- Implement the Exit exception to allow setting finish status for workfunctions [[#1631]](https://github.com/aiidateam/aiida_core/pull/1631)
 
 ### Verdi
 - Added the command `verdi group rename` [[#1224]](https://github.com/aiidateam/aiida_core/pull/1224)
@@ -29,14 +32,25 @@
 - Implemented the `DbImporter` for the Materials Platform of Data Science API, which exposed the content of the Pauling file [[#1238]](https://github.com/aiidateam/aiida_core/pull/1238)
 - Implement the `has_atomic_sites` and `has_unknown_species` properties for the `CifData` class [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
 - Default library used in `_get_aiida_structure` to convert the `CifData` to `StructureData` has been changed from `ase` to `pymatgen` [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
+- Do not allow the copy or deepcopy of Node, except for Data  [[#1705]](https://github.com/aiidateam/aiida_core/pull/1705)
+- Added element X to the elements list in order to support unknown species [[#1613]]
+- Enable use of tuple in QueryBuilder.append for all ORM classes [[#1608]](https://github.com/aiidateam/aiida_core/pull/1608), [[#1607]](https://github.com/aiidateam/aiida_core/pull/1607)
 
-### Documentation:
+### Database
+- Allow PostgreSQL connections via unix sockets [[#1721]](https://github.com/aiidateam/aiida_core/pull/1721)
+- Creating unique constraint & indexes at the db_dbgroup_dbnodes table in SQLA [[#1680]](https://github.com/aiidateam/aiida_core/pull/1680)
+- Performance improvement for adding nodes to group [[#1677]](https://github.com/aiidateam/aiida_core/pull/1677)
+
+
+### Documentation
 - Big reorganization of the documentation structure [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
 - Added section on the basics of workchains and workfunctions [[#1384]](https://github.com/aiidateam/aiida_core/pull/1384)
 - Added section on how to launch workchains and workfunctions [[#1385]](https://github.com/aiidateam/aiida_core/pull/1385)
 - Added section on how to monitor workchains and workfunctions[[#1387]](https://github.com/aiidateam/aiida_core/pull/1387)
 - Added section on the concept of the `Process` [[#1395]](https://github.com/aiidateam/aiida_core/pull/1395)
 - Added section on advance concepts of the `WorkChain` class, as well as best-practices on designing/writing workchains [[#1459]](https://github.com/aiidateam/aiida_core/pull/1459)
+- Remove outdated or duplicated docs for legacy and new workflow system [[#1718]]
+
 
 ### Bug fixes
 - Fixed a problem with the temporary folder containing the files of the `retrieve_temporary_list` that could be cleaned before parsing finished [[#1168]](https://github.com/aiidateam/aiida_core/pull/1168)
@@ -44,6 +58,8 @@
 - Restored a proper implementation of mutability for `Node` attributes [[#1181]](https://github.com/aiidateam/aiida_core/pull/1181)
 - Restore the correct plugin type string based on the module path of the base `Data` types [[#1192]](https://github.com/aiidateam/aiida_core/pull/1192)
 - Fix bug in `verdi export create` when only exporting computers [[#1448]](https://github.com/aiidateam/aiida_core/pull/1448)
+- Fix copying of the calculation raw input folder in caching [[#1745]](https://github.com/aiidateam/aiida_core/pull/1745)
+- Fix sphinxext command by allowing whitespace in argument [[#1644]](https://github.com/aiidateam/aiida_core/pull/1644)
 
 
 ## v0.12.1

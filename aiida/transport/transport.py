@@ -23,17 +23,8 @@ class Transport(object):
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
     _common_auth_options = [
-        ('safe_interval', {'default': 5, 'type': int, 'prompt': 'Connection cooldown time (sec)', 'help': 'Minimum time between connections in sec'})
+        ('safe_interval', {'type': int, 'prompt': 'Connection cooldown time (sec)', 'help': 'Minimum time between connections in sec'})
     ]
-
-    # Time in seconds between consecutive checks
-    # Set to a non-zero value to be safe e.g. in the case of transports with a connection limit,
-    # to avoid overloading the server (and being banned). Should be overriden
-    # in plugins. This is anyway just a default, as the value can be changed
-    # by the user in the Computer properties, for instance.
-    # Currently both the local and the ssh transport override this value, so this is not used,
-    # but it will be the default for possible new plugins.
-    _DEFAULT_SAFE_OPEN_INTERVAL = DEFAULT_TRANSPORT_INTERVAL
 
     def __init__(self, *args, **kwargs):
         """
@@ -43,6 +34,7 @@ class Transport(object):
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
+        self._safe_open_interval = DEFAULT_TRANSPORT_INTERVAL
 
     def __enter__(self):
         """
@@ -152,6 +144,16 @@ class Transport(object):
     def auth_options(cls):
         return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
 
+    def _get_safe_interval_suggestion_string(cls, computer):
+        # Time in seconds between consecutive checks
+        # Set to a non-zero value to be safe e.g. in the case of transports with a connection limit,
+        # to avoid overloading the server (and being banned). Should be overriden
+        # in plugins. This is anyway just a default, as the value can be changed
+        # by the user in the Computer properties, for instance.
+        # Currently both the local and the ssh transport override this value, so this is not used,
+        # but it will be the default for possible new plugins.
+        return DEFAULT_TRANSPORT_INTERVAL
+
     @property
     def logger(self):
         """
@@ -187,7 +189,7 @@ class Transport(object):
         :return: The safe interval between calling open, in seconds
         :rtype: float
         """
-        return self._DEFAULT_SAFE_OPEN_INTERVAL
+        return self._safe_open_interval
 
     def chdir(self, path):
         """

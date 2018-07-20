@@ -91,7 +91,7 @@ class SshTransport(aiida.transport.Transport):
     # instance
     _valid_auth_options = _valid_connect_options + [
         ('load_system_host_keys', {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off', 'non_interactive_default': True}),
-        ('key_policy', {'type': click.Choice(['RejectPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy', 'non_interactive_default': True})
+        ('key_policy', {'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy', 'non_interactive_default': True})
     ]
 
     # I set the (default) value here to 5 secs between consecutive SSH checks.
@@ -407,6 +407,10 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         return str(config.get('gssapihostname', computer.hostname))
 
+    @classmethod
+    def _get_safe_interval_suggestion_string(cls, computer):
+        return cls._DEFAULT_SAFE_OPEN_INTERVAL
+
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
@@ -433,6 +437,8 @@ class SshTransport(aiida.transport.Transport):
         self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)
         if self._load_system_host_keys:
             self._client.load_system_host_keys()
+
+        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
 
         self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default
         if self._missing_key_policy == 'RejectPolicy':

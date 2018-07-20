@@ -63,6 +63,7 @@ class LocalTransport(Transport):
         if self._machine and self._machine != 'localhost':
             # TODO: check if we want a different logic
             self.logger.debug('machine was passed, but it is not localhost')
+        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         if kwargs:
             raise ValueError("Input parameters to LocalTransport" " are not recognized")
 
@@ -848,5 +849,9 @@ class LocalTransport(Transport):
         """
         return os.path.exists(os.path.join(self.curdir, path))
 
+
+    @classmethod
+    def _get_safe_interval_suggestion_string(cls, computer):
+        return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
 CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')

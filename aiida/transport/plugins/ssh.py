@@ -20,6 +20,7 @@ import aiida.transport.transport
 from aiida import transport
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types.path import AbsolutePathParamType
 from aiida.cmdline.utils import echo
 from aiida.common import aiidalogger
 from aiida.common.utils import escape_for_bash
@@ -64,7 +65,7 @@ class SshTransport(aiida.transport.Transport):
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
         ('port', {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
-        ('key_filename', {'type': click.Path(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
+        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
         ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
         ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect

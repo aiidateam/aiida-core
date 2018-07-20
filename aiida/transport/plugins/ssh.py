@@ -76,6 +76,8 @@ class SshTransport(aiida.transport.Transport):
         # for Kerberos support through python-gssapi
     ]
 
+    _valid_connect_params = [i[0] for i in _valid_connect_options]
+
     # Valid parameters for the ssh transport
     # For each param, a class method with name
     # _convert_PARAMNAME_fromstring

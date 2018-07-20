@@ -63,10 +63,10 @@ def transport_option_default(name, computer):
     return default
 
 
-@with_dbenv()
 def interactive_default(transport_type, key, also_noninteractive=False):
     """Create a contextual_default value callback for an auth_param key."""
 
+    @with_dbenv()
     def get_default(ctx):
         """Determine the default value from the context."""
         from aiida.orm.backend import construct_backend

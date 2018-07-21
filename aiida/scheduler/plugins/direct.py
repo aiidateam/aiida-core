@@ -149,7 +149,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 raise ValueError("max_memory_kb must be "
                                  "a positive integer (in kB)! It is instead '{}'"
                                  "".format((job_tmpl.MaxMemoryKb)))
-            lines.append("ulimit -v {}", virtualMemoryKb)
+            lines.append("ulimit -v {}".format( virtualMemoryKb))
         if not job_tmpl.import_sys_environment:
             lines.append("env --ignore-environment \\")
 

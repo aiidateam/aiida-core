@@ -5,7 +5,7 @@ import os
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import importfile
+from aiida.cmdline.commands import cmd_import
 
 
 def get_archive_file(archive):
@@ -32,7 +32,7 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_no_archives(self):
         """Test that passing no valid archives will lead to command failure."""
         options = []
-        result = self.cli_runner.invoke(importfile.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNotNone(result.exception)
         self.assertIn('Critical', result.output)
@@ -40,7 +40,7 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_non_existing_archives(self):
         """Test that passing a non-existing archive will lead to command failure."""
         options = ['non-existing-archive.aiida']
-        result = self.cli_runner.invoke(importfile.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNotNone(result.exception)
 
@@ -57,6 +57,6 @@ class TestVerdiImport(AiidaTestCase):
         ]
 
         options = [] + archives
-        result = self.cli_runner.invoke(importfile.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception)

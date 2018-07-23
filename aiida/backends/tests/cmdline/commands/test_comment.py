@@ -13,7 +13,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_show_simple(self):
         """ test simply calling the show command (without data to show) """
-        from aiida.cmdline.commands.comment import show
+        from aiida.cmdline.commands.cmd_comment import show
 
         result = CliRunner().invoke(show, [], catch_exceptions=False)
         self.assertEqual(result.output, "")
@@ -21,7 +21,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_show(self):
         """ Test showing an existing comment """
-        from aiida.cmdline.commands.comment import show
+        from aiida.cmdline.commands.cmd_comment import show
         from aiida.orm import Node
 
         node = Node()
@@ -34,7 +34,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_add(self):
         """ Test adding a comment """
-        from aiida.cmdline.commands.comment import add
+        from aiida.cmdline.commands.cmd_comment import add
         from aiida.orm import Node
 
         node = Node()
@@ -49,7 +49,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_remove(self):
         """ Test removing a comment """
-        from aiida.cmdline.commands.comment import remove
+        from aiida.cmdline.commands.cmd_comment import remove
         from aiida.orm import Node
 
         node = Node()
@@ -65,7 +65,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_remove_all(self):
         """ Test removing all comments from a node """
-        from aiida.cmdline.commands.comment import remove
+        from aiida.cmdline.commands.cmd_comment import remove
         from aiida.orm import Node
 
         node = Node()

@@ -76,7 +76,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         Tests help text for all profile sub commands
         """
         options = ["--help"]
-        from aiida.cmdline.commands.profile import (profile_list, profile_setdefault, profile_delete)
+        from aiida.cmdline.commands.cmd_profile import (profile_list, profile_setdefault, profile_delete)
 
         result = self.runner.invoke(profile_list, options)
         self.assertIsNone(result.exception)
@@ -94,7 +94,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         Test for verdi profile list command
         """
-        from aiida.cmdline.commands.profile import profile_list
+        from aiida.cmdline.commands.cmd_profile import profile_list
         result = self.runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertIn('Configuration folder: ' + self._new_aiida_config_folder, result.output)
@@ -105,11 +105,11 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         Test for verdi profile setdefault command
         """
-        from aiida.cmdline.commands.profile import profile_setdefault
+        from aiida.cmdline.commands.cmd_profile import profile_setdefault
         result = self.runner.invoke(profile_setdefault, [self.dummy_profile_list[1]])
         self.assertIsNone(result.exception)
 
-        from aiida.cmdline.commands.profile import profile_list
+        from aiida.cmdline.commands.cmd_profile import profile_list
         result = self.runner.invoke(profile_list)
 
         self.assertIsNone(result.exception)
@@ -121,7 +121,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         Test for verdi profile delete command
         """
-        from aiida.cmdline.commands.profile import profile_delete, profile_list
+        from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
 
         ### delete single profile
         result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])

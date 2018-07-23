@@ -247,7 +247,7 @@ def calculation_inputcat(calculation, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calculation plugin class.
     """
-    from aiida.cmdline.commands.node import cat_repo_files
+    from aiida.cmdline.commands.cmd_node import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -284,7 +284,7 @@ def calculation_outputcat(calculation, path):
     If PATH is not specified, the default output file path will be used, if defined by the calculation plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.commands.node import cat_repo_files
+    from aiida.cmdline.commands.cmd_node import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -326,7 +326,7 @@ def calculation_inputls(calculation, path, color):
 
     If PATH is not specified, the base path of the input folder will be used.
     """
-    from aiida.cmdline.commands.node import list_repo_files
+    from aiida.cmdline.commands.cmd_node import list_repo_files
     from aiida.orm.implementation.general.calculation.job import _input_subfolder
 
     if path is not None:
@@ -352,7 +352,7 @@ def calculation_outputls(calculation, path, color):
     If PATH is not specified, the base path of the retrieved folder will be used.
     Content can only be showm after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.commands.node import list_repo_files
+    from aiida.cmdline.commands.cmd_node import list_repo_files
 
     if path is not None:
         fullpath = os.path.join(calculation._path_subfolder_name, path)

@@ -12,12 +12,12 @@ This allows to manage TrajectoryData objects from command line.
 """
 import click
 from aiida.cmdline.commands import verdi_data
-from aiida.cmdline.commands.data.export_functions import _export, export_options
+from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
+from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
+from aiida.cmdline.commands.cmd_data.cmd_show import show_options
+from aiida.cmdline.commands.cmd_data.cmd_deposit import deposit_options, deposit_tcod
 from aiida.cmdline.utils import echo
-from aiida.cmdline.commands.data.list_functions import _list, list_options
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline.commands.data.show import show_options
-from aiida.cmdline.commands.data.deposit import deposit_options, deposit_tcod
 
 
 # pylint: disable=unused-argument

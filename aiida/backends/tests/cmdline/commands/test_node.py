@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.cmdline.commands.node import node_delete, node_label, node_description, show, tree, repo_ls, repo_cat
+from aiida.cmdline.commands.cmd_node import node_delete, node_label, node_description, show, tree, repo_ls, repo_cat
 
 class TestVerdiNode(AiidaTestCase):
 

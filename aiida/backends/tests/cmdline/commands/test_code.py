@@ -4,7 +4,7 @@ import subprocess as sp
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.code import (setup_code, delete, hide, reveal, relabel, code_list, show)
+from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show)
 from aiida.common.exceptions import NotExistent
 
 

@@ -24,15 +24,15 @@ commands is placed in ``_<Datatype>`` class inside
 
 are implemented in corresponding classes:
 
-* :py:class:`~aiida.cmdline.commands.data.list_functions`
-* :py:class:`~aiida.cmdline.commands.data.export_functions`,
+* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list`
+* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_export`,
 
 which are inherited by ``_<Datatype>`` classes (multiple inheritance is
 possible). Actions ``show``, ``import`` and ``export`` can be extended with
 new format plugins simply by adding additional methods in ``_<Datatype>``
 (these are automatically detected). Action ``list`` can be extended by
 overriding default methods of the
-:py:class:`~aiida.cmdline.commands.data.list_functions`.
+:py:class:`~aiida.cmdline.commands.cmd_data.cmd_list`.
 
 Adding plugins for ``show``, ``import``, ``export`` and like
 ------------------------------------------------------------
@@ -105,16 +105,16 @@ Implementing ``list``
 
 As listing of data nodes can be extended with filters, controllable using
 command line parameters, the code of
-:py:class:`~aiida.cmdline.commands.data.list_functions` is split into a few
+:py:class:`~aiida.cmdline.commands.cmd_data.cmd_list` is split into a few
 separate methods, that can be individually overridden:
 
-* :py:class:`~aiida.cmdline.commands.data.list_functions._list`:
+* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list._list`:
     the main method, parsing the command line arguments and printing the
     data node information to the standard output;
-* :py:class:`~aiida.cmdline.commands.data.list_functions.query`:
+* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list.query`:
     takes the parsed command line arguments and performs a query on the
     database, returns table of unformatted strings, representing the hits;
-    :py:class:`~aiida.cmdline.commands.data.list_functions.query` function;
+    :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list.query` function;
 
 
 Adding a ``verdi`` command

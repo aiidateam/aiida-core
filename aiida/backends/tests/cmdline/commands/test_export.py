@@ -9,7 +9,7 @@ import zipfile
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import export
+from aiida.cmdline.commands import cmd_export
 
 
 def delete_temporary_file(filepath):
@@ -66,7 +66,7 @@ class TestVerdiExport(AiidaTestCase):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
         with tempfile.NamedTemporaryFile() as handle:
             options = [handle.name]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNotNone(result.exception)
 
     def test_create_force(self):
@@ -76,11 +76,11 @@ class TestVerdiExport(AiidaTestCase):
         """
         with tempfile.NamedTemporaryFile() as handle:
             options = ['-f', handle.name]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception)
 
             options = ['--force', handle.name]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception)
 
     def test_create_zip(self):
@@ -91,7 +91,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'zip',
                 filename
             ]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
@@ -106,7 +106,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F',
                 'zip-uncompressed', filename
             ]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
@@ -121,7 +121,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'tar.gz',
                 filename
             ]
-            result = self.cli_runner.invoke(export.create, options)
+            result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception)
             self.assertTrue(os.path.isfile(filename))
             self.assertTrue(tarfile.is_tarfile(filename))
@@ -142,7 +142,7 @@ class TestVerdiExport(AiidaTestCase):
 
             try:
                 options = [filename_input, filename_output]
-                result = self.cli_runner.invoke(export.migrate, options)
+                result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertIsNone(result.exception)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
@@ -162,7 +162,7 @@ class TestVerdiExport(AiidaTestCase):
 
             try:
                 options = [filename_input, filename_output]
-                result = self.cli_runner.invoke(export.migrate, options)
+                result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertIsNotNone(result.exception)
             finally:
                 delete_temporary_file(filename_output)
@@ -180,7 +180,7 @@ class TestVerdiExport(AiidaTestCase):
             # Using the context manager will create the file and so the command should fail
             with tempfile.NamedTemporaryFile() as file_output:
                 options = [filename_input, file_output.name]
-                result = self.cli_runner.invoke(export.migrate, options)
+                result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertIsNotNone(result.exception)
 
             for option in ['-f', '--force']:
@@ -189,7 +189,7 @@ class TestVerdiExport(AiidaTestCase):
                 with tempfile.NamedTemporaryFile() as file_output:
                     filename_output = file_output.name
                     options = [option, filename_input, filename_output]
-                    result = self.cli_runner.invoke(export.migrate, options)
+                    result = self.cli_runner.invoke(cmd_export.migrate, options)
                     self.assertIsNone(result.exception)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
@@ -208,7 +208,7 @@ class TestVerdiExport(AiidaTestCase):
             for option in ['-s', '--silent']:
                 try:
                     options = [option, filename_input, filename_output]
-                    result = self.cli_runner.invoke(export.migrate, options)
+                    result = self.cli_runner.invoke(cmd_export.migrate, options)
                     self.assertEquals(result.output, '')
                     self.assertIsNone(result.exception)
                     self.assertTrue(os.path.isfile(filename_output))
@@ -230,7 +230,7 @@ class TestVerdiExport(AiidaTestCase):
             for option in ['-F', '--archive-format']:
                 try:
                     options = [option, 'tar.gz', filename_input, filename_output]
-                    result = self.cli_runner.invoke(export.migrate, options)
+                    result = self.cli_runner.invoke(cmd_export.migrate, options)
                     self.assertIsNone(result.exception)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertTrue(tarfile.is_tarfile(filename_output))

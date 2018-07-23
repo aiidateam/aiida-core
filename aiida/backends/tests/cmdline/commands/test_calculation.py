@@ -4,7 +4,7 @@
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import calculation as command
+from aiida.cmdline.commands import cmd_calculation as command
 from aiida.common.datastructures import calc_states
 from aiida.orm.calculation.job import JobCalculationFinishStatus
 from aiida.work import runners, rmq

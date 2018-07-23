@@ -134,6 +134,7 @@ py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
+py:exc    plumpy.TaskRejected
 
 py:class  kiwipy.futures.Future
 

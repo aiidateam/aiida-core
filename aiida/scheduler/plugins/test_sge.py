@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.scheduler.plugins.sge import *
+
 import unittest
 import logging
-import uuid
+from aiida.scheduler.plugins.sge import *
 
 text_qstat_ext_urg_xml_test = """<?xml version='1.0'?>
 <job_info  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -173,7 +173,7 @@ class TestCommand(unittest.TestCase):
     def test_get_joblist_command(self):
         sge = SgeScheduler()
 
-        #TEST 1:
+        # TEST 1:
         sge_get_joblist_command = sge._get_joblist_command(user='ExamplUsr')
 
         self.assertTrue('qstat' in sge_get_joblist_command)
@@ -183,7 +183,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('-urg' in sge_get_joblist_command)
         self.assertTrue('ExamplUsr' in sge_get_joblist_command)
 
-        #TEST 2:
+        # TEST 2:
         sge_get_joblist_command = sge._get_joblist_command()
 
         self.assertTrue('qstat' in sge_get_joblist_command)
@@ -214,11 +214,11 @@ class TestCommand(unittest.TestCase):
     def test_parse_submit_output(self):
         sge = SgeScheduler()
 
-        #TEST 1:
+        # TEST 1:
         sge_parse_submit_output = sge._parse_submit_output(0, ' 1176936', '')
         self.assertTrue('1176936' in sge_parse_submit_output)
 
-        #TEST 2:
+        # TEST 2:
         logging.disable(logging.ERROR)
         with self.assertRaisesRegexp(SchedulerError, '^Error during submission, retval=1'):
             sge_parse_submit_output = sge._parse_submit_output(1, '', '')
@@ -233,31 +233,31 @@ class TestCommand(unittest.TestCase):
 
         job_list = sge._parse_joblist_output(retval, stdout, stderr)
 
-        #Is job_list parsed correctly?:
+        # Is job_list parsed correctly?:
         job_on_cluster = 3
         job_parsed = len(job_list)
         self.assertEquals(job_parsed, job_on_cluster)
 
-        #Check if different job states are realized:
+        # Check if different job states are realized:
         job_running = 1
-        job_running_parsed = len([ j for j in job_list if j.job_state \
-                                   and j.job_state == job_states.RUNNING ])
+        job_running_parsed = len([j for j in job_list if j.job_state \
+                                  and j.job_state == JOB_STATES.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         job_held = 1
-        job_held_parsed = len([ j for j in job_list if j.job_state \
-                                   and j.job_state == job_states.QUEUED_HELD ])
+        job_held_parsed = len([j for j in job_list if j.job_state \
+                               and j.job_state == JOB_STATES.QUEUED_HELD])
         self.assertEquals(job_held, job_held_parsed)
 
         job_queued = 1
-        job_queued_parsed = len([ j for j in job_list if j.job_state \
-                                   and j.job_state == job_states.QUEUED ])
+        job_queued_parsed = len([j for j in job_list if j.job_state \
+                                 and j.job_state == JOB_STATES.QUEUED])
         self.assertEquals(job_queued, job_queued_parsed)
 
-        #check if job id is recognized:
+        # check if job id is recognized:
         running_jobs = ['1212299']
-        parsed_running_jobs = [ j.job_id for j in job_list if j.job_state \
-                                 and j.job_state == job_states.RUNNING ]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
+                               and j.job_state == JOB_STATES.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         dispatch_time = [self._parse_time_string('2013-06-18T12:08:23')]
@@ -272,37 +272,34 @@ class TestCommand(unittest.TestCase):
         self.assertEquals(set(submission_times), set(parsed_submission_times))
 
         running_jobs = [test_raw_data]
-        parsed_running_jobs = [ j.raw_data for j in job_list if j.job_state \
-                                 and j.job_state == job_states.RUNNING ]
+        parsed_running_jobs = [j.raw_data for j in job_list if j.job_state \
+                               and j.job_state == JOB_STATES.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
-        #job_list_raise=sge._parse_joblist_output(retval, \
+        # job_list_raise=sge._parse_joblist_output(retval, \
         #                                         text_qstat_ext_urg_xml_test_raise, stderr)
         logging.disable(logging.ERROR)
         stdout = text_xml_parsing_fails_raise
-        with self.assertRaises(SchedulerParsingError) as e:
-            job_list_raise = sge._parse_joblist_output(retval, stdout, stderr)
+        with self.assertRaises(SchedulerParsingError):
+            sge._parse_joblist_output(retval, stdout, stderr)
 
         stdout = text_check_queue_job_info
-        with self.assertRaises(SchedulerError) as e:
-            job_list_raise = sge._parse_joblist_output(retval, stdout, stderr)
+        with self.assertRaises(SchedulerError):
+            sge._parse_joblist_output(retval, stdout, stderr)
 
-        #Test: Is the except of IndexErrors raised correctly?
+        # Test: Is the except of IndexErrors raised correctly?
         stdout = text_qstat_ext_urg_xml_test_raise
-        with self.assertRaises(IndexError) as e:
-            job_list_raise = sge._parse_joblist_output(retval, stdout, stderr)
+        with self.assertRaises(IndexError):
+            sge._parse_joblist_output(retval, stdout, stderr)
         logging.disable(logging.NOTSET)
 
     def test_submit_script(self):
-        """
-        """
         from aiida.scheduler.datastructures import JobTemplate
 
         sge = SgeScheduler()
 
         job_tmpl = JobTemplate()
-        job_tmpl.job_resource = sge.create_job_resource(parallel_env="mpi8", \
-                                                        tot_num_mpiprocs=16)
+        job_tmpl.job_resource = sge.create_job_resource(parallel_env="mpi8", tot_num_mpiprocs=16)
         job_tmpl.working_directory = "/home/users/dorigm7s/test"
         job_tmpl.submit_as_hold = None
         job_tmpl.rerunnable = None
@@ -314,7 +311,7 @@ class TestCommand(unittest.TestCase):
         job_tmpl.sched_join_files = None
         job_tmpl.queue_name = "FavQ.q"
         job_tmpl.priority = None
-        job_tmpl.max_wallclock_seconds = "3600"  #"23:59:59"
+        job_tmpl.max_wallclock_seconds = "3600"  # "23:59:59"
         job_tmpl.job_environment = {"HOME": "/home/users/dorigm7s/", "WIENROOT": "$HOME:/WIEN2k"}
 
         submit_script_text = sge._get_submit_script_header(job_tmpl)
@@ -323,25 +320,26 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('#$ -N BestJobEver' in submit_script_text)
         self.assertTrue('#$ -q FavQ.q' in submit_script_text)
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
-        #self.assertTrue( 'export HOME=/home/users/dorigm7s/'
+        # self.assertTrue( 'export HOME=/home/users/dorigm7s/'
         #                 in submit_script_text )
         self.assertTrue("# ENVIRONMENT VARIABLES BEGIN ###" in submit_script_text)
         self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
         self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
 
-    def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
+    @staticmethod
+    def _parse_time_string(string, fmt='%Y-%m-%dT%H:%M:%S'):
         """
         Parse a time string in the format returned from qstat -xml -ext and
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time, datetime
+        import time
+        import datetime
 
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as e:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, e.message))
-            raise ValueError("Problem parsing the time string.")
+            raise ValueError("Unable to parse time string {}, the message " "was {}".format(string, e.message))
 
         # I convert from a time_struct to a datetime object going through
         # the seconds since epoch, as suggested on stackoverflow:

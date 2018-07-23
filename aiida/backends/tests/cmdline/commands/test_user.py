@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-import uuid
-
-import click
 from click.testing import CliRunner
-import mock
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import user

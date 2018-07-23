@@ -159,5 +159,10 @@ TRANSPORT = OverridableOption('-T', '--transport', help='transport type',
 SCHEDULER = OverridableOption('-S', '--scheduler', help='scheduler type',
                               type=types.PluginParamType(group='schedulers'), required=True)
 
-USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType,
+USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(),
                          help='the email address of the user')
+
+PORT_NR = OverridableOption('-P', '--port', 'port', type=int, help='Port number')
+
+
+FREQUENCY = OverridableOption('-F', '--frequency', 'frequency', type=int)

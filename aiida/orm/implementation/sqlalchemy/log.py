@@ -83,7 +83,7 @@ class SqlaLog(Log):
                 entry.delete()
             session.commit()
         else:
-            raise NotImplemented(
+            raise NotImplementedError(
                 "Only deleting all by passing an empty filer dictionary is "
                 "currently supported")
 

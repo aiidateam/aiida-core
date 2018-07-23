@@ -58,6 +58,7 @@ from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline.commands.restapi import Restapi
 from aiida.cmdline.commands.rehash import Rehash
+from aiida.cmdline.utils import echo
 from aiida.cmdline import execname
 
 
@@ -330,7 +331,7 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        click.echo('\nwarning: verdi install is deprecated, use verdi setup.\n')
+        echo.echo_warning('verdi install is deprecated, use verdi setup.\n')
         ctx = _setup_cmd.make_context('setup', list(args))
         with ctx:
             _setup_cmd.invoke(ctx)
@@ -790,7 +791,7 @@ class Run(VerdiCommand):
         if not is_dbenv_loaded():
             load_dbenv()
         import argparse
-        from aiida.cmdline.commands.shell import default_modules_list
+        from aiida.cmdline.commands.shell import DEFAULT_MODULES_LIST
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -839,7 +840,7 @@ class Run(VerdiCommand):
 
         ## dynamically load modules (the same of verdi shell) - but in
         ## globals_dict, not in the current environment
-        for app_mod, model_name, alias in default_modules_list:
+        for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
             globals_dict["{}".format(alias)] = getattr(
                 __import__(app_mod, {}, {}, model_name), model_name)
 

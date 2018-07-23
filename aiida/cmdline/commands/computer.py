@@ -7,115 +7,265 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import click
+"""`verdi computer` commands"""
 import sys
+import click
+from click_plugins import with_plugins
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common.exceptions import ValidationError
-from aiida.cmdline.commands import verdi, verdi_computer
+from aiida.common.utils import escape_for_bash
+from aiida.cmdline.commands import verdi, verdi_computer, ensure_scripts
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import types
+from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types import (
+    ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
+from aiida.control.computer import ComputerBuilder, get_computer_configuration
+from aiida.plugins.entry_point import get_entry_points
+from aiida import transport
 
 
+def get_computer_names():
+    """
+    Retrieve the list of computers in the DB.
+    """
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder()
+    qb.append(type='computer', project=['name'])
+    if qb.count() > 0:
+        return zip(*qb.all())[0]
+    else:
+        return []
+
+@with_dbenv()
+def get_computer(name):
+    """
+    Get a Computer object with given name, or raise NotExistent
+    """
+    from aiida.orm.computer import Computer as AiidaOrmComputer
+    return AiidaOrmComputer.get(name)
+
+
+@with_dbenv()
 def prompt_for_computer_configuration(computer):
     import inspect, readline
     from aiida.orm.computer import Computer
     from aiida.common.exceptions import ValidationError
 
-    for internal_name, name, desc, multiline in (Computer._conf_attributes):
-        # Check if I should skip this entry
-        shouldcall_name = '_shouldcall_{}'.format(internal_name)
+def shouldcall_default_mpiprocs_per_machine(ctx):
+    """
+    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
+    False otherwise.
+
+    If there is a problem in determining the scheduler, return True to
+    avoid exceptions.
+    """
+    scheduler_ep = ctx.params['scheduler']
+    if scheduler_ep is not None:
         try:
-            shouldcallfunc = dict(inspect.getmembers(computer))[shouldcall_name]
-            shouldcall = shouldcallfunc()
-        except KeyError:
-            shouldcall = True
-        if not shouldcall:
-            # Call cleanup code, if present
-            cleanup_name = '_cleanup_{}'.format(internal_name)
-            try:
-                cleanup = dict(inspect.getmembers(computer))[cleanup_name]
-                cleanup()
-            except KeyError:
-                # No cleanup function: this is not a problem, simply
-                # no cleanup is needed
-                pass
+            SchedulerClass = scheduler_ep.load()
+        except ImportError:
+            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+    else:
+        raise ValidationError(
+            "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
 
-            # Skip this question
-            continue
+    JobResourceClass = SchedulerClass._job_resource_class
+    if JobResourceClass is None:
+        # Odd situation...
+        return False
 
-        getter_name = '_get_{}_string'.format(internal_name)
-        try:
-            getter = dict(inspect.getmembers(computer))[getter_name]
-        except KeyError:
-            print >> sys.stderr, ("Internal error! " "No {} getter defined in Computer".format(getter_name))
-            sys.exit(1)
-        previous_value = getter()
+    return JobResourceClass.accepts_default_mpiprocs_per_machine()
 
-        setter_name = '_set_{}_string'.format(internal_name)
-        try:
-            setter = dict(inspect.getmembers(computer))[setter_name]
-        except KeyError:
-            print >> sys.stderr, ("Internal error! " "No {} setter defined in Computer".format(setter_name))
-            sys.exit(1)
+def _computer_test_get_jobs(transport,scheduler,authinfo):
+    """
+    Internal test to check if it is possible to check the queue state.
 
-        valid_input = False
-        while not valid_input:
-            if multiline:
-                newlines = []
-                print "=> {}: ".format(name)
-                print "   # This is a multiline input, press CTRL+D on a"
-                print "   # empty line when you finish"
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object (from which one can get
+      computer and aiidauser)
+    :return: True if the test succeeds, False if it fails.
+    """
+    echo.echo("> Getting job list...")
+    found_jobs = scheduler.getJobs(as_dict=True)
+    # For debug
+    # for jid, data in found_jobs.iteritems():
+    #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
+    echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
+    return True
 
-                try:
-                    for l in previous_value.splitlines():
-                        while True:
-                            readline.set_startup_hook(lambda: readline.insert_text(l))
-                            input_txt = raw_input()
-                            if input_txt.strip() == '?':
-                                print ["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')]
-                                continue
-                            else:
-                                newlines.append(input_txt)
-                                break
+def _computer_create_temp_file(transport, scheduler, authinfo):
+    """
+    Internal test to check if it is possible to create a temporary file
+    and then delete it in the work directory
 
-                    # Reset the hook (no default text printed)
-                    readline.set_startup_hook()
+    :note: exceptions could be raised
 
-                    print "   # ------------------------------------------"
-                    print "   # End of old input. You can keep adding     "
-                    print "   # lines, or press CTRL+D to store this value"
-                    print "   # ------------------------------------------"
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object (from which one can get
+      computer and aiidauser)
+    :return: True if the test succeeds, False if it fails.
+    """
+    import tempfile
+    import datetime
+    import os
 
-                    while True:
-                        input_txt = raw_input()
-                        if input_txt.strip() == '?':
-                            print "\n".join(["  > {}".format(descl) for descl in "HELP: {}".format(desc).split('\n')])
-                            continue
-                        else:
-                            newlines.append(input_txt)
-                except EOFError:
-                    # Ctrl+D pressed: end of input.
-                    pass
+    file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
+    echo.echo("> Creating a temporary file in the work directory...")
+    echo.echo("  `-> Getting the remote user name...")
+    remote_user = transport.whoami()
+    echo.echo("      [remote username: {}]".format(remote_user))
+    workdir = authinfo.get_workdir().format(username=remote_user)
+    echo.echo("      [Checking/creating work directory: {}]".format(workdir))
 
-                input_txt = "\n".join(newlines)
+    try:
+        transport.chdir(workdir)
+    except IOError:
+        transport.makedirs(workdir)
+        transport.chdir(workdir)
 
-            else:  # No multiline
-                readline.set_startup_hook(lambda: readline.insert_text(previous_value))
-                input_txt = raw_input("=> {}: ".format(name))
-                if input_txt.strip() == '?':
-                    print "HELP:", desc
-                    continue
+    with tempfile.NamedTemporaryFile() as tempf:
+        fname = os.path.split(tempf.name)[1]
+        echo.echo("  `-> Creating the file {}...".format(fname))
+        remote_file_path = os.path.join(workdir, fname)
+        tempf.write(file_content)
+        tempf.flush()
+        transport.putfile(tempf.name, remote_file_path)
+    echo.echo("  `-> Checking if the file has been created...")
+    if not transport.path_exists(remote_file_path):
+        echo.echo_error("* ERROR! The file was not found!")
+        return False
+    else:
+        echo.echo("      [OK]")
+    echo.echo("  `-> Retrieving the file and checking its content...")
 
-            try:
-                setter(input_txt)
-                valid_input = True
-            except ValidationError as e:
-                print >> sys.stderr, "Invalid input: {}".format(e.message)
-                print >> sys.stderr, "Enter '?' for help".format(e.message)
+    handle, destfile = tempfile.mkstemp()
+    os.close(handle)
+    try:
+        transport.getfile(remote_file_path, destfile)
+        with open(destfile) as dfile:
+            read_string = dfile.read()
+        echo.echo("      [Retrieved]")
+        if read_string != file_content:
+            echo.echo_error("* ERROR! The file content is different from what was " "expected!")
+            echo.echo("** Expected:")
+            echo.echo(file_content)
+            echo.echo("** Found:")
+            echo.echo(read_string)
+            return False
+        else:
+            print "      [Content OK]"
+    finally:
+        os.remove(destfile)
+
+    echo.echo("  `-> Removing the file...")
+    transport.remove(remote_file_path)
+    echo.echo("  [Deleted successfully]")
+    return True
+
+@verdi_computer.command('setup')
+@click.pass_context
+@options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())
+@options.HOSTNAME(prompt='Hostname', cls=InteractiveOption, required=True,
+    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption,
+                     help="A human-readable description of this computer")
+@click.option('-e/-d', '--enabled/--disabled', is_flag=True, default=True,
+    help='if created with the disabled flag, calculations '
+         'associated with it will not be submitted until when it is '
+         're-enabled',
+    prompt="Enable the computer?",
+    cls=InteractiveOption,
+    # IMPORTANT! Do not specify explicitly type=click.BOOL,
+    # Otherwise you would not get a default value when prompting
+ )
+@options.TRANSPORT(prompt="Transport plugin", cls=InteractiveOption)
+@options.SCHEDULER(prompt="Scheduler plugin", cls=InteractiveOption)
+@click.option(
+   '--shebang',
+    prompt='Shebang line (first line of each script, starting with #!)',
+    default="#!/bin/bash",
+    cls=InteractiveOption,
+    help='this line specifies the first line of the submission script for this computer',
+    type=ShebangParamType())
+@click.option(
+    '-w', '--work-dir',
+    prompt='work directory on the computer',
+    default="/scratch/{username}/aiida/",
+    cls=InteractiveOption,
+    help="The absolute path of the directory on the computer where AiiDA will "
+         "run the calculations (typically, the scratch of the computer). You "
+         "can use the {username} replacement, that will be replaced by your "
+         "username on the remote computer")
+@click.option(
+    '-m', '--mpirun-command',
+    prompt="mpirun command",
+    default="mpirun -np {tot_num_mpiprocs}",
+    cls=InteractiveOption,
+    help="The mpirun command needed on the cluster to run parallel MPI "
+         "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+         "replaced by the total number of cpus, or the other scheduler-dependent "
+         "replacement fields (see the scheduler docs for more information)",
+    type=MpirunCommandParamType())
+@click.option(
+    '--mpiprocs-per-machine',
+    prompt="default number of CPUs per machine",
+    cls=InteractiveOption,
+    help="Enter here the default number of MPI processes per machine (node) that "
+         "should be used if nothing is otherwise specified. Pass the digit 0 "
+         "if you do not want to provide a default value.",
+    prompt_fn=shouldcall_default_mpiprocs_per_machine,
+    required_fn=False,
+    type=click.INT,
+) # Note: this can still be passed from the command line in non-interactive mode
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@with_dbenv()
+def setup_computer(ctx, non_interactive, **kwargs):
+    """Add a Computer."""
+    from aiida.common.exceptions import ValidationError
+    #from aiida.cmdline.utils.echo import ExitCode
+
+    if kwargs['label'] in get_computer_names():
+        echo.echo_critical('A computer called {} already exists.\n'
+            'Use "verdi computer update" to update it, and be '
+            'careful if you really want to modify a database '
+            'entry!'.format(kwargs['label']))
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    kwargs['transport'] = kwargs['transport'].name
+    kwargs['scheduler'] = kwargs['scheduler'].name
+
+    computer_builder = ComputerBuilder(**kwargs)
+    try:
+        computer = computer_builder.new()
+    except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
+        echo.echo_critical('{}: {}'.format(type(e).__name__, e))
+
+
+    try:
+        computer.store()
+    except ValidationError as err:
+        echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+
+    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
+    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
+
+    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
+    echo.echo_info("  verdi computer configure {}".format(computer.name))
+    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
+    echo.echo_info("the command-line interface at the moment)")
 
 
 @verdi_computer.command('enable')
@@ -188,6 +338,300 @@ def disable_computer(ctx, only_for_user, computer):
                 computer.name, only_for_user.first_name, only_for_user.last_name))
 
 
+@verdi_computer.command('list')
+@click.option(
+    '-o',
+    '--only-usable',
+    is_flag=True,
+    help="Show only computers that are usable (i.e., "
+    "configured for the given user and enabled)")
+@click.option(
+    '-p',
+    '--parsable',
+    is_flag=True,
+    help="Show only the computer names, one per line, "
+    "without any other information or string.")
+@click.option('-a', '--all-comps', is_flag=True, help="Show also disabled or unconfigured computers")
+@with_dbenv()
+def computer_list(only_usable, parsable, all_comps):
+    """
+    List available computers
+    """
+    from aiida.orm.computer import Computer as AiiDAOrmComputer
+    from aiida.orm.backend import construct_backend
+
+    backend = construct_backend()
+
+    computer_names = get_computer_names()
+
+    if not parsable:
+        echo.echo("# List of configured computers:")
+        echo.echo("# (use 'verdi computer show COMPUTERNAME' " "to see the details)")
+    if computer_names:
+        for name in sorted(computer_names):
+            computer = AiiDAOrmComputer.get(name)
+
+            is_configured = computer.is_user_configured(backend.users.get_automatic_user())
+            is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
+
+            is_usable = False  # True if both enabled and configured
+
+            if not all_comps:
+                if not is_configured or not is_user_enabled or not computer.is_enabled():
+                    continue
+
+            if computer.is_enabled():
+                if is_configured:
+                    configured_str = ""
+                    if is_user_enabled:
+                        symbol = "*"
+                        color = 'green'
+                        enabled_str = ""
+                        is_usable = True
+                    else:
+                        symbol = "x"
+                        color = 'red'
+                        enabled_str = "[DISABLED for this user]"
+                else:
+                    symbol = "x"
+                    color = 'reset'
+                    enabled_str = ""
+                    configured_str = " [unconfigured]"
+            else:  # GLOBALLY DISABLED
+                symbol = "x"
+                color = 'red'
+                if is_configured and not is_user_enabled:
+                    enabled_str = " [DISABLED globally AND for this user]"
+                else:
+                    enabled_str = " [DISABLED globally]"
+                if is_configured:
+                    configured_str = ""
+                else:
+                    configured_str = " [unconfigured]"
+
+            if parsable:
+                echo.echo(click.style("{}".format(name), fg=color))
+            else:
+                if (not only_usable) or is_usable:
+                    echo.echo(click.style("{} ".format(symbol), fg=color), nl=False)
+                    echo.echo(click.style("{} ".format(name), bold=True, fg=color), nl=False)
+                    echo.echo(click.style("{}{}".format(enabled_str, configured_str), fg=color))
+
+    else:
+        echo.echo("# No computers configured yet. Use 'verdi computer setup'")
+
+
+@verdi_computer.command('show')
+@arguments.COMPUTER()
+@with_dbenv()
+def computer_show(computer):
+    """
+    Show information on a given computer
+    """
+    return echo.echo(computer.full_text_info)
+
+
+@verdi_computer.command('rename')
+@arguments.COMPUTER()
+@arguments.LABEL('NEW_NAME')
+@with_dbenv()
+def computer_rename(computer, new_name):
+    """
+    Rename a computer
+    """
+    from aiida.common.exceptions import UniquenessError, ValidationError
+
+    old_name = computer.get_name()
+
+    if old_name == new_name:
+        echo.echo_critical("The old and new names are the same.")
+
+    try:
+        computer.set_name(new_name)
+        computer.store()
+    except ValidationError as error:
+        echo.echo_critical("Invalid input! {}".format(error.message))
+    except UniquenessError as error:
+        echo.echo_critical("Uniqueness error encountered! Probably a "
+                           "computer with name '{}' already exists"
+                           "".format(new_name))
+        echo.echo_critical("(Message was: {})".format(error.message))
+
+    echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
+
+
+@verdi_computer.command('test')
+@options.USER(
+    required=False,
+    help="Test the connection for a given AiiDA user, specified by"
+    "their email address. If not specified, uses the current "
+    "default user.",
+)
+@click.option(
+    '-t',
+    '--print-traceback',
+    is_flag=True,
+    help="Print the full traceback in case an exception "
+    "is raised",
+)
+@arguments.COMPUTER()
+@with_dbenv()
+def computer_test(user, print_traceback, computer):
+    """
+    Test the connection to a computer.
+
+    It tries to connect, to get the list of calculations on the queue and
+    to perform other tests.
+    """
+    import traceback
+    from aiida.common.exceptions import NotExistent
+    from aiida.orm.backend import construct_backend
+
+    backend = construct_backend()
+
+    # Set a user automatically if one is not specified in the command line
+    if user is None:
+        user = backend.users.get_automatic_user()
+
+    echo.echo("Testing computer '{}' for user {}...".format(computer.get_name(), user.email))
+    try:
+        authinfo = computer.get_authinfo(user)
+    except NotExistent:
+        echo.echo_critical("User with email '{}' is not yet configured "
+                           "for computer '{}' yet.".format(user.email, computer.get_name()))
+
+    warning_string = None
+    if not authinfo.enabled:
+        warning_string = ("** NOTE! Computer is disabled for the "
+                          "specified user!\n   Do you really want to test it? [y/N] ")
+    if not computer.is_enabled():
+        warning_string = ("** NOTE! Computer is disabled!\n" "   Do you really want to test it? [y/N] ")
+    if warning_string:
+        if not click.confirm(warning_string):
+            sys.exit(0)
+
+    sched = authinfo.computer.get_scheduler()
+    trans = authinfo.get_transport()
+
+    ## STARTING TESTS HERE
+    num_failures = 0
+    num_tests = 0
+
+    try:
+        echo.echo("> Testing connection...")
+        with trans:
+            sched.set_transport(trans)
+            num_tests += 1
+            for test in [_computer_test_get_jobs, _computer_create_temp_file]:
+                num_tests += 1
+                try:
+                    succeeded = test(transport=trans, scheduler=sched, authinfo=authinfo)
+                # pylint:disable=broad-except
+                except Exception as error:
+                    echo.echo_error("* The test raised an exception!")
+                    if print_traceback:
+                        echo.echo("** Full traceback:")
+                        # Indent
+                        echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
+                    else:
+                        echo.echo("** {}: {}".format(error.__class__.__name__, error.message))
+                        echo.echo("** (use the --traceback option to see the " "full traceback)")
+                    succeeded = False
+
+                if not succeeded:
+                    num_failures += 1
+
+        if num_failures:
+            echo.echo("Some tests failed! ({} out of {} failed)".format(num_failures, num_tests))
+        else:
+            echo.echo("Test completed (all {} tests succeeded)".format(num_tests))
+    # pylint:disable=broad-except
+    except Exception as error:
+        echo.echo_error("** Error while trying to connect to the computer! Cannot "
+                        "   perform following tests, stopping.")
+        if print_traceback:
+            echo.echo("** Full traceback:")
+            # Indent
+            echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
+        else:
+            echo.echo("{}: {}".format(error.__class__.__name__, error.message))
+            echo.echo("(use the --traceback option to see the " "full traceback)")
+        succeeded = False
+
+
+
+@verdi_computer.command('delete')
+@arguments.COMPUTER()
+@with_dbenv()
+def computer_delete(computer):
+    """
+    Configure the authentication information for a given computer
+
+    Does not delete the computer if there are calculations that are using
+    it.
+    """
+    from aiida.common.exceptions import (NotExistent, InvalidOperation)
+    from aiida.orm.computer import delete_computer
+
+    compname = computer.get_name()
+
+    try:
+        delete_computer(computer)
+    except InvalidOperation as error:
+        echo.echo_critical(error.message)
+
+    echo.echo_success("Computer '{}' deleted.".format(compname))
+
+
+
+# ~ @with_plugins(get_entry_points('aiida.cmdline.computer.configure'))
+@verdi_computer.group('configure')
+def computer_configure():
+    """Configure a computer with one of the available transport types."""
+    pass
+
+@computer_configure.command('show')
+@click.option('--current/--defaults')
+@click.option('--as-option-string', is_flag=True)
+@options.USER()
+@arguments.COMPUTER()
+def computer_config_show(computer, user, current, as_option_string):
+    """Show the current or default configuration for COMPUTER."""
+    import tabulate
+    from pprint import pformat
+    config = {}
+    table = []
+
+    transport_cls = computer.get_transport_class()
+    option_list = [param for param in transport.cli.create_configure_cmd(computer.get_transport_type()).params if isinstance(param, click.core.Option)]
+    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+    if current:
+        config = get_computer_configuration(computer, user)
+    else:
+        config = {option.name: transport.cli.transport_option_default(option.name, computer) for option in option_list}
+
+    option_items = []
+    if as_option_string:
+        for option in option_list:
+            t_opt = transport_cls.auth_options[option.name]
+            if config.get(option.name) or config.get(option.name) is False:
+                if t_opt.get('switch'):
+                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(option.name.replace('_', '-'))
+                elif t_opt.get('is_flag'):
+                    is_default = config.get(option.name) == transport_option_default(option.name, computer)
+                    option_value = option.opts[-1] if is_default else ''
+                else:
+                    option_value = '{}={}'.format(option.opts[-1], config[option.name])
+                option_items.append(option_value)
+        opt_string = ' '.join(option_items)
+        echo.echo(escape_for_bash(opt_string))
+    else:
+        table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]
+        echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+
+for ep in get_entry_points('aiida.transports'):
+    computer_configure.add_command(transport.cli.create_configure_cmd(ep.name))
+
 class Computer(VerdiCommandWithSubcommands):
     """
     Setup and manage computers to be used
@@ -202,179 +646,24 @@ class Computer(VerdiCommandWithSubcommands):
         super(Computer, self).__init__()
 
         self.valid_subcommands = {
-            'list': (self.computer_list, self.complete_none),
-            'show': (self.computer_show, self.complete_computers),
-            'setup': (self.computer_setup, self.complete_none),
+            'list': (verdi, self.complete_none),
+            'show': (verdi, self.complete_computers),
+            'setup': (verdi, self.complete_none),
             'update': (self.computer_update, self.complete_computers),
             'enable': (verdi, self.complete_computers),
             'disable': (verdi, self.complete_computers),
-            'rename': (self.computer_rename, self.complete_computers),
-            'configure': (self.computer_configure, self.complete_computers),
-            'test': (self.computer_test, self.complete_computers),
-            'delete': (self.computer_delete, self.complete_computers),
+            'rename': (verdi, self.complete_computers),
+            'test': (verdi, self.complete_computers),
+            'delete': (verdi, self.complete_computers),
+            'configure': (verdi, self.complete_none),
         }
 
     def complete_computers(self, subargs_idx, subargs):
         if not is_dbenv_loaded():
             load_dbenv()
-        computer_names = self.get_computer_names()
+        computer_names = get_computer_names()
         print computer_names
         return "\n".join(computer_names)
-
-    def computer_list(self, *args):
-        """
-        List available computers
-        """
-        import argparse
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-        from aiida.orm.computer import Computer as AiiDAOrmComputer
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(), description='List the computers in the database.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument(
-            '-C',
-            '--color',
-            action='store_true',
-            help="Use colors to help visualizing the different categories",
-        )
-        parser.add_argument(
-            '-o',
-            '--only-usable',
-            action='store_true',
-            help="Show only computers that are usable (i.e., "
-            "configured for the given user and enabled)",
-        )
-        parser.add_argument(
-            '-p',
-            '--parsable',
-            action='store_true',
-            help="Show only the computer names, one per line, "
-            "without any other information or string.",
-        )
-        parser.add_argument(
-            '-a',
-            '--all',
-            action='store_true',
-            help="Show also disabled or unconfigured computers",
-        )
-        parser.set_defaults(also_disabled=False)
-        parsed_args = parser.parse_args(args)
-        use_colors = parsed_args.color
-        only_usable = parsed_args.only_usable
-        parsable = parsed_args.parsable
-        all_comps = parsed_args.all
-
-        computer_names = self.get_computer_names()
-
-        if use_colors:
-            color_id = 90  # Dark gray
-            color_id = None  # Default color
-            if color_id is not None:
-                start_color = "\x1b[{}m".format(color_id)
-                end_color = "\x1b[0m"
-            else:
-                start_color = ""
-                end_color = ""
-        else:
-            start_color = ""
-            end_color = ""
-
-        if not parsable:
-            print "{}# List of configured computers:{}".format(start_color, end_color)
-            print("{}# (use 'verdi computer show COMPUTERNAME' " "to see the details){}".format(start_color, end_color))
-        if computer_names:
-            for name in sorted(computer_names):
-                computer = AiiDAOrmComputer.get(name)
-
-                # color_id = 90 # Dark gray
-                # color_id = 34 # Blue
-
-                is_configured = computer.is_user_configured(self.backend.users.get_automatic_user())
-                is_user_enabled = computer.is_user_enabled(self.backend.users.get_automatic_user())
-
-                is_usable = False  # True if both enabled and configured
-
-                if not all_comps:
-                    if not is_configured or not is_user_enabled or not computer.is_enabled():
-                        continue
-
-                if computer.is_enabled():
-                    if is_configured:
-                        configured_str = ""
-                        if is_user_enabled:
-                            symbol = "*"
-                            color_id = None
-                            enabled_str = ""
-                            is_usable = True
-                        else:
-                            symbol = "x"
-                            color_id = 31  # Red
-                            enabled_str = "[DISABLED for this user]"
-                    else:
-                        symbol = "x"
-                        color_id = 90  # Dark gray
-                        enabled_str = ""
-                        configured_str = " [unconfigured]"
-                else:  # GLOBALLY DISABLED
-                    symbol = "x"
-                    color_id = 31  # Red
-                    if is_configured and not is_user_enabled:
-                        enabled_str = " [DISABLED globally AND for this user]"
-                    else:
-                        enabled_str = " [DISABLED globally]"
-                    if is_configured:
-                        configured_str = ""
-                    else:
-                        configured_str = " [unconfigured]"
-
-                if use_colors:
-                    if color_id is not None:
-                        start_color = "\x1b[{}m".format(color_id)
-                        bold_sequence = "\x1b[1;{}m".format(color_id)
-                        nobold_sequence = "\x1b[0;{}m".format(color_id)
-                    else:
-                        start_color = "\x1b[0m"
-                        bold_sequence = "\x1b[1m"
-                        nobold_sequence = "\x1b[0m"
-                    end_color = "\x1b[0m"
-                else:
-                    start_color = ""
-                    end_color = ""
-                    bold_sequence = ""
-                    nobold_sequence = ""
-
-                if parsable:
-                    print "{}{}{}".format(start_color, name, end_color)
-                else:
-                    if (not only_usable) or is_usable:
-                        print "{}{} {}{}{} {}{}{}".format(start_color, symbol, bold_sequence, name, nobold_sequence,
-                                                          enabled_str, configured_str, end_color)
-
-        else:
-            print "# No computers configured yet. Use 'verdi computer setup'"
-
-    def computer_show(self, *args):
-        """
-        Show information on a given computer
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import NotExistent
-
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'computer show' there should be one "
-                                  "argument only, being the computer name.")
-            sys.exit(1)
-        try:
-            computer = self.get_computer(name=args[0])
-        except NotExistent:
-            print >> sys.stderr, "No computer in the DB with name {}.".format(args[0])
-            sys.exit(1)
-        print computer.full_text_info
 
     def computer_update(self, *args):
         """
@@ -438,486 +727,4 @@ class Computer(VerdiCommandWithSubcommands):
         print "OK"
         pass
 
-    def computer_setup(self, *args):
-        """
-        Setup a new or existing computer
-        """
-        import readline
 
-        if len(args) != 0:
-            print >> sys.stderr, ("after 'computer setup' there cannot be any " "argument.")
-            sys.exit(1)
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm.computer import Computer as AiidaOrmComputer
-
-        print "At any prompt, type ? to get some help."
-        print "---------------------------------------"
-
-        # get the new computer name
-        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
-        input_txt = raw_input("=> Computer name: ")
-        if input_txt.strip() == '?':
-            print "HELP:", "The computer name"
-        computer_name = input_txt.strip()
-
-        try:
-            computer = self.get_computer(name=computer_name)
-            print "A computer called {} already exists.".format(computer_name)
-            print "Use 'verdi computer update' to update it, and be careful if"
-            print "you really want to modify a database entry!"
-            print "Now exiting..."
-            sys.exit(1)
-        except NotExistent:
-            computer = AiidaOrmComputer(name=computer_name)
-            print "Creating new computer with name '{}'".format(computer_name)
-
-        prompt_for_computer_configuration(computer)
-
-        try:
-            computer.store()
-        except ValidationError as e:
-            print "Unable to store the computer: {}. Exiting...".format(e.message)
-            sys.exit(1)
-
-        print "Computer '{}' successfully stored in DB.".format(computer_name)
-        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
-        print "Note: before using it with AiiDA, configure it using the command"
-        print "  verdi computer configure {}".format(computer_name)
-        print "(Note: machine_dependent transport parameters cannot be set via "
-        print "the command-line interface at the moment)"
-
-    def computer_rename(self, *args):
-        """
-        Rename a computer
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import (NotExistent, UniquenessError, ValidationError)
-
-        try:
-            oldname = args[0]
-            newname = args[1]
-        except IndexError:
-            print >> sys.stderr, "Pass as parameters the old and the new name"
-            sys.exit(1)
-
-        if oldname == newname:
-            print >> sys.stderr, "The initial and final name are the same."
-            sys.exit(1)
-
-        try:
-            computer = self.get_computer(name=oldname)
-        except NotExistent:
-            print >> sys.stderr, "No computer exists with name '{}'".format(oldname)
-            sys.exit(1)
-
-        try:
-            computer.set_name(newname)
-            computer.store()
-        except ValidationError as e:
-            print >> sys.stderr, "Invalid input! {}".format(e.message)
-            sys.exit(1)
-        except UniquenessError as e:
-            print >> sys.stderr, ("Uniqueness error encountered! Probably a "
-                                  "computer with name '{}' already exists"
-                                  "".format(newname))
-            print >> sys.stderr, "(Message was: {})".format(e.message)
-            sys.exit(1)
-
-        print "Computer '{}' renamed to '{}'".format(oldname, newname)
-
-    def computer_configure(self, *args):
-        """
-        Configure the authentication information for a given computer
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        import readline
-        import inspect
-
-        from aiida.common.exceptions import (NotExistent, ValidationError, MultipleObjectsError)
-        from aiida.common.utils import get_configured_user_email
-
-        import argparse
-
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(), description='Configure a computer for a given AiiDA user.')
-        # The default states are those that are shown if no option is given
-        parser.add_argument(
-            '-u',
-            '--user',
-            type=str,
-            metavar='EMAIL',
-            help="Configure the computer for the given AiiDA user (otherwise, configure the current default user)",
-        )
-        parser.add_argument('computer', type=str, help="The name of the computer that you want to configure")
-
-        parsed_args = parser.parse_args(args)
-
-        user_email = parsed_args.user
-        computername = parsed_args.computer
-
-        try:
-            computer = self.get_computer(name=computername)
-        except NotExistent:
-            print >> sys.stderr, "No computer exists with name '{}'".format(computername)
-            sys.exit(1)
-        if user_email is None:
-            user = self.backend.users.get_automatic_user()
-        else:
-            try:
-                user = self.backend.users.get(email=user_email)
-            except (NotExistent, MultipleObjectsError) as e:
-                print >> sys.stderr, ("{}".format(e))
-                sys.exit(1)
-
-        try:
-            authinfo = self.backend.authinfos.get(computer=computer, user=user)
-        except NotExistent:
-            authinfo = self.backend.authinfos.create(computer=computer, user=user)
-        old_authparams = authinfo.get_auth_params()
-
-        Transport = computer.get_transport_class()
-
-        print("Configuring computer '{}' for the AiiDA user '{}'".format(computername, user.email))
-
-        print "Computer {} has transport of type {}".format(computername, computer.get_transport_type())
-
-        if user.email != get_configured_user_email():
-            print "*" * 72
-            print "** {:66s} **".format("WARNING!")
-            print "** {:66s} **".format("  You are configuring a different user.")
-            print "** {:66s} **".format("  Note that the default suggestions are taken from your")
-            print "** {:66s} **".format("  local configuration files, so they may be incorrect.")
-            print "*" * 72
-
-        valid_keys = Transport.get_valid_auth_params()
-
-        default_authparams = {}
-        for k in valid_keys:
-            if k in old_authparams:
-                default_authparams[k] = old_authparams.pop(k)
-        if old_authparams:
-            print("WARNING: the following keys were previously in the " "authorization parameters,")
-            print "but have not been recognized and have been deleted:"
-            print ", ".join(old_authparams.keys())
-
-        print ""
-        print "Note: to leave a field unconfigured, leave it empty and press [Enter]"
-
-        # I strip out the old auth_params that are not among the valid keys
-        new_authparams = {}
-
-        for k in valid_keys:
-            key_set = False
-            while not key_set:
-                try:
-                    converter_name = '_convert_{}_fromstring'.format(k)
-                    try:
-                        converter = dict(inspect.getmembers(Transport))[converter_name]
-                    except KeyError:
-                        print >> sys.stderr, ("Internal error! "
-                                              "No {} defined in Transport {}".format(
-                                                  converter_name, computer.get_transport_type()))
-                        sys.exit(1)
-
-                    if k in default_authparams:
-                        readline.set_startup_hook(lambda: readline.insert_text(str(default_authparams[k])))
-                    else:
-                        # Use suggestion only if parameters were not already set
-                        suggester_name = '_get_{}_suggestion_string'.format(k)
-                        try:
-                            suggester = dict(inspect.getmembers(Transport))[suggester_name]
-                            suggestion = suggester(computer)
-                            readline.set_startup_hook(lambda: readline.insert_text(suggestion))
-                        except KeyError:
-                            readline.set_startup_hook()
-
-                    txtval = raw_input("=> {} = ".format(k))
-                    if txtval:
-                        new_authparams[k] = converter(txtval)
-                    key_set = True
-                except ValidationError as e:
-                    print "Error in the inserted value: {}".format(e.message)
-
-        if not valid_keys:
-            print "There are no special keys to be configured. Configuration completed."
-
-        authinfo.set_auth_params(new_authparams)
-        authinfo.store()
-        print "Configuration stored for your user on computer '{}'.".format(computername)
-
-    def computer_delete(self, *args):
-        """
-        Configure the authentication information for a given computer
-
-        Does not delete the computer if there are calculations that are using
-        it.
-        """
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import (NotExistent, InvalidOperation)
-        from aiida.orm.computer import delete_computer
-
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'computer delete' there should be one "
-                                  "argument only, being the computer name.")
-            sys.exit(1)
-
-        computername = args[0]
-
-        try:
-            computer = self.get_computer(name=computername)
-        except NotExistent:
-            print >> sys.stderr, "No computer exists with name '{}'".format(computername)
-            sys.exit(1)
-
-        try:
-            delete_computer(computer)
-        except InvalidOperation as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-
-        print "Computer '{}' deleted.".format(computername)
-
-    def computer_test(self, *args):
-        """
-        Test the connection to a computer.
-
-        It tries to connect, to get the list of calculations on the queue and
-        to perform other tests.
-        """
-        import argparse
-        import traceback
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.common.exceptions import NotExistent
-
-        parser = argparse.ArgumentParser(prog=self.get_full_command_name(), description='Test a remote computer')
-        # The default states are those that are shown if no option is given
-        parser.add_argument(
-            '-u',
-            '--user',
-            type=str,
-            metavar='EMAIL',
-            dest='user_email',
-            help="Test the connection for a given AiiDA user."
-            "If not specified, uses the current "
-            "default user.",
-        )
-        parser.add_argument(
-            '-t',
-            '--traceback',
-            action='store_true',
-            help="Print the full traceback in case an exception "
-            "is raised",
-        )
-        parser.add_argument('computer', type=str, help="The name of the computer that you " "want to test")
-
-        parsed_args = parser.parse_args(args)
-
-        user_email = parsed_args.user_email
-        computername = parsed_args.computer
-        print_traceback = parsed_args.traceback
-
-        try:
-            computer = self.get_computer(name=computername)
-        except NotExistent:
-            print >> sys.stderr, "No computer exists with name '{}'".format(computername)
-            sys.exit(1)
-
-        if user_email is None:
-            user = self.backend.users.get_automatic_user()
-        else:
-            user_list = self.backend.users.find(email=user_email)
-            # If no user is found
-            if not user_list:
-                print >> sys.stderr, ("No user with email '{}' in the " "database.".format(user_email))
-                sys.exit(1)
-            user = user_list[0]
-
-        print "Testing computer '{}' for user {}...".format(computername, user.email)
-        try:
-            authinfo = computer.get_authinfo(user)
-        except NotExistent:
-            print >> sys.stderr, ("User with email '{}' is not yet configured "
-                                  "for computer '{}' yet.".format(user.email, computername))
-            sys.exit(1)
-
-        warning_string = None
-        if not authinfo.enabled:
-            warning_string = ("** NOTE! Computer is disabled for the "
-                              "specified user!\n   Do you really want to test it? [y/N] ")
-        if not computer.is_enabled():
-            warning_string = ("** NOTE! Computer is disabled!\n" "   Do you really want to test it? [y/N] ")
-        if warning_string:
-            answer = raw_input(warning_string)
-            if not (answer == 'y' or answer == 'Y'):
-                sys.exit(0)
-
-        s = authinfo.computer.get_scheduler()
-        t = authinfo.get_transport()
-
-        ## STARTING TESTS HERE
-        num_failures = 0
-        num_tests = 0
-
-        try:
-            print "> Testing connection..."
-            with t:
-                s.set_transport(t)
-                num_tests += 1
-                for test in [self._computer_test_get_jobs, self._computer_create_temp_file]:
-                    num_tests += 1
-                    try:
-                        succeeded = test(transport=t, scheduler=s, authinfo=authinfo)
-                    except Exception as e:
-                        print "* The test raised an exception!"
-                        if print_traceback:
-                            print "** Full traceback:"
-                            # Indent
-                            print "\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()])
-                        else:
-                            print "** {}: {}".format(e.__class__.__name__, e.message)
-                            print("** (use the --traceback option to see the " "full traceback)")
-                        succeeded = False
-
-                    if not succeeded:
-                        num_failures += 1
-
-            if num_failures:
-                print "Some tests failed! ({} out of {} failed)".format(num_failures, num_tests)
-            else:
-                print "Test completed (all {} tests succeeded)".format(num_tests)
-        except Exception as e:
-            print "** Error while trying to connect to the computer! Cannot "
-            print "   perform following tests, stopping."
-            if print_traceback:
-                print "** Full traceback:"
-                # Indent
-                print "\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()])
-            else:
-                print "{}: {}".format(e.__class__.__name__, e.message)
-                print("(use the --traceback option to see the " "full traceback)")
-            succeeded = False
-
-    def _computer_test_get_jobs(self, transport, scheduler, authinfo):
-        """
-        Internal test to check if it is possible to check the queue state.
-
-        :note: exceptions could be raised
-
-        :param transport: an open transport
-        :param scheduler: the corresponding scheduler class
-        :param authinfo: the authinfo object (from which one can get
-          computer and aiidauser)
-        :return: True if the test succeeds, False if it fails.
-        """
-        print "> Getting job list..."
-        found_jobs = scheduler.getJobs(as_dict=True)
-        # For debug
-        # for jid, data in found_jobs.iteritems():
-        #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
-        print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
-        return True
-
-    def _computer_create_temp_file(self, transport, scheduler, authinfo):
-        """
-        Internal test to check if it is possible to create a temporary file
-        and then delete it in the work directory
-
-        :note: exceptions could be raised
-
-        :param transport: an open transport
-        :param scheduler: the corresponding scheduler class
-        :param authinfo: the AuthInfo object (from which one can get
-          computer and aiidauser)
-        :return: True if the test succeeds, False if it fails.
-        """
-        import tempfile
-        import datetime
-        import os
-
-        file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-        print "> Creating a temporary file in the work directory..."
-        print "  `-> Getting the remote user name..."
-        remote_user = transport.whoami()
-        print "      [remote username: {}]".format(remote_user)
-        workdir = authinfo.get_workdir().format(username=remote_user)
-        print "      [Checking/creating work directory: {}]".format(workdir)
-
-        try:
-            transport.chdir(workdir)
-        except IOError:
-            transport.makedirs(workdir)
-            transport.chdir(workdir)
-
-        with tempfile.NamedTemporaryFile() as f:
-            fname = os.path.split(f.name)[1]
-            print "  `-> Creating the file {}...".format(fname)
-            remote_file_path = os.path.join(workdir, fname)
-            f.write(file_content)
-            f.flush()
-            transport.putfile(f.name, remote_file_path)
-        print "  `-> Checking if the file has been created..."
-        if not transport.path_exists(remote_file_path):
-            print "* ERROR! The file was not found!"
-            return False
-        else:
-            print "      [OK]"
-        print "  `-> Retrieving the file and checking its content..."
-
-        fd, destfile = tempfile.mkstemp()
-        os.close(fd)
-        try:
-            transport.getfile(remote_file_path, destfile)
-            with open(destfile) as f:
-                read_string = f.read()
-            print "      [Retrieved]"
-            if read_string != file_content:
-                print("* ERROR! The file content is different from what was " "expected!")
-                print "** Expected:"
-                print file_content
-                print "** Found:"
-                print read_string
-                return False
-            else:
-                print "      [Content OK]"
-        finally:
-            os.remove(destfile)
-
-        print "  `-> Removing the file..."
-        transport.remove(remote_file_path)
-        print "  [Deleted successfully]"
-        return True
-
-    def get_computer_names(self):
-        """
-        Retrieve the list of computers in the DB.
-
-        ToDo: use an API or cache the results, sometime it is quite slow!
-        """
-        from aiida.orm.querybuilder import QueryBuilder
-        qb = QueryBuilder()
-        qb.append(type='computer', project=['name'])
-        if qb.count() > 0:
-            return zip(*qb.all())[0]
-        else:
-            return None
-
-    def get_computer(self, name):
-        """
-        Get a Computer object with given name, or raise NotExistent
-        """
-        from aiida.orm.computer import Computer as AiidaOrmComputer
-
-        return AiidaOrmComputer.get(name)

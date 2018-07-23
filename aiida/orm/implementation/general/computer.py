@@ -40,112 +40,6 @@ class AbstractComputer(object):
     """
     _logger = logging.getLogger(__name__)
 
-    @classproperty
-    def _conf_attributes(self):
-        """
-        Return the configuration attributes to be used in the 'setup' phase.
-
-        The return value is a list of tuples. Each tuple has three elements:
-        1. an internal name (used to find the
-           _set_internalname_string, and get_internalname_string methods)
-        2. a short human-readable name
-        3. A long human-readable description
-        4. True if it is a multi-line input, False otherwise
-
-        For the implementation, see in aiida.cmdline.computer
-
-        .. note: you can define a ``_shouldcall_internalname`` method that returns
-          either True or False if the specific configuration option has to be
-          called or not. If such a method is not found, the option is always
-          asked to the user. In this case, you typically also want to define a
-          ``_cleanup_internalname`` method to remove any previous configuration
-          associated to internalname, in case ``_shouldcall_internalname``
-          returns False.
-
-        .. note: IMPORTANT! For each entry, remember to define the
-          ``_set_internalname_string`` and ``get_internalname_string`` methods.
-          Moreover, the ``_set_internalname_string`` method should also
-          immediately validate the value.
-
-        ..note: Defining it as a property increases the overall execution
-          of the code because it does not require to calculate
-          Transport.get_valid_transports() at each load of this class.
-        """
-
-        return [
-            ("hostname",
-             "Fully-qualified hostname",
-             "The fully qualified host-name of this computer",
-             False,
-             ),
-            ("description",
-             "Description",
-             "A human-readable description of this computer",
-             False,
-             ),
-            ("enabled_state",
-             "Enabled",
-             "True or False; if False, the computer is disabled and calculations\n"
-             "associated with it will not be submitted",
-             False,
-             ),
-            ("transport_type",
-             "Transport type",
-             "The name of the transport to be used. Valid names are: {}".format(
-                 ",".join(Transport.get_valid_transports())),
-             False,
-             ),
-            ("scheduler_type",
-             "Scheduler type",
-             "The name of the scheduler to be used. Valid names are: {}".format(
-                 ",".join(Scheduler.get_valid_schedulers())),
-             False,
-             ),
-            ("shebang",
-             "shebang line at the beginning of the submission script",
-             "this line specifies the first line of the submission script for this computer",
-             False,
-             ),
-            ("workdir",
-             "AiiDA work directory",
-             "The absolute path of the directory on the computer where AiiDA will\n"
-             "run the calculations (typically, the scratch of the computer). You\n"
-             "can use the {username} replacement, that will be replaced by your\n"
-             "username on the remote computer",
-             False,
-             ),
-            # Must be called after the scheduler!
-            ("mpirun_command",
-             "mpirun command",
-             "The mpirun command needed on the cluster to run parallel MPI\n"
-             "programs. You can use the {tot_num_mpiprocs} replacement, that will be \n"
-             "replaced by the total number of cpus, or the other scheduler-dependent\n"
-             "replacement fields (see the scheduler docs for more information)",
-             False,
-             ),
-            ("default_mpiprocs_per_machine",
-             "Default number of CPUs per machine",
-             "Enter here the default number of CPUs per machine (node) that \n"
-             "should be used if nothing is otherwise specified. Leave empty \n"
-             "if you do not want to provide a default value.\n",
-             False,
-             ),
-            ("prepend_text",
-             "Text to prepend to each command execution",
-             "This is a multiline string, whose content will be prepended inside\n"
-             "the submission script before the real execution of the job. It is\n"
-             "your responsibility to write proper bash code!",
-             True,
-             ),
-            ("append_text",
-             "Text to append to each command execution",
-             "This is a multiline string, whose content will be appended inside\n"
-             "the submission script after the real execution of the job. It is\n"
-             "your responsibility to write proper bash code!",
-             True,
-             ),
-        ]
-
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying with Django.
@@ -327,16 +221,6 @@ class AbstractComputer(object):
         if not name.strip():
             raise ValidationError("No name specified")
 
-    def _get_hostname_string(self):
-        return self.get_hostname()
-
-    def _set_hostname_string(self, string):
-        """
-        Set the hostname starting from a string.
-        """
-        self._hostname_validator(string)
-        self.set_hostname(string)
-
     @classmethod
     def _hostname_validator(cls, hostname):
         """
@@ -344,36 +228,6 @@ class AbstractComputer(object):
         """
         if not hostname.strip():
             raise ValidationError("No hostname specified")
-
-    def _get_default_mpiprocs_per_machine_string(self):
-        """
-        Get the default number of CPUs per machine (node) as a string
-        """
-        def_cpus_per_machine = self.get_default_mpiprocs_per_machine()
-        if def_cpus_per_machine is None:
-            return ""
-        else:
-            return str(def_cpus_per_machine)
-
-    def _set_default_mpiprocs_per_machine_string(self, string):
-        """
-        Set the default number of CPUs per machine (node) from a string (set to
-        None if the string is empty)
-        """
-        if not string:
-            def_cpus_per_machine = None
-        else:
-            try:
-                def_cpus_per_machine = int(string)
-            except ValueError:
-                raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
-                                      "must be a positive integer, or an empty "
-                                      "string if you do not want to provide a "
-                                      "default value.")
-
-        self._default_mpiprocs_per_machine_validator(def_cpus_per_machine)
-
-        self.set_default_mpiprocs_per_machine(def_cpus_per_machine)
 
     def _default_mpiprocs_per_machine_validator(self, def_cpus_per_machine):
         """
@@ -389,57 +243,6 @@ class AbstractComputer(object):
                                   "string if you do not want to provide a "
                                   "default value.")
 
-    def _shouldcall_default_mpiprocs_per_machine(self):
-        """
-        Return True if the scheduler can accept 'default_mpiprocs_per_machine',
-        False otherwise.
-
-        If there is a problem in determining the scheduler, return True to
-        avoid exceptions.
-        """
-        try:
-            SchedulerClass = SchedulerFactory(self.get_scheduler_type())
-        except MissingPluginError:
-            # Return True if the Scheduler was not found...
-            return True
-
-        JobResourceClass = SchedulerClass._job_resource_class
-        if JobResourceClass is None:
-            # Odd situation...
-            return False
-
-        return JobResourceClass.accepts_default_mpiprocs_per_machine()
-
-    def _cleanup_default_mpiprocs_per_machine(self):
-        """
-        Called by the command line utility in case the _shouldcall_ routine
-        returns False, to remove possible values that were previously set
-        (e.g. if one used before a pbspro scheduler and set the
-        default_mpiprocs_per_machine, and then switches to sge, the question is
-        not asked, but the value should also be removed from the DB.
-        """
-        self.set_default_mpiprocs_per_machine(None)
-
-    def _get_enabled_state_string(self):
-        return "True" if self.is_enabled() else "False"
-
-    def _set_enabled_state_string(self, string):
-        """
-        Set the enabled state starting from a string.
-        """
-        upper_string = string.upper()
-        if upper_string in ['YES', 'Y', 'T', 'TRUE']:
-            enabled_state = True
-        elif upper_string in ['NO', 'N', 'F', 'FALSE']:
-            enabled_state = False
-        else:
-            raise ValidationError("Invalid value '{}' for the enabled state, must "
-                                  "be a boolean".format(string))
-
-        self._enabled_state_validator(enabled_state)
-
-        self.set_enabled_state(enabled_state)
-
     @classmethod
     def _enabled_state_validator(cls, enabled_state):
         """
@@ -449,16 +252,6 @@ class AbstractComputer(object):
             raise ValidationError("Invalid value '{}' for the enabled state, must "
                                   "be a boolean".format(str(enabled_state)))
 
-    def _get_description_string(self):
-        return self.get_description()
-
-    def _set_description_string(self, string):
-        """
-        Set the description starting from a string.
-        """
-        self._description_validator(string)
-        self.set_description(string)
-
     @classmethod
     def _description_validator(cls, description):
         """
@@ -466,16 +259,6 @@ class AbstractComputer(object):
         """
         # The description is always valid
         pass
-
-    def _get_transport_type_string(self):
-        return self.get_transport_type()
-
-    def _set_transport_type_string(self, string):
-        """
-        Set the transport_type starting from a string.
-        """
-        self._transport_type_validator(string)
-        self.set_transport_type(string)
 
     @classmethod
     def _transport_type_validator(cls, transport_type):
@@ -485,16 +268,6 @@ class AbstractComputer(object):
         if transport_type not in Transport.get_valid_transports():
             raise ValidationError("The specified transport is not a valid one")
 
-    def _get_scheduler_type_string(self):
-        return self.get_scheduler_type()
-
-    def _set_scheduler_type_string(self, string):
-        """
-        Set the scheduler_type starting from a string.
-        """
-        self._scheduler_type_validator(string)
-        self.set_scheduler_type(string)
-
     @classmethod
     def _scheduler_type_validator(cls, scheduler_type):
         """
@@ -502,16 +275,6 @@ class AbstractComputer(object):
         """
         if scheduler_type not in Scheduler.get_valid_schedulers():
             raise ValidationError("The specified scheduler is not a valid one")
-
-    def _get_prepend_text_string(self):
-        return self.get_prepend_text()
-
-    def _set_prepend_text_string(self, string):
-        """
-        Set the prepend_text starting from a string.
-        """
-        self._prepend_text_validator(string)
-        self.set_prepend_text(string)
 
     @classmethod
     def _prepend_text_validator(cls, prepend_text):
@@ -521,16 +284,6 @@ class AbstractComputer(object):
         # no validation done
         pass
 
-    def _get_append_text_string(self):
-        return self.get_append_text()
-
-    def _set_append_text_string(self, string):
-        """
-        Set the append_text starting from a string.
-        """
-        self._append_text_validator(string)
-        self.set_append_text(string)
-
     @classmethod
     def _append_text_validator(cls, append_text):
         """
@@ -538,27 +291,6 @@ class AbstractComputer(object):
         """
         # no validation done
         pass
-
-    def _get_workdir_string(self):
-        return self.get_workdir()
-
-    def _set_workdir_string(self, string):
-        """
-        Set the workdir starting from a string.
-        """
-        self._workdir_validator(string)
-        self.set_workdir(string)
-
-    def _get_shebang_string(self):
-        return self.get_shebang()
-
-    def _set_shebang_string(self, string):
-        """
-        Set the shebang line.
-        """
-        # self._shebang_validator(string)
-        # Should we validate?
-        self.set_shebang(string)
 
     @classmethod
     def _workdir_validator(cls, workdir):
@@ -578,19 +310,6 @@ class AbstractComputer(object):
 
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
-
-    def _get_mpirun_command_string(self):
-        return " ".join(self.get_mpirun_command())
-
-    def _set_mpirun_command_string(self, string):
-        """
-        Set the mpirun command string (from a string to a list).
-        """
-        converted_cmd = str(string).strip().split(" ")
-        if converted_cmd == ['']:
-            converted_cmd = []
-        self._mpirun_command_validator(converted_cmd)
-        self.set_mpirun_command(converted_cmd)
 
     def _mpirun_command_validator(self, mpirun_cmd):
         """
@@ -683,6 +402,13 @@ class AbstractComputer(object):
         The computer label
         """
         return self.name
+
+    @label.setter
+    def label(self, value):
+        """
+        Set the computer label (i.e., name)
+        """
+        self.set_name(value)
 
     @abstractproperty
     def description(self):

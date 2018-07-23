@@ -1322,6 +1322,7 @@ class AbstractNode(object):
         Add a new comment.
 
         :param content: string with comment
+        :return: An ID for the newly added comment
         """
         pass
 

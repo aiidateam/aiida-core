@@ -58,6 +58,7 @@ from aiida.cmdline.commands.comment import Comment
 from aiida.cmdline.commands.shell import Shell
 from aiida.cmdline.commands.restapi import Restapi
 from aiida.cmdline.commands.rehash import Rehash
+from aiida.cmdline.utils import echo
 from aiida.cmdline import execname
 
 
@@ -330,7 +331,7 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        click.echo('\nwarning: verdi install is deprecated, use verdi setup.\n')
+        echo.echo_warning('verdi install is deprecated, use verdi setup.\n')
         ctx = _setup_cmd.make_context('setup', list(args))
         with ctx:
             _setup_cmd.invoke(ctx)

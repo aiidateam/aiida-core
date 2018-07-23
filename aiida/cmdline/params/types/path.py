@@ -12,6 +12,7 @@ class AbsolutePathParamType(click.Path):
     name = 'AbsolutePath'
 
     def convert(self, value, param, ctx):
+        value = os.path.expanduser(value)
         newval = super(AbsolutePathParamType, self).convert(value, param, ctx)
         if not os.path.isabs(newval):
             raise click.BadParameter('path must be absolute')

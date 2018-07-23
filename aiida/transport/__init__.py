@@ -17,6 +17,7 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 from aiida.transport.transport import Transport
 from aiida.transport.util import TransportFactory
+import aiida.transport.cli
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):

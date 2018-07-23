@@ -13,7 +13,7 @@ def configure_computer(computer, user=None, **kwargs):
     user = user or backend.users.get_automatic_user()
 
     try:
-        authinfo = backend.authinfos.get(computer, user)
+        authinfo = computer.get_authinfo(user)
     except NotExistent:
         authinfo = backend.authinfos.create(computer, user)
 
@@ -28,6 +28,9 @@ def configure_computer(computer, user=None, **kwargs):
     if valid_keys:
         auth_params.update(kwargs)
         authinfo.set_auth_params(auth_params)
+        from aiida.settings import BACKEND
+        if BACKEND == 'sqlalchemy':
+            authinfo._dbauthinfo.auth_params = auth_params  # pylint: disable=protected-access
     authinfo.store()
 
 

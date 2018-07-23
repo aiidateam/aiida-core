@@ -11,14 +11,14 @@
 This allows to manage StructureData objects from command line.
 """
 import click
-from aiida.cmdline.commands.data.list import _list, list_options
-from aiida.cmdline.commands.data.export import _export, export_options
+
+from aiida.cmdline.commands.data.list_functions import _list, list_options
+from aiida.cmdline.commands.data.export_functions import _export, export_options
 from aiida.cmdline.commands.data.deposit import deposit_tcod, deposit_options
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import decorators, echo
 
 
 # pylint: disable=unused-argument
@@ -32,6 +32,7 @@ def structure(ctx):
 
 
 @structure.command('show')
+@decorators.with_dbenv()
 @arguments.NODES()
 @click.option(
     '-f',
@@ -72,6 +73,7 @@ PROJECT_HEADERS = ["Id", "Label", "Kinds", "Sites"]
 
 # pylint: disable=too-many-locals,too-many-branches
 @structure.command('list')
+@decorators.with_dbenv()
 @list_options
 @click.option(
     '-f',
@@ -158,6 +160,7 @@ SUPPORTED_FORMATS = ['cif', 'tcod', 'xsf', 'xyz']
 # XYZ for alloys or systems with vacancies not implemented.
 # supported_formats = ['cif', 'tcod', 'xsf']
 @structure.command('export')
+@decorators.with_dbenv()
 @click.option(
     '-y',
     '--format',
@@ -187,20 +190,20 @@ def export(**kwargs):
 
 
 @structure.command('deposit')
+@decorators.with_dbenv()
 @deposit_options
 def deposit(**kwargs):
     """
     Deposit StructureData object
     """
     from aiida.orm.data.structure import StructureData
-    if not is_dbenv_loaded():
-        load_dbenv()
+
     node = kwargs.pop('node')
     deposition_type = kwargs.pop('deposition_type')
     parameter_data = kwargs.pop('parameter_data')
 
-    #if kwargs['database'] is None:
-    #echo.echo_critical("Default database is not defined, please specify.")
+    # if kwargs['database'] is None:
+    # echo.echo_critical("Default database is not defined, please specify.")
     kwargs.pop('database')  # looks like a bug, but deposit function called inside
     # deposit_tcod complains about the 'database' keywords argument
 
@@ -317,6 +320,7 @@ def _import_ase(filename, **kwargs):
 
 # pylint: disable=too-many-arguments
 @structure.command('import')
+@decorators.with_dbenv()
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option(
     '-f',

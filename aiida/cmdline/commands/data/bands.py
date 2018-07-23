@@ -13,14 +13,13 @@ This allows to manage BandsData objects from command line.
 from __future__ import print_function
 import sys
 import click
-from aiida.cmdline.commands.data.list import list_options
-from aiida.cmdline.commands.data.export import _export
+from aiida.cmdline.commands.data.list_functions import list_options
+from aiida.cmdline.commands.data.export_functions import _export
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
-from aiida.cmdline.utils import echo
-from aiida.orm.data.array.bands import BandsData
+from aiida.cmdline.utils import decorators, echo
 from aiida.common.utils import Prettifier
 
 
@@ -51,17 +50,17 @@ def show_xmgrace(exec_name, list_bands):
 
     try:
         subprocess.check_output([exec_name] + [f.name for f in list_files])
-        _ = [f.close() for f in list_files]
     except subprocess.CalledProcessError:
         print("Note: the call to {} ended with an error.".format(exec_name))
-        _ = [f.close() for f in list_files]
     except OSError as err:
-        _ = [f.close() for f in list_files]
         if err.errno == 2:
             print("No executable '{}' found. Add to the path," " or try with an absolute path.".format(exec_name))
             sys.exit(1)
         else:
             raise
+    finally:
+        for fhandle in list_files:
+            fhandle.close()
 
 
 # pylint: disable=unused-argument
@@ -75,6 +74,7 @@ def bands(ctx):
 
 
 @bands.command('show')
+@decorators.with_dbenv()
 @arguments.NODES()
 @click.option(
     '-f',
@@ -88,6 +88,7 @@ def show(nodes, show_format):
     """
     Visualize bands objects
     """
+    from aiida.orm.data.array.bands import BandsData
     for node in nodes:
         if not isinstance(node, BandsData):
             echo.echo_critical("Node {} is of class {} instead " "of {}".format(node, type(node), BandsData))
@@ -99,6 +100,7 @@ PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
 
 # pylint: disable=too-many-arguments
 @bands.command('list')
+@decorators.with_dbenv()
 @list_options
 @click.option(
     '-e',
@@ -166,6 +168,7 @@ def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all
 
 
 @bands.command('export')
+@decorators.with_dbenv()
 @click.option(
     '-y',
     '--format',
@@ -207,6 +210,8 @@ def export(used_format, y_min_lim, y_max_lim, output, force, prettify_format, no
     """
     Export bands objects
     """
+    from aiida.orm.data.array.bands import BandsData
+
     args = {}
     if y_min_lim is not None:
         args['y_min_lim'] = y_min_lim

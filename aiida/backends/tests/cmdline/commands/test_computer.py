@@ -350,7 +350,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIn("unknown replacement field 'unknown_key'", str(result.output))
 
 
-class TestVerdiComputerSetup(AiidaTestCase):
+class TestVerdiComputerConfigure(AiidaTestCase):
 
     def setUp(self):
         """Prepare computer builder with common properties."""

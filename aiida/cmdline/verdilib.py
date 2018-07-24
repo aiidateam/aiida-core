@@ -26,38 +26,35 @@ import contextlib
 import click
 
 import aiida
-import aiida.cmdline.commands.user
-from aiida.common.exceptions import (
-    AiidaException, ConfigurationError, ProfileConfigurationError)
-from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
-from aiida.cmdline import pass_to_django_manage
 from aiida.backends import settings as settings_profile
-from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.cmdline import pass_to_django_manage
+from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline.commands import verdi
-from aiida.backends.profile import (BACKEND_DJANGO, BACKEND_SQLA)
+from aiida.cmdline.commands import cmd_user
+from aiida.common.exceptions import AiidaException, ConfigurationError, ProfileConfigurationError
+from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
-# Import here from other files; once imported, it will be found and
-# used as a command-line parameter
-from aiida.cmdline.commands.user import User
-import aiida.cmdline.commands.user as user
-from aiida.cmdline.commands.calculation import Calculation
-from aiida.cmdline.commands.code import Code
-from aiida.cmdline.commands.computer import Computer
-from aiida.cmdline.commands.daemon import Daemon
-from aiida.cmdline.commands.data import Data
-from aiida.cmdline.commands.devel import Devel
-from aiida.cmdline.commands.export import Export
-from aiida.cmdline.commands.group import Group
-from aiida.cmdline.commands.graph import Graph
-from aiida.cmdline.commands.importfile import Import
-from aiida.cmdline.commands.node import Node
-from aiida.cmdline.commands.profile import Profile
-from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.work import Work
-from aiida.cmdline.commands.comment import Comment
-from aiida.cmdline.commands.shell import Shell
-from aiida.cmdline.commands.restapi import Restapi
-from aiida.cmdline.commands.rehash import Rehash
+# Import here from other files; once imported, it will be found and used as a command-line parameter
+from aiida.cmdline.commands.cmd_calculation import Calculation
+from aiida.cmdline.commands.cmd_code import Code
+from aiida.cmdline.commands.cmd_comment import Comment
+from aiida.cmdline.commands.cmd_computer import Computer
+from aiida.cmdline.commands.cmd_daemon import Daemon
+from aiida.cmdline.commands.cmd_data import Data
+from aiida.cmdline.commands.cmd_devel import Devel
+from aiida.cmdline.commands.cmd_export import Export
+from aiida.cmdline.commands.cmd_graph import Graph
+from aiida.cmdline.commands.cmd_group import Group
+from aiida.cmdline.commands.cmd_import import Import
+from aiida.cmdline.commands.cmd_node import Node
+from aiida.cmdline.commands.cmd_profile import Profile
+from aiida.cmdline.commands.cmd_rehash import Rehash
+from aiida.cmdline.commands.cmd_restapi import Restapi
+from aiida.cmdline.commands.cmd_shell import Shell
+from aiida.cmdline.commands.cmd_user import User
+from aiida.cmdline.commands.cmd_work import Work
+from aiida.cmdline.commands.cmd_workflow import Workflow
 from aiida.cmdline.utils import echo
 from aiida.cmdline import execname
 
@@ -605,7 +602,7 @@ def setup(profile, only_config, non_interactive=False, **kwargs):
 
         # Ask to configure the user
         try:
-            user.configure(commands)
+            cmd_user.configure(commands)
         except SystemExit:
             # Have to catch this as the configure command will do a sys.exit()
             pass
@@ -791,7 +788,7 @@ class Run(VerdiCommand):
         if not is_dbenv_loaded():
             load_dbenv()
         import argparse
-        from aiida.cmdline.commands.shell import DEFAULT_MODULES_LIST
+        from aiida.cmdline.commands.cmd_shell import DEFAULT_MODULES_LIST
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 

@@ -3,11 +3,9 @@ import os
 from collections import OrderedDict
 from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.computer import (disable_computer, enable_computer)
-from aiida.cmdline.commands.computer import setup_computer, computer_configure
-from aiida.cmdline.commands.computer import (computer_show, computer_list, computer_rename, computer_delete,
-                                             computer_test)
-from aiida.utils.capturing import Capturing
+from aiida.cmdline.commands.cmd_computer import disable_computer, enable_computer, setup_computer
+from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_rename, computer_delete
+from aiida.cmdline.commands.cmd_computer import computer_test, computer_configure
 
 
 def generate_setup_options_dict(replace_args={}, non_interactive=True):
@@ -599,7 +597,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         It should work as it is a local connection
         """
-        from aiida.cmdline.commands.computer import Computer as ComputerCmd
+        from aiida.cmdline.commands.cmd_computer import Computer as ComputerCmd
 
         # Testing the wrong computer will fail
         result = self.runner.invoke(computer_test, ['non-existent-computer'])

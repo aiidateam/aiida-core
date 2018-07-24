@@ -4,7 +4,7 @@ Test suite to test verdi group command
 
 from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.group import (group_list, group_create, group_delete, group_rename, group_description,
+from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_rename, group_description,
                                           group_addnodes, group_removenodes, group_show)
 
 

@@ -89,13 +89,13 @@ def data_plugins(entry_point):
 
 
 # import to populate the click subcommands
-from aiida.cmdline.commands.data import (
-    upf,
-    structure,
-    bands,
-    cif,
-    trajectory,
-    parameter,
-    array,
-    remote,
+from aiida.cmdline.commands.cmd_data import (
+    cmd_array,
+    cmd_bands,
+    cmd_cif,
+    cmd_parameter,
+    cmd_remote,
+    cmd_structure,
+    cmd_trajectory,
+    cmd_upf,
     )

@@ -2,7 +2,7 @@
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import user
+from aiida.cmdline.commands import cmd_user
 
 # User #1
 user_1 = {
@@ -37,7 +37,7 @@ class TestVerdiUserCommand(AiidaTestCase):
         """
         verdi user list
         """
-        from aiida.cmdline.commands.user import user_list as list_user
+        from aiida.cmdline.commands.cmd_user import user_list as list_user
 
         result = CliRunner().invoke(list_user, [], catch_exceptions=False)
         self.assertTrue(user_1['email'] in result.output)
@@ -56,7 +56,7 @@ class TestVerdiUserCommand(AiidaTestCase):
         ]
 
         # configure user
-        result = CliRunner().invoke(user.configure, cli_options, catch_exceptions=False)
+        result = CliRunner().invoke(cmd_user.configure, cli_options, catch_exceptions=False)
         self.assertTrue(user_2['email'] in result.output)
         self.assertTrue("is already present" not in result.output)
 
@@ -78,7 +78,7 @@ class TestVerdiUserCommand(AiidaTestCase):
             '--non-interactive'
         ]
 
-        result = CliRunner().invoke(user.configure, cli_options, catch_exceptions=False)
+        result = CliRunner().invoke(cmd_user.configure, cli_options, catch_exceptions=False)
         self.assertTrue(email in result.output)
 
         user_model = self.backend.users.find(email=email)[0]
@@ -86,6 +86,6 @@ class TestVerdiUserCommand(AiidaTestCase):
         # Check it's all been changed to user2's attributes except the email
         for key, value in user_2.items():
             if key != 'email':
-                setattr(user, key, user_1[key])
+                setattr(cmd_user, key, user_1[key])
 
         self.assertTrue(user_model.verify_password(new_pass))

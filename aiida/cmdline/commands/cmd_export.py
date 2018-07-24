@@ -8,27 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import click
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_export
+
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import DanglingLinkError
 
 
-class Export(VerdiCommandWithSubcommands):
-    """
-    Create and manage AiiDA export archives
-    """
-
-    def __init__(self):
-        self.valid_subcommands = {
-            'create': (self.cli, self.complete_none),
-            'migrate': (self.cli, self.complete_none)
-        }
-
-    def cli(self, *args):
-        verdi()
+@verdi.group('export')
+def verdi_export():
+    """Create and manage export archives."""
+    pass
 
 
 @verdi_export.command('create')
@@ -39,12 +30,18 @@ class Export(VerdiCommandWithSubcommands):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@click.option('-P', '--no-parents', is_flag=True, default=False,
-    help='store only the nodes that are explicitly given, without exporting the parents'
-)
-@click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
-    help='if a calculation is included in the list of nodes to export, do not export its outputs'
-)
+@click.option(
+    '-P',
+    '--no-parents',
+    is_flag=True,
+    default=False,
+    help='store only the nodes that are explicitly given, without exporting the parents')
+@click.option(
+    '-O',
+    '--no-calc-outputs',
+    is_flag=True,
+    default=False,
+    help='if a calculation is included in the list of nodes to export, do not export its outputs')
 def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_outputs, force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
@@ -154,8 +151,8 @@ def migrate(input_file, output_file, force, silent, archive_format):
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)
                     for fn in dirnames + filenames:
-                        real_src = os.path.join(dirpath,fn)
-                        real_dest = os.path.join(relpath,fn)
+                        real_src = os.path.join(dirpath, fn)
+                        real_dest = os.path.join(relpath, fn)
                         archive.write(real_src, real_dest)
         elif archive_format == 'tar.gz':
             with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
@@ -183,8 +180,7 @@ def verify_metadata_version(metadata, version=None):
         return metadata_version
 
     if metadata_version != version:
-        raise ValueError('expected export file with version {} but found version {}'
-            .format(version, metadata_version))
+        raise ValueError('expected export file with version {} but found version {}'.format(version, metadata_version))
 
 
 def update_metadata(metadata, version):
@@ -245,14 +241,14 @@ def migrate_v1_to_v2(metadata, data):
         else:
             return data
 
-    for field in ['export_data']: 
+    for field in ['export_data']:
         for k in list(data[field]):
             if k.startswith(old_start):
                 new_k = get_new_string(k)
                 data[field][new_k] = data[field][k]
                 del data[field][k]
 
-    for field in ['unique_identifiers', 'all_fields_info']: 
+    for field in ['unique_identifiers', 'all_fields_info']:
         for k in list(metadata[field].keys()):
             if k.startswith(old_start):
                 new_k = get_new_string(k)
@@ -336,7 +332,7 @@ def migrate_v2_to_v3(metadata, data):
             input_type = NodeType(mapping[link['input']])
             output_type = NodeType(mapping[link['output']])
         except KeyError:
-            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'],link['output']))
+            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'], link['output']))
 
         # The following table demonstrates the logic for infering the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT
@@ -355,7 +351,6 @@ def migrate_v2_to_v3(metadata, data):
             link['type'] = LinkType.CALL.value
         else:
             link['type'] = LinkType.UNSPECIFIED.value
-
 
     # Now we migrate the entity key names i.e. removing the 'aiida.backends.djsite.db.models' prefix
     for field in ['unique_identifiers', 'all_fields_info']:

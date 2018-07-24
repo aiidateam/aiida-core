@@ -14,8 +14,7 @@ from __future__ import absolute_import
 import os
 import click
 
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.cmdline.commands import verdi_shell
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.utils import decorators, echo
 
 DEFAULT_MODULES_LIST = [
@@ -33,18 +32,7 @@ DEFAULT_MODULES_LIST = [
     ("aiida.orm.workflow", "Workflow", "Workflow"),
     ("aiida.orm", "load_workflow", "load_workflow"),
     ("aiida.orm.querybuilder", "QueryBuilder", "QueryBuilder"),
-    # ("aiida.backends.djsite.db", "models", "models"),
-    # ("aiida.backends.sqlalchemy", "models", "models"),
 ]
-
-
-class Shell(VerdiCommand):
-    """Open a shell (ipython / bpython) with aiida env preloaded."""
-
-    def run(self, *args):
-        ctx = shell.make_context('shell', list(args))
-        with ctx:
-            shell.invoke(ctx)
 
 
 def get_start_namespace():
@@ -134,7 +122,7 @@ def bpython():
 SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 
-@verdi_shell.command('shell')
+@verdi.command('shell')
 @decorators.with_dbenv()
 @click.option('--plain', is_flag=True, help='Tells Django to use plain Python, not IPython or bpython.)')
 @click.option(

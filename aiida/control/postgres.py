@@ -314,7 +314,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     if port:
         options += '-p {}'.format(port)
 
-    ## build command line
+    # Build command line
     sudo_cmd = ['sudo', '-S']
     non_interactive = kwargs.pop('non_interactive', None)
     if non_interactive:

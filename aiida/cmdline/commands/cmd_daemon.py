@@ -16,8 +16,7 @@ import time
 import click
 from click_spinner import spinner
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_daemon
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
@@ -26,46 +25,10 @@ from aiida.common.setup import get_profiles_list
 from aiida.daemon.client import DaemonClient
 
 
-class Daemon(VerdiCommandWithSubcommands):
-    """
-    Manage the AiiDA daemon
-
-    This command allows to interact with the AiiDA daemon.
-    Valid subcommands are:
-
-    * start: start the daemon
-
-    * stop: restart the daemon
-
-    * restart: restart the aiida daemon, waiting for it to cleanly exit\
-        before restarting it.
-
-    * status: inquire the status of the Daemon.
-
-    * logshow: show the log in a continuous fashion, similar to the 'tail -f' \
-        command. Press CTRL+C to exit.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called:
-        start, stop, status and restart.
-        """
-        super(Daemon, self).__init__()
-
-        self.valid_subcommands = {
-            'start': (self.cli, self.complete_none),
-            'status': (self.cli, self.complete_none),
-            'restart': (self.cli, self.complete_none),
-            'stop': (self.cli, self.complete_none),
-            'incr': (self.cli, self.complete_none),
-            'decr': (self.cli, self.complete_none),
-            'logshow': (self.cli, self.complete_none),
-            '_start_circus': (self.cli, self.complete_none),
-        }
-
-    def cli(self, *args):  # pylint: disable=unused-argument,no-self-use
-        verdi.main()
+@verdi.group('daemon')
+def verdi_daemon():
+    """Inspect and manage the daemon."""
+    pass
 
 
 @verdi_daemon.command()

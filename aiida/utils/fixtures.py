@@ -175,7 +175,7 @@ class FixtureManager(object):
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.cmdline.verdilib import setup
+        from aiida.cmdline.commands.cmd_setup import setup
         if not self.root_dir:
             self.create_root_dir()
         print(self.root_dir, self.config_dir)

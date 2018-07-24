@@ -12,7 +12,7 @@ This allows to manage StructureData objects from command line.
 """
 import click
 
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_deposit import deposit_tcod, deposit_options
@@ -21,10 +21,8 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators, echo
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('structure')
-@click.pass_context
-def structure(ctx):
+def structure():
     """
     Manipulation of the structures
     """

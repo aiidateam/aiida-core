@@ -119,8 +119,8 @@ PROCESS_STATE = OverridableOption('-S', '--process-state', 'process_state', cls=
                                   type=types.LazyChoice(valid_process_states),
                                   help='only include entries with this process state', default=active_process_states)
 
-FINISH_STATUS = OverridableOption('-F', '--finish-status', 'finish_status', type=click.INT,
-                                  help='only include entries with this finish status')
+EXIT_STATUS = OverridableOption('-E', '--exit-status', 'exit_status', type=click.INT,
+                                help='only include entries with this exit status')
 
 FAILED = OverridableOption('-x', '--failed', 'failed', is_flag=True, default=False,
                            help='only include entries that have failed')

@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """ Convenience functions for printing output from verdi commands """
 import enum
 import sys
+
 import click
 
 
-#pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods
 class ExitCode(enum.Enum):
     """Exit codes for the verdi command line."""
     CRITICAL = 1
@@ -13,7 +22,7 @@ class ExitCode(enum.Enum):
     UNKNOWN = 99
 
 
-#pylint: disable=invalid-name
+# pylint: disable=invalid-name
 def echo(message, bold=False, nl=True):
     """
     Print a normal message through click's echo function to stdout
@@ -92,7 +101,7 @@ def echo_critical(message, bold=False, nl=True):
     sys.exit(ExitCode.CRITICAL.value)
 
 
-#pylint: disable=redefined-builtin
+# pylint: disable=redefined-builtin
 def echo_deprecated(message, bold=False, nl=True, exit=False):
     """
     Print an error message through click's echo function to stdout, prefixed with 'Deprecated:'

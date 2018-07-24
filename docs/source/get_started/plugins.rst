@@ -29,11 +29,18 @@ For a plugin ``aiida-plugin-template`` hosted on
     reentry scan -r aiida   # notify aiida of new entry points
 
 In case there is no PyPI package available, you can install 
-the plugin from the python source, e.g.::
+the plugin directly from a source code repository, e.g.::
 
-    git clone https://github.com/aiidateam/aiida-plugin-template
-    pip install aiida-plugin-template
+    pip install git+https://github.com/aiidateam/aiida-plugin-template.git
     reentry scan -r aiida
+
+**Note:** Instead of updating the reentry cache via ``reentry scan -r aiida``,
+the same can be achieved from  python:
+
+.. code-block:: python
+
+    from reentry import manager
+    manager.scan(group_re='aiida')
 
 Background
 -----------

@@ -14,10 +14,12 @@ services:
     - docker
 
 addons:
+    # make sure the path in .ci/test_script.sh matches the version requested here
     postgresql: "9.5"
 
     apt:
         packages:
+            - postgresql-server-dev-9.5
             - texlive-base
             - texlive-generic-recommended
             - texlive-fonts-recommended
@@ -37,6 +39,7 @@ before_install:
 
     # Needed to have 'locate' work properly
     - sudo updatedb
+    - .ci/prep_ssh.sh
 
     # Build the docker image if needed
     - .ci/before_install.sh

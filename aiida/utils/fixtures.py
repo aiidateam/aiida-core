@@ -468,4 +468,4 @@ class TestRunner(unittest.runner.TextTestRunner):
         with Capturing():
             with fixture_manager() as manager:
                 manager.backend = backend
-                super(TestRunner, self).run(suite)
+                return super(TestRunner, self).run(suite)

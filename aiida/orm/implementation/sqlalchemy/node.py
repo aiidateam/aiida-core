@@ -28,7 +28,6 @@ from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.utils import get_attr
-from aiida.orm.mixins import Sealable
 
 from . import user as users
 
@@ -538,25 +537,6 @@ class Node(AbstractNode):
             session = get_scoped_session()
             session.rollback()
             raise
-
-    def copy(self, **kwargs):
-        # pylint: disable=protected-access
-        # Make sure we have the latest version from the database
-        self._ensure_model_uptodate()
-        newobject = self.__class__()
-        newobject._dbnode.type = self._dbnode.type  # Inherit type
-        newobject._dbnode.label = self._dbnode.label  # Inherit label
-        newobject._dbnode.description = self._dbnode.description  # Inherit description
-        newobject._dbnode.dbcomputer = self._dbnode.dbcomputer  # Inherit computer
-
-        for key, val in self.iterattrs():
-            if key != Sealable.SEALED_KEY:
-                newobject._set_attr(key, val)
-
-        for path in self.get_folder_list():
-            newobject.add_path(self.get_abs_path(path), path)
-
-        return newobject
 
     @property
     def pk(self):

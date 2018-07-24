@@ -95,7 +95,7 @@ def calculation_gotocomputer(calculation):
 @arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
 @options.CALCULATION_STATE()
 @options.PROCESS_STATE(default=None)
-@options.FINISH_STATUS()
+@options.EXIT_STATUS()
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
@@ -113,7 +113,7 @@ def calculation_gotocomputer(calculation):
     default=False,
     help='print the absolute creation time, rather than the relative creation time')
 @decorators.with_dbenv()
-def calculation_list(calculations, past_days, groups, all_entries, calculation_state, process_state, finish_status,
+def calculation_list(calculations, past_days, groups, all_entries, calculation_state, process_state, exit_status,
                      failed, limit, order_by, project, all_users, raw, absolute_time):
     """Return a list of job calculations that are still running."""
     from aiida.cmdline.utils.common import print_last_process_state_change
@@ -125,7 +125,7 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
         calculation_state = None
 
     PROCESS_STATE_KEY = 'attributes.{}'.format(JobCalculation.PROCESS_STATE_KEY)
-    FINISH_STATUS_KEY = 'attributes.{}'.format(JobCalculation.FINISH_STATUS_KEY)
+    EXIT_STATUS_KEY = 'attributes.{}'.format(JobCalculation.EXIT_STATUS_KEY)
 
     filters = {}
 
@@ -136,12 +136,12 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
     if failed:
         calculation_state = None
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[FINISH_STATUS_KEY] = {'!==': 0}
+        filters[EXIT_STATUS_KEY] = {'!==': 0}
 
-    if finish_status is not None:
+    if exit_status is not None:
         calculation_state = None
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[FINISH_STATUS_KEY] = {'==': finish_status}
+        filters[EXIT_STATUS_KEY] = {'==': exit_status}
 
     JobCalculation._list_calculations(
         states=calculation_state,

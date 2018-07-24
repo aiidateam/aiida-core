@@ -91,7 +91,7 @@ class TestVerdiWork(AiidaTestCase):
 
             # Set the FunctionCalculation as successful
             if state == ProcessState.FINISHED:
-                calc._set_finish_status(0)
+                calc._set_exit_status(0)
 
             calc.store()
             calcs.append(calc)
@@ -101,7 +101,7 @@ class TestVerdiWork(AiidaTestCase):
 
             # Set the WorkCalculation as failed
             if state == ProcessState.FINISHED:
-                calc._set_finish_status(1)
+                calc._set_exit_status(1)
 
             calc.store()
             calcs.append(calc)
@@ -130,14 +130,14 @@ class TestVerdiWork(AiidaTestCase):
                 self.assertIsNone(result.exception)
                 self.assertEquals(len(get_result_lines(result)), 2)
 
-        # Filtering for finish status should only get us one
-        for flag in ['-F', '--finish-status']:
-            for finish_status in ['0', '1']:
-                result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, finish_status])
+        # Filtering for exit status should only get us one
+        for flag in ['-E', '--exit-status']:
+            for exit_status in ['0', '1']:
+                result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, exit_status])
                 self.assertIsNone(result.exception)
                 self.assertEquals(len(get_result_lines(result)), 1)
 
-        # Passing the failed flag as a shortcut for FINISHED + non-zero finish status
+        # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
         for flag in ['-x', '--failed']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag])
             self.assertIsNone(result.exception)

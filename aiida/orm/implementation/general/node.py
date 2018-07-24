@@ -306,6 +306,14 @@ class AbstractNode(object):
 
         return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
+    def __copy__(self):
+        """Copying a Node is not supported in general, but only for the Data sub class."""
+        raise NotImplementedError('copying a base Node is not supported')
+
+    def __deepcopy__(self, memo):
+        """Deep copying a Node is not supported in general, but only for the Data sub class."""
+        raise NotImplementedError('deep copying a base Node is not supported')
+
     @property
     def backend(self):
         return self._backend
@@ -1377,21 +1385,6 @@ class AbstractNode(object):
         """
         pass
 
-    @abstractmethod
-    def copy(self, **kwargs):
-        """
-        Return a copy of the current object to work with, not stored yet.
-
-        This is a completely new entry in the DB, with its own UUID.
-        Works both on stored instances and with not-stored ones.
-
-        Copies files and attributes, but not the extras.
-        Does not store the Node to allow modification of attributes.
-
-        :return: an object copy
-        """
-        pass
-
     @property
     @abstractmethod
     def uuid(self):
@@ -1706,12 +1699,21 @@ class AbstractNode(object):
         return self
 
     def _store_from_cache(self, cache_node, with_transaction):
-        new_node = cache_node.copy(include_updatable_attrs=True)
-        inputlinks_cache = self._inputlinks_cache
-        # "impersonate" the copied node by getting all its attributes
-        self.__dict__ = new_node.__dict__
-        # restore the input links
-        self._inputlinks_cache = inputlinks_cache
+        from aiida.orm.mixins import Sealable
+        assert self.type == cache_node.type
+
+        self.label = cache_node.label
+        self.description = cache_node.description
+
+        for key, value in cache_node.iterattrs():
+            if key != Sealable.SEALED_KEY:
+                self._set_attr(key, value)
+
+        self.folder.replace_with_folder(
+            cache_node.folder.abspath,
+            move=False,
+            overwrite=True
+        )
 
         # Make sure the node doesn't have any RETURN links
         if cache_node.get_outputs(link_type=LinkType.RETURN):
@@ -1721,10 +1723,9 @@ class AbstractNode(object):
         self.set_extra('_aiida_cached_from', cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node):
-        # add CREATE links
-        output_mapping = {}
+        # Add CREATE links
         for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
-            new_node = out_node.copy(include_updatable_attrs=True).store()
+            new_node = out_node.clone().store()
             new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
 
     @abstractmethod

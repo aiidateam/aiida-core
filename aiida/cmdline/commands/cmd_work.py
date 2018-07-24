@@ -17,7 +17,7 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
 
 
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'finish_status', 'sealed', 'process_label', 'label', 'description', 'type')
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed', 'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 
 
@@ -56,14 +56,14 @@ class Work(VerdiCommandWithSubcommands):
 @verdi_work.command('list')
 @options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
 @options.PROCESS_STATE()
-@options.FINISH_STATUS()
+@options.EXIT_STATUS()
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
 @options.ALL()
 @options.RAW()
 @decorators.with_dbenv()
-def work_list(past_days, all_entries, process_state, finish_status, failed, limit, project, raw):
+def work_list(past_days, all_entries, process_state, exit_status, failed, limit, project, raw):
     """
     Return a list of work calculations that are still running
     """
@@ -78,7 +78,8 @@ def work_list(past_days, all_entries, process_state, finish_status, failed, limi
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
     PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
-    FINISH_STATUS_KEY = 'attributes.{}'.format(Calculation.FINISH_STATUS_KEY)
+    EXIT_STATUS_KEY = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
+    TERMINAL_STATES = [ProcessState.FINISHED.value, ProcessState.KILLED.value, ProcessState.EXCEPTED.value]
 
     now = timezone.now()
 
@@ -90,7 +91,7 @@ def work_list(past_days, all_entries, process_state, finish_status, failed, limi
         'type': 'Type',
         'state': 'State',
         'process_state': 'Process state',
-        'finish_status': 'Finish status',
+        'exit_status': 'Exit status',
         'sealed': 'Sealed',
         'process_label': 'Process label',
         'label': 'Label',
@@ -104,7 +105,7 @@ def work_list(past_days, all_entries, process_state, finish_status, failed, limi
         'mtime': 'mtime',
         'type': 'type',
         'process_state': PROCESS_STATE_KEY,
-        'finish_status': FINISH_STATUS_KEY,
+        'exit_status': EXIT_STATUS_KEY,
         'sealed': SEALED_KEY,
         'process_label': PROCESS_LABEL_KEY,
         'label': 'label',
@@ -117,9 +118,9 @@ def work_list(past_days, all_entries, process_state, finish_status, failed, limi
         'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
         'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
         'type': lambda value: value['type'],
-        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[FINISH_STATUS_KEY]),
+        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[EXIT_STATUS_KEY]),
         'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
-        'finish_status': lambda value: value[FINISH_STATUS_KEY],
+        'exit_status': lambda value: value[EXIT_STATUS_KEY],
         'sealed': lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
         'process_label': lambda value: value[PROCESS_LABEL_KEY],
         'label': lambda value: value['label'],
@@ -134,11 +135,11 @@ def work_list(past_days, all_entries, process_state, finish_status, failed, limi
 
     if failed:
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[FINISH_STATUS_KEY] = {'!==': 0}
+        filters[EXIT_STATUS_KEY] = {'!==': 0}
 
-    if finish_status is not None:
+    if exit_status is not None:
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[FINISH_STATUS_KEY] = {'==': finish_status}
+        filters[EXIT_STATUS_KEY] = {'==': exit_status}
 
     query = _build_query(
         limit=limit,

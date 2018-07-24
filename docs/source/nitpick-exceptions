@@ -135,6 +135,8 @@ py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
 py:exc    plumpy.TaskRejected
+py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
+py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 
 py:class  kiwipy.futures.Future
 

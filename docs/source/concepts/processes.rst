@@ -70,25 +70,26 @@ The ``Excepted`` state indicates that during execution an exception occurred tha
 The final option is the ``Finished`` state, which means that the process was successfully executed, and the execution was nominal.
 Note that this does not automatically mean that the result of the process can also considered to be successful, it just executed without any problems.
 
-To distinghuis between a successful and a failed execution, we have introduced the 'finish status'.
+To distinghuis between a successful and a failed execution, we have introduced the 'exit status'.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A zero means that the result of the process was successful, and a non-zero value indicates a failure.
-All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation`, which defines handy properties to query the process state and finish status
+All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Method                Explanation
 ===================   ============================================================================================
 ``process_state``     Returns the current process state
-``finish_status``     Returns the finish status, or None if not set
+``exit_status``       Returns the exit status, or None if not set
+``exit_message``      Returns the exit message, or None if not set
 ``is_terminated``     Returns ``True`` if the process was either ``Killed``, ``Excepted`` or ``Finished``
 ``is_killed``         Returns ``True`` if the process is ``Killed``
 ``is_excepted``       Returns ``True`` if the process is ``Excepted``
 ``is_finished``       Returns ``True`` if the process is ``Finished``
-``is_finished_ok``    Returns ``True`` if the process is ``Finished`` and the ``finish_status`` is equal to zero
-``is_failed``         Returns ``True`` if the process is ``Finished`` and the ``finish_status`` is non-zero
+``is_finished_ok``    Returns ``True`` if the process is ``Finished`` and the ``exit_status`` is equal to zero
+``is_failed``         Returns ``True`` if the process is ``Finished`` and the ``exit_status`` is non-zero
 ===================   ============================================================================================
 
-When you load a calculation node from the database, you can use these property methods to inquire about its state and finish status.
+When you load a calculation node from the database, you can use these property methods to inquire about its state and exit status.
 
 
 .. _process_builder:

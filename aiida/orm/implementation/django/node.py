@@ -28,6 +28,7 @@ from . import user as users
 
 
 class Node(AbstractNode):
+
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
         from aiida.backends.djsite.db.models import DbNode
@@ -487,23 +488,6 @@ class Node(AbstractNode):
         # Note: I have to reload the object (to have the right values in memory,
         # otherwise I only get the Django Field F object as a result!
         self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
-
-    def copy(self, **kwargs):
-        newobject = self.__class__()
-        newobject._dbnode.type = self._dbnode.type  # Inherit type
-        newobject.label = self.label  # Inherit label
-        # TODO: add to the description the fact that this was a copy?
-        newobject.description = self.description  # Inherit description
-        newobject._dbnode.dbcomputer = self._dbnode.dbcomputer  # Inherit computer
-
-        for k, v in self.iterattrs():
-            if k != Sealable.SEALED_KEY:
-                newobject._set_attr(k, v)
-
-        for path in self.get_folder_list():
-            newobject.add_path(self.get_abs_path(path), path)
-
-        return newobject
 
     @property
     def uuid(self):

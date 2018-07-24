@@ -32,16 +32,16 @@ SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 CALCULATION_STATE_KEY = 'state'
 SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
 PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
-FINISH_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.FINISH_STATUS_KEY)
+EXIT_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.EXIT_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 _input_subfolder = 'raw_input'
 
 
-class JobCalculationFinishStatus(enum.Enum):
+class JobCalculationExitStatus(enum.Enum):
     """
     This enumeration maps specific calculation states to an integer. This integer can
-    then be used to set the finish status of a JobCalculation node. The values defined
+    then be used to set the exit status of a JobCalculation node. The values defined
     here map directly on the failed calculation states, but the idea is that sub classes
     of AbstractJobCalculation can extend this enum with additional error codes
     """
@@ -59,25 +59,23 @@ class AbstractJobCalculation(AbstractCalculation):
     """
 
     @classproperty
-    def finish_status_enum(cls):
-        return JobCalculationFinishStatus
+    def exit_status_enum(cls):
+        return JobCalculationExitStatus
 
     @property
-    def finish_status_label(self):
+    def exit_status_label(self):
         """
-        Return the label belonging to the finish status of the Calculation
+        Return the label belonging to the exit status of the Calculation
 
-        :returns: the finish status, an integer exit code or None
+        :returns: the exit status label
         """
-        finish_status = self.finish_status
-
         try:
-            finish_status_enum = self.finish_status_enum(finish_status)
-            finish_status_label = finish_status_enum.name
+            exit_status_enum = self.exit_status_enum(self.exit_status)
+            exit_status_label = exit_status_enum.name
         except ValueError:
-            finish_status_label = 'UNKNOWN'
+            exit_status_label = 'UNKNOWN'
 
-        return finish_status_label
+        return exit_status_label
 
     _cacheable = True
 
@@ -698,7 +696,7 @@ class AbstractJobCalculation(AbstractCalculation):
     def finished_ok(self):
         """
         Returns whether the Calculation has finished successfully, which means that it
-        terminated nominally and had a zero exit code indicating a successful execution
+        terminated nominally and had a zero exit status indicating a successful execution
 
         :return: True if the calculation has finished successfully, False otherwise
         :rtype: bool
@@ -921,7 +919,7 @@ class AbstractJobCalculation(AbstractCalculation):
         'scheduler_state': ('calculation', SCHEDULER_STATE_KEY),
         'calculation_state': ('calculation', CALCULATION_STATE_KEY),
         'process_state': ('calculation', PROCESS_STATE_KEY),
-        'finish_status': ('calculation', FINISH_STATUS_KEY),
+        'exit_status': ('calculation', EXIT_STATUS_KEY),
         'sealed': ('calculation', SEALED_KEY),
         'type': ('calculation', 'type'),
         'description': ('calculation', 'description'),
@@ -932,7 +930,7 @@ class AbstractJobCalculation(AbstractCalculation):
     }
 
     compound_projection_map = {
-        'state': ('calculation', (PROCESS_STATE_KEY, FINISH_STATUS_KEY)),
+        'state': ('calculation', (PROCESS_STATE_KEY, EXIT_STATUS_KEY)),
         'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
     }
 
@@ -975,7 +973,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'pk': 'PK',
             'state': 'State',
             'process_state': 'Process state',
-            'finish_status': 'Finish status',
+            'exit_status': 'Exit status',
             'sealed': 'Sealed',
             'ctime': 'Creation',
             'mtime': 'Modification',

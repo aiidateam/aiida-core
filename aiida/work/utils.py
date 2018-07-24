@@ -7,6 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Utilities for the workflow engine."""
 import contextlib
 import tornado.ioloop
 
@@ -25,10 +35,12 @@ def is_work_calc_type(calc_node):
     """
     Check if the given calculation node is of the new type.
     Currently in AiiDA we have a hierarchy of 'Calculation' nodes with the following subclasses:
-        1) JobCalculation
-        2) InlineCalculation
-        3) WorkCalculation
-        4) FunctionCalculation
+
+        1. JobCalculation
+        2. InlineCalculation
+        3. WorkCalculation
+        4. FunctionCalculation
+
     1 & 2 can be considered the 'old' way of doing things, even though they are still
     in use while 3 & 4 are the 'new' way.  In loose terms the main difference is that
     the old way don't support RETURN and CALL links.
@@ -39,9 +51,15 @@ def is_work_calc_type(calc_node):
     return isinstance(calc_node, PROCESS_CALC_TYPES)
 
 
-def is_workfunction(func):
+def is_workfunction(function):
+    """
+    Return whether the given function is a workfunction
+
+    :param function: a function
+    :returns: True if the function is a wrapped workfunction, False otherwise
+    """
     try:
-        return func._is_workfunction
+        return function.is_workfunction
     except AttributeError:
         return False
 
@@ -56,10 +74,10 @@ def get_or_create_output_group(calculation):
     if not isinstance(calculation, Calculation):
         raise TypeError("Can only create output groups for type Calculation")
 
-    d = calculation.get_outputs_dict(link_type=LinkType.CREATE)
-    d.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
+    outputs = calculation.get_outputs_dict(link_type=LinkType.CREATE)
+    outputs.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
 
-    return FrozenDict(dict=d)
+    return FrozenDict(dict=outputs)
 
 
 @contextlib.contextmanager
@@ -70,8 +88,8 @@ def loop_scope(loop):
     :param loop: The event loop to make current for the duration of the scope
     :type loop: :class:`tornado.ioloop.IOLoop`
     """
-
     current = tornado.ioloop.IOLoop.current()
+
     try:
         loop.make_current()
         yield
@@ -108,7 +126,6 @@ def set_process_state_change_timestamp(process):
         set_global_setting(key, value, description)
     except UniquenessError as exception:
         process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
-        pass
 
 
 def get_process_state_change_timestamp(process_type='calculation'):

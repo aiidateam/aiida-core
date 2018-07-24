@@ -1,27 +1,16 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Exceptions that can be thrown by parts of the workflow engine."""
 from aiida.common.exceptions import AiidaException
 
-__all__ = ['Exit', 'PastException']
-
-
-class Exit(AiidaException):
-    """
-    This can be raised from within a workfunction to tell it to exit immediately, but as opposed to all other
-    exceptions will not cause the workflow engine to mark the workfunction as excepted. Rather it will take
-    the exit code set for the exception and set that as the finish status of the workfunction.
-    """
-
-    def __init__(self, exit_code=0):
-        """
-        Construct the exception with a given exit code
-
-        :param exit_code: the integer exit code, default is 0
-        """
-        self._exit_code = exit_code
-
-    @property
-    def exit_code(self):
-        return self._exit_code
+__all__ = ['PastException']
 
 
 class PastException(AiidaException):

@@ -9,47 +9,47 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi setup` command."""
-import click
-
 from aiida.cmdline.commands import verdi
+from aiida.cmdline.params import arguments, options
 from aiida.control.profile import setup_profile
 
 
 @verdi.command('setup')
-@click.argument('profile', default='', type=str)
-@click.option('--only-config', is_flag=True)
-@click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-@click.option(
-    '--backend',
-    type=click.Choice(['django', 'sqlalchemy']),
-)
-@click.option('--email', type=str)
-@click.option('--db_host', type=str)
-@click.option('--db_port', type=int)
-@click.option('--db_name', type=str)
-@click.option('--db_user', type=str)
-@click.option('--db_pass', type=str)
-@click.option('--first-name', type=str)
-@click.option('--last-name', type=str)
-@click.option('--institution', type=str)
-@click.option('--repo', type=str)
-def setup(profile, only_config, non_interactive, backend, email, db_host, db_port, db_name, db_user, db_pass,
-          first_name, last_name, institution, repo):
+@arguments.PROFILE_NAME()
+@options.PROFILE_ONLY_CONFIG()
+@options.PROFILE_SET_DEFAULT()
+@options.NON_INTERACTIVE()
+@options.BACKEND()
+@options.DB_HOST()
+@options.DB_PORT()
+@options.DB_NAME()
+@options.DB_USERNAME()
+@options.DB_PASSWORD()
+@options.REPOSITORY_PATH()
+@options.USER_EMAIL()
+@options.USER_FIRST_NAME()
+@options.USER_LAST_NAME()
+@options.USER_INSTITUTION()
+def setup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
+          db_password, repository, email, first_name, last_name, institution):
     """Setup and configure a new profile."""
     kwargs = dict(
-        profile=profile,
+        profile=profile_name,
         only_config=only_config,
+        set_default=set_default,
         non_interactive=non_interactive,
         backend=backend,
-        email=email,
         db_host=db_host,
         db_port=db_port,
         db_name=db_name,
-        db_user=db_user,
-        db_pass=db_pass,
+        db_user=db_username,
+        db_pass=db_password,
+        repo=repository,
+        email=email,
         first_name=first_name,
         last_name=last_name,
-        institution=institution,
-        repo=repo)
+        institution=institution)
+
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
     setup_profile(**kwargs)

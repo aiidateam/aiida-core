@@ -10,47 +10,20 @@
 import click
 from tabulate import tabulate
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi_work, verdi
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
 
-
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed', 'process_label', 'label', 'description', 'type')
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed',
+                                'process_label', 'label', 'description', 'type')
 LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 
 
-class Work(VerdiCommandWithSubcommands):
-    """
-    Manage the AiiDA workflows
-    """
-
-    def __init__(self):
-        self.valid_subcommands = {
-            'kill': (self.cli, self.complete_none),
-            'list': (self.cli, self.complete_none),
-            'pause': (self.cli, self.complete_none),
-            'play': (self.cli, self.complete_none),
-            'plugins': (self.cli, self.complete_plugins),
-            'report': (self.cli, self.complete_none),
-            'status': (self.cli, self.complete_none),
-            'watch': (self.cli, self.complete_none),
-        }
-
-    def cli(self, *args):
-        verdi()
-
-    @decorators.with_dbenv()
-    def complete_plugins(self, subargs_idx, subargs):
-        """
-        Return the list of plugins registered under the 'workflows' category
-        """
-        from aiida.plugins.entry_point import get_entry_point_names
-
-        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
-        return_plugins = [_ for _ in get_entry_point_names('aiida.workflows') if _ not in other_subargs]
-        return '\n'.join(return_plugins)
+@verdi.group('work')
+def verdi_work():
+    """Inspect and manage work calculations."""
+    pass
 
 
 @verdi_work.command('list')
@@ -74,12 +47,10 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
     from aiida.utils import timezone
     from aiida.work import ProcessState
 
-
     SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
     PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
     PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
     EXIT_STATUS_KEY = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
-    TERMINAL_STATES = [ProcessState.FINISHED.value, ProcessState.KILLED.value, ProcessState.EXCEPTED.value]
 
     now = timezone.now()
 
@@ -113,18 +84,30 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
     }
 
     projection_format_map = {
-        'pk': lambda value: value['id'],
-        'uuid': lambda value: value['uuid'],
-        'ctime': lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
-        'mtime': lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
-        'type': lambda value: value['type'],
-        'state': lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[EXIT_STATUS_KEY]),
-        'process_state': lambda value: value[PROCESS_STATE_KEY].capitalize(),
-        'exit_status': lambda value: value[EXIT_STATUS_KEY],
-        'sealed': lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
-        'process_label': lambda value: value[PROCESS_LABEL_KEY],
-        'label': lambda value: value['label'],
-        'description': lambda value: value['description'],
+        'pk':
+        lambda value: value['id'],
+        'uuid':
+        lambda value: value['uuid'],
+        'ctime':
+        lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
+        'mtime':
+        lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
+        'type':
+        lambda value: value['type'],
+        'state':
+        lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[EXIT_STATUS_KEY]),
+        'process_state':
+        lambda value: value[PROCESS_STATE_KEY].capitalize(),
+        'exit_status':
+        lambda value: value[EXIT_STATUS_KEY],
+        'sealed':
+        lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
+        'process_label':
+        lambda value: value[PROCESS_LABEL_KEY],
+        'label':
+        lambda value: value['label'],
+        'description':
+        lambda value: value['description'],
     }
 
     table = []
@@ -146,8 +129,7 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         projections=projection_attribute_map.values(),
         filters=filters,
         past_days=past_days,
-        order_by={'ctime': 'desc'}
-    )
+        order_by={'ctime': 'desc'})
 
     for result in query:
 
@@ -175,23 +157,22 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
 
 
 @verdi_work.command('report')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@click.option('-i', '--indent-size', type=int, default=2, help='set the number of spaces to indent each level by')
 @click.option(
-    '-i', '--indent-size', type=int, default=2,
-    help='set the number of spaces to indent each level by'
-)
+    '-l',
+    '--levelname',
+    type=click.Choice(LOG_LEVELS.keys()),
+    default='REPORT',
+    help='filter the results by name of the log level')
 @click.option(
-    '-l', '--levelname', type=click.Choice(LOG_LEVELS.keys()), default='REPORT',
-    help='filter the results by name of the log level'
-)
-@click.option(
-    '-o', '--order-by', type=click.Choice(['id', 'time', 'levelname']), default='time',
-    help='order the results by column'
-)
-@click.option(
-    '-m', '--max-depth', 'max_depth', type=int, default=None,
-    help='limit the number of levels to be printed'
-)
+    '-o',
+    '--order-by',
+    type=click.Choice(['id', 'time', 'levelname']),
+    default='time',
+    help='order the results by column')
+@click.option('-m', '--max-depth', 'max_depth', type=int, default=None, help='limit the number of levels to be printed')
 def work_report(calculations, levelname, order_by, indent_size, max_depth):
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
@@ -208,19 +189,12 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
         }
 
         entries = backend.log.find(filter_by=filters)
-        entries = [
-            entry for entry in entries
-            if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]
-        ]
+        entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
         qb = QueryBuilder()
-        qb.append(
-            cls=WorkCalculation,
-            filters={'id': pk},
-            tag='workcalculation'
-        )
+        qb.append(cls=WorkCalculation, filters={'id': pk}, tag='workcalculation')
         qb.append(
             cls=WorkCalculation,
             project=['id'],
@@ -228,8 +202,7 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
             output_of='workcalculation',
-            tag='subworkchains'
-        )
+            tag='subworkchains')
         result = list(itertools.chain(*qb.distinct().all()))
 
         # This will return a single flat list of tuples, where the first element
@@ -247,7 +220,9 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
         workchain_tree = get_subtree(calculation.pk)
 
         if max_depth:
-            report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth]
+            report_list = [
+                get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth
+            ]
         else:
             report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
 
@@ -263,21 +238,22 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
         width_id = len(str(max(object_ids)))
         width_levelname = max(levelnames)
         for entry, depth in reports:
-            echo.echo('{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
-                id=entry.id,
-                levelname=entry.levelname,
-                message=entry.message,
-                time=entry.time,
-                width_id=width_id,
-                width_levelname=width_levelname,
-                indent=' ' * (depth * indent_size)
-            ))
+            echo.echo('{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.
+                      format(
+                          id=entry.id,
+                          levelname=entry.levelname,
+                          message=entry.message,
+                          time=entry.time,
+                          width_id=width_id,
+                          width_levelname=width_levelname,
+                          indent=' ' * (depth * indent_size)))
 
     return
 
 
 @verdi_work.command('kill')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def work_kill(calculations):
     """
     Kill work calculations
@@ -301,7 +277,8 @@ def work_kill(calculations):
 
 
 @verdi_work.command('pause')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def work_pause(calculations):
     """
     Pause running work calculations
@@ -325,7 +302,8 @@ def work_pause(calculations):
 
 
 @verdi_work.command('play')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def work_play(calculations):
     """
     Play paused work calculations
@@ -349,7 +327,8 @@ def work_play(calculations):
 
 
 @verdi_work.command('watch')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def work_watch(calculations):
     """
     Watch the state transitions for work calculations
@@ -378,7 +357,8 @@ def work_watch(calculations):
 
 
 @verdi_work.command('status')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
 def work_status(calculations):
     """
     Print the status of work calculations
@@ -435,10 +415,7 @@ def _build_query(projections=None, filters=None, order_by=None, limit=None, past
 
     # Until the QueryBuilder supports passing a tuple of classes in the append method, we have to query
     # for the base Calculation class and match the type to get all WorkCalculation AND FunctionCalculation nodes
-    filters['or'] = [
-        {'type': WorkCalculation._plugin_type_string},
-        {'type': FunctionCalculation._plugin_type_string}
-    ]
+    filters['or'] = [{'type': WorkCalculation._plugin_type_string}, {'type': FunctionCalculation._plugin_type_string}]
 
     if past_days is not None:
         n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
@@ -446,12 +423,7 @@ def _build_query(projections=None, filters=None, order_by=None, limit=None, past
 
     # Build the query
     qb = QueryBuilder()
-    qb.append(
-        cls=Calculation,
-        filters=filters,
-        project=projections,
-        tag='calculation'
-    )
+    qb.append(cls=Calculation, filters=filters, project=projections, tag='calculation')
 
     # Ordering of queryset
     if order_by is not None:

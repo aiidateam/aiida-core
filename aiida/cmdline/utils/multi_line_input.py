@@ -5,6 +5,22 @@ utilities for getting multi line input from the commandline
 import click
 
 
+def ensure_scripts(pre, post, summary):
+    """
+    A function to check if the prepend and append scripts were specified, and
+    if needed ask to edit them.
+
+    :param pre: prepend-text
+    :param post: append-text
+    :param summary: summary for click template
+    :return:
+    """
+    if not pre or not post:
+        return edit_pre_post(pre, post, summary)
+
+    return pre, post
+
+
 def edit_pre_post(pre=None, post=None, summary=None):
     """
     use click to call up an editor to write or edit pre / post

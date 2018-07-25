@@ -10,16 +10,13 @@
 """
 This allows to manage ParameterData objects from command line.
 """
-import click
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('parameter')
-@click.pass_context
-def parameter(ctx):
+def parameter():
     """
     View and manipulate Parameter data classes.
     """

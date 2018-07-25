@@ -5,30 +5,28 @@ The main way of interacting with AiiDA is through a command line interface tool 
 You have already used ``verdi`` when installing AiiDA, either through ``verdi quicksetup`` or ``verdi setup``.
 But ``verdi`` is very versatile and provides a wealth of other functionalities; here is a list:
 
-* :ref:`calculation<calculation>`:   Query and interact with calculations
+* :ref:`calculation<calculation>`:   Inspect and manage calculations.
 * :ref:`code<code>`:                 Setup and manage codes.
-* :ref:`comment<comment>`:           Manage general properties of nodes in the database
-* :ref:`computer<computer>`:         Setup and manage computers to be used
-* :ref:`daemon<daemon>`:             Manage the AiiDA daemon
-* :ref:`data<data>`:                 Setup and manage data specific types
-* :ref:`devel<devel>`:               AiiDA commands for developers
-* :ref:`export<export>`:             Create and manage AiiDA export archives
-* :ref:`graph<graph>`:               Utility to explore the nodes in the database graph
-* :ref:`group<group>`:               Setup and manage groups
-* :ref:`help<help>`:                 Describe a specific command
-* :ref:`import<import>`:             Import AiiDA export archives
-* :ref:`install<install>`:           (Deprecated) Install/setup aiida for the current user
-* :ref:`node<node>`:                 Manage operations on AiiDA nodes
-* :ref:`profile<profile>`:           List AiiDA profiles, and set the default profile.
+* :ref:`comment<comment>`:           Inspect, create and manage comments.
+* :ref:`computer<computer>`:         Setup and manage computers.
+* :ref:`daemon<daemon>`:             Inspect and manage the daemon.
+* :ref:`data<data>`:                 Inspect, create and manage data nodes.
+* :ref:`devel<devel>`:               Commands for developers.
+* :ref:`export<export>`:             Create and manage export archives.
+* :ref:`graph<graph>`:               Create visual representations of the provenance graph.
+* :ref:`group<group>`:               Inspect, create and manage groups.
+* :ref:`import<import>`:             Import one or multiple exported AiiDA archives
+* :ref:`node<node>`:                 Inspect, create and manage nodes.
+* :ref:`profile<profile>`:           Inspect and manage the configured profiles.
 * :ref:`quicksetup<quicksetup>`:     Quick setup for the most common usecase (1 user, 1 machine).
-* :ref:`rehash<rehash>`:             Re-hash nodes filtered by identifier and or node class.
-* :ref:`restapi<restapi>`:           Command line utility to hook up the AiiDA REST API
-* :ref:`run<run>`:                   Execute an AiiDA script
-* :ref:`setup<setup>`:               Setup aiida for the current user
-* :ref:`shell<shell>`:               Open a shell (ipython / bpython) with aiida env preloaded.
-* :ref:`user<user>`:                 List and configure new AiiDA users.
-* :ref:`work<work>`:                 Manage the AiiDA workflows
-* :ref:`workflow<workflow>`:         Manage the AiiDA legacy worflow manager
+* :ref:`rehash<rehash>`:             Recompute the hash for nodes in the database
+* :ref:`restapi<restapi>`:           Run the AiiDA REST API server
+* :ref:`run<run>`:                   Execute an AiiDA script.
+* :ref:`setup<setup>`:               Setup and configure a new profile.
+* :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
+* :ref:`user<user>`:                 Inspect and manage users.
+* :ref:`work<work>`:                 Inspect and manage work calculations.
+* :ref:`workflow<workflow>`:         Inspect and manage legacy workflows.
 
 
 Concepts

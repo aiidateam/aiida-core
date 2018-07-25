@@ -12,33 +12,9 @@
         aiida/backends/tests/cmdline/params/types/workflow.py|
         aiida/control/.*.py|
         aiida/cmdline/tests/.*.py|
-        aiida/cmdline/commands/calculation.py|
-        aiida/cmdline/commands/code.py|
-        aiida/cmdline/commands/comment.py|
-        aiida/cmdline/commands/daemon.py|
-        aiida/cmdline/commands/devel.py|
-        aiida/cmdline/commands/data/array.py|
-        aiida/cmdline/commands/data/bands.py|
-        aiida/cmdline/commands/data/cif.py|
-        aiida/cmdline/commands/data/deposit.py|
-        aiida/cmdline/commands/data/export.py|
-        aiida/cmdline/commands/data/list.py|
-        aiida/cmdline/commands/data/parameter.py|
-        aiida/cmdline/commands/data/remote.py|
-        aiida/cmdline/commands/data/show.py|
-        aiida/cmdline/commands/data/structure.py|
-        aiida/cmdline/commands/data/trajectory.py|
-        aiida/cmdline/commands/data/upf.py|
-        aiida/cmdline/commands/graph.py|
-        aiida/cmdline/commands/group.py|
-        aiida/cmdline/commands/importfile.py|
-        aiida/cmdline/commands/profile.py|
-        aiida/cmdline/commands/node.py|
-        aiida/cmdline/commands/rehash.py|
-        aiida/cmdline/commands/restapi.py|
-        aiida/cmdline/commands/shell.py|
-        aiida/cmdline/commands/user.py|
-        aiida/cmdline/commands/workflow.py|
+        #aiida/cmdline/commands/.*.py|
+        aiida/cmdline/commands/cmd_setup.py|
+        aiida/cmdline/commands/cmd_quicksetup.py|
         aiida/cmdline/options/types/legacy_workflow.py|
         aiida/cmdline/options/interactive.py|
         aiida/cmdline/params/types/path.py|

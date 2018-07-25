@@ -10,34 +10,26 @@
 """`verdi rehash` command."""
 import click
 
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.cmdline.commands import verdi_rehash
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo
 
 
-class Rehash(VerdiCommand):
-    """Re-hash nodes filtered by identifier and or node class."""
-
-    def run(self, *args):
-        ctx = rehash.make_context('rehash', list(args))
-        with ctx:
-            rehash.invoke(ctx)
-
-
-@verdi_rehash.command('rehash')
+@verdi.command('rehash')
 @arguments.NODES()
 @click.option(
     '-e',
     '--entry-point',
     type=PluginParamType(group=('node', 'calculations', 'data'), load=True),
     default='node',
-    help=
-    'restrict nodes which are re-hashed to instances that are a sub class of the class identified by this entry point')
+    help='Only include nodes that are class or sub class of the class identified by this entry point.')
 @decorators.with_dbenv()
 def rehash(nodes, entry_point):
-    """Rehash all nodes in the database filtered by their identifier and/or based on their class."""
+    """Recompute the hash for nodes in the database
+
+    The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
+    """
     from aiida.orm.querybuilder import QueryBuilder
 
     if nodes:

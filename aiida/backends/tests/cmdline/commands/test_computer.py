@@ -597,8 +597,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         It should work as it is a local connection
         """
-        from aiida.cmdline.commands.cmd_computer import Computer as ComputerCmd
-
         # Testing the wrong computer will fail
         result = self.runner.invoke(computer_test, ['non-existent-computer'])
         # An exception should arise
@@ -613,7 +611,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Test if 'verdi computer list' command works
         """
-
         # Check the vanilla command works
         result = self.runner.invoke(computer_list, [])
         # No exceptions should arise

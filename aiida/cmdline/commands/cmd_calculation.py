@@ -13,10 +13,9 @@ import os
 
 import click
 
-from aiida.cmdline.commands import verdi_calculation, verdi
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.setup import get_property
 
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'state', 'ctime', 'job_state', 'calculation_state', 'scheduler_state', 'computer',
@@ -24,45 +23,10 @@ LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'state', 'ctime', 'job_state', 'calculatio
 LIST_CMDLINE_PROJECT_DEFAULT = get_property('verdishell.calculation_list')
 
 
-class Calculation(VerdiCommandWithSubcommands):
-    """
-    Query and interact with calculations
-
-    Different subcommands allow to list the running calculations, show the
-    content of the input/output files, see the logs, etc.
-    """
-
-    def __init__(self):
-        super(Calculation, self).__init__()
-
-        self.valid_subcommands = {
-            'gotocomputer': (self.cli, self.complete_none),
-            'list': (self.cli, self.complete_none),
-            'logshow': (self.cli, self.complete_none),
-            'kill': (self.cli, self.complete_none),
-            'inputls': (self.cli, self.complete_none),
-            'outputls': (self.cli, self.complete_none),
-            'inputcat': (self.cli, self.complete_none),
-            'outputcat': (self.cli, self.complete_none),
-            'res': (self.cli, self.complete_none),
-            'show': (self.cli, self.complete_none),
-            'plugins': (self.cli, self.complete_plugins),
-            'cleanworkdir': (self.cli, self.complete_none),
-        }
-
-    @staticmethod
-    def cli(*args):  # pylint: disable=unused-argument
-        verdi()  # pylint: disable=no-value-for-parameter
-
-    @staticmethod
-    @decorators.with_dbenv()
-    def complete_plugins(subargs_idx, subargs):
-        """Return the list of plugins registered under the 'calculations' category."""
-        from aiida.plugins.entry_point import get_entry_point_names
-
-        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
-        return_plugins = [_ for _ in get_entry_point_names('aiida.calculations') if _ not in other_subargs]
-        return '\n'.join(return_plugins)
+@verdi.group('calculation')
+def verdi_calculation():
+    """Inspect and manage calculations."""
+    pass
 
 
 @verdi_calculation.command('gotocomputer')

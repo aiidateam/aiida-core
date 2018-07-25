@@ -10,45 +10,19 @@
 """
 It defines subcommands for verdi group command.
 """
-
 import click
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import UniquenessError
-from aiida.cmdline.commands import verdi, verdi_group
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import options, arguments
 
 
-class Group(VerdiCommandWithSubcommands):
-    """
-    Setup and manage groups
-
-    There is a list of subcommands to perform specific operation on groups.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called:
-        list.
-        """
-        super(Group, self).__init__()
-
-        self.valid_subcommands = {
-            'list': (self.cli, self.complete_none),
-            'show': (self.cli, self.complete_none),
-            'description': (self.cli, self.complete_none),
-            'create': (self.cli, self.complete_none),
-            'rename': (self.cli, self.complete_none),
-            'delete': (self.cli, self.complete_none),
-            'addnodes': (self.cli, self.complete_none),
-            'removenodes': (self.cli, self.complete_none),
-        }
-
-    @staticmethod
-    def cli(*args):  # pylint: disable=unused-argument
-        verdi.main()
+@verdi.group('group')
+def verdi_group():
+    """Inspect, create and manage groups."""
+    pass
 
 
 @verdi_group.command("removenodes")

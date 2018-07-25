@@ -12,49 +12,16 @@ This allows to manage profiles from command line.
 """
 import click
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.control.postgres import Postgres
-from aiida.cmdline.commands import verdi, verdi_profile
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params import options
+from aiida.control.postgres import Postgres
 
 
-class Profile(VerdiCommandWithSubcommands):
-    """
-    List AiiDA profiles, and set the default profile.
-
-    Allow to see the list of AiiDA profiles, and to set the default profile
-    (the to be used by any verdi command when no '-p' option is given).
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        super(Profile, self).__init__()
-        self.valid_subcommands = {
-            'setdefault': (self.cli, self.complete_profiles),
-            'list': (self.cli, self.complete_none),
-            'delete': (self.cli, self.complete_profiles),
-        }
-
-    @staticmethod
-    def cli(*args):  # pylint: disable=unused-argument
-        verdi.main()
-
-    def complete_profiles(self, subargs_idx, subargs):  #pylint: disable=unused-argument,no-self-use
-        """
-        :param subargs_idx: flag
-        :param subargs: additional arguments
-
-        :return: either profiles list or None.
-        """
-        from aiida.common.setup import get_profiles_list
-
-        if subargs_idx == 0:
-            return "\n".join(get_profiles_list())
-
-        return ""
+@verdi.group('profile')
+def verdi_profile():
+    """Inspect and manage the configured profiles."""
+    pass
 
 
 @verdi_profile.command("list")
@@ -114,7 +81,7 @@ def profile_delete(force, profiles):
     import os.path
     from urlparse import urlparse
 
-    print "profiles:", profiles
+    echo.echo('profiles: {}'.format(', '.join(profiles)))
 
     confs = get_or_create_config()
     available_profiles = confs.get('profiles', {})

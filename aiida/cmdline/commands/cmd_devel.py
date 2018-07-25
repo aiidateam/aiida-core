@@ -10,11 +10,16 @@
 """`verdi devel` commands."""
 import click
 
-from aiida.cmdline.commands import verdi_devel, verdi
+from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.exceptions import TestsNotAllowedError
+
+
+@verdi.group('devel')
+def verdi_devel():
+    """Commands for developers."""
+    pass
 
 
 @decorators.with_dbenv()
@@ -36,7 +41,6 @@ def get_valid_test_paths():
         'aiida.common',
         'aiida.utils',
         'aiida.control',
-        'aiida.cmdline.tests',
         'aiida.cmdline.utils',
         'aiida.cmdline.params.types',
         'aiida.cmdline.params.options',
@@ -55,51 +59,6 @@ def get_valid_test_paths():
     valid_test_paths[db_prefix_raw] = db_test_list
 
     return valid_test_paths
-
-
-class Devel(VerdiCommandWithSubcommands):
-    """
-    AiiDA commands for developers
-
-    Provides a set of tools for developers such as running the unit test suite and manipulating properties
-    that are stored in the configuration file.
-    """
-
-    def __init__(self):
-        super(Devel, self).__init__()
-
-        self.valid_subcommands = {
-            'describeproperties': (self.cli, self.complete_none),
-            'listproperties': (self.cli, self.complete_none),
-            'delproperty': (self.cli, self.complete_properties),
-            'getproperty': (self.cli, self.complete_properties),
-            'setproperty': (self.cli, self.complete_properties),
-            'run_daemon': (self.cli, self.complete_none),
-            'tests': (self.cli, self.complete_tests),
-            'play': (self.cli, self.complete_none),
-        }
-
-    @staticmethod
-    def cli(*args):  # pylint: disable=unused-argument
-        verdi()  # pylint: disable=no-value-for-parameter
-
-    @staticmethod
-    def complete_properties(subargs_idx, subargs):  # pylint: disable=unused-argument
-        """Complete with subargs that were not used yet."""
-        from aiida.common.setup import _property_table
-
-        if subargs_idx == 0:
-            return ' '.join(_property_table.keys())
-
-        return ''
-
-    @staticmethod
-    def complete_tests(subargs_idx, subargs):
-        """Complete with subargs that were not used yet."""
-        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
-        remaining_tests = (set(get_valid_test_paths()) - set(other_subargs))
-
-        return ' '.join(sorted(remaining_tests))
 
 
 @verdi_devel.command('describeproperties')

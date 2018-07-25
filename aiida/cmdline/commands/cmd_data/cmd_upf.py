@@ -12,14 +12,12 @@ This allows to manage TrajectoryData objects from command line.
 """
 import click
 from aiida.cmdline.utils import echo
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('upf')
-@click.pass_context
-def upf(ctx):
+def upf():
     """
     Manipulation of the upf families
     """

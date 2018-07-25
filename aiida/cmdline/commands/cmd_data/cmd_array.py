@@ -10,17 +10,13 @@
 """
 This allows to manage ArrayData objects from command line.
 """
-import click
-
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('array')
-@click.pass_context
-def array(ctx):
+def array():
     """
     Manipulate ArrayData objects
     """

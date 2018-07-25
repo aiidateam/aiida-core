@@ -1,7 +1,5 @@
-"""
-User param type for click
-"""
-
+# -*- coding: utf-8 -*-
+"""User param type for click."""
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -35,3 +33,17 @@ class UserParamType(click.ParamType):
             self.fail("Multiple users found with email '{}': {}".format(value, results))
 
         return results[0]
+
+    @with_dbenv()
+    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
+        """
+        Return possible completions based on an incomplete value
+
+        :returns: list of tuples of valid entry points (matching incomplete) and a description
+        """
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
+        users = backend.users.find()
+
+        return [(user.email, '') for user in users if user.email.startswith(incomplete)]

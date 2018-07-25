@@ -9,6 +9,11 @@
 ###########################################################################
 """The `verdi` command line interface."""
 import click
+import click_completion
+
+
+# Activate the completion of parameter types provided by the click_completion package
+click_completion.init()
 
 
 @click.group()

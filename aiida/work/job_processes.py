@@ -21,7 +21,7 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationExitStatus
-from aiida.scheduler.datastructures import job_states
+from aiida.scheduler.datastructures import JOB_STATES
 from aiida.work.process_builder import JobProcessBuilder
 
 from . import persistence
@@ -101,16 +101,17 @@ class UpdateSchedulerState(TransportTask):
         if info is None:
             # If the job is computed or not found assume it's done
             job_done = True
-            self._calc._set_scheduler_state(job_states.DONE)
+            self._calc._set_scheduler_state(JOB_STATES.DONE)
         else:
             execmanager.update_job_calc_from_job_info(self._calc, info)
-            job_done = info.job_state == job_states.DONE
+
+            job_done = info.job_state == JOB_STATES.DONE
 
         if job_done:
             # If the job is done, also get detailed job info
             try:
                 detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-            except NotImplementedError:
+            except exceptions.FeatureNotAvailable:
                 detailed_job_info = (
                     u"AiiDA MESSAGE: This scheduler does not implement "
                     u"the routine get_detailed_jobinfo to retrieve "
@@ -161,6 +162,8 @@ class KillJob(TransportTask):
         calc_state = calc.get_state()
 
         if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
+            calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(JOB_STATES.DONE)
             calc.logger.warning("Calculation {} killed by the user (it was in {} state)".format(calc.pk, calc_state))
             return True
 
@@ -180,6 +183,8 @@ class KillJob(TransportTask):
                 "An error occurred while trying to kill calculation {} (jobid {}), see log "
                 "(maybe the calculation already finished?)".format(calc.pk, job_id))
         else:
+            calc._set_state(calc_states.FAILED)
+            calc._set_scheduler_state(JOB_STATES.DONE)
             calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
 
         return result

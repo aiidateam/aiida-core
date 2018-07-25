@@ -43,6 +43,7 @@ class CalculationFuture(Future):
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
         calc_node = load_node(pk=pk)
+
         if calc_node.is_terminated:
             self.set_result(calc_node)
         else:

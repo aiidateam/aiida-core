@@ -246,3 +246,10 @@ class UnsupportedSpeciesError(ValueError):
     Raised when StructureData operations are fed species that are not supported by AiiDA such as Deuterium
     """
     pass
+
+
+class DanglingLinkError(Exception):
+    """
+    Raised when an export archive is detected to contain dangling links when importing
+    """
+    pass

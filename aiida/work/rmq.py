@@ -358,8 +358,8 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._loop.close()
         self.close()
+        self._loop.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)

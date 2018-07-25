@@ -7,9 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import uuid
 
 import plumpy
-import uuid
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int

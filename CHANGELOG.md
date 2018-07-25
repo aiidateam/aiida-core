@@ -1,5 +1,9 @@
 ## v1.0.0
 
+### Schedulers
+- renamed aiida.daemon.execmanager.job_states to JOB_STATES (conforming to python conventions).
+- abstract method `aiida.scheduler.Scheduler._get_detailed_jobinfo_command()` raises `aiida.common.exceptions.FeatureNotAvailable` (was `NotImplemented`).
+
 ### Daemon
 - Each profile now has its own daemon that can be run completely independently in parallel [[#1217]](https://github.com/aiidateam/aiida_core/pull/1217)
 - Polling based daemon has been replaced with a much faster event-based daemon [[#1067]](https://github.com/aiidateam/aiida_core/pull/1067)

@@ -29,6 +29,7 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
+    PAUSED_KEY = 'paused'
     CHECKPOINT_KEY = 'checkpoints'
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
@@ -43,6 +44,7 @@ class AbstractCalculation(Sealable):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractCalculation, cls)._updatable_attributes + (
+            cls.PAUSED_KEY,
             cls.CHECKPOINT_KEY,
             cls.EXCEPTION_KEY,
             cls.EXIT_MESSAGE_KEY,
@@ -400,8 +402,36 @@ class AbstractCalculation(Sealable):
         """
         Delete the checkpoint bundle set for the Calculation
         """
-        if self.checkpoint is not None:
+        try:
             self._del_attr(self.CHECKPOINT_KEY)
+        except AttributeError:
+            pass
+
+    @property
+    def paused(self):
+        """
+        Return whether the Process corresponding to this Calculation node is paused
+
+        :returns: True if the Calculation is marked as paused, False otherwise
+        """
+        return self.get_attr(self.PAUSED_KEY, False)
+
+    def pause(self):
+        """
+        Mark the Calculation as paused by setting the corresponding attribute. This serves only to reflect
+        that the corresponding Process is paused and so this method should not be called by anyone but the Process.
+        """
+        return self._set_attr(self.PAUSED_KEY, True)
+
+    def unpause(self):
+        """
+        Mark the Calculation as unpaused by removing the corresponding attribute. This serves only to reflect
+        that the corresponding Process is unpaused and so this method should not be called by anyone but the Process.
+        """
+        try:
+            self._del_attr(self.PAUSED_KEY)
+        except AttributeError:
+            pass
 
     @property
     def called(self):

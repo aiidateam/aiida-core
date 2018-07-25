@@ -7,11 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""General utilities for Transport classes."""
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 from aiida.plugins.factory import BaseFactory
 
 
-def TransportFactory(entry_point):
+def TransportFactory(entry_point):  # pylint: disable=invalid-name
     """
     Return the Transport plugin class for a given entry point
 

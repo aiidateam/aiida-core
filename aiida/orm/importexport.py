@@ -2173,8 +2173,7 @@ def export_zip(what, outfile='testzip', overwrite=False,
     import os
 
     if not overwrite and os.path.exists(outfile):
-        raise IOError("The output file '{}' already "
-                      "exists".format(outfile))
+        raise IOError("the output file '{}' already exists".format(outfile))
 
     import time
     t = time.time()

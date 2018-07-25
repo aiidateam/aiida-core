@@ -25,7 +25,8 @@ from os.path import abspath
 from click.testing import CliRunner
 from pgtest.pgtest import PGTest
 
-from aiida.cmdline.verdilib import _setup_cmd, quicksetup
+from aiida.cmdline.commands.cmd_setup import setup
+from aiida.cmdline.commands.cmd_quicksetup import quicksetup
 from aiida.control.postgres import Postgres
 from aiida.backends import settings as backend_settings
 
@@ -95,12 +96,11 @@ class SetupTestCase(unittest.TestCase):
         Test ``verdi setup`` non-interactively
         """
         backend_settings.AIIDADB_PROFILE = None
-        result = self.runner.invoke(_setup_cmd, [
-            'radames_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(
-                self.backend), '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi',
-            '--institution=Scala', '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(
-                self.pg_test.port), '--db_name={}'.format(self.dbname), '--db_user={}'.format(
-                    self.dbuser), '--db_pass={}'.format(self.dbpass), '--no-password'
+        result = self.runner.invoke(setup, [
+            'radames_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(self.backend),
+            '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi', '--institution=Scala',
+            '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(self.pg_test.port),
+            '--db_name={}'.format(self.dbname), '--db_user={}'.format(self.dbuser), '--db_pass={}'.format(self.dbpass)
         ])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
@@ -109,17 +109,16 @@ class SetupTestCase(unittest.TestCase):
         Test ``verdi setup`` configure user
         """
         backend_settings.AIIDADB_PROFILE = None
-        self.runner.invoke(_setup_cmd, [
-            'radames2_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(
-                self.backend), '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi',
-            '--institution=Scala', '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(
-                self.pg_test.port), '--db_name={}'.format(self.dbname), '--db_user={}'.format(
-                    self.dbuser), '--db_pass={}'.format(self.dbpass), '--no-password'
+        self.runner.invoke(setup, [
+            'radames2_{}'.format(self.backend), '--non-interactive', '--backend={}'.format(self.backend),
+            '--email=radames.verdi@ope.ra', '--first-name=Radames', '--last-name=Verdi', '--institution=Scala',
+            '--repo={}'.format(self.repo), '--db_host=localhost', '--db_port={}'.format(self.pg_test.port),
+            '--db_name={}'.format(self.dbname), '--db_user={}'.format(self.dbuser), '--db_pass={}'.format(self.dbpass)
         ])
 
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(
-            _setup_cmd, ['radames2_{}'.format(self.backend), '--only-config'],
+            setup, ['radames2_{}'.format(self.backend), '--only-config'],
             input=
             'yes\nradames.verdi@ope.ra\npostgresql_psycopg2\n\n\n\n\n\n{repo}\nRadames2\nVerdi2\nScala2\nyes\nno\n'.
             format(repo=self.repo),

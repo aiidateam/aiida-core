@@ -7,12 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Transport module
+"""
+
 import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 from aiida.transport.transport import Transport
 from aiida.transport.util import TransportFactory
+import aiida.transport.cli
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):

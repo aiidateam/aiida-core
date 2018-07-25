@@ -270,6 +270,22 @@ class Process(plumpy.Process):
             raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(type(result), result, self.pid))
 
     @override
+    def on_paused(self):
+        """
+        The Process was paused so set the paused attribute on the Calculation node
+        """
+        super(Process, self).on_paused()
+        self.calc.pause()
+
+    @override
+    def on_playing(self):
+        """
+        The Process was unpaused so remove the paused attribute on the Calculation node
+        """
+        super(Process, self).on_playing()
+        self.calc.unpause()
+
+    @override
     def on_output_emitting(self, output_port, value):
         """
         The process has emitted a value on the given output port.

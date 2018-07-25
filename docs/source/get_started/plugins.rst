@@ -1,5 +1,21 @@
 .. _plugins:
 
+*******
+Plugins
+*******
+
+AiiDA plug-ins are input generators and output parsers, enabling the
+integration of codes into AiiDA calculations and workflows.
+
+The plug-ins are not meant to completely automatize the calculation of physical properties. An underlying knowledge of how each code works, which flags it requires, etc. is still required. A total automatization, if desired, has to be implemented at the level of a workflow.
+
+Plugins live in different repositories than AiiDA.
+You can find a list of existing plugins on the `AiiDA website <http://www.aiida.net/plugins/>`_ or on the
+``aiida-registry`` (check the `JSON version <https://github.com/aiidateam/aiida-registry/blob/master/plugins.json>`_
+or the `human-readable version <https://aiidateam.github.io/aiida-registry/>`_), the official location to register
+and list plugins.
+
+
 Installing plugins
 ==================
 

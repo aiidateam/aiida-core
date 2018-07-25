@@ -1516,7 +1516,7 @@ class TestNodeBasic(AiidaTestCase):
         # Testing whether loading the node with part of UUID works, removing the dashes
         for i in range(10, len(uuid_stored), 2):
             start_uuid = uuid_stored[:i].replace('-', '')
-            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+            self.assertEqual(uuid_stored, load_node(uuid=start_uuid).uuid)
             # If I don't allow load_node to fix the dashes, this has to raise:
             with self.assertRaises(NotExistent):
                 load_node(start_uuid, query_with_dashes=False)
@@ -1532,7 +1532,7 @@ class TestNodeBasic(AiidaTestCase):
         # Last check, when asking for specific subclass, this should raise:
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
-                load_node(spec, parent_class=ArrayData)
+                load_node(spec, sub_class=ArrayData)
 
     def test_load_unknown_calculation_type(self):
         """

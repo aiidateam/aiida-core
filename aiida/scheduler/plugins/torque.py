@@ -12,35 +12,37 @@ Plugin for PBS/Torque.
 This has been tested on Torque v.2.4.16 (from Ubuntu).
 """
 from __future__ import division
-from aiida.scheduler import Scheduler
+import logging
+
 from .pbsbaseclasses import PbsBaseClass
 
+_LOGGER = logging.getLogger(__name__)
+
 ## These are instead the states from PBS/Torque v.2.4.16 (from Ubuntu)
-#C -  Job is completed after having run [different from above, but not clashing]
-#E -  Job is exiting after having run. [same as above]
-#H -  Job is held. [same as above]
-#Q -  job is queued, eligible to run or routed. [same as above]
-#R -  job is running. [same as above]
-#T -  job is being moved to new location. [same as above]
-#W -  job is waiting for its execution time
+# C -  Job is completed after having run [different from above, but not clashing]
+# E -  Job is exiting after having run. [same as above]
+# H -  Job is held. [same as above]
+# Q -  job is queued, eligible to run or routed. [same as above]
+# R -  job is running. [same as above]
+# T -  job is being moved to new location. [same as above]
+# W -  job is waiting for its execution time
 #     (-a option) to be reached. [similar to above]
-#S -  (Unicos only) job is suspend. [as above]
+# S -  (Unicos only) job is suspend. [as above]
 
 
-class TorqueScheduler(PbsBaseClass, Scheduler):
+class TorqueScheduler(PbsBaseClass):
     """
     Subclass to support the Torque scheduler..
 
     I redefine only what needs to change from the base class
     """
-    _logger = Scheduler._logger.getChild('torque')
 
     ## I don't need to change this from the base class
-    #_job_resource_class = PbsJobResource
+    # _job_resource_class = PbsJobResource
 
     ## For the time being I use a common dictionary, should be sufficient
     ## for the time being, but I can redefine it if needed.
-    #_map_status = _map_status_pbs_common
+    # _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
                             max_wallclock_seconds):
@@ -77,8 +79,8 @@ class TorqueScheduler(PbsBaseClass, Scheduler):
 
         if max_memory_kb:
             try:
-                virtualMemoryKb = int(max_memory_kb)
-                if virtualMemoryKb <= 0:
+                virtual_memory_kb = int(max_memory_kb)
+                if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError("max_memory_kb must be "
@@ -86,7 +88,7 @@ class TorqueScheduler(PbsBaseClass, Scheduler):
                                  "".format((max_memory_kb)))
             # There is always something before, at least the total #
             # of nodes
-            select_string += ",mem={}kb".format(virtualMemoryKb)
+            select_string += ",mem={}kb".format(virtual_memory_kb)
 
         return_lines.append("#PBS -l {}".format(select_string))
         return return_lines

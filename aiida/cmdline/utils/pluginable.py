@@ -22,8 +22,9 @@ class Pluginable(click.Group):
 
     def list_commands(self, ctx):
         """Add entry point names of available plugins to the command list."""
-        subcommands = super(Pluginable, self).list_commands()
+        subcommands = super(Pluginable, self).list_commands(ctx)
         subcommands.extend(get_entry_point_names(self._entry_point_group))
+        return subcommands
 
     def get_command(self, ctx, name):
         """Try to load a subcommand from entry points, else defer to super."""

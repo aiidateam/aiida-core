@@ -40,3 +40,5 @@ OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=cli
 LABEL = OverridableArgument('label')
 
 USER = OverridableArgument('user', metavar='USER', type=types.UserParamType())
+
+PROFILE_NAME = OverridableArgument('profile_name', type=click.STRING)

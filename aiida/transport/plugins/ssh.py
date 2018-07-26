@@ -63,7 +63,7 @@ class SshTransport(aiida.transport.Transport):
     # aiida log file.
     _valid_connect_options = [
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
-        ('port', {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True}),
+        ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
         ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),

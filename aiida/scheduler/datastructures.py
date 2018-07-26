@@ -451,7 +451,7 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``annotation``: human-readable description of the reason for the job
          being in the current state or substate.
        * ``job_state``: the job state (one of those defined in
-         ``aiida.scheduler.datastructures.job_states``)
+         ``aiida.scheduler.datastructures.JOB_STATES``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
          This is a list of :py:class:`MachineInfo` objects.

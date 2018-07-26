@@ -434,14 +434,14 @@ class JobProcess(processes.Process):
         """The Process excepted so we set the calculation and scheduler state."""
         super(JobProcess, self).on_excepted()
         self.calc._set_state(calc_states.FAILED)
-        self.calc._set_scheduler_state(job_states.DONE)
+        self.calc._set_scheduler_state(JOB_STATES.DONE)
 
     @override
     def on_killed(self):
         """The Process was killed so we set the calculation and scheduler state."""
         super(JobProcess, self).on_excepted()
         self.calc._set_state(calc_states.FAILED)
-        self.calc._set_scheduler_state(job_states.DONE)
+        self.calc._set_scheduler_state(JOB_STATES.DONE)
 
     @override
     def update_outputs(self):

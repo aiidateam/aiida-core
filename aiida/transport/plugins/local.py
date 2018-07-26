@@ -27,7 +27,6 @@ import StringIO
 import glob
 
 from aiida.transport.transport import Transport, TransportInternalError
-from aiida.transport.util import FileAttribute
 from aiida import transport
 
 
@@ -655,6 +654,8 @@ class LocalTransport(Transport):
         as specified in aiida.transport.
         :param path: the path of the given file.
         """
+        from aiida.transport.util import FileAttribute
+
         os_attr = os.lstat(os.path.join(self.curdir, path))
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one

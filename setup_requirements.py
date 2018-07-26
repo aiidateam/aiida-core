@@ -32,6 +32,7 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-completion==0.3.1',
     'click-plugins==1.0.3',
     'click-spinner==0.1.7',
     'tabulate==0.8.2',

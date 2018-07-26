@@ -45,6 +45,7 @@ PASSWORD_UNCHANGED = '***'  # noqa
 
 @verdi_user.command()
 @click.argument('user', metavar='USER', type=UserParamType(create=True))
+@options.NON_INTERACTIVE()
 @click.option(
     '--first-name',
     prompt='First name',
@@ -72,7 +73,6 @@ PASSWORD_UNCHANGED = '***'  # noqa
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
     cls=options.InteractiveOption)
-@options.NON_INTERACTIVE()
 @with_dbenv()
 def configure(user, first_name, last_name, institution, password, non_interactive):
     """

@@ -57,9 +57,9 @@ _MAP_STATUS_PS = {
     'Z': JOB_STATES.DONE,
     # Not sure about these three, I comment them out (they used to be in
     # here, but they don't appear neither on ubuntu nor on Mac)
-    #    'F': job_states.DONE,
-    #    'H': job_states.QUEUED_HELD,
-    #    'Q': job_states.QUEUED,
+    #    'F': JOB_STATES.DONE,
+    #    'H': JOB_STATES.QUEUED_HELD,
+    #    'Q': JOB_STATES.QUEUED,
 }
 
 

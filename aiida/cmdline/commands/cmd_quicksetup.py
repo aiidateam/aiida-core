@@ -14,8 +14,8 @@ import sys
 
 import click
 
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.commands import verdi
+from aiida.cmdline.params import arguments, options
 from aiida.control.profile import setup_profile
 from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
@@ -33,27 +33,23 @@ def _check_db_name(dbname, postgres):
 
 
 @verdi.command('quicksetup')
-@click.option('--profile', 'profile_name', prompt='Profile name', type=str, default='quicksetup')
-@click.option(
-    '--email',
-    prompt='Email Address (identifies your data when sharing)',
-    type=str,
-    help='This email address will be associated with your data and will be exported along with it, '
-    'should you choose to share any of your work')
-@click.option('--first-name', prompt='First Name', type=str)
-@click.option('--last-name', prompt='Last Name', type=str)
-@click.option('--institution', prompt='Institution', type=str)
-@click.option('--backend', type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]), default=BACKEND_DJANGO)
-@click.option('--db-port', type=int)
-@click.option('--db-user', type=str)
-@click.option('--db-user-pw', type=str)
-@click.option('--db-name', type=str)
-@click.option('--repo', type=str)
-@click.option(
-    '--set-default/--no-set-default', default=None, help='Whether to set new profile as default for shell and daemon.')
-@click.option('--non-interactive', is_flag=True, help='never prompt the user for input, read values from options')
-def quicksetup(profile_name, email, first_name, last_name, institution, backend, db_port, db_user, db_user_pw, db_name,
-               repo, set_default, non_interactive):
+@arguments.PROFILE_NAME(default='quicksetup')
+@options.PROFILE_ONLY_CONFIG()
+@options.PROFILE_SET_DEFAULT()
+@options.NON_INTERACTIVE()
+@options.BACKEND()
+@options.DB_HOST()
+@options.DB_PORT()
+@options.DB_NAME()
+@options.DB_USERNAME()
+@options.DB_PASSWORD()
+@options.REPOSITORY_PATH()
+@options.USER_EMAIL()
+@options.USER_FIRST_NAME()
+@options.USER_LAST_NAME()
+@options.USER_INSTITUTION()
+def quicksetup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
+               db_password, repository, email, first_name, last_name, institution):
     """Set up a sane configuration with as little interaction as possible."""
     from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
     create_base_dirs()
@@ -61,7 +57,7 @@ def quicksetup(profile_name, email, first_name, last_name, institution, backend,
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
     # access postgres
-    postgres = Postgres(port=db_port, interactive=bool(not non_interactive), quiet=False)
+    postgres = Postgres(host=db_host, port=db_port, interactive=bool(not non_interactive), quiet=False)
     postgres.set_setup_fail_callback(prompt_db_info)
     success = postgres.determine_setup()
     if not success:
@@ -76,21 +72,20 @@ def quicksetup(profile_name, email, first_name, last_name, institution, backend,
 
     # default database user name is aiida_qs_<login-name>
     # default password is random
-    dbuser = db_user or 'aiida_qs_' + osuser
+    dbuser = db_username or 'aiida_qs_' + osuser
     from aiida.common.setup import generate_random_secret_key
-    dbpass = db_user_pw or generate_random_secret_key()
+    dbpass = db_password or generate_random_secret_key()
 
     # check if there is a profile that contains the db user already
     # and if yes, take the db user password from there
     # This is ok because a user can only see his own config files
-    from aiida.common.setup import (set_default_profile, get_or_create_config)
+    from aiida.common.setup import get_or_create_config
     confs = get_or_create_config()
     profs = confs.get('profiles', {})
     for profile in profs.itervalues():
-        if profile.get('AIIDADB_USER', '') == dbuser and not db_user_pw:
+        if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
             dbpass = profile.get('AIIDADB_PASS')
-            print
-            'using found password for {}'.format(dbuser)
+            print 'using found password for {}'.format(dbuser)
             break
 
     try:
@@ -129,7 +124,7 @@ def quicksetup(profile_name, email, first_name, last_name, institution, backend,
     dbport = postgres.dbinfo.get('port', '5432')
 
     from os.path import isabs
-    repo = repo or 'repository-{}/'.format(profile_name)
+    repo = repository or 'repository-{}/'.format(profile_name)
     if not isabs(repo):
         repo = os.path.join(aiida_dir, repo)
 
@@ -147,22 +142,5 @@ def quicksetup(profile_name, email, first_name, last_name, institution, backend,
         'institution': institution,
         'force_overwrite': write_profile,
     }
-    setup_profile(profile_name, only_config=False, non_interactive=True, **setup_args)
 
-    default_profile = confs.get('default_profile', None)
-
-    # If the user specifies whether to override that's fine
-    if set_default in [True, False]:
-        do_set_default = set_default
-    # Otherwise we may need to ask
-    else:
-        # If a default profile exists, confirm to overwrite
-        if default_profile:
-            do_set_default = click.confirm(
-                "The current default profile is set to '{}': do you want to set the newly created '{}' "
-                "as the new default? (can be reverted later)".format(default_profile, profile_name))
-        else:
-            do_set_default = True
-
-    if do_set_default:
-        set_default_profile(profile_name, force_rewrite=True)
+    setup_profile(profile_name, only_config=only_config, set_default=set_default, non_interactive=True, **setup_args)

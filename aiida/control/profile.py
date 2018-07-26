@@ -7,12 +7,13 @@ import sys
 import click
 
 
-def setup_profile(profile, only_config, non_interactive=False, **kwargs):
+def setup_profile(profile, only_config, set_default=False, non_interactive=False, **kwargs):
     """
     Setup an AiiDA profile and AiiDA user (and the AiiDA default user).
 
     :param profile: Profile name
     :param only_config: do not create a new user
+    :param set_default: set the new profile as the default
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
     :param backend: one of 'django', 'sqlalchemy'
     :param email: valid email address for the user
@@ -21,31 +22,19 @@ def setup_profile(profile, only_config, non_interactive=False, **kwargs):
     :param db_user: name of the db user
     :param db_pass: password of the db user
     """
-    from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile, DEFAULT_UMASK,
-                                    create_config_noninteractive)
     from aiida.backends import settings
     from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
     from aiida.backends.utils import set_backend_type
     from aiida.cmdline import execname
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
+    from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile, DEFAULT_UMASK,
+                                    create_config_noninteractive)
 
-    # ~ cmdline_args = list(args)
-
-    # ~ only_user_config = False
-    # ~ try:
-    # ~ cmdline_args.remove('--only-config')
-    # ~ only_user_config = True
-    # ~ except ValueError:
-    # ~ # Parameter not provided
-    # ~ pass
     only_user_config = only_config
 
-    # create the directories to store the configuration files
+    # Create the directories to store the configuration files
     create_base_dirs()
-    # gprofile = 'default' if profile is None else profile
-    # ~ gprofile = profile if settings.AIIDADB_PROFILE is None \
-    # ~ else settings.AIIDADB_PROFILE
     if settings.AIIDADB_PROFILE and profile:
         sys.exit('the profile argument cannot be used if verdi is called with -p option: {} and {}'.format(
             settings.AIIDADB_PROFILE, profile))
@@ -91,7 +80,7 @@ def setup_profile(profile, only_config, non_interactive=False, **kwargs):
             print >> sys.stderr, "Error during configuration: {}".format(exception.message)
             sys.exit(1)
 
-        # Det default DB profile
+        # Set default DB profile
         set_default_profile(gprofile, force_rewrite=False)
 
     if only_user_config:
@@ -195,5 +184,8 @@ def setup_profile(profile, only_config, non_interactive=False, **kwargs):
         except SystemExit:
             # Have to catch this as the configure command will do a sys.exit()
             pass
+
+    if set_default:
+        set_default_profile(profile, force_rewrite=True)
 
     print("Setup finished.")

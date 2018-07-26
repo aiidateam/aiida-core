@@ -8,17 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """General utilities for Transport classes."""
+from paramiko import ProxyCommand
+
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from aiida.plugins.factory import BaseFactory
-
-
-def TransportFactory(entry_point):  # pylint: disable=invalid-name
-    """
-    Return the Transport plugin class for a given entry point
-
-    :param entry_point: the entry point name of the Transport plugin
-    """
-    return BaseFactory('aiida.transports', entry_point)
 
 
 class FileAttribute(FixedFieldsAttributeDict):
@@ -35,3 +27,33 @@ class FileAttribute(FixedFieldsAttributeDict):
         'st_atime',
         'st_mtime',
     )
+
+
+class _DetachedProxyCommand(ProxyCommand):
+    """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
+
+    def __init__(self, command_line):
+        import os
+        from subprocess import Popen, PIPE
+        from shlex import split as shlsplit
+        super(_DetachedProxyCommand, self).__init__(command_line)
+
+        self.cmd = shlsplit(command_line)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
+        self.timeout = None
+
+
+def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):
+    """
+    Copy files or folders from a remote computer to another remote computer.
+
+    :param transportsource: transport to be used for the source computer
+    :param transportdestination: transport to be used for the destination computer
+    :param str remotesource: path to the remote source directory / file
+    :param str remotedestination: path to the remote destination directory / file
+    :param kwargs: keyword parameters passed to the final put,
+        except for 'dereference' that is passed to the initial get
+
+    .. note:: it uses the method transportsource.copy_from_remote_to_remote
+    """
+    transportsource.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)

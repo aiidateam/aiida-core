@@ -12,7 +12,6 @@ import sys
 import click
 
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import escape_for_bash
 from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params import types
@@ -610,7 +609,7 @@ def computer_configure():
 def computer_config_show(computer, user, current, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
-    from pprint import pformat
+    from aiida.common.utils import escape_for_bash
     from aiida.transport import cli as transport_cli
     config = {}
     table = []

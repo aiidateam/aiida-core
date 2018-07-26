@@ -120,6 +120,8 @@ py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
 
+py:class  paramiko.proxy.ProxyCommand
+
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec

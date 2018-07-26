@@ -19,3 +19,12 @@ def BaseFactory(group, name):
     :return: the plugin class
     """
     return load_entry_point(group, name)
+
+
+def TransportFactory(entry_point):  # pylint: disable=invalid-name
+    """
+    Return the Transport plugin class for a given entry point
+
+    :param entry_point: the entry point name of the Transport plugin
+    """
+    return BaseFactory('aiida.transports', entry_point)

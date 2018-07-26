@@ -15,7 +15,6 @@ import fnmatch
 import sys
 from collections import OrderedDict
 
-import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.utils import classproperty
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
@@ -45,7 +44,9 @@ class Transport(object):
         """
         __init__ method of the Transport base class.
         """
-        self._logger = aiida.common.aiidalogger.getChild('transport').getChild(self.__class__.__name__)
+        from aiida.common import aiidalogger
+
+        self._logger = aiidalogger.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
         self._enters = 0

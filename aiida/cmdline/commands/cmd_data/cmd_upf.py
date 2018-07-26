@@ -14,6 +14,7 @@ import click
 from aiida.cmdline.utils import echo
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
+from aiida.cmdline.utils.decorators import with_dbenv
 
 
 @verdi_data.group('upf')
@@ -25,6 +26,7 @@ def upf():
 
 
 @upf.command('uploadfamily')
+@with_dbenv()
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.argument('group_name', type=click.STRING)
 @click.argument('group_description', type=click.STRING)
@@ -47,6 +49,7 @@ def uploadfamily(folder, group_name, group_description, stop_if_existing):
 
 
 @upf.command('listfamilies')
+@with_dbenv()
 @click.option(
     '-d',
     '--with-description',
@@ -62,7 +65,7 @@ def uploadfamily(folder, group_name, group_description, stop_if_existing):
     cls=MultipleValueOption,
     default=None,
     help="Filter the families only to those containing "
-    "a pseudo for each of the specified elements")
+         "a pseudo for each of the specified elements")
 def listfamilies(elements, with_description):
     """
     Print on screen the list of upf families installed
@@ -108,6 +111,7 @@ def listfamilies(elements, with_description):
 
 
 @upf.command('exportfamily')
+@with_dbenv()
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.argument('group_name', type=click.STRING)
 def exportfamily(folder, group_name):
@@ -138,6 +142,7 @@ def exportfamily(folder, group_name):
 
 
 @upf.command('import')
+@with_dbenv()
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option(
     '-f',

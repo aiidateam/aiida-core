@@ -15,8 +15,6 @@ from aiida.transport import TransportFactory
 from aiida.common.exceptions import NotExistent
 
 
-
-
 class TestComputer(AiidaTestCase):
 
     def test_get_transport(self):
@@ -26,17 +24,18 @@ class TestComputer(AiidaTestCase):
         import tempfile
         from aiida.orm import Computer
         from aiida.orm.backend import construct_backend
-        backend = construct_backend()
 
         new_comp = Computer(name='bbb',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+                            hostname='localhost',
+                            transport_type='local',
+                            scheduler_type='direct',
+                            workdir='/tmp/aiida')
         new_comp.store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = backend.authinfos.create(computer=new_comp, user=backend.users.get_automatic_user())
+        authinfo = self.backend.authinfos.create(
+            computer=new_comp,
+            user=self.backend.users.get_automatic_user())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -51,20 +50,19 @@ class TestComputer(AiidaTestCase):
     def test_delete(self):
         from aiida.orm import Computer
         new_comp = Computer(name='aaa',
-                                hostname='aaa',
-                                transport_type='local',
-                                scheduler_type='pbspro',
-                                workdir='/tmp/aiida')
+                            hostname='aaa',
+                            transport_type='local',
+                            scheduler_type='pbspro',
+                            workdir='/tmp/aiida')
         new_comp.store()
 
         comp_pk = new_comp.pk
 
         check_computer = Computer.get(comp_pk)
         self.assertEquals(comp_pk, check_computer.pk)
-        
+
         from aiida.orm.computer import delete_computer
         delete_computer(pk=comp_pk)
 
         with self.assertRaises(NotExistent):
             Computer.get(comp_pk)
-

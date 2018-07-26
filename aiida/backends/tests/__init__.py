@@ -92,6 +92,7 @@ db_test_list = {
         'work.rmq': ['aiida.backends.tests.work.test_rmq'],
         'work.run': ['aiida.backends.tests.work.run'],
         'work.runners': ['aiida.backends.tests.work.test_runners'],
+        'work.test_transport': ['aiida.backends.tests.work.test_transport'],
         'work.utils': ['aiida.backends.tests.work.utils'],
         'work.work_chain': ['aiida.backends.tests.work.work_chain'],
         'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],

@@ -15,11 +15,10 @@
         #aiida/cmdline/commands/.*.py|
         aiida/cmdline/commands/cmd_setup.py|
         aiida/cmdline/commands/cmd_quicksetup.py|
-        aiida/cmdline/options/types/legacy_workflow.py|
         aiida/cmdline/options/interactive.py|
         aiida/cmdline/params/types/path.py|
+        aiida/cmdline/params/types/test_module.py|
         aiida/cmdline/params/.*.py|
-        aiida/cmdline/optiontypes/.*.py|
         aiida/cmdline/utils/multi_line_input.py|
         aiida/cmdline/utils/test_multiline.py|
         aiida/cmdline/utils/templates.py|

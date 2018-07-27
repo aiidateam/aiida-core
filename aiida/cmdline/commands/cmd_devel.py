@@ -12,6 +12,7 @@ import click
 
 from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import options
+from aiida.cmdline.params.types import TestModuleParamType
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.exceptions import TestsNotAllowedError
 
@@ -164,7 +165,7 @@ def devel_run_daemon():
 
 
 @verdi_devel.command('tests')
-@click.argument('paths', nargs=-1, type=click.STRING, required=False)
+@click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
 @decorators.with_dbenv()
 def devel_tests(paths):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Run the unittest suite or parts of it."""

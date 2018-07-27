@@ -185,8 +185,9 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         print >> sys.stderr, (
             "DB tests that will be run: {} (expecting {} tests)".format(
                 ",".join(actually_run_tests), num_tests_expected))
-
-    results = unittest.TextTestRunner(failfast=False).run(test_suite)
+        results = unittest.TextTestRunner(failfast=False, verbosity=2).run(test_suite)
+    else:
+        results = unittest.TextTestRunner(failfast=False).run(test_suite)
 
     if verbose:
         print "Run tests: {}".format(results.testsRun)

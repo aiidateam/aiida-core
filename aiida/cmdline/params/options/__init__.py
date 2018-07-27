@@ -311,3 +311,8 @@ PORT = OverridableOption(
 FREQUENCY = OverridableOption(
     '-F', '--frequency', 'frequency',
     type=click.INT)
+
+VERBOSE = OverridableOption(
+    '-v', '--verbose',
+    is_flag=True, default=False,
+    help='Be more verbose in printing output.')

@@ -166,8 +166,9 @@ def devel_run_daemon():
 
 @verdi_devel.command('tests')
 @click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
+@options.VERBOSE(help='Print the class and function name for each test.')
 @decorators.with_dbenv()
-def devel_tests(paths):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Run the unittest suite or parts of it."""
     import os
     import sys
@@ -238,7 +239,7 @@ def devel_tests(paths):  # pylint: disable=too-many-locals,too-many-statements,t
         echo.echo('v' * 75)
         echo.echo('>>> Tests for {} db application'.format(settings.BACKEND))
         echo.echo('^' * 75)
-        db_results = run_aiida_db_tests(db_test_list)
+        db_results = run_aiida_db_tests(db_test_list, verbose)
         test_skipped.extend(db_results.skipped)
         test_failures.extend(db_results.failures)
         test_errors.extend(db_results.errors)

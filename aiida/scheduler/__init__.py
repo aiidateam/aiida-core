@@ -13,7 +13,7 @@ Module for all scheduler related things
 
 from abc import ABCMeta, abstractmethod
 import aiida.common
-from aiida.common.utils import escape_for_bash
+from aiida.common.utils import classproperty, escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate
@@ -103,6 +103,10 @@ class Scheduler(object):
             from aiida.common.exceptions import InternalError
 
             raise InternalError("No self._logger configured for {}!")
+
+    @classproperty
+    def job_resource_class(self):
+        return self._job_resource_class
 
     @classmethod
     def create_job_resource(cls, **kwargs):

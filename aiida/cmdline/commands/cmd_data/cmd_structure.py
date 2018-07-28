@@ -43,11 +43,11 @@ def show(nodes, given_format):
     """
     Visualize StructureData objects
     """
-    from aiida.cmdline.commands.data.show import _show_jmol
-    from aiida.cmdline.commands.data.show import _show_ase
-    from aiida.cmdline.commands.data.show import _show_vesta
-    from aiida.cmdline.commands.data.show import _show_vmd
-    from aiida.cmdline.commands.data.show import _show_xcrysden
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_jmol
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_ase
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_vesta
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_vmd
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_xcrysden
     from aiida.orm.data.structure import StructureData
     for node in nodes:
         if not isinstance(node, StructureData):

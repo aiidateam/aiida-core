@@ -20,11 +20,10 @@ Provides:
 
 """
 import sys
-import click
-
 from contextlib import contextmanager
 from functools import wraps
 
+import click
 from click_spinner import spinner
 
 
@@ -41,6 +40,8 @@ def load_dbenv_if_not_loaded(**kwargs):
 
 
 def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
+    """Function decorator that will load the database environment only when the function is called."""
+
     def decorator(function):
         """
         Function decorator that loads the dbenv if necessary before running the function
@@ -60,6 +61,7 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
             return function(*args, **kwargs)
 
         return decorated_function
+
     return decorator
 
 
@@ -168,6 +170,8 @@ def check_circus_zmq_version(function):
 
 
 def deprecated_command(message):
+    """Function decorator that will mark a click command as deprecated when invoked."""
+
     def decorator(function):
         """
         Function decorator that echoes a deprecation warning before doing anything else in a click commad.
@@ -179,6 +183,7 @@ def deprecated_command(message):
             def mycommand():
                 pass
         """
+
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """Echo a deprecation warning before doing anything else."""
@@ -189,5 +194,7 @@ def deprecated_command(message):
             width = 80
             echo.echo(template.render(msg=wrap(message, width), width=width))
             return function(*args, **kwargs)
+
         return decorated_function
+
     return decorator

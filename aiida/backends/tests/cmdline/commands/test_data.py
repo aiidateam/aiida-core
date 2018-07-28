@@ -1061,13 +1061,9 @@ class TestVerdiDataUpf(AiidaTestCase):
             "Sub-command verdi data upf listfamilies --help failed.")
 
     def test_import(self):
-        options = [self.this_folder + '/'+self.pseudos_dir + '/' +
-                'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF',
-                '--format',
-                'upf']
-        res = self.cli_runner.invoke(cmd_upf.import_upf, options,
-                                     catch_exceptions=False)
+        options = [self.this_folder + '/'+self.pseudos_dir + '/' + 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF']
+        res = self.cli_runner.invoke(cmd_upf.import_upf, options, catch_exceptions=False)
 
         self.assertIn('Imported', res.output_bytes,
                       'The string "Imported" was not'
-                      ' found in the output of verdi data import' )
+                      ' found in the output of verdi data import: {}'.format(res.output))

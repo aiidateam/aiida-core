@@ -30,10 +30,10 @@ def show(nodes):
     Show contents of ParameterData nodes.
     """
     from aiida.orm.data.parameter import ParameterData
-    from aiida.cmdline import print_dictionary
+    from aiida.cmdline.utils.echo import echo_dictionary
     for node in nodes:
         if not isinstance(node, ParameterData):
             echo.echo_error("Node {} is of class {} instead of {}".format(node, type(node), ParameterData))
             continue
         the_dict = node.get_dict()
-        print_dictionary(the_dict, 'json+date')
+        echo_dictionary(the_dict, 'json+date')

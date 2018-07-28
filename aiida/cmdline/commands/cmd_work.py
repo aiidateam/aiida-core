@@ -7,17 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-arguments
+"""`verdi work` command."""
 import click
-from tabulate import tabulate
 
 from aiida.cmdline.commands import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
 
+LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed',
                                 'process_label', 'label', 'description', 'type')
-LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
 
 
 @verdi.group('work')
@@ -37,9 +38,12 @@ def verdi_work():
 @options.RAW()
 @decorators.with_dbenv()
 def work_list(past_days, all_entries, process_state, exit_status, failed, limit, project, raw):
+    # pylint: disable=too-many-locals,line-too-long
     """
     Return a list of work calculations that are still running
     """
+    from tabulate import tabulate
+
     from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.common.utils import str_timedelta
     from aiida.orm.mixins import Sealable
@@ -47,10 +51,10 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
     from aiida.utils import timezone
     from aiida.work import ProcessState
 
-    SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    PROCESS_LABEL_KEY = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
-    PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
-    EXIT_STATUS_KEY = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
+    sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
+    process_label_key = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
+    process_state_key = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
+    exit_status_key = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
 
     now = timezone.now()
 
@@ -75,10 +79,10 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         'ctime': 'ctime',
         'mtime': 'mtime',
         'type': 'type',
-        'process_state': PROCESS_STATE_KEY,
-        'exit_status': EXIT_STATUS_KEY,
-        'sealed': SEALED_KEY,
-        'process_label': PROCESS_LABEL_KEY,
+        'process_state': process_state_key,
+        'exit_status': exit_status_key,
+        'sealed': sealed_key,
+        'process_label': process_label_key,
         'label': 'label',
         'description': 'description',
     }
@@ -95,15 +99,15 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         'type':
         lambda value: value['type'],
         'state':
-        lambda value: '{} | {}'.format(value[PROCESS_STATE_KEY].capitalize() if value[PROCESS_STATE_KEY] else None, value[EXIT_STATUS_KEY]),
+        lambda value: '{} | {}'.format(value[process_state_key].capitalize() if value[process_state_key] else None, value[exit_status_key]),
         'process_state':
-        lambda value: value[PROCESS_STATE_KEY].capitalize(),
+        lambda value: value[process_state_key].capitalize(),
         'exit_status':
-        lambda value: value[EXIT_STATUS_KEY],
+        lambda value: value[exit_status_key],
         'sealed':
-        lambda value: 'True' if value[SEALED_KEY] == 1 else 'False',
+        lambda value: 'True' if value[sealed_key] == 1 else 'False',
         'process_label':
-        lambda value: value[PROCESS_LABEL_KEY],
+        lambda value: value[process_label_key],
         'label':
         lambda value: value['label'],
         'description':
@@ -114,15 +118,15 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
     filters = {}
 
     if process_state and not all_entries:
-        filters[PROCESS_STATE_KEY] = {'in': process_state}
+        filters[process_state_key] = {'in': process_state}
 
     if failed:
-        filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[EXIT_STATUS_KEY] = {'!==': 0}
+        filters[process_state_key] = {'==': ProcessState.FINISHED.value}
+        filters[exit_status_key] = {'!==': 0}
 
     if exit_status is not None:
-        filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[EXIT_STATUS_KEY] = {'==': exit_status}
+        filters[process_state_key] = {'==': ProcessState.FINISHED.value}
+        filters[exit_status_key] = {'==': exit_status}
 
     query = _build_query(
         limit=limit,
@@ -136,14 +140,14 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         table_row = []
         calculation = result['calculation']
 
-        for p in project:
-            value = projection_format_map[p](calculation)
+        for projection in project:
+            value = projection_format_map[projection](calculation)
             table_row.append(value)
 
         table.append(table_row)
 
     # Since we sorted by descending creation time, we revert the list to print the most recent entries last
-    projection_labels = list(map(lambda p: projection_label_map[p], project))
+    projection_labels = [projection_label_map[projection] for projection in project]
     table = table[::-1]
 
     if raw:
@@ -166,14 +170,9 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
     type=click.Choice(LOG_LEVELS.keys()),
     default='REPORT',
     help='filter the results by name of the log level')
-@click.option(
-    '-o',
-    '--order-by',
-    type=click.Choice(['id', 'time', 'levelname']),
-    default='time',
-    help='order the results by column')
 @click.option('-m', '--max-depth', 'max_depth', type=int, default=None, help='limit the number of levels to be printed')
-def work_report(calculations, levelname, order_by, indent_size, max_depth):
+def work_report(calculations, levelname, indent_size, max_depth):
+    # pylint: disable=too-many-locals
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
@@ -183,6 +182,7 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
     from aiida.orm.calculation.work import WorkCalculation
 
     def get_report_messages(pk, depth, levelname):
+        """Return list of log messages with given levelname and their depth for a node with a given pk."""
         backend = construct_backend()
         filters = {
             'objpk': pk,
@@ -193,9 +193,10 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
         return [(_, depth) for _ in entries]
 
     def get_subtree(pk, level=0):
-        qb = QueryBuilder()
-        qb.append(cls=WorkCalculation, filters={'id': pk}, tag='workcalculation')
-        qb.append(
+        """Get a nested tree of work calculation nodes and their nesting level starting from this pk."""
+        builder = QueryBuilder()
+        builder.append(cls=WorkCalculation, filters={'id': pk}, tag='workcalculation')
+        builder.append(
             cls=WorkCalculation,
             project=['id'],
             # In the future, we should specify here the type of link
@@ -203,7 +204,7 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
             # (we here really want instead to follow CALL links)
             output_of='workcalculation',
             tag='subworkchains')
-        result = list(itertools.chain(*qb.distinct().all()))
+        result = list(itertools.chain(*builder.distinct().all()))
 
         # This will return a single flat list of tuples, where the first element
         # corresponds to the WorkChain pk and the second element is an integer
@@ -229,7 +230,7 @@ def work_report(calculations, levelname, order_by, indent_size, max_depth):
         reports = list(itertools.chain(*report_list))
         reports.sort(key=lambda r: r[0].time)
 
-        if reports is None or len(reports) == 0:
+        if not reports:
             echo.echo("No log messages recorded for this work calculation")
             return
 
@@ -272,8 +273,8 @@ def work_kill(calculations):
                     echo.echo_success('killed Calculation<{}>'.format(calculation.pk))
                 else:
                     echo.echo_error('problem killing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as e:
-                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, e.message))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, exception.message))
 
 
 @verdi_work.command('pause')
@@ -297,8 +298,8 @@ def work_pause(calculations):
                     echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
                 else:
                     echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as e:
-                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, e.message))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception.message))
 
 
 @verdi_work.command('play')
@@ -322,8 +323,8 @@ def work_play(calculations):
                     echo.echo_success('played Calculation<{}>'.format(calculation.pk))
                 else:
                     echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as e:
-                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, e.message))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception.message))
 
 
 @verdi_work.command('watch')
@@ -337,7 +338,7 @@ def work_watch(calculations):
     from aiida.work.rmq import create_communicator
 
     def _print(body, sender, subject, correlation_id):
-        echo.echo("pk={}, subject={}, body={}".format(sender, subject, body))
+        echo.echo("pk={}, subject={}, body={}, correlation_id={}".format(sender, subject, body, correlation_id))
 
     communicator = create_communicator()
 
@@ -392,8 +393,8 @@ def work_plugins(entry_point):
         entry_points = get_entry_point_names('aiida.workflows')
         if entry_points:
             echo.echo('Registered workflow entry points:')
-            for entry_point in entry_points:
-                echo.echo("* {}".format(entry_point))
+            for registered_entry_point in entry_points:
+                echo.echo("* {}".format(registered_entry_point))
 
             echo.echo('')
             echo.echo_info('Pass the entry point as an argument to display detailed information')
@@ -402,6 +403,7 @@ def work_plugins(entry_point):
 
 
 def _build_query(projections=None, filters=None, order_by=None, limit=None, past_days=None):
+    """Build and execute a query for work type calculations given certain filters and options."""
     import datetime
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.function import FunctionCalculation
@@ -415,22 +417,22 @@ def _build_query(projections=None, filters=None, order_by=None, limit=None, past
 
     # Until the QueryBuilder supports passing a tuple of classes in the append method, we have to query
     # for the base Calculation class and match the type to get all WorkCalculation AND FunctionCalculation nodes
-    filters['or'] = [{'type': WorkCalculation._plugin_type_string}, {'type': FunctionCalculation._plugin_type_string}]
+    filters['or'] = [{'type': WorkCalculation.plugin_type_string}, {'type': FunctionCalculation.plugin_type_string}]
 
     if past_days is not None:
         n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
         filters['ctime'] = {'>': n_days_ago}
 
     # Build the query
-    qb = QueryBuilder()
-    qb.append(cls=Calculation, filters=filters, project=projections, tag='calculation')
+    builder = QueryBuilder()
+    builder.append(cls=Calculation, filters=filters, project=projections, tag='calculation')
 
     # Ordering of queryset
     if order_by is not None:
-        qb.order_by({'calculation': order_by})
+        builder.order_by({'calculation': order_by})
 
     # Limiting the queryset
     if limit is not None:
-        qb.limit(limit)
+        builder.limit(limit)
 
-    return qb.iterdict()
+    return builder.iterdict()

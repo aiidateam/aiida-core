@@ -132,7 +132,7 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
 @decorators.with_dbenv()
 def calculation_res(calculation, fmt, keys):
     """Print data from the result output node of a calculation."""
-    from aiida.cmdline import print_dictionary
+    from aiida.cmdline.utils.echo import echo_dictionary
 
     results = calculation.res._get_dict()
 
@@ -144,7 +144,7 @@ def calculation_res(calculation, fmt, keys):
     else:
         result = results
 
-    print_dictionary(result, format=fmt)
+    echo_dictionary(result, fmt=fmt)
 
 
 @verdi_calculation.command('show')

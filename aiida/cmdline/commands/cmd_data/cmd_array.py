@@ -30,11 +30,11 @@ def show(nodes):
     Visualize array object
     """
     from aiida.orm.data.array import ArrayData
-    from aiida.cmdline import print_dictionary
+    from aiida.cmdline.utils.echo import echo_dictionary
     for node in nodes:
         if not isinstance(node, ArrayData):
             echo.echo_critical("Node {} is of class {} instead of" " {}".format(node, type(node), ArrayData))
         the_dict = {}
         for arrayname in node.arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()
-        print_dictionary(the_dict, 'json+date')
+        echo_dictionary(the_dict, 'json+date')

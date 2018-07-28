@@ -10,19 +10,8 @@
         .ci/test_setup.py|
         #aiida/backends/tests/cmdline/commands/.*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
+        aiida/cmdline/.*.py|
         aiida/control/.*.py|
-        aiida/cmdline/tests/.*.py|
-        #aiida/cmdline/commands/.*.py|
-        aiida/cmdline/commands/cmd_setup.py|
-        aiida/cmdline/commands/cmd_quicksetup.py|
-        aiida/cmdline/options/interactive.py|
-        aiida/cmdline/params/types/path.py|
-        aiida/cmdline/params/types/test_module.py|
-        aiida/cmdline/params/.*.py|
-        aiida/cmdline/utils/multi_line_input.py|
-        aiida/cmdline/utils/test_multiline.py|
-        aiida/cmdline/utils/templates.py|
-        aiida/cmdline/utils/echo.py|
         aiida/orm/data/cif.py|
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/user.py|

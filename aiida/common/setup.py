@@ -702,23 +702,21 @@ def create_configuration(profile='default'):
         if not os.path.isabs(new_repo_path):
             raise ValueError("You must specify an absolute path")
 
-        # Check if the new repository is a test repository and if it already
-        # exists.
+        # Check if the new repository is a test repository and if it already exists.
         if is_test_profile:
-            if TEST_KEYWORD not in new_repo_path:
-                raise ValueError("The test prefix {} should be contained only"
-                                 "in repository names related to test "
-                                 "profiles.".format(TEST_KEYWORD))
+            if TEST_KEYWORD not in os.path.basename(new_repo_path):
+                raise ValueError(
+                    "The repository directory for test profiles should "
+                    "contain the test keyword '{}'".format(TEST_KEYWORD))
 
             if os.path.isdir(new_repo_path):
                 print("The repository {} already exists. It will be used for "
-                      "tests. Any content may be deleted."
-                      .format(new_repo_path))
+                      "tests. Any content may be deleted.".format(new_repo_path))
         else:
-            if TEST_KEYWORD in new_repo_path:
-                raise ValueError("Only test profiles can have a test "
-                                 "repository. Your repository contains the "
-                                 "test prefix {}.".format(TEST_KEYWORD))
+            if TEST_KEYWORD in os.path.basename(new_repo_path):
+                raise ValueError(
+                    "The repository directory for non-test profiles cannot "
+                    "contain the test keyword '{}'".format(TEST_KEYWORD))
 
         if not os.path.isdir(new_repo_path):
             print("The repository {} will be created.".format(new_repo_path))

@@ -10,7 +10,7 @@
 """The `verdi data` command line interface."""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.pluginable import Pluginable
 

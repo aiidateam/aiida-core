@@ -10,7 +10,7 @@
 """`verdi graph` commands"""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators, echo
 

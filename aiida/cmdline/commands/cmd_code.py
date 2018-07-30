@@ -13,7 +13,7 @@ This allows to setup and configure a code from command line.
 import click
 import tabulate
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo

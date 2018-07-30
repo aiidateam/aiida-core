@@ -11,7 +11,7 @@
 """`verdi work` command."""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
@@ -158,6 +158,18 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         echo.echo(tabulated)
         echo.echo('\nTotal results: {}\n'.format(len(table)))
         print_last_process_state_change(process_type='work')
+
+
+@verdi_work.command('show')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.with_dbenv()
+def work_show(calculations):
+    """Show a summary for one or multiple calculations."""
+    from aiida.cmdline.utils.common import get_node_info
+
+    for calculation in calculations:
+        echo.echo(get_node_info(calculation))
 
 
 @verdi_work.command('report')

@@ -58,7 +58,7 @@ if __name__ == '__main__':
         reentry_register=True,
         entry_points={
             'console_scripts': [
-                'verdi=aiida.cmdline.commands:verdi',
+                'verdi=aiida.cmdline.commands.cmd_verdi:verdi',
                 'verdi-plug = aiida.cmdline.verdi_plug:verdi_plug'
             ],
             # following are AiiDA plugin entry points:

@@ -15,74 +15,74 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 from __future__ import division
-import aiida.scheduler
 import xml.parsers.expat
+import xml.dom.minidom
+
 from aiida.common.utils import escape_for_bash
+import aiida.scheduler
 from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo, ParEnvJobResource)
-"""
-'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
-Jobs Status:
-    'qw' - Queued and waiting,
-    'w' - Job waiting,
-    's' - Job suspended,
-    't' - Job transferring and about to start,
-    'r' - Job running,
-    'h' - Job hold,
-    'R' - Job restarted,
-    'd' - Job has been marked for deletion,
-    'Eqw' - An error occurred with the job.
+from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, ParEnvJobResource)
 
-'http://confluence.rcs.griffith.edu.au:8080/display/v20zCluster/
-Sun+Grid+Engine+SGE+state+letter+symbol+codes+meanings':
-
-Category     State     SGE Letter Code
-Pending:     pending     qw
-Pending:     pending, user hold     qw
-Pending:     pending, system hold     hqw
-Pending:     pending, user and system hold     hqw
-Pending:     pending, user hold, re-queue     hRwq
-Pending:     pending, system hold, re-queue     hRwq
-Pending:     pending, user and system hold, re-queue     hRwq
-Pending:     pending, user hold     qw
-Pending:     pending, user hold     qw
-Running     running     r
-Running     transferring     t
-Running     running, re-submit     Rr
-Running     transferring, re-submit     Rt
-Suspended     job suspended     s, ts
-Suspended     queue suspended     S, tS
-Suspended     queue suspended by alarm     T, tT
-Suspended     all suspended with re-submit     Rs, Rts, RS, RtS, RT, RtT
-Error     all pending states with error     Eqw, Ehqw, EhRqw
-Deleted     all running and suspended states with deletion     dr, dt, dRr, dRt, 
-                                                               ds, dS, dT, dRs, 
-                                                               dRS, dRT
-"""
-
-_map_status_sge = {
-    'qw': job_states.QUEUED,
-    'w': job_states.QUEUED,
-    'hqw': job_states.QUEUED_HELD,
-    'hRwq': job_states.QUEUED_HELD,
-    'r': job_states.RUNNING,
-    't': job_states.RUNNING,
-    'R': job_states.RUNNING,
-    'Rr': job_states.RUNNING,
-    'Rt': job_states.RUNNING,
-    's': job_states.SUSPENDED,
-    'st': job_states.SUSPENDED,
-    'Rs': job_states.SUSPENDED,
-    'Rts': job_states.SUSPENDED,
-    'dr': job_states.UNDETERMINED,
-    'dt': job_states.UNDETERMINED,
-    'ds': job_states.UNDETERMINED,
-    'dRr': job_states.UNDETERMINED,
-    'dRt': job_states.UNDETERMINED,
-    'dRs': job_states.UNDETERMINED,
-    'Eqw': job_states.UNDETERMINED,
-    'Ehqw': job_states.UNDETERMINED,
-    'EhRqw': job_states.UNDETERMINED
+# 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
+# Jobs Status:
+#     'qw' - Queued and waiting,
+#     'w' - Job waiting,
+#     's' - Job suspended,
+#     't' - Job transferring and about to start,
+#     'r' - Job running,
+#     'h' - Job hold,
+#     'R' - Job restarted,
+#     'd' - Job has been marked for deletion,
+#     'Eqw' - An error occurred with the job.
+#
+# 'http://confluence.rcs.griffith.edu.au:8080/display/v20zCluster/
+# Sun+Grid+Engine+SGE+state+letter+symbol+codes+meanings':
+#
+# Category     State     SGE Letter Code
+# Pending:     pending     qw
+# Pending:     pending, user hold     qw
+# Pending:     pending, system hold     hqw
+# Pending:     pending, user and system hold     hqw
+# Pending:     pending, user hold, re-queue     hRwq
+# Pending:     pending, system hold, re-queue     hRwq
+# Pending:     pending, user and system hold, re-queue     hRwq
+# Pending:     pending, user hold     qw
+# Pending:     pending, user hold     qw
+# Running     running     r
+# Running     transferring     t
+# Running     running, re-submit     Rr
+# Running     transferring, re-submit     Rt
+# Suspended     job suspended     s, ts
+# Suspended     queue suspended     S, tS
+# Suspended     queue suspended by alarm     T, tT
+# Suspended     all suspended with re-submit     Rs, Rts, RS, RtS, RT, RtT
+# Error     all pending states with error     Eqw, Ehqw, EhRqw
+# Deleted     all running and suspended states with deletion     dr, dt, dRr, dRt,
+#                                                                ds, dS, dT, dRs,
+#                                                                dRS, dRT
+_MAP_STATUS_SGE = {
+    'qw': JOB_STATES.QUEUED,
+    'w': JOB_STATES.QUEUED,
+    'hqw': JOB_STATES.QUEUED_HELD,
+    'hRwq': JOB_STATES.QUEUED_HELD,
+    'r': JOB_STATES.RUNNING,
+    't': JOB_STATES.RUNNING,
+    'R': JOB_STATES.RUNNING,
+    'Rr': JOB_STATES.RUNNING,
+    'Rt': JOB_STATES.RUNNING,
+    's': JOB_STATES.SUSPENDED,
+    'st': JOB_STATES.SUSPENDED,
+    'Rs': JOB_STATES.SUSPENDED,
+    'Rts': JOB_STATES.SUSPENDED,
+    'dr': JOB_STATES.UNDETERMINED,
+    'dt': JOB_STATES.UNDETERMINED,
+    'ds': JOB_STATES.UNDETERMINED,
+    'dRr': JOB_STATES.UNDETERMINED,
+    'dRt': JOB_STATES.UNDETERMINED,
+    'dRs': JOB_STATES.UNDETERMINED,
+    'Eqw': JOB_STATES.UNDETERMINED,
+    'Ehqw': JOB_STATES.UNDETERMINED,
+    'EhRqw': JOB_STATES.UNDETERMINED
 }
 
 
@@ -92,7 +92,7 @@ class SgeJobResource(ParEnvJobResource):
 
 class SgeScheduler(aiida.scheduler.Scheduler):
     """
-    Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...) 
+    Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('sge')
 
@@ -111,9 +111,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
-        
+
         !!!ALL COPIED FROM PBSPRO!!!
-        TODO: understand if it is worth escaping the username, 
+        TODO: understand if it is worth escaping the username,
         or rather leave it unescaped to allow to pass $USER
         """
         from aiida.common.exceptions import FeatureNotAvailable
@@ -131,7 +131,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         self.logger.debug("qstat command: {}".format(command))
         return command
-        #raise NotImplementedError
+        # raise NotImplementedError
 
     def _get_detailed_jobinfo_command(self, jobid):
         command = "qacct -j {}".format(escape_for_bash(jobid))
@@ -164,11 +164,11 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         lines.append('#$ -S /bin/bash')
 
         if job_tmpl.submit_as_hold:
-            #if isinstance(job_tmpl.submit_as_hold, str):
+            # if isinstance(job_tmpl.submit_as_hold, str):
             lines.append('#$ -h {}'.format(job_tmpl.submit_as_hold))
 
         if job_tmpl.rerunnable:
-            #if isinstance(job_tmpl.rerunnable, str):
+            # if isinstance(job_tmpl.rerunnable, str):
             lines.append('#$ -r {}'.format(job_tmpl.rerunnable))
 
         if job_tmpl.email:
@@ -190,8 +190,8 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         else:
             lines.append("#$ -m n")
 
-        #From the qsub man page:
-        #"The name may be any arbitrary alphanumeric ASCII string, but
+        # From the qsub man page:
+        # "The name may be any arbitrary alphanumeric ASCII string, but
         # may  not contain  "\n", "\t", "\r", "/", ":", "@", "\", "*",
         # or "?"."
         if job_tmpl.job_name:
@@ -239,9 +239,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
 
         if not job_tmpl.job_resource:
             raise ValueError("Job resources (as the tot_num_mpiprocs) are required " "for the SGE scheduler plugin")
-        #Setting up the parallel environment
-        lines.append('#$ -pe {} {}'.\
-                     format(str(job_tmpl.job_resource.parallel_env),\
+        # Setting up the parallel environment
+        lines.append('#$ -pe {} {}'. \
+                     format(str(job_tmpl.job_resource.parallel_env), \
                             int(job_tmpl.job_resource.tot_num_mpiprocs)))
 
         if job_tmpl.max_wallclock_seconds is not None:
@@ -262,7 +262,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        #TAKEN FROM PBSPRO:
+        # TAKEN FROM PBSPRO:
         # Job environment variables are to be set on one single line.
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.
@@ -273,8 +273,8 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(k.strip(), escape_for_bash(v)))
+            for key, value in job_tmpl.job_environment.iteritems():
+                lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -283,7 +283,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
-        
+
         Args:
             submit_script: the path of the submit script relative to the working
                 directory.
@@ -296,12 +296,10 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        import xml.dom.minidom
-
         if retval != 0:
             self.logger.error("Error in _parse_joblist_output: retval={}; "
                               "stdout={}; stderr={}".format(retval, stdout, stderr))
-            raise SchedulerError("Error during joblist retrieval, retval={}".\
+            raise SchedulerError("Error during joblist retrieval, retval={}". \
                                  format(retval))
 
         if stderr.strip():
@@ -324,37 +322,37 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             second_childs = first_child.childNodes
             tag_names_sec = [elem.tagName for elem in second_childs \
                              if elem.nodeType == 1]
-            if not 'queue_info' in tag_names_sec:
+            if 'queue_info' not in tag_names_sec:
                 self.logger.error("Error in sge._parse_joblist_output: "
-                                  "no queue_info: {}".\
+                                  "no queue_info: {}". \
                                   format(stdout))
                 raise SchedulerError
-            if not 'job_info' in tag_names_sec:
+            if 'job_info' not in tag_names_sec:
                 self.logger.error("Error in sge._parse_joblist_output: "
-                                  "no job_info: {}".\
+                                  "no job_info: {}". \
                                   format(stdout))
                 raise SchedulerError
         except SchedulerError:
-            self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
+            self.logger.error("Error in sge._parse_joblist_output: stdout={}" \
                               .format(stdout))
             raise SchedulerError("Error during xml processing, of stdout:"
                                  "There is no 'job_info' or no 'queue_info'"
                                  "element or there are no jobs!")
-        #If something weird happens while firstChild, pop, etc:
+        # If something weird happens while firstChild, pop, etc:
         except Exception:
-            self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
+            self.logger.error("Error in sge._parse_joblist_output: stdout={}" \
                               .format(stdout))
             raise SchedulerError("Error during xml processing, of stdout")
 
         jobs = [i for i in first_child.getElementsByTagName('job_list')]
-        #jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
-        #print [i[0].childNodes[0].data for i in job_numbers if i]
+        # jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
+        # print [i[0].childNodes[0].data for i in job_numbers if i]
         joblist = []
         for job in jobs:
             this_job = JobInfo()
 
-            #In case the user needs more information the xml-data for
-            #each job is stored:
+            # In case the user needs more information the xml-data for
+            # each job is stored:
             this_job.raw_data = job.toxml()
 
             try:
@@ -365,13 +363,13 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     raise SchedulerError
             except SchedulerError:
                 self.logger.error("Error in sge._parse_joblist_output:"
-                                  "no job id is given, stdout={}"\
+                                  "no job id is given, stdout={}" \
                                   .format(stdout))
                 raise SchedulerError("Error in sge._parse_joblist_output:" "no job id is given")
             except IndexError:
                 self.logger.error("No 'job_number' given for job index {} in "
-                                  "job list, stdout={}".format(jobs.index(job)\
-                                  ,stdout))
+                                  "job list, stdout={}".format(jobs.index(job) \
+                                                               , stdout))
                 raise IndexError("Error in sge._parse_joblist_output:" "no job id is given")
 
             try:
@@ -379,14 +377,14 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 job_state_string = str(element_child.data).strip()
                 try:
-                    this_job.job_state = _map_status_sge[job_state_string]
+                    this_job.job_state = _MAP_STATUS_SGE[job_state_string]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string, this_job.job_id))
-                    this_job.job_state = job_states.UNDETERMINED
+                    this_job.job_state = JOB_STATES.UNDETERMINED
             except IndexError:
                 self.logger.warning("No 'job_state' field for job id {} in" "stdout={}".format(this_job.job_id, stdout))
-                this_job.job_state = job_states.UNDETERMINED
+                this_job.job_state = JOB_STATES.UNDETERMINED
 
             try:
                 job_element = job.getElementsByTagName('JB_owner').pop(0)
@@ -407,7 +405,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 this_job.queue_name = str(element_child.data).strip()
             except IndexError:
-                if this_job.job_state == job_states.RUNNING:
+                if this_job.job_state == JOB_STATES.RUNNING:
                     self.logger.warning("No 'queue_name' field for job " "id {}".format(this_job.job_id))
 
             try:
@@ -442,8 +440,8 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                                         "'JAT_start_time' field for job "
                                         "id {}".format(this_job.job_id))
 
-            #There is also cpu_usage, mem_usage, io_usage information available:
-            if this_job.job_state == job_states.RUNNING:
+            # There is also cpu_usage, mem_usage, io_usage information available:
+            if this_job.job_state == JOB_STATES.RUNNING:
                 try:
                     job_element = job.getElementsByTagName('slots').pop(0)
                     element_child = job_element.childNodes.pop(0)
@@ -452,20 +450,18 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     self.logger.warning("No 'slots' field for job " "id {}".format(this_job.job_id))
 
             joblist.append(this_job)
-        #self.logger.debug("joblist final: {}".format(joblist))
+        # self.logger.debug("joblist final: {}".format(joblist))
         return joblist
 
     def _parse_submit_output(self, retval, stdout, stderr):
         """
         Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
-        
+
         To be implemented by the plugin.
-        
+
         Return a string with the JobID.
         """
-        import re
-
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
                               "stdout={}; stderr={}".format(retval, stdout, stderr))
@@ -484,12 +480,13 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time, datetime
+        import time
+        import datetime
 
         try:
             time_struct = time.strptime(string, fmt)
-        except Exception as e:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, e.message))
+        except Exception as exc:
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

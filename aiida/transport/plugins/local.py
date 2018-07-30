@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Local transport
+"""
+
 ###
 ### GP: a note on the local transport:
 ### I believe that we must not use os.chdir to keep track of the folder
@@ -15,16 +19,19 @@
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+import errno
 import os
 import shutil
 import subprocess
-from aiida.transport.transport import Transport, TransportInternalError
-from aiida.transport.util import FileAttribute
 import StringIO
 import glob
-from aiida.common import aiidalogger
+
+from aiida.transport.transport import Transport, TransportInternalError
+from aiida import transport
 
 
+# refactor or raise the limit: issue #1784
+# pylint: disable=too-many-public-methods
 class LocalTransport(Transport):
     """
     Support copy and command execution on the same host on which AiiDA is running via direct file copy and
@@ -35,7 +42,7 @@ class LocalTransport(Transport):
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
     # There are no valid parameters for the local transport
-    _valid_auth_params = []
+    _valid_auth_options = []
 
     # There is no real limit on how fast you can connect to localhost
     # you should not be banned (as instead it is the case in SSH).
@@ -53,8 +60,8 @@ class LocalTransport(Transport):
         # Just to avoid errors
         self._machine = kwargs.pop('machine', None)
         if self._machine and self._machine != 'localhost':
-            # TODO: check if we want a different logic
             self.logger.debug('machine was passed, but it is not localhost')
+        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         if kwargs:
             raise ValueError("Input parameters to LocalTransport" " are not recognized")
 
@@ -118,7 +125,10 @@ class LocalTransport(Transport):
 
         self._internal_dir = os.path.normpath(new_path)
 
-    def normalize(self, path):
+    def chown(self, path, uid, gid):
+        os.chown(path, uid, gid)
+
+    def normalize(self, path='.'):
         """
         Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
@@ -131,18 +141,16 @@ class LocalTransport(Transport):
         """
         return self.curdir
 
-    def _os_path_split_asunder(self, path):
-        """
-        Used by makedirs. Takes path (a str)
-        and returns a list deconcatenating the path
-        """
-        # TODO : test it on windows (sigh!)
+    @staticmethod
+    def _os_path_split_asunder(path):
+        """Used by makedirs, Takes path (a str) and returns a list deconcatenating the path."""
         parts = []
         while True:
             newpath, tail = os.path.split(path)
             if newpath == path:
                 assert not tail
-                if path: parts.append(path)
+                if path:
+                    parts.append(path)
                 break
             parts.append(tail)
             path = newpath
@@ -205,8 +213,8 @@ class LocalTransport(Transport):
         """
         if not path:
             return False
-        else:
-            return os.path.isdir(os.path.join(self.curdir, path))
+
+        return os.path.isdir(os.path.join(self.curdir, path))
 
     def chmod(self, path, mode):
         """
@@ -224,145 +232,154 @@ class LocalTransport(Transport):
         else:
             os.chmod(real_path, mode)
 
-    def put(self, source, destination, dereference=True, overwrite=True, ignore_nonexisting=False):
+    # please refactor: issue #1782
+    # pylint: disable=too-many-branches
+    def put(self, localpath, remotepath, *args, **kwargs):
         """
-        Copies a file or a folder from source to destination.
+        Copies a file or a folder from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
-        :param source: absolute path to local file
-        :param destination: path to remote file
+        :param localpath: absolute path to local file
+        :param remotepath: path to remote file
         :param dereference: if True follows symbolic links.
                                  Default = True
-        :param overwrite: if True overwrites destination.
+        :param overwrite: if True overwrites remotepath.
                                  Default = False
 
-        :raise IOError: if destination is not valid
-        :raise ValueError: if source is not valid
+        :raise IOError: if remotepath is not valid
+        :raise ValueError: if localpath is not valid
         """
-        if not destination:
-            raise IOError("Input destination to put function " "must be a non empty string")
-        if not source:
-            raise ValueError("Input source to put function " "must be a non empty string")
+        dereference = kwargs.get('dereference', args[0] if args else True)
+        overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
+        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        if not remotepath:
+            raise IOError("Input remotepath to put function " "must be a non empty string")
+        if not localpath:
+            raise ValueError("Input localpath to put function " "must be a non empty string")
 
-        if not os.path.isabs(source):
+        if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
 
-        if self.has_magic(source):
-            if self.has_magic(destination):
-                raise ValueError("Pathname patterns are not allowed in the " "destination")
+        if self.has_magic(localpath):
+            if self.has_magic(remotepath):
+                raise ValueError("Pathname patterns are not allowed in the " "remotepath")
 
-            to_copy_list = glob.glob(source)  # using local glob here
+            to_copy_list = glob.glob(localpath)  # using local glob here
 
             rename_remote = False
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
-                if self.isfile(destination):
-                    raise OSError("Remote destination is not a directory")
+                if self.isfile(remotepath):
+                    raise OSError("Remote remotepath is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not self.path_exists(destination):  # questo dovrebbe valere solo per file
+                elif not self.path_exists(remotepath):  # questo dovrebbe valere solo per file
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_remote = True
 
-            for s in to_copy_list:
-                if os.path.isfile(s):
+            for source_path in to_copy_list:
+                if os.path.isfile(source_path):
                     if rename_remote:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
-                        r = os.path.join(destination, os.path.split(s)[1])
-                        self.putfile(s, r, overwrite)
+                        subpath = os.path.join(remotepath, os.path.split(source_path)[1])
+                        self.putfile(source_path, subpath, overwrite)
 
-                    elif self.isdir(destination):  # one file to copy in '.'
-                        r = os.path.join(destination, os.path.split(s)[1])
-                        self.putfile(s, r, overwrite)
+                    elif self.isdir(remotepath):  # one file to copy in '.'
+                        subpath = os.path.join(remotepath, os.path.split(source_path)[1])
+                        self.putfile(source_path, subpath, overwrite)
                     else:  # one file to copy on one file
-                        self.putfile(s, destination, overwrite)
+                        self.putfile(source_path, remotepath, overwrite)
                 else:
-                    self.puttree(s, destination, dereference, overwrite)
+                    self.puttree(source_path, remotepath, dereference, overwrite)
 
         else:
-            if os.path.isdir(source):
-                self.puttree(source, destination, dereference, overwrite)
-            elif os.path.isfile(source):
-                if self.isdir(destination):
-                    r = os.path.join(destination, os.path.split(source)[1])
-                    self.putfile(source, r, overwrite)
+            if os.path.isdir(localpath):
+                self.puttree(localpath, remotepath, dereference, overwrite)
+            elif os.path.isfile(localpath):
+                if self.isdir(remotepath):
+                    full_destination = os.path.join(remotepath, os.path.split(localpath)[1])
                 else:
-                    self.putfile(source, destination, overwrite)
+                    full_destination = remotepath
+
+                self.putfile(localpath, full_destination, overwrite)
             else:
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise OSError("The local path {} does not exist".format(source))
+                    raise OSError("The local path {} does not exist".format(localpath))
 
-    def putfile(self, source, destination, overwrite=True):
+    def putfile(self, localpath, remotepath, *args, **kwargs):
         """
-        Copies a file from source to destination.
+        Copies a file from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
-        :param source: absolute path to local file
-        :param destination: path to remote file
-        :param overwrite: if True overwrites destination
+        :param localpath: absolute path to local file
+        :param remotepath: path to remote file
+        :param overwrite: if True overwrites remotepath
                                  Default = False
 
-        :raise IOError: if destination is not valid
-        :raise ValueError: if source is not valid
-        :raise OSError: if source does not exist
+        :raise IOError: if remotepath is not valid
+        :raise ValueError: if localpath is not valid
+        :raise OSError: if localpath does not exist
         """
-        if not destination:
-            raise IOError("Input destination to putfile " "must be a non empty string")
-        if not source:
-            raise ValueError("Input source to putfile " "must be a non empty string")
+        overwrite = kwargs.get('overwrite', args[0] if args else True)
+        if not remotepath:
+            raise IOError("Input remotepath to putfile " "must be a non empty string")
+        if not localpath:
+            raise ValueError("Input localpath to putfile " "must be a non empty string")
 
-        if not os.path.isabs(source):
+        if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
 
-        if not os.path.exists(source):
+        if not os.path.exists(localpath):
             raise OSError("Source does not exists")
 
-        the_destination = os.path.join(self.curdir, destination)
+        the_destination = os.path.join(self.curdir, remotepath)
         if os.path.exists(the_destination) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        shutil.copyfile(source, the_destination)
+        shutil.copyfile(localpath, the_destination)
 
-    def puttree(self, source, destination, dereference=True, overwrite=True):
+    def puttree(self, localpath, remotepath, *args, **kwargs):
         """
-        Copies a folder recursively from source to destination.
+        Copies a folder recursively from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
-        :param source: absolute path to local file
-        :param destination: path to remote file
+        :param localpath: absolute path to local file
+        :param remotepath: path to remote file
         :param dereference: follow symbolic links.
                                  Default = True
-        :param overwrite: if True overwrites destination.
+        :param overwrite: if True overwrites remotepath.
                                Default = False
 
-        :raise IOError: if destination is not valid
-        :raise ValueError: if source is not valid
-        :raise OSError: if source does not exist
+        :raise IOError: if remotepath is not valid
+        :raise ValueError: if localpath is not valid
+        :raise OSError: if localpath does not exist
         """
-        if not destination:
-            raise IOError("Input destination to putfile " "must be a non empty string")
-        if not source:
-            raise ValueError("Input source to putfile " "must be a non empty string")
+        dereference = kwargs.get('dereference', args[0] if args else True)
+        overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
+        if not remotepath:
+            raise IOError("Input remotepath to putfile " "must be a non empty string")
+        if not localpath:
+            raise ValueError("Input localpath to putfile " "must be a non empty string")
 
-        if not os.path.isabs(source):
+        if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
 
-        if not os.path.exists(source):
+        if not os.path.exists(localpath):
             raise OSError("Source does not exists")
 
-        if self.path_exists(destination) and not overwrite:
+        if self.path_exists(remotepath) and not overwrite:
             raise OSError("Can't overwrite existing files")
-        if self.isfile(destination):
+        if self.isfile(remotepath):
             raise OSError("Cannot copy a directory into a file")
 
-        if self.isdir(destination):
-            destination = os.path.join(destination, os.path.split(source)[1])
+        if self.isdir(remotepath):
+            remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
 
-        the_destination = os.path.join(self.curdir, destination)
+        the_destination = os.path.join(self.curdir, remotepath)
 
-        shutil.copytree(source, the_destination, symlinks=not (dereference))
+        shutil.copytree(localpath, the_destination, symlinks=not dereference)
 
     def rmtree(self, path):
         """
@@ -373,249 +390,263 @@ class LocalTransport(Transport):
         the_path = os.path.join(self.curdir, path)
         try:
             shutil.rmtree(the_path)
-        except OSError as e:
-            if e.errno == 20:
+        except OSError as exception:
+            if exception.errno == errno.ENOENT:
+                pass
+            elif exception.errno == errno.ENOTDIR:
                 os.remove(the_path)
             else:
-                raise e
+                raise IOError(exception)
 
-    def get(self, source, destination, dereference=True, overwrite=True, ignore_nonexisting=False):
+    # please refactor: issue #1781
+    # pylint: disable=too-many-branches
+    def get(self, remotepath, localpath, *args, **kwargs):
         """
-        Copies a folder or a file recursively from 'remote' source to
-        'local' destination.
+        Copies a folder or a file recursively from 'remote' remotepath to
+        'local' localpath.
         Automatically redirects to getfile or gettree.
 
-        :param source: path to local file
-        :param destination: absolute path to remote file
+        :param remotepath: path to local file
+        :param localpath: absolute path to remote file
         :param dereference: follow symbolic links
                                  default = True
-        :param overwrite: if True overwrites destination
+        :param overwrite: if True overwrites localpath
                                default = False
 
-        :raise IOError: if 'remote' source is not valid
-        :raise ValueError: if 'local' destination is not valid
+        :raise IOError: if 'remote' remotepath is not valid
+        :raise ValueError: if 'local' localpath is not valid
         """
-        if not destination:
-            raise ValueError("Input destination to get function " "must be a non empty string")
-        if not source:
-            raise IOError("Input source to get function " "must be a non empty string")
+        dereference = kwargs.get('dereference', args[0] if args else True)
+        overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
+        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        if not localpath:
+            raise ValueError("Input localpath to get function " "must be a non empty string")
+        if not remotepath:
+            raise IOError("Input remotepath to get function " "must be a non empty string")
 
-        if not os.path.isabs(destination):
+        if not os.path.isabs(localpath):
             raise ValueError("Destination must be an absolute path")
 
-        if self.has_magic(source):
-            if self.has_magic(destination):
-                raise ValueError("Pathname patterns are not allowed in the " "destination")
-            to_copy_list = self.glob(source)
+        if self.has_magic(remotepath):
+            if self.has_magic(localpath):
+                raise ValueError("Pathname patterns are not allowed in the " "localpath")
+            to_copy_list = self.glob(remotepath)
 
             rename_local = False
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
-                if os.path.isfile(destination):
-                    raise IOError("Remote destination is not a directory")
+                if os.path.isfile(localpath):
+                    raise IOError("Remote localpath is not a directory")
                 # I can't scp more than one file in a non existing directory
-                elif not os.path.exists(destination):  # this should hold only for files
+                elif not os.path.exists(localpath):  # this should hold only for files
                     raise OSError("Remote directory does not exist")
                 else:  # the remote path is a directory
                     rename_local = True
 
-            for s in to_copy_list:
-                if self.isfile(s):
+            for source in to_copy_list:
+                if self.isfile(source):
                     if rename_local:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
-                        r = os.path.join(destination, os.path.split(s)[1])
-                        self.getfile(s, r, overwrite)
+                        subpath = os.path.join(localpath, os.path.split(source)[1])
+                        self.getfile(source, subpath, overwrite)
                     else:  # one file to copy on one file
-                        self.getfile(s, destination, overwrite)
+                        self.getfile(source, localpath, overwrite)
                 else:
-                    self.gettree(s, destination, dereference, overwrite)
+                    self.gettree(source, localpath, dereference, overwrite)
 
         else:
-            if self.isdir(source):
-                self.gettree(source, destination, dereference, overwrite)
-            elif self.isfile(source):
-                if os.path.isdir(destination):
-                    r = os.path.join(destination, os.path.split(source)[1])
-                    self.getfile(source, r, overwrite)
+            if self.isdir(remotepath):
+                self.gettree(remotepath, localpath, dereference, overwrite)
+            elif self.isfile(remotepath):
+                if os.path.isdir(localpath):
+                    subpath = os.path.join(localpath, os.path.split(remotepath)[1])
+                    self.getfile(remotepath, subpath, overwrite)
                 else:
-                    self.getfile(source, destination, overwrite)
+                    self.getfile(remotepath, localpath, overwrite)
             else:
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError("The local path {} does not exist".format(destination))
+                    raise IOError("The local path {} does not exist".format(localpath))
 
-    def getfile(self, source, destination, overwrite=True):
+    def getfile(self, remotepath, localpath, *args, **kwargs):
         """
-        Copies a file recursively from 'remote' source to
-        'local' destination.
+        Copies a file recursively from 'remote' remotepath to
+        'local' localpath.
 
-        :param source: path to local file
-        :param destination: absolute path to remote file
-        :param overwrite: if True overwrites destination.
+        :param remotepath: path to local file
+        :param localpath: absolute path to remote file
+        :param overwrite: if True overwrites localpath.
                                Default = False
 
-        :raise IOError if 'remote' source is not valid or not found
-        :raise ValueError: if 'local' destination is not valid
+        :raise IOError if 'remote' remotepath is not valid or not found
+        :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        if not destination:
-            raise ValueError("Input destination to get function " "must be a non empty string")
-        if not source:
-            raise IOError("Input source to get function " "must be a non empty string")
-        the_source = os.path.join(self.curdir, source)
+        overwrite = kwargs.get('overwrite', args[0] if args else True)
+        if not localpath:
+            raise ValueError("Input localpath to get function " "must be a non empty string")
+        if not remotepath:
+            raise IOError("Input remotepath to get function " "must be a non empty string")
+        the_source = os.path.join(self.curdir, remotepath)
         if not os.path.exists(the_source):
             raise IOError("Source not found")
-        if not os.path.isabs(destination):
+        if not os.path.isabs(localpath):
             raise ValueError("Destination must be an absolute path")
-        if os.path.exists(destination) and not overwrite:
+        if os.path.exists(localpath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        shutil.copyfile(the_source, destination)
+        shutil.copyfile(the_source, localpath)
 
-    def gettree(self, source, destination, dereference=True, overwrite=True):
+    def gettree(self, remotepath, localpath, *args, **kwargs):
         """
-        Copies a folder recursively from 'remote' source to
-        'local' destination.
+        Copies a folder recursively from 'remote' remotepath to
+        'local' localpath.
 
-        :param source: path to local file
-        :param destination: absolute path to remote file
+        :param remotepath: path to local file
+        :param localpath: absolute path to remote file
         :param dereference: follow symbolic links. Default = True
-        :param overwrite: if True overwrites destination. Default = False
+        :param overwrite: if True overwrites localpath. Default = False
 
-        :raise IOError: if 'remote' source is not valid
-        :raise ValueError: if 'local' destination is not valid
+        :raise IOError: if 'remote' remotepath is not valid
+        :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        if not source:
+        dereference = kwargs.get('dereference', args[0] if args else True)
+        overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
+        if not remotepath:
             raise IOError("Remotepath must be a non empty string")
-        if not destination:
+        if not localpath:
             raise ValueError("Localpaths must be a non empty string")
 
-        if not os.path.isabs(destination):
+        if not os.path.isabs(localpath):
             raise ValueError("Localpaths must be an absolute path")
 
-        if not self.isdir(source):
-            raise IOError("Input remotepath is not a folder: {}".format(source))
+        if not self.isdir(remotepath):
+            raise IOError("Input remotepath is not a folder: {}".format(remotepath))
 
-        if os.path.exists(destination) and not overwrite:
+        if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
-        if os.path.isfile(destination):
+        if os.path.isfile(localpath):
             raise OSError("Cannot copy a directory into a file")
 
-        if os.path.isdir(destination):
-            destination = os.path.join(destination, os.path.split(source)[1])
+        if os.path.isdir(localpath):
+            localpath = os.path.join(localpath, os.path.split(remotepath)[1])
 
-        the_source = os.path.join(self.curdir, source)
-        shutil.copytree(the_source, destination, symlinks=not (dereference))
+        the_source = os.path.join(self.curdir, remotepath)
+        shutil.copytree(the_source, localpath, symlinks=not dereference)
 
-    def copy(self, source, destination, dereference=False):
+    # please refactor: issue #1780 on github
+    # pylint: disable=too-many-branches
+    def copy(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copies a file or a folder from 'remote' source to 'remote' destination.
+        Copies a file or a folder from 'remote' remotesource to 'remote' remotedestination.
         Automatically redirects to copyfile or copytree.
 
-        :param source: path to local file
-        :param destination: path to remote file
+        :param remotesource: path to local file
+        :param remotedestination: path to remote file
         :param dereference: follow symbolic links. Default = False
 
-        :raise ValueError: if 'remote' source or destination is not valid
-        :raise OSError: if source does not exist
+        :raise ValueError: if 'remote' remotesource or remotedestinationis not valid
+        :raise OSError: if remotesource does not exist
         """
-        if not source:
-            raise ValueError("Input source to copy " "must be a non empty object")
-        if not destination:
-            raise ValueError("Input destination to copy " "must be a non empty object")
-        if not self.has_magic(source):
-            if not os.path.exists(os.path.join(self.curdir, source)):
+        dereference = kwargs.get('dereference', args[0] if args else True)
+        if not remotesource:
+            raise ValueError("Input remotesource to copy " "must be a non empty object")
+        if not remotedestination:
+            raise ValueError("Input remotedestination to copy " "must be a non empty object")
+        if not self.has_magic(remotesource):
+            if not os.path.exists(os.path.join(self.curdir, remotesource)):
                 raise OSError("Source not found")
-        if self.normalize(source) == self.normalize(destination):
+        if self.normalize(remotesource) == self.normalize(remotedestination):
             raise ValueError("Cannot copy from itself to itself")
 
             # # by default, overwrite old files
-        #        if not destination.startswith('.'):
-        #            if self.isfile(destination) or self.isdir(destination):
-        #                self.rmtree(destination)
+        #        if not remotedestination .startswith('.'):
+        #            if self.isfile(remotedestination) or self.isdir(remotedestination):
+        #                self.rmtree(remotedestination)
 
-        the_destination = os.path.join(self.curdir, destination)
+        the_destination = os.path.join(self.curdir, remotedestination)
 
-        if self.has_magic(source):
-            if self.has_magic(destination):
-                raise ValueError("Pathname patterns are not allowed in the " "destination")
+        if self.has_magic(remotesource):
+            if self.has_magic(remotedestination):
+                raise ValueError("Pathname patterns are not allowed in the " "remotedestination")
 
-            to_copy_list = self.glob(source)
+            to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
-                if not self.path_exists(destination) or self.isfile(destination):
-                    raise OSError("Can't copy more than one file in the same " "destination file")
+                if not self.path_exists(remotedestination) or self.isfile(remotedestination):
+                    raise OSError("Can't copy more than one file in the same " "remotedestination file")
 
-            for s in to_copy_list:
+            for source in to_copy_list:
                 # If s is an absolute path, then the_s = s
-                the_s = os.path.join(self.curdir, s)
-                if self.isfile(s):
+                the_s = os.path.join(self.curdir, source)
+                if self.isfile(source):
                     # With shutil, use the full path (the_s)
                     shutil.copy(the_s, the_destination)
                 else:
                     # With self.copytree, the (possible) relative path is OK
-                    self.copytree(s, destination, dereference)
+                    self.copytree(source, remotedestination, dereference)
 
         else:
-            # If s is an absolute path, then the_source = source
-            the_source = os.path.join(self.curdir, source)
-            if self.isfile(source):
+            # If s is an absolute path, then the_source = remotesource
+            the_source = os.path.join(self.curdir, remotesource)
+            if self.isfile(remotesource):
                 # With shutil, use the full path (the_source)
                 shutil.copy(the_source, the_destination)
             else:
                 # With self.copytree, the (possible) relative path is OK
-                self.copytree(source, destination, dereference)
+                self.copytree(remotesource, remotedestination, dereference)
 
-    def copyfile(self, source, destination):
+    def copyfile(self, remotesource, remotedestination, *args, **kwargs):  # pylint: disable=unused-argument
         """
-        Copies a file from 'remote' source to
-        'remote' destination.
+        Copies a file from 'remote' remotesource to
+        'remote' remotedestination.
 
-        :param source: path to local file
-        :param destination: path to remote file
-        :raise ValueError: if 'remote' source or destination is not valid
-        :raise OSError: if source does not exist
+        :param remotesource: path to local file
+        :param remotedestination: path to remote file
+        :raise ValueError: if 'remote' remotesource or remotedestination is not valid
+        :raise OSError: if remotesource does not exist
 
         """
-        if not source:
-            raise ValueError("Input source to copyfile " "must be a non empty object")
-        if not destination:
-            raise ValueError("Input destination to copyfile " "must be a non empty object")
-        the_source = os.path.join(self.curdir, source)
-        the_destination = os.path.join(self.curdir, destination)
+        if not remotesource:
+            raise ValueError("Input remotesource to copyfile " "must be a non empty object")
+        if not remotedestination:
+            raise ValueError("Input remotedestination to copyfile " "must be a non empty object")
+        the_source = os.path.join(self.curdir, remotesource)
+        the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
             raise OSError("Source not found")
 
         shutil.copyfile(the_source, the_destination)
 
-    def copytree(self, source, destination, dereference=False):
+    def copytree(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copies a folder from 'remote' source to
-        'remote' destination.
+        Copies a folder from 'remote' remotesource to
+        'remote' remotedestination.
 
-        :param source: path to local file
-        :param destination: path to remote file
+        :param remotesource: path to local file
+        :param remotedestination: path to remote file
         :param dereference: follow symbolic links. Default = False
 
-        :raise ValueError: if 'remote' source or destination is not valid
-        :raise OSError: if source does not exist
+        :raise ValueError: if 'remote' remotesource or remotedestination is not valid
+        :raise OSError: if remotesource does not exist
         """
-        if not source:
-            raise ValueError("Input source to copytree " "must be a non empty object")
-        if not destination:
-            raise ValueError("Input destination to copytree " "must be a non empty object")
-        the_source = os.path.join(self.curdir, source)
-        the_destination = os.path.join(self.curdir, destination)
+        dereference = kwargs.get('dereference', args[0] if args else False)
+        if not remotesource:
+            raise ValueError("Input remotesource to copytree " "must be a non empty object")
+        if not remotedestination:
+            raise ValueError("Input remotedestination to copytree " "must be a non empty object")
+        the_source = os.path.join(self.curdir, remotesource)
+        the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
             raise OSError("Source not found")
 
         # Using the Ubuntu default behavior (different from Mac)
-        if self.isdir(destination):
-            the_destination = os.path.join(the_destination, os.path.split(source)[1])
+        if self.isdir(remotedestination):
+            the_destination = os.path.join(the_destination, os.path.split(remotesource)[1])
 
-        shutil.copytree(the_source, the_destination, symlinks=not (dereference))
+        shutil.copytree(the_source, the_destination, symlinks=not dereference)
 
     def get_attribute(self, path):
         """
@@ -623,16 +654,18 @@ class LocalTransport(Transport):
         as specified in aiida.transport.
         :param path: the path of the given file.
         """
+        from aiida.transport.util import FileAttribute
+
         os_attr = os.lstat(os.path.join(self.curdir, path))
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:
+        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
-    def _local_listdir(self, path, pattern=None):
-        # acts on the local folder, for the rest, same as listdir
+    def _local_listdir(self, path, pattern=None):  # pylint: disable=no-self-use
+        """Act on the local folder, for the rest, same as listdir."""
         if not pattern:
             return os.listdir(path)
         else:
@@ -659,9 +692,9 @@ class LocalTransport(Transport):
         if not pattern:
             try:
                 return os.listdir(the_path)
-            except OSError as e:
-                exc = IOError(str(e))
-                exc.errno = e.errno
+            except OSError as err:
+                exc = IOError(str(err))
+                exc.errno = err.errno
                 raise exc
         else:
             import re
@@ -684,13 +717,12 @@ class LocalTransport(Transport):
         """
         if not path:
             return False
-        else:
-            return os.path.isfile(os.path.join(self.curdir, path))
+        return os.path.isfile(os.path.join(self.curdir, path))
 
-    def _exec_command_internal(self, command):
+    def _exec_command_internal(self, command, **kwargs):  # pylint: disable=unused-argument
         """
         Executes the specified command in bash login shell.
-        
+
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
 
@@ -703,7 +735,7 @@ class LocalTransport(Transport):
 
         :param  command: the command to execute. The command is assumed to be
             already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
-        
+
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
@@ -726,7 +758,7 @@ class LocalTransport(Transport):
 
         return proc.stdin, proc.stdout, proc.stderr, proc
 
-    def exec_command_wait(self, command, stdin=None):
+    def exec_command_wait(self, command, **kwargs):
         """
         Executes the specified command and waits for it to finish.
 
@@ -735,7 +767,8 @@ class LocalTransport(Transport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and
                  stderr are strings.
         """
-        local_stdin, local_stdout, local_stderr, local_proc = self._exec_command_internal(command)
+        stdin = kwargs.get('stdin')
+        local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
             if isinstance(stdin, basestring):
@@ -744,16 +777,14 @@ class LocalTransport(Transport):
                 filelike_stdin = stdin
 
             try:
-                for l in filelike_stdin.readlines():
-                    local_proc.stdin.write(l)
+                for line in filelike_stdin.readlines():
+                    local_proc.stdin.write(line)
             except AttributeError:
                 raise ValueError("stdin can only be either a string of a " "file-like object!")
         else:
             filelike_stdin = None
 
         local_stdin.flush()
-        # TODO : instead of stringIO use cstringIO
-        # TODO : use input option of communicate()
         output_text, stderr_text = local_proc.communicate()
 
         retval = local_proc.returncode
@@ -772,12 +803,15 @@ class LocalTransport(Transport):
 
         :param str remotedir: the full path of the remote directory
         """
-        # return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="'"\[\033[01;31m\][AiiDA] \033[00m\]$PS1"'"') ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-        #        escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
-        return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        script = ' ; '.join([
+            'if [ -d {escaped_remotedir} ]', 'then cd {escaped_remotedir}', 'bash', "else echo ' ** The directory'",
+            "echo ' ** {remotedir}'", "echo ' ** seems to have been deleted, I logout...'", 'fi'
+        ]).format(
             escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+        cmd = 'bash -c "{}"'.format(script)
+        return cmd
 
-    def rename(self, src, dst):
+    def rename(self, oldpath, newpath):
         """
         Rename a file or folder from oldpath to newpath.
 
@@ -787,21 +821,21 @@ class LocalTransport(Transport):
         :raises IOError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
-        if not src:
-            raise ValueError("Source {} is not a valid string".format(src))
-        if not dst:
-            raise ValueError("Destination {} is not a valid string".format(dst))
-        if not os.path.exists(src):
-            raise IOError("Source {} does not exist".format(src))
-        if not os.path.exists(dst):
-            raise IOError("Destination {} does not exist".format(dst))
+        if not oldpath:
+            raise ValueError("Source {} is not a valid string".format(oldpath))
+        if not newpath:
+            raise ValueError("Destination {} is not a valid string".format(newpath))
+        if not os.path.exists(oldpath):
+            raise IOError("Source {} does not exist".format(oldpath))
+        if not os.path.exists(newpath):
+            raise IOError("Destination {} does not exist".format(newpath))
 
-        shutil.move(src, dst)
+        shutil.move(oldpath, newpath)
 
     def symlink(self, remotesource, remotedestination):
         """
         Create a symbolic link between the remote source and the remote
-        destination
+        remotedestination
 
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
@@ -831,3 +865,10 @@ class LocalTransport(Transport):
         Check if path exists
         """
         return os.path.exists(os.path.join(self.curdir, path))
+
+    @classmethod
+    def _get_safe_interval_suggestion_string(cls, computer):
+        return cls._DEFAULT_SAFE_OPEN_INTERVAL
+
+
+CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')

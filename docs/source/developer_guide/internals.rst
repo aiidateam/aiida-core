@@ -54,8 +54,6 @@ General purpose methods
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._increment_version_number_db`: increment the version number of the node on the DB. This happens when adding an ``attribute`` or an ``extra`` to the node. This method should not be called by the users.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.copy` returns a not stored copy of the node with new UUID that can be edited directly.
-
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.uuid` returns the universally unique identifier (UUID) of the node.
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.pk` returns the principal key (ID) of the node.

@@ -11,7 +11,6 @@ import logging
 from copy import deepcopy
 from logging import config
 from aiida.common import setup
-from aiida.backends.utils import is_dbenv_loaded
 
 # Custom logging level, intended specifically for informative log messages
 # reported during WorkChains and Workflows. We want the level between INFO(20)
@@ -50,6 +49,7 @@ class DBLogHandler(logging.Handler):
 
     def emit(self, record):
         # If this is reached before a backend is defined, simply pass
+        from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             return
 

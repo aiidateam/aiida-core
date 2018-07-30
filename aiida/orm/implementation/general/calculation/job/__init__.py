@@ -50,7 +50,6 @@ class JobCalculationExitStatus(enum.Enum):
     RETRIEVALFAILED = 200
     PARSINGFAILED = 300
     FAILED = 400
-    I_AM_A_TEAPOT = 418
 
 
 class AbstractJobCalculation(AbstractCalculation):
@@ -977,10 +976,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classmethod
     def _list_calculations(
-            cls, states=None, past_days=None, group=None,
-            group_pk=None, all_users=False, pks=tuple(),
-            relative_ctime=True, with_scheduler_state=False,
-            order_by=None, limit=None, filters=None,
+            cls, states=None, past_days=None, groups=None, all_users=False, pks=tuple(),
+            relative_ctime=True, with_scheduler_state=False, order_by=None, limit=None, filters=None,
             projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'), raw=False
     ):
         """
@@ -991,13 +988,7 @@ class AbstractJobCalculation(AbstractCalculation):
             Default = None.
         :param past_days: If specified, show only calculations that were
             created in the given number of past days.
-        :param group: If specified, show only calculations belonging to a
-            user-defined group with the given name.
-            Can use colons to separate the group name from the type,
-            as specified in :py:meth:`aiida.orm.group.Group.get_from_string`
-            method.
-        :param group_pk: If specified, show only calculations belonging to a
-            user-defined group with the given PK.
+        :param groups: If specified, show only calculations belonging to these groups
         :param pks: if specified, must be a list of integers, and only
             calculations within that list are shown. Otherwise, all
             calculations are shown.
@@ -1086,11 +1077,9 @@ class AbstractJobCalculation(AbstractCalculation):
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 calculation_filters['ctime'] = {'>': n_days_ago}
 
-            # Filter on the group, either name or by pks
-            if group:
-                group_filters = {'name': {'like': '%{}%'.format(group)}}
-            elif group_pk:
-                group_filters = {'id': {'==': group_pk}}
+            # Filter on the groups
+            if groups:
+                group_filters = {'uuid': {'in': [group.uuid for group in groups]}}
             else:
                 group_filters = None
 
@@ -1643,7 +1632,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = load_node(code_info.code_uuid, parent_class=Code)
+            this_code = load_node(code_info.code_uuid, sub_class=Code)
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Various decorators useful for creating verdi commands, for example loading the dbenv lazily.
 
@@ -12,11 +20,10 @@ Provides:
 
 """
 import sys
-import click
-
 from contextlib import contextmanager
 from functools import wraps
 
+import click
 from click_spinner import spinner
 
 
@@ -33,6 +40,8 @@ def load_dbenv_if_not_loaded(**kwargs):
 
 
 def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
+    """Function decorator that will load the database environment only when the function is called."""
+
     def decorator(function):
         """
         Function decorator that loads the dbenv if necessary before running the function
@@ -52,6 +61,7 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
             return function(*args, **kwargs)
 
         return decorated_function
+
     return decorator
 
 
@@ -157,3 +167,34 @@ def check_circus_zmq_version(function):
         return function(*args, **kwargs)
 
     return decorated_function
+
+
+def deprecated_command(message):
+    """Function decorator that will mark a click command as deprecated when invoked."""
+
+    def decorator(function):
+        """
+        Function decorator that echoes a deprecation warning before doing anything else in a click commad.
+
+        Example::
+
+            @click.command()
+            @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
+            def mycommand():
+                pass
+        """
+
+        @wraps(function)
+        def decorated_function(*args, **kwargs):
+            """Echo a deprecation warning before doing anything else."""
+            from aiida.cmdline.utils import echo, templates
+            from textwrap import wrap
+
+            template = templates.env.get_template('deprecated.tpl')
+            width = 80
+            echo.echo(template.render(msg=wrap(message, width), width=width))
+            return function(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator

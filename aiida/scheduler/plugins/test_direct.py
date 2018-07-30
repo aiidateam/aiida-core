@@ -7,15 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.scheduler.plugins.direct import DirectScheduler
-from aiida.scheduler.datastructures import job_states
-from aiida.scheduler import SchedulerError
 
 import unittest
-# import logging
-#import uuid
+from aiida.scheduler.plugins.direct import DirectScheduler
+from aiida.scheduler import SchedulerError
 
-#This was executed with ps -o pid,stat,user,time | tail -n +2
+# This was executed with ps -o pid,stat,user,time | tail -n +2
 mac_ps_output_str = """21259 S+   broeder   0:00.04
 87619 S+   broeder   0:00.44
 87634 S+   broeder   0:00.01
@@ -59,10 +56,10 @@ class TestParserGetJobList(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
-        s = DirectScheduler()
+        scheduler = DirectScheduler()
 
         with self.assertRaises(SchedulerError):
-            result = s._parse_joblist_output(retval=0, stdout=wrong_output, stderr="")
+            scheduler._parse_joblist_output(retval=0, stdout=wrong_output, stderr="")
 
     def test_parse_mac_joblist_output(self):
         """
@@ -80,9 +77,9 @@ class TestParserGetJobList(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
-        s = DirectScheduler()
+        scheduler = DirectScheduler()
 
-        result = s._parse_joblist_output(retval=0, stdout=linux_ps_output_str, stderr="")
+        result = scheduler._parse_joblist_output(retval=0, stdout=linux_ps_output_str, stderr="")
         self.assertEqual(len(result), 3)
 
         job_ids = [job.job_id for job in result]

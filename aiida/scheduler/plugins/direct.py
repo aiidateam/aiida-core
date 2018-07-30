@@ -13,8 +13,8 @@ Plugin for direct execution.
 from __future__ import division
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
-from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo, NodeNumberJobResource)
+from aiida.scheduler import SchedulerError
+from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobResource)
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -45,21 +45,21 @@ from aiida.scheduler.datastructures import (JobInfo, job_states, MachineInfo, No
 #               Z    defunct ("zombie") process, terminated but not reaped by
 #                    its parent
 
-_map_status_ps = {
-    'D': job_states.RUNNING,
-    'I': job_states.RUNNING,
-    'R': job_states.RUNNING,
-    'S': job_states.RUNNING,
-    'T': job_states.SUSPENDED,
-    'U': job_states.RUNNING,
-    'W': job_states.RUNNING,
-    'X': job_states.DONE,
-    'Z': job_states.DONE,
+_MAP_STATUS_PS = {
+    'D': JOB_STATES.RUNNING,
+    'I': JOB_STATES.RUNNING,
+    'R': JOB_STATES.RUNNING,
+    'S': JOB_STATES.RUNNING,
+    'T': JOB_STATES.SUSPENDED,
+    'U': JOB_STATES.RUNNING,
+    'W': JOB_STATES.RUNNING,
+    'X': JOB_STATES.DONE,
+    'Z': JOB_STATES.DONE,
     # Not sure about these three, I comment them out (they used to be in
     # here, but they don't appear neither on ubuntu nor on Mac)
-    #    'F': job_states.DONE,
-    #    'H': job_states.QUEUED_HELD,
-    #    'Q': job_states.QUEUED,
+    #    'F': JOB_STATES.DONE,
+    #    'H': JOB_STATES.QUEUED_HELD,
+    #    'Q': JOB_STATES.QUEUED,
 }
 
 
@@ -88,8 +88,6 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        from aiida.common.exceptions import FeatureNotAvailable
-
         command = 'ps -o pid,stat,user,time'
 
         if jobs:
@@ -113,8 +111,6 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         Args:
            job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        import re
-        import string
 
         lines = []
         empty_line = ""
@@ -126,9 +122,9 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         if job_tmpl.sched_join_files:
             # TODO: manual says:
-            #By  default both standard output and standard error are directed
-            #to a file of the name "slurm-%j.out", where the "%j" is replaced
-            #with  the  job  allocation  number.
+            # By  default both standard output and standard error are directed
+            # to a file of the name "slurm-%j.out", where the "%j" is replaced
+            # with  the  job  allocation  number.
             # See that this automatic redirection works also if
             # I specify a different --output file
             if job_tmpl.sched_error_path:
@@ -142,14 +138,14 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         if job_tmpl.max_memory_kb:
             try:
-                virtualMemoryKb = int(job_tmpl.max_memory_kb)
-                if virtualMemoryKb <= 0:
+                virtual_memory_kb = int(job_tmpl.max_memory_kb)
+                if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError("max_memory_kb must be "
                                  "a positive integer (in kB)! It is instead '{}'"
                                  "".format((job_tmpl.MaxMemoryKb)))
-            lines.append("ulimit -v {}", virtualMemoryKb)
+            lines.append("ulimit -v {}".format(virtualMemoryKb))
         if not job_tmpl.import_sys_environment:
             lines.append("env --ignore-environment \\")
 
@@ -167,8 +163,8 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for k, v in job_tmpl.job_environment.iteritems():
-                lines.append("export {}={}".format(k.strip(), escape_for_bash(v)))
+            for key, value in job_tmpl.job_environment.iteritems():
+                lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -193,7 +189,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
-    
+
         .. note:: One needs to redirect stdout and stderr to /dev/null
            otherwise the daemon remains hanging for the script to run
 
@@ -233,11 +229,11 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         # Create dictionary and parse specific fields
         job_list = []
         for line in stdout.split('\n'):
-            if re.search('^\s*PID', line) or line == '':
+            if re.search(r'^\s*PID', line) or line == '':
                 # Skip the header if present
                 continue
-            line = re.sub('^\s+', '', line)
-            job = re.split('\s+', line)
+            line = re.sub(r'^\s+', '', line)
+            job = re.split(r'\s+', line)
             this_job = JobInfo()
             this_job.job_id = job[0]
 
@@ -249,15 +245,15 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 job_state_string = job[1][0]  # I just check the first character
             except IndexError:
                 self.logger.debug("No 'job_state' field for job id {}".format(this_job.job_id))
-                this_job.job_state = job_states.UNDETERMINED
+                this_job.job_state = JOB_STATES.UNDETERMINED
             else:
                 try:
                     this_job.job_state = \
-                        _map_status_ps[job_state_string]
+                        _MAP_STATUS_PS[job_state_string]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string, this_job.job_id))
-                    this_job.job_state = job_states.UNDETERMINED
+                    this_job.job_state = JOB_STATES.UNDETERMINED
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -297,7 +293,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         for job_id in not_found_jobs:
             job = JobInfo()
             job.job_id = job_id
-            job.job_state = job_states.DONE
+            job.job_state = JOB_STATES.DONE
             # Owner and wallclock time is unknown
             if as_dict:
                 job_stats[job_id] = job

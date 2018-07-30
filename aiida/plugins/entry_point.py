@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+import enum
 import traceback
 try:
     from reentry import manager as epm
@@ -8,7 +17,30 @@ except ImportError:
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
 
+ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
+
+
+class EntryPointFormat(enum.Enum):
+    """
+    Enum to distinguish between the various possible entry point string formats. An entry point string
+    is fully qualified by its group and name concatenated by the entry point string separator character.
+    The group in AiiDA has the prefix `aiida.` and the separator character is the colon `:`.
+
+    Under these definitions a potentially valid entry point string may have the following formats:
+
+        * FULL:    prefixed group plus entry point name     aiida.calculations:job
+        * PARTIAL: unprefixed group plus entry point name   calculations:job
+        * MINIMAL: no group but only entry point name:      job
+
+    Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
+    entry point groups.
+    """
+
+    INVALID = 0
+    FULL = 1
+    PARTIAL = 2
+    MINIMAL = 3
 
 
 entry_point_group_to_module_path_map = {
@@ -26,6 +58,100 @@ entry_point_group_to_module_path_map = {
 }
 
 
+def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
+    """
+    Format an entry point string for a given entry point group and name, based on the specified format
+
+    :param group: the entry point group
+    :param name: the name of the entry point
+    :param fmt: the desired output format
+    :raises TypeError: if fmt is not instance of EntryPointFormat
+    :raises ValueError: if fmt value is invalid
+    """
+    if not isinstance(fmt, EntryPointFormat):
+        raise TypeError('fmt should be an instance of EntryPointFormat')
+
+    if fmt == EntryPointFormat.FULL:
+        return '{}{}{}'.format(group, ENTRY_POINT_STRING_SEPARATOR, name)
+    elif fmt == EntryPointFormat.PARTIAL:
+        return '{}{}{}'.format(group[len(ENTRY_POINT_GROUP_PREFIX):], ENTRY_POINT_STRING_SEPARATOR, name)
+    elif fmt == EntryPointFormat.MINIMAL:
+        return '{}'.format(name)
+    else:
+        raise ValueError('invalid EntryPointFormat')
+
+
+def parse_entry_point_string(entry_point_string):
+    """
+    Validate the entry point string and attempt to parse the entry point group and name
+
+    :param entry_point_string: the entry point string
+    :return: the entry point group and name if the string is valid
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    """
+    if not isinstance(entry_point_string, basestring):
+        raise TypeError('the entry_point_string should be a string')
+
+    try:
+        group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
+    except ValueError as exception:
+        raise ValueError('invalid entry_point_string format')
+
+    return group, name
+
+
+def get_entry_point_string_format(entry_point_string):
+    """
+    Determine the format of an entry point string. Note that it does not validate the actual entry point
+    string and it may not correspond to any actual entry point. This will only assess the string format
+
+    :param entry_point_string: the entry point string
+    :returns: the entry point type
+    :rtype: EntryPointFormat
+    """
+    try:
+        group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
+    except ValueError as exception:
+        return EntryPointFormat.MINIMAL
+    else:
+        if group.startswith(ENTRY_POINT_GROUP_PREFIX):
+            return EntryPointFormat.FULL
+        else:
+            return EntryPointFormat.PARTIAL
+
+
+def get_entry_point_from_string(entry_point_string):
+    """
+    Return an entry point for the given entry point string
+
+    :param entry_point_string: the entry point string
+    :return: the entry point if it exists else None
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    """
+    group, name = parse_entry_point_string(entry_point_string)
+    return get_entry_point(group, name)
+
+
+def load_entry_point_from_string(entry_point_string):
+    """
+    Load the class registered for a given entry point string that determines group and name
+
+    :param entry_point_string: the entry point string
+    :return: class registered at the given entry point
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises LoadingEntryPointError: entry point could not be loaded
+    """
+    group, name = parse_entry_point_string(entry_point_string)
+    return load_entry_point(group, name)
+
+
 def load_entry_point(group, name):
     """
     Load the class registered under the entry point for a given name and group
@@ -33,6 +159,10 @@ def load_entry_point(group, name):
     :param group: the entry point group
     :param name: the name of the entry point
     :return: class registered at the given entry point
+    :raises TypeError: if the entry_point_string is not a string type
+    :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
+    :raises MissingEntryPointError: entry point was not registered
+    :raises MultipleEntryPointError: entry point could not be uniquely resolved
     :raises LoadingEntryPointError: entry point could not be loaded
     """
     entry_point = get_entry_point(group, name)
@@ -45,16 +175,13 @@ def load_entry_point(group, name):
     return loaded_entry_point
 
 
-def load_entry_point_from_string(entry_point_string):
+def get_entry_point_groups():
     """
-    Load the class registered for a given entry point string that determines group and name
+    Return a list of all the recognized entry point groups
 
-    :param entry_point_string: the entry point string
-    :return: class registered at the given entry point
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :return: a list of valid entry point groups
     """
-    group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    return load_entry_point(group, name)
+    return entry_point_group_to_module_path_map.keys()
 
 
 def get_entry_point_names(group, sort=True):

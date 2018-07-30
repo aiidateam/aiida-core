@@ -7,81 +7,44 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=cyclic-import
+"""The `verdi` command line interface."""
 import click
+import click_completion
 
-from aiida.cmdline.utils.pluginable import Pluginable
-
-
-def click_subcmd_complete(cmd_group):
-    """Create a subcommand completion function for a click command group."""
-    def complete(subargs_idx, subargs):
-        """List valid subcommands for a command group that start with the last subarg."""
-        if subargs_idx >= 1:
-            return None
-        incomplete = subargs[-1]
-        print '\n'.join(cmd_group.list_commands({'parameters': [incomplete]}))
-    return complete
+# Activate the completion of parameter types provided by the click_completion package
+click_completion.init()
 
 
-@click.group()
-@click.option('--profile', '-p')
+@click.group(invoke_without_command=True)
+@click.option('-p', '--profile', help='Execute the command for this profile instead of the default profile.')
+@click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')
 @click.pass_context
-def verdi(ctx, profile):
-    """
-    Toplevel command for click-implemented verdi commands.
+def verdi(ctx, profile, version):
+    """The command line interface of AiiDA."""
+    import sys
+    import aiida
+    from aiida.cmdline.utils import echo
 
-    Might eventually replace ``execute_from_cmdline``, however, there is no way to directly call this command from the commandline
-    currently. Instead, it is used for subcommand routing of commands written in click, see aiida/cmdline/commands/work.py for an
-    example. In short it exists, so the name by which the subcommand is called ('verdi something something') matches it's command
-    group hierarchy (group ``verdi``, subgroup ``something``, command ``something``).
+    if version:
+        echo.echo('AiiDA version {}'.format(aiida.__version__))
+        sys.exit(0)
 
-    """
-    ctx.obj = {'profile': profile}
+    if profile is not None:
+        from aiida.backends import settings
+        settings.AIIDADB_PROFILE = profile
 
-
-@verdi.command()
-@click.argument('completion_args', nargs=-1, type=click.UNPROCESSED)
-def completion(completion_args):
-    """
-    Completion command alias for click-implemented verdi commands.
-
-    Due to the roundabout process by which click-implemented verdi commands are called, pressing <Tab><Tab> on one of them tries to
-    call aiida.cmdline.commands.verdi with subcommand completion. Therefore in order to enable the same behaviour as on older commands,
-    such a subcommand with the same signature must exist and must run the same code with the same arguments.
-    """
-    from aiida.cmdline.verdilib import Completion
-    Completion().run(*completion_args)
+    ctx.help_option_names = ['-h', '--help']
 
 
-@verdi.group()
-def export():
-    pass
+# Import to populate the `verdi` sub commands
+# pylint: disable=wrong-import-position
+from aiida.cmdline.commands import (cmd_calculation, cmd_code, cmd_comment, cmd_computer, cmd_data, cmd_daemon,
+                                    cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_profile,
+                                    cmd_quicksetup, cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_user,
+                                    cmd_work, cmd_workflow)
 
-
-@verdi.group()
-def work():
-    pass
-
-
-@verdi.group()
-def user():
-    pass
-
-@verdi.group()
-def node():
-    pass
-
-@verdi.group('data', entry_point_group='aiida.cmdline.data', cls=Pluginable)
-def data_cmd():
-    """Verdi data interface for plugin commands."""
-    pass
-
-
-@verdi.group('daemon')
-def daemon_cmd():
-    pass
-
-
-@verdi.group('code')
-def code_cmd():
-    pass
+# Import to populate the `verdi data` sub commands
+# pylint: disable=wrong-import-position
+from aiida.cmdline.commands.cmd_data import (cmd_array, cmd_bands, cmd_cif, cmd_parameter, cmd_remote, cmd_structure,
+                                             cmd_trajectory, cmd_upf)

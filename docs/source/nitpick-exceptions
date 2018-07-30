@@ -91,10 +91,16 @@ py:obj None
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
+py:exc    click.BadParameter
+py:class  click.ParamType
+py:class  click.core.Group
 py:class  click.core.Option
+py:class  click.Option
 py:class  click.types.ParamType
 py:class  click.types.Choice
-py:class  click.core.Group
+py:class  click.types.IntParamType
+py:class  click.types.StringParamType
+py:class  click.types.Path
 
 py:class  distutils.version.Version
 
@@ -114,6 +120,8 @@ py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
 
+py:class  paramiko.proxy.ProxyCommand
+
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec
@@ -129,8 +137,8 @@ py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
 py:exc    plumpy.TaskRejected
-py:meth   plumpy.ProcessSpec.expose_inputs
-py:meth   plumpy.ProcessSpec.expose_outputs
+py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
+py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 
 py:class  kiwipy.futures.Future
 
@@ -172,3 +180,8 @@ py:class  _abcoll.MutableSequence
 py:class  aiida.orm.node.Node
 # This comes from ABCMeta
 py:meth   aiida.orm.group.Group.get_from_string
+
+py:mod    click
+py:class  click.Choice
+
+py:func   click.Option.get_default

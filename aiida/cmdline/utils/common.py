@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Common utility functions for command line commands."""
 import os
 import sys
 from tabulate import tabulate
@@ -38,8 +39,8 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 
     if isinstance(timestamp, float):
         return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
-    else:
-        return timestamp.strftime(format_str)
+
+    return timestamp.strftime(format_str)
 
 
 def print_last_process_state_change(process_type='calculation'):
@@ -50,7 +51,6 @@ def print_last_process_state_change(process_type='calculation'):
     :param process_type: the process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
-    from aiida.cmdline.utils.common import format_local_time
     from aiida.cmdline.utils.echo import echo_info, echo_warning
     from aiida.daemon.client import DaemonClient
     from aiida.utils import timezone
@@ -73,11 +73,12 @@ def print_last_process_state_change(process_type='calculation'):
         echo_warning('the daemon is not running', bold=True)
 
 
-def print_node_summary(node):
+def get_node_summary(node):
     """
-    Output a pretty printed summary of a Node
+    Return a multi line string with a pretty formatted summary of a Node
 
-    :params node: a Node instance
+    :param node: a Node instance
+    :return: a string summary of the node
     """
     from plumpy import ProcessState
     from aiida.orm.implementation.general.calculation import AbstractCalculation
@@ -124,21 +125,25 @@ def print_node_summary(node):
         if code is not None:
             table.append(['code', code.label])
 
-    print(tabulate(table, headers=table_headers))
+    return tabulate(table, headers=table_headers)
 
 
-def print_node_info(node, print_summary=True):
+def get_node_info(node, include_summary=True):
+    # pylint: disable=too-many-branches
     """
-    Print information about the given node, such as the incoming and outcoming links
+    Return a multi line string of information about the given node, such as the incoming and outcoming links
 
-    :param print_summary: also print out a summary of node properties
+    :param include_summary: also include a summary of node properties
+    :return: a string summary of the node including a description of all its links and log messages
     """
     from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
     from aiida.orm.calculation.work import WorkCalculation
 
-    if print_summary:
-        print_node_summary(node)
+    if include_summary:
+        result = get_node_summary(node)
+    else:
+        result = ''
 
     nodes_input = node.get_inputs(link_type=LinkType.INPUT, also_labels=True)
     nodes_caller = node.get_inputs(link_type=LinkType.CALL, also_labels=True)
@@ -150,35 +155,35 @@ def print_node_info(node, print_summary=True):
     if nodes_caller:
         table = []
         table_headers = ['Called by', 'PK', 'Type']
-        for k, v in nodes_caller:
-            table.append([k, v.pk, v.__class__.__name__])
-        print('\n{}'.format(tabulate(table, headers=table_headers)))
+        for key, value in nodes_caller:
+            table.append([key, value.pk, value.__class__.__name__])
+        result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_input:
         table = []
         table_headers = ['Inputs', 'PK', 'Type']
-        for k, v in nodes_input:
-            if k == 'code': continue
-            table.append([k, v.pk, v.__class__.__name__])
-        print('\n{}'.format(tabulate(table, headers=table_headers)))
-
+        for key, value in nodes_input:
+            if key == 'code':
+                continue
+            table.append([key, value.pk, value.__class__.__name__])
+        result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_output:
         table = []
         table_headers = ['Outputs', 'PK', 'Type']
-        for k, v in nodes_output:
-            table.append([k, v.pk, v.__class__.__name__])
-        print('\n{}'.format(tabulate(table, headers=table_headers)))
-
+        for key, value in nodes_output:
+            table.append([key, value.pk, value.__class__.__name__])
+        result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_called:
         table = []
         table_headers = ['Called', 'PK', 'Type']
-        for k, v in nodes_called:
-            table.append([k, v.pk, v.__class__.__name__])
-        print('\n{}'.format(tabulate(table, headers=table_headers)))
+        for key, value in nodes_called:
+            table.append([key, value.pk, value.__class__.__name__])
+        result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     log_messages = get_log_messages(node)
+
     if log_messages:
         table = []
         table_headers = ['Log messages']
@@ -187,4 +192,58 @@ def print_node_info(node, print_summary=True):
             table.append(["Run 'verdi work report {}' to see them".format(node.pk)])
         else:
             table.append(["Run 'verdi calculation logshow {}' to see them".format(node.pk)])
-        print('\n{}'.format(tabulate(table, headers=table_headers)))
+        result += '\n{}'.format(tabulate(table, headers=table_headers))
+
+    return result
+
+
+def get_calculation_log_report(calculation):
+    """
+    Return a multi line string representation of the log messages and output of a given calculation
+
+    :param calculation: the calculation node
+    :return: a string representation of the log messages and scheduler output
+    """
+    from aiida.backends.utils import get_log_messages
+    from aiida.common.datastructures import calc_states
+
+    log_messages = get_log_messages(calculation)
+    scheduler_out = calculation.get_scheduler_output()
+    scheduler_err = calculation.get_scheduler_error()
+    calculation_state = calculation.get_state()
+    scheduler_state = calculation.get_scheduler_state()
+
+    if calculation_state == calc_states.WITHSCHEDULER:
+        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
+                                                        if scheduler_state else '(unknown)')
+    else:
+        state_string = '{}'.format(calculation_state)
+
+    label_string = ' [{}]'.format(calculation.label) if calculation.label else ''
+
+    result = "*** {}{}: {}".format(calculation.pk, label_string, state_string)
+
+    if scheduler_out is None:
+        result += '*** Scheduler output: N/A'
+    elif scheduler_out:
+        result += '*** Scheduler output:\n{}'.format(scheduler_out)
+    else:
+        result += '*** (empty scheduler output file)'
+
+    if scheduler_err is None:
+        result += '*** Scheduler errors: N/A'
+    elif scheduler_err:
+        result += '*** Scheduler errors:\n{}'.format(scheduler_err)
+    else:
+        result += '*** (empty scheduler errors file)'
+
+    if log_messages:
+        result += '*** {} LOG MESSAGES:'.format(len(log_messages))
+    else:
+        result += '*** 0 LOG MESSAGES'
+
+    for log in log_messages:
+        result += '+-> {} at {}'.format(log['levelname'], log['time'])
+        result += '\n'.join(['|   {}'.format(message) for message in log['message'].splitlines()])
+
+    return result

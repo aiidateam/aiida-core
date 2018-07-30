@@ -2156,8 +2156,8 @@ class TestStructureDataLock(AiidaTestCase):
         _ = a.is_alloy()
         _ = a.has_vacancies()
 
-        b = a.copy()
-        # I check that I can edit after copy
+        b = a.clone()
+        # I check that clone returned an unstored copy and so can be altered
         b.append_site(s)
         b.clear_sites()
         # I check that the original did not change
@@ -2204,7 +2204,7 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
         # Fully reload from UUID
-        b = load_node(a.uuid, parent_class=StructureData)
+        b = load_node(a.uuid, sub_class=StructureData)
 
         for i in range(3):
             for j in range(3):
@@ -2220,9 +2220,9 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
 
-    def test_copy(self):
+    def test_clone(self):
         """
-        Start from a StructureData object, copy it and see if it is preserved
+        Start from a StructureData object, clone it and see if it is preserved
         """
         from aiida.orm.data.structure import StructureData
 
@@ -2234,7 +2234,7 @@ class TestStructureDataReload(AiidaTestCase):
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
-        b = a.copy()
+        b = a.clone()
 
         for i in range(3):
             for j in range(3):
@@ -2252,8 +2252,8 @@ class TestStructureDataReload(AiidaTestCase):
 
         a.store()
 
-        # Copy after store()
-        c = a.copy()
+        # Clone after store()
+        c = a.clone()
         for i in range(3):
             for j in range(3):
                 self.assertAlmostEqual(cell[i][j], c.cell[i][j])
@@ -3009,7 +3009,7 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(second.shape, n2.get_shape('second'))
 
         # Same checks, after reloading with UUID
-        n2 = load_node(n.uuid, parent_class=ArrayData)
+        n2 = load_node(n.uuid, sub_class=ArrayData)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
@@ -3214,7 +3214,7 @@ class TestTrajectoryData(AiidaTestCase):
 
         ##############################################################
         # Again, but after reloading from uuid
-        n = load_node(n.uuid, parent_class=TrajectoryData)
+        n = load_node(n.uuid, sub_class=TrajectoryData)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)

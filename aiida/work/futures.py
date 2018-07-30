@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 import tornado.gen
 
@@ -35,6 +43,7 @@ class CalculationFuture(Future):
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
         calc_node = load_node(pk=pk)
+
         if calc_node.is_terminated:
             self.set_result(calc_node)
         else:

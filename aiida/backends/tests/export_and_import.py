@@ -1426,23 +1426,17 @@ class TestComputer(AiidaTestCase):
         """
         Check why sqla import manages to import the django export file correctly
         """
-        import inspect
-        import os
+        from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computer import Computer
 
-        for filename in ('export_dj_comp_test.aiida',
-                         'export_sqla_comp_test.aiida'):
-            curr_path = inspect.getfile(inspect.currentframe())
-            folder_path = os.path.dirname(curr_path)
-            relative_folder_path = ("export_import_test_files/" + filename)
-            test_file_path = os.path.join(folder_path, relative_folder_path)
+        for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
 
             # Clean the database
             self.clean_db()
 
             # Import the needed data
-            import_data(test_file_path, silent=True)
+            import_archive_fixture(archive)
 
             # The expected metadata & transport parameters
             comp1_metadata = {
@@ -1455,19 +1449,13 @@ class TestComputer(AiidaTestCase):
 
             # Check that we got the correct metadata & transport parameters
             qb = QueryBuilder()
-            qb.append(Computer, project=['transport_params', '_metadata'],
-                      tag="comp")
+            qb.append(Computer, project=['transport_params', '_metadata'], tag="comp")
             self.assertEqual(qb.count(), 1, "Expected only one computer")
 
             res = qb.dict()[0]
 
-            self.assertEqual(res['comp']['transport_params'],
-                             comp1_transport_params,
-                             "Not the expected transport parameters "
-                             "were found")
-            self.assertEqual(res['comp']['_metadata'],
-                             comp1_metadata,
-                             "Not the expected metadata were found")
+            self.assertEqual(res['comp']['transport_params'], comp1_transport_params)
+            self.assertEqual(res['comp']['_metadata'], comp1_metadata)
 
 
 class TestLinks(AiidaTestCase):

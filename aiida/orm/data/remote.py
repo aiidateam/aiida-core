@@ -161,18 +161,12 @@ class RemoteData(Data):
         import os
 
         authinfo = self._get_authinfo()
-        t = authinfo.get_transport()
+        transport = authinfo.get_transport()
 
         remote_dir = self.get_remote_path()
-        pre, post = os.path.split(remote_dir)
 
-        with t:
-            try:
-                t.chdir(pre)
-                t.rmtree(post)
-            except IOError as e:
-                if e.errno == 2:  # directory not existing
-                    pass
+        with transport:
+            clean_remote(transport, remote_dir)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError

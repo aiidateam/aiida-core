@@ -10,20 +10,35 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
+import copy
 import unittest
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
-from aiida.common import caching
 from aiida.orm.calculation import Calculation
-from aiida.orm.code import Code
 from aiida.orm.data import Data
 from aiida.orm.node import Node
 from aiida.orm.utils import load_node
 from aiida.utils.capturing import Capturing
 from aiida.utils.delete_nodes import delete_nodes
+
+
+class TestNodeCopyDeepcopy(AiidaTestCase):
+    """Test that calling copy and deepcopy on a Node does the right thing."""
+
+    def test_copy_not_supported(self):
+        """Copying a base Node instance is not supported."""
+        node = Node()
+        with self.assertRaises(NotImplementedError):
+            clone = copy.copy(node)
+
+    def test_copy_not_supported(self):
+        """Deep copying a base Node instance is not supported."""
+        node = Node()
+        with self.assertRaises(NotImplementedError):
+            clone = copy.deepcopy(node)
 
 
 class TestNodeHashing(AiidaTestCase):
@@ -543,10 +558,10 @@ class TestNodeBasic(AiidaTestCase):
 
         self.assertEquals(date_to_compare, retrieved)
 
-    def test_attributes_on_copy(self):
+    def test_attributes_on_clone(self):
         import copy
 
-        a = Node()
+        a = Data()
         attrs_to_set = {
             'none': None,
             'bool': self.boolval,
@@ -562,20 +577,8 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
 
-        a.store()
-
-        # I now set extras
-        extras_to_set = {
-            'bool': 'some non-boolean value',
-            'some_other_name': 987
-        }
-        all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
-
-        for k, v in extras_to_set.iteritems():
-            a.set_extra(k, v)
-
-            # I make a copy
-        b = a.copy()
+        # Create a copy
+        b = copy.deepcopy(a)
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
@@ -585,8 +588,7 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEquals({k: v
-                           for k, v in b.iterattrs()}, b_expected_attributes)
+        self.assertEquals({k: v for k, v in b.iterattrs()}, b_expected_attributes)
         # Note that during copy, I do not copy the extras!
         self.assertEquals({k: v for k, v in b.iterextras()}, {})
 
@@ -596,20 +598,17 @@ class TestNodeBasic(AiidaTestCase):
         b.set_extra('meta', 'textofext')
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
-        # Now I check for the attributes
-        # First I check that nothing has changed
+        # Now I check that the attributes of the original node have not changed
         self.assertEquals({k: v for k, v in a.iterattrs()}, attrs_to_set)
-        self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
         # I check then on the 'b' copy
-        self.assertEquals({k: v
-                           for k, v in b.iterattrs()}, b_expected_attributes)
+        self.assertEquals({k: v for k, v in b.iterattrs()}, b_expected_attributes)
         self.assertEquals({k: v for k, v in b.iterextras()}, b_expected_extras)
 
     def test_files(self):
         import tempfile
 
-        a = Node()
+        a = Data()
 
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
@@ -627,7 +626,7 @@ class TestNodeBasic(AiidaTestCase):
         with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
-        b = a.copy()
+        b = a.clone()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
@@ -638,7 +637,7 @@ class TestNodeBasic(AiidaTestCase):
         with open(b.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
-        # I overwrite a file and create a new one in the copy only
+        # I overwrite a file and create a new one in the clone only
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
@@ -666,9 +665,9 @@ class TestNodeBasic(AiidaTestCase):
         # so I recheck
         a.store()
 
-        # I now copy after storing
-        c = a.copy()
-        # I overwrite a file and create a new one in the copy only
+        # I now clone after storing
+        c = a.clone()
+        # I overwrite a file and create a new one in the clone only
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
@@ -702,7 +701,7 @@ class TestNodeBasic(AiidaTestCase):
         import random
         import string
 
-        a = Node()
+        a = Data()
 
         # Since Node uses the same method of Folder(),
         # for this test I create a test folder by hand
@@ -747,8 +746,8 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ValueError):
             a.get_folder_list('..')
 
-        # copy into a new node
-        b = a.copy()
+        # clone into a new node
+        b = a.clone()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
@@ -811,7 +810,7 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # I now copy after storing
-        c = a.copy()
+        c = a.clone()
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
         with tempfile.NamedTemporaryFile() as f:
@@ -1517,7 +1516,7 @@ class TestNodeBasic(AiidaTestCase):
         # Testing whether loading the node with part of UUID works, removing the dashes
         for i in range(10, len(uuid_stored), 2):
             start_uuid = uuid_stored[:i].replace('-', '')
-            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+            self.assertEqual(uuid_stored, load_node(uuid=start_uuid).uuid)
             # If I don't allow load_node to fix the dashes, this has to raise:
             with self.assertRaises(NotExistent):
                 load_node(start_uuid, query_with_dashes=False)
@@ -1533,7 +1532,7 @@ class TestNodeBasic(AiidaTestCase):
         # Last check, when asking for specific subclass, this should raise:
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
-                load_node(spec, parent_class=ArrayData)
+                load_node(spec, sub_class=ArrayData)
 
     def test_load_unknown_calculation_type(self):
         """

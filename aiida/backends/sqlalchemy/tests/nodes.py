@@ -239,8 +239,8 @@ class TestNodeBasicSQLA(AiidaTestCase):
         a = Node()
         a.store()
 
-        self.assertEquals(a.pk, load_node(node_id=a.pk).pk)
-        self.assertEquals(a.pk, load_node(node_id=a.uuid).pk)
+        self.assertEquals(a.pk, load_node(identifier=a.pk).pk)
+        self.assertEquals(a.pk, load_node(identifier=a.uuid).pk)
         self.assertEquals(a.pk, load_node(pk=a.pk).pk)
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
@@ -249,7 +249,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         try:
             session.begin_nested()
             with self.assertRaises(InputValidationError):
-                load_node(node_id=a.pk, pk=a.pk)
+                load_node(identifier=a.pk, pk=a.pk)
         finally:
             session.rollback()
 

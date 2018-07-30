@@ -26,6 +26,7 @@ RUN update-locale LANG=en_US.utf8
 RUN apt-get update \
     && apt-get -y install \
     git \
+    vim \
     openssh-client \
     postgresql-client-9.5 \
     postgresql-9.5 \
@@ -44,6 +45,7 @@ RUN apt-get update \
     texlive-latex-extra \
     dvipng \
     dvidvi \
+    graphviz \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean all
 

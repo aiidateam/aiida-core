@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=too-few-public-methods
 """Components to communicate tasks to RabbitMQ."""
 import collections
@@ -350,8 +358,8 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._loop.close()
         self.close()
+        self._loop.close()
 
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)

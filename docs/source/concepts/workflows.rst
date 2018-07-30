@@ -828,7 +828,7 @@ As a first example, we will implement a thin wrapper workflow, which simply forw
 .. include:: include/snippets/workflows/expose_inputs/simple_parent.py
     :code: python
 
-In the ``define`` method of this simple parent workchain, we use the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs`.
+In the ``define`` method of this simple parent workchain, we use the :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`plumpy.process_spec.ProcessSpec.expose_outputs`.
 This creates the corresponding input and output ports in the parent workchain.
 Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class.
 This is used when calling the child in the ``run_child`` method.
@@ -857,9 +857,9 @@ In the next section, we will explain each of the steps.
     :code: python
 
 First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.
-For this, we again use :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
+For this, we again use :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`plumpy.process_spec.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
 This specifies a list of keys, and only inputs or outputs which are in that list will be exposed.
-So by passing ``include=['a']`` to :meth:`~plumpy.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
+So by passing ``include=['a']`` to :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
 
 Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children.
 For this purpose, we pass the ``namespace`` parameter to the expose functions.

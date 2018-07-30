@@ -14,6 +14,7 @@ import plumpy.test_utils
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
+from aiida.orm import load_node
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
@@ -1150,4 +1151,58 @@ class TestWorkChainReturnDict(AiidaTestCase):
 
     def test_run_pointless_workchain(self):
         """Running the pointless workchain should not incur any exceptions"""
-        result = work.run(TestWorkChainReturnDict.PointlessWorkChain)
+        work.run(TestWorkChainReturnDict.PointlessWorkChain)
+
+
+class TestDefaultUniqueness(AiidaTestCase):
+    """Test that default inputs of exposed nodes will get unique UUIDS."""
+
+    class Parent(WorkChain):
+
+        @classmethod
+        def define(cls, spec):
+            super(TestDefaultUniqueness.Parent, cls).define(spec)
+            spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_one')
+            spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_two')
+            spec.outline(cls.do_run)
+
+        def do_run(self):
+            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_one')
+            child_one = self.submit(TestDefaultUniqueness.Child, **inputs)
+            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_two')
+            child_two = self.submit(TestDefaultUniqueness.Child, **inputs)
+            return ToContext(workchain_child_one=child_one, workchain_child_two=child_two)
+
+    class Child(WorkChain):
+
+        @classmethod
+        def define(cls, spec):
+            super(TestDefaultUniqueness.Child, cls).define(spec)
+            spec.input('a', valid_type=Bool, default=Bool(True))
+
+        def _run(self):
+            pass
+
+    def test_unique_default_inputs(self):
+        """
+        The default value for the Child will be constructed at import time, which will be an unstored Bool node with a
+        given ID. When `expose_inputs` is called on the ProcessSpec of the Parent workchain, for the Child workchain,
+        the ports of the Child will be deepcopied into the portnamespace of the Parent, in this case twice, into
+        different namespaces. The port in each namespace will have a deepcopied version of the unstored Bool node. When
+        the Parent workchain is now called without inputs, both those nodes will be stored and used as inputs, but they
+        will have the same UUID, unless the deepcopy will have guaranteed that a new UUID is generated for unstored
+        nodes.
+        """
+        inputs = {
+            'child_one': {},
+            'child_two': {}
+        }
+        result, node = work.run_get_node(TestDefaultUniqueness.Parent, **inputs)
+
+        nodes = [n for n in node.get_inputs()]
+        uuids = set([n.uuid for n in node.get_inputs()])
+
+        # Trying to load one of the inputs through the UUID should fail,
+        # as both `child_one.a` and `child_two.a` should have the same UUID.
+        node = load_node(uuid=node.get_inputs_dict()['child_one_a'].uuid)
+        self.assertEquals(len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

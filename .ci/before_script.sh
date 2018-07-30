@@ -20,13 +20,16 @@ then
     if [[ "$COMPUTER_SETUP_TYPE" != "jenkins" ]]
     then
         # Setup the torquessh computer
-        cat ${TRAVIS_BUILD_DIR}/.ci/computer-torquessh-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
+        verdi -p $TEST_AIIDA_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --enabled --transport=ssh --scheduler=torque --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
 
         # Configure the torquessh computer
-        cat ${TRAVIS_BUILD_DIR}/.ci/computer-torquessh-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
+        verdi -p $TEST_AIIDA_BACKEND computer configure ssh torquessh --non-interactive --username=app --port=10022 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
 
         # Configure the 'doubler' code inside torquessh
-        cat ${TRAVIS_BUILD_DIR}/.ci/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+            -D "simple script that doubles a number and sleeps for a given number of seconds" \
+            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Make sure that the torquessh (localhost:10022) key is hashed
         # in the known_hosts file
@@ -44,16 +47,21 @@ then
         # Computer configuration on Jenkins
 
         # Setup the torquessh computer - this one is custom, using direct scheduler
-        cat .ci/computer-direct-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND computer setup
+        verdi -p $TEST_AIIDA_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --enabled --transport=ssh --scheduler=direct --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
 
         # Configure the torquessh computer - this one is custom, using port 22
-        cat .ci/computer-direct-configure-input.txt | verdi -p $TEST_AIIDA_BACKEND computer configure torquessh
+        verdi -p $TEST_AIIDA_BACKEND computer configure ssh torquessh --non-interactive --username=jenkins --port=22 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
 
         # Configure the 'doubler' code inside torquessh
-        cat .ci/code-doubler-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+            -D "simple script that doubles a number and sleeps for a given number of seconds" \
+            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
-        cat .ci/code-add-setup-input.txt | verdi -p $TEST_AIIDA_BACKEND code setup
+        verdi -p $TEST_AIIDA_BACKEND code setup -n -L add \
+            -D "simple script that adds two numbers" --on-computer -P simpleplugins.arithmetic.add \
+            -Y torquessh --remote-abs-path=/usr/local/bin/add.sh
 
         ## The key of localhost should be already set in the Jenkinsfile
     fi

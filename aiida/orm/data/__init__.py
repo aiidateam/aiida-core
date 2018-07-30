@@ -56,11 +56,45 @@ class Data(Node):
     # Example: {'dat': 'dat_multicolumn'}
     _custom_export_format_replacements = {}
 
+    def __copy__(self):
+        """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
+        raise NotImplementedError('copying a Data node is not supported, use copy.deepcopy')
+
+    def __deepcopy__(self, memo):
+        """
+        Create a clone of the Data node by pipiong through to the clone method and return the result.
+
+        :returns: an unstored clone of this Data node
+        """
+        if self.is_stored:
+            raise NotImplementedError('deep copying a stored Data node is not supported, use Data.clone() instead')
+
+        return self.clone()
+
+    def clone(self):
+        """
+        Create a clone of the Data node.
+
+        :returns: an unstored clone of this Data node
+        """
+        clone = self.__class__()
+        clone.dbnode.dbcomputer = self._dbnode.dbcomputer
+        clone.dbnode.type = self._dbnode.type
+        clone.label = self.label
+        clone.description = self.description
+
+        for key, value in self.iterattrs():
+            clone._set_attr(key, value)
+
+        for path in self.get_folder_list():
+            clone.add_path(self.get_abs_path(path), path)
+
+        return clone
+
     @property
     def source(self):
         """
-        Gets the dictionary describing the source of Data object. Possible
-        fields:
+        Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
         * **db_uri**: URI of the source database.
@@ -69,12 +103,10 @@ class Data(Node):
         * **version**: version of the object's source.
         * **extras**: a dictionary with other fields for source description.
         * **source_md5**: MD5 checksum of object's source.
-        * **description**: human-readable free form description of the
-            object's source.
+        * **description**: human-readable free form description of the object's source.
         * **license**: a string with a type of license.
 
-        .. note:: some limitations for setting the data source exist, see
-            ``_validate`` method.
+        .. note:: some limitations for setting the data source exist, see ``_validate`` method.
 
         :return: dictionary describing the source of Data object.
         """
@@ -86,8 +118,7 @@ class Data(Node):
         Sets the dictionary describing the source of Data object.
 
         :raise KeyError: if dictionary contains unknown field.
-        :raise ValueError: if supplied source description is not a
-            dictionary.
+        :raise ValueError: if supplied source description is not a dictionary.
         """
         if not isinstance(source, dict):
             raise ValueError("Source must be supplied as a dictionary")

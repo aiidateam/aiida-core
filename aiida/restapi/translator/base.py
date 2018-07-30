@@ -476,8 +476,9 @@ class BaseTranslator(object):
           not identify a unique node
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        from aiida.orm.utils.loaders import IdentifierType, get_loader
 
-        from aiida.orm.utils import create_node_id_qb
+        loader = get_loader(self._aiida_class)
 
         if self._has_uuid:
 
@@ -485,22 +486,22 @@ class BaseTranslator(object):
             if not isinstance(id, (str, unicode)):
                 raise RestValidationError('parameter id has to be an string')
 
-            qb = create_node_id_qb(uuid=id, parent_class=self._aiida_class)
+            identifier_type = IdentifierType.UUID
+            qb, _ = loader.get_query_builder(id, identifier_type, sub_classes=(self._aiida_class,))
         else:
 
             # Similarly, check that id is an integer
             if not isinstance(id, int):
                 raise RestValidationError('parameter id has to be an integer')
 
-            qb = create_node_id_qb(pk=id, parent_class=self._aiida_class)
+            identifier_type = IdentifierType.ID
+            qb, _ = loader.get_query_builder(id, identifier_type, sub_classes=(self._aiida_class,))
 
-        # project only the pk
-        qb.add_projection('node', ['id'])
-        # for efficiency i don;t go further than two results
+        # For efficiency I don't go further than two results
         qb.limit(2)
 
         try:
-            pk = qb.one()[0]
+            pk = qb.one()[0].pk
         except MultipleObjectsError:
             raise RestValidationError("More than one node found."
                                       " Provide longer starting pattern"

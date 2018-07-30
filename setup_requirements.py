@@ -32,6 +32,7 @@ install_requires = [
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
+    'click-completion==0.3.1',
     'click-plugins==1.0.3',
     'click-spinner==0.1.7',
     'tabulate==0.8.2',
@@ -40,7 +41,6 @@ install_requires = [
     'psycopg2-binary==2.7.4',
     'paramiko==2.4.1',
     'ecdsa==0.13',
-    'pycrypto==2.6.1',
     'pika==0.11.2',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
     'plumpy==0.10.3',
@@ -116,12 +116,15 @@ extras_require = {
     'dev_sphinxext': [
         'pytest==3.5.1',
         'pytest-cov==2.5.1',
+    ],
+    'bpython': [
+        'bpython==0.17.1',
     ]
 }
 
 extras_require['dev_sphinxext'] += extras_require['docs']
 extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools'] + extras_require['dev_sphinxext']
-extras_require['all'] = [item for sublist in extras_require.values() for item in sublist]
+extras_require['all'] = [item for sublist in extras_require.values() for item in sublist if item != 'bpython']
 
 # There are a number of optional dependencies that are not
 # listed even as optional dependencies as they are quite

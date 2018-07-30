@@ -10,21 +10,27 @@
 from stat import S_ISDIR, S_ISREG
 import StringIO
 
-import aiida.transport.transport
-import paramiko
 import os
+import click
 import glob
 
 import aiida.transport
-from aiida.common.utils import escape_for_bash
-from aiida.transport.util import FileAttribute
+import aiida.transport.transport
+from aiida import transport
+from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types.path import AbsolutePathParamType
+from aiida.cmdline.utils import echo
 from aiida.common import aiidalogger
+from aiida.common.utils import escape_for_bash
+from aiida.common.exceptions import NotExistent
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
+    import paramiko
     config = paramiko.SSHConfig()
     try:
         config.parse(open(os.path.expanduser('~/.ssh/config')))
@@ -46,6 +52,7 @@ def convert_to_bool(string):
         raise ValueError("Invalid boolean value provided")
 
 
+
 class SshTransport(aiida.transport.Transport):
     """
     Support connection, command execution and data transfer to remote computers via SSH+SFTP.
@@ -53,21 +60,23 @@ class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
-    _valid_connect_params = [
-        'username',
-        'port',
-        'look_for_keys',
-        'key_filename',
-        'timeout',
-        'allow_agent',
-        'proxy_command',  # Managed 'manually' in connect
-        'compress',
-        'gss_auth',
-        'gss_kex',
-        'gss_deleg_creds',
-        'gss_host',
+    _valid_connect_options = [
+        ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
+        ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
+        ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
+        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
+        ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
+        ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
+        ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
+        ('compress', {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off', 'non_interactive_default': True}),
+        ('gss_auth', {'type': bool, 'prompt': 'GSS auth', 'help': 'GSS auth for kerberos', 'non_interactive_default': True}),
+        ('gss_kex', {'type': bool, 'prompt': 'GSS kex', 'help': 'GSS kex for kerberos', 'non_interactive_default': True}),
+        ('gss_deleg_creds', {'type': bool, 'prompt': 'GSS deleg_creds', 'help': 'GSS deleg_creds for kerberos', 'non_interactive_default': True}),
+        ('gss_host', {'prompt': 'GSS host', 'help': 'GSS host for kerberos', 'non_interactive_default': True}),
         # for Kerberos support through python-gssapi
     ]
+
+    _valid_connect_params = [i[0] for i in _valid_connect_options]
 
     # Valid parameters for the ssh transport
     # For each param, a class method with name
@@ -79,14 +88,14 @@ class SshTransport(aiida.transport.Transport):
     # define a _get_PARAMNAME_suggestion_string
     # to return a suggestion; it must accept only one parameter, being a Computer
     # instance
-    _valid_auth_params = _valid_connect_params + [
-        'load_system_host_keys',
-        'key_policy',
+    _valid_auth_options = _valid_connect_options + [
+        ('load_system_host_keys', {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off', 'non_interactive_default': True}),
+        ('key_policy', {'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy', 'non_interactive_default': True})
     ]
 
     # I set the (default) value here to 5 secs between consecutive SSH checks.
     # This should be incremented to 30, probably.
-    _DEFAULT_SAFE_OPEN_INTERVAL = 5.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 5
 
     @classmethod
     def _convert_username_fromstring(cls, string):
@@ -338,7 +347,7 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return str(config.get('gssapiauthentication', "no"))
+        return convert_to_bool(str(config.get('gssapiauthentication', "no")))
 
     @classmethod
     def _convert_gss_kex_fromstring(cls, string):
@@ -358,7 +367,7 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return str(config.get('gssapikeyexchange', "no"))
+        return convert_to_bool(str(config.get('gssapikeyexchange', "no")))
 
     @classmethod
     def _convert_gss_deleg_creds_fromstring(cls, string):
@@ -378,7 +387,7 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return str(config.get('gssapidelegatecredentials', "no"))
+        return convert_to_bool(str(config.get('gssapidelegatecredentials', "no")))
 
     @classmethod
     def _convert_gss_host_fromstring(cls, string):
@@ -397,6 +406,10 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         return str(config.get('gssapihostname', computer.hostname))
 
+    @classmethod
+    def _get_safe_interval_suggestion_string(cls, computer):
+        return cls._DEFAULT_SAFE_OPEN_INTERVAL
+
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
@@ -412,6 +425,7 @@ class SshTransport(aiida.transport.Transport):
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
         """
+        import paramiko
         super(SshTransport, self).__init__()
 
         self._is_open = False
@@ -423,6 +437,8 @@ class SshTransport(aiida.transport.Transport):
         self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)
         if self._load_system_host_keys:
             self._client.load_system_host_keys()
+
+        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
 
         self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default
         if self._missing_key_policy == 'RejectPolicy':
@@ -457,6 +473,7 @@ class SshTransport(aiida.transport.Transport):
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
+        from aiida.transport.util import _DetachedProxyCommand
 
         if self._is_open:
             raise InvalidOperation("Cannot open the transport twice")
@@ -534,8 +551,7 @@ class SshTransport(aiida.transport.Transport):
 
     def chdir(self, path):
         """
-        Change directory of the SFTP session. Emulated internally by
-        paramiko.
+        Change directory of the SFTP session. Emulated internally by paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
@@ -1051,6 +1067,8 @@ class SshTransport(aiida.transport.Transport):
         Returns the object Fileattribute, specified in aiida.transport
         Receives in input the path of a given file.
         """
+        from aiida.transport.util import FileAttribute
+
         paramiko_attr = self.sftp.lstat(path)
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
@@ -1252,7 +1270,7 @@ class SshTransport(aiida.transport.Transport):
     def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
         """
         Executes the specified command in bash login shell.
-        
+
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
 
@@ -1407,16 +1425,3 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
-
-
-class _DetachedProxyCommand(paramiko.ProxyCommand):
-    """
-    Modifies paramiko's ProxyCommand by launching the process in a separate process group.
-    """
-
-    def __init__(self, command_line):
-        from subprocess import Popen, PIPE
-        from shlex import split as shlsplit
-        self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
-        self.timeout = None

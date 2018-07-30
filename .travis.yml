@@ -14,10 +14,12 @@ services:
     - docker
 
 addons:
+    # make sure the path in .ci/test_script.sh matches the version requested here
     postgresql: "9.5"
 
     apt:
         packages:
+            - postgresql-server-dev-9.5
             - texlive-base
             - texlive-generic-recommended
             - texlive-fonts-recommended
@@ -26,6 +28,7 @@ addons:
             - texlive-latex-extra
             - dvipng
             - dvidvi
+            - graphviz
 
 before_install:
     # This is needed for the SSH tests (being able to ssh to localhost)
@@ -33,6 +36,10 @@ before_install:
     - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
     - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
     - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
+
+    # Needed to have 'locate' work properly
+    - sudo updatedb
+    - .ci/prep_ssh.sh
 
     # Build the docker image if needed
     - .ci/before_install.sh

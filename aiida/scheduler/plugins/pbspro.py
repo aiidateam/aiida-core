@@ -12,41 +12,43 @@ Plugin for PBSPro.
 This has been tested on PBSPro v. 12.
 """
 from __future__ import division
-from aiida.scheduler import Scheduler
+
+import logging
 from .pbsbaseclasses import PbsBaseClass
+
+_LOGGER = logging.getLogger(__name__)
 
 # This maps PbsPro status letters to our own status list
 
 ## List of states from the man page of qstat
-#B  Array job has at least one subjob running.
-#E  Job is exiting after having run.
-#F  Job is finished.
-#H  Job is held.
-#M  Job was moved to another server.
-#Q  Job is queued.
-#R  Job is running.
-#S  Job is suspended.
-#T  Job is being moved to new location.
-#U  Cycle-harvesting job is suspended due to  keyboard  activity.
-#W  Job is waiting for its submitter-assigned start time to be reached.
-#X  Subjob has completed execution or has been deleted.
+# B  Array job has at least one subjob running.
+# E  Job is exiting after having run.
+# F  Job is finished.
+# H  Job is held.
+# M  Job was moved to another server.
+# Q  Job is queued.
+# R  Job is running.
+# S  Job is suspended.
+# T  Job is being moved to new location.
+# U  Cycle-harvesting job is suspended due to  keyboard  activity.
+# W  Job is waiting for its submitter-assigned start time to be reached.
+# X  Subjob has completed execution or has been deleted.
 
 
-class PbsproScheduler(PbsBaseClass, Scheduler):
+class PbsproScheduler(PbsBaseClass):
     """
     Subclass to support the PBSPro scheduler
     (http://www.pbsworks.com/).
 
     I redefine only what needs to change from the base class
     """
-    _logger = Scheduler._logger.getChild('pbspro')
 
     ## I don't need to change this from the base class
-    #_job_resource_class = PbsJobResource
+    # _job_resource_class = PbsJobResource
 
     ## For the time being I use a common dictionary, should be sufficient
     ## for the time being, but I can redefine it if needed.
-    #_map_status = _map_status_pbs_common
+    # _map_status = _map_status_pbs_common
 
     def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
                             max_wallclock_seconds):
@@ -82,14 +84,14 @@ class PbsproScheduler(PbsBaseClass, Scheduler):
 
         if max_memory_kb:
             try:
-                virtualMemoryKb = int(max_memory_kb)
-                if virtualMemoryKb <= 0:
+                virtual_memory_kb = int(max_memory_kb)
+                if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError("max_memory_kb must be "
                                  "a positive integer (in kB)! It is instead '{}'"
                                  "".format((max_memory_kb)))
-            select_string += ":mem={}kb".format(virtualMemoryKb)
+            select_string += ":mem={}kb".format(virtual_memory_kb)
 
         return_lines.append("#PBS -l {}".format(select_string))
         return return_lines

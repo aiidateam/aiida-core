@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -22,6 +30,9 @@ class ArithmeticAddCalculation(JobCalculation):
         self._default_parser = 'simpleplugins.arithmetic.add'
         self._required_inputs = ['code', 'x', 'y']
         self._optional_inputs = []
+
+        self._DEFAULT_INPUT_FILE = self._INPUT_FILE_NAME
+        self._DEFAULT_OUTPUT_FILE = self._OUTPUT_FILE_NAME
 
     @classproperty
     def _use_methods(cls):

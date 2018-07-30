@@ -170,3 +170,15 @@ def delete_nodes_and_connections_django(pks_to_delete):
             Q(output__in=pks_to_delete)).delete()
         # now delete nodes
         models.DbNode.objects.filter(pk__in=pks_to_delete).delete()
+
+
+def pass_to_django_manage(argv, profile=None):
+    """
+    Call the corresponding django manage.py command
+    """
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    if not is_dbenv_loaded():
+        load_dbenv(profile=profile)
+
+    import django.core.management
+    django.core.management.execute_from_command_line(argv)

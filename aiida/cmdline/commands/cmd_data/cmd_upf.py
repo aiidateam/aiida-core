@@ -65,7 +65,7 @@ def uploadfamily(folder, group_name, group_description, stop_if_existing):
     cls=MultipleValueOption,
     default=None,
     help="Filter the families only to those containing "
-         "a pseudo for each of the specified elements")
+    "a pseudo for each of the specified elements")
 def listfamilies(elements, with_description):
     """
     Print on screen the list of upf families installed
@@ -144,14 +144,7 @@ def exportfamily(folder, group_name):
 @upf.command('import')
 @with_dbenv()
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@click.option(
-    '-f',
-    '--format',
-    'given_format',
-    type=click.Choice(['upf']),
-    default='upf',
-    help="Format of the pseudopotential file")
-def import_upf(filename, given_format):
+def import_upf(filename):
     """
     Import upf data object
     """

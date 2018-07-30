@@ -326,7 +326,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
       * ``job_resource``: a suitable :py:class:`JobResource`
         subclass with information on how many
         nodes and cpus it should use. It must be an instance of the
-        ``aiida.scheduler.Scheduler._job_resource_class`` class.
+        ``aiida.scheduler.Scheduler.job_resource_class`` class.
         Use the Scheduler.create_job_resource method to create it.
       * ``num_machines``: how many machines (or nodes) should be used
       * ``num_mpiprocs_per_machine``: how many MPI procs should be used on each

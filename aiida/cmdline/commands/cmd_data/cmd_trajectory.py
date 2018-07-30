@@ -71,10 +71,10 @@ def show(**kwargs):
     Visualize trajectory
     """
     from aiida.orm.data.array.trajectory import TrajectoryData
-    from aiida.cmdline.commands.data.show import _show_jmol
-    from aiida.cmdline.commands.data.show import _show_xcrysden
-    from aiida.cmdline.commands.data.show import _show_mpl_pos
-    from aiida.cmdline.commands.data.show import _show_mpl_heatmap
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_jmol
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_xcrysden
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_mpl_pos
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_mpl_heatmap
     nodes = kwargs.pop('nodes')
     given_format = kwargs.pop('show_format')
     for node in nodes:

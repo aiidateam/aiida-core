@@ -27,7 +27,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
-from aiida.common.utils import combomethod
+from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 
 _NO_DEFAULT = tuple()
@@ -145,6 +145,11 @@ class AbstractNode(object):
         :return: a description string
         """
         return ""
+
+    @classproperty
+    def plugin_type_string(cls):
+        """Returns the plugin type string of the node class."""
+        return cls._plugin_type_string
 
     @staticmethod
     def get_schema():

@@ -12,6 +12,7 @@ import click
 
 from aiida.plugins.entry_point import load_entry_point, get_entry_point_names, MissingEntryPointError
 
+
 class Pluginable(click.Group):
     """A click command group that finds and loads plugin commands lazily."""
 
@@ -26,7 +27,7 @@ class Pluginable(click.Group):
         subcommands.extend(get_entry_point_names(self._entry_point_group))
         return subcommands
 
-    def get_command(self, ctx, name):
+    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
         """Try to load a subcommand from entry points, else defer to super."""
         command = None
         try:

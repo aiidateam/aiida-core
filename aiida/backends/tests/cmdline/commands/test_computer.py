@@ -28,7 +28,7 @@ def generate_setup_options_dict(replace_args={}, non_interactive=True):
     valid_noninteractive_options['label'] = 'noninteractive_computer'
     valid_noninteractive_options['hostname'] = "localhost"
     valid_noninteractive_options['description'] = "my description"
-    ## Specifically give a string value for interactive prompts
+    # Specifically give a string value for interactive prompts
     if not non_interactive:
         valid_noninteractive_options['enabled'] = "True"
     valid_noninteractive_options['transport'] = "local"

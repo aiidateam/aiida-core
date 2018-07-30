@@ -119,3 +119,37 @@ def echo_deprecated(message, bold=False, nl=True, exit=False):
 
     if exit:
         sys.exit(ExitCode.DEPRECATED.value)
+
+
+def echo_dictionary(dictionary, fmt):
+    """
+    Print the given dictionary to stdout in the given format
+
+    :param dictionary: the dictionary
+    :param fmt: the format to use for printing, valid options: ['json+data']
+    """
+    valid_formats_table = {'json+date': _format_dictionary_json_date}
+
+    try:
+        format_function = valid_formats_table[fmt]
+    except KeyError:
+        formats = ', '.join(valid_formats_table.keys())
+        raise ValueError('Unrecognised printing format. Valid formats are: {}'.format(formats))
+
+    echo(format_function(dictionary))
+
+
+def _format_dictionary_json_date(dictionary):
+    """Return a dictionary formatted as a string using the json format and converting dates to strings."""
+    import json
+
+    def default_jsondump(data):
+        """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
+        import datetime
+
+        if isinstance(data, datetime.datetime):
+            return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+
+        raise TypeError(repr(data) + ' is not JSON serializable')
+
+    return json.dumps(dictionary, indent=2, sort_keys=True, default=default_jsondump)

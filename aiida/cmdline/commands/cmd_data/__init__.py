@@ -48,17 +48,3 @@ def data_plugins(entry_point):
             echo.echo_info('Pass the entry point as an argument to display detailed information')
         else:
             echo.echo_error('No data plugins found')
-
-
-# Import to populate the `verdi data` sub commands
-# pylint: disable=wrong-import-position
-from aiida.cmdline.commands.cmd_data import (
-    cmd_array,
-    cmd_bands,
-    cmd_cif,
-    cmd_parameter,
-    cmd_remote,
-    cmd_structure,
-    cmd_trajectory,
-    cmd_upf,
-)

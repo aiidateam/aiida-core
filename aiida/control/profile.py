@@ -25,7 +25,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     from aiida.backends import settings
     from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
     from aiida.backends.utils import set_backend_type
-    from aiida.cmdline import execname
+    from aiida.cmdline import EXECNAME
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
     from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile, DEFAULT_UMASK,
@@ -109,8 +109,8 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
             #                            "management.")
 
             try:
-                from aiida.cmdline import pass_to_django_manage
-                pass_to_django_manage([execname, 'migrate'], profile=gprofile)
+                from aiida.backends.djsite.utils import pass_to_django_manage
+                pass_to_django_manage([EXECNAME, 'migrate'], profile=gprofile)
             finally:
                 os.umask(old_umask)
 

@@ -195,3 +195,27 @@ class TestVerdiWork(AiidaTestCase):
         """Test the plugins command. As of writing there are no default plugins defined for aiida-core."""
         result = self.cli_runner.invoke(cmd_work.work_plugins, ['non_existent'])
         self.assertIsNotNone(result.exception)
+
+    def test_work_show(self):
+        """Test verdi work show"""
+        workchain_one = WorkCalculation().store()
+        workchain_two = WorkCalculation().store()
+        workchains = [workchain_one, workchain_two]
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertEquals(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(workchain_one.pk)]
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(workchain.pk) for workchain in workchains]
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(len(get_result_lines(result)) > 0)

@@ -10,7 +10,7 @@
 """`verdi devel` commands."""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types import TestModuleParamType
 from aiida.cmdline.utils import decorators, echo

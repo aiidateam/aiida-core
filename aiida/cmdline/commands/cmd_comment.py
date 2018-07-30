@@ -13,7 +13,7 @@ This allows to manage comments from command line.
 """
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 

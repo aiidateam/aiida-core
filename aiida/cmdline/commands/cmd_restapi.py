@@ -17,7 +17,7 @@ import os
 import click
 
 import aiida.restapi
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 
 DEFAULT_CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
 

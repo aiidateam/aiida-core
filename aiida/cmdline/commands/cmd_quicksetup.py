@@ -14,7 +14,7 @@ import sys
 
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.control.profile import setup_profile
 from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info

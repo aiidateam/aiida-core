@@ -34,7 +34,7 @@ def verdi_work():
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
-@options.ALL()
+@options.ALL(help='Show all entries, regardless of their process state.')
 @options.RAW()
 @decorators.with_dbenv()
 def work_list(past_days, all_entries, process_state, exit_status, failed, limit, project, raw):

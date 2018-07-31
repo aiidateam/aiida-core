@@ -67,8 +67,8 @@ def calculation_gotocomputer(calculation):
 @options.LIMIT()
 @options.ORDER_BY()
 @options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
-@options.GROUPS(help='show only calculations that are contained within one or more of these groups')
-@options.ALL(help='show all entries, regardless of their calculation state')
+@options.GROUPS(help='Show only calculations that are contained within one or more of these groups.')
+@options.ALL(help='Show all entries, regardless of their calculation state.')
 @options.ALL_USERS()
 @options.RAW()
 @click.option(

@@ -72,7 +72,12 @@ class Transport(object):
         """
         # Keep track of how many times enter has been called
         if self._enters == 0:
-            self.open()
+            if self.is_open:
+                # Already open, so just add one to the entered counter
+                # this way on the final exit we will not close
+                self._enters += 1
+            else:
+                self.open()
         self._enters += 1
         return self
 

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from collections import namedtuple
 import shutil
 import sys
 import tempfile
@@ -36,57 +37,53 @@ KILL_COMMAND = 'kill'
 
 
 class TransportTaskException(Exception):
-
     def __init__(self, calc_state):
         self.calc_state = calc_state
 
 
-class TransportTask(plumpy.Future):
-    """ A general task that requires transport """
-
-    def __init__(self, calc_node, transport_queue):
-        super(TransportTask, self).__init__()
-        self._calc = calc_node
-        self._authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
-        transport_queue.call_me_with_transport(self._authinfo, self._execute)
-
-    def execute(self, transport):
-        pass
-
-    def _execute(self, authinfo, transport):
-        if not self.cancelled():
-            try:
-                self.set_result(self.execute(transport))
-            except Exception:
-                self.set_exc_info(sys.exc_info())
-
-
-class SubmitJob(TransportTask):
+@tornado.gen.coroutine
+def submit_job(calc_node, transport_queue, cancelled_flag):
     """ A task to submit a job calculation """
 
-    def execute(self, transport):
-        self._calc.logger.info('Submitting calculation<{}>'.format(self._calc.pk))
+    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
+
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError("Submit cancelled")
+
+        calc_node.logger.info('Submitting calculation<{}>'.format(calc_node.pk))
         try:
-            execmanager.submit_calc(self._calc, self._authinfo, transport)
+            execmanager.submit_calc(calc_node, authinfo, transport)
         except Exception:
+            import traceback
+            calc_node.logger.debug("Submission failed:\n{}".format(traceback.format_exc()))
             raise TransportTaskException(calc_states.SUBMISSIONFAILED)
 
 
-class UpdateSchedulerState(TransportTask):
-    """ A task to update the scheduler state of a job calculation """
+@tornado.gen.coroutine
+def update_scheduler_state(calc_node, transport_queue, cancelled_flag):
+    calc_node.logger.info('Updating scheduler state calculation<{}>'.format(calc_node.pk))
 
-    def execute(self, transport):
-        self._calc.logger.info('Updating scheduler state calculation<{}>'.format(self._calc.pk))
+    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
 
-        # We are the only ones to set the calc state to COMPUTED, so if it is set here
-        # it was already completed in a previous task that got shutdown and reactioned
-        if self._calc.get_state() == calc_states.COMPUTED:
-            return True
+    # We are the only ones to set the calc state to COMPUTED, so if it is set here
+    # it was already completed in a previous task that got shutdown and reactioned
+    if calc_node.get_state() == calc_states.COMPUTED:
+        raise tornado.gen.Return(True)
 
-        scheduler = self._calc.get_computer().get_scheduler()
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
+
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError("Update cancelled")
+
+        scheduler = calc_node.get_computer().get_scheduler()
         scheduler.set_transport(transport)
 
-        job_id = self._calc.get_job_id()
+        job_id = calc_node.get_job_id()
 
         kwargs = {'as_dict': True}
         if scheduler.get_feature('can_query_by_user'):
@@ -101,9 +98,9 @@ class UpdateSchedulerState(TransportTask):
         if info is None:
             # If the job is computed or not found assume it's done
             job_done = True
-            self._calc._set_scheduler_state(JOB_STATES.DONE)
+            calc_node._set_scheduler_state(JOB_STATES.DONE)
         else:
-            execmanager.update_job_calc_from_job_info(self._calc, info)
+            execmanager.update_job_calc_from_job_info(calc_node, info)
 
             job_done = info.job_state == JOB_STATES.DONE
 
@@ -118,60 +115,76 @@ class UpdateSchedulerState(TransportTask):
                     u"the information on "
                     u"a job after it has finished.")
 
-            execmanager.update_job_calc_from_detailed_job_info(self._calc, detailed_job_info)
+            execmanager.update_job_calc_from_detailed_job_info(calc_node, detailed_job_info)
+            calc_node._set_state(calc_states.COMPUTED)
 
-            self._calc._set_state(calc_states.COMPUTED)
-
-        return job_done
+        raise tornado.gen.Return(job_done)
 
 
-class RetrieveJob(TransportTask):
-    """ A task to retrieve a completed calculation """
+@tornado.gen.coroutine
+def retrieve_job(calc_node, transport_queue, retrieved_temporary_folder, cancelled_flag):
+    """ This returns the retrieved temporary folder """
+    calc_node.logger.info('Retrieving completed calculation<{}>'.format(calc_node.pk))
 
-    def __init__(self, calc_node, transport_queue, retrieved_temporary_folder):
-        self._retrieved_temporary_folder = retrieved_temporary_folder
-        super(RetrieveJob, self).__init__(calc_node, transport_queue)
+    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
 
-    def execute(self, transport):
-        """ This returns the retrieved temporary folder """
-        self._calc.logger.info('Retrieving completed calculation<{}>'.format(self._calc.pk))
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError("Retrieve cancelled")
+
         try:
-            return execmanager.retrieve_all(self._calc, transport, self._retrieved_temporary_folder)
+            folder = execmanager.retrieve_all(calc_node, transport, retrieved_temporary_folder)
         except Exception:
+            import traceback
+            calc_node.logger.debug("Retrieval failed:\n{}".format(traceback.format_exc()))
             raise TransportTaskException(calc_states.RETRIEVALFAILED)
+        else:
+            # WARNING: This has to be here and not inside the try, otherwise
+            # it will get swallowed up the general Exception catch
+            raise tornado.gen.Return(folder)
 
 
-class KillJob(TransportTask):
+def kill_job(calc_node, transport_queue, cancelled_flag):
+    """
+    Kill a calculation on the cluster.
 
-    def execute(self, transport):
-        """
-        Kill a calculation on the cluster.
+    Can only be called if the calculation is in status WITHSCHEDULER.
 
-        Can only be called if the calculation is in status WITHSCHEDULER.
+    The command tries to run the kill command as provided by the scheduler,
+    and raises an exception is something goes wrong.
+    No changes of calculation status are done (they will be done later by
+    the calculation manager).
 
-        The command tries to run the kill command as provided by the scheduler,
-        and raises an exception is something goes wrong.
-        No changes of calculation status are done (they will be done later by
-        the calculation manager).
+    .. todo: if the status is TOSUBMIT, check with some lock that it is not
+        actually being submitted at the same time in another thread.
+    """
 
-        .. todo: if the status is TOSUBMIT, check with some lock that it is not
-            actually being submitted at the same time in another thread.
-        """
-        calc = self._calc
-        job_id = calc.get_job_id()
-        calc_state = calc.get_state()
+    job_id = calc_node.get_job_id()
+    calc_state = calc_node.get_state()
 
-        if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
-            calc._set_state(calc_states.FAILED)
-            calc._set_scheduler_state(JOB_STATES.DONE)
-            calc.logger.warning("Calculation {} killed by the user (it was in {} state)".format(calc.pk, calc_state))
-            return True
+    if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
+        calc_node._set_state(calc_states.FAILED)
+        calc_node._set_scheduler_state(JOB_STATES.DONE)
+        calc_node.logger.warning(
+            "Calculation {} killed by the user (it was in {} state)".format(calc_node.pk, calc_state))
+        raise tornado.gen.Return(True)
 
-        if calc_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation in {} state".format(calc_state))
+    if calc_state != calc_states.WITHSCHEDULER:
+        raise InvalidOperation("Cannot kill a calculation in {} state".format(calc_state))
+
+    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
+
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
+
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError("Kill cancelled")
 
         # Get the scheduler plugin class and initialize it with the correct transport
-        scheduler = self._calc.get_computer().get_scheduler()
+        scheduler = calc_node.get_computer().get_scheduler()
         scheduler.set_transport(transport)
 
         # Call the proper kill method for the job ID of this calculation
@@ -181,28 +194,29 @@ class KillJob(TransportTask):
         if not result:
             raise RemoteOperationError(
                 "An error occurred while trying to kill calculation {} (jobid {}), see log "
-                "(maybe the calculation already finished?)".format(calc.pk, job_id))
+                "(maybe the calculation already finished?)".format(calc_node.pk, job_id))
         else:
-            calc._set_state(calc_states.FAILED)
-            calc._set_scheduler_state(JOB_STATES.DONE)
-            calc.logger.warning('Calculation<{}> killed by the user'.format(calc.pk))
+            calc_node._set_state(calc_states.FAILED)
+            calc_node._set_scheduler_state(JOB_STATES.DONE)
+            calc_node.logger.warning('Calculation<{}> killed by the user'.format(calc_node.pk))
 
-        return result
+        raise tornado.gen.Return(result)
 
 
 class Waiting(plumpy.Waiting):
     """
     The waiting state for the JobCalculation.
     """
+    CancelFlag = namedtuple('CancelledFlag', ['cancelled'])
 
     def __init__(self, process, done_callback, msg=None, data=None):
         super(Waiting, self).__init__(process, done_callback, msg, data)
-        self._task = None  # The currently running task
+        self._cancel_flag = self.CancelFlag(False)
         self._kill_future = None
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
-        self._task = None
+        self._cancel_flag = self.CancelFlag(False)
         self._kill_future = None
 
     @tornado.gen.coroutine
@@ -219,8 +233,7 @@ class Waiting(plumpy.Waiting):
 
         try:
             if self.data == SUBMIT_COMMAND:
-                self._task = SubmitJob(calc, transport_queue)
-                yield self._task
+                yield submit_job(calc, transport_queue, self._cancel_flag)
 
                 if self._kill_future:
                     yield self._do_kill()
@@ -230,10 +243,9 @@ class Waiting(plumpy.Waiting):
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
                 job_done = False
-                # Keep geting scheduler updates until done
+                # Keep getting scheduler updates until done
                 while not job_done:
-                    self._task = UpdateSchedulerState(calc, transport_queue)
-                    job_done = yield self._task
+                    job_done = yield update_scheduler_state(calc, transport_queue, self._cancel_flag)
                     if self._kill_future:
                         yield self._do_kill()
                         return
@@ -244,8 +256,7 @@ class Waiting(plumpy.Waiting):
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 retrieved_temporary_folder = tempfile.mkdtemp()
-                self._task = RetrieveJob(calc, transport_queue, retrieved_temporary_folder)
-                yield self._task
+                yield retrieve_job(calc, transport_queue, retrieved_temporary_folder, self._cancel_flag)
 
                 if self._kill_future:
                     yield self._do_kill()
@@ -268,8 +279,6 @@ class Waiting(plumpy.Waiting):
             exc_info = sys.exc_info()
             excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
             raise Return(excepted_state)
-        finally:
-            self._task = None
 
     def scheduler_update(self):
         """
@@ -310,9 +319,8 @@ class Waiting(plumpy.Waiting):
 
     @tornado.gen.coroutine
     def _do_kill(self):
-        self._task = KillJob(self.process.calc, self.process.runner.transport)
         try:
-            yield self._task
+            yield kill_job(self.process.calc, self.process.runner.transport, self._cancel_flag)
         except (InvalidOperation, RemoteOperationError):
             pass
 
@@ -329,10 +337,8 @@ class Waiting(plumpy.Waiting):
             if self.process.calc.get_state() in \
                     [calc_states.NEW, calc_states.TOSUBMIT, calc_states.WITHSCHEDULER]:
                 self._kill_future = plumpy.Future()
-                # Are we currently busy with a task?
-                if self._task is not None and not self._task.done():
-                    # Cancel the task
-                    self._task.cancel()
+                # Cancel the task
+                self._cancel_flag.cancelled = True
                 return self._kill_future
             else:
                 # Can't be killed
@@ -361,38 +367,48 @@ class JobProcess(processes.Process):
             # Define the 'options' inputs namespace and its input ports
             spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
             spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
-                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                     'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
-            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
-                help='Set the wallclock in seconds asked to the scheduler')
-            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
-                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '
-                     ' any non-scheduler command')
-            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set the name of the queue on the remote computer')
+                       help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
+            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True,
+                       default=1800,
+                       help='Set the wallclock in seconds asked to the scheduler')
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring,
+                       non_db=True, required=False,
+                       help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                            'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
+                            'scheduler submission file where such text is inserted: with this method, the string is inserted before '
+                            ' any non-scheduler command')
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+                       required=False,
+                       help='Set the name of the queue on the remote computer')
             spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
-                help='Set the computer to be used by the calculation')
+                       help='Set the computer to be used by the calculation')
             spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
-                help='Set the calculation to use mpi')
-            spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True, required=False,
-                help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-                     'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
-            spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
-                help='If set to true, the submission script will load the system environment variables')
-            spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True, required=False,
-                help='Set a dictionary of custom environment variables for this calculation')
-            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set the priority of the job to be queued')
+                       help='Set the calculation to use mpi')
+            spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True,
+                       required=False,
+                       help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+                            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
+            spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True,
+                       required=False,
+                       help='If set to true, the submission script will load the system environment variables')
+            spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True,
+                       required=False,
+                       help='Set a dictionary of custom environment variables for this calculation')
+            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+                       required=False,
+                       help='Set the priority of the job to be queued')
             spec.input('{}.max_memory_kb'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, required=False,
-                help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
-            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
-            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
-                help='Set a string for the output parser. Can be None if no output plugin is available or needed')
+                       help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
+            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+                       required=False,
+                       help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
+            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+                       required=False,
+                       help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
+            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+                       required=False,
+                       help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
             # Define the actual inputs based on the use methods of the calculation class
             for key, use_method in calc_class._use_methods.iteritems():

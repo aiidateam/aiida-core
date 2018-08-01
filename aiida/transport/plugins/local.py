@@ -418,7 +418,7 @@ class LocalTransport(Transport):
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
-        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not localpath:
             raise ValueError("Input localpath to get function " "must be a non empty string")
         if not remotepath:
@@ -467,7 +467,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError("The local path {} does not exist".format(localpath))
+                    raise IOError("The remote path {} does not exist".format(remotepath))
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """

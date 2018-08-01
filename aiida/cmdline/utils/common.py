@@ -214,8 +214,8 @@ def get_calculation_log_report(calculation):
     scheduler_state = calculation.get_scheduler_state()
 
     if calculation_state == calc_states.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
-                                                        if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}\n'.format(calculation_state, scheduler_state
+                                                          if scheduler_state else '(unknown)')
     else:
         state_string = '{}'.format(calculation_state)
 
@@ -224,26 +224,27 @@ def get_calculation_log_report(calculation):
     result = "*** {}{}: {}".format(calculation.pk, label_string, state_string)
 
     if scheduler_out is None:
-        result += '*** Scheduler output: N/A'
+        result += '*** Scheduler output: N/A\n'
     elif scheduler_out:
-        result += '*** Scheduler output:\n{}'.format(scheduler_out)
+        result += '*** Scheduler output:\n{}\n'.format(scheduler_out)
     else:
-        result += '*** (empty scheduler output file)'
+        result += '*** (empty scheduler output file)\n'
 
     if scheduler_err is None:
-        result += '*** Scheduler errors: N/A'
+        result += '*** Scheduler errors: N/A\n'
     elif scheduler_err:
-        result += '*** Scheduler errors:\n{}'.format(scheduler_err)
+        result += '*** Scheduler errors:\n{}\n'.format(scheduler_err)
     else:
-        result += '*** (empty scheduler errors file)'
+        result += '*** (empty scheduler errors file)\n'
 
     if log_messages:
-        result += '*** {} LOG MESSAGES:'.format(len(log_messages))
+        result += '*** {} LOG MESSAGES:\n'.format(len(log_messages))
     else:
-        result += '*** 0 LOG MESSAGES'
+        result += '*** 0 LOG MESSAGES\n'
 
     for log in log_messages:
         result += '+-> {} at {}'.format(log['levelname'], log['time'])
-        result += '\n'.join(['|   {}'.format(message) for message in log['message'].splitlines()])
+        result += '\n'.join([' | {}'.format(message) for message in log['message'].splitlines()])
+        result += '\n'
 
     return result

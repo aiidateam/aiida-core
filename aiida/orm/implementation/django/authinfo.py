@@ -64,7 +64,10 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
                     user.email, computer.name))
 
     def _from_dbmodel(self, dbmodel):
-        return DjangoAuthInfo._from_dbmodel(self, dbmodel)
+        from aiida.orm.backend import construct_backend
+        backend = construct_backend()
+
+        return DjangoAuthInfo._from_dbmodel(backend, dbmodel)
 
 
 class DjangoAuthInfo(AuthInfo):

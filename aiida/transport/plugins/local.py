@@ -26,8 +26,8 @@ import subprocess
 import StringIO
 import glob
 
+from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
-from aiida import transport
 
 
 # refactor or raise the limit: issue #1784
@@ -871,4 +871,4 @@ class LocalTransport(Transport):
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
 
-CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')
+CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('local')

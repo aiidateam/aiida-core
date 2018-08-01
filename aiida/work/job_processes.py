@@ -8,10 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from collections import namedtuple
+import functools
+import logging
 import shutil
 import sys
 import tempfile
-import tornado.gen
+import traceback
+from tornado.gen import coroutine, Return
 
 import plumpy
 from plumpy.ports import PortNamespace
@@ -22,8 +25,8 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationExitStatus
-from aiida.scheduler.datastructures import JOB_STATES
 from aiida.work.process_builder import JobProcessBuilder
+from aiida.work.utils import exponential_backoff_retry
 
 from . import persistence
 from . import processes
@@ -37,170 +40,188 @@ KILL_COMMAND = 'kill'
 
 
 class TransportTaskException(Exception):
-    def __init__(self, calc_state):
-        self.calc_state = calc_state
+    pass
 
 
-@tornado.gen.coroutine
-def submit_job(calc_node, transport_queue, cancelled_flag):
-    """ A task to submit a job calculation """
-
-    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
-
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError("Submit cancelled")
-
-        calc_node.logger.info('Submitting calculation<{}>'.format(calc_node.pk))
-        try:
-            execmanager.submit_calc(calc_node, authinfo, transport)
-        except Exception:
-            import traceback
-            calc_node.logger.debug("Submission failed:\n{}".format(traceback.format_exc()))
-            raise TransportTaskException(calc_states.SUBMISSIONFAILED)
+LOGGER = logging.getLogger(__name__)
 
 
-@tornado.gen.coroutine
-def update_scheduler_state(calc_node, transport_queue, cancelled_flag):
-    calc_node.logger.info('Updating scheduler state calculation<{}>'.format(calc_node.pk))
+@coroutine
+def task_submit_job(node, transport_queue, cancelled_flag):
+    """
+    Transport task that will attempt to submit a job calculation
 
-    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
 
-    # We are the only ones to set the calc state to COMPUTED, so if it is set here
-    # it was already completed in a previous task that got shutdown and reactioned
-    if calc_node.get_state() == calc_states.COMPUTED:
-        raise tornado.gen.Return(True)
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    initial_interval = 1
+    max_attempts = 1
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
 
     with transport_queue.request_transport(authinfo) as request:
         transport = yield request
 
         # It may have taken time to get the transport, check if we've been cancelled
         if cancelled_flag.cancelled:
-            raise plumpy.CancelledError("Update cancelled")
+            raise plumpy.CancelledError('task_submit_job for calculation<{}> cancelled'.format(node.pk))
 
-        scheduler = calc_node.get_computer().get_scheduler()
-        scheduler.set_transport(transport)
-
-        job_id = calc_node.get_job_id()
-
-        kwargs = {'as_dict': True}
-        if scheduler.get_feature('can_query_by_user'):
-            kwargs['user'] = "$USER"
-        else:
-            # In general schedulers can either query by user or by jobs, but not both
-            # (see also docs of the Scheduler class)
-            kwargs['jobs'] = [job_id]
-        found_jobs = scheduler.getJobs(**kwargs)
-
-        info = found_jobs.get(job_id, None)
-        if info is None:
-            # If the job is computed or not found assume it's done
-            job_done = True
-            calc_node._set_scheduler_state(JOB_STATES.DONE)
-        else:
-            execmanager.update_job_calc_from_job_info(calc_node, info)
-
-            job_done = info.job_state == JOB_STATES.DONE
-
-        if job_done:
-            # If the job is done, also get detailed job info
-            try:
-                detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-            except exceptions.FeatureNotAvailable:
-                detailed_job_info = (
-                    u"AiiDA MESSAGE: This scheduler does not implement "
-                    u"the routine get_detailed_jobinfo to retrieve "
-                    u"the information on "
-                    u"a job after it has finished.")
-
-            execmanager.update_job_calc_from_detailed_job_info(calc_node, detailed_job_info)
-            calc_node._set_state(calc_states.COMPUTED)
-
-        raise tornado.gen.Return(job_done)
-
-
-@tornado.gen.coroutine
-def retrieve_job(calc_node, transport_queue, retrieved_temporary_folder, cancelled_flag):
-    """ This returns the retrieved temporary folder """
-    calc_node.logger.info('Retrieving completed calculation<{}>'.format(calc_node.pk))
-
-    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
-
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError("Retrieve cancelled")
+        LOGGER.info('submitting calculation<{}>'.format(node.pk))
+        node._set_state(calc_states.SUBMITTING)
 
         try:
-            folder = execmanager.retrieve_all(calc_node, transport, retrieved_temporary_folder)
+            corout = functools.partial(execmanager.submit_calculation, node, transport)
+            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
         except Exception:
-            import traceback
-            calc_node.logger.debug("Retrieval failed:\n{}".format(traceback.format_exc()))
-            raise TransportTaskException(calc_states.RETRIEVALFAILED)
+            LOGGER.warning('submitting calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+            node._set_state(calc_states.SUBMISSIONFAILED)
+            raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
         else:
-            # WARNING: This has to be here and not inside the try, otherwise
-            # it will get swallowed up the general Exception catch
-            raise tornado.gen.Return(folder)
+            LOGGER.info('submitting calculation<{}> successful'.format(node.pk))
+            node._set_state(calc_states.WITHSCHEDULER)
+            raise Return(result)
 
 
-def kill_job(calc_node, transport_queue, cancelled_flag):
+@coroutine
+def task_update_job(node, transport_queue, cancelled_flag):
     """
-    Kill a calculation on the cluster.
+    Transport task that will attempt to update the scheduler state of a job calculation
 
-    Can only be called if the calculation is in status WITHSCHEDULER.
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
 
-    The command tries to run the kill command as provided by the scheduler,
-    and raises an exception is something goes wrong.
-    No changes of calculation status are done (they will be done later by
-    the calculation manager).
-
-    .. todo: if the status is TOSUBMIT, check with some lock that it is not
-        actually being submitted at the same time in another thread.
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    initial_interval = 1
+    max_attempts = 5
 
-    job_id = calc_node.get_job_id()
-    calc_state = calc_node.get_state()
-
-    if calc_state == calc_states.NEW or calc_state == calc_states.TOSUBMIT:
-        calc_node._set_state(calc_states.FAILED)
-        calc_node._set_scheduler_state(JOB_STATES.DONE)
-        calc_node.logger.warning(
-            "Calculation {} killed by the user (it was in {} state)".format(calc_node.pk, calc_state))
-        raise tornado.gen.Return(True)
-
-    if calc_state != calc_states.WITHSCHEDULER:
-        raise InvalidOperation("Cannot kill a calculation in {} state".format(calc_state))
-
-    authinfo = calc_node.get_computer().get_authinfo(calc_node.get_user())
+    authinfo = node.get_computer().get_authinfo(node.get_user())
 
     with transport_queue.request_transport(authinfo) as request:
         transport = yield request
 
         # It may have taken time to get the transport, check if we've been cancelled
         if cancelled_flag.cancelled:
-            raise plumpy.CancelledError("Kill cancelled")
+            raise plumpy.CancelledError('task_update_job for calculation<{}> cancelled'.format(node.pk))
 
-        # Get the scheduler plugin class and initialize it with the correct transport
-        scheduler = calc_node.get_computer().get_scheduler()
-        scheduler.set_transport(transport)
+        LOGGER.info('updating calculation<{}>'.format(node.pk))
 
-        # Call the proper kill method for the job ID of this calculation
-        result = scheduler.kill(job_id)
-
-        # Raise error if something went wrong
-        if not result:
-            raise RemoteOperationError(
-                "An error occurred while trying to kill calculation {} (jobid {}), see log "
-                "(maybe the calculation already finished?)".format(calc_node.pk, job_id))
+        try:
+            corout = functools.partial(execmanager.update_calculation, node, transport)
+            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
+        except Exception:
+            LOGGER.warning('updating calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+            node._set_state(calc_states.FAILED)
+            raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
         else:
-            calc_node._set_state(calc_states.FAILED)
-            calc_node._set_scheduler_state(JOB_STATES.DONE)
-            calc_node.logger.warning('Calculation<{}> killed by the user'.format(calc_node.pk))
+            LOGGER.info('updating calculation<{}> successful'.format(node.pk))
+            if result:
+                node._set_state(calc_states.COMPUTED)
+            raise Return(result)
 
-        raise tornado.gen.Return(result)
+
+@coroutine
+def task_retrieve_job(node, transport_queue, cancelled_flag, retrieved_temporary_folder):
+    """
+    Transport task that will attempt to retrieve all files of a completed job calculation
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    initial_interval = 1
+    max_attempts = 5
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
+
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError('task_retrieve_job for calculation<{}> cancelled'.format(node.pk))
+
+        LOGGER.info('retrieving calculation<{}>'.format(node.pk))
+        node._set_state(calc_states.RETRIEVING)
+
+        try:
+            corout = functools.partial(execmanager.retrieve_calculation, node, transport, retrieved_temporary_folder)
+            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
+        except Exception:
+            LOGGER.warning('retrieving calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+            node._set_state(calc_states.RETRIEVALFAILED)
+            raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
+        else:
+            LOGGER.info('retrieving calculation<{}> successful'.format(node.pk))
+            raise Return(result)
+
+
+@coroutine
+def task_kill_job(node, transport_queue, cancelled_flag):
+    """
+    Transport task that will attempt to kill a job calculation
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    initial_interval = 1
+    max_attempts = 5
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+
+    if node.get_state() in [calc_states.NEW, calc_states.TOSUBMIT]:
+        node._set_state(calc_states.FAILED)
+        LOGGER.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
+        raise Return(True)
+
+    with transport_queue.request_transport(authinfo) as request:
+        transport = yield request
+
+        # It may have taken time to get the transport, check if we've been cancelled
+        if cancelled_flag.cancelled:
+            raise plumpy.CancelledError('task_kill_job for calculation<{}> cancelled'.format(node.pk))
+
+        LOGGER.info('killing calculation<{}>'.format(node.pk))
+
+        try:
+            corout = functools.partial(execmanager.kill_calculation, node, transport)
+            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
+        except Exception:
+            LOGGER.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+            node._set_state(calc_states.FAILED)
+            raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
+        else:
+            LOGGER.info('killing calculation<{}> successful'.format(node.pk))
+            raise Return(result)
 
 
 class Waiting(plumpy.Waiting):
@@ -219,9 +240,8 @@ class Waiting(plumpy.Waiting):
         self._cancel_flag = self.CancelFlag(False)
         self._kill_future = None
 
-    @tornado.gen.coroutine
+    @coroutine
     def execute(self):
-        from tornado.gen import Return
 
         if self._kill_future:
             yield self._do_kill()
@@ -233,41 +253,45 @@ class Waiting(plumpy.Waiting):
 
         try:
             if self.data == SUBMIT_COMMAND:
-                yield submit_job(calc, transport_queue, self._cancel_flag)
+
+                yield task_submit_job(calc, transport_queue, self._cancel_flag)
 
                 if self._kill_future:
                     yield self._do_kill()
-                else:
-                    # Now get scheduler updates
-                    raise Return(self.scheduler_update())
+
+                # Now get scheduler updates
+                raise Return(self.scheduler_update())
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
+
                 job_done = False
+
                 # Keep getting scheduler updates until done
                 while not job_done:
-                    job_done = yield update_scheduler_state(calc, transport_queue, self._cancel_flag)
+                    job_done = yield task_update_job(calc, transport_queue, self._cancel_flag)
+
                     if self._kill_future:
                         yield self._do_kill()
-                        return
 
                 # Done, go on to retrieve
                 raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
+
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 retrieved_temporary_folder = tempfile.mkdtemp()
-                yield retrieve_job(calc, transport_queue, retrieved_temporary_folder, self._cancel_flag)
+                yield task_retrieve_job(calc, transport_queue, self._cancel_flag, retrieved_temporary_folder)
 
                 if self._kill_future:
                     yield self._do_kill()
-                else:
-                    raise Return(self.retrieved(retrieved_temporary_folder))
+
+                raise Return(self.retrieved(retrieved_temporary_folder))
 
             else:
-                raise RuntimeError("Unknown waiting command")
+                raise RuntimeError('Unknown waiting command')
 
-        except TransportTaskException as exception:
-            exit_status = JobCalculationExitStatus[exception.calc_state].value
+        except TransportTaskException:
+            exit_status = JobCalculationExitStatus[calc.get_state()].value
             raise Return(self.create_state(processes.ProcessState.FINISHED, exit_status, exit_status is 0))
         except plumpy.CancelledError:
             # A task was cancelled because the state (and process) is being killed
@@ -317,10 +341,10 @@ class Waiting(plumpy.Waiting):
             self.process.retrieved,
             retrieved_temporary_folder)
 
-    @tornado.gen.coroutine
+    @coroutine
     def _do_kill(self):
         try:
-            yield kill_job(self.process.calc, self.process.runner.transport, self._cancel_flag)
+            yield task_kill_job(self.process.calc, self.process.runner.transport, self._cancel_flag)
         except (InvalidOperation, RemoteOperationError):
             pass
 
@@ -328,14 +352,13 @@ class Waiting(plumpy.Waiting):
             self._kill_future.set_result(True)
             self._kill_future = None
 
-        raise tornado.gen.Return(self.create_state(processes.ProcessState.KILLED, 'Got killed yo'))
+        raise Return(self.create_state(processes.ProcessState.KILLED, 'Got killed yo'))
 
     def kill(self, msg=None):
         if self._kill_future is not None:
             return self._kill_future
         else:
-            if self.process.calc.get_state() in \
-                    [calc_states.NEW, calc_states.TOSUBMIT, calc_states.WITHSCHEDULER]:
+            if self.process.calc.get_state() in [calc_states.NEW, calc_states.TOSUBMIT, calc_states.WITHSCHEDULER]:
                 self._kill_future = plumpy.Future()
                 # Cancel the task
                 self._cancel_flag.cancelled = True
@@ -450,14 +473,12 @@ class JobProcess(processes.Process):
         """The Process excepted so we set the calculation and scheduler state."""
         super(JobProcess, self).on_excepted()
         self.calc._set_state(calc_states.FAILED)
-        self.calc._set_scheduler_state(JOB_STATES.DONE)
 
     @override
     def on_killed(self):
         """The Process was killed so we set the calculation and scheduler state."""
         super(JobProcess, self).on_excepted()
         self.calc._set_state(calc_states.FAILED)
-        self.calc._set_scheduler_state(JOB_STATES.DONE)
 
     @override
     def update_outputs(self):
@@ -560,9 +581,7 @@ class JobProcess(processes.Process):
             try:
                 shutil.rmtree(retrieved_temporary_folder)
             except OSError as exception:
-                if exception.errno == 2:
-                    pass
-                else:
+                if exception.errno != 2:
                     raise
 
         # Finally link up the outputs and we're done

@@ -17,9 +17,9 @@ from . import user
 class SqlaBackend(Backend):
 
     def __init__(self):
-        self._logs = log.SqlaLogCollection()
-        self._users = user.SqlaUserCollection()
-        self._authinfos = authinfo.SqlaAuthInfoCollection()
+        self._logs = log.SqlaLogCollection(self)
+        self._users = user.SqlaUserCollection(self)
+        self._authinfos = authinfo.SqlaAuthInfoCollection(self)
 
     @property
     def logs(self):

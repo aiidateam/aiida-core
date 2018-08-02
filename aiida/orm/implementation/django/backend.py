@@ -17,9 +17,9 @@ from . import user
 class DjangoBackend(Backend):
 
     def __init__(self):
-        self._logs = log.DjangoLogCollection()
-        self._users = user.DjangoUserCollection()
-        self._authinfos = authinfo.DjangoAuthInfoCollection()
+        self._logs = log.DjangoLogCollection(self)
+        self._users = user.DjangoUserCollection(self)
+        self._authinfos = authinfo.DjangoAuthInfoCollection(self)
 
     @property
     def logs(self):

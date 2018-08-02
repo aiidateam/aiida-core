@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.common.utils import type_check
 from aiida.orm.user import User, UserCollection
 from aiida.utils.email import normalize_email
 
@@ -15,6 +16,7 @@ from . import utils
 
 
 class SqlaUserCollection(UserCollection):
+
     def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
@@ -23,9 +25,6 @@ class SqlaUserCollection(UserCollection):
         :rtype: :class:`aiida.orm.User`
         """
         return SqlaUser(self, normalize_email(email), first_name, last_name, institution)
-
-    def from_dbmodel(self, dbuser):
-        return SqlaUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
         # Constructing the default query
@@ -45,17 +44,18 @@ class SqlaUserCollection(UserCollection):
             users.append(self.from_dbmodel(dbuser))
         return users
 
+    def from_dbmodel(self, dbmodel):
+        return SqlaUser.from_dbmodel(dbmodel, self.backend)
+
 
 class SqlaUser(User):
-    @classmethod
-    def _from_dbmodel(cls, backend, dbuser):
-        if not isinstance(dbuser, DbUser):
-            raise ValueError("Expected a DbUser. Object of a different"
-                             "class was given as argument.")
 
+    @classmethod
+    def from_dbmodel(cls, dbmodel, backend):
+        type_check(dbmodel, DbUser)
         user = cls.__new__(cls)
         super(SqlaUser, user).__init__(backend)
-        user._dbuser = utils.ModelWrapper(dbuser)
+        user._dbuser = utils.ModelWrapper(dbmodel)
         return user
 
     def __init__(self, backend, email, first_name, last_name, institution):

@@ -58,7 +58,7 @@ class DBLogHandler(logging.Handler):
 
         try:
             backend = construct_backend()
-            backend.log.create_entry_from_record(record)
+            backend.logs.create_entry_from_record(record)
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the

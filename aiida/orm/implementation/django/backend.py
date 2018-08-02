@@ -15,14 +15,15 @@ from . import user
 
 
 class DjangoBackend(Backend):
+
     def __init__(self):
-        self._log = log.DjangoLog()
+        self._logs = log.DjangoLogCollection()
         self._users = user.DjangoUserCollection()
         self._authinfos = authinfo.DjangoAuthInfoCollection()
 
     @property
-    def log(self):
-        return self._log
+    def logs(self):
+        return self._logs
 
     @property
     def users(self):

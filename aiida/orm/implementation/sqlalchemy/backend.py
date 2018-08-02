@@ -15,14 +15,15 @@ from . import user
 
 
 class SqlaBackend(Backend):
+
     def __init__(self):
-        self._log = log.SqlaLog()
+        self._logs = log.SqlaLogCollection()
         self._users = user.SqlaUserCollection()
         self._authinfos = authinfo.SqlaAuthInfoCollection()
 
     @property
-    def log(self):
-        return self._log
+    def logs(self):
+        return self._logs
 
     @property
     def users(self):

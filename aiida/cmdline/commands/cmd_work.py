@@ -200,7 +200,7 @@ def work_report(calculations, levelname, indent_size, max_depth):
             'objpk': pk,
         }
 
-        entries = backend.log.find(filter_by=filters)
+        entries = backend.logs.find(filter_by=filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 

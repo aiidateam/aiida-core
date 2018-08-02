@@ -8,17 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name
-###########################################################################
-# Copyright (c), The AiiDA team. All rights reserved.                     #
-# This file is part of the AiiDA code.                                    #
-#                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
-# For further information on the license, see the LICENSE.txt file        #
-# For further information please visit http://www.aiida.net               #
-###########################################################################
 """Utilities for the workflow engine."""
 import contextlib
+import logging
+import traceback
 import tornado.ioloop
+from tornado.gen import coroutine, sleep, Return
 
 from aiida.common.links import LinkType
 from aiida.orm.calculation import Calculation, WorkCalculation, FunctionCalculation
@@ -26,9 +21,68 @@ from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = []
 
+LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
+
+
+def ensure_coroutine(fct):
+    """
+    Ensure that the given function ``fct`` is a coroutine
+
+    If the passed function is not already a coroutine, it will be made to be a coroutine
+
+    :param fct: the function
+    :returns: the coroutine
+    """
+    if tornado.gen.is_coroutine_function(fct):
+        return fct
+
+    @tornado.gen.coroutine
+    def wrapper(*args, **kwargs):
+        raise tornado.gen.Return(fct(*args, **kwargs))
+
+    return wrapper
+
+
+@coroutine
+def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None):
+    """
+    Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
+
+    This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
+    finished without raising an exception, at which point the returned result will be raised, wrapped in a
+    ``tornado.gen.Result`` instance. If an exception is caught, the function will yield a ``tornado.gen.sleep`` with a
+    time interval equal to the ``initial_interval`` multiplied by ``2*N`` where ``N`` is the number of excepted calls.
+
+    :param fct: the function to call, which will be turned into a coroutine first if it is not already
+    :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
+    :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
+    :raises: ``tornado.gen.Result`` if the ``coro`` call completes within ``max_attempts`` retries without raising
+    """
+    if logger is None:
+        logger = LOGGER
+
+    result = None
+    coro = ensure_coroutine(fct)
+    interval = initial_interval
+
+    for iteration in range(max_attempts):
+        try:
+            result = yield coro()
+            break  # Finished successfully
+        except Exception:  # pylint: disable=broad-except
+            if iteration == max_attempts - 1:
+                logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
+                raise
+            else:
+                logger.warning('iteration %d of %s excepted, retrying after %d seconds\n%s', iteration + 1,
+                               coro.__name__, interval, traceback.format_exc())
+                yield sleep(interval)
+                interval *= 2
+
+    raise Return(result)
 
 
 def is_work_calc_type(calc_node):

@@ -204,18 +204,19 @@ class Group(AbstractGroup):
     def nodes(self):
         class iterator(object):
             def __init__(self, dbnodes):
-                self.dbnodes = dbnodes
+                self._dbnodes = dbnodes
+                self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
 
             def _genfunction(self):
-                for n in self.dbnodes:
+                for n in self._iter:
                     yield n.get_aiida_class()
 
             def __iter__(self):
                 return self
 
             def __len__(self):
-                return len(self.dbnodes)
+                return self._dbnodes.count()
 
             # For future python-3 compatibility
             def __next__(self):
@@ -224,7 +225,7 @@ class Group(AbstractGroup):
             def next(self):
                 return next(self.generator)
 
-        return iterator(self._dbgroup.dbnodes.all())
+        return iterator(self._dbgroup.dbnodes)
 
     def remove_nodes(self, nodes):
         if not self.is_stored:

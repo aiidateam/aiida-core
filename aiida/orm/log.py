@@ -10,6 +10,7 @@
 from abc import abstractmethod, abstractproperty, ABCMeta
 from collections import namedtuple
 from aiida.utils import timezone
+from .backend import Collection, CollectionEntry
 
 ASCENDING = 1
 DESCENDING = -1
@@ -17,7 +18,7 @@ DESCENDING = -1
 OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 
-class LogCollection(object):
+class LogCollection(Collection):
     """
     This class represents the collection of logs and can be used to create
     and retrieve logs.
@@ -103,7 +104,7 @@ class LogCollection(object):
         pass
 
 
-class Log(object):
+class Log(CollectionEntry):
     __metaclass__ = ABCMeta
 
     @abstractproperty

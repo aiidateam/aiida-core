@@ -268,7 +268,7 @@ def setup_computer(non_interactive, **kwargs):
     echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
 
     echo.echo_info("Note: before using it with AiiDA, configure it using the command")
-    echo.echo_info("  verdi computer configure {}".format(computer.name))
+    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
     echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
     echo.echo_info("the command-line interface at the moment)")
 

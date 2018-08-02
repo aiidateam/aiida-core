@@ -483,12 +483,12 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 from aiida.orm.backend import construct_backend
                 self._backend = construct_backend()
-                self._backend.log.delete_many({})
+                self._backend.logs.delete_many({})
                 self.report("Testing the report function")
                 return
 
             def check(self):
-                logs = self._backend.log.find()
+                logs = self._backend.logs.find()
                 assert len(logs) == 1
 
         run_and_check_success(TestWorkChain)

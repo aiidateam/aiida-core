@@ -50,7 +50,7 @@ class Backend(object):
     __metaclass__ = ABCMeta
 
     @abstractproperty
-    def log(self):
+    def logs(self):
         """
         Get an object that implements the logging utilities interface.
 

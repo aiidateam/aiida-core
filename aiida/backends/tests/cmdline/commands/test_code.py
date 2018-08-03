@@ -4,7 +4,7 @@ import subprocess as sp
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show)
+from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show, code_duplicate)
 from aiida.common.exceptions import NotExistent
 
 
@@ -197,3 +197,25 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.runner.invoke(show, [str(self.code.pk)])
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
+
+    #def test_code_duplicate_interactive(self):
+    #    # This currently hangs (to investigate why)
+    #    os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+    #    os.environ['EDITOR'] = 'sleep 1; vim -cwq'
+    #    label = 'abc'
+    #    user_input = '\n'.join(
+    #        [str(self.code.pk), label, 'my desc', '', '', '', ''])
+    #    result = self.runner.invoke(setup_code, input=user_input)
+    #    #result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
+    #    self.assertIsNone(result.exception)
+    #    self.assertTrue(str(self.code.pk) in result.output)
+
+    def test_code_duplicate_non_interactive(self):
+        # This does not seem to take the default values from contextual_defaults
+        # (to fix)
+        label = 'abc'
+        result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
+        self.assertIsNone(result.exception)
+        self.assertTrue(str(self.code.pk) in result.output)
+
+

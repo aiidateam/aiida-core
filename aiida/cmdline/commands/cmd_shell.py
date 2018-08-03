@@ -8,48 +8,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import absolute_import
 
 import os
 import click
 
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.cmdline.commands import verdi_shell
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-
-DEFAULT_MODULES_LIST = [
-    ("aiida.orm", "Node", "Node"),
-    ("aiida.orm.utils", "load_node", "load_node"),
-    ("aiida.orm", "Calculation", "Calculation"),
-    ("aiida.orm", "JobCalculation", "JobCalculation"),
-    ("aiida.orm.code", "Code", "Code"),
-    ("aiida.orm", "Data", "Data"),
-    ("aiida.orm", "CalculationFactory", "CalculationFactory"),
-    ("aiida.orm", "DataFactory", "DataFactory"),
-    ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
-    ("aiida.orm.computer", "Computer", "Computer"),
-    ("aiida.orm.group", "Group", "Group"),
-    ("aiida.orm.workflow", "Workflow", "Workflow"),
-    ("aiida.orm", "load_workflow", "load_workflow"),
-    ("aiida.orm.querybuilder", "QueryBuilder", "QueryBuilder"),
-    # ("aiida.backends.djsite.db", "models", "models"),
-    # ("aiida.backends.sqlalchemy", "models", "models"),
-]
-
-
-class Shell(VerdiCommand):
-    """Open a shell (ipython / bpython) with aiida env preloaded."""
-
-    def run(self, *args):
-        ctx = shell.make_context('shell', list(args))
-        with ctx:
-            shell.invoke(ctx)
 
 
 def get_start_namespace():
     """Load all default and custom modules"""
+    from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
     from aiida.common.setup import get_property
+
     user_ns = {}
     # load default modules
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
@@ -134,7 +106,7 @@ def bpython():
 SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 
-@verdi_shell.command('shell')
+@verdi.command('shell')
 @decorators.with_dbenv()
 @click.option('--plain', is_flag=True, help='Tells Django to use plain Python, not IPython or bpython.)')
 @click.option(

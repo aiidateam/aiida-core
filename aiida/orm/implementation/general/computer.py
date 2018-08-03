@@ -321,7 +321,7 @@ class AbstractComputer(object):
             raise ValidationError("the mpirun_command must be a list of strings")
 
         try:
-            job_resource_keys = self.get_scheduler()._job_resource_class.get_valid_keys()
+            job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
         except MissingPluginError:
             raise ValidationError("Unable to load the scheduler for this computer")
 

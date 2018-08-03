@@ -10,7 +10,7 @@
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column, Table, UniqueConstraint
+from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 
 from sqlalchemy.dialects.postgresql import UUID
@@ -24,7 +24,9 @@ table_groups_nodes = Table(
     Base.metadata,
     Column('id', Integer, primary_key=True),
     Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")),
+
+    UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
 )
 
 
@@ -49,6 +51,9 @@ class DbGroup(Base):
     __table_args__ = (
         UniqueConstraint('name', 'type'),
     )
+
+    Index('db_dbgroup_dbnodes_dbnode_id_idx', table_groups_nodes.c.dbnode_id)
+    Index('db_dbgroup_dbnodes_dbgroup_id_idx', table_groups_nodes.c.dbgroup_id)
 
     @property
     def pk(self):

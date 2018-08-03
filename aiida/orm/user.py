@@ -15,11 +15,12 @@ import abc
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
+from .backend import Collection, CollectionEntry
 
 __all__ = ['User', 'UserCollection']
 
 
-class UserCollection(object):
+class UserCollection(Collection):
     """
     The collection of users stored in a backend
     """
@@ -125,7 +126,7 @@ class UserCollection(object):
         return [_[0] for _ in query.all()]
 
 
-class User(object):
+class User(CollectionEntry):
     """
     This is the base class for User information in AiiDA.  An implementing
     backend needs to provide a concrete version.
@@ -136,15 +137,8 @@ class User(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, backend):
-        self._backend = backend
-
     def __str__(self):
         return self.email
-
-    @property
-    def backend(self):
-        return self._backend
 
     @abc.abstractproperty
     def pk(self):

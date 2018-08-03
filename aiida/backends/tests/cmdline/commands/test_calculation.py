@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calculation as command
 from aiida.common.datastructures import calc_states
-from aiida.orm.calculation.job import JobCalculationFinishStatus
+from aiida.orm.calculation.job import JobCalculationExitStatus
 from aiida.work import runners, rmq
 
 
@@ -65,14 +65,14 @@ class TestVerdiCalculation(AiidaTestCase):
                 pass
 
             try:
-                finish_status = JobCalculationFinishStatus[calculation_state]
+                exit_status = JobCalculationExitStatus[calculation_state]
             except KeyError:
                 if calculation_state == 'IMPORTED':
                     calc._set_process_state(ProcessState.FINISHED)
 
                 calc._set_process_state(ProcessState.RUNNING)
             else:
-                calc._set_finish_status(finish_status)
+                calc._set_exit_status(exit_status)
                 calc._set_process_state(ProcessState.FINISHED)
 
             cls.calcs.append(calc)
@@ -223,12 +223,12 @@ class TestVerdiCalculation(AiidaTestCase):
             self.assertIsNone(result.exception)
             self.assertEquals(len(get_result_lines(result)), 4)
 
-    def test_calculation_list_finish_status(self):
-        """Test verdi calculation list with the finish status filter"""
-        for flag in ['-F', '--finish-status']:
-            for finish_status in JobCalculationFinishStatus:
+    def test_calculation_list_exit_status(self):
+        """Test verdi calculation list with the exit status filter"""
+        for flag in ['-E', '--exit-status']:
+            for exit_status in JobCalculationExitStatus:
 
-                options = ['-r', flag, finish_status.value]
+                options = ['-r', flag, exit_status.value]
                 result = self.cli_runner.invoke(command.calculation_list, options)
 
                 self.assertIsNone(result.exception)

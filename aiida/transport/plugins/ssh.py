@@ -12,7 +12,6 @@ import StringIO
 
 import os
 import click
-import paramiko
 import glob
 
 import aiida.transport
@@ -25,13 +24,13 @@ from aiida.cmdline.utils import echo
 from aiida.common import aiidalogger
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import NotExistent
-from aiida.transport.util import FileAttribute
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
+    import paramiko
     config = paramiko.SSHConfig()
     try:
         config.parse(open(os.path.expanduser('~/.ssh/config')))
@@ -63,7 +62,7 @@ class SshTransport(aiida.transport.Transport):
     # aiida log file.
     _valid_connect_options = [
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
-        ('port', {'option': options.PORT_NR, 'prompt': 'port Nr', 'non_interactive_default': True}),
+        ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
         ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
@@ -426,6 +425,7 @@ class SshTransport(aiida.transport.Transport):
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
         """
+        import paramiko
         super(SshTransport, self).__init__()
 
         self._is_open = False
@@ -473,6 +473,7 @@ class SshTransport(aiida.transport.Transport):
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
+        from aiida.transport.util import _DetachedProxyCommand
 
         if self._is_open:
             raise InvalidOperation("Cannot open the transport twice")
@@ -550,8 +551,7 @@ class SshTransport(aiida.transport.Transport):
 
     def chdir(self, path):
         """
-        Change directory of the SFTP session. Emulated internally by
-        paramiko.
+        Change directory of the SFTP session. Emulated internally by paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
@@ -1067,6 +1067,8 @@ class SshTransport(aiida.transport.Transport):
         Returns the object Fileattribute, specified in aiida.transport
         Receives in input the path of a given file.
         """
+        from aiida.transport.util import FileAttribute
+
         paramiko_attr = self.sftp.lstat(path)
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
@@ -1423,15 +1425,3 @@ class SshTransport(aiida.transport.Transport):
             raise
         else:
             return True
-
-
-
-class _DetachedProxyCommand(paramiko.ProxyCommand):
-    """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
-
-    def __init__(self, command_line):
-        from subprocess import Popen, PIPE
-        from shlex import split as shlsplit
-        self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
-        self.timeout = None

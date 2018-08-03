@@ -9,31 +9,16 @@
 ###########################################################################
 """`verdi graph` commands"""
 import click
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_graph
+
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators, echo
 
 
-class Graph(VerdiCommandWithSubcommands):
-    """
-    Utility to explore the nodes in the database graph
-    More specifically it allow the user to::
-
-        - Generate and render graph
-        - (TODO) Find if two nodes of a graph are connected
-        - (TODO) Extend functionalities
-
-    A list dictionary with available subcommands can be found in __init__ function
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid subcommands as keys and corresponding functions as values
-        """
-        super(Graph, self).__init__()
-
-        self.valid_subcommands = {'generate': (verdi, self.complete_none)}
+@verdi.group('graph')
+def verdi_graph():
+    """Create visual representations of part of the provenance graph."""
+    pass
 
 
 @verdi_graph.command('generate')

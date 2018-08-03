@@ -14,215 +14,19 @@ from functools import partial
 import click
 import tabulate
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_code, ensure_scripts
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
+from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.control.code import CodeBuilder
 
-# pylint: disable=fixme
-#TODO: This may be partly used in verdi code duplicate
 
-#class CodeInputValidationClass(object):
-#    _conf_attributes_start = [
-#        (
-#            "is_local",
-#            "Local",
-#            "True or False; if True, then you have to provide a folder with "
-#            "files that will be stored in AiiDA and copied to the remote "
-#            "computers for every calculation submission. If True, the code "
-#            "is just a link to a remote computer and an absolute path there",
-#            False,
-#        ),
-#    ]
-#
-#
-#     def load_from_code(self, code):
-#         from aiida.orm import Code as AiidaOrmCode
-#
-#         if not isinstance(code, AiidaOrmCode):
-#             raise ValueError("code is not a valid Code instance")
-#
-#         self.label = code.label
-#         self.description = code.description
-#         # Add here also the input_plugin stuff
-#         self.is_local = code.is_local()
-#         if self.is_local:
-#             raise NotImplementedError
-#         else:
-#             self.computer = code.get_remote_computer()
-#             self.remote_abs_path = code.get_remote_exec_path()
-#         self.prepend_text = code.get_prepend_text()
-#         self.append_text = code.get_append_text()
-#
-#    def set_and_validate_from_code(self, kwargs):
-#        """
-#        This method is used by the Code Orm, for the utility to setup a new code
-#        from the verdi shell
-#        """
-#        from aiida.common.exceptions import ValidationError
-#
-#        # convert to string so I can use all the functionalities of the command line
-#        kwargs = {k: str(v) for k, v in kwargs.iteritems()}
-#
-#        start_var = [_[0] for _ in self._conf_attributes_start]
-#        local_var = [_[0] for _ in self._conf_attributes_local]
-#        remote_var = [_[0] for _ in self._conf_attributes_remote]
-#        end_var = [_[0] for _ in self._conf_attributes_end]
-#
-#        def internal_launch(self, x, kwargs):
-#            default_values = {k: getattr(self, '_get_{}_string'.format(k))() for k in x}
-#            setup_keys = [[k, kwargs.pop(k, default_values[k])] for k in x]
-#            #            for k,v in setup_keys:
-#            #                setattr(self,k,v)
-#            [getattr(self, '_set_{}_string'.format(k))(v) for k, v in setup_keys]
-#
-#            return kwargs
-#
-#        kwargs = internal_launch(self, start_var, kwargs)
-#
-#        if self.is_local:
-#            kwargs = internal_launch(self, local_var, kwargs)
-#        else:
-#            print 'called remote', remote_var
-#            kwargs = internal_launch(self, remote_var, kwargs)
-#
-#        kwargs = internal_launch(self, end_var, kwargs)
-#
-#        print kwargs
-#
-#        if kwargs:
-#            raise ValidationError("Some parameters were not " "recognized: {}".format(kwargs))
-#        return self.create_code()
-
-
-class Code(VerdiCommandWithSubcommands):
-    """
-    Setup and manage codes.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        super(Code, self).__init__()
-        self.valid_subcommands = {
-            'list': (verdi, self.complete_none),
-            'show': (verdi, self.complete_none),
-            'setup': (verdi, self.complete_none),
-            'rename': (verdi, self.complete_none),
-            'duplicate': (verdi, self.complete_none),
-            'relabel': (verdi, self.complete_none),
-            'update': (verdi, self.complete_none),
-            'delete': (verdi, self.complete_none),
-            'hide': (verdi, self.complete_none),
-            'reveal': (verdi, self.complete_none),
-        }
-
-    # pylint: disable=fixme
-    #TODO: This may be partly used in verdi code duplicate
-    #@classmethod
-    #def code_update(self, *args):
-    #    import datetime
-    #    from aiida.orm.backend import construct_backend
-
-    #    backend = construct_backend()
-
-    #    if len(args) != 1:
-    #        print >> sys.stderr, ("after 'code update' there should be one "
-    #                              "argument only, being the code id.")
-    #        sys.exit(1)
-
-    #    code = self.get_code(args[0])
-
-    #    if code.has_children:
-    #        print "***********************************"
-    #        print "|                                 |"
-    #        print "|            WARNING!             |"
-    #        print "| Consider to create another code |"
-    #        print "| You risk of losing the history  |"
-    #        print "|                                 |"
-    #        print "***********************************"
-
-    #    # load existing stuff
-    #    set_params = CodeInputValidationClass()
-    #    set_params.label = code.label
-    #    set_params.description = code.description
-    #    set_params.input_plugin = code.get_input_plugin_name()
-
-    #    was_local_before = code.is_local()
-    #    set_params.is_local = code.is_local()
-
-    #    if code.is_local():
-    #        set_params.local_rel_path = code.get_local_executable()
-    #        # I don't have saved the folder with code, so I will just have the list of files
-    #        # file_list = [ code._get_folder_pathsubfolder.get_abs_path(i)
-    #        #    for i in code.get_folder_list() ]
-    #    else:
-    #        set_params.computer = code.get_computer()
-    #        set_params.remote_abs_path = code.get_remote_exec_path()
-
-    #    set_params.prepend_text = code.get_prepend_text()
-    #    set_params.append_text = code.get_append_text()
-
-    #    # ask for the new values
-    #    set_params.ask()
-
-    #    # prepare a comment containing the previous version of the code
-    #    now = datetime.datetime.now()
-    #    new_comment = []
-    #    new_comment.append("Code modified on {}".format(now))
-    #    new_comment.append("Old configuration was:")
-    #    new_comment.append("label: {}".format(code.label))
-    #    new_comment.append("description: {}".format(code.description))
-    #    new_comment.append("input_plugin_name: {}".format(code.get_input_plugin_name()))
-    #    new_comment.append("is_local: {}".format(code.is_local()))
-    #    if was_local_before:
-    #        new_comment.append("local_executable: {}".format(code.get_local_executable()))
-    #    else:
-    #        new_comment.append("computer: {}".format(code.get_computer()))
-    #        new_comment.append("remote_exec_path: {}".format(code.get_remote_exec_path()))
-    #    new_comment.append("prepend_text: {}".format(code.get_prepend_text()))
-    #    new_comment.append("append_text: {}".format(code.get_append_text()))
-    #    comment = "\n".join(new_comment)
-
-    #    if set_params.is_local:
-    #        print "WARNING: => Folder with the code, and"
-    #        print "         => Relative path of the executable, "
-    #        print "         will be ignored! It is not possible to replace "
-    #        print "         the scripts, you have to create a new code for that."
-    #    else:
-    #        if was_local_before:
-    #            # some old files will be left in the repository, and I cannot delete them
-    #            print >> sys.stderr, ("It is not possible to change a "
-    #                                  "code from local to remote.\n"
-    #                                  "Modification cancelled.")
-    #            sys.exit(1)
-    #        print "WARNING: => computer"
-    #        print "         will be ignored! It is not possible to replace it"
-    #        print "         you have to create a new code for that."
-
-    #    code.label = set_params.label
-    #    code.description = set_params.description
-    #    code.set_input_plugin_name(set_params.input_plugin)
-    #    code.set_prepend_text(set_params.prepend_text)
-    #    code.set_append_text(set_params.append_text)
-
-    #    if not was_local_before:
-    #        if set_params.remote_abs_path != code.get_remote_exec_path():
-    #            print "Are you sure about changing the path of the code?"
-    #            print "This operation may imply loss of provenance."
-    #            print "[Enter] to continue, [Ctrl + C] to exit"
-    #            raw_input()
-
-    #            from aiida.backends.djsite.db.models import DbAttribute
-
-    #            DbAttribute.set_value_for_node(code.dbnode, 'remote_exec_path', set_params.remote_abs_path)
-
-    #    # store comment, to track history
-    #    code.add_comment(comment, user=backend.users.get_automatic_user())
+@verdi.group('code')
+def verdi_code():
+    """Setup and manage codes."""
+    pass
 
 
 def is_on_computer(ctx):
@@ -431,7 +235,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
 
     echo.echo_success("Duplicated code '{}'.".format(code.full_label))
-    echo.echo_info('New Code: ' + str(new_code))
+    echo.echo_info('New ' + str(new_code))
 
 
 @verdi_code.command()

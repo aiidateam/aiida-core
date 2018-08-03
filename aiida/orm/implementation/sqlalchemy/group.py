@@ -149,12 +149,13 @@ class Group(AbstractGroup):
         return self
 
     def add_nodes(self, nodes):
+        from sqlalchemy.exc import IntegrityError
+
         if not self.is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
         from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -167,46 +168,55 @@ class Group(AbstractGroup):
                             "of such objects, it is instead {}".format(
                 str(type(nodes))))
 
-        # Get dbnodes here ONCE, otherwise each call to _dbgroup.dbnodes will
-        # re-read teh current value in the database
-        dbnodes = self._dbgroup.dbnodes
-        for node in nodes:
-            if not isinstance(node, (Node, DbNode)):
-                raise TypeError("Invalid type of one of the elements passed "
-                                "to add_nodes, it should be either a Node or "
-                                "a DbNode, it is instead {}".format(
-                    str(type(node))))
+        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+            # Get dbnodes here ONCE, otherwise each call to _dbgroup.dbnodes will
+            # re-read the current value in the database
+            dbnodes = self._dbgroup.dbnodes
+            for node in nodes:
+                if not isinstance(node, (Node, DbNode)):
+                    raise TypeError("Invalid type of one of the elements passed "
+                                    "to add_nodes, it should be either a Node or "
+                                    "a DbNode, it is instead {}".format(
+                        str(type(node))))
 
-            if node.id is None:
-                raise ValueError("At least one of the provided nodes is "
-                                 "unstored, stopping...")
-            if isinstance(node, Node):
-                to_add = node.dbnode
-            else:
-                to_add = node
+                if node.id is None:
+                    raise ValueError("At least one of the provided nodes is "
+                                     "unstored, stopping...")
+                if isinstance(node, Node):
+                    to_add = node.dbnode
+                else:
+                    to_add = node
 
-            if to_add not in dbnodes:
-                # ~ list_nodes.append(to_add)
-                dbnodes.append(to_add)
-        session.commit()
-        # ~ self._dbgroup.dbnodes.extend(list_nodes)
+                # Use pattern as suggested here:
+                # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
+                try:
+                    with session.begin_nested():
+                        dbnodes.append(to_add)
+                        session.flush()
+                except IntegrityError:
+                    # Duplicate entry, skip
+                    pass
+
+            # Commit everything as up till now we've just flushed
+            session.commit()
 
     @property
     def nodes(self):
         class iterator(object):
             def __init__(self, dbnodes):
-                self.dbnodes = dbnodes
+                self._dbnodes = dbnodes
+                self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
 
             def _genfunction(self):
-                for n in self.dbnodes:
+                for n in self._iter:
                     yield n.get_aiida_class()
 
             def __iter__(self):
                 return self
 
             def __len__(self):
-                return len(self.dbnodes)
+                return self._dbnodes.count()
 
             # For future python-3 compatibility
             def __next__(self):
@@ -215,7 +225,7 @@ class Group(AbstractGroup):
             def next(self):
                 return next(self.generator)
 
-        return iterator(self._dbgroup.dbnodes.all())
+        return iterator(self._dbgroup.dbnodes)
 
     def remove_nodes(self, nodes):
         if not self.is_stored:

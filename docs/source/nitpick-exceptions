@@ -120,6 +120,8 @@ py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
 
+py:class  paramiko.proxy.ProxyCommand
+
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec
@@ -135,6 +137,8 @@ py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
 py:exc    plumpy.TaskRejected
+py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
+py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 
 py:class  kiwipy.futures.Future
 

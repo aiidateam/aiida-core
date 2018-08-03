@@ -26,9 +26,8 @@ import subprocess
 import StringIO
 import glob
 
+from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
-from aiida.transport.util import FileAttribute
-from aiida import transport
 
 
 # refactor or raise the limit: issue #1784
@@ -419,7 +418,7 @@ class LocalTransport(Transport):
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
-        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not localpath:
             raise ValueError("Input localpath to get function " "must be a non empty string")
         if not remotepath:
@@ -468,7 +467,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError("The local path {} does not exist".format(localpath))
+                    raise IOError("The remote path {} does not exist".format(remotepath))
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """
@@ -655,6 +654,8 @@ class LocalTransport(Transport):
         as specified in aiida.transport.
         :param path: the path of the given file.
         """
+        from aiida.transport.util import FileAttribute
+
         os_attr = os.lstat(os.path.join(self.curdir, path))
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
@@ -870,4 +871,4 @@ class LocalTransport(Transport):
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
 
-CONFIGURE_LOCAL_CMD = transport.cli.create_configure_cmd('local')
+CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('local')

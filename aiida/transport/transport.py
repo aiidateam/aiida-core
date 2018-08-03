@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Transport interface."""
 from abc import ABCMeta
 import os
@@ -6,7 +15,6 @@ import fnmatch
 import sys
 from collections import OrderedDict
 
-import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.utils import classproperty
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
@@ -36,7 +44,9 @@ class Transport(object):
         """
         __init__ method of the Transport base class.
         """
-        self._logger = aiida.common.aiidalogger.getChild('transport').getChild(self.__class__.__name__)
+        from aiida.common import aiidalogger
+
+        self._logger = aiidalogger.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
@@ -62,7 +72,12 @@ class Transport(object):
         """
         # Keep track of how many times enter has been called
         if self._enters == 0:
-            self.open()
+            if self.is_open:
+                # Already open, so just add one to the entered counter
+                # this way on the final exit we will not close
+                self._enters += 1
+            else:
+                self.open()
         self._enters += 1
         return self
 

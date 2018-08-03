@@ -7,17 +7,39 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=global-statement
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Definition of AiiDA's process persister and the necessary object loaders."""
 import logging
-import plumpy
 import traceback
 import yaml
 
-from aiida import orm
+import plumpy
 
 __all__ = ['ObjectLoader', 'get_object_loader']
 
 LOGGER = logging.getLogger(__name__)
+OBJECT_LOADER = None
+
+
+def get_object_loader():
+    """
+    Get the global AiiDA object loader
+
+    :return: The global object loader
+    :rtype: :class:`plumpy.ObjectLoader`
+    """
+    global OBJECT_LOADER
+    if OBJECT_LOADER is None:
+        OBJECT_LOADER = ObjectLoader()
+    return OBJECT_LOADER
 
 
 class AiiDAPersister(plumpy.Persister):
@@ -27,7 +49,14 @@ class AiiDAPersister(plumpy.Persister):
     """
 
     def save_checkpoint(self, process, tag=None):
-        LOGGER.info('Persisting process<{}>'.format(process.pid))
+        """
+        Persist a Process instance
+
+        :param process: :class:`aiida.work.Process`
+        :param tag: optional checkpoint identifier to allow distinguishing multiple checkpoints for the same process
+        :raises: :class:`plumpy.PersistenceError` Raised if there was a problem saving the checkpoint
+        """
+        LOGGER.debug('Persisting process<%d>', process.pid)
 
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
@@ -36,19 +65,30 @@ class AiiDAPersister(plumpy.Persister):
             bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
         except ValueError:
             # Couldn't create the bundle
-            raise plumpy.PersistenceError(
-                "Failed to create a bundle for '{}':{}".format(process, traceback.format_exc()))
+            raise plumpy.PersistenceError("Failed to create a bundle for '{}':{}".format(
+                process, traceback.format_exc()))
         else:
             calc = process.calc
-            calc._set_checkpoint(yaml.dump(bundle))
+            calc.set_checkpoint(yaml.dump(bundle))
 
         return bundle
 
     def load_checkpoint(self, pid, tag=None):
+        """
+        Load a process from a persisted checkpoint by its process id
+
+        :param pid: the process id of the :class:`plumpy.Process`
+        :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
+        :return: a bundle with the process state
+        :rtype: :class:`plumpy.Bundle`
+        :raises: :class:`plumpy.PersistenceError` Raised if there was a problem loading the checkpoint
+        """
+        from aiida.orm import load_node
+
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
 
-        calculation = orm.load_node(pid)
+        calculation = load_node(pid)
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
@@ -78,8 +118,16 @@ class AiiDAPersister(plumpy.Persister):
         pass
 
     def delete_checkpoint(self, pid, tag=None):
-        calc = orm.load_node(pid)
-        calc._del_checkpoint()
+        """
+        Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist
+
+        :param pid: the process id of the :class:`plumpy.Process`
+        :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
+        """
+        from aiida.orm import load_node
+
+        calc = load_node(pid)
+        calc.del_checkpoint()
 
     def delete_process_checkpoints(self, pid):
         """
@@ -104,10 +152,9 @@ class ObjectLoader(plumpy.DefaultObjectLoader):
         """
         Given an identifier load an object.
 
-        Throws a ValueError if the object cannot be loaded.
-
         :param identifier: The identifier
         :return: The loaded object
+        :raises: ValueError if the object cannot be loaded
         """
         from aiida.work.job_processes import JobProcess
 
@@ -116,20 +163,5 @@ class ObjectLoader(plumpy.DefaultObjectLoader):
             wrapped_class = identifier[idx + len(JobProcess.__name__) + 1:]
             # Recreate the class
             return JobProcess.build(super(ObjectLoader, self).load_object(wrapped_class))
-        else:
-            return super(ObjectLoader, self).load_object(identifier)
 
-
-_object_loader = None
-
-
-def get_object_loader():
-    """
-    Get the global AiiDA object loader
-    :return: The global object loader
-    :rtype: :class:`plumpy.ObjectLoader`
-    """
-    global _object_loader
-    if _object_loader is None:
-        _object_loader = ObjectLoader()
-    return _object_loader
+        return super(ObjectLoader, self).load_object(identifier)

@@ -10,8 +10,7 @@
 """The CLI for legacy workflows."""
 import click
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi_workflow, verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.types import LegacyWorkflowParamType
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params import options
@@ -21,37 +20,14 @@ from aiida.cmdline.utils import echo
 DEPRECATION_MSG = 'Legacy workflows have been deprecated in AiiDA v1.0.'
 
 
+@verdi.group('workflow')
+def verdi_workflow():
+    """Inspect and manage legacy workflows."""
+    pass
+
+
 def format_pk(workflow):
     return '(pk: {})'.format(workflow.pk)
-
-
-class Workflow(VerdiCommandWithSubcommands):
-    """
-    Manage the AiiDA legacy worflow manager
-
-    Valid subcommands are:
-    * list: list the running workflows running and their state. Pass a -h
-    |        option for further help on valid options.
-    * kill: kill a given workflow
-    * report: show the report of a given workflow
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called:
-        list.
-        """
-        super(Workflow, self).__init__()
-        self.valid_subcommands = {
-            'list': (self.cli, self.complete_none),
-            'kill': (self.cli, self.complete_none),
-            'report': (self.cli, self.complete_none),
-            'logshow': (self.cli, self.complete_none),
-        }
-
-    @staticmethod
-    def cli(*args):  # pylint: disable=unused-argument
-        verdi()  # pylint: disable=no-value-for-parameter
 
 
 @verdi_workflow.command('logshow')

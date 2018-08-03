@@ -326,7 +326,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
       * ``job_resource``: a suitable :py:class:`JobResource`
         subclass with information on how many
         nodes and cpus it should use. It must be an instance of the
-        ``aiida.scheduler.Scheduler._job_resource_class`` class.
+        ``aiida.scheduler.Scheduler.job_resource_class`` class.
         Use the Scheduler.create_job_resource method to create it.
       * ``num_machines``: how many machines (or nodes) should be used
       * ``num_mpiprocs_per_machine``: how many MPI procs should be used on each
@@ -451,7 +451,7 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``annotation``: human-readable description of the reason for the job
          being in the current state or substate.
        * ``job_state``: the job state (one of those defined in
-         ``aiida.scheduler.datastructures.job_states``)
+         ``aiida.scheduler.datastructures.JOB_STATES``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
          This is a list of :py:class:`MachineInfo` objects.

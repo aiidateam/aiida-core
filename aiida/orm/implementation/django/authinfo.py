@@ -9,10 +9,10 @@
 ###########################################################################
 import json
 
-from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
-from aiida.orm.authinfo import AuthInfo, AuthInfoCollection
+from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
+from aiida.orm.authinfo import AuthInfo, AuthInfoCollection
 
 from . import computer as computers
 from . import user as users
@@ -25,9 +25,9 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         """
         Create a AuthInfo given a computer and a user
 
-        :param computer: A Computer or DbComputer instance
-        :param user: A User or DbUser instance
-        :return: a AuthInfo object associated to the given computer and User
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
         """
         return DjangoAuthInfo(self, computer, user)
 
@@ -35,24 +35,21 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         """
         Return a AuthInfo given a computer and a user
 
-        :param computer: A Computer or DbComputer instance
-        :param user: A User or DbUser instance
-        :return: a AuthInfo object associated to the given computer and User, if any
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
         :raise NotExistent: if the user is not configured to use computer
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
-             more than once to use the computer! Should never happen
+            more than once to use the computer! Should never happen
         """
-        from django.core.exceptions import (ObjectDoesNotExist,
-                                            MultipleObjectsReturned)
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
         try:
             authinfo = DbAuthInfo.objects.get(
-                # converts from name, Computer or DbComputer instance to
-                # a DbComputer instance
-                dbcomputer=DbComputer.get_dbcomputer(computer),
+                dbcomputer=computer.dbcomputer,
                 aiidauser=user.id)
 
-            return self._from_dbmodel(authinfo)
+            return self.from_dbmodel(authinfo)
         except ObjectDoesNotExist:
             raise exceptions.NotExistent(
                 "The aiida user {} is not configured to use computer {}".format(
@@ -63,17 +60,15 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
 
-    def _from_dbmodel(self, dbmodel):
-        return DjangoAuthInfo._from_dbmodel(self, dbmodel)
+    def from_dbmodel(self, dbmodel):
+        return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
 class DjangoAuthInfo(AuthInfo):
-    """
-    AuthInfo implementation for Django
-    """
+    """AuthInfo implementation for Django."""
 
     @classmethod
-    def _from_dbmodel(cls, backend, dbmodel):
+    def from_dbmodel(cls, dbmodel, backend):
         type_check(dbmodel, DbAuthInfo)
         authinfo = cls.__new__(cls)
         super(DjangoAuthInfo, authinfo).__init__(backend)
@@ -82,19 +77,15 @@ class DjangoAuthInfo(AuthInfo):
 
     def __init__(self, backend, computer, user):
         """
-        Construct a DjangoAuthInfo
+        Construct a DjangoAuthInfo.
 
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
         """
-        from aiida.orm.computer import Computer
-
         super(DjangoAuthInfo, self).__init__(backend)
         type_check(user, users.DjangoUser)
-
-        # Takes care of always getting a Computer instance from a DbComputer, Computer or string
-        dbcomputer = Computer.get(computer).dbcomputer
-
-        self._dbauthinfo = utils.ModelWrapper(
-            DbAuthInfo(dbcomputer=dbcomputer, aiidauser=user.dbuser))
+        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
 
     @property
     def dbauthinfo(self):
@@ -103,9 +94,9 @@ class DjangoAuthInfo(AuthInfo):
     @property
     def is_stored(self):
         """
-        Is it already stored or not?
+        Return whether the AuthInfo is stored
 
-        :return: Boolean
+        :return: True if stored, False otherwise
         """
         return self._dbauthinfo.is_saved()
 

@@ -66,7 +66,7 @@ class MpirunCommandParamType(StringParamType):
         scheduler_ep = ctx.params['scheduler']
         if scheduler_ep is not None:
             try:
-                job_resource_keys = scheduler_ep.load()._job_resource_class.get_valid_keys()  # pylint: disable=protected-access
+                job_resource_keys = scheduler_ep.load().job_resource_class.get_valid_keys()
             except ImportError:
                 self.fail("Unable to load the '{}' scheduler".format(scheduler_ep.name))
         else:

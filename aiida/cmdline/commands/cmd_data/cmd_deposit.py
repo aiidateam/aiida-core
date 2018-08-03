@@ -11,7 +11,6 @@
 This module provides deposit functionality to all data types
 """
 import click
-from aiida.cmdline import delayed_load_node as load_node
 from aiida.cmdline.params import arguments
 
 DEPOSIT_OPTIONS = [
@@ -101,7 +100,9 @@ def deposit_tcod(node, deposit_type, parameter_data=None, **kwargs):
     """
     Deposition plugin for TCOD.
     """
+    from aiida.orm.utils import load_node
     from aiida.tools.dbexporters.tcod import deposit
+
     parameters = None
     if parameter_data is not None:
         from aiida.orm import DataFactory

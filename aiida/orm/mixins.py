@@ -205,26 +205,3 @@ class Sealable(object):
             raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
 
         super(Sealable, self)._del_attr(key, stored_check=False)
-
-    @override
-    def copy(self, include_updatable_attrs=False):
-        """
-        Create a copy of the node minus the updatable attributes if include_updatable_attrs is False
-        """
-        clone = super(Sealable, self).copy()
-
-        if include_updatable_attrs is False:
-            for key, value in clone._iter_updatable_attributes():
-                clone._del_attr(key)
-
-        return clone
-
-    def _iter_updatable_attributes(self):
-        """
-        Iterate over the updatable attributes and yield key value pairs
-        """
-        for key in list(self._updatable_attributes):
-            try:
-                yield (key, self.get_attr(key))
-            except AttributeError:
-                pass

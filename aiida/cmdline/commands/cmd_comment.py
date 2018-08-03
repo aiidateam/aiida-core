@@ -7,40 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=superfluous-parens
 """
 This allows to manage comments from command line.
 """
 import click
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi_comment, verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 
-# pylint: disable=superfluous-parens
 
-
-class Comment(VerdiCommandWithSubcommands):
-    """
-    Manage general properties of nodes in the database
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        super(Comment, self).__init__()
-
-        self.valid_subcommands = {
-            'add': (self.cli, self.complete_none),
-            'remove': (self.cli, self.complete_none),
-            'show': (self.cli, self.complete_none),
-            'update': (self.cli, self.complete_none),
-        }
-
-    def cli(self, *args):
-        # pylint: disable=unused-argument, no-value-for-parameter, no-self-use
-        verdi()
+@verdi.group('comment')
+def verdi_comment():
+    """Inspect, create and manage comments."""
+    pass
 
 
 @verdi_comment.command()

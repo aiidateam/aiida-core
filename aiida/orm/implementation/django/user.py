@@ -17,6 +17,7 @@ from . import utils
 
 
 class DjangoUserCollection(UserCollection):
+
     def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
@@ -29,9 +30,6 @@ class DjangoUserCollection(UserCollection):
                           first_name=first_name,
                           last_name=last_name,
                           institution=institution)
-
-    def from_dbmodel(self, dbuser):
-        return DjangoUser._from_dbmodel(self, dbuser)
 
     def find(self, email=None, id=None):
         # Constructing the default query
@@ -56,24 +54,28 @@ class DjangoUserCollection(UserCollection):
             users.append(self.from_dbmodel(dbuser))
         return users
 
+    def from_dbmodel(self, dbmodel):
+        return DjangoUser.from_dbmodel(dbmodel, self.backend)
+
 
 class DjangoUser(User):
+
     @classmethod
-    def _from_dbmodel(cls, backend, dbuser):
+    def from_dbmodel(cls, dbmodel, backend):
         """
         Create a DjangoUser from a dbmodel instance
 
         :param backend: The backend
         :type backend: :class:`DjangoUserCollection`
-        :param dbuser: The dbuser instance
-        :type dbuser: :class:`aiida.backends.djsite.db.models.DbUser`
+        :param dbmodel: The dbmodel instance
+        :type dbmodel: :class:`aiida.backends.djsite.db.models.DbUser`
         :return: A DjangoUser instance
         :rtype: :class:`DjangoUser`
         """
-        type_check(dbuser, DbUser)
+        type_check(dbmodel, DbUser)
         user = cls.__new__(cls)
         super(DjangoUser, user).__init__(backend)
-        user._dbuser = utils.ModelWrapper(dbuser)
+        user._dbuser = utils.ModelWrapper(dbmodel)
         return user
 
     def __init__(self, backend, email, first_name, last_name, institution):

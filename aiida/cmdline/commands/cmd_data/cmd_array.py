@@ -10,17 +10,13 @@
 """
 This allows to manage ArrayData objects from command line.
 """
-import click
-
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('array')
-@click.pass_context
-def array(ctx):
+def array():
     """
     Manipulate ArrayData objects
     """
@@ -34,11 +30,11 @@ def show(nodes):
     Visualize array object
     """
     from aiida.orm.data.array import ArrayData
-    from aiida.cmdline import print_dictionary
+    from aiida.cmdline.utils.echo import echo_dictionary
     for node in nodes:
         if not isinstance(node, ArrayData):
             echo.echo_critical("Node {} is of class {} instead of" " {}".format(node, type(node), ArrayData))
         the_dict = {}
         for arrayname in node.arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()
-        print_dictionary(the_dict, 'json+date')
+        echo_dictionary(the_dict, 'json+date')

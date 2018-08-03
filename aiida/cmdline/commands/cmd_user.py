@@ -13,39 +13,16 @@ This allows to setup and configure a user from command line.
 from functools import partial
 import click
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi_user, verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.types.user import UserParamType
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import options
 
 
-class User(VerdiCommandWithSubcommands):
-    """
-    List and configure new AiiDA users.
-
-    Allow to see the list of AiiDA users, their permissions, and to configure
-    old and new users.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        super(User, self).__init__()
-        self.valid_subcommands = {
-            'configure': (self.cli, self.complete_emails),
-            'list': (self.cli, self.complete_none),
-        }
-
-    def cli(self, *args):
-        # pylint: disable=no-value-for-parameter, no-self-use, W0612, W0613
-        verdi()
-
-    @with_dbenv()
-    def complete_emails(self, subargs_idx, subargs):
-        # pylint: disable=W0612,W0613
-        return "\n".join([user.email for user in self.backend.users.all()])
+@verdi.group('user')
+def verdi_user():
+    """Inspect and manage users."""
+    pass
 
 
 def get_default(value, ctx):
@@ -68,6 +45,7 @@ PASSWORD_UNCHANGED = '***'  # noqa
 
 @verdi_user.command()
 @click.argument('user', metavar='USER', type=UserParamType(create=True))
+@options.NON_INTERACTIVE()
 @click.option(
     '--first-name',
     prompt='First name',
@@ -95,7 +73,6 @@ PASSWORD_UNCHANGED = '***'  # noqa
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
     cls=options.InteractiveOption)
-@options.NON_INTERACTIVE()
 @with_dbenv()
 def configure(user, first_name, last_name, institution, password, non_interactive):
     """

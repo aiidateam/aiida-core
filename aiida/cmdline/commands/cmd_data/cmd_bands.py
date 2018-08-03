@@ -15,8 +15,8 @@ import sys
 import click
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
-from aiida.cmdline.commands import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
@@ -63,10 +63,8 @@ def show_xmgrace(exec_name, list_bands):
             fhandle.close()
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('bands')
-@click.pass_context
-def bands(ctx):
+def bands():
     """
     Manipulate BandsData objects
     """

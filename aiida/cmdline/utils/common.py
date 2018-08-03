@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Common utility functions for command line commands."""
 import os
 import sys
 from tabulate import tabulate
@@ -38,8 +39,8 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 
     if isinstance(timestamp, float):
         return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
-    else:
-        return timestamp.strftime(format_str)
+
+    return timestamp.strftime(format_str)
 
 
 def print_last_process_state_change(process_type='calculation'):
@@ -50,7 +51,6 @@ def print_last_process_state_change(process_type='calculation'):
     :param process_type: the process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
-    from aiida.cmdline.utils.common import format_local_time
     from aiida.cmdline.utils.echo import echo_info, echo_warning
     from aiida.daemon.client import DaemonClient
     from aiida.utils import timezone
@@ -105,9 +105,9 @@ def get_node_summary(node):
             table.append(['process state', process_state])
 
         try:
-            table.append(['finish status', node.finish_status])
+            table.append(['exit status', node.exit_status])
         except AttributeError:
-            table.append(['finish status', None])
+            table.append(['exit status', None])
 
     try:
         computer = node.get_computer()
@@ -129,6 +129,7 @@ def get_node_summary(node):
 
 
 def get_node_info(node, include_summary=True):
+    # pylint: disable=too-many-branches
     """
     Return a multi line string of information about the given node, such as the incoming and outcoming links
 
@@ -138,7 +139,6 @@ def get_node_info(node, include_summary=True):
     from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
     from aiida.orm.calculation.work import WorkCalculation
-
 
     if include_summary:
         result = get_node_summary(node)
@@ -155,30 +155,31 @@ def get_node_info(node, include_summary=True):
     if nodes_caller:
         table = []
         table_headers = ['Called by', 'PK', 'Type']
-        for k, v in nodes_caller:
-            table.append([k, v.pk, v.__class__.__name__])
+        for key, value in nodes_caller:
+            table.append([key, value.pk, value.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_input:
         table = []
         table_headers = ['Inputs', 'PK', 'Type']
-        for k, v in nodes_input:
-            if k == 'code': continue
-            table.append([k, v.pk, v.__class__.__name__])
+        for key, value in nodes_input:
+            if key == 'code':
+                continue
+            table.append([key, value.pk, value.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_output:
         table = []
         table_headers = ['Outputs', 'PK', 'Type']
-        for k, v in nodes_output:
-            table.append([k, v.pk, v.__class__.__name__])
+        for key, value in nodes_output:
+            table.append([key, value.pk, value.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_called:
         table = []
         table_headers = ['Called', 'PK', 'Type']
-        for k, v in nodes_called:
-            table.append([k, v.pk, v.__class__.__name__])
+        for key, value in nodes_called:
+            table.append([key, value.pk, value.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     log_messages = get_log_messages(node)
@@ -213,7 +214,8 @@ def get_calculation_log_report(calculation):
     scheduler_state = calculation.get_scheduler_state()
 
     if calculation_state == calc_states.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
+                                                        if scheduler_state else '(unknown)')
     else:
         state_string = '{}'.format(calculation_state)
 

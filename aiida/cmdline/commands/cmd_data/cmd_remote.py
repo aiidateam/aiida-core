@@ -11,16 +11,14 @@
 This allows to manage ParameterData objects from command line.
 """
 import click
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 from aiida.common.utils import get_mode_string
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('remote')
-@click.pass_context
-def remote(ctx):
+def remote():
     """
     Managing Remote_Data data types
     """

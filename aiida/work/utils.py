@@ -7,8 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name
+"""Utilities for the workflow engine."""
 import contextlib
+import logging
+import traceback
 import tornado.ioloop
+from tornado.gen import coroutine, sleep, Return
 
 from aiida.common.links import LinkType
 from aiida.orm.calculation import Calculation, WorkCalculation, FunctionCalculation
@@ -16,19 +21,80 @@ from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = []
 
+LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
+
+
+def ensure_coroutine(fct):
+    """
+    Ensure that the given function ``fct`` is a coroutine
+
+    If the passed function is not already a coroutine, it will be made to be a coroutine
+
+    :param fct: the function
+    :returns: the coroutine
+    """
+    if tornado.gen.is_coroutine_function(fct):
+        return fct
+
+    @tornado.gen.coroutine
+    def wrapper(*args, **kwargs):
+        raise tornado.gen.Return(fct(*args, **kwargs))
+
+    return wrapper
+
+
+@coroutine
+def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None):
+    """
+    Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
+
+    This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
+    finished without raising an exception, at which point the returned result will be raised, wrapped in a
+    ``tornado.gen.Result`` instance. If an exception is caught, the function will yield a ``tornado.gen.sleep`` with a
+    time interval equal to the ``initial_interval`` multiplied by ``2*N`` where ``N`` is the number of excepted calls.
+
+    :param fct: the function to call, which will be turned into a coroutine first if it is not already
+    :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
+    :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
+    :raises: ``tornado.gen.Result`` if the ``coro`` call completes within ``max_attempts`` retries without raising
+    """
+    if logger is None:
+        logger = LOGGER
+
+    result = None
+    coro = ensure_coroutine(fct)
+    interval = initial_interval
+
+    for iteration in range(max_attempts):
+        try:
+            result = yield coro()
+            break  # Finished successfully
+        except Exception:  # pylint: disable=broad-except
+            if iteration == max_attempts - 1:
+                logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
+                raise
+            else:
+                logger.warning('iteration %d of %s excepted, retrying after %d seconds\n%s', iteration + 1,
+                               coro.__name__, interval, traceback.format_exc())
+                yield sleep(interval)
+                interval *= 2
+
+    raise Return(result)
 
 
 def is_work_calc_type(calc_node):
     """
     Check if the given calculation node is of the new type.
     Currently in AiiDA we have a hierarchy of 'Calculation' nodes with the following subclasses:
-        1) JobCalculation
-        2) InlineCalculation
-        3) WorkCalculation
-        4) FunctionCalculation
+
+        1. JobCalculation
+        2. InlineCalculation
+        3. WorkCalculation
+        4. FunctionCalculation
+
     1 & 2 can be considered the 'old' way of doing things, even though they are still
     in use while 3 & 4 are the 'new' way.  In loose terms the main difference is that
     the old way don't support RETURN and CALL links.
@@ -39,9 +105,15 @@ def is_work_calc_type(calc_node):
     return isinstance(calc_node, PROCESS_CALC_TYPES)
 
 
-def is_workfunction(func):
+def is_workfunction(function):
+    """
+    Return whether the given function is a workfunction
+
+    :param function: a function
+    :returns: True if the function is a wrapped workfunction, False otherwise
+    """
     try:
-        return func._is_workfunction
+        return function.is_workfunction
     except AttributeError:
         return False
 
@@ -56,10 +128,10 @@ def get_or_create_output_group(calculation):
     if not isinstance(calculation, Calculation):
         raise TypeError("Can only create output groups for type Calculation")
 
-    d = calculation.get_outputs_dict(link_type=LinkType.CREATE)
-    d.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
+    outputs = calculation.get_outputs_dict(link_type=LinkType.CREATE)
+    outputs.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
 
-    return FrozenDict(dict=d)
+    return FrozenDict(dict=outputs)
 
 
 @contextlib.contextmanager
@@ -70,8 +142,8 @@ def loop_scope(loop):
     :param loop: The event loop to make current for the duration of the scope
     :type loop: :class:`tornado.ioloop.IOLoop`
     """
-
     current = tornado.ioloop.IOLoop.current()
+
     try:
         loop.make_current()
         yield
@@ -108,7 +180,6 @@ def set_process_state_change_timestamp(process):
         set_global_setting(key, value, description)
     except UniquenessError as exception:
         process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
-        pass
 
 
 def get_process_state_change_timestamp(process_type='calculation'):

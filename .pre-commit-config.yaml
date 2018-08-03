@@ -10,44 +10,8 @@
         .ci/test_setup.py|
         #aiida/backends/tests/cmdline/commands/.*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
+        aiida/cmdline/.*.py|
         aiida/control/.*.py|
-        aiida/cmdline/tests/.*.py|
-        aiida/cmdline/commands/calculation.py|
-        aiida/cmdline/commands/code.py|
-        aiida/cmdline/commands/comment.py|
-        aiida/cmdline/commands/daemon.py|
-        aiida/cmdline/commands/devel.py|
-        aiida/cmdline/commands/data/array.py|
-        aiida/cmdline/commands/data/bands.py|
-        aiida/cmdline/commands/data/cif.py|
-        aiida/cmdline/commands/data/deposit.py|
-        aiida/cmdline/commands/data/export.py|
-        aiida/cmdline/commands/data/list.py|
-        aiida/cmdline/commands/data/parameter.py|
-        aiida/cmdline/commands/data/remote.py|
-        aiida/cmdline/commands/data/show.py|
-        aiida/cmdline/commands/data/structure.py|
-        aiida/cmdline/commands/data/trajectory.py|
-        aiida/cmdline/commands/data/upf.py|
-        aiida/cmdline/commands/graph.py|
-        aiida/cmdline/commands/group.py|
-        aiida/cmdline/commands/importfile.py|
-        aiida/cmdline/commands/profile.py|
-        aiida/cmdline/commands/node.py|
-        aiida/cmdline/commands/rehash.py|
-        aiida/cmdline/commands/restapi.py|
-        aiida/cmdline/commands/shell.py|
-        aiida/cmdline/commands/user.py|
-        aiida/cmdline/commands/workflow.py|
-        aiida/cmdline/options/types/legacy_workflow.py|
-        aiida/cmdline/options/interactive.py|
-        aiida/cmdline/params/types/path.py|
-        aiida/cmdline/params/.*.py|
-        aiida/cmdline/optiontypes/.*.py|
-        aiida/cmdline/utils/multi_line_input.py|
-        aiida/cmdline/utils/test_multiline.py|
-        aiida/cmdline/utils/templates.py|
-        aiida/cmdline/utils/echo.py|
         aiida/orm/data/cif.py|
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/user.py|
@@ -65,6 +29,23 @@
         aiida/restapi/resources.py|
         aiida/restapi/translator/data/cif.py|
         aiida/utils/fixtures.py|
+        aiida/work/awaitable.py|
+        aiida/work/context.py|
+        aiida/work/exceptions.py|
+        aiida/work/exit_code.py|
+        aiida/work/futures.py|
+        aiida/work/launch.py|
+        aiida/work/persistence.py|
+        aiida/work/ports.py|
+        aiida/work/process_builder.py|
+        aiida/work/process_spec.py|
+        aiida/work/rmq.py|
+        aiida/work/runners.py|
+        aiida/work/test_utils.py|
+        aiida/work/transports.py|
+        aiida/work/utils.py|
+        aiida/work/workchain.py|
+        aiida/work/workfunctions.py|
         docs/update_req_for_rtd.py # a|b -> match a OR b
       )$  # $ -> end of file path, to add a directory, give full/path/.*
 

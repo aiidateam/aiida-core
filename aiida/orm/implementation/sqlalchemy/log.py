@@ -7,23 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.log import Log, LogEntry
-from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
+from aiida.orm.log import LogCollection, Log
+from aiida.orm.log import ASCENDING
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.log import DbLog
+
 session = get_scoped_session()
 
 
-class SqlaLog(Log):
-    def create_entry(self, time, loggername, levelname, objname,
-                     objpk=None, message="", metadata=None):
+class SqlaLogCollection(LogCollection):
+
+    def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
         """
         Create a log entry.
         """
         if objpk is None or objname is None:
             return None
 
-        entry = SqlaLogEntry(
+        entry = SqlaLog(
             DbLog(
                 time=time,
                 loggername=loggername,
@@ -49,7 +50,7 @@ class SqlaLog(Log):
         if not filter_by:
             filter_by = {}
 
-        # Map the LogEntry property names to DbLog field names
+        # Map the Log property names to DbLog field names
         for key, value in filter_by.iteritems():
             filters[key] = value
 
@@ -72,7 +73,7 @@ class SqlaLog(Log):
         else:
             entries = session.query(DbLog).order_by(*order).limit(limit)
 
-        return [SqlaLogEntry(entry) for entry in entries]
+        return [SqlaLog(entry) for entry in entries]
 
     def delete_many(self, filter):
         """
@@ -88,7 +89,8 @@ class SqlaLog(Log):
                 "currently supported")
 
 
-class SqlaLogEntry(LogEntry):
+class SqlaLog(Log):
+
     def __init__(self, model):
         """
         :param model: :class:`aiida.backends.sqlalchemy.models.log.DbLog`

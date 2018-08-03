@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+import contextlib
 from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
@@ -66,6 +67,22 @@ class ModelWrapper(object):
     def _ensure_model_uptodate(self, fields=None):
         if self.is_saved():
             self._model.session.expire(self._model, attribute_names=fields)
+
+
+@contextlib.contextmanager
+def disable_expire_on_commit(session):
+    """
+    Context manager that disables expire_on_commit and restores the original value on exit
+
+    :param session: The SQLA session
+    :type session: :class:`sqlalchemy.orm.session.Session`
+    """
+    current_value = session.expire_on_commit
+    session.expire_on_commit = False
+    try:
+        yield session
+    finally:
+        session.expire_on_commit = current_value
 
 
 def iter_dict(attrs):

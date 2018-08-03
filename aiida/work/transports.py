@@ -1,76 +1,114 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""A transport queue to batch process multiple tasks that require a Transport."""
 from collections import namedtuple
+import contextlib
 import logging
-import threading
 import traceback
-from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
+import tornado.gen
+import tornado.concurrent
+import tornado.ioloop
+import tornado.locks
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class TransportRequest(object):
+    """ Information kept about request for a transport object """
+
+    # pylint: disable=too-few-public-methods
+    def __init__(self):
+        super(TransportRequest, self).__init__()
+        self.future = tornado.concurrent.Future()
+        self.count = 0
 
 
 class TransportQueue(object):
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at
-    some point in the future using a callback.
+    some point in the future.
 
     Internally the class will wait for a specific interval at the end of which
     it will open the transport and give it to all the clients that asked for it
     up to that point.  This way opening of transports (a costly operation) can
     be minimised.
     """
-    AuthinfoEntry = namedtuple("AuthinfoEntry", ['authinfo', 'transport', 'callbacks', 'callback_handle'])
+    AuthInfoEntry = namedtuple('AuthInfoEntry', ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
-    def __init__(self, loop=None, interval=DEFAULT_TRANSPORT_INTERVAL):
+    def __init__(self, loop=None):
         """
-        :param loop: The io loop
-        :param interval: The callback interval in seconds
+        :param loop: The event loop to use, will use tornado.ioloop.IOLoop.current() if not supplied
         """
-        super(TransportQueue, self).__init__()
+        self._loop = loop if loop is not None else tornado.ioloop.IOLoop.current()
+        self._transport_requests = {}
 
-        self._loop = loop
-        self._entries = {}
-        self._interval = interval
-        self._entries_lock = threading.Lock()
+    def loop(self):
+        """ Get the loop being used by this transport queue """
+        return self._loop
 
-        self._callback_handle = None
+    @contextlib.contextmanager
+    def request_transport(self, authinfo):
+        """
+        Request a transport from an authinfo.  Because the client is not allowed to
+        request a transport immediately they will instead be given back a future
+        that can be yielded to get the transport::
 
-    def call_me_with_transport(self, authinfo, callback):
-        _LOGGER.debug("Got request for transport with callback '{}'".format(callback))
+            @tornado.gen.coroutine
+            def transport_task(transport_queue, authinfo):
+                with transport_queue.request_transport(authinfo) as request:
+                    transport = yield request
+                    # Do some work with the transport
 
-        with self._entries_lock:
-            self._get_or_create_entry(authinfo).callbacks.append(callback)
+        :param authinfo: The authinfo to be used to get transport
+        :return: A future that can be yielded to give the transport
+        """
+        transport_request = self._transport_requests.get(authinfo.id, None)
 
-    def _get_or_create_entry(self, authinfo):
-        if authinfo.id in self._entries:
-            return self._entries[authinfo.id]
+        open_callback_handle = None
+        if transport_request is None:
+            transport_request = TransportRequest()
+            self._transport_requests[authinfo.id] = transport_request
 
-        transport = authinfo.get_transport()
+            transport = authinfo.get_transport()
+            safe_open_interval = transport.get_safe_open_interval()
 
-        # Check if the transport is happy to be opened with any frequency
-        # I put <= 0 to avoid that if the user, by mistake, puts a negative
-        # number, we get errors. Negative errors will be considered as zero.
-        safe_open_interval = transport.get_safe_open_interval()
-        if safe_open_interval <= 0.:
-            callback_handle = self._loop.add_callback(self._do_callback, authinfo.id)
-        else:
-            # Ok, we have to use a delay
-            callback_handle = self._loop.call_later(safe_open_interval, self._do_callback, authinfo.id)
+            def do_open():
+                """ Actually open the transport """
+                if transport_request.count > 0:
+                    # The user still wants the transport so open it
+                    _LOGGER.debug('Transport request opening transport for %s', authinfo)
+                    transport.open()
+                    transport_request.future.set_result(transport)
 
-        entry = self.AuthinfoEntry(authinfo, transport, [], callback_handle)
-        self._entries[authinfo.id] = entry
+            # Save the handle so that we can cancel the callback if the user no longer wants it
+            open_callback_handle = self._loop.call_later(safe_open_interval, do_open)
 
-        return entry
+        try:
+            transport_request.count += 1
+            yield transport_request.future
+        except tornado.gen.Return:
+            # Have to have this special case so tornado returns are propagated up to the loop
+            raise
+        except Exception:
+            _LOGGER.error("Exception whilst using transport:\n%s", traceback.format_exc())
+            raise
+        finally:
+            transport_request.count -= 1
+            assert transport_request.count >= 0, "Transport request count dropped blow 0!"
+            # Check if there are no longer any users that want the transport
+            if transport_request.count == 0:
+                if transport_request.future.done():
+                    _LOGGER.debug('Transport request closing transport for %s', authinfo)
+                    transport_request.future.result().close()
+                elif open_callback_handle is not None:
+                    self._loop.remove_timeout(open_callback_handle)
 
-    def _do_callback(self, authinfo_id):
-        entry = self._entries.pop(authinfo_id)
-        with entry.transport:
-            for fn in entry.callbacks:
-                _LOGGER.debug("Passing transport to {}...".format(fn))
-                try:
-                    fn(entry.authinfo, entry.transport)
-                except BaseException:
-                    _LOGGER.error(
-                        "Callback '{}' raised exception when passed transport:\n{}".format(
-                            fn, traceback.format_exc())
-                    )
-                _LOGGER.debug("...callback finished")
+                del self._transport_requests[authinfo.id]

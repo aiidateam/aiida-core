@@ -19,6 +19,7 @@ from aiida.orm import DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
+from aiida.orm.calculation import JobCalculation
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (
@@ -76,8 +77,8 @@ def validate_calculations(expected_results):
     for pk, expected_dict in expected_results.iteritems():
         calc = load_node(pk)
         if not calc.is_finished_ok:
-            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
+            print 'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                pk, calc.process_state, calc.exit_status)
             print_logshow(pk)
             valid = False
 
@@ -118,8 +119,8 @@ def validate_workchains(expected_results):
 
         # I check only if this_valid, otherwise calc could not exist
         if this_valid and not calc.is_finished_ok:
-            print 'Calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
+            print 'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                pk, calc.process_state, calc.exit_status)
             print_logshow(pk)
             valid = False
             this_valid = False
@@ -142,15 +143,25 @@ def validate_cached(cached_calcs):
     for calc in cached_calcs:
 
         if not calc.is_finished_ok:
-            print 'Cached calculation<{}> not finished ok: process_state<{}> finish_status<{}>'.format(
-                pk, calc.process_state, calc.finish_status)
-            print_logshow(pk)
+            print 'Cached calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
+                calc.pk, calc.process_state, calc.exit_status)
+            print_logshow(calc.pk)
             valid = False
 
         if '_aiida_cached_from' not in calc.extras() or calc.get_hash() != calc.get_extra('_aiida_hash'):
-            print 'Cached calculation<{}> has invalid hash'.format(pk)
-            print_logshow(pk)
+            print 'Cached calculation<{}> has invalid hash'.format(calc.pk)
+            print_logshow(calc.pk)
             valid = False
+
+        if isinstance(calc, JobCalculation):
+            if 'raw_input' not in calc.folder.get_content_list():
+                print "Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk)
+                print_logshow(calc.pk)
+                valid = False
+            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
+            if 'raw_input' not in original_calc.folder.get_content_list():
+                print "Original calculation <{}> does not have a 'raw_input' folder after being cached from.".format(original_calc.pk)
+                valid = False
 
     return valid
 

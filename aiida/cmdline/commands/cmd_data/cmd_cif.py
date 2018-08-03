@@ -11,7 +11,7 @@
 This allows to manage CifData objects from command line.
 """
 import click
-from aiida.cmdline.commands import verdi_data
+from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_deposit import deposit_tcod, deposit_options
@@ -19,10 +19,8 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.params import arguments
 
 
-# pylint: disable=unused-argument
 @verdi_data.group('cif')
-@click.pass_context
-def cif(ctx):
+def cif():
     """Manipulation of CIF data objects"""
     pass
 
@@ -43,8 +41,8 @@ def show(nodes, given_format):
     """
     from aiida.orm.data.structure import StructureData
     from aiida.orm.data.cif import CifData
-    from aiida.cmdline.commands.data.show import _show_jmol
-    from aiida.cmdline.commands.data.show import _show_vesta
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_jmol
+    from aiida.cmdline.commands.cmd_data.cmd_show import _show_vesta
 
     for node in nodes:
         if not isinstance(node, CifData):

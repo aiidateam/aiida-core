@@ -28,7 +28,7 @@ def generate_setup_options_dict(replace_args={}, non_interactive=True):
     valid_noninteractive_options['label'] = 'noninteractive_computer'
     valid_noninteractive_options['hostname'] = "localhost"
     valid_noninteractive_options['description'] = "my description"
-    ## Specifically give a string value for interactive prompts
+    # Specifically give a string value for interactive prompts
     if not non_interactive:
         valid_noninteractive_options['enabled'] = "True"
     valid_noninteractive_options['transport'] = "local"
@@ -597,8 +597,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         It should work as it is a local connection
         """
-        from aiida.cmdline.commands.cmd_computer import Computer as ComputerCmd
-
         # Testing the wrong computer will fail
         result = self.runner.invoke(computer_test, ['non-existent-computer'])
         # An exception should arise
@@ -613,7 +611,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Test if 'verdi computer list' command works
         """
-
         # Check the vanilla command works
         result = self.runner.invoke(computer_list, [])
         # No exceptions should arise

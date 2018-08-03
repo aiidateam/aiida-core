@@ -7,28 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-arguments
+"""`verdi export` command."""
 import click
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.cmdline.commands import verdi, verdi_export
+
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import DanglingLinkError
 
 
-class Export(VerdiCommandWithSubcommands):
-    """
-    Create and manage AiiDA export archives
-    """
-
-    def __init__(self):
-        self.valid_subcommands = {
-            'create': (self.cli, self.complete_none),
-            'migrate': (self.cli, self.complete_none)
-        }
-
-    def cli(self, *args):
-        verdi()
+@verdi.group('export')
+def verdi_export():
+    """Create and manage export archives."""
+    pass
 
 
 @verdi_export.command('create')
@@ -39,12 +32,18 @@ class Export(VerdiCommandWithSubcommands):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@click.option('-P', '--no-parents', is_flag=True, default=False,
-    help='store only the nodes that are explicitly given, without exporting the parents'
-)
-@click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
-    help='if a calculation is included in the list of nodes to export, do not export its outputs'
-)
+@click.option(
+    '-P',
+    '--no-parents',
+    is_flag=True,
+    default=False,
+    help='store only the nodes that are explicitly given, without exporting the parents')
+@click.option(
+    '-O',
+    '--no-calc-outputs',
+    is_flag=True,
+    default=False,
+    help='if a calculation is included in the list of nodes to export, do not export its outputs')
 def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_outputs, force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
@@ -96,11 +95,14 @@ def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_out
 @options.FORCE(help='overwrite output file if it already exists')
 @options.SILENT()
 def migrate(input_file, output_file, force, silent, archive_format):
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """
     Migrate an existing export archive file to the most recent version of the export format
     """
-    import os, json
-    import tarfile, zipfile
+    import os
+    import json
+    import tarfile
+    import zipfile
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
 
@@ -117,12 +119,12 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with open(folder.get_abs_path('data.json')) as f:
-                data = json.load(f)
-            with open(folder.get_abs_path('metadata.json')) as f:
-                metadata = json.load(f)
-        except IOError as e:
-            echo.echo_critical('export archive does not contain the required file {}'.format(f.filename))
+            with open(folder.get_abs_path('data.json')) as handle:
+                data = json.load(handle)
+            with open(folder.get_abs_path('metadata.json')) as handle:
+                metadata = json.load(handle)
+        except IOError:
+            echo.echo_critical('export archive does not contain the required file {}'.format(handle.filename))
 
         old_version = verify_metadata_version(metadata)
 
@@ -132,7 +134,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
             elif old_version == '0.2':
                 try:
                     migrate_v2_to_v3(metadata, data)
-                except DanglingLinkError as e:
+                except DanglingLinkError:
                     echo.echo_critical('export file is invalid because it contains dangling links')
             else:
                 echo.echo_critical('cannot migrate from version {}'.format(old_version))
@@ -141,11 +143,11 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         new_version = verify_metadata_version(metadata)
 
-        with open(folder.get_abs_path('data.json'), 'w') as f:
-            json.dump(data, f)
+        with open(folder.get_abs_path('data.json'), 'w') as handle:
+            json.dump(data, handle)
 
-        with open(folder.get_abs_path('metadata.json'), 'w') as f:
-            json.dump(metadata, f)
+        with open(folder.get_abs_path('metadata.json'), 'w') as handle:
+            json.dump(metadata, handle)
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
@@ -153,9 +155,9 @@ def migrate(input_file, output_file, force, silent, archive_format):
                 src = folder.abspath
                 for dirpath, dirnames, filenames in os.walk(src):
                     relpath = os.path.relpath(dirpath, src)
-                    for fn in dirnames + filenames:
-                        real_src = os.path.join(dirpath,fn)
-                        real_dest = os.path.join(relpath,fn)
+                    for filename in dirnames + filenames:
+                        real_src = os.path.join(dirpath, filename)
+                        real_dest = os.path.join(relpath, filename)
                         archive.write(real_src, real_dest)
         elif archive_format == 'tar.gz':
             with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
@@ -183,8 +185,9 @@ def verify_metadata_version(metadata, version=None):
         return metadata_version
 
     if metadata_version != version:
-        raise ValueError('expected export file with version {} but found version {}'
-            .format(version, metadata_version))
+        raise ValueError('expected export file with version {} but found version {}'.format(version, metadata_version))
+
+    return None
 
 
 def update_metadata(metadata, version):
@@ -228,41 +231,43 @@ def migrate_v1_to_v2(metadata, data):
         raise
 
     def get_new_string(old_string):
+        """Replace the old module prefix with the new."""
         if old_string.startswith(old_start):
-            return "{}{}".format(new_start, old_string[len(old_start):])
-        else:
-            return old_string
+            return '{}{}'.format(new_start, old_string[len(old_start):])
+
+        return old_string
 
     def replace_requires(data):
+        """Replace the requires keys with new module path."""
         if isinstance(data, dict):
             new_data = {}
-            for k, v in data.iteritems():
-                if k == 'requires' and v.startswith(old_start):
-                    new_data[k] = get_new_string(v)
+            for key, value in data.iteritems():
+                if key == 'requires' and value.startswith(old_start):
+                    new_data[key] = get_new_string(value)
                 else:
-                    new_data[k] = replace_requires(v)
+                    new_data[key] = replace_requires(value)
             return new_data
-        else:
-            return data
 
-    for field in ['export_data']: 
-        for k in list(data[field]):
-            if k.startswith(old_start):
-                new_k = get_new_string(k)
-                data[field][new_k] = data[field][k]
-                del data[field][k]
+        return data
 
-    for field in ['unique_identifiers', 'all_fields_info']: 
-        for k in list(metadata[field].keys()):
-            if k.startswith(old_start):
-                new_k = get_new_string(k)
-                metadata[field][new_k] = metadata[field][k]
-                del metadata[field][k]
+    for field in ['export_data']:
+        for key in list(data[field]):
+            if key.startswith(old_start):
+                new_key = get_new_string(key)
+                data[field][new_key] = data[field][key]
+                del data[field][key]
+
+    for field in ['unique_identifiers', 'all_fields_info']:
+        for key in list(metadata[field].keys()):
+            if key.startswith(old_start):
+                new_key = get_new_string(key)
+                metadata[field][new_key] = metadata[field][key]
+                del metadata[field][key]
 
     metadata['all_fields_info'] = replace_requires(metadata['all_fields_info'])
 
 
-def migrate_v2_to_v3(metadata, data):
+def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """
     Migration of export files from v0.2 to v0.3, which means adding the link
     types to the link entries and making the entity key names backend agnostic
@@ -271,14 +276,13 @@ def migrate_v2_to_v3(metadata, data):
     :param data: the content of an export archive data.json file
     :param metadata: the content of an export archive metadata.json file
     """
-    import json
     import enum
     from aiida.common.links import LinkType
 
     old_version = '0.2'
     new_version = '0.3'
 
-    class NodeType(enum.Enum):
+    class NodeType(enum.Enum):  # pylint: disable=too-few-public-methods
         """
         A simple enum of relevant node types
         """
@@ -305,8 +309,8 @@ def migrate_v2_to_v3(metadata, data):
 
     # Create a mapping from node uuid to node type
     mapping = {}
-    for category, nodes in data['export_data'].iteritems():
-        for pk, node in nodes.iteritems():
+    for nodes in data['export_data'].values():
+        for node in nodes.values():
 
             try:
                 node_uuid = node['uuid']
@@ -336,7 +340,7 @@ def migrate_v2_to_v3(metadata, data):
             input_type = NodeType(mapping[link['input']])
             output_type = NodeType(mapping[link['output']])
         except KeyError:
-            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'],link['output']))
+            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'], link['output']))
 
         # The following table demonstrates the logic for infering the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT
@@ -355,7 +359,6 @@ def migrate_v2_to_v3(metadata, data):
             link['type'] = LinkType.CALL.value
         else:
             link['type'] = LinkType.UNSPECIFIED.value
-
 
     # Now we migrate the entity key names i.e. removing the 'aiida.backends.djsite.db.models' prefix
     for field in ['unique_identifiers', 'all_fields_info']:

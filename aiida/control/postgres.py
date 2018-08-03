@@ -65,16 +65,19 @@ class Postgres(object):
             print('setup sucessful!')
     """
 
-    def __init__(self, port=None, interactive=False, quiet=True):
+    def __init__(self, host='localhost', port=None, interactive=False, quiet=True):
         self.interactive = interactive
         self.quiet = quiet
         self.pg_execute = _pg_execute_not_connected
         self.dbinfo = {}
-        if port:
-            self.set_port(port)
         self.setup_fail_callback = None
         self.setup_fail_counter = 0
         self.setup_max_tries = 1
+
+        if host:
+            self.set_host(host)
+        if port:
+            self.set_port(port)
 
     def set_setup_fail_callback(self, callback):
         """
@@ -83,6 +86,10 @@ class Postgres(object):
         :param callback: a callable with signature ``callback(interactive, dbinfo)``
         """
         self.setup_fail_callback = callback
+
+    def set_host(self, host):
+        """Set the host manually"""
+        self.dbinfo['host'] = host
 
     def set_port(self, port):
         """Set the port manually"""
@@ -314,8 +321,8 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     if port:
         options += '-p {}'.format(port)
 
-    ## build command line
-    sudo_cmd = ['sudo']
+    # Build command line
+    sudo_cmd = ['sudo', '-S']
     non_interactive = kwargs.pop('non_interactive', None)
     if non_interactive:
         sudo_cmd += ['-n']

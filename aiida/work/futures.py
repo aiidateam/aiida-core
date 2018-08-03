@@ -1,8 +1,17 @@
-import aiida.orm
-import kiwipy
-import plumpy
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 import tornado.gen
 
+import kiwipy
+import plumpy
 
 __all__ = ['Future', 'CalculationFuture']
 
@@ -27,13 +36,14 @@ class CalculationFuture(Future):
         :param poll_interval: The polling interval.  Can be None in which case no polling.
         :param communicator: A communicator.   Can be None in which case no broadcast listens.
         """
+        from aiida.orm import load_node
         from .processes import ProcessState
 
         super(CalculationFuture, self).__init__()
-        assert not (poll_interval is None and communicator is None), \
-            "Must poll or have a communicator to use"
+        assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
-        calc_node = aiida.orm.load_node(pk=int(pk))
+        calc_node = load_node(pk=pk)
+
         if calc_node.is_terminated:
             self.set_result(calc_node)
         else:
@@ -42,12 +52,9 @@ class CalculationFuture(Future):
 
             # Try setting up a filtered broadcast subscriber
             if self._communicator is not None:
-                self._filtered = kiwipy.BroadcastFilter(
-                    lambda *args, **kwargs: self.set_result(calc_node), sender=pk)
-                for state in [ProcessState.FINISHED,
-                              ProcessState.KILLED,
-                              ProcessState.EXCEPTED]:
-                    self._filtered.add_subject_filter("state_changed.*.{}".format(state.value))
+                self._filtered = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(calc_node), sender=pk)
+                for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
+                    self._filtered.add_subject_filter('state_changed.*.{}'.format(state.value))
                 self._communicator.add_broadcast_subscriber(self._filtered)
 
             # Start polling
@@ -55,6 +62,7 @@ class CalculationFuture(Future):
                 loop.add_callback(self._poll_calculation, calc_node, poll_interval)
 
     def cleanup(self):
+        """Clean up the future by removing broadcast subscribers from the communicator if it still exists."""
         if self._communicator is not None:
             self._communicator.remove_broadcast_subscriber(self._filtered)
             self._filtered = None
@@ -62,6 +70,7 @@ class CalculationFuture(Future):
 
     @tornado.gen.coroutine
     def _poll_calculation(self, calc_node, poll_interval):
+        """Poll whether the calculation node has reached a terminal state."""
         while not self.done() and not calc_node.is_terminated:
             yield tornado.gen.sleep(poll_interval)
 

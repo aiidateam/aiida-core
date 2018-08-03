@@ -10,24 +10,12 @@
 """`verdi import` command."""
 import click
 
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.cmdline.commands import verdi_import
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options import MultipleValueOption
 from aiida.cmdline.utils import decorators, echo
 
 
-class Import(VerdiCommand):
-    """
-    Import AiiDA export archives
-    """
-
-    def run(self, *args):
-        ctx = cmd_import.make_context('cmd_import', list(args))
-        with ctx:
-            cmd_import.invoke(ctx)
-
-
-@verdi_import.command('import')
+@verdi.command('import')
 @click.argument('archives', nargs=-1, type=click.Path(exists=True, readable=True))
 @click.option(
     '-w',
@@ -38,8 +26,9 @@ class Import(VerdiCommand):
     "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing")
 @decorators.with_dbenv()
 def cmd_import(archives, webpages):
-    """
-    Import one or multiple exported AiiDA ARCHIVES specified by their relative or absolute file path, or their HTTP URL.
+    """Import one or multiple exported AiiDA archives
+
+    The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
     """
     # pylint: disable=too-many-branches,broad-except
     import traceback

@@ -7,26 +7,29 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` commands"""
 import sys
 import click
-from click_plugins import with_plugins
 
-from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-from aiida.common.exceptions import ValidationError
-from aiida.common.utils import escape_for_bash
-from aiida.cmdline.commands import verdi, verdi_computer, ensure_scripts
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
-from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import types
 from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.types import (
-    ShebangParamType, MpirunCommandParamType, NonemptyStringParamType)
+from aiida.cmdline.params.types import ShebangParamType, MpirunCommandParamType, NonemptyStringParamType
+from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.multi_line_input import ensure_scripts
+from aiida.common.exceptions import ValidationError
 from aiida.control.computer import ComputerBuilder, get_computer_configuration
 from aiida.plugins.entry_point import get_entry_points
-from aiida import transport
+from aiida.transport import cli as transport_cli
+
+
+@verdi.group('computer')
+def verdi_computer():
+    """Setup and manage computers."""
+    pass
 
 
 def get_computer_names():
@@ -34,12 +37,13 @@ def get_computer_names():
     Retrieve the list of computers in the DB.
     """
     from aiida.orm.querybuilder import QueryBuilder
-    qb = QueryBuilder()
-    qb.append(type='computer', project=['name'])
-    if qb.count() > 0:
-        return zip(*qb.all())[0]
-    else:
-        return []
+    builder = QueryBuilder()
+    builder.append(type='computer', project=['name'])
+    if builder.count() > 0:
+        return zip(*builder.all())[0]
+
+    return []
+
 
 @with_dbenv()
 def get_computer(name):
@@ -51,10 +55,9 @@ def get_computer(name):
 
 
 @with_dbenv()
-def prompt_for_computer_configuration(computer):
-    import inspect, readline
-    from aiida.orm.computer import Computer
-    from aiida.common.exceptions import ValidationError
+def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argument
+    pass
+
 
 def shouldcall_default_mpiprocs_per_machine(ctx):
     """
@@ -67,39 +70,37 @@ def shouldcall_default_mpiprocs_per_machine(ctx):
     scheduler_ep = ctx.params['scheduler']
     if scheduler_ep is not None:
         try:
-            SchedulerClass = scheduler_ep.load()
+            scheduler_cls = scheduler_ep.load()
         except ImportError:
             raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
     else:
         raise ValidationError(
             "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
 
-    JobResourceClass = SchedulerClass._job_resource_class
-    if JobResourceClass is None:
+    job_resource_cls = scheduler_cls.job_resource_class
+    if job_resource_cls is None:
         # Odd situation...
         return False
 
-    return JobResourceClass.accepts_default_mpiprocs_per_machine()
+    return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
-def _computer_test_get_jobs(transport,scheduler,authinfo):
+
+def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
-    :param authinfo: the AuthInfo object (from which one can get
-      computer and aiidauser)
+    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: True if the test succeeds, False if it fails.
     """
     echo.echo("> Getting job list...")
     found_jobs = scheduler.getJobs(as_dict=True)
-    # For debug
-    # for jid, data in found_jobs.iteritems():
-    #    print jid, data['submission_time'], data['dispatch_time'], data['job_state']
     echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
     return True
 
-def _computer_create_temp_file(transport, scheduler, authinfo):
+
+def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
@@ -108,8 +109,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):
 
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
-    :param authinfo: the AuthInfo object (from which one can get
-      computer and aiidauser)
+    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: True if the test succeeds, False if it fails.
     """
     import tempfile
@@ -169,75 +169,81 @@ def _computer_create_temp_file(transport, scheduler, authinfo):
     echo.echo("  [Deleted successfully]")
     return True
 
+
 @verdi_computer.command('setup')
-@click.pass_context
 @options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())
-@options.HOSTNAME(prompt='Hostname', cls=InteractiveOption, required=True,
+@options.HOSTNAME(
+    prompt='Hostname',
+    cls=InteractiveOption,
+    required=True,
     help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption,
-                     help="A human-readable description of this computer")
-@click.option('-e/-d', '--enabled/--disabled', is_flag=True, default=True,
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help="A human-readable description of this computer")
+@click.option(
+    '-e/-d',
+    '--enabled/--disabled',
+    is_flag=True,
+    default=True,
     help='if created with the disabled flag, calculations '
-         'associated with it will not be submitted until when it is '
-         're-enabled',
+    'associated with it will not be submitted until when it is '
+    're-enabled',
     prompt="Enable the computer?",
     cls=InteractiveOption,
     # IMPORTANT! Do not specify explicitly type=click.BOOL,
     # Otherwise you would not get a default value when prompting
- )
+)
 @options.TRANSPORT(prompt="Transport plugin", cls=InteractiveOption)
 @options.SCHEDULER(prompt="Scheduler plugin", cls=InteractiveOption)
 @click.option(
-   '--shebang',
+    '--shebang',
     prompt='Shebang line (first line of each script, starting with #!)',
     default="#!/bin/bash",
     cls=InteractiveOption,
     help='this line specifies the first line of the submission script for this computer',
     type=ShebangParamType())
 @click.option(
-    '-w', '--work-dir',
-    prompt='work directory on the computer',
+    '-w',
+    '--work-dir',
+    prompt='Work directory on the computer',
     default="/scratch/{username}/aiida/",
     cls=InteractiveOption,
     help="The absolute path of the directory on the computer where AiiDA will "
-         "run the calculations (typically, the scratch of the computer). You "
-         "can use the {username} replacement, that will be replaced by your "
-         "username on the remote computer")
+    "run the calculations (typically, the scratch of the computer). You "
+    "can use the {username} replacement, that will be replaced by your "
+    "username on the remote computer")
 @click.option(
-    '-m', '--mpirun-command',
-    prompt="mpirun command",
+    '-m',
+    '--mpirun-command',
+    prompt="Mpirun command",
     default="mpirun -np {tot_num_mpiprocs}",
     cls=InteractiveOption,
     help="The mpirun command needed on the cluster to run parallel MPI "
-         "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
-         "replaced by the total number of cpus, or the other scheduler-dependent "
-         "replacement fields (see the scheduler docs for more information)",
+    "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+    "replaced by the total number of cpus, or the other scheduler-dependent "
+    "replacement fields (see the scheduler docs for more information)",
     type=MpirunCommandParamType())
 @click.option(
     '--mpiprocs-per-machine',
-    prompt="default number of CPUs per machine",
+    prompt="Default number of CPUs per machine",
     cls=InteractiveOption,
     help="Enter here the default number of MPI processes per machine (node) that "
-         "should be used if nothing is otherwise specified. Pass the digit 0 "
-         "if you do not want to provide a default value.",
+    "should be used if nothing is otherwise specified. Pass the digit 0 "
+    "if you do not want to provide a default value.",
     prompt_fn=shouldcall_default_mpiprocs_per_machine,
     required_fn=False,
     type=click.INT,
-) # Note: this can still be passed from the command line in non-interactive mode
+)  # Note: this can still be passed from the command line in non-interactive mode
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @with_dbenv()
-def setup_computer(ctx, non_interactive, **kwargs):
+def setup_computer(non_interactive, **kwargs):
     """Add a Computer."""
-    from aiida.common.exceptions import ValidationError
-    #from aiida.cmdline.utils.echo import ExitCode
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists.\n'
-            'Use "verdi computer update" to update it, and be '
-            'careful if you really want to modify a database '
-            'entry!'.format(kwargs['label']))
+                           'Use "verdi computer update" to update it, and be '
+                           'careful if you really want to modify a database '
+                           'entry!'.format(kwargs['label']))
 
     if not non_interactive:
         pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
@@ -253,7 +259,6 @@ def setup_computer(ctx, non_interactive, **kwargs):
     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
         echo.echo_critical('{}: {}'.format(type(e).__name__, e))
 
-
     try:
         computer.store()
     except ValidationError as err:
@@ -263,13 +268,12 @@ def setup_computer(ctx, non_interactive, **kwargs):
     echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
 
     echo.echo_info("Note: before using it with AiiDA, configure it using the command")
-    echo.echo_info("  verdi computer configure {}".format(computer.name))
+    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
     echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
     echo.echo_info("the command-line interface at the moment)")
 
 
 @verdi_computer.command('enable')
-@click.pass_context
 @click.option(
     '-u',
     '--only-for-user',
@@ -278,7 +282,7 @@ def setup_computer(ctx, non_interactive, **kwargs):
     help="Enable a computer only for the given user. If not specified, enables the computer globally.")
 @arguments.COMPUTER()
 @with_dbenv()
-def enable_computer(ctx, only_for_user, computer):
+def enable_computer(only_for_user, computer):
     """Enable a computer"""
     from aiida.common.exceptions import NotExistent
 
@@ -304,7 +308,6 @@ def enable_computer(ctx, only_for_user, computer):
 
 
 @verdi_computer.command('disable')
-@click.pass_context
 @click.option(
     '-u',
     '--only-for-user',
@@ -313,7 +316,7 @@ def enable_computer(ctx, only_for_user, computer):
     help="Disable a computer only for the given user. If not specified, disables the computer globally.")
 @arguments.COMPUTER()
 @with_dbenv()
-def disable_computer(ctx, only_for_user, computer):
+def disable_computer(only_for_user, computer):
     """Disable a computer. Useful, for instance, when a computer is under maintenance."""
     from aiida.common.exceptions import NotExistent
 
@@ -343,14 +346,12 @@ def disable_computer(ctx, only_for_user, computer):
     '-o',
     '--only-usable',
     is_flag=True,
-    help="Show only computers that are usable (i.e., "
-    "configured for the given user and enabled)")
+    help="Show only computers that are usable (i.e. configured for the given user and enabled)")
 @click.option(
     '-p',
     '--parsable',
     is_flag=True,
-    help="Show only the computer names, one per line, "
-    "without any other information or string.")
+    help="Show only the computer names, one per line, without any other information or string.")
 @click.option('-a', '--all-comps', is_flag=True, help="Show also disabled or unconfigured computers")
 @with_dbenv()
 def computer_list(only_usable, parsable, all_comps):
@@ -439,7 +440,7 @@ def computer_rename(computer, new_name):
     """
     Rename a computer
     """
-    from aiida.common.exceptions import UniquenessError, ValidationError
+    from aiida.common.exceptions import UniquenessError
 
     old_name = computer.get_name()
 
@@ -464,15 +465,13 @@ def computer_rename(computer, new_name):
 @options.USER(
     required=False,
     help="Test the connection for a given AiiDA user, specified by"
-    "their email address. If not specified, uses the current "
-    "default user.",
+    "their email address. If not specified, uses the current default user.",
 )
 @click.option(
     '-t',
     '--print-traceback',
     is_flag=True,
-    help="Print the full traceback in case an exception "
-    "is raised",
+    help="Print the full traceback in case an exception is raised",
 )
 @arguments.COMPUTER()
 @with_dbenv()
@@ -559,7 +558,6 @@ def computer_test(user, print_traceback, computer):
         succeeded = False
 
 
-
 @verdi_computer.command('delete')
 @arguments.COMPUTER()
 @with_dbenv()
@@ -570,7 +568,7 @@ def computer_delete(computer):
     Does not delete the computer if there are calculations that are using
     it.
     """
-    from aiida.common.exceptions import (NotExistent, InvalidOperation)
+    from aiida.common.exceptions import InvalidOperation
     from aiida.orm.computer import delete_computer
 
     compname = computer.get_name()
@@ -583,12 +581,11 @@ def computer_delete(computer):
     echo.echo_success("Computer '{}' deleted.".format(compname))
 
 
-
-# ~ @with_plugins(get_entry_points('aiida.cmdline.computer.configure'))
 @verdi_computer.group('configure')
 def computer_configure():
     """Configure a computer with one of the available transport types."""
     pass
+
 
 @computer_configure.command('show')
 @click.option('--current/--defaults')
@@ -598,17 +595,21 @@ def computer_configure():
 def computer_config_show(computer, user, current, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
-    from pprint import pformat
+    from aiida.common.utils import escape_for_bash
+
     config = {}
     table = []
 
     transport_cls = computer.get_transport_class()
-    option_list = [param for param in transport.cli.create_configure_cmd(computer.get_transport_type()).params if isinstance(param, click.core.Option)]
+    option_list = [
+        param for param in transport_cli.create_configure_cmd(computer.get_transport_type()).params
+        if isinstance(param, click.core.Option)
+    ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
     if current:
         config = get_computer_configuration(computer, user)
     else:
-        config = {option.name: transport.cli.transport_option_default(option.name, computer) for option in option_list}
+        config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
 
     option_items = []
     if as_option_string:
@@ -616,9 +617,11 @@ def computer_config_show(computer, user, current, as_option_string):
             t_opt = transport_cls.auth_options[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
-                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(option.name.replace('_', '-'))
+                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(
+                        option.name.replace('_', '-'))
                 elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name) == transport_option_default(option.name, computer)
+                    is_default = config.get(option.name) == transport_cli.transport_option_default(
+                        option.name, computer)
                     option_value = option.opts[-1] if is_default else ''
                 else:
                     option_value = '{}={}'.format(option.opts[-1], config[option.name])
@@ -629,102 +632,6 @@ def computer_config_show(computer, user, current, as_option_string):
         table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
 
+
 for ep in get_entry_points('aiida.transports'):
-    computer_configure.add_command(transport.cli.create_configure_cmd(ep.name))
-
-class Computer(VerdiCommandWithSubcommands):
-    """
-    Setup and manage computers to be used
-
-    This command allows to list, add, modify and configure computers.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        super(Computer, self).__init__()
-
-        self.valid_subcommands = {
-            'list': (verdi, self.complete_none),
-            'show': (verdi, self.complete_computers),
-            'setup': (verdi, self.complete_none),
-            'update': (self.computer_update, self.complete_computers),
-            'enable': (verdi, self.complete_computers),
-            'disable': (verdi, self.complete_computers),
-            'rename': (verdi, self.complete_computers),
-            'test': (verdi, self.complete_computers),
-            'delete': (verdi, self.complete_computers),
-            'configure': (verdi, self.complete_none),
-        }
-
-    def complete_computers(self, subargs_idx, subargs):
-        if not is_dbenv_loaded():
-            load_dbenv()
-        computer_names = get_computer_names()
-        print computer_names
-        return "\n".join(computer_names)
-
-    def computer_update(self, *args):
-        """
-        Update an existing computer
-        """
-        import argparse
-        from aiida.common.exceptions import NotExistent
-
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-        from aiida.orm.computer import Computer
-
-        parser = argparse.ArgumentParser(prog=self.get_full_command_name(), description='Update a computer')
-        # The default states are those that are shown if no option is given
-        parser.add_argument('computer_name', help="The name of the computer")
-        parsed_args = parser.parse_args(args)
-        computer_name = parsed_args.computer_name
-
-        try:
-            computer = Computer.get(computer_name)
-        except NotExistent:
-            print "No computer {} was found".format(computer_name)
-            sys.exit(1)
-
-        calculation_on_computer = computer.get_calculations_on_computer()
-
-        if calculation_on_computer:
-            # Note: this is an artificial comment.
-            # If you comment the following lines, you will be able to overwrite
-            # the old computer anyway, at your own risk.
-            print "You cannot modify a computer, after you run some calculations on it."
-            print "Disable this computer and set up a new one."
-            sys.exit(1)
-
-        print "*" * 75
-        print "WARNING! Modifying existing computer with name '{}'".format(computer_name)
-        print "Are you sure you want to continue? The UUID will remain the same!"
-        print "Continue only if you know what you are doing."
-        print "If you just want to rename a computer, use the 'verdi computer rename'"
-        print "command. In most cases, it is better to create a new computer."
-        print "Moreover, if you change the transport, you must also reconfigure"
-        print "each computer for each user!"
-        print "*" * 75
-        print "Press [Enter] to continue, or [Ctrl]+C to exit."
-        raw_input()
-
-        prompt_for_computer_configuration(computer)
-
-        try:
-            computer.store()
-        except ValidationError as e:
-            print "Unable to store the computer: {}. Exiting...".format(e.message)
-            sys.exit(1)
-
-        print "Computer '{}' successfully updated.".format(computer_name)
-        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
-        print "(Note: machine_dependent transport parameters cannot be set via "
-        print "the command-line interface at the moment)"
-
-        print "OK"
-        pass
-
-
+    computer_configure.add_command(transport_cli.create_configure_cmd(ep.name))

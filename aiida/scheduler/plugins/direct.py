@@ -57,9 +57,9 @@ _MAP_STATUS_PS = {
     'Z': JOB_STATES.DONE,
     # Not sure about these three, I comment them out (they used to be in
     # here, but they don't appear neither on ubuntu nor on Mac)
-    #    'F': job_states.DONE,
-    #    'H': job_states.QUEUED_HELD,
-    #    'Q': job_states.QUEUED,
+    #    'F': JOB_STATES.DONE,
+    #    'H': JOB_STATES.QUEUED_HELD,
+    #    'Q': JOB_STATES.QUEUED,
 }
 
 
@@ -145,8 +145,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 raise ValueError("max_memory_kb must be "
                                  "a positive integer (in kB)! It is instead '{}'"
                                  "".format((job_tmpl.MaxMemoryKb)))
-            lines.append("ulimit -v {}", virtual_memory_kb)
-
+            lines.append("ulimit -v {}".format(virtualMemoryKb))
         if not job_tmpl.import_sys_environment:
             lines.append("env --ignore-environment \\")
 

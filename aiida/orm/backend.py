@@ -15,11 +15,9 @@ _SQLA_BACKEND = None
 
 def construct_backend(backend_type=None):
     """
-    Construct a concrete backend instance based on the backend_type
-    or use the global backend value if not specified.
+    Construct a concrete backend instance based on the backend_type or use the global backend value if not specified.
 
-    :param backend_type: Get a backend instance based on the specified
-        type (or default)
+    :param backend_type: get a backend instance based on the specified type (or default)
     :return: :class:`Backend`
     """
     if backend_type is None:
@@ -43,18 +41,16 @@ def construct_backend(backend_type=None):
 
 
 class Backend(object):
-    """
-    The public interface that defines a backend factory that creates backend
-    specific concrete objects.
-    """
+    """The public interface that defines a backend factory that creates backend specific concrete objects."""
+
     __metaclass__ = ABCMeta
 
     @abstractproperty
-    def log(self):
+    def logs(self):
         """
-        Get an object that implements the logging utilities interface.
+        Return the collection of log entries
 
-        :return: An concrete log utils object
+        :return: the log collection
         :rtype: :class:`aiida.orm.log.Log`
         """
         pass
@@ -62,9 +58,9 @@ class Backend(object):
     @abstractproperty
     def users(self):
         """
-        Get the collection of all users for this backend
+        Return the collection of users
 
-        :return: The users collection
+        :return: the users collection
         :rtype: :class:`aiida.orm.user.UserCollection`
         """
         pass
@@ -72,9 +68,33 @@ class Backend(object):
     @abstractproperty
     def authinfos(self):
         """
-        Get the collection of authorisation information
+        Return the collection of authorisation information objects
 
-        :return: The authinfo collection
+        :return: the authinfo collection
         :rtype: :class:`aiida.orm.authinfo.AuthInfoCollection`
         """
         pass
+
+
+class Collection(object):
+    """Container class that represents a collection of entries of a particular backend entity."""
+
+    def __init__(self, backend):
+        self._backend = backend
+
+    @property
+    def backend(self):
+        """Return the backend."""
+        return self._backend
+
+
+class CollectionEntry(object):
+    """Class that represents an entry within a collection of entries of a particular backend entity."""
+
+    def __init__(self, backend):
+        self._backend = backend
+
+    @property
+    def backend(self):
+        """Return the backend."""
+        return self._backend

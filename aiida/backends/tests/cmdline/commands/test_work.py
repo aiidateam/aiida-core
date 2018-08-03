@@ -91,7 +91,7 @@ class TestVerdiWork(AiidaTestCase):
 
             # Set the FunctionCalculation as successful
             if state == ProcessState.FINISHED:
-                calc._set_finish_status(0)
+                calc._set_exit_status(0)
 
             calc.store()
             calcs.append(calc)
@@ -101,7 +101,7 @@ class TestVerdiWork(AiidaTestCase):
 
             # Set the WorkCalculation as failed
             if state == ProcessState.FINISHED:
-                calc._set_finish_status(1)
+                calc._set_exit_status(1)
 
             calc.store()
             calcs.append(calc)
@@ -130,14 +130,14 @@ class TestVerdiWork(AiidaTestCase):
                 self.assertIsNone(result.exception)
                 self.assertEquals(len(get_result_lines(result)), 2)
 
-        # Filtering for finish status should only get us one
-        for flag in ['-F', '--finish-status']:
-            for finish_status in ['0', '1']:
-                result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, finish_status])
+        # Filtering for exit status should only get us one
+        for flag in ['-E', '--exit-status']:
+            for exit_status in ['0', '1']:
+                result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, exit_status])
                 self.assertIsNone(result.exception)
                 self.assertEquals(len(get_result_lines(result)), 1)
 
-        # Passing the failed flag as a shortcut for FINISHED + non-zero finish status
+        # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
         for flag in ['-x', '--failed']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag])
             self.assertIsNone(result.exception)
@@ -195,3 +195,27 @@ class TestVerdiWork(AiidaTestCase):
         """Test the plugins command. As of writing there are no default plugins defined for aiida-core."""
         result = self.cli_runner.invoke(cmd_work.work_plugins, ['non_existent'])
         self.assertIsNotNone(result.exception)
+
+    def test_work_show(self):
+        """Test verdi work show"""
+        workchain_one = WorkCalculation().store()
+        workchain_two = WorkCalculation().store()
+        workchains = [workchain_one, workchain_two]
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertEquals(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(workchain_one.pk)]
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(workchain.pk) for workchain in workchains]
+        result = self.cli_runner.invoke(cmd_work.work_show, options)
+        self.assertIsNone(result.exception)
+        self.assertTrue(len(get_result_lines(result)) > 0)

@@ -17,24 +17,12 @@ import os
 import click
 
 import aiida.restapi
-from aiida.cmdline.baseclass import VerdiCommand
-from aiida.cmdline.commands import verdi_restapi
+from aiida.cmdline.commands.cmd_verdi import verdi
 
 DEFAULT_CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
 
 
-class Restapi(VerdiCommand):
-    """
-    Command line utility to hook up the AiiDA REST API
-    """
-
-    def run(self, *args):
-        ctx = restapi.make_context('restapi', list(args))
-        with ctx:
-            restapi.invoke(ctx)
-
-
-@verdi_restapi.command('restapi')
+@verdi.command('restapi')
 @click.option('-H', '--host', type=click.STRING, default='127.0.0.1', help='the hostname to use')
 @click.option('-p', '--port', type=click.INT, default=5000, help='the port to use')
 @click.option(
@@ -45,7 +33,8 @@ class Restapi(VerdiCommand):
     help='the path of the configuration directory')
 def restapi(host, port, config_dir):
     """
-    Command line utility to hook up the AiiDA REST API.
+    Run the AiiDA REST API server
+
     Example Usage:
 
         \b

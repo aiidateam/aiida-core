@@ -16,7 +16,6 @@ import string
 import sys
 import numbers
 
-import numpy as np
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -225,7 +224,9 @@ def conv_to_fortran(val, quote_strings=True):
     """
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
-    if isinstance(val, (bool, np.bool_)):
+    import numpy
+
+    if isinstance(val, (bool, numpy.bool_)):
         if val:
             val_str = '.true.'
         else:

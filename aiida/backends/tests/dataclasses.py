@@ -2156,8 +2156,8 @@ class TestStructureDataLock(AiidaTestCase):
         _ = a.is_alloy()
         _ = a.has_vacancies()
 
-        b = a.copy()
-        # I check that I can edit after copy
+        b = a.clone()
+        # I check that clone returned an unstored copy and so can be altered
         b.append_site(s)
         b.clear_sites()
         # I check that the original did not change
@@ -2220,9 +2220,9 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
 
-    def test_copy(self):
+    def test_clone(self):
         """
-        Start from a StructureData object, copy it and see if it is preserved
+        Start from a StructureData object, clone it and see if it is preserved
         """
         from aiida.orm.data.structure import StructureData
 
@@ -2234,7 +2234,7 @@ class TestStructureDataReload(AiidaTestCase):
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
-        b = a.copy()
+        b = a.clone()
 
         for i in range(3):
             for j in range(3):
@@ -2252,8 +2252,8 @@ class TestStructureDataReload(AiidaTestCase):
 
         a.store()
 
-        # Copy after store()
-        c = a.copy()
+        # Clone after store()
+        c = a.clone()
         for i in range(3):
             for j in range(3):
                 self.assertAlmostEqual(cell[i][j], c.cell[i][j])

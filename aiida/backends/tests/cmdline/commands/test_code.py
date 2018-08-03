@@ -198,26 +198,28 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
 
-    def test_code_delete(self):
-        result = self.runner.invoke(show, [str(self.code.pk)])
+    def test_code_duplicate_interactive(self):
+        # This currently fails with SystemExit(2)
+        # Don't know why...
+        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
+        label = 'my_code_duplicate'
+        user_input = '\n'.join(
+            [label, 'my desc', 'simpleplugins.arithmetic.add', 'True', 'localhost', '/usr/bin/diff'])
+            #[str(self.code.pk), label, 'my desc', 'simpleplugins.arithmetic.add', 'True', 'localhost', '/usr/bin/diff'])
+        result = self.runner.invoke(setup_code, [str(self.code.pk)], input=user_input)
+        #result = self.runner.invoke(setup_code, [str(self.code.pk)], input=user_input)
+        #result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
         self.assertIsNone(result.exception)
-        self.assertTrue(str(self.code.pk) in result.output)
 
-
-    #def test_code_duplicate_interactive(self):
-    #    # This currently hangs (to investigate why)
-    #    os.environ['VISUAL'] = 'sleep 1; vim -cwq'
-    #    os.environ['EDITOR'] = 'sleep 1; vim -cwq'
-    #    label = 'abc'
-    #    user_input = '\n'.join(
-    #        [str(self.code.pk), label, 'my desc', '', '', '', ''])
-    #    result = self.runner.invoke(setup_code, input=user_input)
-    #    #result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
-    #    self.assertIsNone(result.exception)
-    #    self.assertTrue(str(self.code.pk) in result.output)
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
 
     def test_code_duplicate_non_interactive(self):
-        label = 'newcode'
+        label = 'my_code_duplicate'
         result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
         self.assertIsNone(result.exception)
 

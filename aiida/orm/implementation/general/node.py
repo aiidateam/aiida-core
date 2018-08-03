@@ -1698,7 +1698,19 @@ class AbstractNode(object):
         return self
 
     def _store_from_cache(self, cache_node, with_transaction):
-        new_node = cache_node.copy(include_updatable_attrs=True)
+        from aiida.orm.mixins import Sealable
+        new_node = type(cache_node)()
+        new_node._dbnode.type = cache_node._dbnode.type  # Inherit type
+        new_node.label = cache_node.label  # Inherit label
+        new_node.description = cache_node.description  # Inherit description
+        new_node._dbnode.dbcomputer = cache_node._dbnode.dbcomputer  # Inherit computer
+
+        for k, v in cache_node.iterattrs():
+            if k != Sealable.SEALED_KEY:
+                new_node._set_attr(k, v)
+
+        new_node.folder.replace_with_folder(cache_node.folder.abspath, move=False, overwrite=True)
+
         inputlinks_cache = self._inputlinks_cache
         # "impersonate" the copied node by getting all its attributes
         self.__dict__ = new_node.__dict__

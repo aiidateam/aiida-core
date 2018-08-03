@@ -198,6 +198,12 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
 
+    def test_code_delete(self):
+        result = self.runner.invoke(show, [str(self.code.pk)])
+        self.assertIsNone(result.exception)
+        self.assertTrue(str(self.code.pk) in result.output)
+
+
     #def test_code_duplicate_interactive(self):
     #    # This currently hangs (to investigate why)
     #    os.environ['VISUAL'] = 'sleep 1; vim -cwq'
@@ -211,11 +217,14 @@ class TestVerdiCodeCommands(AiidaTestCase):
     #    self.assertTrue(str(self.code.pk) in result.output)
 
     def test_code_duplicate_non_interactive(self):
-        # This does not seem to take the default values from contextual_defaults
-        # (to fix)
-        label = 'abc'
-        result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
+        label = 'newcode'
+        result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
         self.assertIsNone(result.exception)
-        self.assertTrue(str(self.code.pk) in result.output)
 
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+        self.assertEquals(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
 

@@ -115,10 +115,13 @@ def get_default(key, ctx):
     :param ctx: The click context (which will be used to get the user)
     :return: The default value, or None
     """
-    value = getattr(ctx.code_builder, key)
+    try:
+        value = getattr(ctx.code_builder, key)
+        if value == "":
+            value = None
+    except KeyError:
+        value = None
 
-    if value == "":
-        return None
     return value
 
 
@@ -264,11 +267,12 @@ def delete(codes):
 
     for code in codes:
         try:
+            code_str = str(code)
             delete_code(code)
         except InvalidOperation as exc:
             echo.echo_critical(exc.message)
 
-        echo.echo_success("Code '{}' deleted.".format(code.pk))
+        echo.echo_success("{} deleted.".format(code_str))
 
 
 @verdi_code.command()

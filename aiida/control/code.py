@@ -107,7 +107,7 @@ class CodeBuilder(object):
             try:
                 return self._code_spec[key]
             except KeyError:
-                raise self.CodeValidationError("Attribute '{}' not set".format(key))
+                raise KeyError("Attribute '{}' not set".format(key))
         return None
 
     def _get(self, key):

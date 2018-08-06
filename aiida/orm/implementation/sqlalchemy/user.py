@@ -24,7 +24,7 @@ class SqlaUserCollection(UserCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return SqlaUser(self, normalize_email(email), first_name, last_name, institution)
+        return SqlaUser(self.backend, normalize_email(email), first_name, last_name, institution)
 
     def find(self, email=None, id=None):
         # Constructing the default query

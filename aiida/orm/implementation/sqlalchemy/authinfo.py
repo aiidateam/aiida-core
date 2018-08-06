@@ -20,7 +20,7 @@ from . import utils
 class SqlaAuthInfoCollection(AuthInfoCollection):
 
     def create(self, computer, user):
-        return SqlaAuthInfo(self, computer, user)
+        return SqlaAuthInfo(self.backend, computer, user)
 
     def get(self, computer, user):
         """

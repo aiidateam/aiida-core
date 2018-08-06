@@ -117,6 +117,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
                 remote_computer_exec=[self.comp, '/remote/abs/path'],
             )
             code.label = 'code'
+            code.description = 'desc'
             code.store()
         self.code = code
 
@@ -199,18 +200,12 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertTrue(str(self.code.pk) in result.output)
 
     def test_code_duplicate_interactive(self):
-        # This currently fails with SystemExit(2)
-        # Don't know why...
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
-        label = 'my_code_duplicate'
-        user_input = '\n'.join(
-            [label, 'my desc', 'simpleplugins.arithmetic.add', 'True', 'localhost', '/usr/bin/diff'])
-            #[str(self.code.pk), label, 'my desc', 'simpleplugins.arithmetic.add', 'True', 'localhost', '/usr/bin/diff'])
-        result = self.runner.invoke(setup_code, [str(self.code.pk)], input=user_input)
-        #result = self.runner.invoke(setup_code, [str(self.code.pk)], input=user_input)
-        #result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=abc', str(self.code.pk)])
-        self.assertIsNone(result.exception)
+        label = 'code_duplicate_interactive'
+        user_input = label + '\n\n\n\n\n\n'
+        result = self.runner.invoke(code_duplicate, [str(self.code.pk)], input=user_input, catch_exceptions=False)
+        self.assertIsNone(result.exception, result.output)
 
         from aiida.orm import Code
         new_code = Code.get_from_string(label)
@@ -219,7 +214,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
 
     def test_code_duplicate_non_interactive(self):
-        label = 'my_code_duplicate'
+        label = 'code_duplicate_noninteractive'
         result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
         self.assertIsNone(result.exception)
 

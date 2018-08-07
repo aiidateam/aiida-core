@@ -52,4 +52,8 @@ class TestExponentialBackoffRetry(AiidaTestCase):
 
         max_attempts = MAX_ITERATIONS - 1
         with self.assertRaises(RuntimeError):
-            loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+            try:
+                loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+            except Exception as e:
+                print(e)
+                raise

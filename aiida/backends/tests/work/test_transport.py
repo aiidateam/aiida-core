@@ -7,17 +7,17 @@ from aiida.work.transports import TransportQueue
 class TestTransportQueue(AiidaTestCase):
     """ Tests for the transport queue """
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUp(self, *args, **kwargs):
         """ Set up a simple authinfo and for later use """
-        super(TestTransportQueue, cls).setUpClass(*args, **kwargs)
-        # Configure the computer - no parameters for local transport
-        # WARNING: This is not deleted as there is no API facing way to do this
-        # it would require a backend specific call
-        cls.authinfo = cls.backend.authinfos.create(
-            computer=cls.computer,
-            user=cls.backend.users.get_automatic_user())
-        cls.authinfo.store()
+        super(TestTransportQueue, self).setUp(*args, **kwargs)
+        self.authinfo = self.backend.authinfos.create(
+            computer=self.computer,
+            user=self.backend.users.get_automatic_user())
+        self.authinfo.store()
+
+    def tearDown(self, *args, **kwargs):
+        self.backend.authinfos.remove(self.authinfo.id)
+        super(TestTransportQueue, self).tearDown(*args, **kwargs)
 
     def test_simple_request(self):
         """ Test a simple transport request """
@@ -76,3 +76,26 @@ class TestTransportQueue(AiidaTestCase):
 
         retval = loop.run_sync(lambda: test())
         self.assertTrue(retval)
+
+    def test_open_fail(self):
+        """ Test that if opening fails  """
+        queue = TransportQueue()
+        loop = queue.loop()
+
+        @coroutine
+        def test():
+            with queue.request_transport(self.authinfo) as request:
+                yield request
+
+        def broken_open(trans):
+            raise RuntimeError("Could not open transport")
+
+        original = None
+        try:
+            # Let's put in a broken open method
+            original = self.authinfo.get_transport().__class__.open
+            self.authinfo.get_transport().__class__.open = broken_open
+            with self.assertRaises(RuntimeError):
+                loop.run_sync(lambda: test())
+        finally:
+            self.authinfo.get_transport().__class__.open = original

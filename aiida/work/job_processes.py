@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from collections import namedtuple
-import functools
 import logging
 import shutil
 import sys
@@ -67,27 +66,29 @@ def task_submit_job(node, transport_queue, cancelled_flag):
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
+    @coroutine
+    def do_submit():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
 
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError('task_submit_job for calculation<{}> cancelled'.format(node.pk))
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancelled_flag.cancelled:
+                raise plumpy.CancelledError('task_submit_job for calculation<{}> cancelled'.format(node.pk))
 
-        LOGGER.info('submitting calculation<{}>'.format(node.pk))
-        node._set_state(calc_states.SUBMITTING)
+            LOGGER.info('submitting calculation<{}>'.format(node.pk))
+            node._set_state(calc_states.SUBMITTING)
+            raise Return(execmanager.submit_calculation(node, transport))
 
-        try:
-            corout = functools.partial(execmanager.submit_calculation, node, transport)
-            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
-        except Exception:
-            LOGGER.warning('submitting calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
-            node._set_state(calc_states.SUBMISSIONFAILED)
-            raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
-        else:
-            LOGGER.info('submitting calculation<{}> successful'.format(node.pk))
-            node._set_state(calc_states.WITHSCHEDULER)
-            raise Return(result)
+    try:
+        result = yield exponential_backoff_retry(do_submit, initial_interval, max_attempts, logger=node.logger)
+    except Exception:
+        LOGGER.warning('submitting calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        node._set_state(calc_states.SUBMISSIONFAILED)
+        raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        LOGGER.info('submitting calculation<{}> successful'.format(node.pk))
+        node._set_state(calc_states.WITHSCHEDULER)
+        raise Return(result)
 
 
 @coroutine
@@ -111,27 +112,29 @@ def task_update_job(node, transport_queue, cancelled_flag):
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
+    @coroutine
+    def do_update():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
 
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError('task_update_job for calculation<{}> cancelled'.format(node.pk))
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancelled_flag.cancelled:
+                raise plumpy.CancelledError('task_update_job for calculation<{}> cancelled'.format(node.pk))
 
-        LOGGER.info('updating calculation<{}>'.format(node.pk))
+            LOGGER.info('updating calculation<{}>'.format(node.pk))
+            raise Return(execmanager.update_calculation(node, transport))
 
-        try:
-            corout = functools.partial(execmanager.update_calculation, node, transport)
-            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
-        except Exception:
-            LOGGER.warning('updating calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
-            node._set_state(calc_states.FAILED)
-            raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
-        else:
-            LOGGER.info('updating calculation<{}> successful'.format(node.pk))
-            if result:
-                node._set_state(calc_states.COMPUTED)
-            raise Return(result)
+    try:
+        result = yield exponential_backoff_retry(do_update, initial_interval, max_attempts, logger=node.logger)
+    except Exception:
+        LOGGER.warning('updating calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        node._set_state(calc_states.FAILED)
+        raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        LOGGER.info('updating calculation<{}> successful'.format(node.pk))
+        if result:
+            node._set_state(calc_states.COMPUTED)
+        raise Return(result)
 
 
 @coroutine
@@ -155,26 +158,29 @@ def task_retrieve_job(node, transport_queue, cancelled_flag, retrieved_temporary
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
+    @coroutine
+    def do_retrieve():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
 
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError('task_retrieve_job for calculation<{}> cancelled'.format(node.pk))
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancelled_flag.cancelled:
+                raise plumpy.CancelledError('task_retrieve_job for calculation<{}> cancelled'.format(node.pk))
 
-        LOGGER.info('retrieving calculation<{}>'.format(node.pk))
-        node._set_state(calc_states.RETRIEVING)
+            LOGGER.info('retrieving calculation<{}>'.format(node.pk))
+            node._set_state(calc_states.RETRIEVING)
 
-        try:
-            corout = functools.partial(execmanager.retrieve_calculation, node, transport, retrieved_temporary_folder)
-            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
-        except Exception:
-            LOGGER.warning('retrieving calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
-            node._set_state(calc_states.RETRIEVALFAILED)
-            raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
-        else:
-            LOGGER.info('retrieving calculation<{}> successful'.format(node.pk))
-            raise Return(result)
+            raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
+
+    try:
+        result = yield exponential_backoff_retry(do_retrieve, initial_interval, max_attempts, logger=node.logger)
+    except Exception:
+        LOGGER.warning('retrieving calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        node._set_state(calc_states.RETRIEVALFAILED)
+        raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        LOGGER.info('retrieving calculation<{}> successful'.format(node.pk))
+        raise Return(result)
 
 
 @coroutine
@@ -196,32 +202,35 @@ def task_kill_job(node, transport_queue, cancelled_flag):
     initial_interval = 1
     max_attempts = 5
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
-
     if node.get_state() in [calc_states.NEW, calc_states.TOSUBMIT]:
         node._set_state(calc_states.FAILED)
         LOGGER.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
-    with transport_queue.request_transport(authinfo) as request:
-        transport = yield request
+    authinfo = node.get_computer().get_authinfo(node.get_user())
 
-        # It may have taken time to get the transport, check if we've been cancelled
-        if cancelled_flag.cancelled:
-            raise plumpy.CancelledError('task_kill_job for calculation<{}> cancelled'.format(node.pk))
+    @coroutine
+    def do_kill():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
 
-        LOGGER.info('killing calculation<{}>'.format(node.pk))
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancelled_flag.cancelled:
+                raise plumpy.CancelledError('task_kill_job for calculation<{}> cancelled'.format(node.pk))
 
-        try:
-            corout = functools.partial(execmanager.kill_calculation, node, transport)
-            result = yield exponential_backoff_retry(corout, initial_interval, max_attempts, logger=node.logger)
-        except Exception:
-            LOGGER.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
-            node._set_state(calc_states.FAILED)
-            raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
-        else:
-            LOGGER.info('killing calculation<{}> successful'.format(node.pk))
-            raise Return(result)
+            LOGGER.info('killing calculation<{}>'.format(node.pk))
+
+            raise Return(execmanager.kill_calculation(node, transport))
+
+    try:
+        result = yield exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
+    except Exception:
+        LOGGER.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        node._set_state(calc_states.FAILED)
+        raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        LOGGER.info('killing calculation<{}> successful'.format(node.pk))
+        raise Return(result)
 
 
 class Waiting(plumpy.Waiting):

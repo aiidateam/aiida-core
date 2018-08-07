@@ -29,7 +29,7 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
         """
-        return DjangoAuthInfo(self, computer, user)
+        return DjangoAuthInfo(self.backend, computer, user)
 
     def get(self, computer, user):
         """

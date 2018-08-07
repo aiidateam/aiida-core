@@ -78,6 +78,7 @@ db_test_list = {
         'control.computer': ['aiida.backends.tests.control.test_computer_ctrl'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
+        'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
         'orm.log': ['aiida.backends.tests.orm.log'],
         'orm.mixins': ['aiida.backends.tests.orm.mixins'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.loaders'],

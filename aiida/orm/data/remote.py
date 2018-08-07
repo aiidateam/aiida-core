@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm import Data
+import errno
 import os
+
+from aiida.orm import Data
 
 
 class RemoteData(Data):
     """
     Store a link to a file or folder on a remote machine.
-    
+
     Remember to pass a computer!
     """
 
@@ -48,9 +50,10 @@ class RemoteData(Data):
         with t:
             try:
                 t.chdir(self.get_remote_path())
-            except IOError as e:
-                if e.errno == 2:  # directory not existing
-                    return True  # is indeed empty, i.e. unusable
+            except IOError:
+                # If the transport IOError the directory no longer exists and was deleted
+                return True
+
             return not t.listdir()
 
     def getfile(self, relpath, destpath):
@@ -158,11 +161,10 @@ class RemoteData(Data):
         """
         Remove all content of the remote folder on the remote computer
         """
-        import os
+        from aiida.orm.utils.remote import clean_remote
 
         authinfo = self._get_authinfo()
         transport = authinfo.get_transport()
-
         remote_dir = self.get_remote_path()
 
         with transport:

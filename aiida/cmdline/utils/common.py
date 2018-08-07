@@ -43,12 +43,12 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type='calculation'):
+def print_last_process_state_change(process_type=None):
     """
     Print the last time that a process of the specified type has changed its state.
     This function will also print a warning if the daemon is not running.
 
-    :param process_type: the process type for which to get the latest state change timestamp.
+    :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning

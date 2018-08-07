@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-arguments
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,18 +8,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments
 """`verdi work` command."""
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
-
-LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'state', 'process_label')
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed',
-                                'process_label', 'label', 'description', 'type')
 
 
 @verdi.group('work')
@@ -28,148 +25,40 @@ def verdi_work():
 
 
 @verdi_work.command('list')
-@options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
+@options.PROJECT(
+    type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections)
+@options.ALL(help='Show all entries, regardless of their process state.')
 @options.PROCESS_STATE()
 @options.EXIT_STATUS()
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
-@options.ALL(help='Show all entries, regardless of their process state.')
 @options.RAW()
 @decorators.with_dbenv()
-def work_list(past_days, all_entries, process_state, exit_status, failed, limit, project, raw):
-    # pylint: disable=too-many-locals,line-too-long
-    """
-    Return a list of work calculations that are still running
-    """
+def work_list(all_entries, process_state, exit_status, failed, past_days, limit, project, raw):
+    """Show a list of work calculations that are still running."""
     from tabulate import tabulate
-
     from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.common.utils import str_timedelta
-    from aiida.orm.mixins import Sealable
-    from aiida.orm.calculation import Calculation
-    from aiida.utils import timezone
-    from aiida.work import ProcessState
+    from aiida.orm.calculation.function import FunctionCalculation
+    from aiida.orm.calculation.work import WorkCalculation
 
-    sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
-    process_label_key = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
-    process_state_key = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
-    exit_status_key = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
+    node_types = (WorkCalculation, FunctionCalculation)
 
-    now = timezone.now()
+    builder = CalculationQueryBuilder()
+    filters = builder.get_filters(all_entries, process_state, exit_status, failed, node_types=node_types)
+    query_set = builder.get_query_set(filters=filters, past_days=past_days, limit=limit)
+    projected = builder.get_projected(query_set, projections=project)
 
-    projection_label_map = {
-        'pk': 'PK',
-        'uuid': 'UUID',
-        'ctime': 'Creation',
-        'mtime': 'Modification',
-        'type': 'Type',
-        'state': 'State',
-        'process_state': 'Process state',
-        'exit_status': 'Exit status',
-        'sealed': 'Sealed',
-        'process_label': 'Process label',
-        'label': 'Label',
-        'description': 'Description',
-    }
-
-    projection_attribute_map = {
-        'pk': 'id',
-        'uuid': 'uuid',
-        'ctime': 'ctime',
-        'mtime': 'mtime',
-        'type': 'type',
-        'process_state': process_state_key,
-        'exit_status': exit_status_key,
-        'sealed': sealed_key,
-        'process_label': process_label_key,
-        'label': 'label',
-        'description': 'description',
-    }
-
-    projection_format_map = {
-        'pk':
-        lambda value: value['id'],
-        'uuid':
-        lambda value: value['uuid'],
-        'ctime':
-        lambda value: str_timedelta(timezone.delta(value['ctime'], now), negative_to_zero=True, max_num_fields=1),
-        'mtime':
-        lambda value: str_timedelta(timezone.delta(value['mtime'], now), negative_to_zero=True, max_num_fields=1),
-        'type':
-        lambda value: value['type'],
-        'state':
-        lambda value: '{} | {}'.format(value[process_state_key].capitalize() if value[process_state_key] else None, value[exit_status_key]),
-        'process_state':
-        lambda value: value[process_state_key].capitalize(),
-        'exit_status':
-        lambda value: value[exit_status_key],
-        'sealed':
-        lambda value: 'True' if value[sealed_key] == 1 else 'False',
-        'process_label':
-        lambda value: value[process_label_key],
-        'label':
-        lambda value: value['label'],
-        'description':
-        lambda value: value['description'],
-    }
-
-    table = []
-    filters = {}
-
-    if process_state and not all_entries:
-        filters[process_state_key] = {'in': process_state}
-
-    if failed:
-        filters[process_state_key] = {'==': ProcessState.FINISHED.value}
-        filters[exit_status_key] = {'!==': 0}
-
-    if exit_status is not None:
-        filters[process_state_key] = {'==': ProcessState.FINISHED.value}
-        filters[exit_status_key] = {'==': exit_status}
-
-    query = _build_query(
-        limit=limit,
-        projections=projection_attribute_map.values(),
-        filters=filters,
-        past_days=past_days,
-        order_by={'ctime': 'desc'})
-
-    for result in query:
-
-        table_row = []
-        calculation = result['calculation']
-
-        for projection in project:
-            value = projection_format_map[projection](calculation)
-            table_row.append(value)
-
-        table.append(table_row)
-
-    # Since we sorted by descending creation time, we revert the list to print the most recent entries last
-    projection_labels = [projection_label_map[projection] for projection in project]
-    table = table[::-1]
+    headers = projected.pop(0)
 
     if raw:
-        tabulated = tabulate(table, tablefmt='plain')
+        tabulated = tabulate(projected, tablefmt='plain')
         echo.echo(tabulated)
     else:
-        tabulated = tabulate(table, headers=projection_labels)
+        tabulated = tabulate(projected, headers=headers)
         echo.echo(tabulated)
-        echo.echo('\nTotal results: {}\n'.format(len(table)))
+        echo.echo('\nTotal results: {}\n'.format(len(projected)))
         print_last_process_state_change(process_type='work')
-
-
-@verdi_work.command('show')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-@decorators.with_dbenv()
-def work_show(calculations):
-    """Show a summary for one or multiple calculations."""
-    from aiida.cmdline.utils.common import get_node_info
-
-    for calculation in calculations:
-        echo.echo(get_node_info(calculation))
 
 
 @verdi_work.command('report')
@@ -264,109 +153,16 @@ def work_report(calculations, levelname, indent_size, max_depth):
     return
 
 
-@verdi_work.command('kill')
+@verdi_work.command('show')
 @arguments.CALCULATIONS(
     type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def work_kill(calculations):
-    """
-    Kill work calculations
-    """
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
-
-    with new_blocking_control_panel() as control_panel:
-        for calculation in calculations:
-
-            if calculation.is_terminated:
-                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
-                continue
-
-            try:
-                if control_panel.kill_process(calculation.pk):
-                    echo.echo_success('killed Calculation<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_error('problem killing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, exception.message))
-
-
-@verdi_work.command('pause')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def work_pause(calculations):
-    """
-    Pause running work calculations
-    """
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
-
-    with new_blocking_control_panel() as control_panel:
-        for calculation in calculations:
-
-            if calculation.is_terminated:
-                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
-                continue
-
-            try:
-                if control_panel.pause_process(calculation.pk):
-                    echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception.message))
-
-
-@verdi_work.command('play')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def work_play(calculations):
-    """
-    Play paused work calculations
-    """
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
-
-    with new_blocking_control_panel() as control_panel:
-        for calculation in calculations:
-
-            if calculation.is_terminated:
-                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
-                continue
-
-            try:
-                if control_panel.play_process(calculation.pk):
-                    echo.echo_success('played Calculation<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception.message))
-
-
-@verdi_work.command('watch')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def work_watch(calculations):
-    """
-    Watch the state transitions for work calculations
-    """
-    from kiwipy import BroadcastFilter
-    from aiida.work.rmq import create_communicator
-
-    def _print(body, sender, subject, correlation_id):
-        echo.echo("pk={}, subject={}, body={}, correlation_id={}".format(sender, subject, body, correlation_id))
-
-    communicator = create_communicator()
+@decorators.with_dbenv()
+def work_show(calculations):
+    """Show a summary for one or multiple calculations."""
+    from aiida.cmdline.utils.common import get_node_info
 
     for calculation in calculations:
-
-        if calculation.is_terminated:
-            echo.echo_warning('Calculation<{}> is already terminated'.format(calculation.pk))
-        communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=calculation.pk))
-
-    try:
-        communicator.await()
-    except (SystemExit, KeyboardInterrupt):
-        try:
-            communicator.disconnect()
-        except RuntimeError:
-            pass
+        echo.echo(get_node_info(calculation))
 
 
 @verdi_work.command('status')

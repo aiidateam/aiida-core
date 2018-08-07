@@ -235,7 +235,7 @@ EXIT_STATUS = OverridableOption(
     help='Only include entries with this exit status.')
 
 FAILED = OverridableOption(
-    '-x', '--failed', 'failed',
+    '-X', '--failed', 'failed',
     is_flag=True, default=False,
     help='Only include entries that have failed.')
 

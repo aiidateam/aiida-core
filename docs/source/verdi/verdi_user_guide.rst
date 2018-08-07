@@ -17,6 +17,7 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`group<group>`:               Inspect, create and manage groups.
 * :ref:`import<import>`:             Import one or multiple exported AiiDA archives
 * :ref:`node<node>`:                 Inspect, create and manage nodes.
+* :ref:`process<process>`:           Inspect and manage processes.
 * :ref:`profile<profile>`:           Inspect and manage the configured profiles.
 * :ref:`quicksetup<quicksetup>`:     Quick setup for the most common usecase (1 user, 1 machine).
 * :ref:`rehash<rehash>`:             Recompute the hash for nodes in the database
@@ -213,7 +214,7 @@ Below is a list with all the available subcommands.
   * **gotocomputer**: open a shell to the calc folder on the cluster
   * **inputcat**: shows an input file of a calculation node
   * **inputls**: shows the list of the input files of a calculation node
-  * **kill**: stop the execution on the cluster of a calculation
+  * **kill**: [deprecated: use ``verdi process kill`` instead] stop the execution on the cluster of a calculation
   * **list**: list the AiiDA calculations. By default, lists only the running calculations
   * **logshow**: shows the logs/errors produced by a calculation
   * **outputcat**: shows an ouput file of a calculation node
@@ -410,7 +411,7 @@ Create and manage group objects.
 
 ``verdi help``
 --------------
-Print a list of all available commands and a short description.
+This command is deprecated, please use ``verdi --help`` instead
 
 
 .. _import:
@@ -443,6 +444,18 @@ Manage ``Node`` instances from the provenance graph.
 .. warning:: In order to preserve the provenance, ``verdi node delete`` will delete not only the list of specified nodes, but also all the children nodes!
   So please be sure to double check what is going to be deleted before running this function.
   This command cannot be undone.
+
+
+.. _process:
+
+``verdi process``
+-----------------
+Inspect and manage processes.
+
+ * **kill**: Kill running processes.
+ * **pause**: Pause running processes.
+ * **play**: Play paused processes.
+ * **watch**: Watch the state transitions for a process.
 
 
 .. _profile:
@@ -517,14 +530,10 @@ Configure and manage users
 --------------
 Manage work calculations.
 
-  * **kill**: kill a work calculation
   * **list**: list the work calculations present in the database
-  * **pause**: pause a work calculation
-  * **play**: play a paused work calculation
   * **plugins**: show the registered work calculation plugins
   * **report**: show the log messages for a work calculation
   * **status**: shows an ASCII tree for a work calculation showing the status of itself and the calculations it called
-  * **watch**: dynamically print the state transitions for the given work calculation
 
 
 .. _workflow:

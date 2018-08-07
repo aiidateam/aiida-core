@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-arguments, wrong-import-position
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -14,13 +15,11 @@ import click_completion
 click_completion.init()
 
 # Import to populate the `verdi` sub commands
-# pylint: disable=wrong-import-position
 from aiida.cmdline.commands import (cmd_calculation, cmd_code, cmd_comment, cmd_computer, cmd_data, cmd_daemon,
-                                    cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_profile,
-                                    cmd_quicksetup, cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_user,
-                                    cmd_work, cmd_workflow)
+                                    cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_process,
+                                    cmd_profile, cmd_quicksetup, cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell,
+                                    cmd_user, cmd_work, cmd_workflow)
 
 # Import to populate the `verdi data` sub commands
-# pylint: disable=wrong-import-position
 from aiida.cmdline.commands.cmd_data import (cmd_array, cmd_bands, cmd_cif, cmd_parameter, cmd_remote, cmd_structure,
                                              cmd_trajectory, cmd_upf)

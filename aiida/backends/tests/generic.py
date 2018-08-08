@@ -126,6 +126,35 @@ class TestWfBasic(AiidaTestCase):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
+class TestGroupHashing(AiidaTestCase):
+
+    def test_group_uuid_hashing_for_querybuidler(self):
+        """
+        Hashing for QueryBuilder should work with a unicode uuid filtering
+        but also with a uuid.UUID type filtering.
+        """
+        from aiida.orm.group import Group
+        from aiida.orm.querybuilder import QueryBuilder
+        import uuid
+
+        g = Group(name='test_group')
+        g.store()
+
+        # Search for the UUID of the stored group. The UUID search is by
+        # passing a uuid.UUID argument
+        qb = QueryBuilder()
+        qb.append(Group, project=['name'],
+                  filters={'uuid': {'==': uuid.UUID(g.uuid)}})
+        qb.all()
+
+        # Search for the UUID of the stored group. The UUID search is by
+        # passing a unicode argument
+        qb = QueryBuilder()
+        qb.append(Group, project=['name'],
+                  filters={'uuid': {'==': unicode(g.uuid)}})
+        qb.all()
+
+
 class TestGroups(AiidaTestCase):
     """
     Test groups.

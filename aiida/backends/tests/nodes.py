@@ -51,6 +51,33 @@ class TestNodeHashing(AiidaTestCase):
             n2.store(use_cache=True)
             self.assertEqual(n1.uuid, n2.get_extra('_aiida_cached_from'))
 
+
+    def test_node_uuid_hashing_for_querybuidler(self):
+        """
+        Hashing for QueryBuilder should work with a unicode uuid filtering
+        but also with a uuid.UUID type filtering.
+        """
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        import uuid
+
+        n = Node()
+        n.store()
+
+        # Search for the UUID of the stored node. The UUID search is by
+        # passing a uuid.UUID argument
+        qb = QueryBuilder()
+        qb.append(Node, project=['id'],
+                  filters={'uuid': {'==': uuid.UUID(n.uuid)}})
+        qb.all()
+
+        # Search for the UUID of the stored node. The UUID search is by
+        # passing a unicode argument
+        qb = QueryBuilder()
+        qb.append(Node, project=['id'],
+                  filters={'uuid': {'==': unicode(n.uuid)}})
+        qb.all()
+
     @staticmethod
     def create_folderdata_with_empty_file():
         from aiida.orm.data.folder import FolderData

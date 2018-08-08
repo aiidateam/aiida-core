@@ -210,37 +210,110 @@ def work_plugins(entry_point):
             echo.echo_error('No workflow plugins found')
 
 
-def _build_query(projections=None, filters=None, order_by=None, limit=None, past_days=None):
-    """Build and execute a query for work type calculations given certain filters and options."""
-    import datetime
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.function import FunctionCalculation
-    from aiida.orm.calculation.work import WorkCalculation
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.utils import timezone
+@verdi_work.command('kill')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
+def work_kill(calculations):
+    """
+    Kill work calculations
+    """
+    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
 
-    # Define filters
-    if filters is None:
-        filters = {}
+    with new_blocking_control_panel() as control_panel:
+        for calculation in calculations:
 
-    # Until the QueryBuilder supports passing a tuple of classes in the append method, we have to query
-    # for the base Calculation class and match the type to get all WorkCalculation AND FunctionCalculation nodes
-    filters['or'] = [{'type': WorkCalculation.plugin_type_string}, {'type': FunctionCalculation.plugin_type_string}]
+            if calculation.is_terminated:
+                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+                continue
 
-    if past_days is not None:
-        n_days_ago = timezone.now() - datetime.timedelta(days=past_days)
-        filters['ctime'] = {'>': n_days_ago}
+            try:
+                if control_panel.kill_process(calculation.pk):
+                    echo.echo_success('killed Calculation<{}>'.format(calculation.pk))
+                else:
+                    echo.echo_error('problem killing Calculation<{}>'.format(calculation.pk))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, exception.message))
 
-    # Build the query
-    builder = QueryBuilder()
-    builder.append(cls=Calculation, filters=filters, project=projections, tag='calculation')
 
-    # Ordering of queryset
-    if order_by is not None:
-        builder.order_by({'calculation': order_by})
+@verdi_work.command('pause')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process pause' instead.")
+def work_pause(calculations):
+    """
+    Pause running work calculations
+    """
+    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
 
-    # Limiting the queryset
-    if limit is not None:
-        builder.limit(limit)
+    with new_blocking_control_panel() as control_panel:
+        for calculation in calculations:
 
-    return builder.iterdict()
+            if calculation.is_terminated:
+                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+                continue
+
+            try:
+                if control_panel.pause_process(calculation.pk):
+                    echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
+                else:
+                    echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception.message))
+
+
+@verdi_work.command('play')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process play' instead.")
+def work_play(calculations):
+    """
+    Play paused work calculations
+    """
+    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
+
+    with new_blocking_control_panel() as control_panel:
+        for calculation in calculations:
+
+            if calculation.is_terminated:
+                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+                continue
+
+            try:
+                if control_panel.play_process(calculation.pk):
+                    echo.echo_success('played Calculation<{}>'.format(calculation.pk))
+                else:
+                    echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
+            except (RemoteException, DeliveryFailed) as exception:
+                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception.message))
+
+
+@verdi_work.command('watch')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process watch' instead.")
+def work_watch(calculations):
+    """
+    Watch the state transitions for work calculations
+    """
+    from kiwipy import BroadcastFilter
+    from aiida.work.rmq import create_communicator
+
+    def _print(body, sender, subject, correlation_id):
+        echo.echo("pk={}, subject={}, body={}, correlation_id={}".format(sender, subject, body, correlation_id))
+
+    communicator = create_communicator()
+
+    for calculation in calculations:
+
+        if calculation.is_terminated:
+            echo.echo_warning('Calculation<{}> is already terminated'.format(calculation.pk))
+        communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=calculation.pk))
+
+    try:
+        communicator.await()
+    except (SystemExit, KeyboardInterrupt):
+        try:
+            communicator.disconnect()
+        except RuntimeError:
+            pass

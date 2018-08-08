@@ -452,6 +452,7 @@ Manage ``Node`` instances from the provenance graph.
 -----------------
 Inspect and manage processes.
 
+ * **list**: Show a list of processes that are still running.
  * **kill**: Kill running processes.
  * **pause**: Pause running processes.
  * **play**: Play paused processes.
@@ -534,6 +535,10 @@ Manage work calculations.
   * **plugins**: show the registered work calculation plugins
   * **report**: show the log messages for a work calculation
   * **status**: shows an ASCII tree for a work calculation showing the status of itself and the calculations it called
+  * **kill**: [deprecated: use ``verdi process kill`` instead] kill a work calculation
+  * **pause**: [deprecated: use ``verdi process pause`` instead] pause a work calculation
+  * **play**: [deprecated: use ``verdi process play`` instead] play a paused work calculation
+  * **watch**: [deprecated: use ``verdi process watch`` instead] dynamically print the state transitions for the given work calculation
 
 
 .. _workflow:

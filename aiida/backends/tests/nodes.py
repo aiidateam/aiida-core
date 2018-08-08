@@ -72,7 +72,12 @@ class TestNodeHashing(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(Node, project=['id'],
                   filters={'uuid': {'==': uuid}})
+
+        # Check that the query doesn't fail
         qb.all()
+        # And that the results are correct
+        self.assertEquals(qb.count(), 1)
+        self.assertEquals(qb.first()[0], n.id)
 
     @staticmethod
     def create_folderdata_with_empty_file():

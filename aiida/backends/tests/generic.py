@@ -134,7 +134,6 @@ class TestGroupHashing(AiidaTestCase):
         """
         from aiida.orm.group import Group
         from aiida.orm.querybuilder import QueryBuilder
-        import uuid
 
         g = Group(name='test_group')
         g.store()
@@ -147,9 +146,13 @@ class TestGroupHashing(AiidaTestCase):
 
         # Look the node with the previously returned UUID
         qb = QueryBuilder()
-        qb.append(Group, project=['name'],
+        qb.append(Group, project=['id'],
                   filters={'uuid': {'==': uuid}})
+        # Check that the query doesn't fail
         qb.all()
+        # And that the results are correct
+        self.assertEquals(qb.count(), 1)
+        self.assertEquals(qb.first()[0], g.id)
 
 
 class TestGroups(AiidaTestCase):

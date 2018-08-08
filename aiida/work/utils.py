@@ -182,24 +182,38 @@ def set_process_state_change_timestamp(process):
         process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
 
 
-def get_process_state_change_timestamp(process_type='calculation'):
+def get_process_state_change_timestamp(process_type=None):
     """
-    Get the global setting that reflects the last time a process of the given process type changed
-    its state. The returned value will be the corresponding timestamp or None if the setting does
-    not exist.
+    Get the global setting that reflects the last time a process of the given process type changed its state.
+    The returned value will be the corresponding timestamp or None if the setting does not exist.
 
-    :param process_type: the process type for which to get the latest state change timestamp.
-        Valid process types are either 'calculation' or 'work'.
+    :param process_type: optional process type for which to get the latest state change timestamp.
+        Valid process types are either 'calculation' or 'work'. If not specified, last timestamp for all
+        known process types will be returned.
     :return: a timestamp or None
     """
     from aiida.backends.utils import get_global_setting
 
-    if process_type not in ['calculation', 'work']:
-        raise ValueError('invalid value for process_type')
+    valid_process_types = ['calculation', 'work']
 
-    key = PROCESS_STATE_CHANGE_KEY.format(process_type)
+    if process_type is not None and process_type not in valid_process_types:
+        raise ValueError("invalid value for process_type, valid values are {}".format(', '.join(valid_process_types)))
 
-    try:
-        return get_global_setting(key)
-    except KeyError:
+    if process_type is None:
+        process_types = valid_process_types
+    else:
+        process_types = [process_type]
+
+    timestamps = []
+
+    for process_type_key in process_types:
+        key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
+        try:
+            timestamps.append(get_global_setting(key))
+        except KeyError:
+            pass
+
+    if not timestamps:
         return None
+
+    return max(timestamps)

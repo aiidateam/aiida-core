@@ -13,7 +13,7 @@ It defines subcommands for verdi group command.
 import click
 
 from aiida.common.exceptions import UniquenessError
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import options, arguments

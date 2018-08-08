@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-from aiida.orm.authinfo import AuthInfoCollection, AuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
+from aiida.orm.authinfo import AuthInfoCollection, AuthInfo
 
 from . import computer as computers
 from . import user as users
@@ -18,16 +18,17 @@ from . import utils
 
 
 class SqlaAuthInfoCollection(AuthInfoCollection):
+
     def create(self, computer, user):
-        return SqlaAuthInfo(self, computer, user)
+        return SqlaAuthInfo(self.backend, computer, user)
 
     def get(self, computer, user):
         """
         Return a SqlaAuthInfo given a computer and a user
 
-        :param computer: A Computer or DbComputer instance
-        :param user: A User or DbUser instance
-        :return: a SqlaAuthInfo object associated to the given computer and User, if any
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
         :raise NotExistent: if the user is not configured to use computer
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
              more than once to use the computer! Should never happen
@@ -43,7 +44,7 @@ class SqlaAuthInfoCollection(AuthInfoCollection):
                 aiidauser_id=user.id,
             ).one()
 
-            return self._from_dbmodel(authinfo)
+            return self.from_dbmodel(authinfo)
         except NoResultFound:
             raise exceptions.NotExistent(
                 "The aiida user {} is not configured to use computer {}".format(
@@ -54,17 +55,26 @@ class SqlaAuthInfoCollection(AuthInfoCollection):
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
 
-    def _from_dbmodel(self, dbmodel):
-        return SqlaAuthInfo._from_dbmodel(self, dbmodel)
+    def remove(self, authinfo_id):
+        from sqlalchemy.orm.exc import NoResultFound
+        from aiida.backends.sqlalchemy import get_scoped_session
+
+        session = get_scoped_session()
+        try:
+            session.query(DbAuthInfo).filter_by(id=authinfo_id).delete()
+            session.commit()
+        except NoResultFound:
+            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))
+
+    def from_dbmodel(self, dbmodel):
+        return SqlaAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
 class SqlaAuthInfo(AuthInfo):
-    """
-    AuthInfo implementation for SQLAlchemy
-    """
+    """AuthInfo implementation for SQLAlchemy."""
 
     @classmethod
-    def _from_dbmodel(cls, backend, dbmodel):
+    def from_dbmodel(cls, dbmodel, backend):
         type_check(dbmodel, DbAuthInfo)
         authinfo = SqlaAuthInfo.__new__(cls)
         super(SqlaAuthInfo, authinfo).__init__(backend)
@@ -74,19 +84,14 @@ class SqlaAuthInfo(AuthInfo):
     def __init__(self, backend, computer, user):
         """
         Construct an SqlaAuthInfo
+
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
         """
-        from aiida.orm.computer import Computer
-
         super(SqlaAuthInfo, self).__init__(backend)
-
         type_check(user, users.SqlaUser)
-
-        # Takes care of always getting a Computer instance from a DbComputer, Computer or string
-        dbcomputer = Computer.get(computer).dbcomputer
-        # user.email exists both for DbUser and User, so I'm robust w.r.t. the type of what I get
-        dbuser = user.dbuser
-        self._dbauthinfo = utils.ModelWrapper(
-            DbAuthInfo(dbcomputer=dbcomputer, aiidauser=dbuser))
+        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
 
     @property
     def dbauthinfo(self):
@@ -95,9 +100,9 @@ class SqlaAuthInfo(AuthInfo):
     @property
     def is_stored(self):
         """
-        Is it already stored or not?
+        Return whether the AuthInfo is stored
 
-        :return: Boolean
+        :return: True if stored, False otherwise
         """
         return self._dbauthinfo.is_saved()
 

@@ -11,7 +11,7 @@
 """`verdi work` command."""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
@@ -34,7 +34,7 @@ def verdi_work():
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
-@options.ALL()
+@options.ALL(help='Show all entries, regardless of their process state.')
 @options.RAW()
 @decorators.with_dbenv()
 def work_list(past_days, all_entries, process_state, exit_status, failed, limit, project, raw):
@@ -160,6 +160,18 @@ def work_list(past_days, all_entries, process_state, exit_status, failed, limit,
         print_last_process_state_change(process_type='work')
 
 
+@verdi_work.command('show')
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@decorators.with_dbenv()
+def work_show(calculations):
+    """Show a summary for one or multiple calculations."""
+    from aiida.cmdline.utils.common import get_node_info
+
+    for calculation in calculations:
+        echo.echo(get_node_info(calculation))
+
+
 @verdi_work.command('report')
 @arguments.CALCULATIONS(
     type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
@@ -188,7 +200,7 @@ def work_report(calculations, levelname, indent_size, max_depth):
             'objpk': pk,
         }
 
-        entries = backend.log.find(filter_by=filters)
+        entries = backend.logs.find(filter_by=filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 

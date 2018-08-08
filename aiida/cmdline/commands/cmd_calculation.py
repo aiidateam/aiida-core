@@ -13,14 +13,14 @@ import os
 
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.setup import get_property
 
+LIST_CMDLINE_PROJECT_DEFAULT = get_property('verdishell.calculation_list')
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'state', 'ctime', 'job_state', 'calculation_state', 'scheduler_state', 'computer',
                                 'type', 'description', 'label', 'uuid', 'mtime', 'user', 'sealed')
-LIST_CMDLINE_PROJECT_DEFAULT = get_property('verdishell.calculation_list')
 
 
 @verdi.group('calculation')
@@ -30,7 +30,8 @@ def verdi_calculation():
 
 
 @verdi_calculation.command('gotocomputer')
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 def calculation_gotocomputer(calculation):
     """
     Open a shell and go to the calculation folder on the computer
@@ -56,7 +57,8 @@ def calculation_gotocomputer(calculation):
 
 
 @verdi_calculation.command('list')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.CALCULATION_STATE()
 @options.PROCESS_STATE(default=None)
 @options.EXIT_STATUS()
@@ -65,8 +67,8 @@ def calculation_gotocomputer(calculation):
 @options.LIMIT()
 @options.ORDER_BY()
 @options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
-@options.GROUPS(help='show only calculations that are contained within one or more of these groups')
-@options.ALL(help='show all entries, regardless of their calculation state')
+@options.GROUPS(help='Show only calculations that are contained within one or more of these groups.')
+@options.ALL(help='Show all entries, regardless of their calculation state.')
 @options.ALL_USERS()
 @options.RAW()
 @click.option(
@@ -126,7 +128,8 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
 
 
 @verdi_calculation.command('res')
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @click.option('-f', '--format', 'fmt', type=click.STRING, default='json+date', help='format for the output')
 @click.option('-k', '--keys', 'keys', type=click.STRING, cls=options.MultipleValueOption, help='show only these keys')
 @decorators.with_dbenv()
@@ -148,7 +151,8 @@ def calculation_res(calculation, fmt, keys):
 
 
 @verdi_calculation.command('show')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @decorators.with_dbenv()
 def calculation_show(calculations):
     """Show a summary for one or multiple calculations."""
@@ -159,7 +163,8 @@ def calculation_show(calculations):
 
 
 @verdi_calculation.command('logshow')
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @decorators.with_dbenv()
 def calculation_logshow(calculations):
     """Show the log for one or multiple calculations."""
@@ -202,7 +207,8 @@ def calculation_plugins(entry_point):
 
 
 @verdi_calculation.command('inputcat')
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calculation_inputcat(calculation, path):
@@ -211,7 +217,7 @@ def calculation_inputcat(calculation, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calculation plugin class.
     """
-    from aiida.cmdline.commands.cmd_node import cat_repo_files
+    from aiida.cmdline.utils.repository import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -238,7 +244,8 @@ def calculation_inputcat(calculation, path):
 
 
 @verdi_calculation.command('outputcat')
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calculation_outputcat(calculation, path):
@@ -248,7 +255,7 @@ def calculation_outputcat(calculation, path):
     If PATH is not specified, the default output file path will be used, if defined by the calculation plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.commands.cmd_node import cat_repo_files
+    from aiida.cmdline.utils.repository import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -281,7 +288,8 @@ def calculation_outputcat(calculation, path):
 
 @verdi_calculation.command('inputls')
 @decorators.with_dbenv()
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calculation_inputls(calculation, path, color):
@@ -290,7 +298,7 @@ def calculation_inputls(calculation, path, color):
 
     If PATH is not specified, the base path of the input folder will be used.
     """
-    from aiida.cmdline.commands.cmd_node import list_repo_files
+    from aiida.cmdline.utils.repository import list_repo_files
     from aiida.orm.implementation.general.calculation.job import _input_subfolder
 
     if path is not None:
@@ -306,7 +314,8 @@ def calculation_inputls(calculation, path, color):
 
 @verdi_calculation.command('outputls')
 @decorators.with_dbenv()
-@arguments.CALCULATION(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATION(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calculation_outputls(calculation, path, color):
@@ -316,7 +325,7 @@ def calculation_outputls(calculation, path, color):
     If PATH is not specified, the base path of the retrieved folder will be used.
     Content can only be showm after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.commands.cmd_node import list_repo_files
+    from aiida.cmdline.utils.repository import list_repo_files
 
     if path is not None:
         fullpath = os.path.join(calculation._path_subfolder_name, path)
@@ -336,7 +345,8 @@ def calculation_outputls(calculation, path, color):
 
 @verdi_calculation.command('kill')
 @decorators.with_dbenv()
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.FORCE()
 def calculation_kill(calculations, force):
     """Kill one or multiple running calculations."""
@@ -365,7 +375,8 @@ def calculation_kill(calculations, force):
 
 @verdi_calculation.command('cleanworkdir')
 @decorators.with_dbenv()
-@arguments.CALCULATIONS(type=types.CalculationParamType(sub_classes=('aiida.calculations:job',)))
+@arguments.CALCULATIONS(
+    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.PAST_DAYS(default=None)
 @options.OLDER_THAN(default=None)
 @options.COMPUTERS(help='include only calculations that were ran on these computers')

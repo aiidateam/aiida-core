@@ -36,7 +36,7 @@ class TestBackendLog(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestBackendLog, self).tearDown()
-        self._backend.log.delete_many({})
+        self._backend.logs.delete_many({})
 
     def test_create_backend(self):
         """
@@ -52,18 +52,18 @@ class TestBackendLog(AiidaTestCase):
         """
         count = 10
         for _ in range(count):
-            self._backend.log.create_entry(**self._record)
+            self._backend.logs.create_entry(**self._record)
 
-        self.assertEquals(len(self._backend.log.find()), count)
-        self._backend.log.delete_many({})
-        self.assertEquals(len(self._backend.log.find()), 0)
+        self.assertEquals(len(self._backend.logs.find()), count)
+        self._backend.logs.delete_many({})
+        self.assertEquals(len(self._backend.logs.find()), 0)
 
     def test_create_log_message(self):
         """
         Test the manual creation of a log entry 
         """
         record = self._record
-        entry = self._backend.log.create_entry(
+        entry = self._backend.logs.create_entry(
             record['time'],
             record['loggername'],
             record['levelname'],
@@ -88,15 +88,15 @@ class TestBackendLog(AiidaTestCase):
         for pk in range(10):
             record = self._record
             record['objpk'] = pk
-            self._backend.log.create_entry(**record)
+            self._backend.logs.create_entry(**record)
 
         order_by = [OrderSpecifier('objpk', ASCENDING)]
-        entries = self._backend.log.find(order_by=order_by)
+        entries = self._backend.logs.find(order_by=order_by)
 
         self.assertEquals(entries[0].objpk, 0)
 
         order_by = [OrderSpecifier('objpk', DESCENDING)]
-        entries = self._backend.log.find(order_by=order_by)
+        entries = self._backend.logs.find(order_by=order_by)
 
         self.assertEquals(entries[0].objpk, 9)
 
@@ -106,9 +106,9 @@ class TestBackendLog(AiidaTestCase):
         """
         limit = 2
         for _ in range(limit * 2):
-            self._backend.log.create_entry(**self._record)
+            self._backend.logs.create_entry(**self._record)
 
-        entries = self._backend.log.find(limit=limit)
+        entries = self._backend.logs.find(limit=limit)
         self.assertEquals(len(entries), limit)
 
     def test_find_filter(self):
@@ -119,9 +119,9 @@ class TestBackendLog(AiidaTestCase):
         for pk in range(10):
             record = self._record
             record['objpk'] = pk
-            self._backend.log.create_entry(**record)
+            self._backend.logs.create_entry(**record)
 
-        entries = self._backend.log.find(filter_by={'objpk': target_pk})
+        entries = self._backend.logs.find(filter_by={'objpk': target_pk})
         self.assertEquals(len(entries), 1)
         self.assertEquals(entries[0].objpk, target_pk)
 
@@ -137,14 +137,14 @@ class TestBackendLog(AiidaTestCase):
         # Firing a log for an unstored should not end up in the database
         calc.logger.critical(message)
 
-        logs = self._backend.log.find()
+        logs = self._backend.logs.find()
 
         self.assertEquals(len(logs), 0)
 
         # After storing the node, logs above log level should be stored
         calc.store()
         calc.logger.critical(message)
-        logs = self._backend.log.find()
+        logs = self._backend.logs.find()
 
         self.assertEquals(len(logs), 1)
         self.assertEquals(logs[0].message, message)

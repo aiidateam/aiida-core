@@ -13,7 +13,7 @@ This allows to setup and configure a user from command line.
 from functools import partial
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.types.user import UserParamType
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.params import options

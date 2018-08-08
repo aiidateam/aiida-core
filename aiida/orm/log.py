@@ -10,6 +10,7 @@
 from abc import abstractmethod, abstractproperty, ABCMeta
 from collections import namedtuple
 from aiida.utils import timezone
+from .backend import Collection, CollectionEntry
 
 ASCENDING = 1
 DESCENDING = -1
@@ -17,7 +18,7 @@ DESCENDING = -1
 OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 
-class Log(object):
+class LogCollection(Collection):
     """
     This class represents the collection of logs and can be used to create
     and retrieve logs.
@@ -46,7 +47,7 @@ class Log(object):
         :param metadata: Any (optional) metadata, should be JSON serializable dictionary
         :type metadata: :class:`dict`
         :return: An object implementing the log entry interface
-        :rtype: :class:`aiida.orm.log.LogEntry`
+        :rtype: :class:`aiida.orm.log.Log`
         """
         pass
 
@@ -58,7 +59,7 @@ class Log(object):
         :param record: The record created by the logging module
         :type record: :class:`logging.record`
         :return: An object implementing the log entry interface
-        :rtype: :class:`aiida.orm.log.LogEntry`
+        :rtype: :class:`aiida.orm.log.Log`
         """
         from datetime import datetime
 
@@ -103,7 +104,7 @@ class Log(object):
         pass
 
 
-class LogEntry(object):
+class Log(CollectionEntry):
     __metaclass__ = ABCMeta
 
     @abstractproperty
@@ -192,6 +193,6 @@ class LogEntry(object):
         Persist the log entry to the database
 
         :return: reference of self
-        :rtype: :class: LogEntry
+        :rtype: :class: Log
         """
         pass

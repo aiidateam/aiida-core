@@ -1,0 +1,101 @@
+from tornado.gen import coroutine, Return
+
+from aiida.backends.testbase import AiidaTestCase
+from aiida.work.transports import TransportQueue
+
+
+class TestTransportQueue(AiidaTestCase):
+    """ Tests for the transport queue """
+
+    def setUp(self, *args, **kwargs):
+        """ Set up a simple authinfo and for later use """
+        super(TestTransportQueue, self).setUp(*args, **kwargs)
+        self.authinfo = self.backend.authinfos.create(
+            computer=self.computer,
+            user=self.backend.users.get_automatic_user())
+        self.authinfo.store()
+
+    def tearDown(self, *args, **kwargs):
+        self.backend.authinfos.remove(self.authinfo.id)
+        super(TestTransportQueue, self).tearDown(*args, **kwargs)
+
+    def test_simple_request(self):
+        """ Test a simple transport request """
+        queue = TransportQueue()
+        loop = queue.loop()
+
+        @coroutine
+        def test():
+            trans = None
+            with queue.request_transport(self.authinfo) as request:
+                trans = yield request
+                self.assertTrue(trans.is_open)
+            self.assertFalse(trans.is_open)
+
+        loop.run_sync(lambda: test())
+
+    def test_get_transport_nested(self):
+        """ Test nesting calls to get the same transport """
+        transport_queue = TransportQueue()
+        loop = transport_queue.loop()
+
+        @coroutine
+        def nested(queue, authinfo):
+            with queue.request_transport(authinfo) as request1:
+                trans1 = yield request1
+                self.assertTrue(trans1.is_open)
+                with queue.request_transport(authinfo) as request2:
+                    trans2 = yield request2
+                    self.assertIs(trans1, trans2)
+                    self.assertTrue(trans2.is_open)
+
+        loop.run_sync(lambda: nested(transport_queue, self.authinfo))
+
+    def test_get_transport_interleaved(self):
+        """ Test interleaved calls to get the same transport """
+        transport_queue = TransportQueue()
+        loop = transport_queue.loop()
+
+        @coroutine
+        def interleaved(authinfo):
+            with transport_queue.request_transport(authinfo) as trans_future:
+                yield trans_future
+
+        loop.run_sync(lambda: [interleaved(self.authinfo), interleaved(self.authinfo)])
+
+    def test_return_from_context(self):
+        """ Test raising a Return from coroutine context """
+        queue = TransportQueue()
+        loop = queue.loop()
+
+        @coroutine
+        def test():
+            with queue.request_transport(self.authinfo) as request:
+                trans = yield request
+                raise Return(trans.is_open)
+
+        retval = loop.run_sync(lambda: test())
+        self.assertTrue(retval)
+
+    def test_open_fail(self):
+        """ Test that if opening fails  """
+        queue = TransportQueue()
+        loop = queue.loop()
+
+        @coroutine
+        def test():
+            with queue.request_transport(self.authinfo) as request:
+                yield request
+
+        def broken_open(trans):
+            raise RuntimeError("Could not open transport")
+
+        original = None
+        try:
+            # Let's put in a broken open method
+            original = self.authinfo.get_transport().__class__.open
+            self.authinfo.get_transport().__class__.open = broken_open
+            with self.assertRaises(RuntimeError):
+                loop.run_sync(lambda: test())
+        finally:
+            self.authinfo.get_transport().__class__.open = original

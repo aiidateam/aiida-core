@@ -727,7 +727,7 @@ Appending
 When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.work.context.append_` function.
 Consider the example from the previous section, but now we will use the ``append_`` function instead:
 
-.. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
+.. include:: include/snippets/workflows/workchains/run_workchain_submit_append.py
     :code: python
 
 Notice that in the ``submit_workchains`` step we no longer have to generate a unique key based on the index but we simply wrap the future in the ``append_`` function and assign it to the generic key ``workchains``.
@@ -791,7 +791,7 @@ The parent workchain can easily request the exit status of the child workchain t
 Workfunction exit codes
 ^^^^^^^^^^^^^^^^^^^^^^^
 The method of setting the exit status for a ``WorkChain`` by returning an ``ExitCode``, as explained in the previous section, works almost exactly the same for ``workfunctions``.
-The only difference is that for a workfunction, we do not have access to the convenience ``exit_codes`` property of then ``WorkChain``, but rather we have to import and return an ``ExitCode`` ourselves.
+The only difference is that for a workfunction, we do not have access to the convenience ``exit_codes`` property of the ``WorkChain``, but rather we have to import and return an ``ExitCode`` ourselves.
 This named tuple can be constructed with an integer, to denote the desired exit status and an optional message, and when returned, the workflow engine will mark the node of the workfunction as ``Finished`` and set the exit status and message to the value of the tuple.
 Consider the following example:
 

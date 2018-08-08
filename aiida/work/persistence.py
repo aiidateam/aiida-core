@@ -56,7 +56,7 @@ class AiiDAPersister(plumpy.Persister):
         :param tag: optional checkpoint identifier to allow distinguishing multiple checkpoints for the same process
         :raises: :class:`plumpy.PersistenceError` Raised if there was a problem saving the checkpoint
         """
-        LOGGER.info('Persisting process<%d>', process.pid)
+        LOGGER.debug('Persisting process<%d>', process.pid)
 
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')

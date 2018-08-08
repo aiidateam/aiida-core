@@ -10,7 +10,7 @@
 """The CLI for legacy workflows."""
 import click
 
-from aiida.cmdline.commands import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.types import LegacyWorkflowParamType
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params import options

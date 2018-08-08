@@ -130,8 +130,7 @@ class TestGroupHashing(AiidaTestCase):
 
     def test_group_uuid_hashing_for_querybuidler(self):
         """
-        Hashing for QueryBuilder should work with a unicode uuid filtering
-        but also with a uuid.UUID type filtering.
+        QueryBuilder results should be reusable and shouldn't brake hashing.
         """
         from aiida.orm.group import Group
         from aiida.orm.querybuilder import QueryBuilder
@@ -140,18 +139,16 @@ class TestGroupHashing(AiidaTestCase):
         g = Group(name='test_group')
         g.store()
 
-        # Search for the UUID of the stored group. The UUID search is by
-        # passing a uuid.UUID argument
+        # Search for the UUID of the stored group
         qb = QueryBuilder()
-        qb.append(Group, project=['name'],
-                  filters={'uuid': {'==': uuid.UUID(g.uuid)}})
-        qb.all()
+        qb.append(Group, project=['uuid'],
+                  filters={'name': {'==': 'test_group'}})
+        [uuid] = qb.first()
 
-        # Search for the UUID of the stored group. The UUID search is by
-        # passing a unicode argument
+        # Look the node with the previously returned UUID
         qb = QueryBuilder()
         qb.append(Group, project=['name'],
-                  filters={'uuid': {'==': unicode(g.uuid)}})
+                  filters={'uuid': {'==': uuid}})
         qb.all()
 
 

@@ -54,28 +54,24 @@ class TestNodeHashing(AiidaTestCase):
 
     def test_node_uuid_hashing_for_querybuidler(self):
         """
-        Hashing for QueryBuilder should work with a unicode uuid filtering
-        but also with a uuid.UUID type filtering.
+        QueryBuilder results should be reusable and shouldn't brake hashing.
         """
         from aiida.orm.node import Node
         from aiida.orm.querybuilder import QueryBuilder
-        import uuid
 
         n = Node()
         n.store()
 
-        # Search for the UUID of the stored node. The UUID search is by
-        # passing a uuid.UUID argument
+        # Search for the UUID of the stored node
         qb = QueryBuilder()
-        qb.append(Node, project=['id'],
-                  filters={'uuid': {'==': uuid.UUID(n.uuid)}})
-        qb.all()
+        qb.append(Node, project=['uuid'],
+                  filters={'id': {'==': n.id}})
+        [uuid] = qb.first()
 
-        # Search for the UUID of the stored node. The UUID search is by
-        # passing a unicode argument
+        # Look the node with the previously returned UUID
         qb = QueryBuilder()
         qb.append(Node, project=['id'],
-                  filters={'uuid': {'==': unicode(n.uuid)}})
+                  filters={'uuid': {'==': uuid}})
         qb.all()
 
     @staticmethod

@@ -202,12 +202,12 @@ class FixtureManager(object):
         profile = {
             'backend': self.backend,
             'email': self.email,
-            'repository': self.repo,
+            'repo': self.repo,
             'db_host': self.db_host,
             'db_port': self.db_port,
             'db_name': self.db_name,
-            'db_username': self.db_user,
-            'db_password': self.db_pass,
+            'db_user': self.db_user,
+            'db_pass': self.db_pass,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'institution': self.institution

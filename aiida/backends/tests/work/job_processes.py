@@ -96,6 +96,26 @@ class TestJobProcess(AiidaTestCase):
         self.assertEquals(job.calc.label, label)
         self.assertEquals(job.calc.description, description)
 
+    def test_job_process_label(self):
+        """
+        Verify that the process_label attribute is set equal to the class name of the calculation from which the
+        JobProcess class was generated
+        """
+        inputs = {
+            'options': {
+                'computer': self.computer,
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'max_wallclock_seconds': 10,
+            },
+        }
+        process = TemplatereplacerCalculation.process()
+        job = process(inputs)
+
+        self.assertEquals(job.calc.process_label, TemplatereplacerCalculation.__name__)
+
     def test_job_process_set_none(self):
         """
         Verify that calculation label and description can be not set.

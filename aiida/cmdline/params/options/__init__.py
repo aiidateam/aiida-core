@@ -316,3 +316,8 @@ VERBOSE = OverridableOption(
     '-v', '--verbose',
     is_flag=True, default=False,
     help='Be more verbose in printing output.')
+
+TIMEOUT = OverridableOption(
+    '-t', '--timeout',
+    type=click.FLOAT, default=5.0, show_default=True,
+    help='Time in seconds to wait for a response before timing out.')

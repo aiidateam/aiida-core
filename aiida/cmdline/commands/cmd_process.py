@@ -57,12 +57,13 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 
 @verdi_process.command('kill')
 @arguments.PROCESSES()
+@options.TIMEOUT()
 @decorators.with_dbenv()
-def process_kill(processes):
+def process_kill(processes, timeout):
     """Kill running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
 
-    with new_blocking_control_panel() as control_panel:
+    with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
 
             if process.is_terminated:
@@ -74,18 +75,21 @@ def process_kill(processes):
                     echo.echo_success('killed Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem killing Process<{}>'.format(process.pk))
+            except TimeoutError:
+                echo.echo_error('call to kill Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception.message))
 
 
 @verdi_process.command('pause')
 @arguments.PROCESSES()
+@options.TIMEOUT()
 @decorators.with_dbenv()
-def process_pause(processes):
+def process_pause(processes, timeout):
     """Pause running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
 
-    with new_blocking_control_panel() as control_panel:
+    with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
 
             if process.is_terminated:
@@ -97,18 +101,21 @@ def process_pause(processes):
                     echo.echo_success('paused Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem pausing Process<{}>'.format(process.pk))
+            except TimeoutError:
+                echo.echo_error('call to pause Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception.message))
 
 
 @verdi_process.command('play')
 @arguments.PROCESSES()
+@options.TIMEOUT()
 @decorators.with_dbenv()
-def process_play(processes):
+def process_play(processes, timeout):
     """Play paused processes."""
-    from aiida.work import RemoteException, DeliveryFailed, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
 
-    with new_blocking_control_panel() as control_panel:
+    with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
 
             if process.is_terminated:
@@ -120,6 +127,8 @@ def process_play(processes):
                     echo.echo_success('played Process<{}>'.format(process.pk))
                 else:
                     echo.echo_critical('problem playing Process<{}>'.format(process.pk))
+            except TimeoutError:
+                echo.echo_error('call to play Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception.message))
 
@@ -148,7 +157,11 @@ def process_watch(processes):
     try:
         communicator.await()
     except (SystemExit, KeyboardInterrupt):
+
         try:
             communicator.disconnect()
         except RuntimeError:
             pass
+
+        # Reraise to trigger clicks builtin abort sequence
+        raise

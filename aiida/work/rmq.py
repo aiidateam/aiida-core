@@ -17,6 +17,7 @@ import yaml
 import plumpy
 from plumpy.rmq import RmqCommunicator, RmqConnector
 from plumpy.process_comms import PID_KEY
+from kiwipy import communications
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.exceptions import PastException
@@ -26,12 +27,13 @@ from . import persistence
 from . import utils
 
 __all__ = [
-    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException',
+    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException', 'TimeoutError',
     'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel'
 ]
 
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
+TimeoutError = communications.TimeoutError  # pylint: disable=invalid-name
 
 # GP: Using here 127.0.0.1 instead of localhost because on some computers
 # localhost resolves first to IPv6 with address ::1 and if RMQ is not
@@ -347,11 +349,12 @@ class BlockingProcessControlPanel(ProcessControlPanel):
     A blocking adapter for the ProcessControlPanel.
     """
 
-    def __init__(self, prefix, testing_mode=False):
+    def __init__(self, prefix, testing_mode=False, timeout=None):
         self._loop = tornado.ioloop.IOLoop()
         connector = create_rmq_connector(self._loop)
         super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
 
+        self._timeout = timeout
         self.connect()
 
     def __enter__(self):
@@ -361,16 +364,20 @@ class BlockingProcessControlPanel(ProcessControlPanel):
         self.close()
         self._loop.close()
 
+    @property
+    def timeout(self):
+        return self._timeout
+
     def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
         action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
         action.execute(self._communicator)
-        self._communicator.await(action)
+        self._communicator.await(action, timeout=self.timeout)
         return action.result()
 
     def execute_action(self, action):
         with utils.loop_scope(self._loop):
             action.execute(self._communicator)
-            return self._communicator.await(action)
+            return self._communicator.await(action, timeout=self.timeout)
 
     def close(self):
         self._communicator.disconnect()
@@ -388,15 +395,16 @@ def new_control_panel():
     return ProcessControlPanel(prefix, connector)
 
 
-def new_blocking_control_panel():
+def new_blocking_control_panel(timeout=None):
     """
     Create a new blocking control panel based on the current profile configuration
 
+    :param timeout: optional default timeout for await instructions
     :return: A new control panel instance
     :rtype: :py:class:`aiida.work.rmq.BlockingProcessControlPanel`
     """
     prefix = get_rmq_prefix()
-    return BlockingProcessControlPanel(prefix)
+    return BlockingProcessControlPanel(prefix, timeout=timeout)
 
 
 def create_rmq_connector(loop=None):

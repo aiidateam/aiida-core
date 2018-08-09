@@ -126,6 +126,35 @@ class TestWfBasic(AiidaTestCase):
         self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
 
 
+class TestGroupHashing(AiidaTestCase):
+
+    def test_group_uuid_hashing_for_querybuidler(self):
+        """
+        QueryBuilder results should be reusable and shouldn't brake hashing.
+        """
+        from aiida.orm.group import Group
+        from aiida.orm.querybuilder import QueryBuilder
+
+        g = Group(name='test_group')
+        g.store()
+
+        # Search for the UUID of the stored group
+        qb = QueryBuilder()
+        qb.append(Group, project=['uuid'],
+                  filters={'name': {'==': 'test_group'}})
+        [uuid] = qb.first()
+
+        # Look the node with the previously returned UUID
+        qb = QueryBuilder()
+        qb.append(Group, project=['id'],
+                  filters={'uuid': {'==': uuid}})
+        # Check that the query doesn't fail
+        qb.all()
+        # And that the results are correct
+        self.assertEquals(qb.count(), 1)
+        self.assertEquals(qb.first()[0], g.id)
+
+
 class TestGroups(AiidaTestCase):
     """
     Test groups.

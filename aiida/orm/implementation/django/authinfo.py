@@ -29,7 +29,7 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
         """
-        return DjangoAuthInfo(self, computer, user)
+        return DjangoAuthInfo(self.backend, computer, user)
 
     def get(self, computer, user):
         """
@@ -59,6 +59,13 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
                 "The aiida user {} is configured more than once to use "
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
+
+    def remove(self, authinfo_id):
+        from django.core.exceptions import ObjectDoesNotExist
+        try:
+            DbAuthInfo.objects.get(pk=authinfo_id).delete()
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))
 
     def from_dbmodel(self, dbmodel):
         return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)

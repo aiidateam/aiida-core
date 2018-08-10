@@ -43,12 +43,12 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type='calculation'):
+def print_last_process_state_change(process_type=None):
     """
     Print the last time that a process of the specified type has changed its state.
     This function will also print a warning if the daemon is not running.
 
-    :param process_type: the process type for which to get the latest state change timestamp.
+    :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning
@@ -213,6 +213,8 @@ def get_calculation_log_report(calculation):
     calculation_state = calculation.get_state()
     scheduler_state = calculation.get_scheduler_state()
 
+    report = []
+
     if calculation_state == calc_states.WITHSCHEDULER:
         state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
                                                         if scheduler_state else '(unknown)')
@@ -221,29 +223,30 @@ def get_calculation_log_report(calculation):
 
     label_string = ' [{}]'.format(calculation.label) if calculation.label else ''
 
-    result = "*** {}{}: {}".format(calculation.pk, label_string, state_string)
+    report.append('*** {}{}: {}'.format(calculation.pk, label_string, state_string))
 
     if scheduler_out is None:
-        result += '*** Scheduler output: N/A'
+        report.append('*** Scheduler output: N/A')
     elif scheduler_out:
-        result += '*** Scheduler output:\n{}'.format(scheduler_out)
+        report.append('*** Scheduler output:\n{}'.format(scheduler_out))
     else:
-        result += '*** (empty scheduler output file)'
+        report.append('*** (empty scheduler output file)')
 
     if scheduler_err is None:
-        result += '*** Scheduler errors: N/A'
+        report.append('*** Scheduler errors: N/A')
     elif scheduler_err:
-        result += '*** Scheduler errors:\n{}'.format(scheduler_err)
+        report.append('*** Scheduler errors:\n{}'.format(scheduler_err))
     else:
-        result += '*** (empty scheduler errors file)'
+        report.append('*** (empty scheduler errors file)')
 
     if log_messages:
-        result += '*** {} LOG MESSAGES:'.format(len(log_messages))
+        report.append('*** {} LOG MESSAGES:'.format(len(log_messages)))
     else:
-        result += '*** 0 LOG MESSAGES'
+        report.append('*** 0 LOG MESSAGES')
 
     for log in log_messages:
-        result += '+-> {} at {}'.format(log['levelname'], log['time'])
-        result += '\n'.join(['|   {}'.format(message) for message in log['message'].splitlines()])
+        report.append('+-> {} at {}'.format(log['levelname'], log['time']))
+        for message in log['message'].splitlines():
+            report.append(' | {}'.format(message))
 
-    return result
+    return '\n'.join(report)

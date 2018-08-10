@@ -49,8 +49,7 @@ class ModelWrapper(object):
     def save(self):
         """ Store the model (possibly updating values if changed) """
         try:
-            self._model.save()
-            self._model.session.commit()
+            self._model.save(commit=True)
         except sqlalchemy.exc.IntegrityError as e:
             self._model.session.rollback()
             raise exceptions.IntegrityError(str(e))

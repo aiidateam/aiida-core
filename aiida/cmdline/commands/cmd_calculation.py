@@ -348,6 +348,7 @@ def calculation_outputls(calculation, path, color):
 @arguments.CALCULATIONS(
     type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.FORCE()
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
 def calculation_kill(calculations, force):
     """Kill one or multiple running calculations."""
     from aiida import work

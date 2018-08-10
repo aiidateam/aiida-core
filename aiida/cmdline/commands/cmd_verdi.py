@@ -4,7 +4,8 @@ import click
 
 
 @click.group(invoke_without_command=True)
-@click.option('-p', '--profile', help='Execute the command for this profile instead of the default profile.')
+@click.option(
+    '-p', '--profile', metavar='PROFILE', help='Execute the command for this profile instead of the default profile.')
 @click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')
 @click.pass_context
 def verdi(ctx, profile, version):

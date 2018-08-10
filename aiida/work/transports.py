@@ -85,8 +85,13 @@ class TransportQueue(object):
                 if transport_request.count > 0:
                     # The user still wants the transport so open it
                     _LOGGER.debug('Transport request opening transport for %s', authinfo)
-                    transport.open()
-                    transport_request.future.set_result(transport)
+                    try:
+                        transport.open()
+                    except Exception as exception:  # pylint: disable=broad-except
+                        _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
+                        transport_request.future.set_exception(exception)
+                    else:
+                        transport_request.future.set_result(transport)
 
             # Save the handle so that we can cancel the callback if the user no longer wants it
             open_callback_handle = self._loop.call_later(safe_open_interval, do_open)

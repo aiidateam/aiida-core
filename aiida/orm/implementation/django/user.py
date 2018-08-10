@@ -25,7 +25,7 @@ class DjangoUserCollection(UserCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return DjangoUser(self,
+        return DjangoUser(self.backend,
                           email=normalize_email(email),
                           first_name=first_name,
                           last_name=last_name,

@@ -20,7 +20,7 @@ from . import utils
 class SqlaAuthInfoCollection(AuthInfoCollection):
 
     def create(self, computer, user):
-        return SqlaAuthInfo(self, computer, user)
+        return SqlaAuthInfo(self.backend, computer, user)
 
     def get(self, computer, user):
         """
@@ -54,6 +54,17 @@ class SqlaAuthInfoCollection(AuthInfoCollection):
                 "The aiida user {} is configured more than once to use "
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
+
+    def remove(self, authinfo_id):
+        from sqlalchemy.orm.exc import NoResultFound
+        from aiida.backends.sqlalchemy import get_scoped_session
+
+        session = get_scoped_session()
+        try:
+            session.query(DbAuthInfo).filter_by(id=authinfo_id).delete()
+            session.commit()
+        except NoResultFound:
+            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))
 
     def from_dbmodel(self, dbmodel):
         return SqlaAuthInfo.from_dbmodel(dbmodel, self.backend)

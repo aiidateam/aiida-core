@@ -216,7 +216,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
     def test_calculation_list_failed(self):
         """Test verdi calculation list with the failed filter"""
-        for flag in ['-x', '--failed']:
+        for flag in ['-X', '--failed']:
             options = ['-r', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
 

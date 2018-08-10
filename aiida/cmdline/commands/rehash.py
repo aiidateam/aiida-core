@@ -61,7 +61,7 @@ def _rehash_cmd(all, class_name, pks):
     if not qb.count():
         click.echo('No matching nodes found.')
         return
-    for i, (node,) in enumerate(qb.iterall()):
+    for i, (node,) in enumerate(qb.all()):
         if i % 100 == 0:
             click.echo('.', nl=False)
         node.rehash()

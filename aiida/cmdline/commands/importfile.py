@@ -31,6 +31,7 @@ class Import(VerdiCommand):
 
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import get_valid_import_links, import_data
+        from aiida.common.exceptions import ContentNotExistent
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -82,7 +83,10 @@ class Import(VerdiCommand):
         for filename in files:
             try:
                 print "**** Importing file {}".format(filename)
-                import_data(filename)
+                try:
+                    import_data(filename)
+                except ContentNotExistent as ce:
+                    print ce
             except Exception:
                 traceback.print_exc()
 

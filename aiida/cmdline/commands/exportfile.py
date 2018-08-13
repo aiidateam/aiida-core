@@ -39,22 +39,37 @@ class Export(VerdiCommandWithSubcommands):
     help='Export the given computers by pk')
 @click.option('-G', '--groups', multiple=True, type=int,
     help='Export the given groups by pk')
-@click.option('-g', '--group_names', multiple=True, type=str,
+@click.option('-g', '--group-names', multiple=True, type=str,
     help='Export the given groups by group name')
-@click.option('-P', '--no-parents', is_flag=True, default=False,
-    help='Store only the nodes that are explicitly given, without exporting the parents')
-@click.option('-O', '--no-calc-outputs', is_flag=True, default=False,
-    help='If a calculation is included in the list of nodes to export, do not export its outputs')
+@click.option('-I', '--input-forward', is_flag=True, default=False,
+    show_default=True, help='Follow forward INPUT links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-C', '--create-reversed', is_flag=True, default=True,
+    show_default=True, help='Follow reverse CREATE links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-R', '--return-reversed', is_flag=True, default=False,
+    show_default=True, help='Follow reverse RETURN links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-X', '--call-reversed', is_flag=True, default=False,
+    show_default=True, help='Follow reverse CALL links (recursively) when '
+                            'calculating the node set to export.')
 @click.option('-f', '--overwrite', is_flag=True, default=False,
     help='Overwrite the output file, if it exists')
-@click.option('-a', '--archive-format', type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip')
-def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_outputs, overwrite, archive_format):
+@click.option('-a', '--archive-format',
+              type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
+              default='zip')
+def create(outfile, computers, groups, nodes, group_names, input_forward,
+           create_reversed, return_reversed, call_reversed, overwrite,
+           archive_format):
     """
     Export nodes and groups of nodes to an archive file for backup or sharing purposes
     """
     import sys
-    from aiida.backends.utils import load_dbenv
-    load_dbenv()
+    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    # TODO: Replace with aiida.cmdline.utils.decorators.with_dbenv decocator
+    # TODO: when we merge to develop
+    if not is_dbenv_loaded():
+        load_dbenv()
     from aiida.orm import Group, Node, Computer
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.importexport import export, export_zip
@@ -68,7 +83,8 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
+        group_dict.update(
+            {group['group']['*'].id: group['group']['*'] for group in res})
         node_id_set.update([node['node']['id'] for node in res])
 
     if groups:
@@ -77,11 +93,11 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
         qb.append(Node, tag='node', member_of='group', project=['id'])
         res = qb.dict()
 
-        group_dict.update({group['group']['*'].name: group['group']['*'].dbgroup for group in res})
+        group_dict.update(
+            {group['group']['*'].id: group['group']['*'] for group in res})
         node_id_set.update([node['node']['id'] for node in res])
 
-    # The db_groups that correspond to what was searched above
-    dbgroups_list = group_dict.values()
+    groups_list = group_dict.values()
 
     # Getting the nodes that correspond to the ids that were found above
     if len(node_id_set) > 0:
@@ -96,9 +112,6 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     for node_id in missing_nodes:
         print >> sys.stderr, ('WARNING! Node with pk={} not found, skipping'.format(node_id))
 
-    # The dbnodes of the above node list
-    dbnode_list = [node.dbnode for node in node_list]
-
     if computers:
         qb = QueryBuilder()
         qb.append(Computer, tag='comp', project=['*'], filters={'id': {'in': set(computers)}})
@@ -110,10 +123,7 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     else:
         computer_list = []
 
-    # The dbcomputers of the above computer list
-    dbcomputer_list = [computer.dbcomputer for computer in computer_list]
-
-    what_list = dbnode_list + dbcomputer_list + dbgroups_list
+    what_list = node_list + computer_list + groups_list
     additional_kwargs = dict()
 
     if archive_format == 'zip':
@@ -125,14 +135,19 @@ def create(outfile, computers, groups, nodes, group_names, no_parents, no_calc_o
     elif archive_format == 'tar.gz':
         export_function = export
     else:
-        print >> sys.stderr, 'invalid --archive-format value {}'.format(archive_format)
+        print >> sys.stderr, 'invalid --archive-format value {}'.format(
+            archive_format)
         sys.exit(1)
 
     try:
         export_function(
-            what=what_list, also_parents=not no_parents, also_calc_outputs=not no_calc_outputs,
-            outfile=outfile, overwrite=overwrite, **additional_kwargs
+            what=what_list, input_forward=input_forward,
+            create_reversed=create_reversed,
+            return_reversed=return_reversed,
+            call_reversed=call_reversed, outfile=outfile,
+            overwrite=overwrite, **additional_kwargs
         )
+
     except IOError as e:
         print >> sys.stderr, 'IOError: {}'.format(e.message)
         sys.exit(1)

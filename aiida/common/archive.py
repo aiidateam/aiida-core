@@ -27,6 +27,9 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
     try:
         with zipfile.ZipFile(infile, "r", allowZip64=True) as zip:
 
+            if not zip.namelist():
+                raise ValueError("The zip file is empty.")
+
             zip.extract(path=folder.abspath,
                    member='metadata.json')
             zip.extract(path=folder.abspath,

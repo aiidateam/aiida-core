@@ -387,9 +387,9 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
                                  "nor a zip file.")
 
         if not folder.get_content_list():
-            print "The provided file/folder is empty. Exiting silently"
-            return
-
+            from aiida.common.exceptions import ContentNotExistent
+            raise ContentNotExistent("The provided file/folder ({}) is empty"
+                                     .format(in_path))
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
                 metadata = json.load(f)
@@ -869,7 +869,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
-    from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
@@ -910,6 +909,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                  "is neither a (possibly compressed) tar "
                                  "file, nor a zip file.")
 
+        if not folder.get_content_list():
+            from aiida.common.exceptions import ContentNotExistent
+            raise ContentNotExistent("The provided file/folder ({}) is empty"
+                                     .format(in_path))
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
                 metadata = json.load(f)
@@ -1683,10 +1686,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
                 return_reversed=False, call_reversed=False, **kwargs):
     """
-    Export the DB entries passed in the 'what' list to a file tree.
+    Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
-    :param what: a list of Django database entries; they can belong to
-    different models.
+    :param what: a list of entity instances; they can belong to
+    different models/entities.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
     :param input_forward: Follow forward INPUT links (recursively) when
     calculating the node set to export.
@@ -1733,7 +1736,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     given_node_entry_ids = set()
     given_group_entry_ids = set()
 
-    # I store a list of the actual dbnodes
+    # I keep the pks of the given entities
     for entry in what:
         if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
@@ -1907,7 +1910,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         # If it is a Data node
         else:
             curr_node_id = to_be_visited[Data].pop()
-            # If it is already visited continue to the next node
             # If it is already visited continue to the next node
             if curr_node_id in to_be_exported:
                 continue
@@ -2599,16 +2601,29 @@ def export_zip(what, outfile = 'testzip', overwrite = False,
         print "File written in {:10.3g} s.".format(time.time() - t)
 
 
-def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, **kwargs):
+def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
+           silent=False, **kwargs):
     """
-    Export the DB entries passed in the 'what' list on a file.
-
+    Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
-
-    :param what: a list of Django database entries; they can belong to different
-      models.
-    :param also_parents: if True, also all the parents are stored (from the transitive closure)
-    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param what: a list of entity instances; they can belong to
+    different models/entities.
+    :param input_forward: Follow forward INPUT links (recursively) when
+    calculating the node set to export.
+    :param create_reversed: Follow reversed CREATE links (recursively) when
+    calculating the node set to export.
+    :param return_reversed: Follow reversed RETURN links (recursively) when
+    calculating the node set to export.
+    :param call_reversed: Follow reversed CALL links (recursively) when
+    calculating the node set to export.
+    :param allowed_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
+    :param forbidden_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param outfile: the filename of the file on which to export
     :param overwrite: if True, overwrite the output file without asking.
         if False, raise an IOError in this case.
@@ -2635,25 +2650,17 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     if not silent:
         print "COMPRESSING..."
 
-    # PAX_FORMAT: virtually no limitations, better support for unicode
-    #   characters
-    # dereference=True: at the moment, we should not have any symlink or
-    #   hardlink in the AiiDA repository; therefore, do not store symlinks
-    #   or hardlinks, but store the actual destinations.
-    #   This also simplifies the checks on import.
     t3 = time.time()
     with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
                       dereference=True) as tar:
         tar.add(folder.abspath, arcname="")
-
-        #        import shutil
-        #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
     t4 = time.time()
 
     if not silent:
         filecr_time = t2-t1
         filecomp_time = t4-t3
-        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time, filecr_time + filecomp_time)
+        print("Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s."
+              .format(filecr_time, filecomp_time, filecr_time + filecomp_time))
 
     if not silent:
         print "DONE."

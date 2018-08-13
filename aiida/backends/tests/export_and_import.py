@@ -1808,11 +1808,6 @@ class TestLinks(AiidaTestCase):
             o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
             o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
 
-            uuids_wanted = set(_.uuid for _ in (w1,o1,i1))
-            # links_wanted = [l for l in self.get_all_node_links() if l[3] in
-            #                 ('createlink', 'inputlink', 'returnlink', 'calllink')]
-            # links_wanted = self.get_all_node_links()
-
             links_wanted = [l for l in self.get_all_node_links() if l[3] in
                             (LinkType.CREATE.value,
                              LinkType.INPUT.value,

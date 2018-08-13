@@ -39,20 +39,20 @@ class Export(VerdiCommandWithSubcommands):
     help='Export the given computers by pk')
 @click.option('-G', '--groups', multiple=True, type=int,
     help='Export the given groups by pk')
-@click.option('-g', '--group_names', multiple=True, type=str,
+@click.option('-g', '--group-names', multiple=True, type=str,
     help='Export the given groups by group name')
-@click.option('-IF', '--input_forward', is_flag=True, default=False,
-    help='Follow forward INPUT links (recursively) when calculating the node '
-         "set to export. By default this is switched off.")
-@click.option('-CrR', '--create_reversed', is_flag=True, default=True,
-    help='Follow reverse CREATE links (recursively) when calculating the node '
-         'set to export. By default this is switched on.')
-@click.option('-RR', '--return_reversed', is_flag=True, default=False,
-    help='Follow reverse RETURN links (recursively) when calculating the node '
-         'set to export. By default this is switched off.')
-@click.option('-CaR', '--call_reversed', is_flag=True, default=False,
-    help='Follow reverse CALL links (recursively) when calculating the node '
-         'set to export. By default this is switched off.')
+@click.option('-I', '--input-forward', is_flag=True, default=False,
+    show_default=True, help='Follow forward INPUT links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-C', '--create-reversed', is_flag=True, default=True,
+    show_default=True, help='Follow reverse CREATE links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-R', '--return-reversed', is_flag=True, default=False,
+    show_default=True, help='Follow reverse RETURN links (recursively) when '
+                            'calculating the node set to export.')
+@click.option('-X', '--call-reversed', is_flag=True, default=False,
+    show_default=True, help='Follow reverse CALL links (recursively) when '
+                            'calculating the node set to export.')
 @click.option('-f', '--overwrite', is_flag=True, default=False,
     help='Overwrite the output file, if it exists')
 @click.option('-a', '--archive-format',
@@ -66,6 +66,8 @@ def create(outfile, computers, groups, nodes, group_names, input_forward,
     """
     import sys
     from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    # TODO: Replace with aiida.cmdline.utils.decorators.with_dbenv decocator
+    # TODO: when we merge to develop
     if not is_dbenv_loaded():
         load_dbenv()
     from aiida.orm import Group, Node, Computer

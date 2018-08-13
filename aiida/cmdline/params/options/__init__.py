@@ -235,7 +235,7 @@ EXIT_STATUS = OverridableOption(
     help='Only include entries with this exit status.')
 
 FAILED = OverridableOption(
-    '-x', '--failed', 'failed',
+    '-X', '--failed', 'failed',
     is_flag=True, default=False,
     help='Only include entries that have failed.')
 
@@ -316,3 +316,8 @@ VERBOSE = OverridableOption(
     '-v', '--verbose',
     is_flag=True, default=False,
     help='Be more verbose in printing output.')
+
+TIMEOUT = OverridableOption(
+    '-t', '--timeout',
+    type=click.FLOAT, default=5.0, show_default=True,
+    help='Time in seconds to wait for a response before timing out.')

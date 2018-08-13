@@ -2626,7 +2626,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
     license is allowed, False otherwise.
     :param outfile: the filename of the file on which to export
     :param overwrite: if True, overwrite the output file without asking.
-        if False, raise an IOError in this case.
+    if False, raise an IOError in this case.
     :param silent: suppress debug print
 
     :raise IOError: if overwrite==False and the filename already exists.

@@ -175,7 +175,7 @@ class FixtureManager(object):
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.cmdline.commands.cmd_setup import setup
+        from aiida.control.profile import setup_profile
         if not self.root_dir:
             self.create_root_dir()
         print(self.root_dir, self.config_dir)
@@ -183,7 +183,7 @@ class FixtureManager(object):
         backend_settings.AIIDADB_PROFILE = None
         aiida_cfg.create_base_dirs()
         profile_name = 'test_profile'
-        setup(profile_name=profile_name, only_config=False, non_interactive=True, **self.profile)
+        setup_profile(profile=profile_name, only_config=False, non_interactive=True, **self.profile)
         aiida_cfg.set_default_profile(profile_name)
         self.__is_running_on_test_profile = True
 
@@ -202,12 +202,12 @@ class FixtureManager(object):
         profile = {
             'backend': self.backend,
             'email': self.email,
-            'repository': self.repo,
+            'repo': self.repo,
             'db_host': self.db_host,
             'db_port': self.db_port,
             'db_name': self.db_name,
-            'db_username': self.db_user,
-            'db_password': self.db_pass,
+            'db_user': self.db_user,
+            'db_pass': self.db_pass,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'institution': self.institution

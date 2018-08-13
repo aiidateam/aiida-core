@@ -58,9 +58,7 @@ install_requires = [
     'psycopg2-binary==2.7.4',
     'paramiko==2.4.1',
     'ecdsa==0.13',
-    'pycrypto==2.6.1',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
-    'scipy==1.0.1',
 ]
 
 extras_require = {

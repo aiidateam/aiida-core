@@ -224,7 +224,7 @@ class DbNode(Base):
             raise ValueError("We don't know how to treat key with dot in it yet")
 
         if key not in d:
-            raise ValueError("Key {} does not exists".format(key))
+            raise AttributeError("Key {} does not exists".format(key))
 
         del d[key]
 

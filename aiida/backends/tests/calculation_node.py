@@ -80,6 +80,10 @@ class TestCalcNode(AiidaTestCase):
         a._set_attr(Calculation.PROCESS_STATE_KEY, 'FINISHED')
         a._del_attr(Calculation.PROCESS_STATE_KEY)
 
+        # Deleting non-existing attribute should raise attribute error
+        with self.assertRaises(AttributeError):
+            a._del_attr(Calculation.PROCESS_STATE_KEY)
+
         with self.assertRaises(ModificationNotAllowed):
             a._set_attr('bool', False)
 

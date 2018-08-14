@@ -56,6 +56,7 @@ if __name__ == '__main__':
         extras_require=extras_require,
         packages=find_packages(),
         reentry_register=True,
+        reentry_scan=['aiida'],
         entry_points={
             'console_scripts': [
                 'verdi=aiida.cmdline.commands.cmd_verdi:verdi',

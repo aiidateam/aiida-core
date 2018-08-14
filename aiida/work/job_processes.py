@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from collections import namedtuple
+import functools
 import logging
 import shutil
 import sys
@@ -18,14 +18,14 @@ from tornado.gen import coroutine, Return
 import plumpy
 from plumpy.ports import PortNamespace
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import InvalidOperation, RemoteOperationError
+from aiida.common.exceptions import TransportTaskException
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationExitStatus
 from aiida.work.process_builder import JobProcessBuilder
-from aiida.work.utils import exponential_backoff_retry
+from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
 from . import persistence
 from . import processes
@@ -38,15 +38,11 @@ RETRIEVE_COMMAND = 'retrieve'
 KILL_COMMAND = 'kill'
 
 
-class TransportTaskException(Exception):
-    pass
-
-
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @coroutine
-def task_submit_job(node, transport_queue, cancelled_flag):
+def task_submit_job(node, transport_queue, cancel_flag):
     """
     Transport task that will attempt to submit a job calculation
 
@@ -57,12 +53,12 @@ def task_submit_job(node, transport_queue, cancelled_flag):
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     initial_interval = 1
-    max_attempts = 1
+    max_attempts = 5
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
@@ -72,27 +68,30 @@ def task_submit_job(node, transport_queue, cancelled_flag):
             transport = yield request
 
             # It may have taken time to get the transport, check if we've been cancelled
-            if cancelled_flag.cancelled:
+            if cancel_flag.is_cancelled:
                 raise plumpy.CancelledError('task_submit_job for calculation<{}> cancelled'.format(node.pk))
 
-            LOGGER.info('submitting calculation<{}>'.format(node.pk))
+            logger.info('submitting calculation<{}>'.format(node.pk))
             node._set_state(calc_states.SUBMITTING)
             raise Return(execmanager.submit_calculation(node, transport))
 
     try:
-        result = yield exponential_backoff_retry(do_submit, initial_interval, max_attempts, logger=node.logger)
+        result = yield exponential_backoff_retry(
+            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+    except plumpy.CancelledError:
+        pass
     except Exception:
-        LOGGER.warning('submitting calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        logger.warning('submitting calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
         node._set_state(calc_states.SUBMISSIONFAILED)
         raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        LOGGER.info('submitting calculation<{}> successful'.format(node.pk))
+        logger.info('submitting calculation<{}> successful'.format(node.pk))
         node._set_state(calc_states.WITHSCHEDULER)
         raise Return(result)
 
 
 @coroutine
-def task_update_job(node, transport_queue, cancelled_flag):
+def task_update_job(node, transport_queue, cancel_flag):
     """
     Transport task that will attempt to update the scheduler state of a job calculation
 
@@ -103,7 +102,7 @@ def task_update_job(node, transport_queue, cancelled_flag):
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
@@ -118,27 +117,30 @@ def task_update_job(node, transport_queue, cancelled_flag):
             transport = yield request
 
             # It may have taken time to get the transport, check if we've been cancelled
-            if cancelled_flag.cancelled:
+            if cancel_flag.is_cancelled:
                 raise plumpy.CancelledError('task_update_job for calculation<{}> cancelled'.format(node.pk))
 
-            LOGGER.info('updating calculation<{}>'.format(node.pk))
+            logger.info('updating calculation<{}>'.format(node.pk))
             raise Return(execmanager.update_calculation(node, transport))
 
     try:
-        result = yield exponential_backoff_retry(do_update, initial_interval, max_attempts, logger=node.logger)
+        result = yield exponential_backoff_retry(
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+    except plumpy.CancelledError:
+        pass
     except Exception:
-        LOGGER.warning('updating calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        logger.warning('updating calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
         node._set_state(calc_states.FAILED)
         raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        LOGGER.info('updating calculation<{}> successful'.format(node.pk))
+        logger.info('updating calculation<{}> successful'.format(node.pk))
         if result:
             node._set_state(calc_states.COMPUTED)
         raise Return(result)
 
 
 @coroutine
-def task_retrieve_job(node, transport_queue, cancelled_flag, retrieved_temporary_folder):
+def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancel_flag):
     """
     Transport task that will attempt to retrieve all files of a completed job calculation
 
@@ -149,7 +151,7 @@ def task_retrieve_job(node, transport_queue, cancelled_flag, retrieved_temporary
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
@@ -164,27 +166,30 @@ def task_retrieve_job(node, transport_queue, cancelled_flag, retrieved_temporary
             transport = yield request
 
             # It may have taken time to get the transport, check if we've been cancelled
-            if cancelled_flag.cancelled:
+            if cancel_flag.is_cancelled:
                 raise plumpy.CancelledError('task_retrieve_job for calculation<{}> cancelled'.format(node.pk))
 
-            LOGGER.info('retrieving calculation<{}>'.format(node.pk))
+            logger.info('retrieving calculation<{}>'.format(node.pk))
             node._set_state(calc_states.RETRIEVING)
 
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
     try:
-        result = yield exponential_backoff_retry(do_retrieve, initial_interval, max_attempts, logger=node.logger)
+        result = yield exponential_backoff_retry(
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+    except plumpy.CancelledError:
+        pass
     except Exception:
-        LOGGER.warning('retrieving calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        logger.warning('retrieving calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
         node._set_state(calc_states.RETRIEVALFAILED)
         raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        LOGGER.info('retrieving calculation<{}> successful'.format(node.pk))
+        logger.info('retrieving calculation<{}> successful'.format(node.pk))
         raise Return(result)
 
 
 @coroutine
-def task_kill_job(node, transport_queue, cancelled_flag):
+def task_kill_job(node, transport_queue, cancel_flag):
     """
     Transport task that will attempt to kill a job calculation
 
@@ -195,7 +200,7 @@ def task_kill_job(node, transport_queue, cancelled_flag):
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param cancelled_flag: the cancelled flag that will be queried to determine whethr the job was cancelled
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
@@ -204,7 +209,7 @@ def task_kill_job(node, transport_queue, cancelled_flag):
 
     if node.get_state() in [calc_states.NEW, calc_states.TOSUBMIT]:
         node._set_state(calc_states.FAILED)
-        LOGGER.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
+        logger.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
@@ -215,21 +220,23 @@ def task_kill_job(node, transport_queue, cancelled_flag):
             transport = yield request
 
             # It may have taken time to get the transport, check if we've been cancelled
-            if cancelled_flag.cancelled:
+            if cancel_flag.is_cancelled:
                 raise plumpy.CancelledError('task_kill_job for calculation<{}> cancelled'.format(node.pk))
 
-            LOGGER.info('killing calculation<{}>'.format(node.pk))
+            logger.info('killing calculation<{}>'.format(node.pk))
 
             raise Return(execmanager.kill_calculation(node, transport))
 
     try:
         result = yield exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
+    except plumpy.CancelledError:
+        pass
     except Exception:
-        LOGGER.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
+        logger.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
         node._set_state(calc_states.FAILED)
         raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        LOGGER.info('killing calculation<{}> successful'.format(node.pk))
+        logger.info('killing calculation<{}> successful'.format(node.pk))
         raise Return(result)
 
 
@@ -237,88 +244,85 @@ class Waiting(plumpy.Waiting):
     """
     The waiting state for the JobCalculation.
     """
-    CancelFlag = namedtuple('CancelledFlag', ['cancelled'])
 
     def __init__(self, process, done_callback, msg=None, data=None):
         super(Waiting, self).__init__(process, done_callback, msg, data)
-        self._cancel_flag = self.CancelFlag(False)
-        self._kill_future = None
+        self._task = None
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
-        self._cancel_flag = self.CancelFlag(False)
-        self._kill_future = None
+        self._task = None
 
     @coroutine
     def execute(self):
 
-        if self._kill_future:
-            yield self._do_kill()
-            return
-
-        calc = self.process.calc
+        calculation = self.process.calc
         transport_queue = self.process.runner.transport
-        calc.logger.info('Waiting for calculation<{}> on {}'.format(calc.pk, self.data))
+
+        calculation._set_process_status('Waiting for transport task: {}'.format(self.data))
 
         try:
+
             if self.data == SUBMIT_COMMAND:
 
-                yield task_submit_job(calc, transport_queue, self._cancel_flag)
+                try:
+                    transport_task = functools.partial(task_submit_job, calculation, transport_queue)
+                    self._task = interruptable_task(transport_task)
+                    yield self._task
+                finally:
+                    self._task = None
 
-                if self._kill_future:
-                    yield self._do_kill()
-
-                # Now get scheduler updates
                 raise Return(self.scheduler_update())
 
             elif self.data == UPDATE_SCHEDULER_COMMAND:
 
                 job_done = False
 
-                # Keep getting scheduler updates until done
                 while not job_done:
-                    job_done = yield task_update_job(calc, transport_queue, self._cancel_flag)
+                    try:
+                        transport_task = functools.partial(task_update_job, calculation, transport_queue)
+                        self._task = interruptable_task(transport_task)
+                        job_done = yield self._task
+                    finally:
+                        self._task = None
 
-                    if self._kill_future:
-                        yield self._do_kill()
-
-                # Done, go on to retrieve
                 raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
 
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
-                retrieved_temporary_folder = tempfile.mkdtemp()
-                yield task_retrieve_job(calc, transport_queue, self._cancel_flag, retrieved_temporary_folder)
+                temp_folder = tempfile.mkdtemp()
 
-                if self._kill_future:
-                    yield self._do_kill()
+                try:
+                    transport_task = functools.partial(task_retrieve_job, calculation, transport_queue, temp_folder)
+                    self._task = interruptable_task(transport_task)
+                    yield self._task
+                finally:
+                    self._task = None
 
-                raise Return(self.retrieved(retrieved_temporary_folder))
+                raise Return(self.retrieved(temp_folder))
 
             else:
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException:
-            exit_status = JobCalculationExitStatus[calc.get_state()].value
+            exit_status = JobCalculationExitStatus[calculation.get_state()].value
             raise Return(self.create_state(processes.ProcessState.FINISHED, exit_status, exit_status is 0))
-        except plumpy.CancelledError:
-            # A task was cancelled because the state (and process) is being killed
-            next_state = yield self._do_kill()
-            raise Return(next_state)
-        except Return:
+        except (plumpy.Interruption, plumpy.CancelledError, Return):
             raise
         except Exception:
             exc_info = sys.exc_info()
             excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
             raise Return(excepted_state)
+        finally:
+            calculation._set_process_status(None)
 
     def scheduler_update(self):
         """
         Create the next state to go to
+
         :return: The appropriate WAITING state
         """
-        assert self._kill_future is None, "Currently being killed"
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
@@ -328,9 +332,9 @@ class Waiting(plumpy.Waiting):
     def retrieve(self):
         """
         Create the next state to go to in order to retrieve
+
         :return: The appropriate WAITING state
         """
-        assert self._kill_future is None, "Currently being killed"
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
@@ -344,37 +348,15 @@ class Waiting(plumpy.Waiting):
             be used in parsing.
         :return: The appropriate RUNNING state
         """
-        assert self._kill_future is None, "Currently being killed"
         return self.create_state(
             processes.ProcessState.RUNNING,
             self.process.retrieved,
             retrieved_temporary_folder)
 
-    @coroutine
-    def _do_kill(self):
-        try:
-            yield task_kill_job(self.process.calc, self.process.runner.transport, self._cancel_flag)
-        except (InvalidOperation, RemoteOperationError):
-            pass
-
-        if self._kill_future is not None:
-            self._kill_future.set_result(True)
-            self._kill_future = None
-
-        raise Return(self.create_state(processes.ProcessState.KILLED, 'Got killed yo'))
-
-    def kill(self, msg=None):
-        if self._kill_future is not None:
-            return self._kill_future
-        else:
-            if self.process.calc.get_state() in [calc_states.NEW, calc_states.TOSUBMIT, calc_states.WITHSCHEDULER]:
-                self._kill_future = plumpy.Future()
-                # Cancel the task
-                self._cancel_flag.cancelled = True
-                return self._kill_future
-            else:
-                # Can't be killed
-                return False
+    def interrupt(self, reason):
+        """Interrupt the Waiting state by calling interrupt on the transport task InterruptableFuture."""
+        if self._task is not None:
+            self._task.interrupt(reason)
 
 
 class JobProcess(processes.Process):

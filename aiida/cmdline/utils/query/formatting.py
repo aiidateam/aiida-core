@@ -17,7 +17,7 @@ def format_relative_time(datetime):
     return str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
 
 
-def format_state(process_state, exit_status=None):
+def format_state(process_state, paused=None, exit_status=None):
     """
     Return a string formatted representation of a process' state, which consists of its process state and exit status
 
@@ -25,7 +25,23 @@ def format_state(process_state, exit_status=None):
     :param exit_status: the process' exit status
     :return: string representation of the process' state
     """
-    return '{} | {}'.format(process_state.capitalize() if process_state else None, exit_status)
+    if process_state in ['excepted', 'killed']:
+        symbol = u'\u2A2F'
+    elif process_state in ['created', 'finished']:
+        symbol = u'\u23F9'
+    elif process_state in ['running', 'waiting']:
+        if paused is True:
+            symbol = u'\u23F8'
+        else:
+            symbol = u'\u23F5'
+    else:
+        # Unknown process state, use invisible separator
+        symbol = u'\x00\xA0'
+
+    if process_state == 'finished' and exit_status is not None:
+        return u'{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)
+
+    return u'{} {}'.format(symbol, format_process_state(process_state))
 
 
 def format_process_state(process_state):

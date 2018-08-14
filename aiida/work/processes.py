@@ -111,16 +111,6 @@ class Process(plumpy.Process):
         if self._logger is None:
             self.set_logger(self._calc.logger)
 
-    def has_finished(self):
-        """
-        Has the process finished i.e. completed running normally, without abort
-        or an exception.
-
-        :return: True if finished, False otherwise
-        :rtype: bool
-        """
-        return self.state == ProcessState.FINISHED
-
     @property
     def calc(self):
         return self._calc
@@ -159,11 +149,14 @@ class Process(plumpy.Process):
         """
         Kill the process and all the children calculations it called
         """
-        self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
+        self._calc.logger.debug('Request to kill Process<{}>'.format(self._calc.pk))
+
+        had_been_terminated = self.has_terminated()
+
         result = super(Process, self).kill(msg)
 
         # Only kill children if we could be killed ourselves
-        if result is not False:
+        if result is not False and not had_been_terminated:
             killing = []
             for child in self.calc.called:
                 try:
@@ -270,11 +263,11 @@ class Process(plumpy.Process):
             raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(type(result), result, self.pid))
 
     @override
-    def on_paused(self):
+    def on_paused(self, msg=None):
         """
         The Process was paused so set the paused attribute on the Calculation node
         """
-        super(Process, self).on_paused()
+        super(Process, self).on_paused(msg)
         self.calc.pause()
 
     @override
@@ -301,6 +294,15 @@ class Process(plumpy.Process):
             )
 
     # end region
+
+    def set_status(self, status):
+        """
+        The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
+
+        :param status: the status message
+        """
+        super(Process, self).set_status(status)
+        self.calc._set_process_status(status)
 
     def run_process(self, process, *args, **inputs):
         with self.runner.child_runner() as runner:

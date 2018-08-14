@@ -29,13 +29,14 @@ class AbstractCalculation(Sealable):
     calculations run via a scheduler.
     """
 
-    PAUSED_KEY = 'paused'
     CHECKPOINT_KEY = 'checkpoints'
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
     PROCESS_LABEL_KEY = '_process_label'
+    PROCESS_PAUSED_KEY = 'paused'
     PROCESS_STATE_KEY = 'process_state'
+    PROCESS_STATUS_KEY = 'process_status'
 
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL']
@@ -44,13 +45,14 @@ class AbstractCalculation(Sealable):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractCalculation, cls)._updatable_attributes + (
-            cls.PAUSED_KEY,
+            cls.PROCESS_PAUSED_KEY,
             cls.CHECKPOINT_KEY,
             cls.EXCEPTION_KEY,
             cls.EXIT_MESSAGE_KEY,
             cls.EXIT_STATUS_KEY,
             cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
+            cls.PROCESS_STATUS_KEY,
         )
 
     @classproperty
@@ -247,6 +249,38 @@ class AbstractCalculation(Sealable):
         return self._set_attr(self.PROCESS_STATE_KEY, state)
 
     @property
+    def process_status(self):
+        """
+        Return the process status of the Calculation
+
+        The process status is a generic status message e.g. the reason it might be paused or when it is being killed
+
+        :returns: the process status
+        """
+        return self.get_attr(self.PROCESS_STATUS_KEY, None)
+
+    def _set_process_status(self, status):
+        """
+        Set the process status of the Calculation
+
+        The process status is a generic status message e.g. the reason it might be paused or when it is being killed.
+        If status is None, the corresponding attribute will be deleted.
+
+        :param status: string process status
+        """
+        if status is None:
+            try:
+                self._del_attr(self.PROCESS_STATUS_KEY)
+            except AttributeError:
+                pass
+            return
+
+        if not isinstance(status, basestring):
+            raise TypeError('process status should be a string')
+
+        return self._set_attr(self.PROCESS_STATUS_KEY, status)
+
+    @property
     def is_terminated(self):
         """
         Returns whether the Calculation has terminated, meaning that it reached any terminal state
@@ -414,14 +448,14 @@ class AbstractCalculation(Sealable):
 
         :returns: True if the Calculation is marked as paused, False otherwise
         """
-        return self.get_attr(self.PAUSED_KEY, False)
+        return self.get_attr(self.PROCESS_PAUSED_KEY, False)
 
     def pause(self):
         """
         Mark the Calculation as paused by setting the corresponding attribute. This serves only to reflect
         that the corresponding Process is paused and so this method should not be called by anyone but the Process.
         """
-        return self._set_attr(self.PAUSED_KEY, True)
+        return self._set_attr(self.PROCESS_PAUSED_KEY, True)
 
     def unpause(self):
         """
@@ -429,7 +463,7 @@ class AbstractCalculation(Sealable):
         that the corresponding Process is unpaused and so this method should not be called by anyone but the Process.
         """
         try:
-            self._del_attr(self.PAUSED_KEY)
+            self._del_attr(self.PROCESS_PAUSED_KEY)
         except AttributeError:
             pass
 

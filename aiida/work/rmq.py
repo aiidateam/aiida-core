@@ -312,8 +312,8 @@ class ProcessControlPanel(object):
     def connect(self):
         return self._communicator.connect()
 
-    def pause_process(self, pid):
-        return self.execute_action(plumpy.PauseAction(pid))
+    def pause_process(self, pid, msg=None):
+        return self.execute_action(plumpy.PauseAction(pid, msg))
 
     def play_process(self, pid):
         return self.execute_action(plumpy.PlayAction(pid))

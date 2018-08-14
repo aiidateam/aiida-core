@@ -253,3 +253,10 @@ class DanglingLinkError(Exception):
     Raised when an export archive is detected to contain dangling links when importing
     """
     pass
+
+
+class TransportTaskException(Exception):
+    """
+    Raised when a TransportTask, an task to be completed by the engine that requires transport, fails
+    """
+    pass

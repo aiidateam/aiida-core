@@ -97,7 +97,7 @@ def process_pause(processes, timeout):
                 continue
 
             try:
-                if control_panel.pause_process(process.pk):
+                if control_panel.pause_process(process.pk, msg='Paused through `verdi process pause`'):
                     echo.echo_success('paused Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem pausing Process<{}>'.format(process.pk))

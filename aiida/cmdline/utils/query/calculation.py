@@ -57,7 +57,7 @@ class CalculationQueryBuilder(object):
 
         if failed:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}
-            filters[exit_status_attribute] = {'!==': 0}
+            filters[exit_status_attribute] = {'>': 0}
 
         if exit_status is not None:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}

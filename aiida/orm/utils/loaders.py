@@ -103,6 +103,8 @@ class OrmEntityLoader(object):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         """
+        from uuid import UUID
+
         uuid = identifier.replace('-', '')
 
         if query_with_dashes:
@@ -112,7 +114,14 @@ class OrmEntityLoader(object):
 
         qb = QueryBuilder()
         qb.append(cls=classes, tag='entity', project=['*'])
-        qb.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
+
+        # If a UUID can be constructed from the identifier, it is a full UUID and the query can use an equality operator
+        try:
+            UUID(uuid)
+        except ValueError:
+            qb.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
+        else:
+            qb.add_filter('entity', {'uuid': uuid})
 
         return qb
 

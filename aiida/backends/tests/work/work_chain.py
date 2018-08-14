@@ -10,6 +10,7 @@
 import inspect
 import plumpy
 import plumpy.test_utils
+from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
@@ -27,6 +28,43 @@ from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
 
 from . import utils
+
+
+def run_until_paused(proc):
+    """ Set up a future that will be resolved on entering the WAITING state """
+    listener = plumpy.ProcessListener()
+    paused = plumpy.Future()
+
+    if proc.paused:
+        paused.set_result(True)
+    else:
+        def on_paused(_paused_proc):
+            paused.set_result(True)
+            proc.remove_process_listener(listener)
+
+        listener.on_process_paused = on_paused
+        proc.add_process_listener(listener)
+
+    return paused
+
+
+def run_until_waiting(proc):
+    """ Set up a future that will be resolved on entering the WAITING state """
+    from aiida.work import ProcessState
+    listener = plumpy.ProcessListener()
+    in_waiting = plumpy.Future()
+
+    if proc.state == ProcessState.WAITING:
+        in_waiting.set_result(True)
+    else:
+        def on_waiting(waiting_proc):
+            in_waiting.set_result(True)
+            proc.remove_process_listener(listener)
+
+        listener.on_process_waiting = on_waiting
+        proc.add_process_listener(listener)
+
+    return in_waiting
 
 
 def run_and_check_success(process_class, **kwargs):
@@ -449,21 +487,32 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
-        if_test_wc = IfTest()
-        work.run(if_test_wc)
-        self.assertTrue(if_test_wc.ctx.s1)
-        self.assertFalse(if_test_wc.ctx.s2)
+        wc = IfTest()
+        self.runner.loop.add_callback(wc.step_until_terminated)
 
-        # Now bundle the thing
-        bundle = plumpy.Bundle(if_test_wc)
+        @gen.coroutine
+        def run_async(workchain):
+            yield run_until_paused(workchain)
+            self.assertTrue(workchain.ctx.s1)
+            self.assertFalse(workchain.ctx.s2)
 
-        # Load from saved tate
-        wc2 = bundle.unbundle()
-        self.assertTrue(wc2.ctx.s1)
-        self.assertFalse(wc2.ctx.s2)
-        work.run(wc2)
-        self.assertTrue(wc2.ctx.s1)
-        self.assertTrue(wc2.ctx.s2)
+            # Now bundle the thing
+            bundle = plumpy.Bundle(workchain)
+
+            # Load from saved state
+            workchain2 = bundle.unbundle()
+            self.assertTrue(workchain2.ctx.s1)
+            self.assertFalse(workchain2.ctx.s2)
+
+            bundle2 = plumpy.Bundle(workchain2)
+            self.assertDictEqual(bundle, bundle2)
+
+            workchain.play()
+            yield workchain.future()
+            self.assertTrue(workchain.ctx.s1)
+            self.assertTrue(workchain.ctx.s2)
+
+        self.runner.loop.run_sync(lambda: run_async(wc))
 
     def test_report_dbloghandler(self):
         """
@@ -696,10 +745,18 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with Capturing():
-            with self.assertRaises(RuntimeError):
-                work.run(process)
-                work.run(process)
+        @gen.coroutine
+        def run_async():
+            yield run_until_paused(process)
+
+            process.play()
+
+            with Capturing():
+                with self.assertRaises(RuntimeError):
+                    result = yield process.future()
+
+        self.runner.loop.add_callback(process.step_until_terminated)
+        self.runner.loop.run_sync(lambda: run_async())
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -713,10 +770,18 @@ class TestWorkChainAbort(AiidaTestCase):
         """
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        with self.assertRaises(plumpy.KilledError):
-            work.run(process)
+        @gen.coroutine
+        def run_async():
+            yield run_until_paused(process)
+
+            self.assertTrue(process.paused)
             process.kill()
-            work.run(process)
+
+            with self.assertRaises(plumpy.KilledError):
+                work.run(process)
+
+        self.runner.loop.add_callback(process.step_until_terminated)
+        self.runner.loop.run_sync(lambda: run_async())
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
@@ -798,15 +863,19 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         workchain and its children end up in the KILLED state.
         """
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
-        process.add_on_waiting_callback(lambda _: process.pause())
+        # process.add_on_waiting_callback(lambda _: process.pause())
 
-        with self.assertRaises(plumpy.KilledError):
-            work.run(process)
-            result = process.kill()
-            if isinstance(result, plumpy.Future):
-                # Run the loop until all the killing is done
-                self.runner.loop.run_sync(lambda: result)
-            work.run(process)
+        @gen.coroutine
+        def run_async():
+            yield run_until_waiting(process)
+
+            process.kill()
+
+            with self.assertRaises(plumpy.KilledError):
+                result = yield process.future()
+
+        self.runner.loop.add_callback(process.step_until_terminated)
+        self.runner.loop.run_sync(lambda: run_async())
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -817,8 +886,6 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEquals(process.calc.is_excepted, False)
         self.assertEquals(process.calc.is_killed, True)
 
-
-#
 
 class TestImmutableInputWorkchain(AiidaTestCase):
     """

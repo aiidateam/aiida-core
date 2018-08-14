@@ -77,8 +77,10 @@ class CalculationProjectionMapper(ProjectionMapper):
         self._valid_projections = projections
 
         sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
+        process_paused_key = 'attributes.{}'.format(Calculation.PROCESS_PAUSED_KEY)
         process_label_key = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
         process_state_key = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
+        process_status_key = 'attributes.{}'.format(Calculation.PROCESS_STATUS_KEY)
         exit_status_key = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
 
         default_labels = {
@@ -91,17 +93,25 @@ class CalculationProjectionMapper(ProjectionMapper):
         default_attributes = {
             'pk': 'id',
             'sealed': sealed_key,
+            'paused': process_paused_key,
             'process_label': process_label_key,
             'process_state': process_state_key,
+            'process_status': process_status_key,
             'exit_status': exit_status_key,
         }
 
+        # pylint: disable=line-too-long
         default_formatters = {
-            'ctime': lambda value: formatting.format_relative_time(value['ctime']),
-            'mtime': lambda value: formatting.format_relative_time(value['mtime']),
-            'state': lambda value: formatting.format_state(value[process_state_key], value[exit_status_key]),
-            'process_state': lambda value: formatting.format_process_state(value[process_state_key]),
-            'sealed': lambda value: formatting.format_sealed(value[sealed_key]),
+            'ctime':
+            lambda value: formatting.format_relative_time(value['ctime']),
+            'mtime':
+            lambda value: formatting.format_relative_time(value['mtime']),
+            'state':
+            lambda value: formatting.format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
+            'process_state':
+            lambda value: formatting.format_process_state(value[process_state_key]),
+            'sealed':
+            lambda value: formatting.format_sealed(value[sealed_key]),
         }
 
         if projection_labels is not None:

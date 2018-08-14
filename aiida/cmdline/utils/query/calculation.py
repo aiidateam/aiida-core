@@ -7,9 +7,9 @@ from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 class CalculationQueryBuilder(object):
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
-    _default_projections = ('pk', 'ctime', 'state', 'process_label')
-    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'exit_status', 'sealed',
-                          'process_label', 'label', 'description', 'type', 'process_type')
+    _default_projections = ('pk', 'ctime', 'state', 'process_label', 'process_status')
+    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
+                          'sealed', 'process_label', 'label', 'description', 'type', 'paused', 'process_type')
 
     def __init__(self, mapper=None):
         if mapper is None:

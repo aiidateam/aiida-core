@@ -274,6 +274,8 @@ class PbsBaseClass(Scheduler):
 
         if job_tmpl.queue_name:
             lines.append("#PBS -q {}".format(job_tmpl.queue_name))
+        if job_tmpl.account:
+            lines.append("#PBS -q {}".format(job_tmpl.account))
 
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
@@ -575,6 +577,11 @@ class PbsBaseClass(Scheduler):
                 this_job.queue_name = raw_data['queue']
             except KeyError:
                 _LOGGER.debug("No 'queue' field for job id " "{}".format(this_job.job_id))
+
+            try:
+                this_job.account = raw_data['account']
+            except KeyError:
+                self.logger.debug("No 'account' field for job id " "{}".format(this_job.job_id))
 
             try:
                 this_job.RequestedWallclockTime = (self._convert_time(raw_data['resource_list.walltime']))

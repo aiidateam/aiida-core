@@ -229,8 +229,8 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         # Create dictionary and parse specific fields
         job_list = []
         for line in stdout.split('\n'):
-            if re.search(r'^\s*PID', line) or line == '':
-                # Skip the header if present
+            if re.search('^\s*PID', line) or line == '' or '\x1b[H\x1b[J' in line:
+                # Skip the header if present, also avoid headers with escape characters
                 continue
             line = re.sub(r'^\s+', '', line)
             job = re.split(r'\s+', line)
@@ -346,6 +346,20 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
+    def _remove_escape_characters(self, input_string):
+        """Removes escape characters from a string."""
+
+        if input_string:
+            # TODO: Fix a list containing possible escape characters
+            string_list = input_string.split('\x1b[H\x1b[J')
+            if len(string_list) == 2:
+                input_string = string_list[1]
+            elif len(string_list) > 2:
+                self.logger.error("Multiple escape characters detected in string. "
+                                  "Not supported. Returning original string.")
+
+        return input_string
+
     def _parse_submit_output(self, retval, stdout, stderr):
         """
         Parse the output of the submit command, as returned by executing the
@@ -364,6 +378,10 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "
                                 "there was some text in stderr: {}".format(str(self.transport), stderr))
+
+        # On some systems we have escape characters that needs to be removed.
+        stdout = self._remove_escape_characters(stdout)
+        stderr = self._remove_escape_characters(stderr)
 
         if not stdout.strip():
             self.logger.debug("Unable to get the PID: retval={}; "

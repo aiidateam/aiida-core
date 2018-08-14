@@ -399,20 +399,21 @@ class JobProcess(processes.Process):
             # Define the 'options' inputs namespace and its input ports
             spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
             spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
-                       help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
-            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True,
-                       default=1800,
-                       help='Set the wallclock in seconds asked to the scheduler')
-            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring,
-                       non_db=True, required=False,
-                       help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                            'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
-                            'scheduler submission file where such text is inserted: with this method, the string is inserted before '
-                            ' any non-scheduler command')
-            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the name of the queue on the remote computer')
+                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                     'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
+            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
+                help='Set the wallclock in seconds asked to the scheduler')
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
+                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '
+                     ' any non-scheduler command')
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the name of the queue on the remote computer')
+            spec.input('{}.account'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the account to use in for the queue on the remote computer')
+            spec.input('{}.qos'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the quality of service to use in for the queue on the remote computer')
             spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
                        help='Set the computer to be used by the calculation')
             spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,

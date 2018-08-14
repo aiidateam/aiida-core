@@ -90,6 +90,8 @@ class AbstractJobCalculation(AbstractCalculation):
     def _hash_ignored_attributes(cls):
         return super(AbstractJobCalculation, cls)._hash_ignored_attributes + (
             'queue_name',
+            'account',
+            'qos',
             'priority',
             'max_wallclock_seconds',
             'max_memory_kb',
@@ -290,6 +292,28 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             self._set_attr('queue_name', unicode(val))
 
+    def set_account(self, val):
+        """
+        Set the account on the remote computer.
+
+        :param str val: the account name
+        """
+        if val is None:
+            self._set_attr('account', None)
+        else:
+            self._set_attr('account', unicode(val))
+
+    def set_qos(self, val):
+        """
+        Set the quality of service on the remote computer.
+
+        :param str val: the quality of service
+        """
+        if val is None:
+            self._set_attr('qos', None)
+        else:
+            self._set_attr('qos', unicode(val))
+
     def set_import_sys_environment(self, val):
         """
         If set to true, the submission script will load the system
@@ -440,6 +464,22 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: a string or None.
         """
         return self.get_attr('queue_name', None)
+
+    def get_account(self):
+        """
+        Get the account on the cluster.
+
+        :return: a string or None.
+        """
+        return self.get_attr('account', None)
+
+    def get_qos(self):
+        """
+        Get the quality of service on the cluster.
+
+        :return: a string or None.
+        """
+        return self.get_attr('qos', None)
 
     def get_priority(self):
         """
@@ -1645,8 +1685,14 @@ class AbstractJobCalculation(AbstractCalculation):
         job_tmpl.job_environment = self.get_environment_variables()
 
         queue_name = self.get_queue_name()
+        account = self.get_account()
+        qos = self.get_qos()
         if queue_name is not None:
             job_tmpl.queue_name = queue_name
+        if account is not None:
+            job_tmpl.account = account
+        if qos is not None:
+            job_tmpl.qos = qos
         priority = self.get_priority()
         if priority is not None:
             job_tmpl.priority = priority

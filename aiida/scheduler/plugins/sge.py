@@ -228,6 +228,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.queue_name:
             lines.append("#$ -q {}".format(job_tmpl.queue_name))
 
+        if job_tmpl.account:
+            lines.append("#$ -P {}".format(job_tmpl.account))
+
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1023,  +1024].  Sets job's Priority
@@ -405,6 +408,14 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 if this_job.job_state == JOB_STATES.RUNNING:
                     self.logger.warning("No 'queue_name' field for job " "id {}".format(this_job.job_id))
 
+            try:
+                job_element = job.getElementsByTagName('account').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.account = str(element_child.data).strip()
+            except IndexError:
+                if this_job.job_state == job_states.RUNNING:
+                    self.logger.warning("No 'projectName' (set with 'account') field for job " "id {}".format(this_job.job_id))
+                    
             try:
                 job_element = job.getElementsByTagName('JB_submission_time').pop(0)
                 element_child = job_element.childNodes.pop(0)

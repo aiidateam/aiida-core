@@ -33,6 +33,10 @@ NODE = OverridableArgument('node', type=types.NodeParamType())
 
 NODES = OverridableArgument('nodes', nargs=-1, type=types.NodeParamType())
 
+PROCESS = OverridableArgument('process', type=types.CalculationParamType())
+
+PROCESSES = OverridableArgument('processes', nargs=-1, type=types.CalculationParamType())
+
 INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.Path(exists=True))
 
 OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=click.Path())

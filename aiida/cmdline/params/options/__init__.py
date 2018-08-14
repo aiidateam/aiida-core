@@ -24,20 +24,6 @@ def valid_calculation_states():
     return tuple(state for state in calc_states)
 
 
-def active_calculation_states():
-    """Return a list of calculation states that are considered active."""
-    from aiida.common.datastructures import calc_states
-    return ([
-        calc_states.NEW,
-        calc_states.TOSUBMIT,
-        calc_states.SUBMITTING,
-        calc_states.WITHSCHEDULER,
-        calc_states.COMPUTED,
-        calc_states.RETRIEVING,
-        calc_states.PARSING,
-    ])
-
-
 def active_process_states():
     """Return a list of process states that are considered active."""
     from plumpy import ProcessState
@@ -221,7 +207,7 @@ INPUT_PLUGIN = OverridableOption(
 
 CALCULATION_STATE = OverridableOption(
     '-s', '--calculation-state', 'calculation_state',
-    type=types.LazyChoice(valid_calculation_states), cls=MultipleValueOption, default=active_calculation_states,
+    type=types.LazyChoice(valid_calculation_states), cls=MultipleValueOption,
     help='Only include entries with this calculation state.')
 
 PROCESS_STATE = OverridableOption(
@@ -235,7 +221,7 @@ EXIT_STATUS = OverridableOption(
     help='Only include entries with this exit status.')
 
 FAILED = OverridableOption(
-    '-x', '--failed', 'failed',
+    '-X', '--failed', 'failed',
     is_flag=True, default=False,
     help='Only include entries that have failed.')
 
@@ -316,3 +302,8 @@ VERBOSE = OverridableOption(
     '-v', '--verbose',
     is_flag=True, default=False,
     help='Be more verbose in printing output.')
+
+TIMEOUT = OverridableOption(
+    '-t', '--timeout',
+    type=click.FLOAT, default=5.0, show_default=True,
+    help='Time in seconds to wait for a response before timing out.')

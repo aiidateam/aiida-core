@@ -34,38 +34,6 @@ class TestVerdiWork(AiidaTestCase):
         super(TestVerdiWork, self).setUp()
         self.cli_runner = CliRunner()
 
-    def test_pause_play_kill(self):
-        """
-        Test the pause/play/kill commands
-        """
-        from concurrent.futures import ThreadPoolExecutor
-
-        calc = self.runner.submit(test_utils.WaitProcess)
-        executor = ThreadPoolExecutor(max_workers=1)
-
-        try:
-            _ = executor.submit(self.daemon_runner.start)
-
-            self.assertFalse(calc.paused)
-            result = self.cli_runner.invoke(cmd_work.work_pause, [str(calc.pk)])
-
-            self.assertTrue(calc.paused)
-            self.assertIsNone(result.exception)
-
-            result = self.cli_runner.invoke(cmd_work.work_play, [str(calc.pk)])
-
-            self.assertFalse(calc.paused)
-            self.assertIsNone(result.exception)
-
-            result = self.cli_runner.invoke(cmd_work.work_kill, [str(calc.pk)])
-
-            self.assertTrue(calc.is_terminated)
-            self.assertTrue(calc.is_killed)
-            self.assertIsNone(result.exception)
-        finally:
-            self.daemon_runner.stop()
-            executor.shutdown()
-
     def test_status(self):
         """Test the status command."""
         calc = self.runner.submit(test_utils.WaitProcess)
@@ -138,7 +106,7 @@ class TestVerdiWork(AiidaTestCase):
                 self.assertEquals(len(get_result_lines(result)), 1)
 
         # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
-        for flag in ['-x', '--failed']:
+        for flag in ['-X', '--failed']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag])
             self.assertIsNone(result.exception)
             self.assertEquals(len(get_result_lines(result)), 1)

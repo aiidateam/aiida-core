@@ -500,15 +500,26 @@ class JobProcess(processes.Process):
     def get_or_create_db_record(self):
         return self._calc_class()
 
+    @property
+    def process_class(self):
+        """
+        Return the class that represents this Process, for the JobProcess this is JobCalculation class it wraps.
+
+        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
+        the Process class is a wrapper around another class. This function returns that original class, i.e. the
+        class that really represents what was being executed.
+        """
+        return self._calc_class
+
     @override
-    def _setup_db_record(self):
+    def _setup_db_inputs(self):
         """
-        Link up all the retrospective provenance for this JobCalculation
+        Create the links that connect the inputs to the calculation node that represents this Process
+
+        For a JobProcess, the inputs also need to be mapped onto the `use_` and `set_` methods of the
+        legacy JobCalculation class. If a code is defined in the inputs and no computer has been set
+        yet for the calculation node, the computer configured for the code is used to set on the node.
         """
-        from aiida.common.links import LinkType
-
-        self.calc._set_process_type(self._calc_class)
-
         for name, input_value in self.get_provenance_inputs_iterator():
 
             port = self.spec().inputs[name]
@@ -519,7 +530,7 @@ class JobProcess(processes.Process):
             # Call the 'set' attribute methods for the contents of the 'option' namespace
             if name == self.OPTIONS_INPUT_LABEL:
                 for option_name, option_value in input_value.items():
-                    getattr(self._calc, 'set_{}'.format(option_name))(option_value)
+                    getattr(self.calc, 'set_{}'.format(option_name))(option_value)
                 continue
 
             # Call the 'use' methods to set up the data-calc links
@@ -528,27 +539,20 @@ class JobProcess(processes.Process):
 
                 for k, v in input_value.iteritems():
                     try:
-                        getattr(self._calc, 'use_{}'.format(name))(v, **{additional: k})
+                        getattr(self.calc, 'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError:
                         raise AttributeError(
                             "You have provided for an input the key '{}' but"
                             "the JobCalculation has no such use_{} method".format(name, name))
 
             else:
-                getattr(self._calc, 'use_{}'.format(name))(input_value)
+                getattr(self.calc, 'use_{}'.format(name))(input_value)
 
         # Get the computer from the code if necessary
-        if self._calc.get_computer() is None and 'code' in self.inputs:
+        if self.calc.get_computer() is None and 'code' in self.inputs:
             code = self.inputs['code']
             if not code.is_local():
-                self._calc.set_computer(code.get_remote_computer())
-
-        parent_calc = self.get_parent_calc()
-
-        if parent_calc:
-            self._calc.add_link_from(parent_calc, 'CALL', LinkType.CALL)
-
-        self._add_description_and_label()
+                self.calc.set_computer(code.get_remote_computer())
 
     # endregion
 

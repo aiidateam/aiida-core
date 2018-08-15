@@ -29,7 +29,6 @@ import glob
 from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
 
-
 # refactor or raise the limit: issue #1784
 # pylint: disable=too-many-public-methods
 class LocalTransport(Transport):
@@ -48,6 +47,10 @@ class LocalTransport(Transport):
     # you should not be banned (as instead it is the case in SSH).
     # So I set the (default) limit to zero.
     _DEFAULT_SAFE_OPEN_INTERVAL = 0.
+
+    # List of escape and csi characters we forcefully remove from stdout
+    # and stderr
+    _EC_CHARACTERS = ['\x1b[H\x1b[J']
 
     def __init__(self, **kwargs):
         super(LocalTransport, self).__init__()
@@ -787,9 +790,22 @@ class LocalTransport(Transport):
         local_stdin.flush()
         output_text, stderr_text = local_proc.communicate()
 
+        # On some systems we have escape characters that needs to be removed.
+        output_text = self._remove_escape_characters(output_text)
+        stderr_text = self._remove_escape_characters(stderr_text)
+
         retval = local_proc.returncode
 
         return retval, output_text, stderr_text
+
+    def _remove_escape_characters(self, input_string):
+        """Removes escape characters from a string."""
+
+        if input_string:
+            for entry in self._EC_CHARACTERS:
+                input_string = input_string.strip(entry)
+
+        return input_string
 
     def gotocomputer_command(self, remotedir):
         """

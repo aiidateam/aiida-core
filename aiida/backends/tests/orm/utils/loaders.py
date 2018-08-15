@@ -49,7 +49,6 @@ class TestOrmUtils(AiidaTestCase):
         with self.assertRaises(NotExistent):
             load_group('non-existent-uuid')
 
-
     def test_load_node(self):
         """
         Test the functionality of load_node

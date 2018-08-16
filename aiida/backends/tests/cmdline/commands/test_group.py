@@ -164,7 +164,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         result = self.runner.invoke(group_removenodes, ["--force", "--group=dummygroup1", calc.uuid])
         self.assertIsNone(result.exception)
         # check if node is added in group using group show command
-        result = self.runner.invoke(group_show, ["dummygroup1"])
+        result = self.runner.invoke(group_show, ['-r', 'dummygroup1'])
         self.assertIsNone(result.exception)
         self.assertNotIn("Calculation", result.output)
         self.assertNotIn(str(calc.pk), result.output)

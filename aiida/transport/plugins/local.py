@@ -47,7 +47,7 @@ class LocalTransport(Transport):
     # There is no real limit on how fast you can connect to localhost
     # you should not be banned (as instead it is the case in SSH).
     # So I set the (default) limit to zero.
-    _DEFAULT_SAFE_OPEN_INTERVAL = 0.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 2.
 
     def __init__(self, **kwargs):
         super(LocalTransport, self).__init__()

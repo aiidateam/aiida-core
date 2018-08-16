@@ -28,6 +28,17 @@ PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed 
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
 
 
+class CancelFlag(object):
+    """A simple container that can be passed by reference to signal that the task was cancelled."""
+
+    def __init__(self):
+        self.cancelled = False
+
+    @property
+    def is_cancelled(self):
+        return self.cancelled
+
+
 def interruptable_task(coro, loop=None):
     """
     Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
@@ -36,18 +47,6 @@ def interruptable_task(coro, loop=None):
     :param loop: the event loop in which to run the coroutine, by default uses tornado.ioloop.IOLoop.current()
     :return: an InterruptableFuture
     """
-
-    class CancelFlag(object):
-        """A simple container that can be passed by reference to signal that the task was cancelled."""
-
-        def __init__(self):
-            self.cancelled = False
-
-        @property
-        def is_cancelled(self):
-            return self.cancelled
-
-    cancel_flag = CancelFlag()
 
     class InterruptableFuture(Future):
         """A future that can be interrupted by calling `interrupt`."""
@@ -59,16 +58,21 @@ def interruptable_task(coro, loop=None):
 
     loop = loop or tornado.ioloop.IOLoop.current()
     future = InterruptableFuture()
+    cancel_flag = CancelFlag()
 
     @coroutine
     def execute_coroutine():
         """Coroutine that wraps the original coroutine and sets it result on the future only if not already set."""
-        result = yield coro(cancel_flag)
-
-        # If the future has not been set elsewhere, i.e. by the interrupt call, by the time that the coroutine
-        # is executed, set the future's result to the result of the coroutine
-        if not future.done():
-            future.set_result(result)
+        try:
+            result = yield coro(cancel_flag)
+        except Exception as exception:  # pylint: disable=broad-except
+            if not future.done():
+                future.set_exception(exception)
+        else:
+            # If the future has not been set elsewhere, i.e. by the interrupt call, by the time that the coroutine
+            # is executed, set the future's result to the result of the coroutine
+            if not future.done():
+                future.set_result(result)
 
     loop.add_callback(execute_coroutine)
 

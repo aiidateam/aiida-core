@@ -13,6 +13,7 @@ import shutil
 import sys
 import tempfile
 import traceback
+from future.utils import raise_
 from tornado.gen import coroutine, Return
 
 import plumpy
@@ -24,6 +25,7 @@ from aiida.common.lang import override
 from aiida.daemon import execmanager
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job import JobCalculationExitStatus
+from aiida.scheduler.datastructures import JOB_STATES
 from aiida.work.process_builder import JobProcessBuilder
 from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
@@ -33,9 +35,12 @@ from . import processes
 __all__ = ['JobProcess']
 
 SUBMIT_COMMAND = 'submit'
-UPDATE_SCHEDULER_COMMAND = 'update_scheduler'
+UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
 KILL_COMMAND = 'kill'
+
+TRANSPORT_TASK_RETRY_INITIAL_INTERVAL = 1
+TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 2
 
 
 logger = logging.getLogger(__name__)
@@ -59,8 +64,8 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancel_fl
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    initial_interval = 1
-    max_attempts = 5
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
@@ -116,8 +121,8 @@ def task_update_job(node, transport_queue, cancel_flag):
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    initial_interval = 1
-    max_attempts = 5
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
@@ -168,8 +173,8 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancel_
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    initial_interval = 1
-    max_attempts = 5
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
 
@@ -223,8 +228,8 @@ def task_kill_job(node, transport_queue, cancel_flag):
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    initial_interval = 1
-    max_attempts = 5
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     if node.get_state() in [calc_states.NEW, calc_states.TOSUBMIT, calc_states.SUBMITTING]:
         logger.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
@@ -250,10 +255,10 @@ def task_kill_job(node, transport_queue, cancel_flag):
         pass
     except Exception:
         logger.warning('killing calculation<{}> failed:\n{}'.format(node.pk, traceback.format_exc()))
-        node._set_state(calc_states.FAILED)
         raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('killing calculation<{}> successful'.format(node.pk))
+        node._set_scheduler_state(JOB_STATES.DONE)
         raise Return(result)
 
 
@@ -265,10 +270,12 @@ class Waiting(plumpy.Waiting):
     def __init__(self, process, done_callback, msg=None, data=None):
         super(Waiting, self).__init__(process, done_callback, msg, data)
         self._task = None
+        self._killing = None
 
     def load_instance_state(self, saved_state, load_context):
         super(Waiting, self).load_instance_state(saved_state, load_context)
         self._task = None
+        self._killing = None
 
     @coroutine
     def execute(self):
@@ -290,7 +297,7 @@ class Waiting(plumpy.Waiting):
                 yield self._launch_task(task_submit_job, calculation, transport_queue, *args)
                 raise Return(self.scheduler_update())
 
-            elif self.data == UPDATE_SCHEDULER_COMMAND:
+            elif self.data == UPDATE_COMMAND:
                 job_done = False
 
                 while not job_done:
@@ -308,15 +315,15 @@ class Waiting(plumpy.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException:
+            calculation._set_process_status('Transport task {} failed'.format(command))
             exit_status = JobCalculationExitStatus[calculation.get_state()].value
             raise Return(self.create_state(processes.ProcessState.FINISHED, exit_status, exit_status is 0))
-        except (plumpy.Interruption, plumpy.CancelledError, Return):
-            raise
-        except Exception:
+        except plumpy.KillInterruption:
             exc_info = sys.exc_info()
-            excepted_state = self.create_state(processes.ProcessState.EXCEPTED, exc_info[1], exc_info[2])
-            raise Return(excepted_state)
-        finally:
+            yield self._launch_task(task_kill_job, calculation, transport_queue)
+            self._killing.set_result(True)
+            raise_(*exc_info)
+        except Return:
             calculation._set_process_status(None)
             raise
         except (plumpy.Interruption, plumpy.CancelledError):
@@ -347,7 +354,7 @@ class Waiting(plumpy.Waiting):
             processes.ProcessState.WAITING,
             None,
             msg='Waiting for scheduler update',
-            data=UPDATE_SCHEDULER_COMMAND)
+            data=UPDATE_COMMAND)
 
     def retrieve(self):
         """
@@ -377,6 +384,11 @@ class Waiting(plumpy.Waiting):
         """Interrupt the Waiting state by calling interrupt on the transport task InterruptableFuture."""
         if self._task is not None:
             self._task.interrupt(reason)
+
+        if isinstance(reason, plumpy.KillInterruption):
+            if self._killing is None:
+                self._killing = plumpy.Future()
+            return self._killing
 
 
 class JobProcess(processes.Process):
@@ -479,16 +491,10 @@ class JobProcess(processes.Process):
         return states_map
 
     # region Process overrides
-    @override
-    def on_excepted(self):
-        """The Process excepted so we set the calculation and scheduler state."""
-        super(JobProcess, self).on_excepted()
-        self.calc._set_state(calc_states.FAILED)
 
     @override
     def on_killed(self):
-        """The Process was killed so we set the calculation and scheduler state."""
-        super(JobProcess, self).on_excepted()
+        super(JobProcess, self).on_killed()
         self.calc._set_state(calc_states.FAILED)
 
     @override
@@ -567,7 +573,8 @@ class JobProcess(processes.Process):
         from aiida.common.folders import SandboxFolder
         from aiida.common.exceptions import InputValidationError
 
-        if self.calc.is_terminated:
+        # Note that the caching mechanism relies on this as it will always enter the run method, even when finished
+        if self.calc.get_state() == calc_states.FINISHED:
             return 0
 
         state_current = self.calc.get_state()
@@ -640,7 +647,7 @@ class ContinueJobCalculation(JobProcess):
             return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
 
         elif state in calc_states.WITHSCHEDULER:
-            return plumpy.Wait(msg='Waiting for scheduler', data=UPDATE_SCHEDULER_COMMAND)
+            return plumpy.Wait(msg='Waiting for scheduler', data=UPDATE_COMMAND)
 
         elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
             return plumpy.Wait(msg='Waiting to retrieve', data=RETRIEVE_COMMAND)

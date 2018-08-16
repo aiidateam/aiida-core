@@ -78,6 +78,30 @@ def sort_states(list_states, use_key=False):
     return [_[1] for _ in list_to_sort[::-1]]
 
 
+def is_progressive_state_change(state_old, state_new):
+    """
+    Return whether a state change from `state_old` to `state_new` would be progressive, i.e. moving forward in time
+
+    :param state_old: the old calculation state
+    :param state_new: the new calculation state
+    :return: True if the change from `state_old` to `state_new` is progressive, False otherwise
+    :raise: ValueError if either `state_old` or `state_new` is not a valid calculation state
+    """
+    states = list(_sorted_datastates)
+
+    try:
+        index_old = states.index(state_old)
+    except ValueError:
+        raise ValueError('state_old {} is not a valid calculation state'.format(state_old))
+
+    try:
+        index_new = states.index(state_new)
+    except ValueError:
+        raise ValueError('state_new {} is not a valid calculation state'.format(state_new))
+
+    return index_new > index_old
+
+
 class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the calculation plugin and to be

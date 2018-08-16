@@ -232,19 +232,17 @@ def update_calculation(calculation, transport):
         kwargs['jobs'] = [job_id]
 
     found_jobs = scheduler.getJobs(**kwargs)
+    job_info = found_jobs.get(job_id, None)
 
-    info = found_jobs.get(job_id, None)
-    if info is None:
+    if job_info is None:
         # If the job is computed or not found assume it's done
         job_done = True
         calculation._set_scheduler_state(JOB_STATES.DONE)
     else:
-        update_job_calc_from_job_info(calculation, info)
-
-        job_done = info.job_state == JOB_STATES.DONE
+        job_done = job_info.job_state == JOB_STATES.DONE
+        update_job_calc_from_job_info(calculation, job_info)
 
     if job_done:
-        # If the job is done, also get detailed job info
         try:
             detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
         except exceptions.FeatureNotAvailable:
@@ -334,9 +332,18 @@ def kill_calculation(calculation, transport):
     result = scheduler.kill(job_id)
 
     if result is not True:
-        raise exceptions.RemoteOperationError('scheduler.kill({}) was unsuccessful'.format(job_id))
-    else:
-        calculation._set_scheduler_state(JOB_STATES.DONE)
+
+        # Failed to kill because the job might have already been completed
+        running_jobs = scheduler.getJobs(jobs=[job_id], as_dict=True)
+        job = running_jobs.get(job_id, None)
+
+        # If the job is returned it is still running and the kill really failed, so we raise
+        if job is not None and job.job_state != JOB_STATES.DONE:
+            raise exceptions.RemoteOperationError('scheduler.kill({}) was unsuccessful'.format(job_id))
+        else:
+            execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
+
+    return True
 
 
 def update_job_calc_from_job_info(calc, job_info):

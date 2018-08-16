@@ -160,3 +160,16 @@ def _format_dictionary_json_date(dictionary):
         raise TypeError(repr(data) + ' is not JSON serializable')
 
     return json.dumps(dictionary, indent=2, sort_keys=True, default=default_jsondump)
+
+
+def is_stdout_redirected():
+    """Determines if the standard output is redirected.
+
+    For cases where the standard output is redirected and you want to
+    inform the user without messing up the output. Example::
+
+        echo.echo_info("Found {} results".format(qb.count()), err=echo.is_stdout_redirected)
+        echo.echo(tabulate.tabulate(qb.all()))
+    """
+    # pylint: disable=no-member
+    return not sys.stdout.isatty()

@@ -23,30 +23,32 @@ class ExitCode(enum.Enum):
 
 
 # pylint: disable=invalid-name
-def echo(message, bold=False, nl=True):
+def echo(message, bold=False, nl=True, err=False):
     """
     Print a normal message through click's echo function to stdout
 
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho(message, bold=bold, nl=nl)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
 
-def echo_info(message, bold=False, nl=True):
+def echo_info(message, bold=False, nl=True, err=False):
     """
     Print an info message through click's echo function to stdout, prefixed with 'Info:'
 
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho('Info: ', fg='blue', bold=True, nl=False)
-    click.secho(message, bold=bold, nl=nl)
+    click.secho('Info: ', fg='blue', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
 
-def echo_success(message, bold=False, nl=True):
+def echo_success(message, bold=False, nl=True, err=False):
     """
     Print a success message through click's echo function to stdout, prefixed with 'Success:'
 
@@ -54,36 +56,39 @@ def echo_success(message, bold=False, nl=True):
     :param bold: whether to print the message in bold
         include a newline character
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho('Success: ', fg='green', bold=True, nl=False)
-    click.secho(message, bold=bold, nl=nl)
+    click.secho('Success: ', fg='green', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
 
-def echo_warning(message, bold=False, nl=True):
+def echo_warning(message, bold=False, nl=True, err=False):
     """
     Print a warning message through click's echo function to stdout, prefixed with 'Warning:'
 
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho('Warning: ', fg='yellow', bold=True, nl=False)
-    click.secho(message, bold=bold, nl=nl)
+    click.secho('Warning: ', fg='yellow', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
 
-def echo_error(message, bold=False, nl=True):
+def echo_error(message, bold=False, nl=True, err=True):
     """
     Print an error message through click's echo function to stdout, prefixed with 'Error:'
 
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho('Error: ', fg='red', bold=True, nl=False, err=True)
-    click.secho(message, bold=bold, nl=nl, err=True)
+    click.secho('Error: ', fg='red', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
 
-def echo_critical(message, bold=False, nl=True):
+def echo_critical(message, bold=False, nl=True, err=True):
     """
     Print an error message through click's echo function to stdout, prefixed with 'Critical:'
     and then calls sys.exit with the given exit_status.
@@ -95,14 +100,15 @@ def echo_critical(message, bold=False, nl=True):
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     """
-    click.secho('Critical: ', fg='red', bold=True, nl=False, err=True)
-    click.secho(message, bold=bold, nl=nl, err=True)
+    click.secho('Critical: ', fg='red', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
     sys.exit(ExitCode.CRITICAL.value)
 
 
 # pylint: disable=redefined-builtin
-def echo_deprecated(message, bold=False, nl=True, exit=False):
+def echo_deprecated(message, bold=False, nl=True, err=True, exit=False):
     """
     Print an error message through click's echo function to stdout, prefixed with 'Deprecated:'
     and then calls sys.exit with the given exit_status.
@@ -112,10 +118,11 @@ def echo_deprecated(message, bold=False, nl=True, exit=False):
     :param message: the string representing the message to print
     :param bold: whether to print the message in bold
     :param nl: whether to print a newline at the end of the message
+    :param err: whether to print to stderr
     :param exit: whether to exit after printing the message
     """
-    click.secho('Deprecated: ', fg='red', bold=True, nl=False, err=True)
-    click.secho(message, bold=bold, nl=nl, err=True)
+    click.secho('Deprecated: ', fg='red', bold=True, nl=False, err=err)
+    click.secho(message, bold=bold, nl=nl, err=err)
 
     if exit:
         sys.exit(ExitCode.DEPRECATED.value)

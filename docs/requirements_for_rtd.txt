@@ -45,7 +45,7 @@ passlib==1.7.1
 pathlib2
 pgtest==1.1.0
 pika==0.11.2
-plumpy==0.10.4
+plumpy==0.10.5
 psutil==5.4.5
 pymatgen==2018.4.20
 pyparsing==2.2.0

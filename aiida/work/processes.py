@@ -111,16 +111,6 @@ class Process(plumpy.Process):
         if self._logger is None:
             self.set_logger(self._calc.logger)
 
-    def has_finished(self):
-        """
-        Has the process finished i.e. completed running normally, without abort
-        or an exception.
-
-        :return: True if finished, False otherwise
-        :rtype: bool
-        """
-        return self.state == ProcessState.FINISHED
-
     @property
     def calc(self):
         return self._calc
@@ -159,11 +149,14 @@ class Process(plumpy.Process):
         """
         Kill the process and all the children calculations it called
         """
-        self._calc.logger.info('Kill Process<{}>'.format(self._calc.pk))
+        self._calc.logger.debug('Request to kill Process<{}>'.format(self._calc.pk))
+
+        had_been_terminated = self.has_terminated()
+
         result = super(Process, self).kill(msg)
 
         # Only kill children if we could be killed ourselves
-        if result is not False:
+        if result is not False and not had_been_terminated:
             killing = []
             for child in self.calc.called:
                 try:
@@ -270,11 +263,11 @@ class Process(plumpy.Process):
             raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(type(result), result, self.pid))
 
     @override
-    def on_paused(self):
+    def on_paused(self, msg=None):
         """
         The Process was paused so set the paused attribute on the Calculation node
         """
-        super(Process, self).on_paused()
+        super(Process, self).on_paused(msg)
         self.calc.pause()
 
     @override
@@ -301,6 +294,15 @@ class Process(plumpy.Process):
             )
 
     # end region
+
+    def set_status(self, status):
+        """
+        The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
+
+        :param status: the status message
+        """
+        super(Process, self).set_status(status)
+        self.calc._set_process_status(status)
 
     def run_process(self, process, *args, **inputs):
         with self.runner.child_runner() as runner:
@@ -397,16 +399,50 @@ class Process(plumpy.Process):
             if utils.is_work_calc_type(self.calc):
                 value.add_link_from(self.calc, label, LinkType.RETURN)
 
+    @property
+    def process_class(self):
+        """
+        Return the class that represents this Process.
+
+        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
+        the Process class is a wrapper around another class. This function returns that original class, i.e. the
+        class that really represents what was being executed.
+        """
+        return self.__class__
+
     def _setup_db_record(self):
+        """
+        Create the database record for this process and the links with respect to its inputs
+
+        This function will set various attributes on the node that serve as a proxy for attributes of the Process.
+        This is essential as otherwise this information could only be introspected through the Process itself, which
+        is only available to the interpreter that has it in memory. To make this data introspectable from any
+        interpreter, for example for the command line interface, certain Process attributes are proxied through the
+        calculation node.
+
+        In addition, the parent calculation will be setup with a CALL link if applicable and all inputs will be
+        linked up as well.
+        """
         assert self.inputs is not None
-        assert not self.calc.is_sealed, \
-            "Calculation cannot be sealed when setting up the database record"
+        assert not self.calc.is_sealed, 'Calculation cannot be sealed when setting up the database record'
 
-        # Save the name of this process
+        # Store important process attributes in the node proxy
         self.calc._set_process_state(None)
-        self.calc._set_process_label(self.__class__.__name__)
-        self.calc._set_process_type(self.__class__)
+        self.calc._set_process_label(self.process_class.__name__)
+        self.calc._set_process_type(self.process_class)
 
+        parent_calc = self.get_parent_calc()
+
+        if parent_calc:
+            self.calc.add_link_from(parent_calc, 'CALL', link_type=LinkType.CALL)
+
+        self._setup_db_inputs()
+        self._add_description_and_label()
+
+    def _setup_db_inputs(self):
+        """
+        Create the links that connect the inputs to the calculation node that represents this Process
+        """
         parent_calc = self.get_parent_calc()
 
         for name, input_value in self._flat_inputs().iteritems():
@@ -417,16 +453,11 @@ class Process(plumpy.Process):
             if not input_value.is_stored:
                 # If the input isn't stored then assume our parent created it
                 if parent_calc:
-                    input_value.add_link_from(parent_calc, "CREATE", link_type=LinkType.CREATE)
+                    input_value.add_link_from(parent_calc, 'CREATE', link_type=LinkType.CREATE)
                 if self.inputs.store_provenance:
                     input_value.store()
 
             self.calc.add_link_from(input_value, name)
-
-        if parent_calc:
-            self.calc.add_link_from(parent_calc, "CALL", link_type=LinkType.CALL)
-
-        self._add_description_and_label()
 
     def _add_description_and_label(self):
         if self.inputs:
@@ -681,6 +712,17 @@ class FunctionProcess(Process):
             raise RuntimeError('Cannot persist a workfunction')
         super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
 
+    @property
+    def process_class(self):
+        """
+        Return the class that represents this Process, for the FunctionProcess this is the function itself.
+
+        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
+        the Process class is a wrapper around another class. This function returns that original class, i.e. the
+        class that really represents what was being executed.
+        """
+        return self._func
+
     def execute(self):
         result = super(FunctionProcess, self).execute()
         # Create a special case for Process functions: They can return
@@ -694,7 +736,6 @@ class FunctionProcess(Process):
     def _setup_db_record(self):
         super(FunctionProcess, self)._setup_db_record()
         self.calc.store_source_info(self._func)
-        self.calc._set_process_label(self._func.__name__)
 
     @override
     def _run(self):

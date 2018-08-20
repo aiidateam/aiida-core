@@ -69,8 +69,8 @@ class TestVerdiCalculation(AiidaTestCase):
             except KeyError:
                 if calculation_state == 'IMPORTED':
                     calc._set_process_state(ProcessState.FINISHED)
-
-                calc._set_process_state(ProcessState.RUNNING)
+                else:
+                    calc._set_process_state(ProcessState.RUNNING)
             else:
                 calc._set_exit_status(exit_status)
                 calc._set_process_state(ProcessState.FINISHED)
@@ -152,7 +152,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = ['-r']
         result = self.cli_runner.invoke(command.calculation_list, options)
         self.assertIsNone(result.exception)
-        self.assertEquals(len(get_result_lines(result)), 7)
+        self.assertEquals(len(get_result_lines(result)), 7, result.output)
 
         for flag in ['-a', '--all']:
             options = ['-r', flag]
@@ -210,18 +210,18 @@ class TestVerdiCalculation(AiidaTestCase):
                 self.assertIsNone(result.exception)
 
                 if state == 'finished':
-                    self.assertEquals(len(get_result_lines(result)), 5)
+                    self.assertEquals(len(get_result_lines(result)), 6, result.output)
                 else:
-                    self.assertEquals(len(get_result_lines(result)), 8)
+                    self.assertEquals(len(get_result_lines(result)), 7, result.output)
 
     def test_calculation_list_failed(self):
         """Test verdi calculation list with the failed filter"""
-        for flag in ['-x', '--failed']:
+        for flag in ['-X', '--failed']:
             options = ['-r', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
 
             self.assertIsNone(result.exception)
-            self.assertEquals(len(get_result_lines(result)), 4)
+            self.assertEquals(len(get_result_lines(result)), 4, result.output)
 
     def test_calculation_list_exit_status(self):
         """Test verdi calculation list with the exit status filter"""

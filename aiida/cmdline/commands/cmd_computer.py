@@ -534,7 +534,7 @@ def computer_test(user, print_traceback, computer):
                         echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
                         echo.echo("** {}: {}".format(error.__class__.__name__, error.message))
-                        echo.echo("** (use the --traceback option to see the " "full traceback)")
+                        echo.echo("** (use the --print-traceback option to see the " "full traceback)")
                     succeeded = False
 
                 if not succeeded:
@@ -554,7 +554,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
             echo.echo("{}: {}".format(error.__class__.__name__, error.message))
-            echo.echo("(use the --traceback option to see the " "full traceback)")
+            echo.echo("(use the --print-traceback option to see the " "full traceback)")
         succeeded = False
 
 

@@ -13,6 +13,7 @@ import contextlib
 import logging
 import traceback
 import tornado.ioloop
+from tornado.concurrent import Future
 from tornado.gen import coroutine, sleep, Return
 
 from aiida.common.links import LinkType
@@ -25,6 +26,53 @@ LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
+
+
+def interruptable_task(coro, loop=None):
+    """
+    Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
+
+    :param coro: the coroutine that should be made interruptable
+    :param loop: the event loop in which to run the coroutine, by default uses tornado.ioloop.IOLoop.current()
+    :return: an InterruptableFuture
+    """
+
+    class CancelFlag(object):
+        """A simple container that can be passed by reference to signal that the task was cancelled."""
+
+        def __init__(self):
+            self.cancelled = False
+
+        @property
+        def is_cancelled(self):
+            return self.cancelled
+
+    cancel_flag = CancelFlag()
+
+    class InterruptableFuture(Future):
+        """A future that can be interrupted by calling `interrupt`."""
+
+        def interrupt(self, reason):
+            """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
+            cancel_flag.cancelled = True
+            self.set_exception(reason)
+
+    loop = loop or tornado.ioloop.IOLoop.current()
+    future = InterruptableFuture()
+
+    @coroutine
+    def execute_coroutine():
+        """Coroutine that wraps the original coroutine and sets it result on the future only if not already set."""
+        result = yield coro(cancel_flag)
+
+        # If the future has not been set elsewhere, i.e. by the interrupt call, by the time that the coroutine
+        # is executed, set the future's result to the result of the coroutine
+        if not future.done():
+            future.set_result(result)
+
+    loop.add_callback(execute_coroutine)
+
+    return future
 
 
 def ensure_coroutine(fct):
@@ -47,7 +95,7 @@ def ensure_coroutine(fct):
 
 
 @coroutine
-def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None):
+def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None, ignore_exceptions=None):
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
@@ -72,7 +120,12 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
         try:
             result = yield coro()
             break  # Finished successfully
-        except Exception:  # pylint: disable=broad-except
+        except Exception as exception:  # pylint: disable=broad-except
+
+            # Re-raise exceptions that should be ignored
+            if ignore_exceptions is not None and isinstance(exception, ignore_exceptions):
+                raise
+
             if iteration == max_attempts - 1:
                 logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
                 raise
@@ -182,24 +235,38 @@ def set_process_state_change_timestamp(process):
         process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
 
 
-def get_process_state_change_timestamp(process_type='calculation'):
+def get_process_state_change_timestamp(process_type=None):
     """
-    Get the global setting that reflects the last time a process of the given process type changed
-    its state. The returned value will be the corresponding timestamp or None if the setting does
-    not exist.
+    Get the global setting that reflects the last time a process of the given process type changed its state.
+    The returned value will be the corresponding timestamp or None if the setting does not exist.
 
-    :param process_type: the process type for which to get the latest state change timestamp.
-        Valid process types are either 'calculation' or 'work'.
+    :param process_type: optional process type for which to get the latest state change timestamp.
+        Valid process types are either 'calculation' or 'work'. If not specified, last timestamp for all
+        known process types will be returned.
     :return: a timestamp or None
     """
     from aiida.backends.utils import get_global_setting
 
-    if process_type not in ['calculation', 'work']:
-        raise ValueError('invalid value for process_type')
+    valid_process_types = ['calculation', 'work']
 
-    key = PROCESS_STATE_CHANGE_KEY.format(process_type)
+    if process_type is not None and process_type not in valid_process_types:
+        raise ValueError("invalid value for process_type, valid values are {}".format(', '.join(valid_process_types)))
 
-    try:
-        return get_global_setting(key)
-    except KeyError:
+    if process_type is None:
+        process_types = valid_process_types
+    else:
+        process_types = [process_type]
+
+    timestamps = []
+
+    for process_type_key in process_types:
+        key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
+        try:
+            timestamps.append(get_global_setting(key))
+        except KeyError:
+            pass
+
+    if not timestamps:
         return None
+
+    return max(timestamps)

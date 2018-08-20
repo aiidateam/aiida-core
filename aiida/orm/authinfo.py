@@ -33,6 +33,14 @@ class AuthInfoCollection(Collection):
         pass
 
     @abc.abstractmethod
+    def remove(self, authinfo_id):
+        """
+        Remove an AuthInfo from the collection with the given id
+        :param authinfo_id: The ID of the authinfo to delete
+        """
+        pass
+
+    @abc.abstractmethod
     def get(self, computer, user):
         """
         Return a AuthInfo given a computer and a user

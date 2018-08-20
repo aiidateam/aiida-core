@@ -60,7 +60,7 @@ def calculation_gotocomputer(calculation):
 @arguments.CALCULATIONS(
     type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.CALCULATION_STATE()
-@options.PROCESS_STATE(default=None)
+@options.PROCESS_STATE()
 @options.EXIT_STATUS()
 @options.FAILED()
 @options.PAST_DAYS()
@@ -68,7 +68,7 @@ def calculation_gotocomputer(calculation):
 @options.ORDER_BY()
 @options.PROJECT(type=click.Choice(LIST_CMDLINE_PROJECT_CHOICES), default=LIST_CMDLINE_PROJECT_DEFAULT)
 @options.GROUPS(help='Show only calculations that are contained within one or more of these groups.')
-@options.ALL(help='Show all entries, regardless of their calculation state.')
+@options.ALL(help='Show all entries, regardless of their process state.')
 @options.ALL_USERS()
 @options.RAW()
 @click.option(
@@ -95,6 +95,9 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
 
     filters = {}
 
+    if calculation_state:
+        process_state = None
+
     if process_state:
         calculation_state = None
         filters[PROCESS_STATE_KEY] = {'in': process_state}
@@ -102,7 +105,7 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
     if failed:
         calculation_state = None
         filters[PROCESS_STATE_KEY] = {'==': ProcessState.FINISHED.value}
-        filters[EXIT_STATUS_KEY] = {'!==': 0}
+        filters[EXIT_STATUS_KEY] = {'>': 0}
 
     if exit_status is not None:
         calculation_state = None
@@ -348,6 +351,7 @@ def calculation_outputls(calculation, path, color):
 @arguments.CALCULATIONS(
     type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
 @options.FORCE()
+@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
 def calculation_kill(calculations, force):
     """Kill one or multiple running calculations."""
     from aiida import work

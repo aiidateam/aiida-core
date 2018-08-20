@@ -45,12 +45,12 @@ passlib==1.7.1
 pathlib2
 pgtest==1.1.0
 pika==0.11.2
-plumpy==0.10.3
+plumpy==0.10.4
 psutil==5.4.5
 pymatgen==2018.4.20
 pyparsing==2.2.0
 pytest-cov==2.5.1
-pytest==3.5.1
+pytest==3.6.0
 python-dateutil==2.7.2
 python-memcached==1.59
 python-mimeparse==1.6.0

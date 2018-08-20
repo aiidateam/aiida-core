@@ -43,7 +43,7 @@ install_requires = [
     'ecdsa==0.13',
     'pika==0.11.2',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
-    'plumpy==0.10.3',
+    'plumpy==0.10.4',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
 ]
@@ -114,7 +114,7 @@ extras_require = {
         'toml==0.9.4'
     ],
     'dev_sphinxext': [
-        'pytest==3.5.1',
+        'pytest==3.6.0',
         'pytest-cov==2.5.1',
     ],
     'bpython': [

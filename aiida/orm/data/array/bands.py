@@ -1119,8 +1119,12 @@ class BandsData(KpointsData):
         
         Other kwargs are passed to self._exportstring.
         """
-        exec self._exportstring(fileformat='mpl_singlefile', main_file_name='',
-                                **kwargs)
+        # In Python 2, exec is a statement which was extended to also take a tuple, while Python 3's exec
+        # is a real function. We could unpack the tuple into arguments in Python 3 as follows:
+        #    exec(*self._exportstring(...))
+        # but this does not work in Python 2. But it is anyway clearer to explicitly unpack the 2-tuple instead.
+        code_obj, code_globals = self._exportstring(fileformat='mpl_singlefile', main_file_name='', **kwargs)
+        exec(code_obj, code_globals)  # pylint: disable=exec-used
         
 
     def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,

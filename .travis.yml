@@ -5,6 +5,7 @@ language: python
 
 python:
     - "2.7"
+    - "3.6"
 
 cache: pip
 
@@ -60,6 +61,16 @@ env:
 - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
 - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
+# Currently skip all but the pre-commit to catch non-py3 compatible dependencies
+# and py3 incompatible syntax in the installation scripts.
+matrix:
+  exclude:
+    - python: "3.6"
+      env: TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
+    - python: "3.6"
+      env: TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
+    - python: "3.6"
+      env: TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
 before_script:
     - .ci/setup_profiles.sh

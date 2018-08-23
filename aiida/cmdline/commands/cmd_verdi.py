@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """The main `verdi` click group."""
+
 import click
 
 
-@click.group(invoke_without_command=True)
+@click.group()
 @click.option(
     '-p', '--profile', metavar='PROFILE', help='Execute the command for this profile instead of the default profile.')
 @click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')

@@ -70,8 +70,60 @@
   sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
   hooks:
   - id: python-modernize
-    args: [--write, --nobackups, --fix=exec, --fix=import]
     exclude: ^docs/
+    args:
+      - --write
+      - --nobackups
+      - --fix=apply
+#      - --fix=except
+      - --fix=exec
+      - --fix=execfile
+      - --fix=exitfunc
+#      - --fix=funcattrs
+#      - --fix=has_key
+#      - --fix=idioms
+#      - --fix=long
+      - --fix=methodattrs
+      - --fix=ne
+#      - --fix=numliterals
+      - --fix=operator
+      - --fix=paren
+#      - --fix=reduce
+      - --fix=renames
+      - --fix=repr
+#      - --fix=set_literal
+      - --fix=standarderror
+      - --fix=sys_exc
+      - --fix=throw
+      - --fix=tuple_params
+#      - --fix=types
+#      - --fix=ws_comma
+      - --fix=xreadlines
+#      - --fix=basestring
+#      - --fix=classic_division
+#      - --fix=dict_six
+      - --fix=file
+#      - --fix=filter
+      - --fix=import
+#      - --fix=imports_six
+#      - --fix=input_six
+#      - --fix=int_long_tuple
+      - --fix=itertools_imports_six
+#      - --fix=itertools_six
+#      - --fix=map
+#      - --fix=metaclass
+#      - --fix=next
+#      - --fix=open
+#      - --fix=print
+#      - --fix=raise
+      - --fix=raise_six
+      - --fix=unichr
+      - --fix=unicode
+      - --fix=unicode_future
+#      - --fix=unicode_type
+#      - --fix=urllib_six
+#      - --fix=xrange_six
+#      - --fix=zip
 
 - repo: local
   hooks:

@@ -27,7 +27,7 @@ DEPOSIT_OPTIONS = [
         default='published',
         help="Type of the deposition."),
     click.option('-u', '--username', type=click.STRING, default=None, help="Depositor's username."),
-    click.option('-p', '--password', is_flag=True, default=False, help="Depositor's password."),
+    click.option('-p', '--password', is_flag=True, default=False, help="Prompt for depositor's password."),
     click.option('--user-email', type=click.STRING, default=None, help="Depositor's e-mail address."),
     click.option('--title', type=click.STRING, default=None, help="Title of the publication."),
     click.option('--author-name', type=click.STRING, default=None, help="Full name of the publication author."),

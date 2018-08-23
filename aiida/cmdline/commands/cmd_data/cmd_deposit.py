@@ -35,11 +35,12 @@ DEPOSIT_OPTIONS = [
     click.option('--url', type=click.STRING, default=None, help="URL of the deposition API."),
     click.option(
         '--code',
+        'code_label',
         type=click.STRING,
         default=None,
         help="Label of the code to be used for the deposition."
         " Default: cif_cod_deposit."),
-    click.option('--computer', type=click.STRING, default=None, help="Name of the computer to be used for deposition."),
+    click.option('--computer', 'computer_name', type=click.STRING, default=None, help="Name of the computer to be used for deposition."),
     click.option(
         '--replace', type=click.INT, default=None, help="ID of the structure to be redeposited (replaced), if any."),
     click.option(

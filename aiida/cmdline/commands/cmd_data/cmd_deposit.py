@@ -35,6 +35,7 @@ DEPOSIT_OPTIONS = [
     click.option('--url', type=click.STRING, default=None, help="URL of the deposition API."),
     click.option(
         '--code',
+        'code_label',
         type=click.STRING,
         default=None,
         help="Label of the code to be used for the deposition."

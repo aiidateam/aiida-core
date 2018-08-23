@@ -115,6 +115,22 @@ class Process(plumpy.Process):
     def calc(self):
         return self._calc
 
+    def _save_checkpoint(self):
+        """
+        Save the current state in a chechpoint if persistence is enabled and the process state is not terminal
+
+        If the persistence call excepts with a PersistenceError, it will be caught and a warning will be logged.
+        """
+        if self._enable_persistence and not self._state.is_terminal():
+            try:
+                self.runner.persister.save_checkpoint(self)
+            except plumpy.PersistenceError:
+                self.logger.warning(
+                    "Exception trying to save checkpoint, this means you will "
+                    "not be able to restart in case of a crash until the next successful checkpoint.")
+                self.logger.debug(
+                    "Exception trying to save checkpoint:\n{}".format(traceback.format_exc()))
+
     @override
     def save_instance_state(self, out_state, save_context):
         super(Process, self).save_instance_state(out_state, save_context)
@@ -204,16 +220,8 @@ class Process(plumpy.Process):
 
     def on_entered(self, from_state):
         super(Process, self).on_entered(from_state)
+        self._save_checkpoint()
         self.update_node_state(self._state)
-        if self._enable_persistence and not self._state.is_terminal():
-            try:
-                self.runner.persister.save_checkpoint(self)
-            except plumpy.PersistenceError:
-                self.logger.warning(
-                    "Exception trying to save checkpoint, this means you will "
-                    "not be able to restart in case of a crash until the next successful checkpoint.")
-                self.logger.debug(
-                    "Exception trying to save checkpoint:\n{}".format(traceback.format_exc()))
 
         # Update the latest process state change timestamp
         utils.set_process_state_change_timestamp(self)
@@ -268,6 +276,7 @@ class Process(plumpy.Process):
         The Process was paused so set the paused attribute on the Calculation node
         """
         super(Process, self).on_paused(msg)
+        self._save_checkpoint()
         self.calc.pause()
 
     @override

@@ -17,6 +17,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of AiiDA's process persister and the necessary object loaders."""
+from __future__ import absolute_import
 import logging
 import traceback
 import yaml

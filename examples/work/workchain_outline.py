@@ -8,6 +8,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.orm.data.int import Int
 from aiida import work
 from aiida.work.workchain import while_, if_

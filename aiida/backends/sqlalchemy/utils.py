@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 try:
     import ultrajson as json
     from functools import partial

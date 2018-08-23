@@ -13,6 +13,7 @@ collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
 
+from __future__ import absolute_import
 from aiida.orm.data.array import ArrayData
 import numpy as np
 from aiida.common.exceptions import InputValidationError, NotExistent

@@ -11,6 +11,7 @@
 Tests for specific subclasses of Data
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 
 

@@ -11,6 +11,7 @@
 Base classes for PBSPro and PBS/Torque plugins.
 """
 from __future__ import division
+from __future__ import absolute_import
 import abc
 import logging
 from aiida.common.utils import escape_for_bash

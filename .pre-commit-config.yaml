@@ -70,7 +70,7 @@
   sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
   hooks:
   - id: python-modernize
-    args: [--write, --nobackups, --fix=exec]
+    args: [--write, --nobackups, --fix=exec, --fix=import]
     exclude: ^docs/
 
 - repo: local

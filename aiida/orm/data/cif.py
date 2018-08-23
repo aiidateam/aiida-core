@@ -9,6 +9,7 @@
 ###########################################################################
 """Tools for handling Crystallographic Information Files (CIF)"""
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
+from __future__ import absolute_import
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
@@ -833,7 +834,7 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
-        import cif  # pylint: disable=import-self
+        from . import cif  # pylint: disable=import-self
         from aiida.orm.data.parameter import ParameterData
 
         parameters = ParameterData(dict=kwargs)

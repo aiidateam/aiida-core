@@ -15,6 +15,7 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 from __future__ import division
+from __future__ import absolute_import
 import xml.parsers.expat
 import xml.dom.minidom
 

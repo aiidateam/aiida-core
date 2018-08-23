@@ -10,6 +10,7 @@
 
 
 
+from __future__ import absolute_import
 def test_and_get_code(codename, expected_code_type, use_exceptions=False):
     """
     Pass a code name and an expected code (plugin) type. Check that the

@@ -10,6 +10,7 @@
 """
 This module provides export functionality to all data types
 """
+from __future__ import absolute_import
 import click
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params import arguments

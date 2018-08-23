@@ -11,6 +11,7 @@
 Module for all scheduler related things
 """
 
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 import aiida.common
 from aiida.common.utils import classproperty, escape_for_bash

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                 silent=False):
     """

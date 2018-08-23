@@ -15,6 +15,7 @@ location for the (implicit) definition of the registry format.
 """
 
 
+from __future__ import absolute_import
 class InvalidPluginEntryError(Exception):
     def __init__(self, msg=''):
         msg = 'Error: Invalid Plugin Registry Entry: {}'.format(msg)

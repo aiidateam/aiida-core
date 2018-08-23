@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from past.builtins import basestring
 from aiida.orm.data import BaseType
 from aiida.orm.data import to_aiida_type

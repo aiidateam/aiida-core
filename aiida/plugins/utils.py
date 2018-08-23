@@ -16,6 +16,7 @@ utilities for:
 """
 
 
+from __future__ import absolute_import
 def registry_cache_folder_name():
     """
     return the name of the subfolder of aiida_dir where registry caches are stored.

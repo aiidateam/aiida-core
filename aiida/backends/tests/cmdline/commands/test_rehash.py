@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for `verdi rehash`."""
+from __future__ import absolute_import
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase

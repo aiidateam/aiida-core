@@ -10,6 +10,7 @@
 """
 This allows to setup and configure a code from command line.
 """
+from __future__ import absolute_import
 import click
 import tabulate
 

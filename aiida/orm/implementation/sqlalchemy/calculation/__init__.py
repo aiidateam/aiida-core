@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.orm.implementation.sqlalchemy.node import Node
 

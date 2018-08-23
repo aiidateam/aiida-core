@@ -4,6 +4,7 @@
     :synopsis: Tools for options which are required only if a a set of
     conditions on the context are fulfilled
 """
+from __future__ import absolute_import
 import click
 
 

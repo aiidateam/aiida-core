@@ -12,6 +12,7 @@ This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
 
+from __future__ import absolute_import
 from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template

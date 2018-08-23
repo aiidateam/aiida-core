@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for `verdi export`."""
+from __future__ import absolute_import
 import errno
 import os
 import tempfile

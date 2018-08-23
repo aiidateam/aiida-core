@@ -15,6 +15,7 @@ registry online and that operate on the cache folder.
 """
 
 
+from __future__ import absolute_import
 def registry_cache_file_name():
     """
     return the name of the registry cache file

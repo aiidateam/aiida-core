@@ -1,4 +1,5 @@
 """Unit tests for editing pre and post bash scripts, comments, etc."""
+from __future__ import absolute_import
 import os
 import unittest
 

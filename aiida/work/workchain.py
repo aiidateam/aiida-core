@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Components for the WorkChain concept of the workflow engine."""
+from __future__ import absolute_import
 import functools
 
 from plumpy import auto_persist, WorkChainSpec, Wait, Continue

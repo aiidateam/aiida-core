@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=superfluous-parens,too-many-locals,too-many-statements,too-many-branches
 """Functions to create, inspect and manipulate profiles in the configuration file."""
+from __future__ import absolute_import
 import os
 import sys
 

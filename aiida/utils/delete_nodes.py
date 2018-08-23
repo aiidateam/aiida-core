@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 def delete_nodes(pks, follow_calls=False, follow_returns=False, 
                  dry_run=False, force=False, disable_checks=False, verbosity=0):
     """

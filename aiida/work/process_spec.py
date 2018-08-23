@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
+from __future__ import absolute_import
 import plumpy
 
 from aiida.work.exit_code import ExitCode, ExitCodesNamespace

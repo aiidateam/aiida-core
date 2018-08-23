@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite to test the `verdi profile` commands."""
+from __future__ import absolute_import
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase

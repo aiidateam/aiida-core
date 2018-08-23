@@ -16,6 +16,7 @@ the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
 from __future__ import division
+from __future__ import absolute_import
 from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
 
 from aiida.common import aiidalogger

@@ -12,6 +12,7 @@ Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 from __future__ import division
+from __future__ import absolute_import
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError

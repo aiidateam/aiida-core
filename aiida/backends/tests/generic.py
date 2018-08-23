@@ -11,6 +11,7 @@
 Generic tests that need the use of the DB
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.node import Node

@@ -20,6 +20,7 @@ when instantiated by the user.
 """
 
 # Warnings are issued for deprecations:
+from __future__ import absolute_import
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass

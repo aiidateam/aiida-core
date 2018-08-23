@@ -11,6 +11,7 @@ Module for the ORM user classes yo
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import abc
 
 from aiida.common.hashing import is_password_usable

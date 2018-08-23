@@ -13,6 +13,7 @@ miscellaneous utilities for different parts in AiiDA
 
 # pylint: disable=too-many-lines
 
+from __future__ import absolute_import
 import datetime
 import filecmp
 import functools

@@ -10,6 +10,7 @@
 """
 This module manages the UPF pseudopotentials in the local repository.
 """
+from __future__ import absolute_import
 import re
 
 import aiida.orm.user

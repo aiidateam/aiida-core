@@ -10,6 +10,7 @@
 """
 Tests for TestTcodDbExporter
 """
+from __future__ import absolute_import
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
@@ -251,7 +252,7 @@ class TestTcodDbExporter(AiidaTestCase):
 
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_nwcpymatgen_translation(self):
-        from tcodexporter import FakeObject
+        from .tcodexporter import FakeObject
         from aiida.orm.data.parameter import ParameterData
         from aiida.plugins.entry_point import load_entry_point
         from aiida.tools.dbexporters.tcod import translate_calculation_specific_values

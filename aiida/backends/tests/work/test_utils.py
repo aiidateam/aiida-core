@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine
 

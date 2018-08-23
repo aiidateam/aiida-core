@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for `verdi import`."""
+from __future__ import absolute_import
 import os
 
 from click.testing import CliRunner

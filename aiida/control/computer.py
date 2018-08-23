@@ -1,4 +1,5 @@
 """Manage computer objects with lazy loading of the db env"""
+from __future__ import absolute_import
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.utils.error_accumulator import ErrorAccumulator

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError

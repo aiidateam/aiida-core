@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline

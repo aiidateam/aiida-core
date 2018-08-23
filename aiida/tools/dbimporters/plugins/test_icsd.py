@@ -10,6 +10,7 @@
 """
 Tests for IcsdDbImporter
 """
+from __future__ import absolute_import
 from django.utils import unittest
 from aiida.backends.testbase import AiidaTestCase
 

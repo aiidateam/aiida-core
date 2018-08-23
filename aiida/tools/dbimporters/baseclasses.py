@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 from aiida.orm.calculation.inline import optional_inline
 
 

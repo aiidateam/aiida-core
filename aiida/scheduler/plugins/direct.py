@@ -11,6 +11,7 @@
 Plugin for direct execution.
 """
 from __future__ import division
+from __future__ import absolute_import
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError

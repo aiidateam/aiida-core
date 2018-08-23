@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-few-public-methods
 """Components to communicate tasks to RabbitMQ."""
+from __future__ import absolute_import
 import collections
 
 import tornado.ioloop

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states

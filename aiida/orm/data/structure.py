@@ -12,6 +12,7 @@ This module defines the classes for structures and all related
 functions to operate on them.
 """
 
+from __future__ import absolute_import
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
@@ -1881,7 +1882,7 @@ class StructureData(Data):
         :return: :py:class:`aiida.orm.data.cif.CifData` node.
         """
         from aiida.orm.data.parameter import ParameterData
-        import structure  # This same module
+        from . import structure  # This same module
 
         param = ParameterData(dict=kwargs)
         try:

@@ -1,4 +1,5 @@
 """Tests for the 'verdi computer' command."""
+from __future__ import absolute_import
 import os
 from collections import OrderedDict
 from click.testing import CliRunner

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Exceptions that can be thrown by parts of the workflow engine."""
+from __future__ import absolute_import
 from aiida.common.exceptions import AiidaException
 
 __all__ = ['PastException']

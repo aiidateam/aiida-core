@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 """Click parameter type for AiiDA Plugins."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.utils import decorators

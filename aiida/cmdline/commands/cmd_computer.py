@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` commands"""
+from __future__ import absolute_import
 import sys
 import click
 

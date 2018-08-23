@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.djsite.db.models import DbComment
 from aiida.orm.implementation.general.comment import AbstractComment
 from aiida.common.exceptions import NotExistent, MultipleObjectsError

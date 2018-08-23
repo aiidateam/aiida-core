@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-arguments
 """`verdi export` command."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

@@ -1,4 +1,5 @@
 """Manage code objects with lazy loading of the db env"""
+from __future__ import absolute_import
 import enum
 import os
 

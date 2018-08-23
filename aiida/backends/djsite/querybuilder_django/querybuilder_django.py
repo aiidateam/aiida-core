@@ -9,12 +9,13 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 import datetime
 from datetime import datetime
 from json import loads as json_loads
 
 # ~ import aiida.backends.djsite.querybuilder_django.dummy_model as dummy_model
-import dummy_model
+from . import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
 from sqlalchemy import and_, or_, not_, exists, select, exists, case

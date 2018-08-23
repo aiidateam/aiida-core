@@ -11,6 +11,7 @@
 Tests for the export and import routines.
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 

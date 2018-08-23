@@ -10,6 +10,7 @@
 """
 This allows to manage ParameterData objects from command line.
 """
+from __future__ import absolute_import
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo

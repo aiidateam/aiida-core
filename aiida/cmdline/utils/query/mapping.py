@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A utility module with mapper objects that map database entities projections on attributes and labels."""
+from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 

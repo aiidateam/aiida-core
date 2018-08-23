@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import os, tempfile
 
 def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',

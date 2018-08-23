@@ -9,6 +9,7 @@
 ###########################################################################
 """ Resources for REST API """
 
+from __future__ import absolute_import
 from urllib import unquote
 
 from flask import request, make_response

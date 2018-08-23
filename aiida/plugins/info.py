@@ -33,6 +33,7 @@ example registry::
 """
 
 
+from __future__ import absolute_import
 def entry_point_from_tpstr(typestring):
     if typestring.startswith('calculation.job.'):
         typestring = typestring.split('.', 2)[-1]

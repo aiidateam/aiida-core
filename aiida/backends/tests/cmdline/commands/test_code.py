@@ -1,4 +1,5 @@
 """Tests for the 'verdi code' command."""
+from __future__ import absolute_import
 import os
 import subprocess as sp
 from click.testing import CliRunner

@@ -10,6 +10,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 def launch_ws():
     """
     To control the wf status use the command line 

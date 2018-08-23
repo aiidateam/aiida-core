@@ -1,4 +1,5 @@
 """Computer control module unit tests."""
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.control.computer import ComputerBuilder, configure_computer
 

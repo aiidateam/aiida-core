@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """`verdi run` command."""
+from __future__ import absolute_import
 import contextlib
 import os
 import sys

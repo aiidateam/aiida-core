@@ -11,7 +11,6 @@
 """Utilities for the workflow engine."""
 import contextlib
 import logging
-import traceback
 import tornado.ioloop
 from tornado.concurrent import Future
 from tornado.gen import coroutine, sleep, Return
@@ -134,8 +133,8 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
                 raise
             else:
-                logger.warning('iteration %d of %s excepted, retrying after %d seconds\n%s', iteration + 1,
-                               coro.__name__, interval, traceback.format_exc())
+                logger.warning('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
+                               interval)
                 yield sleep(interval)
                 interval *= 2
 

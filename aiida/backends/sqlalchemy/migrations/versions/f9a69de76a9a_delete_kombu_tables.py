@@ -15,6 +15,7 @@ Create Date: 2018-05-10 15:07:59.235950
 
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from alembic import op
 from sqlalchemy.sql import text
 
@@ -47,4 +48,4 @@ def upgrade():
 
 
 def downgrade():
-    print 'There is no downgrade for the deletion of the kombu tables and the daemon timestamps'
+    print('There is no downgrade for the deletion of the kombu tables and the daemon timestamps')

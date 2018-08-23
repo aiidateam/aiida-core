@@ -21,6 +21,7 @@ when instantiated by the user.
 
 # Warnings are issued for deprecations:
 from __future__ import absolute_import
+from __future__ import print_function
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
@@ -630,8 +631,8 @@ class QueryBuilder(object):
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append, cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append, cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -659,8 +660,8 @@ class QueryBuilder(object):
                 self.add_filter(tag, filters)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part filters), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part filters), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag)
@@ -675,8 +676,8 @@ class QueryBuilder(object):
                 self.add_projection(tag, project)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part projections), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part projections), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -743,8 +744,8 @@ class QueryBuilder(object):
 
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part joining), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part joining), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -757,7 +758,7 @@ class QueryBuilder(object):
         if len(self._path) > 0:
             try:
                 if self._debug:
-                    print "DEBUG: Choosing an edge_tag"
+                    print("DEBUG: Choosing an edge_tag")
                 if edge_tag is None:
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
@@ -767,7 +768,7 @@ class QueryBuilder(object):
                             "The tag {} is already in use".format(edge_tag)
                         )
                 if self._debug:
-                    print "   I have chosen", edge_tag
+                    print("   I have chosen", edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -787,9 +788,9 @@ class QueryBuilder(object):
             except Exception as e:
 
                 if self._debug:
-                    print "DEBUG: Exception caught in append (part joining), cleaning up"
+                    print("DEBUG: Exception caught in append (part joining), cleaning up")
                     import traceback
-                    print  traceback.format_exc()
+                    print(traceback.format_exc())
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self._tag_to_alias_map.pop(tag, None)
@@ -1022,8 +1023,8 @@ class QueryBuilder(object):
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
         if self._debug:
-            print "DEBUG: Adding projection of", tag_spec
-            print "   projection", projection_spec
+            print("DEBUG: Adding projection of", tag_spec)
+            print("   projection", projection_spec)
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]
         for projection in projection_spec:
@@ -1057,7 +1058,7 @@ class QueryBuilder(object):
                             )
             _projections.append(_thisprojection)
         if self._debug:
-            print "   projections have become:", _projections
+            print("   projections have become:", _projections)
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
@@ -1121,7 +1122,7 @@ class QueryBuilder(object):
         # reduces number of key in return dictionary
 
         if self._debug:
-            print tag, items_to_project
+            print(tag, items_to_project)
         if not items_to_project:
             return
 
@@ -1756,7 +1757,7 @@ class QueryBuilder(object):
             The input value that will be converted.
             Recurses into each value if **inp** is an iterable.
         """
-        print inp
+        print(inp)
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[
@@ -1921,10 +1922,10 @@ class QueryBuilder(object):
 
         self.nr_of_projections = 0
         if self._debug:
-            print "DEBUG:"
-            print "   Printing the content of self._projections"
-            print "  ", self._projections
-            print
+            print("DEBUG:")
+            print("   Printing the content of self._projections")
+            print("  ", self._projections)
+            print()
 
         if not any(self._projections.values()):
             # If user has not set projection,
@@ -1941,9 +1942,12 @@ class QueryBuilder(object):
             for vertice in self._path[1:]:
                 edge_tag = vertice.get('edge_tag', None)
                 if self._debug:
-                    print "DEBUG: Checking projections for edges:"
-                    print "   This is edge", edge_tag, "from", vertice.get('tag'), ",", vertice.get(
-                        'joining_keyword'), 'of', vertice.get('joining_value')
+                    print("DEBUG: Checking projections for edges:")
+                    print("   This is edge {} from {}, {} of {}"
+                          .format(edge_tag,
+                                  vertice.get('tag'),
+                                  vertice.get('joining_keyword'),
+                                  vertice.get('joining_value')))
                 if edge_tag is not None:
                     self._build_projections(edge_tag)
 

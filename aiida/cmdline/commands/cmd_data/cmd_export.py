@@ -104,7 +104,7 @@ def _export(node, output_fname, fileformat, other_args=None, overwrite=False):
                 echo.echo_critical("This format requires to write more than one file.\n"
                                    "You need to pass the -o option to specify a file name.")
             else:
-                print filetext
+                echo.echo(filetext)
     except TypeError as err:
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted

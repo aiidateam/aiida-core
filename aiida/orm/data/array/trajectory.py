@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import print_function
 from aiida.orm.data.array import ArrayData
 from aiida.orm.calculation.inline import optional_inline
 
@@ -466,7 +467,7 @@ class TrajectoryData(ArrayData):
                 try:
                     return_string += "{} {:18.10f} {:18.10f} {:18.10f}\n".format(atn, pos[0], pos[1], pos[2] )
                 except:
-                    print atn, pos
+                    print(atn, pos)
                     raise
         return return_string.encode('utf-8'), {}
 

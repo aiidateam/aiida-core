@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import print_function
 import HTMLParser
 import sys
 
@@ -246,7 +247,7 @@ def deserialize_attributes(attributes_data, conversion_data):
     if isinstance(attributes_data, dict):
         ret_data = {}
         for k, v in attributes_data.iteritems():
-            # print "k: ", k, " v: ", v
+            # print("k: ", k, " v: ", v)
             if conversion_data is not None:
                 ret_data[k] = deserialize_attributes(v, conversion_data[k])
             else:
@@ -426,7 +427,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
         # ~ dbnode_model = get_class_string(models.DbNode)
-        # ~ print dbnode_model
+        # ~ print(dbnode_model)
         import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
@@ -550,10 +551,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     ret_dict[model_name]['existing'].append((import_entry_id,
                                                              existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("existing %s: %s (%s->%s)" % (model_name, unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
-                        # print "  `-> WARNING: NO DUPLICITY CHECK DONE!"
+                                                            existing_entry_id))
+                        # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
                         # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them
@@ -606,7 +607,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # are nodes). Note: only for new entries!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE FILES..."
+                        print("STORING NEW NODE FILES...")
                     for o in objects_to_create:
 
                         subfolder = folder.get_subfolder(os.path.join(
@@ -637,7 +638,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 imported_states = []
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
                     for unique_id, new_pk in just_saved.iteritems():
@@ -657,14 +658,14 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                                         new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
                 # For DbNodes, we also have to store Attributes!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE ATTRIBUTES..."
+                        print("STORING NEW NODE ATTRIBUTES...")
                     for unique_id, new_pk in just_saved.iteritems():
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
@@ -688,7 +689,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                             with_transaction=False)
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -700,7 +701,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            # ~ print foreign_ids_reverse_mappings
+            # ~ print(foreign_ids_reverse_mappings)
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
             for link in import_links:
                 try:
@@ -760,15 +761,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
 
                 models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.iteritems():
                 # TODO: cache these to avoid too many queries
@@ -818,15 +819,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
@@ -1154,10 +1155,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (entity_sig,
+                        print("existing %s: %s (%s->%s)" % (entity_sig,
                                                             unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
+                                                            existing_entry_id))
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -1198,7 +1199,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
 
                     if not silent:
-                        print "STORING NEW NODE FILES & ATTRIBUTES..."
+                        print("STORING NEW NODE FILES & ATTRIBUTES...")
                     for o in objects_to_create:
 
                         # Creating the needed files
@@ -1267,7 +1268,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # Needs more from here and below
                     ################################################
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
                     for unique_id, new_pk in just_saved.iteritems():
@@ -1291,12 +1292,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                                          new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -1371,14 +1372,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
                 session.add_all(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.iteritems():
                 # # TODO: cache these to avoid too many queries
@@ -1437,23 +1438,23 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 #     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
             if not silent:
-                print "COMMITTING EVERYTHING..."
+                print("COMMITTING EVERYTHING...")
             session.commit()
         except:
-            print "Rolling back"
+            print("Rolling back")
             session.rollback()
             raise
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
@@ -1994,7 +1995,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
-        print "STORING DATABASE ENTRIES..."
+        print("STORING DATABASE ENTRIES...")
 
     export_data = dict()
     entity_separator = '_'
@@ -2041,17 +2042,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
-            print "No nodes to store, exiting..."
+            print("No nodes to store, exiting...")
         return
 
     if not silent:
-        print "Exporting a total of {} db entries, of which {} nodes.".format(
-            sum(len(model_data) for model_data in export_data.values()),
-            len(all_nodes_pk))
+        print("Exporting a total of {} db entries, of which {} nodes."
+              .format(sum(len(model_data) for model_data in export_data.values()),
+                      len(all_nodes_pk)))
 
     ## ATTRIBUTES
     if not silent:
-        print "STORING NODE ATTRIBUTES..."
+        print("STORING NODE ATTRIBUTES...")
     node_attributes = {}
     node_attributes_conversion = {}
 
@@ -2068,7 +2069,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 n.get_attrs(), track_conversion=True)
 
     if not silent:
-        print "STORING NODE LINKS..."
+        print("STORING NODE LINKS...")
 
     links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
@@ -2305,7 +2306,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     links_uuid = links_uuid_dict.values()
 
     if not silent:
-        print "STORING GROUP ELEMENTS..."
+        print("STORING GROUP ELEMENTS...")
     groups_uuid = dict()
     # If a group is in the exported date, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -2335,7 +2336,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             export_data.pop(entity_name))
 
     if not silent:
-        print "STORING DATA..."
+        print("STORING DATA...")
 
     with folder.open('data.json', 'w') as f:
         json.dump({
@@ -2360,7 +2361,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         json.dump(metadata, f)
 
     if silent is not True:
-        print "STORING FILES..."
+        print("STORING FILES...")
 
     # If there are no nodes, there are no files to store
     if len(all_nodes_pk) > 0:
@@ -2601,7 +2602,7 @@ def export_zip(what, outfile='testzip', overwrite=False,
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
-        print "File written in {:10.3g} s.".format(time.time() - t)
+        print("File written in {:10.3g} s.".format(time.time() - t))
 
 
 def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
@@ -2651,7 +2652,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
     t2 = time.time()
 
     if not silent:
-        print "COMPRESSING..."
+        print("COMPRESSING...")
 
     t3 = time.time()
     with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
@@ -2662,11 +2663,11 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
     if not silent:
         filecr_time = t2 - t1
         filecomp_time = t4 - t3
-        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time,
-                                                                                      filecr_time + filecomp_time)
+        print("Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s."
+              .format(filecr_time, filecomp_time, filecr_time + filecomp_time))
 
     if not silent:
-        print "DONE."
+        print("DONE.")
 
 # Following code: to serialize the date directly when dumping into JSON.
 # In our case, it is better to have a finer control on how to parse fields.

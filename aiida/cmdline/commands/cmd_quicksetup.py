@@ -18,6 +18,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
+from aiida.cmdline.utils import echo
 from aiida.control.profile import setup_profile
 from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
@@ -88,7 +89,7 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     for profile in profs.itervalues():
         if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
             dbpass = profile.get('AIIDADB_PASS')
-            print 'using found password for {}'.format(dbuser)
+            echo.echo('using found password for {}'.format(dbuser))
             break
 
     try:

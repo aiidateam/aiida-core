@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import traceback
 import inspect
@@ -807,7 +808,7 @@ class AbstractWorkflow(object):
 
                 for w in s.get_sub_workflows():
                     if verbose:
-                        print "Killing workflow with pk: {}".format(w.pk)
+                        print("Killing workflow with pk: {}".format(w.pk))
 
                     try:
                         w.kill(verbose=verbose)

@@ -161,7 +161,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
             echo.echo(read_string)
             return False
         else:
-            print "      [Content OK]"
+            echo.echo("      [Content OK]")
     finally:
         os.remove(destfile)
 

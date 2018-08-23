@@ -9,6 +9,7 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from __future__ import print_function
 import gc
 import getpass
 import math
@@ -572,7 +573,7 @@ def change_backend_to_sqla(profile=None):
 
         if setup.aiidadb_backend_key in curr_profile.keys():
             if curr_profile[aiidadb_backend_key] == aiidadb_backend_value_sqla:
-                print "This is already an SQLAlchemy profile. Exiting"
+                print("This is already an SQLAlchemy profile. Exiting")
                 sys.exit(0)
             curr_profile[aiidadb_backend_key] = \
                 aiidadb_backend_value_sqla

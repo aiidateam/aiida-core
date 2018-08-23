@@ -9,6 +9,7 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from __future__ import print_function
 from aiida.backends.testbase import AiidaTestCase
 import unittest
 import aiida.backends.settings as settings
@@ -931,7 +932,7 @@ class TestConsistency(AiidaTestCase):
 
         for idx, item in enumerate(QueryBuilder().append(Node, project=['id', 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
-                print "creating new node"
+                print("creating new node")
                 n = Node()
                 n.store()
         self.assertEqual(idx, 99)

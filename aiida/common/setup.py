@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import uuid
 import aiida
@@ -556,9 +557,9 @@ def create_configuration(profile='default'):
                     if backend_ans in backend_possibilities:
                         valid_aiida_backend = True
                     else:
-                        print "* ERROR! Invalid backend inserted."
-                        print ("*        The available middlewares are {}"
-                               .format(', '.join(backend_possibilities)))
+                        print("* ERROR! Invalid backend inserted.")
+                        print("*        The available middlewares are {}"
+                              .format(', '.join(backend_possibilities)))
                 this_new_confs['AIIDADB_BACKEND'] = backend_ans
                 aiida_backend = backend_ans
 
@@ -572,7 +573,7 @@ def create_configuration(profile='default'):
             valid_email = validate_email(
                 this_new_confs[DEFAULT_USER_CONFIG_FIELD])
             if not valid_email:
-                print "** Invalid email provided!"
+                print("** Invalid email provided!")
 
         # Setting the database engine
         db_possibilities = []
@@ -593,9 +594,9 @@ def create_configuration(profile='default'):
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True
                 else:
-                    print "* ERROR! Invalid database engine inserted."
-                    print ("*        The available engines are {}"
-                           .format(', '.join(db_possibilities)))
+                    print("* ERROR! Invalid database engine inserted.")
+                    print("*        The available engines are {}"
+                          .format(', '.join(db_possibilities)))
             this_new_confs['AIIDADB_ENGINE'] = db_engine_ans
 
         if 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:

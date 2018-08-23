@@ -114,7 +114,7 @@
 #      - --fix=metaclass
 #      - --fix=next
 #      - --fix=open
-#      - --fix=print
+      - --fix=print
 #      - --fix=raise
       - --fix=raise_six
       - --fix=unichr

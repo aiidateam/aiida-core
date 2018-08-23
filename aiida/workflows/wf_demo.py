@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import print_function
 import plumpy
 import aiida.common
 from aiida.common import aiidalogger
@@ -208,7 +209,7 @@ class BranchWorkflowDemo(Workflow):
 
     @Workflow.step
     def finalize(self):
-        print "Here in finalize"
+        print("Here in finalize")
         self.append_to_report("Nothing else to do")
 
         self.next(self.exit)

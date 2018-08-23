@@ -9,6 +9,7 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from __future__ import print_function
 def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                 silent=False):
     """
@@ -23,7 +24,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
     import zipfile
 
     if not silent:
-        print "READING DATA AND METADATA..."
+        print("READING DATA AND METADATA...")
 
     try:
         with zipfile.ZipFile(infile, "r", allowZip64=True) as zip:
@@ -37,7 +38,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                    member='data.json')
 
             if not silent:
-                print "EXTRACTING NODE DATA..."
+                print("EXTRACTING NODE DATA...")
 
             for membername in zip.namelist():
                 # Check that we are only exporting nodes within
@@ -66,7 +67,7 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
     import tarfile
 
     if not silent:
-        print "READING DATA AND METADATA..."
+        print("READING DATA AND METADATA...")
 
     try:
         with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as tar:
@@ -77,19 +78,19 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
                    member=tar.getmember('data.json'))
 
             if not silent:
-                print "EXTRACTING NODE DATA..."
+                print("EXTRACTING NODE DATA...")
 
             for member in tar.getmembers():
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
-                    print >> sys.stderr, ("WARNING, device found inside the "
-                        "import file: {}".format(member.name))
+                    print("WARNING, device found inside the import file: {}"
+                          .format(member.name), file=sys.stderr)
                     continue
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print >> sys.stderr, ("WARNING, link found inside the "
-                        "import file: {}".format(member.name))
+                    print("WARNING, link found inside the import file: {}"
+                          .format(member.name), file=sys.stderr)
                     continue
                 # Check that we are only exporting nodes within
                 # the subfolder!

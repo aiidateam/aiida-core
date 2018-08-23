@@ -10,6 +10,7 @@
 
 
 from __future__ import absolute_import
+from __future__ import print_function
 try:
     import ultrajson as json
     from functools import partial

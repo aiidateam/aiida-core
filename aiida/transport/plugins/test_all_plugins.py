@@ -20,6 +20,7 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : silly cases of copy/put/get from self to self
 
 from __future__ import absolute_import
+from __future__ import print_function
 import unittest
 
 
@@ -51,7 +52,7 @@ def get_all_custom_transports():
     try:
         test_modules.remove(thisbasename)
     except IndexError:
-        print "Warning, this module ({}) was not found!".format(thisbasename)
+        print("Warning, this module ({}) was not found!".format(thisbasename))
 
     all_custom_transports = {}
     for m in test_modules:

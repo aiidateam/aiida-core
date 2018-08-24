@@ -429,16 +429,16 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.mkdir(directory)
 
             # change permissions
-            t.chmod(directory, 0777)
+            t.chmod(directory, 0o777)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0777)
+            self.assertEquals(t.get_mode(directory), 0o777)
 
             # change permissions
-            t.chmod(directory, 0511)
+            t.chmod(directory, 0o511)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0511)
+            self.assertEquals(t.get_mode(directory), 0o511)
 
             # TODO : bug in paramiko. When changing the directory to very low \
             # I cannot set it back to higher permissions
@@ -452,12 +452,12 @@ class TestDirectoryManipulation(unittest.TestCase):
             # change permissions of an empty string, non existing folder.
             fake_dir = ''
             with self.assertRaises(IOError):
-                t.chmod(fake_dir, 0777)
+                t.chmod(fake_dir, 0o777)
 
             fake_dir = 'pippo'
             with self.assertRaises(IOError):
                 # chmod to a non existing folder
-                t.chmod(fake_dir, 0777)
+                t.chmod(fake_dir, 0o777)
 
             t.chdir('..')
             t.rmdir(directory)

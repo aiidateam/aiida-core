@@ -85,7 +85,7 @@
 #      - --fix=long
       - --fix=methodattrs
       - --fix=ne
-#      - --fix=numliterals
+      - --fix=numliterals
       - --fix=operator
       - --fix=paren
 #      - --fix=reduce

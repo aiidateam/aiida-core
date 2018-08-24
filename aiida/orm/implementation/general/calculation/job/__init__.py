@@ -1813,7 +1813,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 # Note: this will possibly overwrite files
                 for f in code.get_folder_list():
                     t.put(code.get_abs_path(f), f)
-                t.chmod(code.get_local_executable(), 0755)  # rwxr-xr-x
+                t.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list

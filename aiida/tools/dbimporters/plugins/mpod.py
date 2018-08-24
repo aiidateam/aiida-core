@@ -99,7 +99,7 @@ class MpodDbImporter(DbImporter):
             if results is None:
                 results = this_results
             else:
-                results = filter(set(results).__contains__, this_results)
+                results = filter(set(results).__contains__, this_results)  # noqa, results is used below as iter.
 
         return MpodSearchResults([{"id": x} for x in results])
 

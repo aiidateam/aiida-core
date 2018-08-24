@@ -137,7 +137,7 @@ class Utils(object):
         :return: list of each element separated by '/'
         """
         # type: (string) -> (list_of_strings).
-        return filter(None, path.split('/'))
+        return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
         """

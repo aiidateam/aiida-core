@@ -106,7 +106,7 @@
 #      - --fix=classic_division
 #      - --fix=dict_six
       - --fix=file
-#      - --fix=filter
+#done:      - --fix=filter
       - --fix=import
 #      - --fix=imports_six
 #      - --fix=input_six

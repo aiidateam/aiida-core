@@ -11,7 +11,7 @@ from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import InputValidationError, InvalidOperation, \
     ConfigurationError
-from aiida.common.utils import get_object_from_string, issingular
+from aiida.common.utils import get_object_from_string
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError

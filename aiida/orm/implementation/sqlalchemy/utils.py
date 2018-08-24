@@ -230,14 +230,14 @@ def django_filter(cls_query, **kwargs):
         if val:
             q = q.filter(apply_json_cast(cls.attributes[key], val) == val)
         else:
-            q = q.filter(cls.attributes.has_key(tmp_attr["key"]))
+            q = q.filter(tmp_attr["key"] in cls.attributes)
     key = tmp_extra["key"]
     if key:
         val = tmp_extra["val"]
         if val:
             q = q.filter(apply_json_cast(cls.extras[key], val) == val)
         else:
-            q = q.filter(cls.extras.has_key(tmp_extra["key"]))
+            q = q.filter(tmp_extra["key"] in cls.extras)
 
     return q
 

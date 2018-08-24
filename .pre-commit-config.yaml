@@ -74,13 +74,16 @@
     args:
       - --write
       - --nobackups
+# Following are all the fixers in python-modernize.
+# Those marked as 'done' were run at some point and their results checked
+# and incorporated if necessary, but they can't be applied without breaking valid cases
       - --fix=apply
       - --fix=except
       - --fix=exec
       - --fix=execfile
       - --fix=exitfunc
 #      - --fix=funcattrs
-#      - --fix=has_key
+#done:      - --fix=has_key
 #      - --fix=idioms
 #      - --fix=long
       - --fix=methodattrs

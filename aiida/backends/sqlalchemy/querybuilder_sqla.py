@@ -421,7 +421,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif operator == 'contains':
             expr = database_entity.cast(JSONB).contains(value)
         elif operator == 'has_key':
-            expr = database_entity.cast(JSONB).has_key(value)
+            expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
             expr = and_(
                 jsonb_typeof(database_entity) == 'array',

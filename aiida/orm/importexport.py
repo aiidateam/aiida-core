@@ -1651,8 +1651,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
-        if file_fields_to_model_fields.has_key(current_entity_str):
-            if file_fields_to_model_fields[current_entity_str].has_key(prop):
+        if current_entity_str in file_fields_to_model_fields:
+            if prop in file_fields_to_model_fields[current_entity_str]:
                 nprop = file_fields_to_model_fields[current_entity_str][prop]
 
         project_cols.append(nprop)
@@ -1962,7 +1962,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         for prop in entity_prop:
             # nprop contains the list of projections
             nprop = (file_fields_to_model_fields[given_entity][prop]
-                     if file_fields_to_model_fields[given_entity].has_key(prop)
+                     if prop in file_fields_to_model_fields[given_entity]
                      else prop)
             project_cols.append(nprop)
 
@@ -2037,7 +2037,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     ######################################
     # I use .get because there may be no nodes to export
     all_nodes_pk = list()
-    if export_data.has_key(NODE_ENTITY_NAME):
+    if NODE_ENTITY_NAME in export_data:
         all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
 
     if sum(len(model_data) for model_data in export_data.values()) == 0:
@@ -2318,7 +2318,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
                                  project=['uuid'], member_of='group')
             for res in group_uuid_qb.iterall():
-                if groups_uuid.has_key(str(res[0])):
+                if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))
                 else:
                     groups_uuid[str(res[0])] = [str(res[1])]

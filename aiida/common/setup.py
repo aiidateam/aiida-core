@@ -524,7 +524,7 @@ def create_configuration(profile='default'):
         print("The following configuration found corresponding to "
               "profile {}.".format(profile))
         for k, v in this_existing_confs.iteritems():
-            if key_explanation.has_key(k):
+            if k in key_explanation:
                 print("{}: {}".format(key_explanation.get(k), v))
             else:
                 print("{}: {}".format(k, v))

@@ -546,7 +546,7 @@ class KpointsData(ArrayData):
         import copy
         if not isinstance(value, dict):
             raise ValueError("bravais_lattice is not a dict")
-        if not all([value.has_key(i) for i in ["short_name", "extended_name", "index", "permutation"]]):
+        if not all([i in value for i in ["short_name", "extended_name", "index", "permutation"]]):
             raise ValueError()
 
         bravais_lattice = copy.copy(value)

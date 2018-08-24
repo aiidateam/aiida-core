@@ -305,7 +305,7 @@ class BaseTranslator(object):
                     order_dict[column[1:]] = 'asc'
                 else:
                     order_dict[column] = 'asc'
-            if order_dict.has_key('pk'):
+            if 'pk' in order_dict:
                 order_dict[pk_dbsynonym] = order_dict.pop('pk')
             return order_dict
 

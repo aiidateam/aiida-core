@@ -82,7 +82,7 @@
       - --fix=exec
       - --fix=execfile
       - --fix=exitfunc
-#      - --fix=funcattrs
+      - --fix=funcattrs
 #done:      - --fix=has_key
 #      - --fix=idioms
 #      - --fix=long

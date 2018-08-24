@@ -49,7 +49,7 @@ class FunctionCalculationMixin(object):
             pass
 
         try:
-            self._set_function_namespace(func.func_globals['__name__'])
+            self._set_function_namespace(func.__globals__['__name__'])
         except Exception:
             pass
 

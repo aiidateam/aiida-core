@@ -64,7 +64,6 @@ extras_require = {
         'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.4',
         'pyparsing==2.2.0',
-        'Pattern==2.6',
         'Flask-SQLAlchemy==2.3.2',
         'sqlalchemy-migrate==0.11.0',
         'marshmallow-sqlalchemy==0.13.2',

@@ -75,7 +75,7 @@
       - --write
       - --nobackups
       - --fix=apply
-#      - --fix=except
+      - --fix=except
       - --fix=exec
       - --fix=execfile
       - --fix=exitfunc

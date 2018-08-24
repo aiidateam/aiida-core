@@ -70,6 +70,6 @@ def get_value_of_sub_field(key, original_get_value):
                 curr_pos += 1
 
             return curr_val
-        except TypeError, KeyError:
+        except TypeError as KeyError:
             raise NotExistent("The sub-field {} doesn't correspond "
                               "to a value.".format(key))

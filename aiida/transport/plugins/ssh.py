@@ -1420,7 +1420,7 @@ class SshTransport(aiida.transport.Transport):
         import errno
         try:
             self.sftp.stat(path)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return False
             raise

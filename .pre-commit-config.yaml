@@ -94,13 +94,13 @@
 #      - --fix=reduce
       - --fix=renames
       - --fix=repr
-#      - --fix=set_literal
+#optional:      - --fix=set_literal
       - --fix=standarderror
       - --fix=sys_exc
       - --fix=throw
       - --fix=tuple_params
 #      - --fix=types
-#      - --fix=ws_comma
+#optional:      - --fix=ws_comma
       - --fix=xreadlines
 #      - --fix=basestring
 #      - --fix=classic_division

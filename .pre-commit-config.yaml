@@ -91,7 +91,7 @@
       - --fix=numliterals
       - --fix=operator
       - --fix=paren
-#      - --fix=reduce
+      - --fix=reduce
       - --fix=renames
       - --fix=repr
 #optional:      - --fix=set_literal

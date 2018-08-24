@@ -12,6 +12,7 @@ from __future__ import absolute_import
 from aiida.backends.djsite.db.models import DbComment
 from aiida.orm.implementation.general.comment import AbstractComment
 from aiida.common.exceptions import NotExistent, MultipleObjectsError
+from functools import reduce
 
 
 

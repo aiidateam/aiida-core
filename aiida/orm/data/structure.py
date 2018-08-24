@@ -19,6 +19,7 @@ from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
 import itertools
 import copy
+from functools import reduce
 
 # Threshold used to check if the mass of two different Site objects is the same.
 

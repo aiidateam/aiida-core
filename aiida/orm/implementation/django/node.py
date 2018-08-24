@@ -26,6 +26,7 @@ from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
 
 from . import user as users
+from functools import reduce
 
 
 class Node(AbstractNode):

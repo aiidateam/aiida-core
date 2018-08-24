@@ -15,6 +15,7 @@ from aiida.utils.email import normalize_email
 from aiida.common.utils import type_check
 
 from . import utils
+from functools import reduce
 
 
 class DjangoUserCollection(UserCollection):

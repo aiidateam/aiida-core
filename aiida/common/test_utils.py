@@ -206,10 +206,12 @@ class PrettifierTest(unittest.TestCase):
             'agr_simple': {
                 'G': r'\xG',
                 'Boo3': r'Boo\s3\N',
+                'Boo99': r'Boo\s99\N',
                 },
             'latex_simple': {
                 'G': r'$\Gamma$',
                 'Delta9': r'Delta$_{9}$',
+                'Delta90': r'Delta$_{90}$',
                 },
             'latex_seekpath': {
                 'LAMBDA': r'$\Lambda$',
@@ -218,6 +220,7 @@ class PrettifierTest(unittest.TestCase):
             'gnuplot_simple': {
                 'G': u'Γ',
                 'bla3': r'bla_{3}',
+                'bla33': r'bla_{33}',
                 },
             'gnuplot_seekpath': {
                 'SIGMA': u'Σ',

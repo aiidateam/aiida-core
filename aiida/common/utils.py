@@ -969,16 +969,15 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
-        newlabel = label
 
-        newlabel = newlabel.replace('GAMMA', r'\xG\f{}')
-        newlabel = newlabel.replace('DELTA', r'\xD\f{}')
-        newlabel = newlabel.replace('LAMBDA', r'\xL\f{}')
-        newlabel = newlabel.replace('SIGMA', r'\xS\f{}')
-        newlabel = re.sub('_(.{0,1})', r'\\s\1\\N', newlabel)
-
-        return newlabel
+        label = (
+                label
+                .replace('GAMMA', r'\xG\f{}')
+                .replace('DELTA', r'\xD\f{}')
+                .replace('LAMBDA', r'\xL\f{}')
+                .replace('SIGMA', r'\xS\f{}')
+                )  # yapf:disable
+        return re.sub(r'_(.?)', r'\\s\1\\N', label)
 
     @classmethod
     def _prettify_label_agr_simple(cls, label):
@@ -987,16 +986,11 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
 
-        newlabel = label
-
-        newlabel = re.sub('([0-9])', r'\\s\1\\N', newlabel)
-
-        if newlabel == 'G':
+        if label == 'G':
             return r'\xG'
-        else:
-            return newlabel
+
+        return re.sub(r'(\d+)', r'\\s\1\\N', label)
 
     @classmethod
     def _prettify_label_gnuplot(cls, label):
@@ -1007,16 +1001,15 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
-        newlabel = label
 
-        newlabel = newlabel.replace(u'GAMMA', u'Γ')
-        newlabel = newlabel.replace(u'DELTA', u'Δ')
-        newlabel = newlabel.replace(u'LAMBDA', u'Λ')
-        newlabel = newlabel.replace(u'SIGMA', u'Σ')
-        newlabel = re.sub(u'_(.{0,1})', ur'_{\1}', newlabel)
-
-        return newlabel
+        label = (
+                label
+                .replace(u'GAMMA', u'Γ')
+                .replace(u'DELTA', u'Δ')
+                .replace(u'LAMBDA', u'Λ')
+                .replace(u'SIGMA', u'Σ')
+                )  # yapf:disable
+        return re.sub(r'_(.?)', r'_{\1}', label)
 
     @classmethod
     def _prettify_label_gnuplot_simple(cls, label):
@@ -1027,16 +1020,11 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
 
-        newlabel = label
-
-        newlabel = re.sub(u'([0-9])', ur'_{\1}', newlabel)
-
-        if newlabel == 'G':
+        if label == 'G':
             return u'Γ'
-        else:
-            return newlabel
+
+        return re.sub(r'(\d+)', r'_{\1}', label)
 
     @classmethod
     def _prettify_label_latex(cls, label):
@@ -1045,18 +1033,19 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
-        newlabel = label
 
-        newlabel = newlabel.replace('GAMMA', r'$\Gamma$')
-        newlabel = newlabel.replace('DELTA', r'$\Delta$')
-        newlabel = newlabel.replace('LAMBDA', r'$\Lambda$')
-        newlabel = newlabel.replace('SIGMA', r'$\Sigma$')
-        newlabel = re.sub('_(.{0,1})', r'$_{\1}$', newlabel)
+        label = (
+                label
+                .replace('GAMMA', r'$\Gamma$')
+                .replace('DELTA', r'$\Delta$')
+                .replace('LAMBDA', r'$\Lambda$')
+                .replace('SIGMA', r'$\Sigma$')
+                )  # yapf:disable
+        label = re.sub(r'_(.?)', r'$_{\1}$', label)
 
-        # newlabel = newlabel + r"$_{\vphantom{0}}$"
+        # label += r"$_{\vphantom{0}}$"
 
-        return newlabel
+        return label
 
     @classmethod
     def _prettify_label_latex_simple(cls, label):
@@ -1065,18 +1054,13 @@ class Prettifier(object):
 
         :param label: a string to prettify
         """
-        import re
-
-        newlabel = label
-        newlabel = re.sub('([0-9])', r'$_{\1}$', newlabel)
-
-        if newlabel == 'G':
+        if label == 'G':
             return r'$\Gamma$'
-        else:
-            return newlabel
+
+        return re.sub(r'(\d+)', r'$_{\1}$', label)
 
     @classproperty
-    def prettifiers(cls):
+    def prettifiers(cls):  # pylint: disable=no-self-argument
         """
         Property that returns a dictionary that for each string associates
         the function to prettify a label
@@ -1100,9 +1084,9 @@ class Prettifier(object):
 
         :return: a list of strings
         """
-        return sorted(cls.prettifiers.keys())
+        return sorted(cls.prettifiers.keys())  # pylint: disable=no-member
 
-    def __init__(self, format):
+    def __init__(self, format):  # pylint: disable=redefined-builtin
         """
         Create a class to pretttify strings of a given format
 
@@ -1111,14 +1095,12 @@ class Prettifier(object):
         """
         if format is None:
             format = 'pass'
+
         try:
-            self._prettifier_f = self.prettifiers[format]
+            self._prettifier_f = self.prettifiers[format]  # pylint: disable=unsubscriptable-object
         except KeyError:
-            raise ValueError("Unknown prettifier format {}; "
-                             "valid formats: {}".format(
-                format,
-                ", ".join(self.get_prettifiers())
-            ))
+            raise ValueError("Unknown prettifier format {}; valid formats: {}".format(
+                format, ", ".join(self.get_prettifiers())))
 
     def prettify(self, label):
         """
@@ -1130,7 +1112,7 @@ class Prettifier(object):
         return self._prettifier_f(label)
 
 
-def prettify_labels(labels, format=None):
+def prettify_labels(labels, format=None):  # pylint: disable=redefined-builtin
     """
     Prettify label for typesetting in various formats
 
@@ -1142,10 +1124,7 @@ def prettify_labels(labels, format=None):
     """
     prettifier = Prettifier(format)
 
-    retlist = []
-    for label_pos, label in labels:
-        retlist.append((label_pos, prettifier.prettify(label)))
-    return retlist
+    return [(pos, prettifier.prettify(label)) for pos, label in labels]
 
 
 def join_labels(labels, join_symbol="|", threshold=1.e-6):

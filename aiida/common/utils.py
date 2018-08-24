@@ -853,9 +853,8 @@ def flatten_list(value):
     """
 
     if isinstance(value, (list, tuple)):
-        return_list = []
-        [[return_list.append(i) for i in flatten_list(item)] for item in value]
-        return return_list
+        return [flat for item in value for flat in flatten_list(item)]
+
     return [value]
 
 

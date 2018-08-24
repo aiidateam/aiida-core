@@ -15,6 +15,7 @@ import os.path
 import string
 import sys
 import numbers
+import re
 
 from dateutil.parser import parse
 
@@ -599,8 +600,6 @@ def xyz_parser_iterator(string):
             """
             return self.__next__()
 
-    import re
-
     pos_regex = re.compile(r"""
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
@@ -705,8 +704,7 @@ def get_fortfloat(key, txt, be_case_sensitive=True):
     *   23.
     *   232
     """
-    import re
-    pattern = """
+    pattern = r"""
         [\n,]                       # key - value pair can be prepended by comma or start
         [ \t]*                      # in a new line and some optional white space
         {}                          # the key goes here
@@ -714,20 +712,22 @@ def get_fortfloat(key, txt, be_case_sensitive=True):
         =                           # Equals, you can put [=:,] if you want more specifiers
         [ \t]*                      # optional white space between specifier and float
         (?P<float>                  # Universal float pattern
-            ( \d*[\.]\d+  |  \d+[\.]?\d* )
-            ([ E | D | e | d ] [+|-]? \d+)?
+            [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([EeDd][\+\-]?\d+)?
         )
         [ \t]*[,\n,#]               # Can be followed by comma, end of line, or a comment
         """.format(key)
-    REKEYS = re.X | re.M if be_case_sensitive else re.X | re.M | re.I
-    match = re.search(
-        pattern,
-        txt,
-        REKEYS)
+
+    rekeys = re.X | re.M
+
+    if not be_case_sensitive:
+        rekeys |= re.I
+
+    match = re.search(pattern, txt, rekeys)
+
     if not match:
         return None
-    else:
-        return float(match.group('float').replace('d', 'e').replace('D', 'e'))
+
+    return float(match.group('float').replace('d', 'e').replace('D', 'e'))
 
 
 def ask_question(question, reply_type, allow_none_as_answer=True):

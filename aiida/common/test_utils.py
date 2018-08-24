@@ -171,7 +171,7 @@ class FortranFormattingTest(unittest.TestCase):
             "0.1d2": 10.,
              "0.D-3": 0.,
              ".2e1": 2.,
-            # "-0.23": -0.23,
+             "-0.23": -0.23,
              "23.": 23.,
              "232": 232.,
             }

@@ -43,7 +43,7 @@ install_requires = [
     'ecdsa==0.13',
     'pika==0.11.2',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
-    'plumpy==0.10.5',
+    'plumpy==0.10.6',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
 ]
@@ -64,7 +64,6 @@ extras_require = {
         'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.4',
         'pyparsing==2.2.0',
-        'Pattern==2.6',
         'Flask-SQLAlchemy==2.3.2',
         'sqlalchemy-migrate==0.11.0',
         'marshmallow-sqlalchemy==0.13.2',

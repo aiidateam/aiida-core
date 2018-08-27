@@ -80,7 +80,7 @@ def profile_delete(force, profiles):
     """
     from aiida.common.setup import get_or_create_config, update_config
     import os.path
-    from six.moves.urllib.parse import urlparse
+    from six.moves.urllib.parse import urlparse  # pylint: disable=import-error
 
     echo.echo('profiles: {}'.format(', '.join(profiles)))
 

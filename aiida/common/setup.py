@@ -15,6 +15,8 @@ import aiida
 import logging
 import json
 
+from six.moves import input
+
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
@@ -551,7 +553,7 @@ def create_configuration(profile='default'):
 
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
-                    backend_ans = raw_input(
+                    backend_ans = input(
                         'AiiDA backend (available: {} - sqlalchemy is in beta mode): '
                             .format(', '.join(backend_possibilities)))
                     if backend_ans in backend_possibilities:
@@ -568,7 +570,7 @@ def create_configuration(profile='default'):
         readline.set_startup_hook(lambda: readline.insert_text(
             this_existing_confs.get(DEFAULT_AIIDA_USER)))
         while not valid_email:
-            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = raw_input(
+            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = input(
                 'Default user email: ')
             valid_email = validate_email(
                 this_new_confs[DEFAULT_USER_CONFIG_FIELD])
@@ -588,7 +590,7 @@ def create_configuration(profile='default'):
 
             valid_db_engine = False
             while not valid_db_engine:
-                db_engine_ans = raw_input(
+                db_engine_ans = input(
                     'Database engine (available: {} - mysql is deprecated): '
                         .format(', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
@@ -607,20 +609,20 @@ def create_configuration(profile='default'):
                 old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_host))
-            this_new_confs['AIIDADB_HOST'] = raw_input('PostgreSQL host: ')
+            this_new_confs['AIIDADB_HOST'] = input('PostgreSQL host: ')
 
             old_port = this_existing_confs.get('AIIDADB_PORT', '5432')
             if not old_port:
                 old_port = '5432'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_port))
-            this_new_confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
+            this_new_confs['AIIDADB_PORT'] = input('PostgreSQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                 this_existing_confs.get('AIIDADB_NAME')))
             db_name = ''
             while True:
-                db_name = raw_input('AiiDA Database name: ')
+                db_name = input('AiiDA Database name: ')
                 if is_test_profile and db_name.startswith(TEST_KEYWORD):
                     break
                 if (not is_test_profile and not
@@ -636,11 +638,11 @@ def create_configuration(profile='default'):
                 old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_user))
-            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+            this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                 this_existing_confs.get('AIIDADB_PASS')))
-            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+            this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
 
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'
@@ -650,20 +652,20 @@ def create_configuration(profile='default'):
                 old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_host))
-            this_new_confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
+            this_new_confs['AIIDADB_HOST'] = input('mySQL host: ')
 
             old_port = this_existing_confs.get('AIIDADB_PORT', '3306')
             if not old_port:
                 old_port = '3306'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_port))
-            this_new_confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
+            this_new_confs['AIIDADB_PORT'] = input('mySQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                 this_existing_confs.get('AIIDADB_NAME')))
             db_name = ''
             while True:
-                db_name = raw_input('AiiDA Database name: ')
+                db_name = input('AiiDA Database name: ')
                 if is_test_profile and db_name.startswith(TEST_KEYWORD):
                     break
                 if (not is_test_profile and not
@@ -679,11 +681,11 @@ def create_configuration(profile='default'):
                 old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(
                 old_user))
-            this_new_confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
+            this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                 this_existing_confs.get('AIIDADB_PASS')))
-            this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
+            this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
         else:
             raise ValueError("You have to specify a valid database "
                              "(valid choices are 'mysql', 'postgres')")
@@ -697,7 +699,7 @@ def create_configuration(profile='default'):
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
         readline.set_startup_hook(lambda: readline.insert_text(existing_repo))
-        new_repo_path = raw_input('AiiDA repository directory: ')
+        new_repo_path = input('AiiDA repository directory: ')
 
         # Constructing the repo path
         new_repo_path = os.path.expanduser(new_repo_path)

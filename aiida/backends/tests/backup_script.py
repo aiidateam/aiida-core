@@ -395,7 +395,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
                    "",                  # is it correct?
                    "0",                 # threshold?
                    ""]                  # is it correct?
-        utils.raw_input = lambda _: answers[ac.array_counter()]
+        utils.input = lambda _: answers[ac.array_counter()]
 
         # Run the setup script
         self._bs_instance.run()

@@ -24,7 +24,7 @@ import sys
 import numbers
 import re
 
-from six.moves import zip
+from six.moves import zip, input
 from six import integer_types
 from dateutil.parser import parse
 
@@ -767,7 +767,7 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
 
 
 def query_yes_no(question, default="yes"):
-    """Ask a yes/no question via raw_input() and return their answer.
+    """Ask a yes/no question via input() and return their answer.
 
     "question" is a string that is presented to the user.
     "default" is the presumed answer if the user just hits <Enter>.
@@ -787,7 +787,7 @@ def query_yes_no(question, default="yes"):
         raise ValueError("invalid default answer: '%s'" % default)
 
     while True:
-        choice = raw_input(question + prompt).lower()
+        choice = input(question + prompt).lower()
         if default is not None and not choice:
             return valid[default]
         elif choice in valid:
@@ -819,7 +819,7 @@ def query_string(question, default):
         prompt = " [{}]".format(default)
 
     while True:
-        reply = raw_input(question + prompt)
+        reply = input(question + prompt)
         if default is not None and not reply:
             # If the default answer is an empty string.
             if not default:

@@ -11,7 +11,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from six.moves import zip
+from six.moves import zip, input
 
 
 def delete_nodes(pks, follow_calls=False, follow_returns=False, 
@@ -152,7 +152,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         pass
     else:
         print("YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete)))
-        if raw_input("Shall I continue? [Y/N] ").lower() != 'y':
+        if input("Shall I continue? [Y/N] ").lower() != 'y':
             print("Exiting without deleting")
             return
 

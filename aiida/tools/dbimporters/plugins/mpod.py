@@ -9,9 +9,9 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from six.moves import filter
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class MpodDbImporter(DbImporter):
@@ -99,7 +99,7 @@ class MpodDbImporter(DbImporter):
             if results is None:
                 results = this_results
             else:
-                results = filter(set(results).__contains__, this_results)  # noqa, results is used below as iter.
+                results = list(filter(set(results).__contains__, this_results))
 
         return MpodSearchResults([{"id": x} for x in results])
 

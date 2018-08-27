@@ -197,9 +197,7 @@ def django_filter(cls_query, **kwargs):
                 q = q.join(join, aliased=True)
                 current_join = join
 
-            current_cls = filter(lambda r: r[0] == join,
-                                 inspect(cls).relationships.items()
-                                 )[0][1].argument
+            current_cls = [r for r in inspect(cls).relationships.items() if r[0] == join][0][1].argument
             if isinstance(current_cls, Mapper):
                 current_cls = current_cls.class_
             else:

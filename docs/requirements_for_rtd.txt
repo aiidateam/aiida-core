@@ -6,7 +6,6 @@ Flask-SQLAlchemy==2.3.2
 Flask==1.0.2
 Jinja2==2.10
 MarkupSafe==1.0
-Pattern==2.6
 PyCifRW==4.2.1
 PyMySQL==0.8.0
 PyYAML==3.12
@@ -45,7 +44,7 @@ passlib==1.7.1
 pathlib2
 pgtest==1.1.0
 pika==0.11.2
-plumpy==0.10.4
+plumpy==0.10.6
 psutil==5.4.5
 pymatgen==2018.4.20
 pyparsing==2.2.0

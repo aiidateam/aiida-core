@@ -76,6 +76,7 @@ db_test_list = {
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
         'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
+        'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'control.computer': ['aiida.backends.tests.control.test_computer_ctrl'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],

@@ -309,7 +309,7 @@ class Node(AbstractNode):
         Create a link from a source node with label and a link type
 
         :param src: The source node
-        :type src: :class:`Node`
+        :type src: :class:`~aiida.orm.implementation.sqlalchemy.node.Node`
         :param label: The link label
         :param link_type: The link type
         """

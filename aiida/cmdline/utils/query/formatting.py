@@ -25,8 +25,10 @@ def format_state(process_state, paused=None, exit_status=None):
     :param exit_status: the process' exit status
     :return: string representation of the process' state
     """
-    if process_state in ['excepted', 'killed']:
+    if process_state in ['excepted']:
         symbol = u'\u2A2F'
+    elif process_state in ['killed']:
+        symbol = u'\u2620'
     elif process_state in ['created', 'finished']:
         symbol = u'\u23F9'
     elif process_state in ['running', 'waiting']:

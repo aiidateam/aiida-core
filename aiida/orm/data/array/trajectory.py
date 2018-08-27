@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import print_function
+from six.moves import zip
 from aiida.orm.data.array import ArrayData
 from aiida.orm.calculation.inline import optional_inline
 
@@ -854,7 +855,7 @@ def plot_positions_XYZ(
             tlim[1] = maxtime
             index_range[1] = np.argmin(times<maxtime)
 
-        trajectories = zip(*positions.tolist())
+        trajectories = zip(*positions.tolist())  # only used in enumerate() below
         cmap =  plt.get_cmap('jet_r')
         fig = plt.figure(figsize = (12,7))
 
@@ -880,7 +881,7 @@ def plot_positions_XYZ(
             if index not in indices_to_show:
                 continue
             color =  color_list[index]
-            X,Y,Z = zip(*traj)
+            X,Y,Z = list(zip(*traj))
             ax1.plot(times, X, color=color)
             ax2.plot(times, Y, color=color)
             ax3.plot(times, Z, color=color)

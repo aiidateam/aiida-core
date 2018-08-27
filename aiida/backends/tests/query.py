@@ -10,8 +10,11 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.backends.testbase import AiidaTestCase
 import unittest
+
+from six.moves import zip
+
+from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 
 
@@ -589,54 +592,54 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
             Node, project='attributes.foo'
         ).order_by({Node: 'ctime'})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Specifying the order  explicitly the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'asc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Reversing the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'desc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(9, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(9, -1, -1)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, -1, -1)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, 1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, 1, -1)))
 
 
 class QueryBuilderJoinsTests(AiidaTestCase):
@@ -914,9 +917,9 @@ class QueryBuilderPath(AiidaTestCase):
             Node, descendant_of='anc', filters={'id': n8.pk}, edge_tag='edge'
         )
         qb.add_projection('edge', 'depth')
-        self.assertTrue(set(zip(*qb.all())[0]), set([5, 6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
         qb.add_filter('edge', {'depth': 6})
-        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([6]))
 
 
 class TestConsistency(AiidaTestCase):

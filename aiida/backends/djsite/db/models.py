@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import sys
 
+from six.moves import zip
 from six import reraise
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
@@ -1519,7 +1520,7 @@ class DbWorkflow(m.Model):
     nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
+    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))), default=wf_states.INITIALIZED)
     report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
     module = m.TextField(blank=False)
@@ -1738,7 +1739,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
                                       related_name="parent_workflow_step")
     state = m.CharField(max_length=255,
-                        choices=zip(list(wf_states), list(wf_states)),
+                        choices=list(zip(list(wf_states), list(wf_states))),
                         default=wf_states.CREATED)
 
     class Meta:

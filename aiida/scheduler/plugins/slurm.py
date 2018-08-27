@@ -14,6 +14,7 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 from __future__ import division
 from __future__ import absolute_import
 import re
+from six.moves import zip
 
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash

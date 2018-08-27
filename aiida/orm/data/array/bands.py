@@ -14,9 +14,10 @@ in a Brillouin zone, and how to operate on them.
 
 from __future__ import absolute_import
 from __future__ import division
-from aiida.orm.data.array.kpoints import KpointsData
-import numpy
 from string import Template
+from six.moves import zip
+import numpy
+from aiida.orm.data.array.kpoints import KpointsData
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import prettify_labels, join_labels
 
@@ -123,7 +124,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 
             # sort the bands by energy, and reorder the occupations accordingly
             # since after joining the two spins, I might have unsorted stuff
-            bands, occupations = [numpy.array(y) for y in zip(*[zip(*j) for j in
+            bands, occupations = [numpy.array(y) for y in zip(*[list(zip(*j)) for j in
                                                                 [sorted(zip(i[0].tolist(), i[1].tolist()),
                                                                         key=lambda x: x[0])
                                                                  for i in zip(bands, occupations)]])]
@@ -806,7 +807,7 @@ class BandsData(KpointsData):
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
         # prepare xticks labels
-        tick_pos, tick_labels = zip(*labels)
+        tick_pos, tick_labels = list(zip(*labels))
 
         #all_data['bands'] = the_bands.tolist()
         all_data['paths'] = plot_info['paths']

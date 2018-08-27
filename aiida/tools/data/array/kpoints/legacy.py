@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
+from six.moves import zip
 import numpy
 
 _default_epsilon_length = 1e-5
@@ -370,13 +371,13 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         ini_coord = point_coordinates[ini_label]
         end_coord = point_coordinates[end_label]
 
-        path_piece = zip(numpy.linspace(ini_coord[0], end_coord[0],
+        path_piece = list(zip(numpy.linspace(ini_coord[0], end_coord[0],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[1], end_coord[1],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[2], end_coord[2],
                                         num_points[count_piece]),
-                         )
+                         ))
 
         for count, j in enumerate(path_piece):
             if all(numpy.array(explicit_kpoints[-1]) == j):

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from six.moves import zip
 from aiida.backends.testbase import AiidaTestCase
 
 
@@ -47,15 +48,15 @@ class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
         ).order_by(
             {Node: {'attributes.foo': {'cast': 'i'}}}
         )
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))

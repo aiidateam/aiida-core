@@ -14,8 +14,9 @@ on them.
 """
 
 from __future__ import absolute_import
-from aiida.orm.data.array import ArrayData
+from six.moves import zip
 import numpy as np
+from aiida.orm.data.array import ArrayData
 from aiida.common.exceptions import InputValidationError, NotExistent
 
 
@@ -155,7 +156,7 @@ class XyData(ArrayData):
         except (KeyError, AttributeError):
             raise NotExistent("Could not retrieve array associated with y array"
                               " {}".format(y_names[i]))
-        return zip(y_names,y_arrays,y_units)
+        return list(zip(y_names,y_arrays,y_units))
 
     # def plot_dosdata(self, dosdata_type, spin='',path='', fmt='pdf'):
     #     """

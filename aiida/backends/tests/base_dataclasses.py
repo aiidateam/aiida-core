@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import unittest
 import operator
 
+from six.moves import zip
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node

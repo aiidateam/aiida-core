@@ -14,13 +14,16 @@ functions to operate on them.
 
 from __future__ import absolute_import
 from __future__ import division
+
+from six.moves import zip
+import itertools
+import copy
+from functools import reduce
+
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
-import itertools
-import copy
-from functools import reduce
 
 # Threshold used to check if the mass of two different Site objects is the same.
 
@@ -2217,8 +2220,7 @@ class Kind(object):
         normalized_weights = (i / w_sum for i in self._weights)
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
-        self._mass = sum([i * j for i, j in
-                          zip(normalized_weights, element_masses)])
+        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses))
 
     @property
     def name(self):

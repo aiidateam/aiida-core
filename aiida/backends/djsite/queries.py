@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import print_function
+from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 

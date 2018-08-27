@@ -24,6 +24,7 @@ import sys
 import numbers
 import re
 
+from six.moves import zip
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -664,7 +665,7 @@ def get_extremas_from_positions(positions):
     """
     returns the minimum and maximum value for each dimension in the positions given
     """
-    return zip(*[(min(values), max(values)) for values in zip(*positions)])
+    return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
 
 
 def get_fortfloat(key, txt, be_case_sensitive=True):

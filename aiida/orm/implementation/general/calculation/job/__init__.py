@@ -14,6 +14,8 @@ import copy
 import datetime
 import enum
 
+from six.moves import zip
+
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
@@ -1280,7 +1282,7 @@ class AbstractJobCalculation(AbstractCalculation):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = zip(*returnresult)[0]
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def _prepare_for_submission(self, tempfolder, inputdict):

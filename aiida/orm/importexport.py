@@ -12,6 +12,7 @@ from __future__ import print_function
 import HTMLParser
 import sys
 
+from six.moves import zip
 from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)

@@ -10,6 +10,8 @@
 from __future__ import absolute_import
 import json
 
+from six.moves import zip
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory

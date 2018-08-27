@@ -25,6 +25,8 @@ from __future__ import print_function
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
+from six.moves import zip
+
 from aiida.orm.node import Node
 
 # The SQLAlchemy functionalities:

@@ -17,6 +17,7 @@ import itertools
 import plumpy
 import uuid
 import traceback
+from six.moves import zip
 from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState

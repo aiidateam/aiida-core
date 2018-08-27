@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+from six.moves import zip
 
 
 class AbstractQueryManager(object):
@@ -106,7 +107,7 @@ class AbstractQueryManager(object):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = zip(*returnresult)[0]
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def get_creation_statistics(

@@ -11,6 +11,9 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from six.moves import zip
+
+
 def delete_nodes(pks, follow_calls=False, follow_returns=False, 
                  dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
@@ -109,7 +112,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         caller_to_called2delete = called_qb.all()
 
         if verbosity > 0 and caller_to_called2delete:
-            calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
+            calculation_pks_losing_called = set(next(zip(*caller_to_called2delete)))
             print("\n{} calculation{} {} lose at least one called instance"
                   .format(len(calculation_pks_losing_called),
                           's' if len(calculation_pks_losing_called) > 1 else '',
@@ -128,7 +131,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
         creator_to_created2delete = created_qb.all()
         if verbosity > 0 and creator_to_created2delete:
-            calculation_pks_losing_created = set(zip(*creator_to_created2delete)[0])
+            calculation_pks_losing_created = set(next(zip(*creator_to_created2delete)))
             print("\n{} calculation{} {} lose at least one created data-instance"
                   .format(len(calculation_pks_losing_created),
                           's' if len(calculation_pks_losing_created) > 1 else '',

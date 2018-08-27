@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
+from six.moves import zip
 import numpy
 from aiida.common.utils import classproperty
 from aiida.orm.data.array import ArrayData
@@ -133,7 +134,7 @@ class KpointsData(ArrayData):
         labels = self.get_attr('labels', None)
         if labels is None or label_numbers is None:
             return None
-        return zip(label_numbers, labels)
+        return list(zip(label_numbers, labels))
 
     @labels.setter
     def labels(self, value):

@@ -16,6 +16,8 @@ plugin-specific operations.
 from __future__ import absolute_import
 import os
 
+from six.moves import zip
+
 from aiida.common import aiidalogger
 from aiida.common import exceptions
 from aiida.common.datastructures import calc_states

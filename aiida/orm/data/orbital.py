@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from six.moves import zip
 from aiida.orm.data.structure import  Site as site_class
 from aiida.orm import Data
 from aiida.common.orbital import OrbitalFactory, Orbital

@@ -11,6 +11,8 @@
 """`verdi computer` commands"""
 from __future__ import absolute_import
 import sys
+
+from six.moves import zip
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -41,7 +43,7 @@ def get_computer_names():
     builder = QueryBuilder()
     builder.append(type='computer', project=['name'])
     if builder.count() > 0:
-        return zip(*builder.all())[0]
+        return next(zip(*builder.all()))  # return the first entry
 
     return []
 

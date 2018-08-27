@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import importlib
 from collections import Mapping
 
+import six
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
@@ -24,6 +26,7 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
+
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -474,7 +477,7 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
-        if isinstance(step_method, basestring):
+        if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
 

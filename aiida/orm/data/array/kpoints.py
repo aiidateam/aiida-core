@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 from __future__ import division
 
+import six
 from six.moves import range, zip
 import numpy
 
@@ -558,7 +559,7 @@ class KpointsData(ArrayData):
         bravais_lattice['permutation'] = [int(i) for i in value['permutation']]
 
         try:
-            if not isinstance(bravais_lattice['variation'], basestring):
+            if not isinstance(bravais_lattice['variation'], six.string_types):
                 raise ValueError()
         except KeyError:
             pass

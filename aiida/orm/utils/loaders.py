@@ -246,7 +246,7 @@ class OrmEntityLoader(object):
         if not value:
             raise ValueError('the value for the identifier cannot be empty')
 
-        if not isinstance(value, basestring):
+        if not isinstance(value, six.string_types):
             value = str(value)
 
         # If the final character of the value is the special marker, we enforce LABEL interpretation

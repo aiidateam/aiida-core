@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import copy
 
+import six
 from six.moves import range
 import numpy as np
 
@@ -286,7 +287,7 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return ValidationError("tags must be a list")
 
-            if not all([isinstance(_,basestring) for _ in tags]):
+            if not all([isinstance(_,six.string_types) for _ in tags]):
                 raise ValidationError("Tags must set a list of strings")
             self._set_attr('tags', tags)
 

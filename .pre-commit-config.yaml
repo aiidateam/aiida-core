@@ -102,7 +102,7 @@
       - --fix=types
 #optional:      - --fix=ws_comma
       - --fix=xreadlines
-#      - --fix=basestring
+      - --fix=basestring
       - --fix=classic_division
 #      - --fix=dict_six
       - --fix=file

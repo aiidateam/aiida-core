@@ -9,8 +9,11 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
+
+import six
 from six.moves import range, zip
 import numpy
+
 
 _default_epsilon_length = 1e-5
 _default_epsilon_angle = 1e-5
@@ -154,7 +157,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                 return False
 
             for i in path:
-                are_str = all([isinstance(b, basestring) for b in i])
+                are_str = all([isinstance(b, six.string_types) for b in i])
                 if not are_str:
                     return False
         except IndexError:
@@ -167,8 +170,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             if not are_three:
                 return False
 
-            are_good = all([all([isinstance(b[0], basestring),
-                                 isinstance(b[1], basestring),
+            are_good = all([all([isinstance(b[0], six.string_types),
+                                 isinstance(b[1], six.string_types),
                                  isinstance(b[2], int)])
                             for b in path])
             if not are_good:
@@ -191,7 +194,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_four = all([len(i) == 4 for i in path])
             if not are_four:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             for i in path:
@@ -210,7 +213,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_five = all([len(i) == 5 for i in path])
             if not are_five:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             have_points_num = all([isinstance(i[4], int) for i in path])

@@ -14,7 +14,10 @@ on them.
 """
 
 from __future__ import absolute_import
+
+import six
 from six.moves import range, zip
+
 import numpy as np
 from aiida.orm.data.array import ArrayData
 from aiida.common.exceptions import InputValidationError, NotExistent
@@ -45,7 +48,7 @@ class XyData(ArrayData):
         Validates that the array is an numpy.ndarray and that the name is
         of type basestring. Raises InputValidationError if this not the case.
         """
-        if not isinstance(name, basestring):
+        if not isinstance(name, six.string_types):
             raise InputValidationError("The name must always be an instance "
                                        "of basestring.")
 
@@ -57,7 +60,7 @@ class XyData(ArrayData):
         except ValueError:
             raise InputValidationError("The input array must only contain "
                                        "floats")
-        if not isinstance(units, basestring):
+        if not isinstance(units, six.string_types):
             raise InputValidationError("The units must always be an instance"
                                            " of basestring.")
 

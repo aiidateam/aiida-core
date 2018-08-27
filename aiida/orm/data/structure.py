@@ -167,7 +167,7 @@ def _create_symbols_tuple(symbols):
     Returns a tuple with the symbols provided. If a string is provided,
     this is converted to a tuple with one single element.
     """
-    if isinstance(symbols, basestring):
+    if isinstance(symbols, six.string_types):
         symbols_list = (symbols,)
     else:
         symbols_list = tuple(symbols)
@@ -326,7 +326,7 @@ def get_formula_from_symbol_list(_list, separator=""):
         else:
             multiplicity_str = str(elem[0])
 
-        if isinstance(elem[1], basestring):
+        if isinstance(elem[1], six.string_types):
             list_str.append("{}{}".format(elem[1], multiplicity_str))
         elif elem[0] > 1:
             list_str.append(
@@ -2547,7 +2547,7 @@ class Site(object):
             # If it is a string, it is the name of the element,
             # and I have to generate a new integer for this element
             # and replace tag_list[i] with this new integer
-            if isinstance(tag_list[i], basestring):
+            if isinstance(tag_list[i], six.string_types):
                 # I get a list of used tags for this element
                 existing_tags = used_tags[tag_list[i]]
                 if existing_tags:

@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from __future__ import division
 from string import Template
 
+import six
 from six.moves import range, zip
 import numpy
 
@@ -313,9 +314,9 @@ class BandsData(KpointsData):
 
         # check the labels
         if labels is not None:
-            if isinstance(labels, basestring):
+            if isinstance(labels, six.string_types):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, basestring) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all([isinstance(_, six.string_types) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError("Band labels have an unrecognized type ({})"

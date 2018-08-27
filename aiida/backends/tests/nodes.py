@@ -1190,7 +1190,7 @@ class TestNodeBasic(AiidaTestCase):
         p = ParameterData(dict={'b': Str("sometext"), 'c': l1})
         p.store()
         self.assertEqual(p.get_attr('b'), "sometext")
-        self.assertIsInstance(p.get_attr('b'), basestring)
+        self.assertIsInstance(p.get_attr('b'), six.string_types)
         self.assertEqual(p.get_attr('c'), ['b', [1, 2]])
         self.assertIsInstance(p.get_attr('c'), (list, tuple))
 
@@ -1199,7 +1199,7 @@ class TestNodeBasic(AiidaTestCase):
         n._set_attr('a', Str("sometext2"))
         n._set_attr('b', l2)
         self.assertEqual(n.get_attr('a'), "sometext2")
-        self.assertIsInstance(n.get_attr('a'), basestring)
+        self.assertIsInstance(n.get_attr('a'), six.string_types)
         self.assertEqual(n.get_attr('b'), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
 
@@ -1207,10 +1207,10 @@ class TestNodeBasic(AiidaTestCase):
         n = Node()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0], basestring)
+        self.assertIsInstance(n.get_attr('a')['b'][0], six.string_types)
         n.store()
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attr('a')['b'][0], basestring)
+        self.assertIsInstance(n.get_attr('a')['b'][0], six.string_types)
 
     def test_basetype_as_extra(self):
         """
@@ -1235,7 +1235,7 @@ class TestNodeBasic(AiidaTestCase):
         n.set_extra('c', l1)
         n.set_extra('d', l2)
         self.assertEqual(n.get_extra('a'), "sometext2")
-        self.assertIsInstance(n.get_extra('a'), basestring)
+        self.assertIsInstance(n.get_extra('a'), six.string_types)
         self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
         self.assertIsInstance(n.get_extra('c'), (list, tuple))
         self.assertEqual(n.get_extra('d'), ['f', True, {'gg': None}])
@@ -1246,7 +1246,7 @@ class TestNodeBasic(AiidaTestCase):
         n.store()
         n.set_extra('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_extra('a')['b'][0], basestring)
+        self.assertIsInstance(n.get_extra('a')['b'][0], six.string_types)
 
     def test_versioning_lowlevel(self):
         """

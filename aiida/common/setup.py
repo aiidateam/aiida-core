@@ -1013,7 +1013,7 @@ def set_property(name, value):
     actual_value = False
 
     if type_string == "bool":
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             if value.strip().lower() in ["0", "false", "f"]:
                 actual_value = False
             elif value.strip().lower() in ["1", "true", "t"]:

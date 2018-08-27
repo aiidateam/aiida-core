@@ -327,7 +327,7 @@ class AbstractJobCalculation(AbstractCalculation):
                              "dictionary to set_environment_variables")
 
         for k, v in env_vars_dict.items():
-            if not isinstance(k, basestring) or not isinstance(v, basestring):
+            if not isinstance(k, six.string_types) or not isinstance(v, six.string_types):
                 raise ValueError(
                     "Both the keys and the values of the "
                     "dictionary passed to set_environment_variables must be "
@@ -549,7 +549,7 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError("You must pass a list of strings to "
                              "set_mpirun_extra_params")
         for param in extra_params:
-            if not isinstance(param, basestring):
+            if not isinstance(param, six.string_types):
                 raise ValueError("You must pass a list of strings to "
                                  "set_mpirun_extra_params")
 
@@ -753,15 +753,15 @@ class AbstractJobCalculation(AbstractCalculation):
         if not (isinstance(retrieve_list, (tuple, list))):
             raise ValueError("You should pass a list/tuple")
         for item in retrieve_list:
-            if not isinstance(item, basestring):
+            if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or
                         len(item) != 3):
                     raise ValueError(
                         "You should pass a list containing either "
                         "strings or lists/tuples"
                     )
-                if (not (isinstance(item[0], basestring)) or
-                        not (isinstance(item[1], basestring)) or
+                if (not (isinstance(item[0], six.string_types)) or
+                        not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
                     raise ValueError(
                         "You have to pass a list (or tuple) of "
@@ -794,15 +794,15 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError('You should pass a list/tuple')
 
         for item in retrieve_temporary_list:
-            if not isinstance(item, basestring):
+            if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or len(item) != 3):
                     raise ValueError(
                         'You should pass a list containing either '
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or
-                        not (isinstance(item[1], basestring)) or
+                if (not (isinstance(item[0], six.string_types)) or
+                        not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
                     raise ValueError(
                         'You have to pass a list (or tuple) of lists, with remotepath(string), '
@@ -834,7 +834,7 @@ class AbstractJobCalculation(AbstractCalculation):
                              "strings as retrieve_singlefile_list")
         for j in retrieve_singlefile_list:
             if (not (isinstance(j, (tuple, list))) or
-                    not (all(isinstance(i, basestring) for i in j))):
+                    not (all(isinstance(i, six.string_types) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
                                  "of strings as retrieve_singlefile_list")
         self._set_attr('retrieve_singlefile_list', retrieve_singlefile_list)

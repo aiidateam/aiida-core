@@ -456,7 +456,7 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
-        if isinstance(step_method, basestring):
+        if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
             if not getattr(step_method, "is_wf_step"):

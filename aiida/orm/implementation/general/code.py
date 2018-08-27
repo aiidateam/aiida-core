@@ -76,7 +76,7 @@ class AbstractCode(Node):
              to be able to call this function.
         """
 
-        if isinstance(files, basestring):
+        if isinstance(files, six.string_types):
             files = [files]
         for f in files:
             self.add_path(f, os.path.split(f)[1])

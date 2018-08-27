@@ -11,6 +11,8 @@
 from __future__ import absolute_import
 import json
 
+import six
+
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, Text
 from sqlalchemy.orm import relationship, backref
@@ -22,8 +24,6 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 
 from aiida.common.exceptions import NotExistent, DbContentError, ConfigurationError
-
-
 
 
 class DbComputer(Base):
@@ -61,7 +61,7 @@ class DbComputer(Base):
         """
 
         from aiida.orm.computer import Computer
-        if isinstance(computer, basestring):
+        if isinstance(computer, six.string_types):
             try:
                 dbcomputer = cls.session.query(cls).filter(cls.name==computer).one()
             except NoResultFound:

@@ -26,8 +26,9 @@ except ImportError:
     json_loads = json.loads
 
 import datetime
-
 import re
+
+import six
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
@@ -137,7 +138,7 @@ def loads_json(s):
             for k, v in d.items():
                 d[k] = f(v)
             return d
-        elif isinstance(d, basestring):
+        elif isinstance(d, six.string_types):
             if date_reg.match(d):
                 try:
                     return parser.parse(d)

@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import sys
 
+import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
@@ -20,7 +21,7 @@ from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
-import six
+
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -2502,7 +2503,7 @@ class ZipFolder(object):
         import zipfile
         import os
 
-        if isinstance(zipfolder_or_fname, basestring):
+        if isinstance(zipfolder_or_fname, six.string_types):
             the_mode = mode
             if the_mode is None:
                 the_mode = "r"

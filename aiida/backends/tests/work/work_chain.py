@@ -9,6 +9,8 @@
 ###########################################################################
 from __future__ import absolute_import
 import inspect
+
+import six
 import plumpy
 import plumpy.test_utils
 from tornado import gen
@@ -364,7 +366,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf)
 
     def test_str(self):
-        self.assertIsInstance(str(Wf.spec()), basestring)
+        self.assertIsInstance(str(Wf.spec()), six.string_types)
 
     def test_malformed_outline(self):
         """

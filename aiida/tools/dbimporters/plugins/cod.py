@@ -9,9 +9,11 @@
 ###########################################################################
 
 from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class CodDbImporter(DbImporter):
@@ -24,7 +26,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying integer fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + " IN (" + ", ".join(str(int(i)) for i in values) + ")"
@@ -35,7 +37,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -79,7 +81,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -93,7 +95,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
             clause_parts.append("formula REGEXP ' " + e + "[0-9 ]'")

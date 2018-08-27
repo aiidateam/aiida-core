@@ -16,6 +16,7 @@ import time
 import uuid
 from datetime import datetime
 
+import six
 from six.moves import range
 from passlib.context import CryptContext
 
@@ -251,7 +252,7 @@ def _(object_to_hash, **kwargs):
 def _(object_to_hash, **kwargs):
     return make_hash_with_type('i', str(object_to_hash))
 
-@make_hash.register(basestring)
+@make_hash.register(six.string_types[0])
 def _(object_to_hash, **kwargs):
     return make_hash_with_type('s', object_to_hash)
 

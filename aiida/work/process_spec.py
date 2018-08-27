@@ -9,6 +9,8 @@
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
 from __future__ import absolute_import
+
+import six
 import plumpy
 
 from aiida.work.exit_code import ExitCode, ExitCodesNamespace
@@ -51,10 +53,10 @@ class ProcessSpec(plumpy.ProcessSpec):
         if status < 0:
             raise ValueError('status should be a positive integer, received {}'.format(type(status)))
 
-        if not isinstance(label, basestring):
+        if not isinstance(label, six.string_types):
             raise TypeError('label should be of basestring type and not of {}'.format(type(label)))
 
-        if not isinstance(message, basestring):
+        if not isinstance(message, six.string_types):
             raise TypeError('message should be of basestring type and not of {}'.format(type(message)))
 
         self._exit_codes[label] = ExitCode(status, message)

@@ -155,7 +155,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(nodes, collections.Iterable):
+        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
                             "of such objects, it is instead {}".format(
@@ -211,7 +211,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
@@ -273,7 +273,7 @@ class Group(AbstractGroup):
             queryobject &= Q(dbnodes__in=pk_list)
 
         if user is not None:
-            if isinstance(user, basestring):
+            if isinstance(user, six.string_types):
                 queryobject &= Q(user__email=user)
             else:
                 queryobject &= Q(user=user.id)
@@ -288,7 +288,7 @@ class Group(AbstractGroup):
 
         if node_attributes is not None:
             for k, vlist in node_attributes.items():
-                if isinstance(vlist, basestring) or not isinstance(
+                if isinstance(vlist, six.string_types) or not isinstance(
                         vlist, collections.Iterable):
                     vlist = [vlist]
 

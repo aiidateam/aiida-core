@@ -10,13 +10,14 @@
 from __future__ import absolute_import
 import contextlib
 
-from six import integer_types
+import six
 from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
 
 from aiida.common import exceptions
+
 
 __all__ = ['django_filter', 'get_attr']
 
@@ -243,9 +244,9 @@ def django_filter(cls_query, **kwargs):
 
 
 def apply_json_cast(attr, val):
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         attr = attr.astext
-    if isinstance(val, integer_types):
+    if isinstance(val, six.integer_types):
         attr = attr.astext.cast(Integer)
     if isinstance(val, bool):
         attr = attr.astext.cast(Boolean)

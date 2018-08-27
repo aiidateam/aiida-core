@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+
+import six
 from six.moves import zip
+
 from aiida.orm.data.structure import  Site as site_class
 from aiida.orm import Data
 from aiida.common.orbital import OrbitalFactory, Orbital
@@ -123,7 +126,7 @@ class OrbitalData(Data):
         if len(tag) != len(orbital):
             raise ValueError()
         for input_name, this_input, kind in [['orbital', orbital, Orbital],
-                                            ['tag', tag, basestring]]:
+                                            ['tag', tag, six.string_types]]:
             if not isinstance(this_input, (list, tuple)):
                 raise ValueError
             if any([True for _ in this_input if not isinstance(_, kind)]):

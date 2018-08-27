@@ -11,6 +11,8 @@
 from __future__ import absolute_import
 import uuid
 
+import six
+
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.common.exceptions import ValidationError
 from aiida.common.exceptions import NotExistent
@@ -31,7 +33,7 @@ def validate_key(key):
     :return: None if the key is valid
     :raise ValidationError: if the key is not valid
     """
-    if not isinstance(key, basestring):
+    if not isinstance(key, six.string_types):
         raise ValidationError("The key must be a string.")
     if not key:
         raise ValidationError("The key cannot be an empty string.")

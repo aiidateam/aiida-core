@@ -467,7 +467,7 @@ class Node(AbstractNode):
         comment = list(DbComment.objects.filter(dbnode=self._dbnode,
                                                 pk=comment_pk, user=user))[0]
 
-        if not isinstance(new_field, basestring):
+        if not isinstance(new_field, six.string_types):
             raise ValueError("Non string comments are not accepted")
 
         if not comment:

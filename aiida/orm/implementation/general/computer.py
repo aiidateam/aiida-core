@@ -318,7 +318,7 @@ class AbstractComputer(object):
         checking for a valid scheduler.
         """
         if not isinstance(mpirun_cmd, (tuple, list)) or not (
-                all(isinstance(i, basestring) for i in mpirun_cmd)):
+                all(isinstance(i, six.string_types) for i in mpirun_cmd)):
             raise ValidationError("the mpirun_command must be a list of strings")
 
         try:
@@ -491,7 +491,7 @@ class AbstractComputer(object):
         string.split() if you have a single, space-separated string).
         """
         if not isinstance(val, (tuple, list)) or not (
-                all(isinstance(i, basestring) for i in val)):
+                all(isinstance(i, six.string_types) for i in val)):
             raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
 
@@ -568,7 +568,7 @@ class AbstractComputer(object):
         """
         :param str val: A valid shebang line
         """
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             raise ValueError("{} is invalid. Input has to be a string".format(val))
         if not val.startswith('#!'):
             raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))

@@ -237,7 +237,7 @@ class Computer(AbstractComputer):
 
     def set_workdir(self, val):
         # if self.to_be_stored:
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             raise ValueError("Computer work directory needs to be string, got {}".format(val))
 
         metadata = self._get_metadata()

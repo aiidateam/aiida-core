@@ -82,7 +82,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
 
     elif uuid is not None:
 
-        if not isinstance(uuid, basestring):
+        if not isinstance(uuid, six.string_types):
             raise TypeError('uuid has to be a string type')
 
         identifier = uuid
@@ -90,7 +90,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
 
     elif label is not None:
 
-        if not isinstance(label, basestring):
+        if not isinstance(label, six.string_types):
             raise TypeError('label has to be a string type')
 
         identifier = label
@@ -138,7 +138,7 @@ def load_node(identifier=None, pk=None, uuid=None, sub_class=None, query_with_da
 
     elif uuid is not None:
 
-        if not isinstance(uuid, basestring):
+        if not isinstance(uuid, six.string_types):
             raise TypeError('uuid has to be a string type')
 
         identifier = uuid
@@ -181,7 +181,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
         if wf_id and isinstance(wf_id, uuid_type):
             wf_id = str(wf_id)
 
-        if isinstance(wf_id, basestring):
+        if isinstance(wf_id, six.string_types):
             return Workflow.get_subclass_from_uuid(wf_id)
         elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)

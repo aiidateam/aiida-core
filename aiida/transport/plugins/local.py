@@ -27,6 +27,8 @@ import subprocess
 import StringIO
 import glob
 
+import six
+
 from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
 
@@ -772,7 +774,7 @@ class LocalTransport(Transport):
         local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
-            if isinstance(stdin, basestring):
+            if isinstance(stdin, six.string_types):
                 filelike_stdin = StringIO.StringIO(stdin)
             else:
                 filelike_stdin = stdin

@@ -9,10 +9,11 @@
 ###########################################################################
 
 from __future__ import absolute_import
-from six import integer_types
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class IcsdImporterExp(Exception):
@@ -107,7 +108,7 @@ class IcsdDbImporter(DbImporter):
         :return: SQL query predicate
         """
         for e in values:
-            if not isinstance(e, integer_types) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return "{} IN ({})".format(key, ", ".join(str(int(i)) for i in values))
@@ -117,7 +118,7 @@ class IcsdDbImporter(DbImporter):
         Return SQL query predicate for querying string fields.
         """
         for e in values:
-            if not isinstance(e, integer_types) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return "{} IN ({})".format(key, ", ".join("'{}'".format(f) for f in values))
@@ -127,7 +128,7 @@ class IcsdDbImporter(DbImporter):
         Return SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
@@ -139,7 +140,7 @@ class IcsdDbImporter(DbImporter):
         Return SQL query predicate for fuzzy querying of string fields.
         """
         for e in values:
-            if not isinstance(e, integer_types) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return " OR ".join("{} LIKE '%{}%'".format(key, s) for s in values)
@@ -149,7 +150,7 @@ class IcsdDbImporter(DbImporter):
         Return SQL query predicate for querying elements in formula fields.
         """
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         # SUM_FORM in the ICSD always stores a numeral after the element name,
@@ -165,7 +166,7 @@ class IcsdDbImporter(DbImporter):
         Return SQL query predicate for querying double-valued fields.
         """
         for e in values:
-            if not isinstance(e, integer_types) and not isinstance(e, float):
+            if not isinstance(e, six.integer_types) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
         return " OR ".join("{} BETWEEN {} AND {}".format(key, d-precision, d+precision) for d in values)
@@ -185,7 +186,7 @@ class IcsdDbImporter(DbImporter):
         }  # from icsd accepted crystal systems
 
         for e in values:
-            if not isinstance(e, integer_types) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return key + " IN (" + ", ".join("'" + valid_systems[f.lower()] + "'" for f in values) + ")"

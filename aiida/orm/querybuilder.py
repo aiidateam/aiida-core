@@ -25,6 +25,8 @@ from __future__ import print_function
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
+
+import six
 from six.moves import range, zip
 
 from aiida.orm.node import Node
@@ -288,7 +290,7 @@ class QueryBuilder(object):
             if isinstance(path_spec, dict):
                 self.append(**path_spec)
             # ~ except TypeError as e:
-            elif isinstance(path_spec, basestring):
+            elif isinstance(path_spec, six.string_types):
                 # Maybe it is just a string,
                 # I assume user means the type
                 self.append(type=path_spec)
@@ -549,14 +551,14 @@ class QueryBuilder(object):
             
             if isinstance(type, (tuple, list, set)):
                 for t in type:
-                    if not isinstance(t, basestring):
+                    if not isinstance(t, six.string_types):
                         raise InputValidationError(
                             "\n\n\n"
                             "{} was passed as type, but is not a string"
                             "\n\n\n".format(t)
                         )
             else:
-                if not isinstance(type, basestring):
+                if not isinstance(type, six.string_types):
                     raise InputValidationError(
                         "\n\n\n"
                         "{} was passed as type, but is not a string"
@@ -872,7 +874,7 @@ class QueryBuilder(object):
                 tag = self._get_tag_from_specification(tagspec)
                 _order_spec[tag] = []
                 for item_to_order_by in items_to_order_by:
-                    if isinstance(item_to_order_by, basestring):
+                    if isinstance(item_to_order_by, six.string_types):
                         item_to_order_by = {item_to_order_by: {}}
                     elif isinstance(item_to_order_by, dict):
                         pass
@@ -886,7 +888,7 @@ class QueryBuilder(object):
                         # if somebody specifies eg {'node':{'id':'asc'}}
                         # tranform to {'node':{'id':{'order':'asc'}}}
 
-                        if isinstance(orderspec, basestring):
+                        if isinstance(orderspec, six.string_types):
                             this_order_spec = {'order': orderspec}
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
@@ -1031,7 +1033,7 @@ class QueryBuilder(object):
         for projection in projection_spec:
             if isinstance(projection, dict):
                 _thisprojection = projection
-            elif isinstance(projection, basestring):
+            elif isinstance(projection, six.string_types):
                 _thisprojection = {projection: {}}
             else:
                 raise InputValidationError(
@@ -1053,7 +1055,7 @@ class QueryBuilder(object):
                             "{} is not a valid key {}".format(
                                 key, self._VALID_PROJECTION_KEYS)
                         )
-                        if not isinstance(val, basestring):
+                        if not isinstance(val, six.string_types):
                             raise InputValidationError(
                                 "{} has to be a string".format(val)
                             )
@@ -1164,7 +1166,7 @@ class QueryBuilder(object):
             In that case, I simply check that it's not a duplicate.
             If it is a class, I check if it's in the _cls_to_tag_map!
         """
-        if isinstance(specification, basestring):
+        if isinstance(specification, six.string_types):
             if specification in self._tag_to_alias_map.keys():
                 tag = specification
             else:

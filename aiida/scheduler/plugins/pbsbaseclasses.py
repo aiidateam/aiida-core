@@ -167,7 +167,7 @@ class PbsBaseClass(Scheduler):
             command.append('-u{}'.format(user))
 
         if jobs:
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:

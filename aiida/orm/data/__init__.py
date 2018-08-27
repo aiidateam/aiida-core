@@ -357,7 +357,7 @@ class Data(Node):
         """
         if object_format is None:
             raise ValueError("object_format must be provided")
-        if not isinstance(object_format, basestring):
+        if not isinstance(object_format, six.string_types):
             raise ValueError('object_format should be a string')
 
         converters = self._get_converters()

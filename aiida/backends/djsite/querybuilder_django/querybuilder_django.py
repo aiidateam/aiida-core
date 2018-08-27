@@ -14,6 +14,8 @@ import datetime
 from datetime import datetime
 from json import loads as json_loads
 
+import six
+
 # ~ import aiida.backends.djsite.querybuilder_django.dummy_model as dummy_model
 from . import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
@@ -226,7 +228,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                     "You have to give an integer when comparing to a length"
                 )
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, basestring):
+            if not isinstance(value, six.string_types):
                 raise InputValidationError(
                     "Value for operator {} has to be a string (you gave {})"
                     "".format(operator, value)
@@ -387,7 +389,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
         else:
             types_n_casts = []
-            if isinstance(value_to_consider, basestring):
+            if isinstance(value_to_consider, six.string_types):
                 types_n_casts.append(('t', None))
             elif isinstance(value_to_consider, bool):
                 types_n_casts.append(('b', None))

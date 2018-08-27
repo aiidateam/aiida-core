@@ -9,6 +9,9 @@
 ###########################################################################
 
 from __future__ import absolute_import
+
+import six
+
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import classproperty
@@ -47,7 +50,7 @@ class AdditionalParameterCalculation(TemplatereplacerCalculation):
         """
         if isinstance(kind, (tuple, list)):
             suffix_string = '_'.join(kind)
-        elif isinstance(kind, basestring):
+        elif isinstance(kind, six.string_types):
             suffix_string = kind
         else:
             raise TypeError('invalid additional parameter type')

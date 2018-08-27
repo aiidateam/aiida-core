@@ -9,7 +9,10 @@
 ###########################################################################
 
 from __future__ import absolute_import
+
+import six
 from six.moves import filter
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
 
@@ -23,7 +26,7 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring) and not isinstance(values, int):
+        if not isinstance(values, six.string_types) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return "{}={}".format(key, values)

@@ -10,10 +10,11 @@
 from __future__ import absolute_import
 from stat import S_ISDIR, S_ISREG
 import StringIO
-
 import os
 import click
 import glob
+
+import six
 
 import aiida.transport
 import aiida.transport.transport
@@ -25,6 +26,7 @@ from aiida.cmdline.utils import echo
 from aiida.common import aiidalogger
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import NotExistent
+
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
 
@@ -164,7 +166,7 @@ class SshTransport(aiida.transport.Transport):
         try:
             identities = config['identityfile']
             # In paramiko > 0.10, identity file is a list of strings.
-            if isinstance(identities, basestring):
+            if isinstance(identities, six.string_types):
                 identity = identities
             elif isinstance(identities, (list, tuple)):
                 if not identities:
@@ -1331,7 +1333,7 @@ class SshTransport(aiida.transport.Transport):
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
-            if isinstance(stdin, basestring):
+            if isinstance(stdin, six.string_types):
                 filelike_stdin = StringIO.StringIO(stdin)
             else:
                 filelike_stdin = stdin

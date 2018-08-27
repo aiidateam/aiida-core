@@ -217,7 +217,7 @@ def validate_list_of_string_tuples(val, tuple_length):
 
     for element in val:
         if (not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-                not all(isinstance(s, basestring) for s in element)):
+                not all(isinstance(s, six.string_types) for s in element)):
             raise ValidationError(err_msg)
 
     return True
@@ -240,7 +240,7 @@ def conv_to_fortran(val, quote_strings=True):
         val_str = "{:d}".format(val)
     elif isinstance(val, numbers.Real):
         val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif isinstance(val, basestring):
+    elif isinstance(val, six.string_types):
         if quote_strings:
             val_str = "'{!s}'".format(val)
         else:
@@ -277,7 +277,7 @@ def conv_to_fortran_withlists(val, quote_strings=True):
     if isinstance(val, float):
         return "{:18.10e}".format(val).replace('e', 'd')
 
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         if quote_strings:
             return "'{!s}'".format(val)
 

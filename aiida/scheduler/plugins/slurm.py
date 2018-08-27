@@ -14,6 +14,8 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 from __future__ import division
 from __future__ import absolute_import
 import re
+
+import six
 from six.moves import zip
 
 import aiida.scheduler
@@ -207,7 +209,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):

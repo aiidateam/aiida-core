@@ -10,11 +10,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import six
 from six.moves import range, zip
 
 from aiida.orm.data.array import ArrayData
 from aiida.orm.calculation.inline import optional_inline
-
 
 
 @optional_inline
@@ -54,7 +54,7 @@ class TrajectoryData(ArrayData):
             raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if not isinstance(symbols, numpy.ndarray):
             raise TypeError("TrajectoryData.symbols must be a numpy array")
-        if any([not isinstance(i, basestring) for i in symbols]):
+        if any([not isinstance(i, six.string_types) for i in symbols]):
             raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")

@@ -9,9 +9,11 @@
 ###########################################################################
 
 from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  UpfEntry)
-
 
 
 class NnincDbImporter(DbImporter):
@@ -23,7 +25,7 @@ class NnincDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring):
+        if not isinstance(values, six.string_types):
             raise ValueError("incorrect value for keyword '{}' -- only "
                              "strings and integers are accepted".format(alias))
         return "{}={}".format(key, values)

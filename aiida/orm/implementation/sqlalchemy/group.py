@@ -164,7 +164,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
@@ -240,7 +240,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
@@ -310,7 +310,7 @@ class Group(AbstractGroup):
 
             filters.append(sub_query)
         if user:
-            if isinstance(user, basestring):
+            if isinstance(user, six.string_types):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser

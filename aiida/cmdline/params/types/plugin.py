@@ -1,6 +1,8 @@
 # -*- coding: utf8 -*-
 """Click parameter type for AiiDA Plugins."""
 from __future__ import absolute_import
+
+import six
 import click
 
 from aiida.cmdline.utils import decorators
@@ -40,7 +42,7 @@ class PluginParamType(click.ParamType):
         if group is None:
             self._groups = tuple(valid_entry_point_groups)
         else:
-            if isinstance(group, basestring):
+            if isinstance(group, six.string_types):
                 invalidated_groups = tuple([group])
             elif isinstance(group, tuple):
                 invalidated_groups = group

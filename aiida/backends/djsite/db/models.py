@@ -10,8 +10,8 @@
 from __future__ import absolute_import
 import sys
 
+import six
 from six.moves import zip, range
-from six import reraise, integer_types
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -766,7 +766,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value, integer_types):
+        elif isinstance(value, six.integer_types):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -782,7 +782,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.bval = None
             new_entry.dval = None
 
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             new_entry.datatype = 'txt'
             new_entry.tval = value
             new_entry.bval = None
@@ -893,11 +893,11 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             return {'datatype': 'none'}
         elif isinstance(value, bool):
             return {'datatype': 'bool', 'bval': value}
-        elif isinstance(value, integer_types):
+        elif isinstance(value, six.integer_types):
             return {'datatype': 'int', 'ival': value}
         elif isinstance(value, float):
             return {'datatype': 'float', 'fval': value}
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             return {'datatype': 'txt', 'tval': value}
         elif isinstance(value, datetime.datetime):
             # current timezone is taken from the settings file of django
@@ -1128,7 +1128,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             if with_transaction:
                 sid = transaction.savepoint()
 
-            if isinstance(dbnode, integer_types):
+            if isinstance(dbnode, six.integer_types):
                 dbnode_node = DbNode(id=dbnode)
             else:
                 dbnode_node = dbnode
@@ -1189,7 +1189,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        if isinstance(dbnode, integer_types):
+        if isinstance(dbnode, six.integer_types):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
@@ -1372,7 +1372,7 @@ class DbComputer(m.Model):
         from aiida.common.exceptions import NotExistent
         from aiida.orm.computer import Computer
 
-        if isinstance(computer, basestring):
+        if isinstance(computer, six.string_types):
             try:
                 dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
@@ -1704,7 +1704,7 @@ class DbWorkflowData(m.Model):
                 self.value_type = wf_data_value_types.JSON
                 self.save()
         except Exception as exc:
-            reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
+            six.reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
         import json

@@ -11,6 +11,8 @@
 from __future__ import absolute_import
 import tempfile
 
+import six
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.persistence import AiiDAPersister
 from aiida.work import Process
@@ -59,7 +61,7 @@ class TestAiiDAPersister(AiidaTestCase):
         process = DummyProcess()
 
         self.persister.save_checkpoint(process)
-        self.assertTrue(isinstance(process.calc.checkpoint, basestring))
+        self.assertTrue(isinstance(process.calc.checkpoint, six.string_types))
 
         self.persister.delete_checkpoint(process.pid)
         self.assertEquals(process.calc.checkpoint, None)

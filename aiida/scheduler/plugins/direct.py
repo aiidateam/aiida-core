@@ -12,6 +12,9 @@ Plugin for direct execution.
 """
 from __future__ import division
 from __future__ import absolute_import
+
+import six
+
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError
@@ -92,7 +95,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         command = 'ps -o pid,stat,user,time'
 
         if jobs:
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:

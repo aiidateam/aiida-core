@@ -13,7 +13,9 @@ import collections
 import enum
 import logging
 
+import six
 from plumpy import ProcessState
+
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import classproperty
@@ -276,7 +278,7 @@ class AbstractCalculation(Sealable):
                 pass
             return
 
-        if not isinstance(status, basestring):
+        if not isinstance(status, six.string_types):
             raise TypeError('process status should be a string')
 
         return self._set_attr(self.PROCESS_STATUS_KEY, status)
@@ -389,7 +391,7 @@ class AbstractCalculation(Sealable):
         if message is None:
             return
 
-        if not isinstance(message, basestring):
+        if not isinstance(message, six.string_types):
             raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
 
         return self._set_attr(self.EXIT_MESSAGE_KEY, message)
@@ -411,7 +413,7 @@ class AbstractCalculation(Sealable):
 
         :param exception: the exception message
         """
-        if not isinstance(exception, basestring):
+        if not isinstance(exception, six.string_types):
             raise ValueError('exception message has to be a string type, got {}'.format(type(exception)))
 
         return self._set_attr(self.EXCEPTION_KEY, exception)

@@ -504,7 +504,7 @@ class Node(AbstractNode):
     def _update_comment(self, new_field, comment_pk, user):
         comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
 
-        if not isinstance(new_field, basestring):
+        if not isinstance(new_field, six.string_types):
             raise ValueError("Non string comments are not accepted")
 
         if not comment:

@@ -10,6 +10,9 @@
 
 
 from __future__ import absolute_import
+
+import six
+
 from aiida.orm.calculation.inline import optional_inline
 
 
@@ -213,7 +216,7 @@ class DbEntry(object):
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
                                ",".join(["{}={}".format(k, '"{}"'.format(v)
-                               if issubclass(v.__class__, basestring)
+                               if issubclass(v.__class__, six.string_types)
                                else v)
                                          for k, v in self.source.items()]))
 

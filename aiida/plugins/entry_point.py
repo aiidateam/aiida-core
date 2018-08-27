@@ -10,6 +10,9 @@
 from __future__ import absolute_import
 import enum
 import traceback
+
+import six
+
 try:
     from reentry import manager as epm
 except ImportError:
@@ -91,7 +94,7 @@ def parse_entry_point_string(entry_point_string):
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
     """
-    if not isinstance(entry_point_string, basestring):
+    if not isinstance(entry_point_string, six.string_types):
         raise TypeError('the entry_point_string should be a string')
 
     try:

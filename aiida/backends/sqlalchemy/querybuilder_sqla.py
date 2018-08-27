@@ -255,7 +255,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                     "You have to give an integer when comparing to a length"
                 )
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, basestring):
+            if not isinstance(value, six.string_types):
                 raise InputValidationError(
                     "Value for operator {} has to be a string (you gave {})"
                     "".format(operator, value)

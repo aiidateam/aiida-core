@@ -568,7 +568,7 @@ def xyz_parser_iterator(xyz_string):
 
         def __next__(self):  # pylint: disable=missing-docstring
             try:
-                match = self._it.next()
+                match = next(self._it)
             except StopIteration:
                 # if we reached the number of atoms declared, everything is well
                 # and we re-raise the StopIteration exception

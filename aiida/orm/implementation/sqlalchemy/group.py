@@ -221,7 +221,7 @@ class Group(AbstractGroup):
 
             # For future python-3 compatibility
             def __next__(self):
-                return self.next()
+                return next(self.generator)
 
             def next(self):
                 return next(self.generator)

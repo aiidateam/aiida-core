@@ -92,8 +92,8 @@ class TestIcsd(AiidaTestCase):
         self.assertEqual(queryresults.number_of_results,1)
 
         with self.assertRaises(StopIteration):
-            queryresults.next()
-            queryresults.next()
+            next(queryresults)
+            next(queryresults)
 
         with self.assertRaises(IndexError):
             queryresults.at(10)
@@ -107,7 +107,7 @@ class TestIcsd(AiidaTestCase):
         self.assertEqual(self.noresults.number_of_results, 0)
 
         with self.assertRaises(StopIteration):
-            self.noresults.next()
+            next(self.noresults)
 
         with self.assertRaises(IndexError):
             self.noresults.at(0)

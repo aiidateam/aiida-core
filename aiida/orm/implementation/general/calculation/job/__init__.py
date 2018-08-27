@@ -1091,7 +1091,7 @@ class AbstractJobCalculation(AbstractCalculation):
             calc_list_data = []
             try:
                 for i in range(100):
-                    res = results_generator.next()
+                    res = next(results_generator)
 
                     row = cls._get_calculation_info_row(
                         res, projections, now if relative_ctime else None)

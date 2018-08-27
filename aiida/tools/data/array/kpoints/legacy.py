@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import division
 import numpy
 
 _default_epsilon_length = 1e-5
@@ -241,14 +242,13 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             max_point_per_interval = 10
             max_interval = max(distances)
             try:
-                points_per_piece = [max(2, int(max_point_per_interval * i / max_interval)) for i in distances]
+                points_per_piece = [max(2, max_point_per_interval * i // max_interval) for i in distances]
             except ValueError:
                 raise ValueError("The beginning and end of each segment in the "
                                  "path should be different.")
 
         else:
-            points_per_piece = [max(2, int(distance / kpoint_distance))
-                                for distance in distances]
+            points_per_piece = [max(2, int(distance // kpoint_distance)) for distance in distances]
         return points_per_piece
 
     if cartesian:

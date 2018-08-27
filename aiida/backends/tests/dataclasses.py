@@ -11,6 +11,7 @@
 Tests for specific subclasses of Data
 """
 from __future__ import absolute_import
+from __future__ import division
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase

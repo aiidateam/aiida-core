@@ -10,6 +10,7 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from __future__ import division  # actually unused, but prevents 2to3-fixer from running run on this file
 import os
 import itertools
 try:

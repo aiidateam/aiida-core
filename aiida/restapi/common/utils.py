@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import division
 from datetime import datetime, timedelta
 
 from flask import jsonify
@@ -304,7 +305,7 @@ class Utils(object):
         if total_count == 0:
             last_page = 1
         else:
-            last_page = int(ceil(float(total_count) / float(perpage)))
+            last_page = int(ceil(total_count / perpage))
 
         ## Check validity of required page and calculate limit, offset,
         # previous,
@@ -808,7 +809,7 @@ class Utils(object):
                     "respect to UTC")
             if dt.tzinfo is not None:
                 tzoffset_minutes = int(
-                    dt.tzinfo.utcoffset(None).total_seconds() / 60)
+                    dt.tzinfo.utcoffset(None).total_seconds() // 60)
 
                 return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
                     offset=tzoffset_minutes, name=None)), precision)

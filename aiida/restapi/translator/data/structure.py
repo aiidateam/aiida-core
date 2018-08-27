@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import division
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.common.exceptions import LicensingException

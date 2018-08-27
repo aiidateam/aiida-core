@@ -9,6 +9,7 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from __future__ import division
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -108,7 +109,7 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif float(len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)))/len(content) > 0.25:
+    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
     elif re.search('^\s*data_',content) is not None or \

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import division
 import numpy
 from aiida.common.utils import classproperty
 from aiida.orm.data.array import ArrayData

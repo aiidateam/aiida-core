@@ -11,6 +11,7 @@
 Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 """
 from __future__ import absolute_import
+from __future__ import division
 from aiida.backends.testbase import AiidaTestCase
 import unittest
 

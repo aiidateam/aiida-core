@@ -10,6 +10,7 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 from __future__ import absolute_import
+from __future__ import division
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
@@ -375,7 +376,7 @@ def refine_inline(node):
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']
         if len(original_atoms) % len(refined_atoms):
-            new_Z = old_Z * len(original_atoms) / len(refined_atoms)
+            new_Z = old_Z * len(original_atoms) // len(refined_atoms)
             cif.values[name]['_cell_formula_units_Z'] = new_Z
 
     return {'cif': cif}

@@ -13,6 +13,7 @@ functions to operate on them.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
@@ -436,7 +437,7 @@ def get_formula_group(symbol_list, separator=""):
         n = len(_list)
         the_symbol_list = copy.deepcopy(_list)
 
-        while (not has_finished) and (group_size <= n / 2):
+        while (not has_finished) and (group_size <= n // 2):
             # try to group as much as possible by groups of size group_size
             the_symbol_list, has_grouped = group_together_symbols(
                 the_symbol_list,
@@ -548,7 +549,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
     if mode in ['hill_compact', 'count_compact']:
         from fractions import gcd
         the_gcd = reduce(gcd,[e[0] for e in the_symbol_list])
-        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
+        the_symbol_list = [[e[0]//the_gcd,e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 

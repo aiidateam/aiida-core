@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+from __future__ import division
 import json
 import datetime
 import shutil
@@ -246,7 +247,7 @@ class AbstractBackup(object):
                 else str(self._end_date_of_backup),
             self.PERIODICITY_KEY: self._periodicity,
             self.BACKUP_LENGTH_THRESHOLD_KEY:
-                int((self._backup_length_threshold.total_seconds() / 3600))
+                int(self._backup_length_threshold.total_seconds() // 3600)
         }
 
         return backup_variables
@@ -388,7 +389,7 @@ class AbstractBackup(object):
                             (datetime.datetime.now() -
                                  last_progress_print).seconds > 60):
                     last_progress_print = datetime.datetime.now()
-                    percent_progress = (copy_counter * 100 / dir_no_to_copy)
+                    percent_progress = copy_counter * 100 / dir_no_to_copy
                     self._logger.info(
                         "Copied {} ".format(copy_counter) +
                         "directories [{}]".format(item.__class__.__name__, ) +

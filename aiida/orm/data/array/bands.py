@@ -13,6 +13,7 @@ in a Brillouin zone, and how to operate on them.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
@@ -147,10 +148,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             # calculation, 2 otherwise)
             number_electrons_per_band = 4 - len(stored_bands.shape)  # 1 or 2
             # gather the energies of the homo band, for every kpoint
-            homo = [i[number_electrons / number_electrons_per_band - 1] for i in bands]  # take the nth level
+            homo = [i[number_electrons // number_electrons_per_band - 1] for i in bands]  # take the nth level
             try:
                 # gather the energies of the lumo band, for every kpoint
-                lumo = [i[number_electrons / number_electrons_per_band] for i in bands]  # take the n+1th level
+                lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError("To understand if it is a metal or insulator, "
                                  "need more bands than n_band=number_electrons")

@@ -9,6 +9,8 @@
 ###########################################################################
 from __future__ import absolute_import
 import contextlib
+
+from six import integer_types
 from sqlalchemy import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
@@ -243,7 +245,7 @@ def django_filter(cls_query, **kwargs):
 def apply_json_cast(attr, val):
     if isinstance(val, basestring):
         attr = attr.astext
-    if isinstance(val, int) or isinstance(val, long):
+    if isinstance(val, integer_types):
         attr = attr.astext.cast(Integer)
     if isinstance(val, bool):
         attr = attr.astext.cast(Boolean)

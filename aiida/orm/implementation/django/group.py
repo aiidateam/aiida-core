@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import
 import collections
+
+from six import integer_types
+
 from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
@@ -38,7 +41,7 @@ class Group(AbstractGroup):
             if kwargs:
                 raise ValueError("If you pass a dbgroups, you cannot pass any further parameter")
 
-            if isinstance(dbgroup, (int, long)):
+            if isinstance(dbgroup, integer_types):
                 try:
                     dbgroup = DbGroup.objects.get(pk=dbgroup)
                 except ObjectDoesNotExist:

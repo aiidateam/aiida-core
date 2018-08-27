@@ -25,6 +25,7 @@ import numbers
 import re
 
 from six.moves import zip
+from six import integer_types
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -270,7 +271,7 @@ def conv_to_fortran_withlists(val, quote_strings=True):
 
         return '.false.'
 
-    if isinstance(val, (int, long)):
+    if isinstance(val, integer_types):
         return "{:d}".format(val)
 
     if isinstance(val, float):

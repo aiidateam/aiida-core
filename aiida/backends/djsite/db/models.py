@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import sys
 
 from six.moves import zip
-from six import reraise
+from six import reraise, integer_types
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -766,7 +766,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value, (int, long)):
+        elif isinstance(value, integer_types):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -893,7 +893,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             return {'datatype': 'none'}
         elif isinstance(value, bool):
             return {'datatype': 'bool', 'bval': value}
-        elif isinstance(value, (int, long)):
+        elif isinstance(value, integer_types):
             return {'datatype': 'int', 'ival': value}
         elif isinstance(value, float):
             return {'datatype': 'float', 'fval': value}
@@ -1128,7 +1128,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             if with_transaction:
                 sid = transaction.savepoint()
 
-            if isinstance(dbnode, (int, long)):
+            if isinstance(dbnode, integer_types):
                 dbnode_node = DbNode(id=dbnode)
             else:
                 dbnode_node = dbnode
@@ -1189,7 +1189,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        if isinstance(dbnode, (int, long)):
+        if isinstance(dbnode, integer_types):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode

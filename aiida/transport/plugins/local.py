@@ -24,10 +24,10 @@ import errno
 import os
 import shutil
 import subprocess
-import StringIO
 import glob
 
 import six
+from six.moves import cStringIO as StringIO
 
 from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
@@ -775,7 +775,7 @@ class LocalTransport(Transport):
 
         if stdin is not None:
             if isinstance(stdin, six.string_types):
-                filelike_stdin = StringIO.StringIO(stdin)
+                filelike_stdin = StringIO(stdin)
             else:
                 filelike_stdin = stdin
 

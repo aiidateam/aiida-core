@@ -687,11 +687,11 @@ class IcsdEntry(CifEntry):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
         from aiida.orm.data.cif import CifData
 
         cif = correct_cif(self.cif)
-        return CifData.read_cif(StringIO.StringIO(cif))
+        return CifData.read_cif(StringIO(cif))
 
 
 def correct_cif(cif):

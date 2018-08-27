@@ -90,7 +90,7 @@ class TemplatereplacerCalculation(JobCalculation):
         :param inputdict: a dictionary with the input nodes, as they would
                 be returned by get_inputs_dict (with the Code!)
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         from aiida.orm.data.singlefile import SinglefileData
         from aiida.orm.data.remote import RemoteData
@@ -159,7 +159,7 @@ class TemplatereplacerCalculation(JobCalculation):
             raise InputValidationError("If you ask for input_through_stdin you have to "
                                        "specify a input_file_name")
 
-        input_file = StringIO.StringIO(input_file_template.format(**parameters))
+        input_file = StringIO(input_file_template.format(**parameters))
         if input_file_name:
             tempfolder.create_file_from_filelike(input_file, input_file_name)
         else:

@@ -1457,8 +1457,9 @@ class AbstractJobCalculation(AbstractCalculation):
             needed by the daemon to handle operations.
         """
         import os
-        import StringIO
         import json
+
+        from six.moves import cStringIO as StringIO
 
         from aiida.common.exceptions import (NotExistent,
                                              PluginInternalError,
@@ -1667,13 +1668,11 @@ class AbstractJobCalculation(AbstractCalculation):
         # TODO: give possibility to use a different name??
         script_filename = '_aiidasubmit.sh'
         script_content = s.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(StringIO.StringIO(script_content), script_filename)
+        folder.create_file_from_filelike(StringIO(script_content), script_filename)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(
-            StringIO.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
-        subfolder.create_file_from_filelike(
-            StringIO.StringIO(json.dumps(calcinfo)), 'calcinfo.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(calcinfo)), 'calcinfo.json')
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []

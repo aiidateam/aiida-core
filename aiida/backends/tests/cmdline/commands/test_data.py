@@ -48,7 +48,7 @@ from aiida.work.workfunctions import workfunction as wf
 
 
 from contextlib import contextmanager
-from StringIO import StringIO
+from six.moves import cStringIO as StringIO
 
 @contextmanager
 def captured_output():

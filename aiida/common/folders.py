@@ -228,7 +228,7 @@ class Folder(object):
           file will be copied in the new file.
 
         :param src_filelike: the file-like object (e.g., if you have
-            a string called s, you can pass ``StringIO.StringIO(s)``)
+            a string called s, you can pass ``io.StringIO(s)``)
         :param dest_name: the destination filename will have this file name.
         """
         filename = six.text_type(dest_name)

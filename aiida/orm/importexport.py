@@ -2456,11 +2456,11 @@ class MyWritingZipFile(object):
         self._buffer = None
 
     def open(self):
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         if self._buffer is not None:
             raise IOError("Cannot open again!")
-        self._buffer = StringIO.StringIO()
+        self._buffer = StringIO()
 
     def write(self, data):
         self._buffer.write(data)

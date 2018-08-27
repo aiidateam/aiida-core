@@ -1323,10 +1323,10 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         test_string = "some_test String"
-        stdin = StringIO.StringIO(test_string)
+        stdin = StringIO(test_string)
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
             self.assertEquals(retcode, 0)

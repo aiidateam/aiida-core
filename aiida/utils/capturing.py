@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
-from cStringIO import StringIO
 import sys
+
+from six.moves import cStringIO as StringIO
 
 
 class Capturing(object):

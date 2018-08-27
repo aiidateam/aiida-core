@@ -9,12 +9,12 @@
 ###########################################################################
 from __future__ import absolute_import
 from stat import S_ISDIR, S_ISREG
-import StringIO
 import os
 import click
 import glob
 
 import six
+from six.moves import cStringIO as StringIO
 
 import aiida.transport
 import aiida.transport.transport
@@ -1334,7 +1334,7 @@ class SshTransport(aiida.transport.Transport):
 
         if stdin is not None:
             if isinstance(stdin, six.string_types):
-                filelike_stdin = StringIO.StringIO(stdin)
+                filelike_stdin = StringIO(stdin)
             else:
                 filelike_stdin = stdin
 

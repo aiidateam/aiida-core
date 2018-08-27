@@ -277,9 +277,9 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
         from aiida.orm.data.cif import CifData
-        return CifData.read_cif(StringIO.StringIO(self.cif))
+        return CifData.read_cif(StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
         """

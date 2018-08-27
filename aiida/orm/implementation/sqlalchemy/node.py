@@ -11,6 +11,8 @@
 SQL Alchemy Node concrete implementation
 """
 from __future__ import absolute_import
+
+import six
 from future.utils import viewitems, viewkeys
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -710,7 +712,7 @@ class Node(AbstractNode):
 
     @property
     def uuid(self):
-        return unicode(self._dbnode.uuid)
+        return six.text_type(self._dbnode.uuid)
 
     def _attributes(self):
         self._ensure_model_uptodate(['attributes'])

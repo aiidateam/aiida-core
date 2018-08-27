@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import collections
 from copy import copy
 
-from six import integer_types
+import six
 from sqlalchemy.orm.session import make_transient
 
 from aiida.backends import sqlalchemy as sa
@@ -42,7 +42,7 @@ class Group(AbstractGroup):
                 raise ValueError("If you pass a dbgroups, you cannot pass any "
                                  "further parameter")
 
-            if isinstance(given_dbgroup, integer_types):
+            if isinstance(given_dbgroup, six.integer_types):
                 dbgroup_res = DbGroup.query.filter_by(id=given_dbgroup).first()
                 if not dbgroup_res:
                     raise NotExistent("Group with pk={} does not exist".format(
@@ -135,7 +135,7 @@ class Group(AbstractGroup):
 
     @property
     def uuid(self):
-        return unicode(self._dbgroup.uuid)
+        return six.text_type(self._dbgroup.uuid)
 
     def __int__(self):
         if not self.is_stored:

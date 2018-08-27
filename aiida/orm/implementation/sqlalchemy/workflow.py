@@ -13,6 +13,8 @@ import importlib
 import inspect
 import logging
 
+import six
+
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
 from aiida.common import aiidalogger
@@ -407,7 +409,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return unicode(self.dbworkflowinstance.state)
+        return six.text_type(self.dbworkflowinstance.state)
 
     def set_state(self, state):
         """

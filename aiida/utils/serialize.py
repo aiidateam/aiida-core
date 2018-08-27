@@ -11,7 +11,10 @@ from __future__ import absolute_import
 import collections
 import uuid
 from ast import literal_eval
+
+import six
 from plumpy.utils import AttributesFrozendict
+
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
@@ -74,7 +77,7 @@ def serialize_data(data):
         return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.items()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
+    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [serialize_data(value) for value in data]
     else:
         return data
@@ -95,13 +98,13 @@ def deserialize_data(data):
         return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.items()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
+    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [deserialize_data(value) for value in data]
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_GROUP):
         return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_UUID):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_UUID):
         return uuid.UUID(data[len(_PREFIX_VALUE_UUID):])
     else:
         return data

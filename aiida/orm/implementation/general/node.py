@@ -20,6 +20,8 @@ try:
 except ImportError:
     import pathlib2 as pathlib
 
+import six
+
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
 from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
@@ -58,7 +60,7 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
     elif (isinstance(value, collections.Iterable) and
-          not isinstance(value, (str, unicode))):
+          not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object

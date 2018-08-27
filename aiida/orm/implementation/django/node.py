@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import
 import copy
+from functools import reduce
+
+import six
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
@@ -26,7 +29,6 @@ from aiida.orm.implementation.django.computer import Computer
 from aiida.orm.mixins import Sealable
 
 from . import user as users
-from functools import reduce
 
 
 class Node(AbstractNode):
@@ -493,7 +495,7 @@ class Node(AbstractNode):
 
     @property
     def uuid(self):
-        return unicode(self._dbnode.uuid)
+        return six.text_type(self._dbnode.uuid)
 
     @property
     def id(self):

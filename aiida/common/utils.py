@@ -24,8 +24,8 @@ import sys
 import numbers
 import re
 
+import six
 from six.moves import range, input, zip
-from six import integer_types
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -107,7 +107,7 @@ def get_new_uuid():
         raise NotImplementedError("Only version 4 of UUID supported currently")
 
     the_uuid = uuid.uuid4()
-    return unicode(the_uuid)
+    return six.text_type(the_uuid)
 
 
 # To speed up the process (os.path.abspath calls are slow)
@@ -271,7 +271,7 @@ def conv_to_fortran_withlists(val, quote_strings=True):
 
         return '.false.'
 
-    if isinstance(val, integer_types):
+    if isinstance(val, six.integer_types):
         return "{:d}".format(val)
 
     if isinstance(val, float):

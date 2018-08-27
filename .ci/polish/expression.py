@@ -12,6 +12,7 @@ import operator as operators
 import random
 from collections import deque
 from six.moves import range
+import six
 
 
 OPERATORS = {
@@ -128,7 +129,7 @@ def evaluate(expression, modulo=None):
             x = int(stack.popleft())
             y = int(stack.popleft())
             result = op(x, y)
-            stack.appendleft(unicode(result))
+            stack.appendleft(six.text_type(result))
 
     if modulo is not None:
         return int(result % modulo)

@@ -705,8 +705,8 @@ class Transport(object):
         if not dirname:
             # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
-        if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
-            dirname = unicode(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
+        if isinstance(pattern, six.text_type) and not isinstance(dirname, six.text_type):
+            dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             # names = os.listdir(dirname)
             # print dirname

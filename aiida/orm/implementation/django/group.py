@@ -11,7 +11,7 @@
 from __future__ import absolute_import
 import collections
 
-from six import integer_types
+import six
 
 from django.db import transaction, IntegrityError
 from django.db.models import Q
@@ -41,7 +41,7 @@ class Group(AbstractGroup):
             if kwargs:
                 raise ValueError("If you pass a dbgroups, you cannot pass any further parameter")
 
-            if isinstance(dbgroup, integer_types):
+            if isinstance(dbgroup, six.integer_types):
                 try:
                     dbgroup = DbGroup.objects.get(pk=dbgroup)
                 except ObjectDoesNotExist:
@@ -119,7 +119,7 @@ class Group(AbstractGroup):
 
     @property
     def uuid(self):
-        return unicode(self._dbgroup.uuid)
+        return six.text_type(self._dbgroup.uuid)
 
     def __int__(self):
         if not self.is_stored:

@@ -15,11 +15,13 @@ import aiida
 import logging
 import json
 
+import six
 from six.moves import input
 
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
+
 
 USE_TZ = True
 DEFAULT_AIIDA_USER = 'aiida@localhost'
@@ -1021,7 +1023,7 @@ def set_property(name, value):
         else:
             actual_value = bool(value)
     elif type_string == "string":
-        actual_value = unicode(value)
+        actual_value = six.text_type(value)
     elif type_string == "int":
         actual_value = int(value)
     elif type_string == 'list_of_str':

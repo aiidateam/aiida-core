@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import
 from datetime import datetime
+
+import six
+
 import aiida.backends.sqlalchemy
 
 from sqlalchemy import and_, or_, not_
@@ -357,7 +360,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, (str, unicode)):
+            elif isinstance(value, six.string_types):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:

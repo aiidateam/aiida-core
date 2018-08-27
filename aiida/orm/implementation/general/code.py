@@ -10,6 +10,9 @@
 from __future__ import absolute_import
 import os
 from abc import abstractmethod
+
+import six
+
 from aiida.orm.implementation import Node
 from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
@@ -315,7 +318,7 @@ class AbstractCode(Node):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self._set_attr('prepend_text', unicode(code))
+        self._set_attr('prepend_text', six.text_type(code))
 
     def get_prepend_text(self):
         """
@@ -332,7 +335,7 @@ class AbstractCode(Node):
         if input_plugin is None:
             self._set_attr('input_plugin', None)
         else:
-            self._set_attr('input_plugin', unicode(input_plugin))
+            self._set_attr('input_plugin', six.text_type(input_plugin))
 
     def get_input_plugin_name(self):
         """
@@ -346,7 +349,7 @@ class AbstractCode(Node):
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self._set_attr('append_text', unicode(code))
+        self._set_attr('append_text', six.text_type(code))
 
     def get_append_text(self):
         """

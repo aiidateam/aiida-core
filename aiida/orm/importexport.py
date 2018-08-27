@@ -20,6 +20,7 @@ from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
+import six
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -1093,15 +1094,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 # stored as (unicode) strings of the serialized
                                 # JSON objects and not as simple serialized
                                 # JSON objects.
-                                if ((type(v['metadata']) is str) or
-                                        (type(v['metadata']) is unicode)):
-                                    v['metadata'] = json.loads(v['metadata'])
+                                if (isinstance(v['metadata'], six.string_types) or
+                                        isinstance(v['metadata'], six.binary_type)):
+                                    v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
 
-                                if ((type(v['transport_params']) is str) or
-                                        (type(v['transport_params']) is
-                                         unicode)):
-                                    v['transport_params'] = json.loads(
-                                        v['transport_params'])
+                                if (isinstance(v['transport_params'], six.string_types) or
+                                        isinstance(v['transport_params'], six.binary_type)):
+                                    v['transport_params'] = json.loads(v['transport_params'])
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -2555,14 +2554,13 @@ class ZipFolder(object):
         import os
 
         if dest_name is None:
-            base_filename = unicode(os.path.basename(src))
+            base_filename = six.text_type(os.path.basename(src))
         else:
-            base_filename = unicode(dest_name)
+            base_filename = six.text_type(dest_name)
 
         base_filename = self._get_internal_path(base_filename)
 
-        if not isinstance(src, unicode):
-            src = unicode(src)
+        src = six.text_type(src)
 
         if not os.path.isabs(src):
             raise ValueError("src must be an absolute path in insert_file")

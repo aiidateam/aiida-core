@@ -196,7 +196,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     else:
         if uuid and isinstance(uuid, uuid_type):
             uuid = str(uuid)
-        if isinstance(uuid, str) or isinstance(uuid, unicode):
+        if isinstance(uuid, six.string_types):
             return Workflow.get_subclass_from_uuid(uuid)
         else:
             raise ValueError("'uuid' has to be a string, unicode or a UUID instance")

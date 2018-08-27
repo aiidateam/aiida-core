@@ -467,13 +467,13 @@ class AbstractComputer(object):
         return self._get_property("prepend_text", "")
 
     def set_prepend_text(self, val):
-        self._set_property("prepend_text", unicode(val))
+        self._set_property("prepend_text", six.text_type(val))
 
     def get_append_text(self):
         return self._get_property("append_text", "")
 
     def set_append_text(self, val):
-        self._set_property("append_text", unicode(val))
+        self._set_property("append_text", six.text_type(val))
 
     def get_mpirun_command(self):
         """

@@ -12,6 +12,8 @@ from __future__ import absolute_import
 import json
 import collections
 
+import six
+
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -24,7 +26,7 @@ from aiida.common.exceptions import (NotExistent, ConfigurationError,
 class Computer(AbstractComputer):
     @property
     def uuid(self):
-        return unicode(self._dbcomputer.uuid)
+        return six.text_type(self._dbcomputer.uuid)
 
     @property
     def pk(self):

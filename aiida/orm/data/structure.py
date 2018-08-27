@@ -14,11 +14,12 @@ functions to operate on them.
 
 from __future__ import absolute_import
 from __future__ import division
-
-from six.moves import range, zip
 import itertools
 import copy
 from functools import reduce
+
+import six
+from six.moves import range, zip
 
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -2237,7 +2238,7 @@ class Kind(object):
         """
         Set the name of this site (a string).
         """
-        self._name = unicode(value)
+        self._name = six.text_type(value)
 
     def set_automatic_kind_name(self, tag=None):
         """
@@ -2528,7 +2529,7 @@ class Site(object):
                 tag_list.append(None)
             # If the kind name is equal to the specie name,
             # then no tag should be set
-            elif unicode(k.name) == unicode(k.symbols[0]):
+            elif six.text_type(k.name) == six.text_type(k.symbols[0]):
                 tag_list.append(None)
             else:
                 # Name is not the specie name
@@ -2594,7 +2595,7 @@ class Site(object):
         """
         Set the type of this site (a string).
         """
-        self._kind_name = unicode(value)
+        self._kind_name = six.text_type(value)
 
     @property
     def position(self):

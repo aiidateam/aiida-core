@@ -14,6 +14,7 @@ import copy
 import datetime
 import enum
 
+import six
 from six.moves import range, zip
 
 from aiida.common.datastructures import calc_states
@@ -292,7 +293,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if val is None:
             self._set_attr('queue_name', None)
         else:
-            self._set_attr('queue_name', unicode(val))
+            self._set_attr('queue_name', six.text_type(val))
 
     def set_import_sys_environment(self, val):
         """
@@ -351,7 +352,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
-        self._set_attr('priority', unicode(val))
+        self._set_attr('priority', six.text_type(val))
 
     def set_max_memory_kb(self, val):
         """
@@ -471,7 +472,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        self._set_attr("prepend_text", unicode(val))
+        self._set_attr("prepend_text", six.text_type(val))
 
     def get_append_text(self):
         """
@@ -489,7 +490,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        self._set_attr("append_text", unicode(val))
+        self._set_attr("append_text", six.text_type(val))
 
     def set_custom_scheduler_commands(self, val):
         """
@@ -501,7 +502,7 @@ class AbstractJobCalculation(AbstractCalculation):
         inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
-        self._set_attr("custom_scheduler_commands", unicode(val))
+        self._set_attr("custom_scheduler_commands", six.text_type(val))
 
     def get_custom_scheduler_commands(self):
         """
@@ -860,7 +861,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 "{})".format(self.get_state())
             )
 
-        return self._set_attr('job_id', unicode(job_id))
+        return self._set_attr('job_id', six.text_type(job_id))
 
     def get_job_id(self):
         """
@@ -875,7 +876,7 @@ class AbstractJobCalculation(AbstractCalculation):
         # I just convert it to a string
         from aiida.utils import timezone
 
-        self._set_attr('scheduler_state', unicode(state))
+        self._set_attr('scheduler_state', six.text_type(state))
         self._set_attr('scheduler_lastchecktime', timezone.now())
 
     def get_scheduler_state(self):

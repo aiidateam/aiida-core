@@ -10,8 +10,9 @@
 
 from __future__ import absolute_import
 import json
-
 from copy import copy
+
+import six
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
@@ -24,12 +25,11 @@ from aiida.orm.implementation.general.computer import AbstractComputer, Util as 
 from aiida.common.lang import override
 
 
-
 class Computer(AbstractComputer):
 
     @property
     def uuid(self):
-        return unicode(self._dbcomputer.uuid)
+        return six.text_type(self._dbcomputer.uuid)
 
     @property
     def pk(self):

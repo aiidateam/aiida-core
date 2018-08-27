@@ -13,6 +13,7 @@ Tests for the export and import routines.
 
 from __future__ import absolute_import
 
+import six
 from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
@@ -1038,8 +1039,8 @@ class TestComputer(AiidaTestCase):
             calc2._set_state(u'RETRIEVING')
 
             # Store locally the computer name
-            comp_name = unicode(self.computer.name)
-            comp_uuid = unicode(self.computer.uuid)
+            comp_name = six.text_type(self.computer.name)
+            comp_uuid = six.text_type(self.computer.uuid)
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
@@ -1073,7 +1074,7 @@ class TestComputer(AiidaTestCase):
             qb.append(JobCalculation, project=['label'])
             self.assertEqual(qb.count(), 1, "Only one calculation should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), calc1_label,
+            self.assertEqual(six.text_type(qb.first()[0]), calc1_label,
                              "The calculation label is not correct.")
 
             # Check that the referenced computer is imported correctly.
@@ -1081,9 +1082,9 @@ class TestComputer(AiidaTestCase):
             qb.append(Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(qb.count(), 1, "Only one computer should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), comp_name,
+            self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
-            self.assertEqual(unicode(qb.first()[1]), comp_uuid,
+            self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
                              "The computer uuid is not correct.")
 
             # Store the id of the computer
@@ -1098,9 +1099,9 @@ class TestComputer(AiidaTestCase):
             qb.append(Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(qb.count(), 1, "Only one computer should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), comp_name,
+            self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
-            self.assertEqual(unicode(qb.first()[1]), comp_uuid,
+            self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
                              "The computer uuid is not correct.")
             self.assertEqual(qb.first()[2], comp_id,
                              "The computer id is not correct.")
@@ -1153,7 +1154,7 @@ class TestComputer(AiidaTestCase):
             calc1._set_state(u'RETRIEVING')
 
             # Store locally the computer name
-            comp1_name = unicode(self.computer.name)
+            comp1_name = six.text_type(self.computer.name)
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
@@ -1200,7 +1201,7 @@ class TestComputer(AiidaTestCase):
             qb.append(JobCalculation, project=['label'])
             self.assertEqual(qb.count(), 1, "Only one calculation should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), calc1_label,
+            self.assertEqual(six.text_type(qb.first()[0]), calc1_label,
                              "The calculation label is not correct.")
 
             # Check that the referenced computer is imported correctly.
@@ -1208,7 +1209,7 @@ class TestComputer(AiidaTestCase):
             qb.append(Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(qb.count(), 1, "Only one computer should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), comp1_name,
+            self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
             # Import the second calculation
@@ -1220,7 +1221,7 @@ class TestComputer(AiidaTestCase):
             qb.append(Computer, project=['name'])
             self.assertEqual(qb.count(), 1, "Only one computer should be "
                                             "found.")
-            self.assertEqual(unicode(qb.first()[0]), comp1_name,
+            self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
         finally:

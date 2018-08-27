@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+
+import six
+
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import InputValidationError, InvalidOperation, \
@@ -484,7 +487,7 @@ class BaseTranslator(object):
         if self._has_uuid:
 
             # For consistency check that tid is a string
-            if not isinstance(id, (str, unicode)):
+            if not isinstance(id, six.string_types):
                 raise RestValidationError('parameter id has to be an string')
 
             identifier_type = IdentifierType.UUID

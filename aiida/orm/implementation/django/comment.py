@@ -9,11 +9,13 @@
 ###########################################################################
 
 from __future__ import absolute_import
+from functools import reduce
+
+import six
+
 from aiida.backends.djsite.db.models import DbComment
 from aiida.orm.implementation.general.comment import AbstractComment
 from aiida.common.exceptions import NotExistent, MultipleObjectsError
-from functools import reduce
-
 
 
 class Comment(AbstractComment):
@@ -89,7 +91,7 @@ class Comment(AbstractComment):
 
     @property
     def uuid(self):
-        return unicode(self.dbcomment.uuid)
+        return six.text_type(self.dbcomment.uuid)
 
     def get_ctime(self):
         return self.dbcomment.ctime

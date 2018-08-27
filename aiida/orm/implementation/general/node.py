@@ -1289,7 +1289,7 @@ class AbstractNode(object):
         # Note: this calls a different function _db_attrs
         # because often it's faster not to retrieve the values from the DB
         if self._to_be_stored:
-            for k in self._attrs_cache.iterkeys():
+            for k in self._attrs_cache.keys():
                 yield k
         else:
             for k in self._db_attrs():

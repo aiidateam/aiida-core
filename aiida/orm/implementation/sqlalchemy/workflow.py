@@ -529,7 +529,7 @@ class Workflow(AbstractWorkflow):
         except ImportError:
             raise InternalError("Unable to load the workflow module {}".format(module))
 
-        for elem_name in wf_mod.__dict__.iterkeys():
+        for elem_name in wf_mod.__dict__.keys():
 
             if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)

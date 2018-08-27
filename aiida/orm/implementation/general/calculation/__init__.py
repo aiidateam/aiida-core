@@ -126,7 +126,7 @@ class AbstractCalculation(Sealable):
         """
         Allow to list all valid attributes, adding also the use_* methods
         """
-        return sorted(dir(type(self)) + list(['use_{}'.format(k) for k in self._use_methods.iterkeys()]))
+        return sorted(dir(type(self)) + list(['use_{}'.format(k) for k in self._use_methods.keys()]))
 
     def __getattr__(self, name):
         """
@@ -183,7 +183,7 @@ class AbstractCalculation(Sealable):
                 self.node._replace_link_from(parent_node, actual_linkname)
 
         prefix = 'use_'
-        valid_use_methods = list(['{}{}'.format(prefix, k) for k in self._use_methods.iterkeys()])
+        valid_use_methods = ['{}{}'.format(prefix, k) for k in self._use_methods.keys()]
 
         if name in valid_use_methods:
             actual_name = name[len(prefix):]

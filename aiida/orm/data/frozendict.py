@@ -41,7 +41,7 @@ class FrozenDict(Data, Mapping):
         return self._get(key)
 
     def __iter__(self):
-        return self.get_attrs().iterkeys()
+        return iter(self.get_attrs().keys())
 
     def __len__(self):
         return len(self.get_attrs())

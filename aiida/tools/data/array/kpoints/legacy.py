@@ -1879,14 +1879,14 @@ def get_kpoints_path(cell, pbc=None, cartesian=False,
         return [permutation.index(i) for i in range(3)]
 
     the_special_points = {}
-    for k in special_points.iterkeys():
+    for k in special_points.keys():
         # NOTE: this originally returned the inverse of the permutation, but was later changed to permutation
         the_special_points[k] = permute(special_points[k], permutation)
 
     # output crystal or cartesian
     if cartesian:
         the_abs_special_points = {}
-        for k in the_special_points.iterkeys():
+        for k in the_special_points.keys():
             the_abs_special_points[k] = change_reference(
                 reciprocal_cell, numpy.array(the_special_points[k]), to_cartesian=True
             )

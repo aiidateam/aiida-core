@@ -89,7 +89,7 @@ def disable_expire_on_commit(session):
 
 def iter_dict(attrs):
     if isinstance(attrs, dict):
-        for key in sorted(attrs.iterkeys()):
+        for key in sorted(attrs.keys()):
             it = iter_dict(attrs[key])
             for k, v in it:
                 new_key = key
@@ -159,7 +159,7 @@ def django_filter(cls_query, **kwargs):
     tmp_attr = dict(key=None, val=None)
     tmp_extra = dict(key=None, val=None)
 
-    for key in sorted(kwargs.iterkeys()):
+    for key in sorted(kwargs.keys()):
         val = kwargs[key]
 
         join, field, op = [None] * 3
@@ -173,7 +173,7 @@ def django_filter(cls_query, **kwargs):
         # we have either "computer__id", which means join + field quality or
         # "id__gte" which means field + op
         elif len(splits) == 2:
-            if splits[1] in _from_op.iterkeys():
+            if splits[1] in _from_op.keys():
                 field, op = splits
             else:
                 join, field = splits

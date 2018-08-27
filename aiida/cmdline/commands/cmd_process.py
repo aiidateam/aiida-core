@@ -71,7 +71,7 @@ def process_kill(processes, timeout):
                 continue
 
             try:
-                if control_panel.kill_process(process.pk):
+                if control_panel.kill_process(process.pk, msg='Killed through `verdi process kill`'):
                     echo.echo_success('killed Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem killing Process<{}>'.format(process.pk))

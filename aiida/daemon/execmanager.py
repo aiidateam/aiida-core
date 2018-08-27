@@ -21,7 +21,7 @@ from aiida.common.datastructures import calc_states
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
-from aiida.orm import load_node, DataFactory
+from aiida.orm import DataFactory
 from aiida.orm.data.folder import FolderData
 from aiida.scheduler.datastructures import JOB_STATES
 
@@ -29,21 +29,25 @@ from aiida.scheduler.datastructures import JOB_STATES
 execlogger = aiidalogger.getChild('execmanager')
 
 
-def submit_calculation(calculation, transport):
+def submit_calculation(calculation, transport, calc_info, script_filename):
     """
     Submit a calculation
 
     :param calculation: the instance of JobCalculation to submit.
     :param transport: an already opened transport to use to submit the calculation.
+    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
+    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
     """
-    from aiida.orm import Code
-    from aiida.common.exceptions import InputValidationError
+    from aiida.orm import load_node, Code
     from aiida.orm.data.remote import RemoteData
 
     computer = calculation.get_computer()
 
     if not computer.is_enabled():
         return
+
+    codes_info = calc_info.codes_info
+    input_codes = [load_node(_.code_uuid, sub_class=Code) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(calculation)
     transport._set_logger_extra(logger_extra)
@@ -55,159 +59,142 @@ def submit_calculation(calculation, transport):
                          "test_submit() method, otherwise store all links"
                          "first".format(calculation.pk))
 
-    s = computer.get_scheduler()
-    s.set_transport(transport)
+    folder = calculation._raw_input_folder
 
-    with SandboxFolder() as folder:
-        calcinfo, script_filename = calculation._presubmit(folder, use_unstored_links=False)
+    # NOTE: some logic is partially replicated in the 'test_submit'
+    # method of JobCalculation. If major logic changes are done
+    # here, make sure to update also the test_submit routine
+    remote_user = transport.whoami()
+    # TODO Doc: {username} field
+    # TODO: if something is changed here, fix also 'verdi computer test'
+    remote_working_directory = computer.get_workdir().format(
+        username=remote_user)
+    if not remote_working_directory.strip():
+        raise exceptions.ConfigurationError(
+            "[submission of calculation {}] "
+            "No remote_working_directory configured for computer "
+            "'{}'".format(calculation.pk, computer.name))
 
-        codes_info = calcinfo.codes_info
-        input_codes = [load_node(_.code_uuid, sub_class=Code) for _ in codes_info]
-
-        for code in input_codes:
-            if not code.can_run_on(computer):
-                raise InputValidationError(
-                    "The selected code {} for calculation "
-                    "{} cannot run on computer {}".
-                        format(code.pk, calculation.pk, computer.name))
-
-        # After this call, no modifications to the folder should be done
-        calculation._store_raw_input_folder(folder.abspath)
-
-        # NOTE: some logic is partially replicated in the 'test_submit'
-        # method of JobCalculation. If major logic changes are done
-        # here, make sure to update also the test_submit routine
-        remote_user = transport.whoami()
-        # TODO Doc: {username} field
-        # TODO: if something is changed here, fix also 'verdi computer test'
-        remote_working_directory = computer.get_workdir().format(
-            username=remote_user)
-        if not remote_working_directory.strip():
+    # If it already exists, no exception is raised
+    try:
+        transport.chdir(remote_working_directory)
+    except IOError:
+        execlogger.debug(
+            "[submission of calculation {}] Unable to chdir in {}, trying to create it".format(
+                calculation.pk, remote_working_directory), extra=logger_extra)
+        try:
+            transport.makedirs(remote_working_directory)
+            transport.chdir(remote_working_directory)
+        except (IOError, OSError) as e:
             raise exceptions.ConfigurationError(
                 "[submission of calculation {}] "
-                "No remote_working_directory configured for computer "
-                "'{}'".format(calculation.pk, computer.name))
+                "Unable to create the remote directory {} on "
+                "computer '{}': {}".format(
+                    calculation.pk, remote_working_directory, computer.name, e.message))
+    # Store remotely with sharding (here is where we choose
+    # the folder structure of remote jobs; then I store this
+    # in the calculation properties using _set_remote_dir
+    # and I do not have to know the logic, but I just need to
+    # read the absolute path from the calculation properties.
+    transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
+    transport.chdir(calc_info.uuid[:2])
+    transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
+    transport.chdir(calc_info.uuid[2:4])
+    transport.mkdir(calc_info.uuid[4:])
+    transport.chdir(calc_info.uuid[4:])
+    workdir = transport.getcwd()
+    # I store the workdir of the calculation for later file
+    # retrieval
+    calculation._set_remote_workdir(workdir)
 
-        # If it already exists, no exception is raised
-        try:
-            transport.chdir(remote_working_directory)
-        except IOError:
-            execlogger.debug(
-                "[submission of calculation {}] "
-                "Unable to chdir in {}, trying to create it".
-                    format(calculation.pk, remote_working_directory),
-                extra=logger_extra)
-            try:
-                transport.makedirs(remote_working_directory)
-                transport.chdir(remote_working_directory)
-            except (IOError, OSError) as e:
-                raise exceptions.ConfigurationError(
-                    "[submission of calculation {}] "
-                    "Unable to create the remote directory {} on "
-                    "computer '{}': {}".
-                        format(calculation.pk, remote_working_directory, computer.name,
-                               e.message))
-        # Store remotely with sharding (here is where we choose
-        # the folder structure of remote jobs; then I store this
-        # in the calculation properties using _set_remote_dir
-        # and I do not have to know the logic, but I just need to
-        # read the absolute path from the calculation properties.
-        transport.mkdir(calcinfo.uuid[:2], ignore_existing=True)
-        transport.chdir(calcinfo.uuid[:2])
-        transport.mkdir(calcinfo.uuid[2:4], ignore_existing=True)
-        transport.chdir(calcinfo.uuid[2:4])
-        transport.mkdir(calcinfo.uuid[4:])
-        transport.chdir(calcinfo.uuid[4:])
-        workdir = transport.getcwd()
-        # I store the workdir of the calculation for later file
-        # retrieval
-        calculation._set_remote_workdir(workdir)
+    # I first create the code files, so that the code can put
+    # default files to be overwritten by the plugin itself.
+    # Still, beware! The code file itself could be overwritten...
+    # But I checked for this earlier.
+    for code in input_codes:
+        if code.is_local():
+            # Note: this will possibly overwrite files
+            for f in code.get_folder_list():
+                transport.put(code.get_abs_path(f), f)
+            transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
-        # I first create the code files, so that the code can put
-        # default files to be overwritten by the plugin itself.
-        # Still, beware! The code file itself could be overwritten...
-        # But I checked for this earlier.
-        for code in input_codes:
-            if code.is_local():
-                # Note: this will possibly overwrite files
-                for f in code.get_folder_list():
-                    transport.put(code.get_abs_path(f), f)
-                transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
+    # copy all files, recursively with folders
+    for f in folder.get_content_list():
+        execlogger.debug("[submission of calculation {}] "
+                         "copying file/folder {}...".format(calculation.pk, f),
+                         extra=logger_extra)
+        transport.put(folder.get_abs_path(f), f)
 
-        # copy all files, recursively with folders
-        for f in folder.get_content_list():
+    # local_copy_list is a list of tuples,
+    # each with (src_abs_path, dest_rel_path)
+    # NOTE: validation of these lists are done
+    # inside calculation._presubmit()
+    local_copy_list = calc_info.local_copy_list
+    remote_copy_list = calc_info.remote_copy_list
+    remote_symlink_list = calc_info.remote_symlink_list
+
+    if local_copy_list is not None:
+        for src_abs_path, dest_rel_path in local_copy_list:
             execlogger.debug("[submission of calculation {}] "
-                             "copying file/folder {}...".format(calculation.pk, f),
-                             extra=logger_extra)
-            transport.put(folder.get_abs_path(f), f)
+                             "copying local file/folder to {}".format(
+                calculation.pk, dest_rel_path),
+                extra=logger_extra)
+            transport.put(src_abs_path, dest_rel_path)
 
-        # local_copy_list is a list of tuples,
-        # each with (src_abs_path, dest_rel_path)
-        # NOTE: validation of these lists are done
-        # inside calculation._presubmit()
-        local_copy_list = calcinfo.local_copy_list
-        remote_copy_list = calcinfo.remote_copy_list
-        remote_symlink_list = calcinfo.remote_symlink_list
-
-        if local_copy_list is not None:
-            for src_abs_path, dest_rel_path in local_copy_list:
+    if remote_copy_list is not None:
+        for (remote_computer_uuid, remote_abs_path,
+             dest_rel_path) in remote_copy_list:
+            if remote_computer_uuid == computer.uuid:
                 execlogger.debug("[submission of calculation {}] "
-                                 "copying local file/folder to {}".format(
-                    calculation.pk, dest_rel_path),
-                    extra=logger_extra)
-                transport.put(src_abs_path, dest_rel_path)
+                                 "copying {} remotely, directly on the machine "
+                                 "{}".format(calculation.pk, dest_rel_path, computer.name))
+                try:
+                    transport.copy(remote_abs_path, dest_rel_path)
+                except (IOError, OSError):
+                    execlogger.warning("[submission of calculation {}] "
+                                       "Unable to copy remote resource from {} to {}! "
+                                       "Stopping.".format(calculation.pk,
+                                                          remote_abs_path, dest_rel_path),
+                                       extra=logger_extra)
+                    raise
+            else:
+                # TODO: implement copy between two different
+                # machines!
+                raise NotImplementedError(
+                    "[presubmission of calculation {}] "
+                    "Remote copy between two different machines is "
+                    "not implemented yet".format(calculation.pk))
 
-        if remote_copy_list is not None:
-            for (remote_computer_uuid, remote_abs_path,
-                 dest_rel_path) in remote_copy_list:
-                if remote_computer_uuid == computer.uuid:
-                    execlogger.debug("[submission of calculation {}] "
-                                     "copying {} remotely, directly on the machine "
-                                     "{}".format(calculation.pk, dest_rel_path, computer.name))
-                    try:
-                        transport.copy(remote_abs_path, dest_rel_path)
-                    except (IOError, OSError):
-                        execlogger.warning("[submission of calculation {}] "
-                                           "Unable to copy remote resource from {} to {}! "
-                                           "Stopping.".format(calculation.pk,
-                                                              remote_abs_path, dest_rel_path),
-                                           extra=logger_extra)
-                        raise
-                else:
-                    # TODO: implement copy between two different
-                    # machines!
-                    raise NotImplementedError(
-                        "[presubmission of calculation {}] "
-                        "Remote copy between two different machines is "
-                        "not implemented yet".format(calculation.pk))
+    if remote_symlink_list is not None:
+        for (remote_computer_uuid, remote_abs_path,
+             dest_rel_path) in remote_symlink_list:
+            if remote_computer_uuid == computer.uuid:
+                execlogger.debug("[submission of calculation {}] "
+                                 "copying {} remotely, directly on the machine "
+                                 "{}".format(calculation.pk, dest_rel_path, computer.name))
+                try:
+                    transport.symlink(remote_abs_path, dest_rel_path)
+                except (IOError, OSError):
+                    execlogger.warning("[submission of calculation {}] "
+                                       "Unable to create remote symlink from {} to {}! "
+                                       "Stopping.".format(calculation.pk,
+                                                          remote_abs_path, dest_rel_path),
+                                       extra=logger_extra)
+                    raise
+            else:
+                raise IOError("It is not possible to create a symlink "
+                              "between two different machines for "
+                              "calculation {}".format(calculation.pk))
 
-        if remote_symlink_list is not None:
-            for (remote_computer_uuid, remote_abs_path,
-                 dest_rel_path) in remote_symlink_list:
-                if remote_computer_uuid == computer.uuid:
-                    execlogger.debug("[submission of calculation {}] "
-                                     "copying {} remotely, directly on the machine "
-                                     "{}".format(calculation.pk, dest_rel_path, computer.name))
-                    try:
-                        transport.symlink(remote_abs_path, dest_rel_path)
-                    except (IOError, OSError):
-                        execlogger.warning("[submission of calculation {}] "
-                                           "Unable to create remote symlink from {} to {}! "
-                                           "Stopping.".format(calculation.pk,
-                                                              remote_abs_path, dest_rel_path),
-                                           extra=logger_extra)
-                        raise
-                else:
-                    raise IOError("It is not possible to create a symlink "
-                                  "between two different machines for "
-                                  "calculation {}".format(calculation.pk))
+    remotedata = RemoteData(computer=computer, remote_path=workdir)
+    remotedata.add_link_from(calculation, label='remote_folder', link_type=LinkType.CREATE)
+    remotedata.store()
 
-        remotedata = RemoteData(computer=computer, remote_path=workdir)
-        remotedata.add_link_from(calculation, label='remote_folder', link_type=LinkType.CREATE)
-        remotedata.store()
+    scheduler = computer.get_scheduler()
+    scheduler.set_transport(transport)
 
-        job_id = s.submit_from_script(transport.getcwd(), script_filename)
-        calculation._set_job_id(job_id)
+    job_id = scheduler.submit_from_script(transport.getcwd(), script_filename)
+    calculation._set_job_id(job_id)
 
 
 def update_calculation(calculation, transport):
@@ -232,19 +219,17 @@ def update_calculation(calculation, transport):
         kwargs['jobs'] = [job_id]
 
     found_jobs = scheduler.getJobs(**kwargs)
+    job_info = found_jobs.get(job_id, None)
 
-    info = found_jobs.get(job_id, None)
-    if info is None:
+    if job_info is None:
         # If the job is computed or not found assume it's done
         job_done = True
         calculation._set_scheduler_state(JOB_STATES.DONE)
     else:
-        update_job_calc_from_job_info(calculation, info)
-
-        job_done = info.job_state == JOB_STATES.DONE
+        job_done = job_info.job_state == JOB_STATES.DONE
+        update_job_calc_from_job_info(calculation, job_info)
 
     if job_done:
-        # If the job is done, also get detailed job info
         try:
             detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
         except exceptions.FeatureNotAvailable:
@@ -334,9 +319,18 @@ def kill_calculation(calculation, transport):
     result = scheduler.kill(job_id)
 
     if result is not True:
-        raise exceptions.RemoteOperationError('scheduler.kill({}) was unsuccessful'.format(job_id))
-    else:
-        calculation._set_scheduler_state(JOB_STATES.DONE)
+
+        # Failed to kill because the job might have already been completed
+        running_jobs = scheduler.getJobs(jobs=[job_id], as_dict=True)
+        job = running_jobs.get(job_id, None)
+
+        # If the job is returned it is still running and the kill really failed, so we raise
+        if job is not None and job.job_state != JOB_STATES.DONE:
+            raise exceptions.RemoteOperationError('scheduler.kill({}) was unsuccessful'.format(job_id))
+        else:
+            execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
+
+    return True
 
 
 def update_job_calc_from_job_info(calc, job_info):

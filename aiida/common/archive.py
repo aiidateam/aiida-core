@@ -148,7 +148,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     :param silent: suppress debug print
     """
     import os
-    import urllib2
+    from six.moves import urllib
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file, sha1_file
@@ -170,7 +170,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
         if contents == '?' or contents == '.':
             uri = values['_tcod_file_uri'][i]
             if uri is not None and uri != '?' and uri != '.':
-                contents = urllib2.urlopen(uri).read()
+                contents = urllib.request.urlopen(uri).read()
         encoding = values['_tcod_file_content_encoding'][i]
         if encoding == '.':
             encoding = None

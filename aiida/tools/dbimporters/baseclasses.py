@@ -223,10 +223,10 @@ class DbEntry(object):
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            import urllib2
+            from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib2.urlopen(self.source['uri']).read()
+            self._contents = urllib.request.urlopen(self.source['uri']).read()
             self.source['source_md5'] = md5(self._contents).hexdigest()
         return self._contents
 

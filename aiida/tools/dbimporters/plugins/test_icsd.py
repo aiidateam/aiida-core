@@ -62,8 +62,8 @@ class TestIcsd(AiidaTestCase):
         """
         Test Icsd intranet webinterface
         """
-        import urllib2
-        html = urllib2.urlopen(self.server + "icsd/").read()
+        from six.moves import urllib
+        html = urllib.request.urlopen(self.server + "icsd/").read()
 
     @unittest.skipIf(host is None or not has_mysqldb(), "host required to query mysql db or unable to import MySQLdb")
     def test_mysqldb(self):

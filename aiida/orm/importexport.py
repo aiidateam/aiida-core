@@ -1493,10 +1493,10 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    import urllib2
+    from six.moves import urllib
     import urlparse
 
-    request = urllib2.urlopen(url)
+    request = urllib.request.urlopen(url)
     parser = HTMLGetLinksParser(filter_extension='aiida')
     parser.feed(request.read())
 

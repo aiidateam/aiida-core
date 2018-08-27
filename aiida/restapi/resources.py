@@ -10,8 +10,8 @@
 """ Resources for REST API """
 
 from __future__ import absolute_import
-from urllib import unquote
 
+from six.moves.urllib.parse import unquote
 from flask import request, make_response
 from flask_restful import Resource
 

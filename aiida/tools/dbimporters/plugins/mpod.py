@@ -88,13 +88,13 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urllib2.urlopen(query).read()
+            response = urllib.request.urlopen(query).read()
             this_results = re.findall("/datafiles/(\d+)\.mpod", response)
             if results is None:
                 results = this_results

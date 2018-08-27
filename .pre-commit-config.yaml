@@ -124,7 +124,7 @@
       - --fix=unicode
       - --fix=unicode_future
 #      - --fix=unicode_type
-#      - --fix=urllib_six
+      - --fix=urllib_six
 #      - --fix=xrange_six
       - --fix=zip
 

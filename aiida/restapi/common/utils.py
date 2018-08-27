@@ -871,7 +871,7 @@ class Utils(object):
 
 def list_routes():
     """List available routes"""
-    import urllib
+    from six.moves import urllib
     from flask import current_app, url_for
 
     output = []
@@ -880,7 +880,7 @@ def list_routes():
             continue
 
         methods = ','.join(rule.methods)
-        line = urllib.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
+        line = urllib.parse.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
         output.append(line)
 
     return sorted(set(output))

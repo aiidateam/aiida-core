@@ -407,7 +407,7 @@ class IcsdDbImporter(DbImporter):
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
-        import urllib
+        from six.moves import urllib
 
         self.actual_args = {
             "action": "Search",
@@ -430,7 +430,7 @@ class IcsdDbImporter(DbImporter):
             except KeyError as e:
                 raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(e.message))
 
-        url_values = urllib.urlencode(self.actual_args)
+        url_values = urllib.parse.urlencode(self.actual_args)
         query_url = self.db_parameters["urladd"] + url_values
 
         return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
@@ -591,13 +591,13 @@ class IcsdSearchResults(DbSearchResults):
 
 
         else:
-            import urllib2
+            from six.moves import urllib
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib2.urlopen(self.db_parameters["server"] + 
-                                        self.db_parameters["db"] + "/" + 
-                                        self.query.format(str(self.page))).read()
+            self.html = urllib.request.urlopen(self.db_parameters["server"] + 
+                                               self.db_parameters["db"] + "/" + 
+                                               self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 
@@ -674,7 +674,7 @@ class IcsdEntry(CifEntry):
         """
         if self._contents is None:
             from hashlib import md5
-            from urllib2 import urlopen
+            from six.moves.urllib.request import urlopen
 
             self._contents = urlopen(self.source['uri']).read()
             self._contents = self._contents.decode('iso-8859-1').encode('utf8')

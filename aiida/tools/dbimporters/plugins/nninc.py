@@ -70,11 +70,11 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query = self.query_get(**kwargs)
-        response = urllib2.urlopen(query).read()
+        response = urllib.request.urlopen(query).read()
         results = re.findall("psp_files/([^']+)\.UPF", response)
 
         elements = kwargs.get('element', None)

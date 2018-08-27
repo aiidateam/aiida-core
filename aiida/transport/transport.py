@@ -711,9 +711,7 @@ class Transport(object):
             # names = os.listdir(dirname)
             # print dirname
             names = self.listdir(dirname)
-        except os.error:
-            return []
-        except IOError:
+        except EnvironmentError:  # in PY2 a superclass of OS/IOError, in PY3 an alias for OSError, like IOError
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']

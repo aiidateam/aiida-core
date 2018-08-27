@@ -50,10 +50,6 @@ case "$TEST_TYPE" in
         coverage report
         ;;
     pre-commit)
-        if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]] ; then
-            echo "WARNING: Disabling prospector for Python $TRAVIS_PYTHON_VERSION due to unresolved issues"
-            export SKIP="prospector"
-        fi
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
         ;;
 esac

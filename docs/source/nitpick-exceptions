@@ -141,6 +141,7 @@ py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
 py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 
 py:class  kiwipy.futures.Future
+py:class  kiwipy.communications.TimeoutError
 
 py:class  tornado.concurrent.Future
 

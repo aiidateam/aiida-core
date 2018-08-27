@@ -28,13 +28,13 @@ from . import persistence
 from . import utils
 
 __all__ = [
-    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException', 'TimeoutError',
-    'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel'
+    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException',
+    'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel'
 ]
 
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
-TimeoutError = communications.TimeoutError  # pylint: disable=invalid-name
+CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-name
 
 # GP: Using here 127.0.0.1 instead of localhost because on some computers
 # localhost resolves first to IPv6 with address ::1 and if RMQ is not

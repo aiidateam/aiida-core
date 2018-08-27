@@ -62,7 +62,7 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @decorators.with_dbenv()
 def process_kill(processes, timeout):
     """Kill running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -76,7 +76,7 @@ def process_kill(processes, timeout):
                     echo.echo_success('killed Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem killing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to kill Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception.message))
@@ -88,7 +88,7 @@ def process_kill(processes, timeout):
 @decorators.with_dbenv()
 def process_pause(processes, timeout):
     """Pause running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -102,7 +102,7 @@ def process_pause(processes, timeout):
                     echo.echo_success('paused Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem pausing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to pause Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception.message))
@@ -114,7 +114,7 @@ def process_pause(processes, timeout):
 @decorators.with_dbenv()
 def process_play(processes, timeout):
     """Play paused processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -128,7 +128,7 @@ def process_play(processes, timeout):
                     echo.echo_success('played Process<{}>'.format(process.pk))
                 else:
                     echo.echo_critical('problem playing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to play Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
                 echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception.message))

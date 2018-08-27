@@ -27,8 +27,7 @@ class CodDbImporter(DbImporter):
             if not isinstance(e, int) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
-                                             values)) + ")"
+        return key + " IN (" + ", ".join(str(int(i)) for i in values) + ")"
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -72,8 +71,7 @@ class CodDbImporter(DbImporter):
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
                                       alias, \
-                                      map(lambda f: "- " + str(f) + " -", \
-                                          values))
+                                      ["- {} -".format(f) for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
@@ -109,11 +107,7 @@ class CodDbImporter(DbImporter):
             if not isinstance(e, int) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join(map(lambda d: key + \
-                                         " BETWEEN " + \
-                                         str(d - precision) + " AND " + \
-                                         str(d + precision), \
-                               values))
+        return " OR ".join("{} BETWEEN {} AND {}".format(key, d-precision, d+precision) for d in values)
 
     length_precision = 0.001
     angle_precision = 0.001

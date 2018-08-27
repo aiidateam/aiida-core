@@ -293,7 +293,7 @@ class Group(AbstractGroup):
             if not isinstance(nodes, collections.Iterable):
                 nodes = [nodes]
 
-            if not all(map(lambda n: isinstance(n, (Node, DbNode)), nodes)):
+            if not all(isinstance(n, (Node, DbNode)) for n in nodes):
                 raise TypeError("At least one of the elements passed as "
                                 "nodes for the query on Group is neither "
                                 "a Node nor a DbNode")
@@ -302,7 +302,7 @@ class Group(AbstractGroup):
             # property on it.
             sub_query = (session.query(table_groups_nodes).filter(
                 table_groups_nodes.c["dbnode_id"].in_(
-                    map(lambda n: n.id, nodes)),
+                    [n.id for n in nodes]),
                 table_groups_nodes.c["dbgroup_id"] == DbGroup.id
             ).exists())
 

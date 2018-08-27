@@ -109,8 +109,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
-                                             values)) + ")"
+        return "{} IN ({})".format(key, ", ".join(str(int(i)) for i in values))
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -120,9 +119,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + \
-               " IN (" + ", ".join(map(lambda f: "'" + str(f) + "'", \
-                                       values)) + ")"
+        return "{} IN ({})".format(key, ", ".join("'{}'".format(f) for f in values))
 
     def _formula_clause(self, key, alias, values):
         """
@@ -134,8 +131,7 @@ class IcsdDbImporter(DbImporter):
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
                                      alias, \
-                                     map(lambda f: str(f), \
-                                         values))
+                                     [str(f) for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
@@ -145,8 +141,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return " OR ".join(map(lambda s: key + \
-                                         " LIKE '%" + str(s) + "%'", values))
+        return " OR ".join("{} LIKE '%{}%'".format(key, s) for s in values)
 
     def _composition_clause(self, key, alias, values):
         """
@@ -162,7 +157,7 @@ class IcsdDbImporter(DbImporter):
         # or at the end of the formula expression (no space after).
         # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
         # after, because I found that capitalization of the element name is not enforced in these queries.
-        return " AND ".join(map(lambda e: "SUM_FORM REGEXP '(^|\ )" + e + "[0-9\.]+($|\ )'", values))
+        return " AND ".join("SUM_FORM REGEXP '(^|\ ){}[0-9\.]+($|\ )'".format(e) for e in values)
 
     def _double_clause(self, key, alias, values, precision):
         """
@@ -172,12 +167,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, (int, long)) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join(map(lambda d: key + \
-                                         " BETWEEN " + \
-                                         str(d - precision) + " AND " + \
-                                         str(d + precision), \
-                               values))
-
+        return " OR ".join("{} BETWEEN {} AND {}".format(key, d-precision, d+precision) for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
         """
@@ -197,9 +187,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return key + \
-               " IN (" + ", ".join(map(lambda f: "'" + valid_systems[f.lower()] + "'", \
-                                       values)) + ")"
+        return key + " IN (" + ", ".join("'" + valid_systems[f.lower()] + "'" for f in values) + ")"
 
     def _length_clause(self, key, alias, values):
         """

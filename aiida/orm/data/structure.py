@@ -607,9 +607,8 @@ def symop_ortho_from_fract(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = map(lambda x: math.pi * x / 180,
-                             alpha, beta, gamma)
-    ca, cb, cg = map(math.cos, [alpha, beta, gamma])
+    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
+    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
     sg = math.sin(gamma)
 
     return numpy.array([
@@ -635,9 +634,8 @@ def symop_fract_from_ortho(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = map(lambda x: math.pi * x / 180,
-                             [alpha, beta, gamma])
-    ca, cb, cg = map(math.cos, [alpha, beta, gamma])
+    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
+    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
     sg = math.sin(gamma)
     ctg = cg / sg
     D = math.sqrt(sg * sg - cb * cb - ca * ca + 2 * ca * cb * cg)

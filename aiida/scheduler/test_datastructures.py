@@ -37,24 +37,24 @@ class TestNodeNumberJobResource(unittest.TestCase):
 
         # Standard info
         job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8)
-        self.assertEquals(job_resource.num_machines, 2)
-        self.assertEquals(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEquals(job_resource.get_tot_num_mpiprocs(), 16)
+        self.assertEqual(job_resource.num_machines, 2)
+        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
+        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
         # redundant but consistent information
         job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
-        self.assertEquals(job_resource.num_machines, 2)
-        self.assertEquals(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEquals(job_resource.get_tot_num_mpiprocs(), 16)
+        self.assertEqual(job_resource.num_machines, 2)
+        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
+        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
         # other equivalent ways of specifying the information
         job_resource = NodeNumberJobResource(num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
-        self.assertEquals(job_resource.num_machines, 2)
-        self.assertEquals(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEquals(job_resource.get_tot_num_mpiprocs(), 16)
+        self.assertEqual(job_resource.num_machines, 2)
+        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
+        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
         # other equivalent ways of specifying the information
         job_resource = NodeNumberJobResource(num_machines=2, tot_num_mpiprocs=16)
-        self.assertEquals(job_resource.num_machines, 2)
-        self.assertEquals(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEquals(job_resource.get_tot_num_mpiprocs(), 16)
+        self.assertEqual(job_resource.num_machines, 2)
+        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
+        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
 
         # wrong field name
         with self.assertRaises(TypeError):

@@ -19,7 +19,6 @@ import filecmp
 import functools
 import inspect
 import os.path
-import string
 import sys
 import numbers
 import re
@@ -188,7 +187,7 @@ def get_suggestion(provided_string, allowed_strings):
     if len(similar_kws) == 1:
         return "(Maybe you wanted to specify {0}?)".format(similar_kws[0])
     elif len(similar_kws) > 1:
-        return "(Maybe you wanted to specify one of these: {0}?)".format(string.join(similar_kws, ', '))
+        return "(Maybe you wanted to specify one of these: {}?)".format(', '.join(similar_kws))
 
     return "(No similar keywords found...)"
 

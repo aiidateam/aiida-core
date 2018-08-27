@@ -50,7 +50,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=bad-continuation,print-statement,unpacking-in-except,long-suffix,import-star-module-level,raw-checker-failed,bad-inline-option,locally-disabled,locally-enabled,suppressed-message,useless-suppression,apply-builtin,basestring-builtin,buffer-builtin,long-builtin,raw_input-builtin,reduce-builtin,unicode-builtin,xrange-builtin,dict-iter-method,dict-view-method,next-method-called,metaclass-assignment,indexing-exception,raising-string,nonzero-method,input-builtin,map-builtin-not-iterating,zip-builtin-not-iterating,range-builtin-not-iterating,filter-builtin-not-iterating,eq-without-hash,invalid-str-codec
+disable=bad-continuation,locally-disabled,useless-suppression
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

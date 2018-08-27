@@ -72,6 +72,7 @@ class CalculationProjectionMapper(ProjectionMapper):
     """The CLI projection mapper for Calculation derived entities."""
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
+        # pylint: disable=too-many-locals
         from aiida.orm.calculation import Calculation
         from aiida.orm.mixins import Sealable
 

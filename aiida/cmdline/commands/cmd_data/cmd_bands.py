@@ -13,7 +13,10 @@ This allows to manage BandsData objects from command line.
 from __future__ import print_function
 from __future__ import absolute_import
 import sys
+
 import click
+from six.moves import range
+
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export
 from aiida.cmdline.commands.cmd_data import verdi_data

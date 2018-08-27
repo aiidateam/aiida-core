@@ -12,8 +12,10 @@ Tests for specific subclasses of Data
 """
 
 from __future__ import absolute_import
-from aiida.backends.testbase import AiidaTestCase
 
+from six.moves import range
+
+from aiida.backends.testbase import AiidaTestCase
 
 
 ### Here comparisons are defined #####################################
@@ -33,7 +35,7 @@ def _comparison_AlmostEqual(testclass, dbdata, comparisondata):
     value = comparisondata['value']
     if isinstance(dbdata, (list, tuple)) and isinstance(value, (list, tuple)):
         testclass.assertEqual(len(dbdata), len(value))
-        for i in range(0, len(dbdata)):
+        for i in range(len(dbdata)):
             testclass.assertAlmostEqual(dbdata[i], value[i])
     else:
         testclass.assertAlmostEqual(dbdata, value)

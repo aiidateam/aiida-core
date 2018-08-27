@@ -10,6 +10,9 @@
 from __future__ import absolute_import
 import logging
 import unittest
+
+from six.moves import range
+
 from aiida.utils.timezone import now
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING

@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import unittest
 import operator
 
-from six.moves import zip
+from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
@@ -63,7 +63,7 @@ class TestList(AiidaTestCase):
         self.assertEqual(len(l), len(lst) * 2)
 
         # Do an element wise comparison
-        for i in range(0, len(lst)):
+        for i in range(len(lst)):
             self.assertEqual(lst[i], l[i])
             self.assertEqual(lst[i], l[i % len(lst)])
 

@@ -25,7 +25,7 @@ from __future__ import print_function
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
-from six.moves import zip
+from six.moves import range, zip
 
 from aiida.orm.node import Node
 
@@ -41,7 +41,6 @@ from aiida.common.exceptions import InputValidationError, ConfigurationError
 # The way I get column as a an attribute to the orm class
 from aiida.backends.utils import _get_column
 from aiida.common.links import LinkType
-
 
 
 def get_querybuilder_classifiers_from_cls(cls, obj):

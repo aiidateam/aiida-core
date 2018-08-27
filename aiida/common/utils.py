@@ -24,7 +24,7 @@ import sys
 import numbers
 import re
 
-from six.moves import zip, input
+from six.moves import range, input, zip
 from six import integer_types
 from dateutil.parser import parse
 

@@ -16,6 +16,7 @@ import copy
 import unittest
 
 import six
+from six.moves import range
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase

@@ -17,6 +17,8 @@ import math
 import os
 import sys
 
+from six.moves import range
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql.json import JSON
@@ -207,7 +209,7 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
         total_groups = int(math.ceil(total_nodes/group_size))
         error = False
 
-        for i in xrange(total_groups):
+        for i in range(total_groups):
 
             print("Migrating group {} of {}".format(i, total_groups))
             nodes = DbNode.query.options(
@@ -297,7 +299,7 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
         total_groups = int(math.ceil(total_nodes/group_size))
         error = False
 
-        for i in xrange(total_groups):
+        for i in range(total_groups):
             print("Migrating group {} of {}".format(i, total_groups))
 
             nodes = DbNode.query.options(

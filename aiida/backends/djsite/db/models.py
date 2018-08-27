@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 import sys
 
-from six.moves import zip
+from six.moves import zip, range
 from six import reraise, integer_types
 from django.db import models as m
 from django_extensions.db.fields import UUIDField

@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
-from six.moves import zip
+
+from six.moves import range, zip
+
 from aiida.backends.testbase import AiidaTestCase
 
 

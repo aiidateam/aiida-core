@@ -125,7 +125,7 @@
       - --fix=unicode_future
 #      - --fix=unicode_type
       - --fix=urllib_six
-#      - --fix=xrange_six
+      - --fix=xrange_six
       - --fix=zip
 
 - repo: local

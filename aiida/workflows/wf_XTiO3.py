@@ -9,7 +9,7 @@
 ###########################################################################
 from __future__ import division
 from __future__ import absolute_import
-from six.moves import zip
+from six.moves import zip, range
 import aiida.common
 from aiida.common import aiidalogger
 from aiida.orm.workflow import Workflow

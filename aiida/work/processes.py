@@ -19,7 +19,7 @@ import uuid
 import traceback
 
 import six
-from six.moves import zip, filter
+from six.moves import zip, filter, range
 from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState

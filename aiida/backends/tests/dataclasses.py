@@ -12,10 +12,13 @@ Tests for specific subclasses of Data
 """
 from __future__ import absolute_import
 from __future__ import division
+import unittest
+
+from six.moves import range
+
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
-import unittest
 from aiida.common.utils import HiddenPrints
 
 

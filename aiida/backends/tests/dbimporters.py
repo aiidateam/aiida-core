@@ -12,9 +12,11 @@ Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 """
 from __future__ import absolute_import
 from __future__ import division
-from aiida.backends.testbase import AiidaTestCase
 import unittest
 
+from six.moves import range
+
+from aiida.backends.testbase import AiidaTestCase
 
 
 class TestCodDbImporter(AiidaTestCase):
@@ -92,8 +94,8 @@ class TestCodDbImporter(AiidaTestCase):
                    [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]
 
-        for i in range(0, len(methods)):
-            for j in range(0, len(values)):
+        for i in range(len(methods)):
+            for j in range(len(values)):
                 message = messages[0]
                 try:
                     methods[i]("test", "test", [values[j]])

@@ -9,10 +9,14 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
+
+from six.moves import range
+import numpy as np
+
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.common.exceptions import LicensingException
-import numpy as np
+
 
 class StructureDataTranslator(DataTranslator):
     """

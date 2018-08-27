@@ -9,7 +9,7 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
-from six.moves import zip
+from six.moves import range, zip
 import numpy
 
 _default_epsilon_length = 1e-5

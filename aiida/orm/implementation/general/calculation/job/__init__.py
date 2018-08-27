@@ -14,7 +14,7 @@ import copy
 import datetime
 import enum
 
-from six.moves import zip
+from six.moves import range, zip
 
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError

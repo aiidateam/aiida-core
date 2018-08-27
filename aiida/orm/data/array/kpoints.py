@@ -9,10 +9,13 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import division
-from six.moves import zip
+
+from six.moves import range, zip
 import numpy
+
 from aiida.common.utils import classproperty
 from aiida.orm.data.array import ArrayData
+
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
 

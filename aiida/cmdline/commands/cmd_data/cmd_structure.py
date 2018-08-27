@@ -11,7 +11,9 @@
 This allows to manage StructureData objects from command line.
 """
 from __future__ import absolute_import
+
 import click
+from six.moves import range
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options

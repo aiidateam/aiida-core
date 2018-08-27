@@ -14,6 +14,8 @@ import subprocess
 import sys
 import time
 
+from six.moves import range
+
 from aiida.common.exceptions import NotExistent
 from aiida.common.caching import enable_caching
 from aiida.daemon.client import DaemonClient
@@ -28,6 +30,7 @@ from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, InlineCalcRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
 )
+
 
 ParameterData = DataFactory('parameter')
 

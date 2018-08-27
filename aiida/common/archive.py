@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from six.moves import range
+
+
 def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                 silent=False):
     """
@@ -157,7 +160,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     values = CifFile.ReadCif(infile)
     values = values[values.keys()[0]] # taking the first datablock in CIF
 
-    for i in range(0,len(values['_tcod_file_id'])-1):
+    for i in range(len(values['_tcod_file_id'])-1):
         name = values['_tcod_file_name'][i]
         if not name.startswith(aiida_export_subfolder+os.sep):
             continue

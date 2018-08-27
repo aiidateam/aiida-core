@@ -14,7 +14,7 @@ on them.
 """
 
 from __future__ import absolute_import
-from six.moves import zip
+from six.moves import range, zip
 import numpy as np
 from aiida.orm.data.array import ArrayData
 from aiida.common.exceptions import InputValidationError, NotExistent

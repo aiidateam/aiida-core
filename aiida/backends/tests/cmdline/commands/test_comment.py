@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
+from six.moves import range
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase

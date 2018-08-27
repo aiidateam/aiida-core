@@ -16,6 +16,7 @@ import time
 import uuid
 from datetime import datetime
 
+from six.moves import range
 from passlib.context import CryptContext
 
 try: # Python3

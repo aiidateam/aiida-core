@@ -8,14 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
+import copy
+
+from six.moves import range
+import numpy as np
+
+from aiida.orm import load_node
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.orbital import OrbitalData 
+from aiida.orm.data.array.bands import BandsData
 from aiida.common.orbital import  Orbital
 from aiida.common.exceptions import   ValidationError, NotExistent
-import copy
-import numpy as np
-from aiida.orm import load_node
-from aiida.orm.data.array.bands import BandsData
 
 
 class ProjectionData(OrbitalData, ArrayData): 

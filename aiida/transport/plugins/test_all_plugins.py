@@ -23,6 +23,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 import unittest
 
+from six.moves import range
+
 
 def get_all_custom_transports():
     """

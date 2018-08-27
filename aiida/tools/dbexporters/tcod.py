@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import
 from __future__ import division
+
+from six.moves import range
+
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -813,7 +816,7 @@ def _collect_tags(node, calc,parameters=None,
             tags[tag] = []
     for encoding in encodings:
         layers = encoding.split('+')
-        for i in range(0, len(layers)):
+        for i in range(len(layers)):
             tags['_tcod_content_encoding_id'].append(encoding)
             tags['_tcod_content_encoding_layer_id'].append(i+1)
             tags['_tcod_content_encoding_layer_type'].append(layers[i])
@@ -1278,7 +1281,7 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
             pass
         if value is not None:
             if isinstance(value,list):
-                for i in range(0,len(value)):
+                for i in range(len(value)):
                     if value[i] is None:
                         value[i] = '?'
             tags[tag] = value

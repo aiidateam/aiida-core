@@ -9,7 +9,9 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import print_function
-from six.moves import zip
+
+from six.moves import range, zip
+
 from aiida.orm.data.array import ArrayData
 from aiida.orm.calculation.inline import optional_inline
 
@@ -168,7 +170,7 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        stepids = numpy.array(range(0, len(structurelist)))
+        stepids = numpy.arange(len(structurelist))
         cells = numpy.array([x.cell for x in structurelist])
         symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites]
@@ -437,7 +439,7 @@ class TrajectoryData(ArrayData):
         from aiida.common.constants import elements
         _atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
 
-        indices = range(self.numsteps)
+        indices = list(range(self.numsteps))
         if index is not None:
             indices = [index]
         return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(indices))
@@ -482,7 +484,7 @@ class TrajectoryData(ArrayData):
         from aiida.common.utils import HiddenPrints
 
         cif = ""
-        indices = range(self.numsteps)
+        indices = list(range(self.numsteps))
         if trajectory_index is not None:
             indices = [trajectory_index]
         for idx in indices:

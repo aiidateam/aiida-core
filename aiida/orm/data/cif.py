@@ -11,6 +11,9 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 from __future__ import absolute_import
 from __future__ import division
+
+from six.moves import range
+
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
@@ -86,8 +89,8 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     import re
     axes = ["x", "y", "z"]
     parts = ["", "", ""]
-    for i in range(0, 3):
-        for j in range(0, 3):
+    for i in range(3):
+        for j in range(3):
             sign = None
             if matrix[i][j] > eps:
                 sign = "+"
@@ -364,7 +367,7 @@ def refine_inline(node):
     cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
         [symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
                                            symmetry['translations'][i])
-         for i in range(0, len(symmetry['rotations']))]
+         for i in range(len(symmetry['rotations']))]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \

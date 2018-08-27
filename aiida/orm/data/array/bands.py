@@ -15,11 +15,14 @@ in a Brillouin zone, and how to operate on them.
 from __future__ import absolute_import
 from __future__ import division
 from string import Template
-from six.moves import zip
+
+from six.moves import range, zip
 import numpy
+
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import prettify_labels, join_labels
+
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
     from aiida import get_file_header

@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+
+from six.moves import range
 from tornado.gen import coroutine, Return
 
 from aiida.backends.testbase import AiidaTestCase

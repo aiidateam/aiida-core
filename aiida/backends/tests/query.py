@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import unittest
 
-from six.moves import zip
+from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
@@ -714,7 +714,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
                 Node, edge_filters={'label': 'is_advisor'}, tag='student'
             ).count(), 7)
 
-        for adv_id, number_students in zip(range(3), (2, 2, 3)):
+        for adv_id, number_students in zip(list(range(3)), (2, 2, 3)):
             self.assertEqual(QueryBuilder().append(
                 Node, filters={'attributes.advisor_id': adv_id}
             ).append(

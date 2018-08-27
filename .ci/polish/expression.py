@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import operator as operators
 import random
 from collections import deque
+from six.moves import range
 
 
 OPERATORS = {

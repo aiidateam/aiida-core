@@ -173,8 +173,6 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         ("%R", 'allocated_machines'),  # list of allocated nodes when running, otherwise
         # reason within parenthesis
         ("%P", 'partition'),  # partition (queue) of the job
-        ("%P", 'account'),  # partition (queue) of the job
-        ("%P", 'qos'),  # partition (queue) of the job
         ("%l", 'time_limit'),  # time limit in days-hours:minutes:seconds
         ("%M", 'time_used'),  # Time used by the job in days-hours:minutes:seconds
         ("%S", 'dispatch_time'),  # actual or expected dispatch time (start time)
@@ -581,8 +579,6 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                 this_job.allocated_machines_raw = thisjob_dict['allocated_machines']
 
             this_job.queue_name = thisjob_dict['partition']
-            this_job.account = thisjob_dict['account']
-            this_job.qos = thisjob_dict['qos']
 
             try:
                 this_job.requested_wallclock_time_seconds = (self._convert_time(thisjob_dict['time_limit']))

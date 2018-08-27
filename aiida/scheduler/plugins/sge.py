@@ -409,14 +409,6 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     self.logger.warning("No 'queue_name' field for job " "id {}".format(this_job.job_id))
 
             try:
-                job_element = job.getElementsByTagName('account').pop(0)
-                element_child = job_element.childNodes.pop(0)
-                this_job.account = str(element_child.data).strip()
-            except IndexError:
-                if this_job.job_state == job_states.RUNNING:
-                    self.logger.warning("No 'projectName' (set with 'account') field for job " "id {}".format(this_job.job_id))
-                    
-            try:
                 job_element = job.getElementsByTagName('JB_submission_time').pop(0)
                 element_child = job_element.childNodes.pop(0)
                 time_string = str(element_child.data).strip()

@@ -607,7 +607,7 @@ class TestNodeBasic(AiidaTestCase):
             'emptylist': [],
         }
 
-        for k, v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.items():
             a._set_attr(k, v)
 
         # Create a copy
@@ -1020,7 +1020,7 @@ class TestNodeBasic(AiidaTestCase):
             'list': self.listval,
         }
 
-        for k, v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.items():
             a._set_attr(k, v)
 
         a.store()
@@ -1031,7 +1031,7 @@ class TestNodeBasic(AiidaTestCase):
             'some_other_name': 987
         }
 
-        for k, v in extras_to_set.iteritems():
+        for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
@@ -1059,14 +1059,14 @@ class TestNodeBasic(AiidaTestCase):
             'list': self.listval,
         }
 
-        for key, value in attrs_to_set.iteritems():
+        for key, value in attrs_to_set.items():
             a._set_attr(key, value)
             self.assertEquals(a.get_attr(key), value)
 
         a.store()
 
         # Check after storing
-        for key, value in attrs_to_set.iteritems():
+        for key, value in attrs_to_set.items():
             self.assertEquals(a.get_attr(key), value)
 
         # Even if I stored many attributes, this should stay at 1
@@ -1102,7 +1102,7 @@ class TestNodeBasic(AiidaTestCase):
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
-        for k, v in extras_to_set.iteritems():
+        for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
         self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
@@ -1154,12 +1154,12 @@ class TestNodeBasic(AiidaTestCase):
             'list': 66.3,
         }
 
-        for k, v in extras_to_set.iteritems():
+        for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
         self.assertEquals({k: v for k, v in a.iterextras()}, all_extras)
 
-        for k, v in new_extras.iteritems():
+        for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
             # performed correctly
             a.set_extra(k, v)
@@ -1967,11 +1967,11 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2.store_all()
         n3.store_all()
 
-        n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
+        n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().items()]
         self.assertEquals(sorted(n2_in_links), sorted([
             ('l1', n1.uuid),
         ]))
-        n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
+        n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().items()]
         self.assertEquals(
             sorted(n3_in_links), sorted([
                 ('l2', n2.uuid),

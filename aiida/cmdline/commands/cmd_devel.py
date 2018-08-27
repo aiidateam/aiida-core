@@ -207,7 +207,7 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     else:
         # Without arguments, run all tests
         do_db = True
-        for key, value in get_valid_test_paths().iteritems():
+        for key, value in get_valid_test_paths().items():
             if value is None:
                 # Non-db tests
                 test_folders.append(key)

@@ -85,7 +85,7 @@ def run_for_all_plugins(actual_test_method):
         The wrapper function that calls the subfunction for each transport.
         """
         exceptions = []
-        for tr_name, custom_transport in all_custom_transports.iteritems():
+        for tr_name, custom_transport in all_custom_transports.items():
             try:
                 actual_test_method(self, custom_transport)
             except Exception as e:

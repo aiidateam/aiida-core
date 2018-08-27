@@ -61,7 +61,7 @@ def generate_setup_options(ordereddict):
     :return: a list to be passed as command-line arguments.
     """
     options = []
-    for key, value in ordereddict.iteritems():
+    for key, value in ordereddict.items():
         if value is None:
             options.append('--{}'.format(key))
         else:
@@ -81,7 +81,7 @@ def generate_setup_options_interactive(ordereddict):
     :return: a list to be passed as command-line arguments.
     """
     options = []
-    for key, value in ordereddict.iteritems():
+    for key, value in ordereddict.items():
         if value is None:
             options.append(True)
         else:

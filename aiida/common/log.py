@@ -182,7 +182,7 @@ def configure_logging(daemon=False, daemon_log_file=None):
             'maxBytes': 100000,
         }
 
-        for name, logger in config.get('loggers', {}).iteritems():
+        for name, logger in config.get('loggers', {}).items():
             logger.setdefault('handlers', []).append(daemon_handler_name)
 
     logging.config.dictConfig(config)

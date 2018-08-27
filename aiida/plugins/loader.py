@@ -57,7 +57,7 @@ def load_plugin(plugin_type, safe=False):
     if base_path.count('.') == 0:
         base_path = '{}.{}'.format(base_path, base_path)
 
-    for prefix, entry_point_type in type_string_to_entry_point_type_map.iteritems():
+    for prefix, entry_point_type in type_string_to_entry_point_type_map.items():
         if base_path.startswith(prefix):
             entry_point = strip_prefix(base_path, prefix)
             try:

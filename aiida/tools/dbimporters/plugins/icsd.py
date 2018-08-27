@@ -380,7 +380,7 @@ class IcsdDbImporter(DbImporter):
 
         sql_where_query = []  # second part of sql query
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if not isinstance(v, list):
                 v = [v]
             sql_where_query.append("({})".format(self.keywords_db[k][1](self, 
@@ -418,7 +418,7 @@ class IcsdDbImporter(DbImporter):
             "mineral": ""
         }
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             try:
                 realname = self.keywords[k][0]
                 newv = self.keywords[k][1](k, v)

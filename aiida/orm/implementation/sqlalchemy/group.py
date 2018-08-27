@@ -317,7 +317,7 @@ class Group(AbstractGroup):
                 filters.append(DbGroup.user == user.dbuser)
 
         if name_filters:
-            for (k, v) in name_filters.iteritems():
+            for (k, v) in name_filters.items():
                 if not v:
                     continue
                 if k == "startswith":

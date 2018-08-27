@@ -280,14 +280,14 @@ class Group(AbstractGroup):
 
         if name_filters is not None:
             name_filters_list = {"name__" + k: v for (k, v)
-                                 in name_filters.iteritems() if v}
+                                 in name_filters.items() if v}
             queryobject &= Q(**name_filters_list)
 
         groups_pk = set(DbGroup.objects.filter(
             queryobject, **kwargs).values_list('pk', flat=True))
 
         if node_attributes is not None:
-            for k, vlist in node_attributes.iteritems():
+            for k, vlist in node_attributes.items():
                 if isinstance(vlist, basestring) or not isinstance(
                         vlist, collections.Iterable):
                     vlist = [vlist]
@@ -300,7 +300,7 @@ class Group(AbstractGroup):
                     # prepend to the key the right django string to SQL-join
                     # on the right table
                     query_dict = {'dbnodes__dbattributes__{}'.format(k2): v2
-                                  for k2, v2 in base_query_dict.iteritems()}
+                                  for k2, v2 in base_query_dict.items()}
 
                     # I narrow down the list of groups.
                     # I had to do it in this way, with multiple DB hits and

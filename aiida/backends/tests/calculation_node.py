@@ -65,7 +65,7 @@ class TestCalcNode(AiidaTestCase):
             'state': self.stateval
         }
 
-        for k, v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.items():
             a._set_attr(k, v)
 
         # Check before storing

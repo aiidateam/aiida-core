@@ -437,7 +437,7 @@ class TrajectoryData(ArrayData):
         Write the given trajectory to a string of format XSF (for XCrySDen).
         """
         from aiida.common.constants import elements
-        _atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
+        _atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
         indices = list(range(self.numsteps))
         if index is not None:

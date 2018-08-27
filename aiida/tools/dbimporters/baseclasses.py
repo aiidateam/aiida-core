@@ -215,7 +215,7 @@ class DbEntry(object):
                                ",".join(["{}={}".format(k, '"{}"'.format(v)
                                if issubclass(v.__class__, basestring)
                                else v)
-                                         for k, v in self.source.iteritems()]))
+                                         for k, v in self.source.items()]))
 
     @property
     def contents(self):

@@ -396,7 +396,7 @@ class Utils(object):
 
             if path_elems.pop(-1) == 'page' or path_elems.pop(-1) == 'page':
                 links = []
-                for (rel, page) in rel_pages.iteritems():
+                for (rel, page) in rel_pages.items():
                     if page is not None:
                         links.append(make_rel_url(rel, page))
                 headers['Link'] = ''.join(links)
@@ -441,7 +441,7 @@ class Utils(object):
         response.status_code = status
 
         if headers is not None:
-            for k, v in headers.iteritems():
+            for k, v in headers.items():
                 response.headers[k] = v
 
         return response

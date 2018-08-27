@@ -247,7 +247,7 @@ def deserialize_attributes(attributes_data, conversion_data):
 
     if isinstance(attributes_data, dict):
         ret_data = {}
-        for k, v in attributes_data.iteritems():
+        for k, v in attributes_data.items():
             # print("k: ", k, " v: ", v)
             if conversion_data is not None:
                 ret_data[k] = deserialize_attributes(v, conversion_data[k])
@@ -481,12 +481,12 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
         import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].iteritems():
+        for model_name, import_data in data['export_data'].items():
             if model_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[model_name] = {
                     int(k): v[metadata['unique_identifiers'][model_name]] for k, v in
-                    import_data.iteritems()}
+                    import_data.items()}
 
         ###############
         # IMPORT DATA #
@@ -523,8 +523,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                    import_unique_ids})}
 
                         foreign_ids_reverse_mappings[model_name] = {
-                            k: v.pk for k, v in relevant_db_entries.iteritems()}
-                        for k, v in data['export_data'][model_name].iteritems():
+                            k: v.pk for k, v in relevant_db_entries.items()}
+                        for k, v in data['export_data'][model_name].items():
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
                                 existing_entries[model_name][k] = v
@@ -543,7 +543,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 unique_identifier = metadata['unique_identifiers'].get(
                     model_name, None)
 
-                for import_entry_id, entry_data in existing_entries[model_name].iteritems():
+                for import_entry_id, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -565,13 +565,13 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 import_entry_ids = {}
                 dupl_counter = 0
                 imported_comp_names = set()
-                for import_entry_id, entry_data in new_entries[model_name].iteritems():
+                for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     if Model is models.DbComputer:
                         # Check if there is already a computer with the same
@@ -642,7 +642,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             models.DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
@@ -650,7 +650,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
@@ -667,7 +667,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print("STORING NEW NODE ATTRIBUTES...")
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
                         try:
@@ -772,7 +772,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             if not silent:
                 print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group = models.DbGroup.objects.get(uuid=groupuuid)
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
@@ -1027,13 +1027,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
-        for entity_name, import_data in data['export_data'].iteritems():
+        for entity_name, import_data in data['export_data'].items():
             # Again I need the entity_name since that's what's being stored since 0.3
             if entity_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[entity_name] = {
                     int(k): v[metadata['unique_identifiers'][entity_name]]
-                    for k, v in import_data.iteritems()}
+                    for k, v in import_data.items()}
         ###############
         # IMPORT DATA #
         ###############
@@ -1080,11 +1080,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in
-                                relevant_db_entries.iteritems()}
+                                relevant_db_entries.items()}
 
                         dupl_counter = 0
                         imported_comp_names = set()
-                        for k, v in data['export_data'][entity_name].iteritems():
+                        for k, v in data['export_data'][entity_name].items():
                             if entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
@@ -1148,7 +1148,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (existing_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (existing_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -1167,13 +1167,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
 
-                for import_entry_id, entry_data in (new_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (new_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     # We convert the Django fields to SQLA. Note that some of
                     # the Django fields were converted to SQLA compatible
@@ -1272,7 +1272,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             DbCalcState(dbnode_id=new_pk,
                                         state=calc_states.IMPORTED))
@@ -1281,7 +1281,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
                         unique_id = str(unique_id)
@@ -1382,7 +1382,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             if not silent:
                 print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(
                     Group, filters={'uuid': {'==': groupuuid}})
@@ -1522,13 +1522,13 @@ def serialize_field(data, track_conversion=False):
         if track_conversion:
             ret_data = {}
             ret_conversion = {}
-            for k, v in data.iteritems():
+            for k, v in data.items():
                 ret_data[k], ret_conversion[k] = serialize_field(
                     data=v, track_conversion=track_conversion)
         else:
             ret_data = {k: serialize_field(data=v,
                                            track_conversion=track_conversion)
-                        for k, v in data.iteritems()}
+                        for k, v in data.items()}
     elif isinstance(data, (list, tuple)):
         if track_conversion:
             ret_data = []
@@ -1589,7 +1589,7 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
 
     conversions = {}
 
-    for k, v in datadict.iteritems():
+    for k, v in datadict.items():
         if k not in remove_fields:
             # rename_fields.get(k,k): use the replacement if found in rename_fields,
             # otherwise use 'k' as the default value.
@@ -1671,12 +1671,12 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
                       all_fields_info[
-                          current_entity_str].iteritems()
-                      # all_fields_info[model_name].iteritems()
+                          current_entity_str].items()
+                      # all_fields_info[model_name].items()
                       if 'requires' in v}
 
     new_tag_suffixes = tag_suffixes + [current_entity_str]
-    for k, v in foreign_fields.iteritems():
+    for k, v in foreign_fields.items():
         ref_model_name = v['requires']
         fill_in_query(partial_query, current_entity_str, ref_model_name,
                       new_tag_suffixes)
@@ -1999,14 +1999,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     export_data = dict()
     entity_separator = '_'
-    for entity_name, partial_query in entries_to_add.iteritems():
+    for entity_name, partial_query in entries_to_add.items():
 
         foreign_fields = {k: v for k, v in
-                          all_fields_info[entity_name].iteritems()
-                          # all_fields_info[model_name].iteritems()
+                          all_fields_info[entity_name].items()
+                          # all_fields_info[model_name].items()
                           if 'requires' in v}
 
-        for k, v in foreign_fields.iteritems():
+        for k, v in foreign_fields.items():
             ref_model_name = v['requires']
             fill_in_query(partial_query, entity_name, ref_model_name,
                           [entity_name], entity_separator)

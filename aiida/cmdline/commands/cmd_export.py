@@ -261,7 +261,7 @@ def migrate_v1_to_v2(metadata, data):
         """Replace the requires keys with new module path."""
         if isinstance(data, dict):
             new_data = {}
-            for key, value in data.iteritems():
+            for key, value in data.items():
                 if key == 'requires' and value.startswith(old_start):
                     new_data[key] = get_new_string(value)
                 else:
@@ -382,7 +382,7 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
 
     # Now we migrate the entity key names i.e. removing the 'aiida.backends.djsite.db.models' prefix
     for field in ['unique_identifiers', 'all_fields_info']:
-        for old_key, new_key in entity_map.iteritems():
+        for old_key, new_key in entity_map.items():
             if old_key in metadata[field]:
                 metadata[field][new_key] = metadata[field][old_key]
                 del metadata[field][old_key]
@@ -390,13 +390,13 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     # Replace the 'requires' keys in the nested dictionaries in 'all_fields_info'
     for entity in metadata['all_fields_info'].values():
         for prop in entity.values():
-            for key, value in prop.iteritems():
+            for key, value in prop.items():
                 if key == 'requires' and value in entity_map:
                     prop[key] = entity_map[value]
 
     # Replace any present keys in the data.json
     for field in ['export_data']:
-        for old_key, new_key in entity_map.iteritems():
+        for old_key, new_key in entity_map.items():
             if old_key in data[field]:
                 data[field][new_key] = data[field][old_key]
                 del data[field][old_key]

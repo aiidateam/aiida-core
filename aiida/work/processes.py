@@ -145,7 +145,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return filter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
+        return filter(lambda kv: not kv[0].startswith('_'), self.inputs.items())
 
     @override
     def load_instance_state(self, saved_state, load_context):
@@ -458,7 +458,7 @@ class Process(plumpy.Process):
         """
         parent_calc = self.get_parent_calc()
 
-        for name, input_value in self._flat_inputs().iteritems():
+        for name, input_value in self._flat_inputs().items():
 
             if isinstance(input_value, Calculation):
                 input_value = utils.get_or_create_output_group(input_value)
@@ -565,7 +565,7 @@ class Process(plumpy.Process):
             # Get the list of ports that were exposed for the given Process class in the current namespace
             exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
 
-            for name, port in port_namespace.ports.iteritems():
+            for name, port in port_namespace.ports.items():
                 if name in inputs and name in exposed_inputs_list:
                     exposed_inputs[name] = inputs[name]
 
@@ -779,7 +779,7 @@ class FunctionProcess(Process):
         if isinstance(result, Data):
             self.out(self.SINGLE_RETURN_LINKNAME, result)
         elif isinstance(result, collections.Mapping):
-            for name, value in result.iteritems():
+            for name, value in result.items():
                 self.out(name, value)
         else:
             raise TypeError(

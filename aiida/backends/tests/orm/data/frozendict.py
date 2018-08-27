@@ -30,7 +30,7 @@ class TestFrozenDict(AiidaTestCase):
     def test_iterate(self):
         input = {'a': Int(5).store(), 'b': Str('testing').store()}
         d = FrozenDict(dict=input)
-        for k, v in d.iteritems():
+        for k, v in d.items():
             self.assertEqual(input[k], v)
 
     def test_length(self):

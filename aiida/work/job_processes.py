@@ -448,7 +448,7 @@ class JobProcess(processes.Process):
                        help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
             # Define the actual inputs based on the use methods of the calculation class
-            for key, use_method in calc_class._use_methods.iteritems():
+            for key, use_method in calc_class._use_methods.items():
 
                 valid_type = use_method['valid_types']
                 docstring = use_method.get('docstring', None)
@@ -535,7 +535,7 @@ class JobProcess(processes.Process):
             if isinstance(port, PortNamespace):
                 additional = self._calc_class._use_methods[name]['additional_parameter']
 
-                for k, v in input_value.iteritems():
+                for k, v in input_value.items():
                     try:
                         getattr(self.calc, 'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError:
@@ -615,7 +615,7 @@ class JobProcess(processes.Process):
                     raise
 
         # Finally link up the outputs and we're done
-        for label, node in self.calc.get_outputs_dict().iteritems():
+        for label, node in self.calc.get_outputs_dict().items():
             self.out(label, node)
 
         return exit_code

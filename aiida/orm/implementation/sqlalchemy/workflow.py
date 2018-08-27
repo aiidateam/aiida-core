@@ -294,7 +294,7 @@ class Workflow(AbstractWorkflow):
 
         def par_validate(params):
             the_params = {}
-            for k, v in params.iteritems():
+            for k, v in params.items():
                 if any([isinstance(v, int),
                         isinstance(v, bool),
                         isinstance(v, float),

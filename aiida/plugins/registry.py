@@ -127,7 +127,7 @@ def update_info(registry=None, errorhandler=None):
     if not registry:
         registry = load_cached()
 
-    for plugin, data in registry.iteritems():
+    for plugin, data in registry.items():
         try:
             entry = Entry(**data)
             pickle_to_registry_cache_folder(entry, plugin)

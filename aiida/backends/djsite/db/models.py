@@ -375,7 +375,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # subitems contains all subitems, here I store only those of
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+        firstlevelsubdict = {k: v for k, v in subitems.items()
                              if sep not in k}
 
         # For checking, I verify the expected values
@@ -427,10 +427,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
         # I get the values in memory as a dictionary
         tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+        for firstsubk, firstsubv in firstlevelsubdict.items():
             # I call recursively the same function to get subitems
             newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.iteritems()
+                           for k, v in subitems.items()
                            if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
                                                          subitems=newsubitems, sep=sep, original_class=original_class,
@@ -443,7 +443,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # subitems contains all subitems, here I store only those of
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+        firstlevelsubdict = {k: v for k, v in subitems.items()
                              if sep not in k}
 
         if len(firstlevelsubdict) != mainitem['ival']:
@@ -472,10 +472,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
         # I get the values in memory as a dictionary
         tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+        for firstsubk, firstsubv in firstlevelsubdict.items():
             # I call recursively the same function to get subitems
             newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.iteritems()
+                           for k, v in subitems.items()
                            if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
                                                          subitems=newsubitems, sep=sep, original_class=original_class,
@@ -527,11 +527,11 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     # I group results by zero-level entity
     found_mainitems = {}
     found_subitems = defaultdict(dict)
-    for mainkey, descriptiondict in data.iteritems():
+    for mainkey, descriptiondict in data.items():
         prefix, thissep, postfix = mainkey.partition(sep)
         if thissep:
             found_subitems[prefix][postfix] = {k: v for k, v
-                                               in descriptiondict.iteritems() if k != "key"}
+                                               in descriptiondict.items() if k != "key"}
         else:
             mainitem = descriptiondict.copy()
             mainitem['key'] = prefix
@@ -546,7 +546,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
 
     # For each zero-level entity, I call the _deserialize_attribute function
     retval = {}
-    for k, v in found_mainitems.iteritems():
+    for k, v in found_mainitems.items():
         # Note: found_subitems[k] will return an empty dictionary it the
         # key does not exist, as it is a defaultdict
         retval[k] = _deserialize_attribute(mainitem=v,
@@ -835,7 +835,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.ival = len(value)
             new_entry.fval = None
 
-            for subk, subv in value.iteritems():
+            for subk, subv in value.items():
                 cls.validate_key(subk)
 
                 # I do not need get_or_create here, because
@@ -1134,7 +1134,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                 dbnode_node = dbnode
 
             # create_value returns a list of nodes to store
-            for k, v in attributes.iteritems():
+            for k, v in attributes.items():
                 nodes_to_store.extend(
                     cls.create_value(k, v,
                                      subspecifier_value=dbnode_node,

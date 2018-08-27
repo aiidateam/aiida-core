@@ -271,7 +271,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)

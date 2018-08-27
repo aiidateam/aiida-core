@@ -39,7 +39,7 @@ from aiida.common.constants import elements
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
-_atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
+_atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
 
 def _get_valid_cell(inputcell):

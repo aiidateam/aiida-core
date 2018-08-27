@@ -162,10 +162,10 @@ def get_db_test_list():
         raise ConfigurationError("A 'common' key must always be defined!")
 
     retdict = defaultdict(list)
-    for k, tests in common_tests.iteritems():
+    for k, tests in common_tests.items():
         for t in tests:
             retdict[k].append(t)
-    for k, tests in be_tests.iteritems():
+    for k, tests in be_tests.items():
         for t in tests:
             retdict[k].append(t)
 
@@ -177,9 +177,9 @@ def get_db_test_list():
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
-    for k, v in retdict.iteritems():
+    for k, v in retdict.items():
         final_retdict[k] = v
-    for k, v in retdict.iteritems():
+    for k, v in retdict.items():
         if '.' in k:
             parts = k.split('.')
             for last_idx in range(1, len(parts)):

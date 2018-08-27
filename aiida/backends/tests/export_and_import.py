@@ -974,7 +974,7 @@ class TestComplex(AiidaTestCase):
 
             import_data(filename, silent=True, ignore_unknown_nodes=True)
 
-            for uuid, label in node_uuids_labels.iteritems():
+            for uuid, label in node_uuids_labels.items():
                 try:
                     load_node(uuid)
                 except NotExistent:

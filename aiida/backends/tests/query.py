@@ -981,10 +981,10 @@ class TestManager(AiidaTestCase):
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)
 
@@ -1030,9 +1030,9 @@ class TestManager(AiidaTestCase):
 
         new_db_statistics = qmanager_default.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)

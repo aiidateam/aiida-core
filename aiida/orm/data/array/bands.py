@@ -841,7 +841,7 @@ class BandsData(KpointsData):
         all_data['y_max_lim'] = y_max_lim
         #all_data['ytick_spacing'] = ytick_spacing
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k not in valid_additional_keywords:
                 raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(
                     k

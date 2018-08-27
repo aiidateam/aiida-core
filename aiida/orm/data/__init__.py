@@ -258,7 +258,7 @@ class Data(Node):
                 raise OSError("The file {} already exists, stopping.".format(
                     path))
 
-        for additional_fname, additional_fcontent in extra_files.iteritems():
+        for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
             with open(additional_fname, 'wb') as f:
                 f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin

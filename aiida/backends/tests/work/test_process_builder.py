@@ -47,7 +47,7 @@ class TestProcessBuilder(AiidaTestCase):
         """
         Check that the builder has all the input ports of the process class as attributes
         """
-        for name, port in self.process_class.spec().inputs.iteritems():
+        for name, port in self.process_class.spec().inputs.items():
             self.assertTrue(hasattr(self.builder, name))
 
     def test_process_builder_set_attributes(self):

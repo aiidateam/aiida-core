@@ -260,10 +260,10 @@ class TestNodeBasicDjango(AiidaTestCase):
             'list': 66.3,
         }
 
-        for k, v in extras_to_set.iteritems():
+        for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        for k, v in new_extras.iteritems():
+        for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
             # performed correctly
             a.set_extra(k, v)

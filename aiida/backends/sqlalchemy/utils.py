@@ -110,7 +110,7 @@ def dumps_json(d):
         if isinstance(v, list):
             return [f(_) for _ in v]
         elif isinstance(v, dict):
-            return dict((key, f(val)) for key, val in v.iteritems())
+            return dict((key, f(val)) for key, val in v.items())
         elif isinstance(v, datetime.datetime):
             return v.isoformat()
         return v
@@ -134,7 +134,7 @@ def loads_json(s):
                 d[i] = f(val)
             return d
         elif isinstance(d, dict):
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 d[k] = f(v)
             return d
         elif isinstance(d, basestring):

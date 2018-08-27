@@ -74,7 +74,7 @@ class Computer(AbstractComputer):
 
         is_modified = False
 
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:

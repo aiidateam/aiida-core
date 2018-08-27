@@ -101,5 +101,5 @@ class EquationOfState2(WorkChain):
             self.insert_barrier(Calc(pid))
 
     def finalise(self):
-        for s, pid in self.ctx.launched.iteritems():
+        for s, pid in self.ctx.launched.items():
             self.out(s, load_node(pid)['output_parameters'].dict)

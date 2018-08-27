@@ -79,7 +79,7 @@ def print_logshow(pk):
 def validate_calculations(expected_results):
     valid = True
     actual_dict = {}
-    for pk, expected_dict in expected_results.iteritems():
+    for pk, expected_dict in expected_results.items():
         calc = load_node(pk)
         if not calc.is_finished_ok:
             print('Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'
@@ -110,7 +110,7 @@ def validate_calculations(expected_results):
 
 def validate_workchains(expected_results):
     valid = True
-    for pk, expected_value in expected_results.iteritems():
+    for pk, expected_value in expected_results.items():
         this_valid = True
         try:
             calc = load_node(pk)

@@ -105,7 +105,7 @@ class TestProcess(AiidaTestCase):
         inputs['store_provenance'] = True
         p = test_utils.DummyProcess(inputs)
 
-        for label, value in p._calc.get_inputs_dict().iteritems():
+        for label, value in p._calc.get_inputs_dict().items():
             self.assertTrue(label in inputs)
             self.assertEqual(int(label), int(value.value))
             dummy_inputs.remove(label)

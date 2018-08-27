@@ -24,7 +24,7 @@ def get_group_list(user, type_string, n_days_ago=None,
                    name_filters={}):
     from aiida.orm.implementation.django.group import Group
 
-    name_filters = {"name__" + k: v for (k, v) in name_filters.iteritems() if v}
+    name_filters = {"name__" + k: v for (k, v) in name_filters.items() if v}
 
     if n_days_ago:
         n_days_ago = timezone.now() - datetime.timedelta(days=n_days_ago)

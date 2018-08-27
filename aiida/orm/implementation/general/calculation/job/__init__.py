@@ -325,7 +325,7 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError("You have to pass a "
                              "dictionary to set_environment_variables")
 
-        for k, v in env_vars_dict.iteritems():
+        for k, v in env_vars_dict.items():
             if not isinstance(k, basestring) or not isinstance(v, basestring):
                 raise ValueError(
                     "Both the keys and the values of the "
@@ -1075,7 +1075,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 for k, v in [cls.projection_map[p]]:
                     projections_dict[k].append(v)
 
-        for k, v in projections_dict.iteritems():
+        for k, v in projections_dict.items():
             qb.add_projection(k, v)
 
         # ORDER
@@ -1560,7 +1560,7 @@ class AbstractJobCalculation(AbstractCalculation):
         subst_dict = {'tot_num_mpiprocs':
                           job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
-        for k, v in job_tmpl.job_resource.iteritems():
+        for k, v in job_tmpl.job_resource.items():
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]

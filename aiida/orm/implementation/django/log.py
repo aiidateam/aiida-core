@@ -50,7 +50,7 @@ class DjangoLogCollection(LogCollection):
             filter_by = {}
 
         # Map the Log property names to DbLog field names
-        for key, value in filter_by.iteritems():
+        for key, value in filter_by.items():
             filters[key] = value
 
         if not order_by:

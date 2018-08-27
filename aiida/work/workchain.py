@@ -129,7 +129,7 @@ class WorkChain(Process):
         a user to add multiple intersteps that will assign a certain value
         to the corresponding key in the context of the workchain
         """
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             awaitable = construct_awaitable(value)
             awaitable.key = key
             self.insert_awaitable(awaitable)

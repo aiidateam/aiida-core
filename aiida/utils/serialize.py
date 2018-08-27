@@ -69,11 +69,11 @@ def serialize_data(data):
     elif isinstance(data, uuid.UUID):
         return '{}{}'.format(_PREFIX_VALUE_UUID, data)
     elif isinstance(data, AttributeDict):
-        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.items()})
     elif isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
-        return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
+        return {encode_key(key): serialize_data(value) for key, value in data.items()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
         return [serialize_data(value) for value in data]
     else:
@@ -90,11 +90,11 @@ def deserialize_data(data):
     :return: the deserialized data with keys decoded and node instances loaded from UUID's
     """
     if isinstance(data, AttributeDict):
-        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.items()})
     elif isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
-        return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
+        return {decode_key(key): deserialize_data(value) for key, value in data.items()}
     elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
         return [deserialize_data(value) for value in data]
     elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):

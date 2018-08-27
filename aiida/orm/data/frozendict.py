@@ -34,7 +34,7 @@ class FrozenDict(Data, Mapping):
             assert isinstance(value, Data)
             assert value.is_stored
 
-        for k, v in dict.iteritems():
+        for k, v in dict.items():
             self._set_attr(k, v.pk)
 
     def __getitem__(self, key):

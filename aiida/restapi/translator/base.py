@@ -224,10 +224,10 @@ class BaseTranslator(object):
         """
         if isinstance(filters, dict):
             if len(filters) > 0:
-                for tag, tag_filters in filters.iteritems():
+                for tag, tag_filters in filters.items():
                     if len(tag_filters) > 0 and isinstance(tag_filters, dict):
                         self._query_help["filters"][tag] = {}
-                        for filter_key, filter_value in tag_filters.iteritems():
+                        for filter_key, filter_value in tag_filters.items():
                             if filter_key == "pk":
                                 filter_key = pk_dbsynonym
                             self._query_help["filters"][tag][filter_key] \
@@ -266,7 +266,7 @@ class BaseTranslator(object):
         """
         if isinstance(projections, dict):
             if len(projections) > 0:
-                for project_key, project_list in projections.iteritems():
+                for project_key, project_list in projections.items():
                     self._query_help["project"][project_key] = project_list
         else:
             raise InputValidationError("Pass data in dictionary format where "
@@ -310,7 +310,7 @@ class BaseTranslator(object):
             return order_dict
 
         ## Assign orderby field query_help
-        for tag, columns in orders.iteritems():
+        for tag, columns in orders.items():
             self._query_help['order_by'][tag] = def_order(columns)
 
     def set_query(self, filters=None, orders=None, projections=None, id=None):

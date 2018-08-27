@@ -416,7 +416,7 @@ def _inline_to_standalone_script(calc):
 
 for key, value in {}(
     {}
-    ).iteritems():
+    ).items():
     value.store()
 """.format(code_string, function_name, args_string)
 
@@ -912,7 +912,7 @@ def add_metadata_inline(what, node, parameters, args):
     loops.update(tcod_loops)
 
     for datablock in datablocks:
-        for k,v in dict(tags.items() + additional_tags.items()).iteritems():
+        for k,v in dict(tags.items() + additional_tags.items()).items():
             if not k.startswith('_'):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "
@@ -1273,7 +1273,7 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         # '_tcod_atom_site_resid_force_Cartn_z': 'get_atom_site_residual_force_Cartesian_z',
     }
     tags = dict()
-    for tag, function in translation_map.iteritems():
+    for tag, function in translation_map.items():
         value = None
         try:
             value = getattr(translator, function)(calc, **kwargs)

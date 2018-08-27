@@ -139,7 +139,7 @@ class Orbital(object):
         # Adds the module_name in hard-coded manner
         init_dict.update({"module_name": self._get_module_name()})
         validated_dict = self._validate_keys(init_dict)
-        for k, v in validated_dict.iteritems():
+        for k, v in validated_dict.items():
             self._orbital_dict[k] = v
 
     def get_orbital_dict(self):

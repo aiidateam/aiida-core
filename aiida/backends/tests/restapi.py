@@ -172,7 +172,7 @@ class RESTApiTestCase(AiidaTestCase):
                 'structuredata': StructureData,
                 'data': Data,
         }
-        for label, dataclass in data_types.iteritems():
+        for label, dataclass in data_types.items():
             data = QueryBuilder().append(dataclass, tag="data", project=data_projections).order_by(
             {'data': [{'id': {'order': 'desc'}}]}).dict()
             data = [_['data'] for _ in data]

@@ -56,7 +56,7 @@ def clean_value(value):
         return value.value
     elif isinstance(value, dict):
         # Check dictionary before iterables
-        return {k: clean_value(v) for k, v in value.iteritems()}
+        return {k: clean_value(v) for k, v in value.items()}
     elif (isinstance(value, collections.Iterable) and
           not isinstance(value, (str, unicode))):
         # list, tuple, ... but not a string
@@ -439,7 +439,7 @@ class AbstractNode(object):
                     raise ValueError("Cannot set {} at the same time".format(
                         " and ".join(incomp)))
 
-        for k, v in arguments.iteritems():
+        for k, v in arguments.items():
             try:
                 if allow_hidden and k.startswith("_"):
                     method = getattr(self, '_set_{}'.format(k[1:]))
@@ -814,7 +814,7 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.iteritems():
+            for label, v in self._inputlinks_cache.items():
                 src = v[0]
                 input_link_type = v[1]
                 if label in input_list_keys:
@@ -1128,7 +1128,7 @@ class AbstractNode(object):
         """
 
         try:
-            for key, value in the_dict.iteritems():
+            for key, value in the_dict.items():
                 self.set_extra(key, value)
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
@@ -1274,7 +1274,7 @@ class AbstractNode(object):
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
         if self._to_be_stored:
-            for k, v in self._attrs_cache.iteritems():
+            for k, v in self._attrs_cache.items():
                 yield (k, v)
         else:
             for k, v in self._db_iterattrs():

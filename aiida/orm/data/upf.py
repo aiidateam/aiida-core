@@ -100,7 +100,7 @@ def get_pseudos_dict(structure, family_name):
     # Will contain a list of all species of the pseudo with given PK
     pseudo_species = defaultdict(list)
 
-    for kindname, pseudo in kind_pseudo_dict.iteritems():
+    for kindname, pseudo in kind_pseudo_dict.items():
         pseudo_dict[pseudo.pk] = pseudo
         pseudo_species[pseudo.pk].append(kindname)
 

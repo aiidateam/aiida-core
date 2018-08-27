@@ -313,7 +313,7 @@ class Workflow(AbstractWorkflow):
 
         def par_validate(params):
             the_params = {}
-            for k, v in params.iteritems():
+            for k, v in params.items():
                 if any([isinstance(v, int),
                         isinstance(v, bool),
                         isinstance(v, float),
@@ -545,7 +545,7 @@ class Workflow(AbstractWorkflow):
         except ImportError:
             raise InternalError("Unable to load the workflow module {}".format(module))
 
-        for elem_name, elem in wf_mod.__dict__.iteritems():
+        for elem_name, elem in wf_mod.__dict__.items():
 
             if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)

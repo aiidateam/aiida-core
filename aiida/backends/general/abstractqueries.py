@@ -142,7 +142,7 @@ class AbstractQueryManager(object):
             def get_statistics_dict(dataset):
                 results = {}
                 for count, typestring in sorted(
-                        (v, k) for k, v in dataset.iteritems())[::-1]:
+                        (v, k) for k, v in dataset.items())[::-1]:
                     results[typestring] = count
                 return results
 

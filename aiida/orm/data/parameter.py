@@ -57,7 +57,7 @@ class ParameterData(Data):
         :param dict: a dictionary with the keys to substitute. It works like
           dict.update(), adding new keys and overwriting existing keys.
         """
-        for k, v in dict.iteritems():
+        for k, v in dict.items():
             self._set_attr(k, v)
 
     def get_dict(self):

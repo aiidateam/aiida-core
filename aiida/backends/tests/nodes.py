@@ -14,6 +14,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 import copy
 import unittest
+
+import six
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
@@ -1370,12 +1372,12 @@ class TestNodeBasic(AiidaTestCase):
                                         "should be equal (since it should be "
                                         "the same node")
 
-        # Check that you can load it with an id of type long.
-        # a3 = Node.get_subclass_from_pk(long(a1.id))
-        a3 = Node.get_subclass_from_pk(long(a1.id))
-        self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
-                                        "should be equal (since it should be "
-                                        "the same node")
+        if six.PY2:  # In Python 3, int is always long (enough)
+            # Check that you can load it with an id of type long
+            a3 = Node.get_subclass_from_pk(long(a1.id))
+            self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
+                                            "should be equal (since it should be "
+                                            "the same node")
 
         # Check that it manages to load the node even if the id is
         # passed as a string.

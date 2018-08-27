@@ -85,7 +85,7 @@
       - --fix=funcattrs
 #done:      - --fix=has_key
 #      - --fix=idioms
-#      - --fix=long
+#done:      - --fix=long
       - --fix=methodattrs
       - --fix=ne
       - --fix=numliterals

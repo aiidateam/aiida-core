@@ -177,5 +177,5 @@ class AuthInfo(CollectionEntry):
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 computer.hostname, computer.get_transport_type(), e.message))
 
-        params = dict(computer.get_transport_params().items() + self.get_auth_params().items())
+        params = dict(list(computer.get_transport_params().items()) + list(self.get_auth_params().items()))
         return ThisTransport(machine=computer.hostname, **params)

@@ -181,9 +181,7 @@ def export(**kwargs):
     export_format = kwargs.pop('format')
     force = kwargs.pop('force')
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))
@@ -208,9 +206,7 @@ def deposit(**kwargs):
     kwargs.pop('database')  # looks like a bug, but deposit function called inside
     # deposit_tcod complains about the 'database' keywords argument
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, StructureData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), StructureData))

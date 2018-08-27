@@ -88,12 +88,12 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
         try:
             transport.makedirs(remote_working_directory)
             transport.chdir(remote_working_directory)
-        except (IOError, OSError) as e:
+        except EnvironmentError as exc:
             raise exceptions.ConfigurationError(
                 "[submission of calculation {}] "
                 "Unable to create the remote directory {} on "
                 "computer '{}': {}".format(
-                    calculation.pk, remote_working_directory, computer.name, e.message))
+                    calculation.pk, remote_working_directory, computer.name, exc))
     # Store remotely with sharding (here is where we choose
     # the folder structure of remote jobs; then I store this
     # in the calculation properties using _set_remote_dir

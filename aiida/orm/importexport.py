@@ -378,9 +378,9 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 try:
                     extract_zip(in_path, folder, silent=silent,
                                 nodes_export_subfolder=nodes_export_subfolder)
-                except ValueError as ve:
+                except ValueError as exc:
                     print("The following problem occured while processing the "
-                          "provided file: {}".format(ve.message))
+                          "provided file: {}".format(exc))
                     return
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
                 extract_cif(in_path, folder, silent=silent,

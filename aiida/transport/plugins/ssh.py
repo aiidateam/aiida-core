@@ -489,9 +489,9 @@ class SshTransport(aiida.transport.Transport):
 
         try:
             self._client.connect(self._machine, **connection_arguments)
-        except Exception as e:
+        except Exception as exc:
             self.logger.error("Error connecting through SSH: [{}] {}, "
-                              "connect_args were: {}".format(e.__class__.__name__, e.message, self._connect_args))
+                              "connect_args were: {}".format(exc.__class__.__name__, exc, self._connect_args))
             raise
 
         # Open also a SFTPClient
@@ -653,15 +653,15 @@ class SshTransport(aiida.transport.Transport):
 
         try:
             self.sftp.mkdir(path)
-        except IOError as e:
+        except IOError as exc:
             if os.path.isabs(path):
                 raise OSError("Error during mkdir of '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(path, e.message))
+                              "or the directory already exists? ({})".format(path, exc))
             else:
                 raise OSError("Error during mkdir of '{}' from folder '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(path, self.getcwd(), e.message))
+                              "or the directory already exists? ({})".format(path, self.getcwd(), exc))
 
     # TODO : implement rmtree
     def rmtree(self, path):

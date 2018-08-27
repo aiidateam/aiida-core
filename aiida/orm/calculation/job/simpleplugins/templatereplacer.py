@@ -120,8 +120,8 @@ class TemplatereplacerCalculation(JobCalculation):
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
-        except ValidationError as e:
-            raise InputValidationError("invalid file_to_copy format: {}".format(e.message))
+        except ValidationError as exc:
+            raise InputValidationError("invalid file_to_copy format: {}".format(exc))
 
         local_copy_list = []
         remote_copy_list = []

@@ -234,11 +234,11 @@ class TestParsers(AiidaTestCase):
                                 attr_test_listtests, start=1):
                             try:
                                 comparison = attr_test_data.pop('comparison')
-                            except KeyError as e:
+                            except KeyError as exc:
                                 raise ValueError(
                                     "Missing '{}' in the '{}' field "
                                     "in '{}' in "
-                                    "the test file".format(e.message,
+                                    "the test file".format(exc.args[0],
                                                            attr_test,
                                                            test_node_name))
 
@@ -262,12 +262,7 @@ class TestParsers(AiidaTestCase):
                                 comparison_test(testclass=self, dbdata=dbdata,
                                                 comparisondata=attr_test_data)
                             except Exception as e:
-                                # I change both the message and the 'args'
-                                # (apparently, args[0] is used by str(e))
                                 # Probably, a 'better' way should be found to do this!
-                                e.message = "Failed test #{} for {}->{}: {}".format(
-                                    test_number, test_node_name, attr_test,
-                                    e.message)
                                 if e.args:
                                     e.args = tuple(
                                         ["Failed test #{} for {}->{}: {}".format(

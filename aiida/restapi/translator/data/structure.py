@@ -60,8 +60,9 @@ class StructureDataTranslator(DataTranslator):
             try:
                 response["str_viz_info"]["data"] = node._exportstring(format)[0]
                 response["str_viz_info"]["format"] = format
-            except LicensingException as e:
-                response = e.message
+            except LicensingException as exc:
+                response = str(exc)
+
         else:
             raise RestInputValidationError("The format {} is not supported.".format(format))
 
@@ -93,9 +94,9 @@ class StructureDataTranslator(DataTranslator):
                 response["data"] = node._exportstring(format)[0]
                 response["status"] = 200
                 response["filename"] = node.uuid + "_structure." + format
-            except LicensingException as e:
+            except LicensingException as exc:
                 response["status"] = 500
-                response["data"] = e.message
+                response["data"] = str(exc)
 
         return response
 

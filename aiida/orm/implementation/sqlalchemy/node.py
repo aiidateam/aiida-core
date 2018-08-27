@@ -104,7 +104,7 @@ class Node(AbstractNode):
                 raise NotExistent("UUID={} is not an instance of {}".format(uuid, cls.__name__))
             return node
         except DatabaseError as exc:
-            raise ValueError(exc.message)
+            raise ValueError(str(exc))
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
@@ -131,7 +131,7 @@ class Node(AbstractNode):
                 raise NotExistent("pk= {} is not an instance of {}".format(pk, cls.__name__))
             return node
         except DatabaseError as exc:
-            raise ValueError(exc.message)
+            raise ValueError(str(exc))
 
     def __int__(self):
         if self._to_be_stored:

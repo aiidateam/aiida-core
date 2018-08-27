@@ -136,7 +136,7 @@ def delete(codes):
         try:
             delete_code(code)
         except InvalidOperation as exc:
-            echo.echo_critical(exc.message)
+            echo.echo_critical(str(exc))
 
         echo.echo_success("Code '{}' deleted.".format(code.pk))
 

@@ -99,8 +99,8 @@ class TestCodDbImporter(AiidaTestCase):
                 message = messages[0]
                 try:
                     methods[i]("test", "test", [values[j]])
-                except ValueError as e:
-                    message = e.message
+                except ValueError as exc:
+                    message = str(exc)
                 self.assertEquals(message, messages[results[i][j]])
 
     def test_dbentry_creation(self):

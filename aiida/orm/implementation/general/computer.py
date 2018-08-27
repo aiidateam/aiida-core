@@ -303,11 +303,10 @@ class AbstractComputer(object):
 
         try:
             convertedwd = workdir.format(username="test")
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement "
-                                  "field '{}'".format(e.message))
-        except ValueError as e:
-            raise ValidationError("Error in the string: '{}'".format(e.message))
+        except KeyError as exc:
+            raise ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+        except ValueError as exc:
+            raise ValidationError("Error in the string: '{}'".format(exc))
 
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
@@ -332,11 +331,10 @@ class AbstractComputer(object):
         try:
             for arg in mpirun_cmd:
                 arg.format(**subst)
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement "
-                                  "field '{}'".format(e.message))
-        except ValueError as e:
-            raise ValidationError("Error in the string: '{}'".format(e.message))
+        except KeyError as exc:
+            raise ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+        except ValueError as exc:
+            raise ValidationError("Error in the string: '{}'".format(exc))
 
     def validate(self):
         """
@@ -660,18 +658,18 @@ class AbstractComputer(object):
         try:
             # I return the class, not an instance
             return TransportFactory(self.get_transport_type())
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.name, self.get_transport_type(), e.message))
+                self.name, self.get_transport_type(), exc))
 
     def get_scheduler(self):
         try:
             ThisPlugin = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return ThisPlugin()
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.name, self.get_scheduler_type(), e.message))
+                self.name, self.get_scheduler_type(), exc))
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

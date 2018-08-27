@@ -341,8 +341,8 @@ class BaseTranslator(object):
 
             try:
                 self._check_id_validity(id)
-            except RestValidationError as e:
-                raise RestValidationError(e.message)
+            except RestValidationError as exc:
+                raise RestValidationError(str(exc))
             else:
                 tagged_filters[self.__label__] = self._id_filter
                 if self._result_type is not self.__label__:

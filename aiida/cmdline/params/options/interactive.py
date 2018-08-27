@@ -159,7 +159,7 @@ class InteractiveOption(ConditionalOption):
             value = self.type.convert(value, param, ctx)
             successful = True
         except click.BadParameter as err:
-            echo.echo_error(err.message)
+            echo.echo_error(str(err))
             self.ctrl_help()
         return successful, value
 

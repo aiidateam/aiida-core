@@ -42,14 +42,14 @@ def repo_cat(node, relative_path):
     try:
         cat_repo_files(node, relative_path)
     except ValueError as exc:
-        echo.echo_critical(exc.message)
+        echo.echo_critical(str(exc))
     except IOError as exc:
         import errno
         # Ignore Broken pipe errors, re-raise everything else
         if exc.errno == errno.EPIPE:
             pass
         else:
-            echo.echo_critical(exc.message)
+            echo.echo_critical(str(exc))
 
 
 @verdi_node_repo.command('ls')
@@ -64,7 +64,7 @@ def repo_ls(node, relative_path, color):
     try:
         list_repo_files(node, relative_path, color)
     except ValueError as exc:
-        echo.echo_critical(exc.message)
+        echo.echo_critical(str(exc))
 
 
 @verdi_node.command('label')

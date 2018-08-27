@@ -101,7 +101,7 @@ def group_rename(group, name):
     try:
         group.name = name
     except UniquenessError as exception:
-        echo.echo_critical("Error: {}.".format(exception.message))
+        echo.echo_critical("Error: {}.".format(exception))
     else:
         echo.echo_success('Name successfully changed')
 

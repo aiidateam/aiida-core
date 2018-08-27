@@ -318,19 +318,6 @@ def parse_upf(fname, check_filename=True):
     return parsed_data
 
 
-# def test_parser(folder):
-#    import os
-#    from aiida.common.exceptions import ParsingError
-#
-#    for fn in os.listdir(folder):
-#        if os.path.isfile(fn) and fn.lower().endswith('.upf'):
-#            try:
-#                data = parse_upf(os.path.join(folder, fn))
-#            except ParsingError as e:
-#                print "~~~~~~~~~~~~~~~~~~~~ ERROR: %s" % e.message
-
-
-
 class UpfData(SinglefileData):
     """
     Function not yet documented.

@@ -257,9 +257,8 @@ class DbWorkflowData(Base):
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
                 self.save()
-        except Exception as ex:
-            raise ValueError("Cannot set the parameter {}\n".format(self.name)
-                             + ex.message)
+        except Exception as exc:
+            raise ValueError("Cannot set the parameter {}\n{}".format(self.name, exc))
 
     def get_value(self):
         if self.value_type == wf_data_value_types.JSON:

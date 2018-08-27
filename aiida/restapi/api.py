@@ -47,15 +47,15 @@ class App(Flask):
             def error_handler(error):
 
                 if isinstance(error, RestValidationError):
-                    response = jsonify({'message': error.message})
+                    response = jsonify({'message': str(error)})
                     response.status_code = 400
 
                 elif isinstance(error, RestInputValidationError):
-                    response = jsonify({'message': error.message})
+                    response = jsonify({'message': str(error)})
                     response.status_code = 400
 
                 elif isinstance(error, RestFeatureNotAvailable):
-                    response = jsonify({'message': error.message})
+                    response = jsonify({'message': str(error)})
                     response.status_code = 501
 
                 # Generic server-side error (not to make the api crash if an
@@ -64,8 +64,7 @@ class App(Flask):
                     response = jsonify(
                         {
                             'message': 'Internal server error. The original '
-                                       'message was: \"{}\"'.format(
-                                error.message)
+                                       'message was: \"{}\"'.format(error)
                         }
                     )
                     response.status_code = 500

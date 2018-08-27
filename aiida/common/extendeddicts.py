@@ -234,9 +234,9 @@ class DefaultFieldsAttributeDict(AttributeDict):
             if callable(validator):
                 try:
                     validator(self[key])
-                except Exception as e:
+                except Exception as exc:
                     raise ValidationError("Invalid value for key '{}' [{}]: {}".format(
-                        key, e.__class__.__name__, e.message))
+                        key, exc.__class__.__name__, exc))
 
     def __setattr__(self, attr, value):
         """

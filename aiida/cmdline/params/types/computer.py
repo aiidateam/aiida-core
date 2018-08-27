@@ -81,8 +81,8 @@ class MpirunCommandParamType(StringParamType):
         try:
             newval.format(**subst)
         except KeyError as exc:
-            self.fail("In workdir there is an unknown replacement " "field '{}'".format(exc.message))
+            self.fail("In workdir there is an unknown replacement field '{}'".format(exc.args[0]))
         except ValueError as exc:
-            self.fail("Error in the string: '{}'".format(exc.message))
+            self.fail("Error in the string: '{}'".format(exc))
 
         return newval

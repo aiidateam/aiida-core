@@ -173,9 +173,9 @@ class AuthInfo(CollectionEntry):
         computer = self.computer
         try:
             ThisTransport = TransportFactory(computer.get_transport_type())
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                computer.hostname, computer.get_transport_type(), e.message))
+                computer.hostname, computer.get_transport_type(), exc))
 
         params = dict(list(computer.get_transport_params().items()) + list(self.get_auth_params().items()))
         return ThisTransport(machine=computer.hostname, **params)

@@ -950,21 +950,21 @@ class StructureData(Data):
 
         try:
             _get_valid_cell(self.cell)
-        except ValueError as e:
-            raise ValidationError("Invalid cell: {}".format(e.message))
+        except ValueError as exc:
+            raise ValidationError("Invalid cell: {}".format(exc))
 
         try:
             get_valid_pbc(self.pbc)
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Invalid periodic boundary conditions: {}".format(e.message))
+                "Invalid periodic boundary conditions: {}".format(exc))
 
         try:
             # This will try to create the kinds objects
             kinds = self.kinds
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Unable to validate the kinds: {}".format(e.message))
+                "Unable to validate the kinds: {}".format(exc))
 
         from collections import Counter
 
@@ -978,9 +978,9 @@ class StructureData(Data):
         try:
             # This will try to create the sites objects
             sites = self.sites
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Unable to validate the sites: {}".format(e.message))
+                "Unable to validate the sites: {}".format(exc))
 
         for site in sites:
             if site.kind_name not in [k.name for k in kinds]:
@@ -2479,9 +2479,9 @@ class Site(object):
             try:
                 self.kind_name = raw['kind_name']
                 self.position = raw['position']
-            except KeyError as e:
+            except KeyError as exc:
                 raise ValueError("Invalid raw object, it does not contain any "
-                                 "key {}".format(e.message))
+                                 "key {}".format(exc.args[0]))
             except TypeError:
                 raise ValueError("Invalid raw object, it is not a dictionary")
 
@@ -2489,8 +2489,8 @@ class Site(object):
             try:
                 self.kind_name = kwargs.pop('kind_name')
                 self.position = kwargs.pop('position')
-            except KeyError as e:
-                raise ValueError("You need to specify {}".format(e.message))
+            except KeyError as exc:
+                raise ValueError("You need to specify {}".format(exc.args[0]))
             if kwargs:
                 raise ValueError("Unrecognized parameters: {}".format(
                     kwargs.keys))

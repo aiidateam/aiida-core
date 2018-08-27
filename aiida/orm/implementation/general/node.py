@@ -2100,4 +2100,4 @@ class AttributeManager(object):
         try:
             return self._node.get_attr(name)
         except AttributeError as err:
-            raise KeyError(err.message)
+            raise KeyError(str(err))

@@ -531,7 +531,7 @@ class PbsBaseClass(Scheduler):
                 except Exception as exc:
                     _LOGGER.debug("Problem parsing the node names, I "
                                   "got Exception {} with message {}; "
-                                  "exec_hosts was {}".format(str(type(exc)), exc.message, exec_hosts))
+                                  "exec_hosts was {}".format(str(type(exc)), exc, exec_hosts))
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -686,7 +686,7 @@ class PbsBaseClass(Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            _LOGGER.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
+            _LOGGER.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

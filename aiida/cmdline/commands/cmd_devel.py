@@ -119,7 +119,7 @@ def devel_delproperty(prop):
     except ValueError:
         echo.echo_critical('property {} not found'.format(prop))
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('{} while getting the property: {}'.format(type(exception).__name__, exception.message))
+        echo.echo_critical('{} while getting the property: {}'.format(type(exception).__name__, exception))
     else:
         echo.echo_success('deleted the {} property from the configuration file'.format(prop))
 
@@ -135,7 +135,7 @@ def devel_getproperty(prop):
     except ValueError:
         echo.echo_critical('property {} not found'.format(prop))
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('{} while getting the property: {}'.format(type(exception).__name__, exception.message))
+        echo.echo_critical('{} while getting the property: {}'.format(type(exception).__name__, exception))
     else:
         echo.echo('{}'.format(value))
 
@@ -152,7 +152,7 @@ def devel_setproperty(prop, value):
     except ValueError:
         echo.echo_critical('{} is not a recognized property, call describeproperties to see a list'.format(prop))
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('{} while storing the property: {}'.format(type(exception).__name__, exception.message))
+        echo.echo_critical('{} while storing the property: {}'.format(type(exception).__name__, exception))
     else:
         echo.echo_success('property {} set to {}'.format(prop, value))
 
@@ -235,7 +235,7 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
         try:
             check_if_tests_can_run()
         except TestsNotAllowedError as exception:
-            echo.echo_critical(exception.message)
+            echo.echo_critical(str(exception))
 
         echo.echo('v' * 75)
         echo.echo('>>> Tests for {} db application'.format(settings.BACKEND))

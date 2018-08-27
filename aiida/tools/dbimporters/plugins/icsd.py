@@ -428,8 +428,8 @@ class IcsdDbImporter(DbImporter):
                     self.actual_args[realname] = self.actual_args[realname] + newv + " "
                 else:
                     self.actual_args[realname] = newv
-            except KeyError as e:
-                raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(e.message))
+            except KeyError as exc:
+                raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(exc.args[0]))
 
         url_values = urllib.parse.urlencode(self.actual_args)
         query_url = self.db_parameters["urladd"] + url_values

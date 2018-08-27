@@ -152,7 +152,7 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
                         connection.execute('DROP TABLE {};'.format(table))
                 except Exception as db_ex:
                     print("The following error occured during the cleaning of"
-                          "the database: {}".format(db_ex.message))
+                          "the database: {}".format(db_ex))
             # Since the database cleaning is over, raise the test
             # exception that was caught
             raise test_ex

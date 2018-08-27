@@ -114,6 +114,6 @@ class IdentifierParamType(click.ParamType):
         try:
             entity = loader.load_entity(value, sub_classes=self._sub_classes)
         except (MultipleObjectsError, NotExistent, ValueError) as exception:
-            raise click.BadParameter(exception.message)
+            raise click.BadParameter(str(exception))
 
         return entity

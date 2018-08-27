@@ -208,9 +208,9 @@ class AbstractJobCalculation(AbstractCalculation):
         s = computer.get_scheduler()
         try:
             _ = s.create_job_resource(**self.get_resources(full=True))
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError) as exc:
             raise ValidationError("Invalid resources for the scheduler of the "
-                                  "specified computer: {}".format(e.message))
+                                  "specified computer: {}".format(exc))
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
@@ -1687,20 +1687,20 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             validate_list_of_string_tuples(local_copy_list,
                                            tuple_length=2)
-        except ValidationError as e:
+        except ValidationError as exc:
             raise PluginInternalError(
                 "[presubmission of calc {}] "
-                "local_copy_list format problem: {}".format(this_pk, e.message))
+                "local_copy_list format problem: {}".format(this_pk, exc))
 
         remote_copy_list = calcinfo.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list,
                                            tuple_length=3)
-        except ValidationError as e:
+        except ValidationError as exc:
             raise PluginInternalError(
                 "[presubmission of calc {}] "
                 "remote_copy_list format problem: {}".
-                    format(this_pk, e.message))
+                    format(this_pk, exc))
 
         for (remote_computer_uuid, remote_abs_path,
              dest_rel_path) in remote_copy_list:

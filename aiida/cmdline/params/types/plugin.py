@@ -199,12 +199,12 @@ class PluginParamType(click.ParamType):
         try:
             entry_point = self.get_entry_point_from_string(value)
         except ValueError as exception:
-            raise click.BadParameter(exception.message)
+            raise click.BadParameter(str(exception))
 
         if self.load:
             try:
                 return entry_point.load()
             except LoadingEntryPointError as exception:
-                raise click.BadParameter(exception.message)
+                raise click.BadParameter(str(exception))
         else:
             return entry_point

@@ -45,7 +45,7 @@ def calculation_gotocomputer(calculation):
     try:
         transport = calculation._get_transport()
     except NotExistent as exception:
-        echo.echo_critical(exception.message)
+        echo.echo_critical(exception)
 
     remote_workdir = calculation._get_remote_workdir()
 
@@ -146,8 +146,8 @@ def calculation_res(calculation, fmt, keys):
     if keys is not None:
         try:
             result = {k: results[k] for k in keys}
-        except KeyError as e:
-            echo.echo_critical("key '{}' was not found in the .res dictionary".format(e.message))
+        except KeyError as exc:
+            echo.echo_critical("key '{}' was not found in the .res dictionary".format(exc.args[0]))
     else:
         result = results
 
@@ -191,7 +191,7 @@ def calculation_plugins(entry_point):
         try:
             plugin = load_entry_point('aiida.calculations', entry_point)
         except (LoadingPluginFailed, MissingPluginError) as exception:
-            echo.echo_critical(exception)
+            echo.echo_critical(str(exception))
         else:
             echo.echo_info(entry_point)
             echo.echo_info(plugin.__doc__ if plugin.__doc__ else 'no docstring available')
@@ -236,8 +236,8 @@ def calculation_inputcat(calculation, path):
 
     try:
         cat_repo_files(calculation, os.path.join('raw_input', path))
-    except ValueError as e:
-        echo.echo_critical(e.message)
+    except ValueError as exc:
+        echo.echo_critical(str(exc))
     except IOError as e:
         import errno
         # Ignore Broken pipe errors, re-raise everything else
@@ -279,8 +279,8 @@ def calculation_outputcat(calculation, path):
 
     try:
         cat_repo_files(retrieved, os.path.join('path', path))
-    except ValueError as e:
-        echo.echo_critical(e.message)
+    except ValueError as exc:
+        echo.echo_critical(str(exc))
     except IOError as e:
         import errno
         # Ignore Broken pipe errors, re-raise everything else
@@ -313,7 +313,7 @@ def calculation_inputls(calculation, path, color):
     try:
         list_repo_files(calculation, fullpath, color)
     except ValueError as exception:
-        echo.echo_critical(exception.message)
+        echo.echo_critical(exception)
 
 
 @verdi_calculation.command('outputls')
@@ -344,7 +344,7 @@ def calculation_outputls(calculation, path, color):
     try:
         list_repo_files(retrieved, fullpath, color)
     except ValueError as exception:
-        echo.echo_critical(exception.message)
+        echo.echo_critical(exception)
 
 
 @verdi_calculation.command('kill')
@@ -367,8 +367,8 @@ def calculation_kill(calculations, force):
             try:
                 future = control_panel.kill_process(calculation)
                 futures.append((calculation, future))
-            except (work.RemoteException, work.DeliveryFailed) as e:
-                echo.echo_error('Calculation<{}> killing failed {}'.format(calculation, e.message))
+            except (work.RemoteException, work.DeliveryFailed) as exc:
+                echo.echo_error('Calculation<{}> killing failed {}'.format(calculation, exc))
 
         for future in futures:
             result = control_panel._communicator.await(future[1])

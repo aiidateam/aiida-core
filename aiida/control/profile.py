@@ -64,18 +64,18 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
                 repo=kwargs['repo'],
                 force_overwrite=kwargs.get('force_overwrite', False))
         except ValueError as exception:
-            echo.echo_critical("Error during configuation: {}".format(exception.message))
+            echo.echo_critical("Error during configuation: {}".format(exception))
         except KeyError as exception:
             import traceback
             echo.echo(traceback.format_exc())
             echo.echo_critical(
                 "--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(
-                    exception.message))
+                    exception.args[0]))
     else:
         try:
             created_conf = create_configuration(profile=gprofile)
         except ValueError as exception:
-            echo.echo_critical("Error during configuration: {}".format(exception.message))
+            echo.echo_critical("Error during configuration: {}".format(exception))
 
         # Set default DB profile
         set_default_profile(gprofile, force_rewrite=False)

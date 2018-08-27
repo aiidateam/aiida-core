@@ -281,11 +281,11 @@ class Node(AbstractNode):
             DbLink.objects.create(input=src._dbnode, output=self._dbnode,
                                   label=label, type=link_type.value)
             transaction.savepoint_commit(sid)
-        except IntegrityError as e:
+        except IntegrityError as exc:
             transaction.savepoint_rollback(sid)
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
-                                  "".format(e.message))
+                                  "".format(exc))
 
     def _get_db_input_links(self, link_type):
         from aiida.backends.djsite.db.models import DbLink

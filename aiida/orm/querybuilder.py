@@ -737,12 +737,11 @@ class QueryBuilder(object):
                     else:
                         raise InputValidationError("direction=0 is not valid")
                     joining_value = self._path[-abs(joining_value)]['tag']
-                except IndexError as e:
+                except IndexError as exc:
                     raise InputValidationError(
                         "You have specified a non-existent entity with\n"
                         "direction={}\n"
-                        "{}\n".format(joining_value, e.message)
-                    )
+                        "{}\n".format(joining_value, exc))
 
 
         except Exception as e:

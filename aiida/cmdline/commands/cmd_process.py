@@ -79,7 +79,7 @@ def process_kill(processes, timeout):
             except CommunicationTimeout:
                 echo.echo_error('call to kill Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('pause')
@@ -105,7 +105,7 @@ def process_pause(processes, timeout):
             except CommunicationTimeout:
                 echo.echo_error('call to pause Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('play')
@@ -131,7 +131,7 @@ def process_play(processes, timeout):
             except CommunicationTimeout:
                 echo.echo_error('call to play Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('watch')

@@ -103,7 +103,7 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
     try:
         export_function(entities, outfile=output_file, **kwargs)
     except IOError as exception:
-        echo.echo_critical('failed to write the export archive file: {}'.format(exception.message))
+        echo.echo_critical('failed to write the export archive file: {}'.format(exception))
     else:
         echo.echo_success('wrote the export archive file to {}'.format(output_file))
 

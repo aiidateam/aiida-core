@@ -81,7 +81,7 @@ def workflow_kill(force, verbose, workflows):
                 echo.echo_error('\t' + msg)
         except WorkflowUnkillable as error:
             echo.echo_error(error.__class__.__name__)
-            echo.echo_error(error.message)
+            echo.echo_error(str(error))
 
     if verbose:
         echo.echo_success('{} workflow{} killed.'.format(counter, plural))

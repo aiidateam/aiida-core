@@ -50,7 +50,7 @@ def print_daemon_log():
             ['cat', '{}'.format(daemon_log)], stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as e:
-        print("Note: the command failed, message: {}".format(e.message))
+        print("Note: the command failed, message: {}".format(e))
 
 
 def jobs_have_finished(pks):
@@ -73,7 +73,7 @@ def print_logshow(pk):
             stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as e2:
-        print("Note: the command failed, message: {}".format(e2.message))
+        print("Note: the command failed, message: {}".format(e))
 
 
 def validate_calculations(expected_results):
@@ -384,7 +384,7 @@ def main():
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as e:
-            print("Note: the command failed, message: {}".format(e.message))
+            print("Note: the command failed, message: {}".format(e))
 
         print("Output of 'verdi work list':")
         try:
@@ -393,7 +393,7 @@ def main():
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as e:
-            print("Note: the command failed, message: {}".format(e.message))
+            print("Note: the command failed, message: {}".format(e))
 
         print("Output of 'verdi daemon status':")
         try:
@@ -402,7 +402,7 @@ def main():
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as e:
-            print("Note: the command failed, message: {}".format(e.message))
+            print("Note: the command failed, message: {}".format(e))
 
         if jobs_have_finished(pks):
             print("Calculation terminated its execution")

@@ -686,20 +686,19 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
             if with_transaction:
                 transaction.savepoint_commit(sid)
-        except BaseException as e:  # All exceptions including CTRL+C, ...
+        except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
                 transaction.savepoint_rollback(sid)
-            if isinstance(e, IntegrityError) and stop_if_existing:
+            if isinstance(exc, IntegrityError) and stop_if_existing:
                 raise UniquenessError("Impossible to create the required "
                                       "entry "
                                       "in table '{}', "
                                       "another entry already exists and the creation would "
                                       "violate an uniqueness constraint.\nFurther details: "
-                                      "{}".format(
-                    cls.__name__, e.message))
+                                      "{}".format(cls.__name__, exc))
             raise
 
     @classmethod
@@ -971,8 +970,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                 return deserialize_attributes(data, sep=self._sep,
                                               original_class=self.__class__,
                                               original_pk=self.subspecifier_pk)['attr']
-        except DeserializationException as e:
-            exc = DbContentError(e.message)
+        except DeserializationException as exc:
+            exc = DbContentError(exc)
             exc.original_exception = e
             raise exc
 
@@ -1110,8 +1109,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             return deserialize_attributes(data, sep=cls._sep,
                                           original_class=cls,
                                           original_pk=dbnodepk)
-        except DeserializationException as e:
-            exc = DbContentError(e.message)
+        except DeserializationException as exc:
+            exc = DbContentError(exc)
             exc.original_exception = e
             raise exc
 

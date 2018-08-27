@@ -111,9 +111,8 @@ class JobCalculation(AbstractJobCalculation, Calculation):
                 else:
                     try:
                         most_recent_state = sort_states(this_calc_states)[0]
-                    except ValueError as e:
+                    except ValueError as exc:
                         raise DbContentError("Error in the content of the "
-                                             "DbCalcState table ({})".format(
-                            e.message))
+                                             "DbCalcState table ({})".format(exc))
 
                     return most_recent_state

@@ -101,14 +101,9 @@ def run_for_all_plugins(actual_test_method):
 
             messages = ["*** At least one test for a subplugin failed. " "See below ***", ""]
             for exc in exceptions:
-                if hasattr(exc[0], "message"):
-                    messages.append("*** [For plugin {}]: Exception '{}': {}"
-                                    "".format(exc[2],
-                                              type(exc[0]).__name__, exc[0].message))
-                    messages.append(exc[1])
-                else:
-                    messages.append("*** [For plugin {}]: Exception '{}'".format(exc[2], type(exc[0]).__name__))
-                    messages.append(exc[1])
+                messages.append("*** [For plugin {}]: Exception '{}': {}"
+                                .format(exc[2], type(exc[0]).__name__, exc[0]))
+                messages.append(exc[1])
 
             raise exception_to_raise("\n".join(messages))
 

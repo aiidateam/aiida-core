@@ -576,9 +576,9 @@ class AbstractCode(Node):
 
         try:
             code.store()
-        except ValidationError as e:
+        except ValidationError as exc:
             raise ValidationError(
-                "Unable to store the computer: {}.".format(e.message))
+                "Unable to store the computer: {}.".format(exc))
         return code
 
 

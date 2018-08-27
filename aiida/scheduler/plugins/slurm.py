@@ -650,7 +650,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

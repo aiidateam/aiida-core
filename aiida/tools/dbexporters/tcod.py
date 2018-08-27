@@ -734,9 +734,8 @@ def _collect_tags(node, calc,parameters=None,
             try:
                 export_tree([node], folder=folder, silent=True,
                             allowed_licenses=['CC0'])
-            except LicensingException as e:
-                raise LicensingException(e.message + \
-                                         ". Only CC0 license is accepted.")
+            except LicensingException as exc:
+                raise LicensingException("{}. Only CC0 license is accepted.".format(exc))
 
             files = _collect_files(folder.abspath)
             with open(folder.get_abs_path('data.json')) as f:

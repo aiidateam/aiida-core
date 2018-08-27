@@ -454,12 +454,12 @@ def computer_rename(computer, new_name):
         computer.set_name(new_name)
         computer.store()
     except ValidationError as error:
-        echo.echo_critical("Invalid input! {}".format(error.message))
+        echo.echo_critical("Invalid input! {}".format(error))
     except UniquenessError as error:
         echo.echo_critical("Uniqueness error encountered! Probably a "
                            "computer with name '{}' already exists"
                            "".format(new_name))
-        echo.echo_critical("(Message was: {})".format(error.message))
+        echo.echo_critical("(Message was: {})".format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
@@ -536,7 +536,7 @@ def computer_test(user, print_traceback, computer):
                         # Indent
                         echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
-                        echo.echo("** {}: {}".format(error.__class__.__name__, error.message))
+                        echo.echo("** {}: {}".format(error.__class__.__name__, error))
                         echo.echo("** (use the --print-traceback option to see the " "full traceback)")
                     succeeded = False
 
@@ -556,7 +556,7 @@ def computer_test(user, print_traceback, computer):
             # Indent
             echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
-            echo.echo("{}: {}".format(error.__class__.__name__, error.message))
+            echo.echo("{}: {}".format(error.__class__.__name__, error))
             echo.echo("(use the --print-traceback option to see the " "full traceback)")
         succeeded = False
 
@@ -579,7 +579,7 @@ def computer_delete(computer):
     try:
         delete_computer(computer)
     except InvalidOperation as error:
-        echo.echo_critical(error.message)
+        echo.echo_critical(str(error))
 
     echo.echo_success("Computer '{}' deleted.".format(compname))
 

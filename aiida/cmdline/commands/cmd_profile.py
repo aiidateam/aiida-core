@@ -41,7 +41,7 @@ def profile_list():
     except ConfigurationError as err:
         err_msg = ("Stopping: {}\n"
                    "Note: if no configuration file was found, it means that you have not run\n"
-                   "'verdi setup' yet to configure at least one AiiDA profile.".format(err.message))
+                   "'verdi setup' yet to configure at least one AiiDA profile.".format(err))
         echo.echo_critical(err_msg)
 
     if default_profile is None:

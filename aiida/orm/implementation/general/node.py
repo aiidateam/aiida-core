@@ -11,7 +11,6 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 import os
-import types
 import logging
 import importlib
 import collections
@@ -59,7 +58,7 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.iteritems()}
     elif (isinstance(value, collections.Iterable) and
-          not isinstance(value, types.StringTypes)):
+          not isinstance(value, (str, unicode))):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object

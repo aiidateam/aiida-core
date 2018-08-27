@@ -99,7 +99,7 @@
       - --fix=sys_exc
       - --fix=throw
       - --fix=tuple_params
-#      - --fix=types
+      - --fix=types
 #optional:      - --fix=ws_comma
       - --fix=xreadlines
 #      - --fix=basestring

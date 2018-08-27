@@ -17,6 +17,8 @@ import itertools
 import plumpy
 import uuid
 import traceback
+
+import six
 from six.moves import zip, filter
 from pika.exceptions import ConnectionClosed
 
@@ -43,12 +45,12 @@ __all__ = ['Process', 'ProcessState', 'FunctionProcess']
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
+@six.add_metaclass(abc.ABCMeta)
 class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
-    __metaclass__ = abc.ABCMeta
 
     _spec_type = ProcessSpec
     _calc_class = WorkCalculation

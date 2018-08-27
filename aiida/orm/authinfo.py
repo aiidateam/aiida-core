@@ -10,6 +10,8 @@
 from __future__ import absolute_import
 import abc
 
+import six
+
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
 from .backend import Collection, CollectionEntry
@@ -17,10 +19,9 @@ from .backend import Collection, CollectionEntry
 __all__ = ['AuthInfo', 'AuthInfoCollection']
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AuthInfoCollection(Collection):
     """The collection of AuthInfo entries."""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create(self, computer, user):
@@ -56,14 +57,13 @@ class AuthInfoCollection(Collection):
         pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AuthInfo(CollectionEntry):
     """
     Base class to map a DbAuthInfo, that contains computer configuration
     specific to a given user (authorization info and other metadata, like
     how often to check on a given computer etc.)
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def pk(self):
         """

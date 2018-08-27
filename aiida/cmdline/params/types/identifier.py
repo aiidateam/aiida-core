@@ -5,12 +5,14 @@ Module for custom click param type identifier
 from __future__ import absolute_import
 from abc import ABCMeta, abstractproperty
 
+import six
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 
+@six.add_metaclass(ABCMeta)
 class IdentifierParamType(click.ParamType):
     """
     An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be
@@ -20,8 +22,6 @@ class IdentifierParamType(click.ParamType):
     parameter type should implement the `orm_class_loader` method to return the appropriate orm class loader,
     which should be a subclass of `aiida.orm.utils.loaders.OrmEntityLoader` for the corresponding orm class.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, sub_classes=None):
         """

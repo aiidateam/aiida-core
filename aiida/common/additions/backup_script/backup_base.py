@@ -17,13 +17,13 @@ import logging
 
 from abc import abstractmethod, ABCMeta
 
+import six
 from dateutil.parser import parse
 from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
 
 
-
-
+@six.add_metaclass(ABCMeta)
 class AbstractBackup(object):
     """
     This class handles the backup of the AiiDA repository that is referenced
@@ -33,8 +33,6 @@ class AbstractBackup(object):
     (in periods of *periodicity* days) until the ending date of the backup
     specified by *end_date_of_backup* or *days_to_backup*.
     """
-
-    __metaclass__ = ABCMeta
 
     # Keys in the dictionary loaded by the JSON file
     OLDEST_OBJECT_BK_KEY = "oldest_object_backedup"

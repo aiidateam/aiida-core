@@ -14,6 +14,9 @@ from __future__ import division
 from __future__ import absolute_import
 import abc
 import logging
+
+import six
+
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, MachineInfo, NodeNumberJobResource)
@@ -108,6 +111,7 @@ class PbsJobResource(NodeNumberJobResource):
             self.num_cores_per_machine = (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class PbsBaseClass(Scheduler):
     """
     Base class with support for the PBSPro scheduler
@@ -117,7 +121,6 @@ class PbsBaseClass(Scheduler):
     Only a few properties need to be redefined, see examples of the pbspro and
     torque plugins
     """
-    __metaclass__ = abc.ABCMeta
 
     # Query only by list of jobs and not by user
     _features = {

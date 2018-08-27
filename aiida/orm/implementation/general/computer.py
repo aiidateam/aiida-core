@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import logging
 import os
 
-from six import integer_types
+import six
 
 from aiida.transport import Transport, TransportFactory
 from aiida.scheduler import Scheduler, SchedulerFactory
@@ -238,7 +238,7 @@ class AbstractComputer(object):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, integer_types) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
             raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                   "must be a positive integer, or an empty "
                                   "string if you do not want to provide a "
@@ -511,7 +511,7 @@ class AbstractComputer(object):
         if def_cpus_per_machine is None:
             self._del_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
-            if not isinstance(def_cpus_per_machine, integer_types):
+            if not isinstance(def_cpus_per_machine, six.integer_types):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
@@ -685,9 +685,8 @@ class AbstractComputer(object):
                                                        self.pk)
 
 
+@six.add_metaclass(ABCMeta)
 class Util(object):
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def delete_computer(self, pk):
         pass

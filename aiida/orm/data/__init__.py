@@ -11,9 +11,11 @@ from __future__ import absolute_import
 from abc import ABCMeta
 
 try:
-    from functools import singledispatch
+    from functools import singledispatch  # Python 3.4+
 except ImportError:
     from singledispatch import singledispatch
+
+import six
 
 from aiida.orm.node import Node
 from aiida.common.links import LinkType
@@ -417,13 +419,13 @@ class Data(Node):
 
 
 
+@six.add_metaclass(ABCMeta)
 class BaseType(Data):
     """
     Store a base python type as a AiiDA node in the DB.
 
     Provide the .value property to get the actual value.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
         try:

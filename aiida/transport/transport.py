@@ -16,18 +16,19 @@ import fnmatch
 import sys
 from collections import OrderedDict
 
+import six
 from aiida.common.exceptions import InternalError
 from aiida.common.utils import classproperty
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
 
 
 # pylint: disable=too-many-public-methods
+@six.add_metaclass(ABCMeta)
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
-    __metaclass__ = ABCMeta
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format

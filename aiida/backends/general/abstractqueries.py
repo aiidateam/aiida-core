@@ -10,11 +10,10 @@
 from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 from six.moves import zip
+import six
 
-
+@six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
-    __metaclass__ = ABCMeta
-
     def __init__(self, *args, **kwargs):
         pass
 

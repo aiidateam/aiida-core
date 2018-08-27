@@ -11,6 +11,8 @@
 from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+import six
+
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
 from aiida.common.utils import abstractclassmethod, abstractstaticmethod
 
@@ -34,12 +36,11 @@ def get_group_type_mapping():
             'autogroup.run': VERDIAUTOGROUP_TYPE}
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractGroup(object):
     """
     An AiiDA ORM implementation of group of nodes.
     """
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def __init__(self, **kwargs):

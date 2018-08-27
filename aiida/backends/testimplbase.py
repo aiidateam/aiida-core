@@ -8,10 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
-from aiida.common.exceptions import InternalError
 from abc import ABCMeta, abstractmethod
 
+import six
 
+from aiida.common.exceptions import InternalError
+
+
+@six.add_metaclass(ABCMeta)
 class AiidaTestImplementation(object):
     """
     For each implementation, define what to do at setUp and tearDown.
@@ -30,7 +34,6 @@ class AiidaTestImplementation(object):
     These two are then exposed by the ``self.get_computer()`` and ``self.get_user_email()``
     methods.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def setUpClass_method(self):

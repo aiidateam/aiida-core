@@ -13,6 +13,9 @@ Module for all scheduler related things
 
 from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+
+import six
+
 import aiida.common
 from aiida.common.utils import classproperty, escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
@@ -38,11 +41,11 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
+@six.add_metaclass(ABCMeta)
 class Scheduler(object):
     """
     Base class for all schedulers.
     """
-    __metaclass__ = ABCMeta
     _logger = aiida.common.aiidalogger.getChild('scheduler')
 
     # A list of features

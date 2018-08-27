@@ -11,11 +11,11 @@ from __future__ import absolute_import
 import logging
 from abc import abstractmethod, abstractproperty, ABCMeta
 
+import six
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractComment(object):
-    __metaclass__ = ABCMeta
-
     _logger = logging.getLogger(__name__)
 
     @abstractmethod

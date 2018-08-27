@@ -9,6 +9,9 @@
 ###########################################################################
 from __future__ import absolute_import
 from abc import ABCMeta
+
+import six
+
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import abstractclassmethod
 from aiida.plugins.factory import BaseFactory
@@ -199,6 +202,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
             raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
 
 
+@six.add_metaclass(ABCMeta)
 class BackendDelegateWithDefault(object):
     """
     This class is a helper to implement the delegation pattern [1] by
@@ -207,7 +211,6 @@ class BackendDelegateWithDefault(object):
 
     [1] https://en.wikipedia.org/wiki/Delegation_pattern
     """
-    __metaclass__ = ABCMeta
 
     _DEFAULT = None
 

@@ -3,6 +3,8 @@ from __future__ import absolute_import
 from abc import ABCMeta
 from enum import Enum
 
+import six
+
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.utils import abstractclassmethod, classproperty
 from aiida.orm.querybuilder import QueryBuilder
@@ -47,9 +49,8 @@ class IdentifierType(Enum):
     LABEL = 'LABEL'
 
 
+@six.add_metaclass(ABCMeta)
 class OrmEntityLoader(object):
-
-    __metaclass__ = ABCMeta
 
     LABEL_AMBIGUITY_BREAKER_CHARACTER = '!'
 

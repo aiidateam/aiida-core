@@ -9,10 +9,10 @@
 ###########################################################################
 from __future__ import absolute_import
 from abc import abstractmethod, ABCMeta
+import six
 
-
-class QueryBuilderInterface():
-    __metaclass__ = ABCMeta
+@six.add_metaclass(ABCMeta)
+class QueryBuilderInterface:
     @abstractmethod
     def __init__(self, *args, **kwargs):
         pass

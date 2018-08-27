@@ -14,6 +14,8 @@ Module for the ORM user classes yo
 from __future__ import absolute_import
 import abc
 
+import six
+
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
 from .backend import Collection, CollectionEntry
@@ -21,12 +23,11 @@ from .backend import Collection, CollectionEntry
 __all__ = ['User', 'UserCollection']
 
 
+@six.add_metaclass(abc.ABCMeta)
 class UserCollection(Collection):
     """
     The collection of users stored in a backend
     """
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create(self, email, first_name='', last_name='', institution=''):
@@ -127,6 +128,7 @@ class UserCollection(Collection):
         return [_[0] for _ in query.all()]
 
 
+@six.add_metaclass(abc.ABCMeta)
 class User(CollectionEntry):
     """
     This is the base class for User information in AiiDA.  An implementing
@@ -135,8 +137,6 @@ class User(CollectionEntry):
     # pylint: disable=invalid-name
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
-    __metaclass__ = abc.ABCMeta
 
     def __str__(self):
         return self.email

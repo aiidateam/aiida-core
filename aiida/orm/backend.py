@@ -10,6 +10,8 @@
 from __future__ import absolute_import
 from abc import abstractproperty, ABCMeta
 
+import six
+
 _DJANGO_BACKEND = None
 _SQLA_BACKEND = None
 
@@ -41,10 +43,9 @@ def construct_backend(backend_type=None):
         raise ValueError("The specified backend {} is currently not implemented".format(backend_type))
 
 
+@six.add_metaclass(ABCMeta)
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
-
-    __metaclass__ = ABCMeta
 
     @abstractproperty
     def logs(self):

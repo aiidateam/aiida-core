@@ -114,7 +114,7 @@
       - --fix=itertools_imports_six
       - --fix=itertools_six
       - --fix=map
-#      - --fix=metaclass
+      - --fix=metaclass
       - --fix=next
 #      - --fix=open
       - --fix=print

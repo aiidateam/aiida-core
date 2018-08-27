@@ -112,7 +112,7 @@
 #      - --fix=input_six
       - --fix=int_long_tuple
       - --fix=itertools_imports_six
-#      - --fix=itertools_six
+      - --fix=itertools_six
       - --fix=map
 #      - --fix=metaclass
       - --fix=next

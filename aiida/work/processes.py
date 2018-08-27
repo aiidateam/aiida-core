@@ -17,7 +17,7 @@ import itertools
 import plumpy
 import uuid
 import traceback
-from six.moves import zip
+from six.moves import zip, filter
 from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState
@@ -143,7 +143,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return itertools.ifilter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
+        return filter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
 
     @override
     def load_instance_state(self, saved_state, load_context):

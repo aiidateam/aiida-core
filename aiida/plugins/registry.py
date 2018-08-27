@@ -14,8 +14,9 @@ Interface for operations that have to connect the
 registry online and that operate on the cache folder.
 """
 
-
 from __future__ import absolute_import
+
+
 def registry_cache_file_name():
     """
     return the name of the registry cache file
@@ -108,7 +109,7 @@ def load_cached():
     load the registry from the local cache
     if the local cache is not readable, create or update it
     """
-    from cPickle import load as pload
+    from six.moves.cPickle import load as pload
     from aiida.plugins.utils import unpickle_from_registry_cache_folder
     cache_fname = registry_cache_file_name()
     if not registry_cache_openable():

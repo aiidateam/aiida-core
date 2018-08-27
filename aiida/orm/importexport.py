@@ -9,10 +9,10 @@
 ###########################################################################
 from __future__ import absolute_import
 from __future__ import print_function
-import HTMLParser
 import sys
 
 from six.moves import zip
+from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
@@ -1460,7 +1460,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     return ret_dict
 
 
-class HTMLGetLinksParser(HTMLParser.HTMLParser):
+class HTMLGetLinksParser(HTMLParser):
     def __init__(self, filter_extension=None):
         """
         If a filter_extension is passed, only links with extension matching
@@ -1468,7 +1468,7 @@ class HTMLGetLinksParser(HTMLParser.HTMLParser):
         """
         self.filter_extension = filter_extension
         self.links = []
-        HTMLParser.HTMLParser.__init__(self)
+        super(HTMLGetLinksParser, self).__init__()
 
     def handle_starttag(self, tag, attrs):
         """
@@ -1494,7 +1494,6 @@ def get_valid_import_links(url):
     the link file has a .aiida extension.
     """
     from six.moves import urllib
-    import urlparse
 
     request = urllib.request.urlopen(url)
     parser = HTMLGetLinksParser(filter_extension='aiida')
@@ -1503,7 +1502,7 @@ def get_valid_import_links(url):
     return_urls = []
 
     for link in parser.get_links():
-        return_urls.append(urlparse.urljoin(request.geturl(), link))
+        return_urls.append(urllib.parse.urljoin(request.geturl(), link))
 
     return return_urls
 

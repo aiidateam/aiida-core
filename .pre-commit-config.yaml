@@ -108,7 +108,7 @@
       - --fix=file
       - --fix=filter
       - --fix=import
-#      - --fix=imports_six
+      - --fix=imports_six
       - --fix=input_six
       - --fix=int_long_tuple
       - --fix=itertools_imports_six

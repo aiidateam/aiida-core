@@ -58,7 +58,7 @@ def pickle_to_registry_cache_folder(obj, fname):
     """
     pickles a python object to the registry cache folder
     """
-    from cPickle import dump as pdump
+    from six.moves.cPickle import dump as pdump
     from os import path as osp
     safe_create_registry_cache_folder()
     cache_dir = registry_cache_folder_path()
@@ -71,7 +71,7 @@ def unpickle_from_registry_cache_folder(fname):
     """
     looks for fname in the registry cache folder and tries to unpickle from it
     """
-    from cPickle import load as pload
+    from six.moves.cPickle import load as pload
     from os import path as osp
     cache_dir = registry_cache_folder_path()
     fpath = osp.join(cache_dir, fname)

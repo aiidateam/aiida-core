@@ -13,7 +13,6 @@ SQL Alchemy Node concrete implementation
 from __future__ import absolute_import
 
 import six
-from future.utils import viewitems, viewkeys
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
@@ -416,16 +415,16 @@ class Node(AbstractNode):
     def _db_iterextras(self):
         extras = self._extras()
         if extras is None:
-            return viewitems(dict())
+            return iter(dict().items())
 
-        return viewitems(extras)
+        return iter(extras.items())
 
     def _db_iterattrs(self):
-        for key, val in viewitems(self._attributes()):
+        for key, val in self._attributes().items():
             yield (key, val)
 
     def _db_attrs(self):
-        for key in viewkeys(self._attributes()):
+        for key in self._attributes().keys():
             yield key
 
     def add_comment(self, content, user=None):

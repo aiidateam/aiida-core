@@ -15,7 +15,6 @@ import sys
 import tempfile
 
 import six
-from future.utils import raise_
 from tornado.gen import coroutine, Return
 
 import plumpy
@@ -316,7 +315,7 @@ class Waiting(plumpy.Waiting):
             exc_info = sys.exc_info()
             yield self._launch_task(task_kill_job, calculation, transport_queue)
             self._killing.set_result(True)
-            raise_(*exc_info)
+            six.reraise(*exc_info)
         except Return:
             calculation._set_process_status(None)
             raise

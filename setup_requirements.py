@@ -18,7 +18,6 @@ install_requires = [
     'pytz==2018.4',
     'PyYAML==3.12',
     'six==1.11.0',
-    'future==0.16.0',
     'anyjson==0.3.3',
     'psutil==5.4.5',
     'meld3==1.0.2',

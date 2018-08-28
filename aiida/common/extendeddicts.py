@@ -9,6 +9,9 @@
 ###########################################################################
 from __future__ import absolute_import
 import collections
+
+import six
+
 from aiida.common.exceptions import ValidationError
 from aiida.common.lang import override
 
@@ -16,7 +19,7 @@ from aiida.common.lang import override
 class Enumerate(frozenset):
     def __getattr__(self, name):
         if name in self:
-            return name.decode("utf-8")
+            return six.text_type(name)  # always return unicode in Python 2
         raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
             name, self.__class__.__name__))
 

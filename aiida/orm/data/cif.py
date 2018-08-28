@@ -273,13 +273,16 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     :param names: optional list of datablock names
     :return: CifFile
     """
-    import CifFile
-    from CifFile import CifBlock
+    try:
+        import CifFile
+        from CifFile import CifBlock
+    except ImportError as exc:
+        raise ImportError(str(exc) + '. You need to install the PyCifRW package.')
 
     if loops is None:
         loops = dict()
 
-    cif = CifFile.CifFile()
+    cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
         cif.set_grammar("1.1")
     except AttributeError:
@@ -560,13 +563,10 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         if self._values is None:
-            try:
-                import CifFile
-                from CifFile import CifBlock
-            except ImportError as e:
-                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
+            import CifFile
+            from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
-            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
+            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c

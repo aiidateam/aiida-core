@@ -17,7 +17,7 @@ from aiida.orm.group import Group
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.cif import CifData
+from aiida.orm.data.cif import CifData, has_pycifrw
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
@@ -72,6 +72,7 @@ class TestVerdiDataExportable:
     NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
     NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
 
+    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
     def data_export_test(self, datatype, ids, supported_formats):
         """
         This method tests that the data listing works as expected with all
@@ -705,6 +706,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
             TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]),
             self.ids)
 
+    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
     def test_export(self):
         from aiida.cmdline.commands.cmd_data.cmd_trajectory import SUPPORTED_FORMATS
         from aiida.cmdline.commands.cmd_data.cmd_trajectory import export
@@ -837,6 +839,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         self.data_export_test(StructureData, self.ids, SUPPORTED_FORMATS)
 
 
+@unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
                        TestVerdiDataExportable):
 

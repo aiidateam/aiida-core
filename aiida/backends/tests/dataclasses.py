@@ -785,6 +785,7 @@ _tag   {}
             flex = CifData(file=f.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_empty_cif(self):
         """
         Test empty CifData
@@ -811,6 +812,7 @@ _tag   {}
 
             a.store()
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_parse_policy(self):
         """
         Test that loading of CIF file occurs as defined by parse_policy.

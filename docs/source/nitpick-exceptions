@@ -61,6 +61,10 @@ py:class  ABCMeta
 py:class  exceptions.Exception
 py:class  exceptions.ValueError
 py:class  exceptions.BaseException
+# repeat for Python 3
+py:class  Exception
+py:class  ValueError
+py:class  BaseException
 py:class  str
 py:class  tuple
 py:class  int
@@ -75,6 +79,12 @@ py:class  __builtin__.float
 py:class  __builtin__.int
 py:class  __builtin__.str
 py:class  __builtin__.dict
+# ... and the same for Python 3
+py:class  builtins.bool
+py:class  builtins.float
+py:class  builtins.int
+py:class  builtins.str
+py:class  builtins.dict
 
 # python builtin objects
 py:obj basestring
@@ -85,6 +95,7 @@ py:obj str
 py:obj string
 py:obj tuple
 py:obj None
+py:obj bool
 
 # python packages
 # Note: These are needed, if they are provided, e.g.
@@ -150,6 +161,7 @@ py:class  IPython.core.magic.Magics
 #py:class  json.json
 
 py:class  HTMLParser.HTMLParser
+py:class  html.parser.HTMLParser
 
 py:class  tuple
 
@@ -176,6 +188,10 @@ py:class  sphinx.ext.autodoc.ClassDocumenter
 py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
 py:class  _abcoll.MutableSequence
+# repeat for Python 3:
+py:class  collections.abc.Mapping
+py:class  collections.abc.MutableMapping
+py:class  collections.abc.MutableSequence
 
 # backend-dependent implementation
 py:class  aiida.orm.node.Node

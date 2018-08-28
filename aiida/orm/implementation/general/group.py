@@ -104,8 +104,7 @@ class AbstractGroup(object):
     @abstractproperty
     def user(self):
         """
-        :return: a Django DbUser object, representing the user associated to
-          this group.
+        :return: a Django DbUser object, representing the user associated to this group.
         """
         pass
 
@@ -119,16 +118,14 @@ class AbstractGroup(object):
     @abstractproperty
     def pk(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         pass
 
     @abstractproperty
     def id(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         pass
 
@@ -237,8 +234,7 @@ class AbstractGroup(object):
     @abstractproperty
     def is_stored(self):
         """
-        :return: True if the respective DbNode has been already saved in the
-          DB, False otherwise
+        :return: True if the respective DbNode has been already saved in the DB, False otherwise
         """
         pass
 

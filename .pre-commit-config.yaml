@@ -10,6 +10,7 @@
         .ci/test_setup.py|
         #aiida/backends/tests/cmdline/commands/.*.py|
         aiida/backends/tests/cmdline/params/types/workflow.py|
+        aiida/common/test_hashing.py|
         aiida/common/utils.py|
         aiida/cmdline/.*.py|
         aiida/control/.*.py|

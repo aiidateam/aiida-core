@@ -26,7 +26,7 @@ click==6.7
 codecov==2.0.15
 coverage==4.5.1
 django-extensions==1.5.0
-django==1.7.11
+django==1.8.19
 docutils==0.14
 ecdsa==0.13
 enum34==1.1.6

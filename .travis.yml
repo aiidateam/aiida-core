@@ -66,8 +66,6 @@ env:
 matrix:
   exclude:
     - python: "3.6"
-      env: TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
-    - python: "3.6"
       env: TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
 before_script:

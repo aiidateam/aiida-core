@@ -636,7 +636,7 @@ class BandsData(KpointsData):
         #    batch.append("s{} hidden true".format(i))
 
         batch_data = "\n".join(batch) + "\n"
-        extra_files = {dat_filename: raw_data.encode('utf-8')}
+        extra_files = {dat_filename: raw_data}
 
         return batch_data.encode('utf-8'), extra_files
 

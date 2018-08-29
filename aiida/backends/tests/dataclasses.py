@@ -278,7 +278,7 @@ class TestCifData(AiidaTestCase):
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEquals(a.values.keys(), ['test'])
+        self.assertEquals(list(a.values.keys()), ['test'])
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_change_cifdata_file(self):
@@ -713,7 +713,7 @@ _tag   {}
 
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
-        self.assertEqual(b.values.keys(), ['test'])
+        self.assertEqual(list(b.values.keys()), ['test'])
         self.assertEqual(b.values['test']['_chemical_formula_sum'], 'C O2')
         self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'], [
             'x,y,z',

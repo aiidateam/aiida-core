@@ -1257,7 +1257,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if import_entry_ids.keys():
                     qb = QueryBuilder()
                     qb.append(entity, filters={
-                        unique_identifier: {"in": import_entry_ids.keys()}},
+                        unique_identifier: {"in": list(import_entry_ids.keys())}},
                               project=[unique_identifier, "id"], tag="res")
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:

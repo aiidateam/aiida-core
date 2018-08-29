@@ -890,7 +890,7 @@ def add_metadata_inline(what, node, parameters, args):
 
     datablocks = []
     loops = {}
-    dataname = node.values.keys()[0]
+    dataname = list(node.values.keys())[0]
     datablock = dict()
     for tag in node.values[dataname].keys():
         datablock[tag] = node.values[dataname][tag]

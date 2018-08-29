@@ -333,7 +333,7 @@ class QueryBuilder(object):
                 "Received additional keywords: {}"
                 "\nwhich I cannot process"
                 "\nValid keywords are: {}"
-                "".format(kwargs.keys(), valid_keys)
+                "".format(list(kwargs.keys()), valid_keys)
             )
 
     def __str__(self):
@@ -692,7 +692,7 @@ class QueryBuilder(object):
 
         try:
             # Get the functions that are implemented:
-            spec_to_function_map = self._get_function_map().keys()
+            spec_to_function_map = list(self._get_function_map().keys())
             joining_keyword = kwargs.pop('joining_keyword', None)
             joining_value = kwargs.pop('joining_value', None)
 

@@ -890,7 +890,7 @@ class StructureData(Data):
             :param species_and_occu: a pymatgen species and occupations dictionary
             :return: a string representing the kind name or None
             """
-            species = species_and_occu.keys()
+            species = list(species_and_occu.keys())
             occupations = list(species_and_occu.values())
 
             has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)

@@ -158,7 +158,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
-    values = values[values.keys()[0]] # taking the first datablock in CIF
+    values = values[list(values.keys())[0]] # taking the first datablock in CIF
 
     for i in range(len(values['_tcod_file_id'])-1):
         name = values['_tcod_file_name'][i]

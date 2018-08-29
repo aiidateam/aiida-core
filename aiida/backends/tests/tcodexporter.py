@@ -397,9 +397,7 @@ class TestTcodDbExporter(AiidaTestCase):
         extend_with_cmdline_parameters(parser)
         options = vars(parser.parse_args(args=[]))
 
-        for key in options.keys():
-            if options[key] is None:
-                options.pop(key)
+        options = {k: v for k, v in options.items() if v is not None}
 
         self.assertEqual(options, {})
 
@@ -407,9 +405,7 @@ class TestTcodDbExporter(AiidaTestCase):
         deposition_cmdline_parameters(parser)
         options = vars(parser.parse_args(args=[]))
 
-        for key in options.keys():
-            if options[key] is None:
-                options.pop(key)
+        options = {k: v for k, v in options.items() if v is not None}
 
         self.assertEqual(options, {})
 

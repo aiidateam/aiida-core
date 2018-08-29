@@ -344,7 +344,7 @@ def refine_inline(node):
                          "block -- multiblock CIF files are not "
                          "supported yet")
 
-    name = node.values.keys()[0]
+    name = list(node.values.keys())[0]
 
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:

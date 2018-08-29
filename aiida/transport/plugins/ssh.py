@@ -1353,8 +1353,8 @@ class SshTransport(aiida.transport.Transport):
         retval = channel.recv_exit_status()
 
         # needs to be after 'recv_exit_status', otherwise it might hang
-        output_text = stdout.read()
-        stderr_text = stderr.read()
+        output_text = stdout.read().decode('utf-8')
+        stderr_text = stderr.read().decode('utf-8')
 
         return retval, output_text, stderr_text
 

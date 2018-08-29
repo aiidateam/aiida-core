@@ -781,9 +781,9 @@ class LocalTransport(Transport):
 
             try:
                 for line in filelike_stdin.readlines():
-                    local_proc.stdin.write(line)
+                    local_stdin.write(line.encode('utf-8'))  # the Popen.stdin/out/err are byte streams
             except AttributeError:
-                raise ValueError("stdin can only be either a string of a " "file-like object!")
+                raise ValueError("stdin can only be either a string or a file-like object!")
         else:
             filelike_stdin = None
 
@@ -792,7 +792,7 @@ class LocalTransport(Transport):
 
         retval = local_proc.returncode
 
-        return retval, output_text, stderr_text
+        return retval, output_text.decode('utf-8'), stderr_text.decode('utf-8')
 
     def gotocomputer_command(self, remotedir):
         """

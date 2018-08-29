@@ -130,8 +130,8 @@ def is_valid_folder_name(name):
     if not name.startswith('test_'):
         return False
 
-    # Remove valid characters, see if anything remains
-    bad_characters = name.translate(None, string.letters + string.digits + '_')
+    # Remove valid characters, see if anything remains, allow only ASCII strings here
+    bad_characters = name.translate(None, string.ascii_letters + string.digits + '_')
     if bad_characters:
         return False
 

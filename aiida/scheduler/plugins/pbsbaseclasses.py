@@ -246,7 +246,7 @@ class PbsBaseClass(Scheduler):
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
-            if not job_title or (job_title[0] not in string.letters + string.digits):
+            if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 15 characters

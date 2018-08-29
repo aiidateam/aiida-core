@@ -202,7 +202,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             # is now empty or does not start with a valid character
             # (the first symbol cannot be digit, at least in some versions
             #  of the scheduler)
-            if not job_title or (job_title[0] not in string.letters):
+            if not job_title or (job_title[0] not in string.ascii_letters):
                 job_title = 'j' + job_title
 
             lines.append('#$ -N {}'.format(job_tmpl.job_name))

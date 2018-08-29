@@ -132,7 +132,7 @@ The configuration of computers happens in two steps.
 
     verdi computer setup
     
-   command. This command allows to create a new computer instance in the DB.   
+   command. This command allows to create a new computer instance in the DB.
    
    .. tip:: The code will ask you a few pieces of information. At every prompt, you can
      type the ``?`` character and press ``<enter>`` to get a more detailed
@@ -164,7 +164,7 @@ The configuration of computers happens in two steps.
    * **Enabled**: either True or False; if False, the computer is disabled
      and calculations associated with it will not be submitted. This allows to
      disable temporarily a computer if it is giving problems or it is down for
-     maintenance, without the need to delete it from the DB.  
+     maintenance, without the need to delete it from the DB.
 
    * **Transport type**: The name of the transport to be used. A list of valid 
      transport types can be obtained typing ``?``
@@ -239,7 +239,7 @@ The configuration of computers happens in two steps.
    simply need to press enter a few times.
 
    .. note:: At the moment, the in-line help (i.e., just typing ``?`` to get
-     some help) is not yet supported in ``verdi configure``, but only in 
+     some help) is not yet supported in ``verdi configure``, but only in
      ``verdi setup``.
 
    For ``local`` transport, you *need to run the command*,
@@ -284,7 +284,7 @@ The configuration of computers happens in two steps.
  After these two steps have been completed, your computer is ready to go!
 
 .. note:: If the cluster you are using requires authentication through a Kerberos
-    token (that you need to obtain before using ssh), you typically need to install 
+    token (that you need to obtain before using ssh), you typically need to install
     ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu), and make sure you install
     the ``ssh_kerberos`` :ref:`optional dependencies<install_optional_dependencies>` during the installation process of AiiDA.
     Then, if your ``.ssh/config`` file is configured properly (in particular includes
@@ -300,7 +300,7 @@ The configuration of computers happens in two steps.
   the scheduler queue) to verify that everything works as expected.
 
 .. note:: If you are not sure if your computer is already set up, use the command::
-   
+
      verdi computer list
    
    to get a list of existing computers, and::
@@ -319,7 +319,7 @@ The configuration of computers happens in two steps.
    commands, whose meaning should be self-explanatory.
    
 .. note:: You can delete computers **only if** no entry in the database is using
-  them (as for instance Calculations, or RemoteData objects). Otherwise, you 
+  them (as for instance Calculations, or RemoteData objects). Otherwise, you
   will get an error message. 
 
 .. note:: It is possible to **disable** a computer.
@@ -346,4 +346,37 @@ The configuration of computers happens in two steps.
   
      verdi computer disable COMPUTERNAME --only-for-user USER_EMAIL
   
-  (and the corresponding ``verdi computer enable`` command to re-enable it).  
+  (and the corresponding ``verdi computer enable`` command to re-enable it).
+
+
+On not bombarding the remote computer with requests
+---------------------------------------------------
+
+Some machine (particularly at supercomputing centres) may not tolerate opening
+connections and executing scheduler commands with a high frequency.  To limit this
+AiiDA currently has two settings:
+
+ * The transport safe open interval, and,
+ * the minimum job poll interval
+
+Neither of these can ever be violated.  AiiDA will not try to update the jobs list
+on a remove machine until the job poll interval has elapsed since the last update
+(the first update will be immediate) at which point it will request a transport.
+Because of this the maximum possible time before a job update could be the sum of
+the two intervals, however this is unlikely to happen in practice.
+
+The transport open interval is currently hardcoded by the transport plugin,
+typically SSH is longer than local transport.
+
+The job poll interval can be set programmatically on the corresponding `Computer`
+object in verdi shell::
+
+    Computer.get('localhost').set_minimum_job_poll_interval(30.0)
+
+
+would set the transport interval on a computer called 'localhost' to 30 seconds.
+
+.. note:: All of these intervals apply per *worker* meaning that a daemon with
+   multiple workers will not necessarily, overall, respect these limits.
+   For the time being there is no way around this and if these limits must be
+   respected then do not run with more than one worker.

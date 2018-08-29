@@ -113,7 +113,7 @@ extras_require = {
         'toml==0.9.4'
     ],
     'dev_sphinxext': [
-        'pytest==3.6.0',
+        'pytest==3.6.3',
         'pytest-cov==2.5.1',
     ],
     'bpython': [

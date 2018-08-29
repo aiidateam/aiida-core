@@ -542,7 +542,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # Sqlalchemy, for some strange reason, does not return a list of lsits
                 # if you have provided an ormclass
 
-                if tag_to_index_dict.values() == ['*']:
+                if list(tag_to_index_dict.values()) == ['*']:
                     for rowitem in results:
                         yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
                 else:

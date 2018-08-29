@@ -891,7 +891,7 @@ class StructureData(Data):
             :return: a string representing the kind name or None
             """
             species = species_and_occu.keys()
-            occupations = species_and_occu.values()
+            occupations = list(species_and_occu.values())
 
             has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)
             has_partial_occupancies = (len(occupations) != 1 or occupations[0] != 1.0)

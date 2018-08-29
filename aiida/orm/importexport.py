@@ -2303,7 +2303,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-    links_uuid = links_uuid_dict.values()
+    links_uuid = list(links_uuid_dict.values())
 
     if not silent:
         print("STORING GROUP ELEMENTS...")

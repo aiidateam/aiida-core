@@ -60,7 +60,7 @@ def structure_to_spglib_tuple(structure):
     for kind in structure.kinds:
         if len(kind.symbols) == 1:
             realnumber = Z[kind.symbols[0]]
-            if realnumber in list(kind_numbers.values()):
+            if realnumber in kind_numbers.values():
                 number = get_new_number(
                     list(kind_numbers.values()), start_from=realnumber * 1000)
             else:
@@ -111,7 +111,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
 
     _kinds_dict = {k.name: k for k in _kinds}
     # Now I will use in any case _kinds and _kind_info
-    if len(_kind_info.values()) != len(set(_kind_info.values())):
+    if len(_kind_info) != len(set(_kind_info.values())):
         raise ValueError(
             "There is at least a number repeated twice in kind_info!")
     # Invert the mapping

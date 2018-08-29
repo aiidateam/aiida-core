@@ -101,7 +101,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
     def test_reachable(self):
         import subprocess as sp
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
-        self.assertIn('Usage:', output)
+        self.assertIn(b'Usage:', output)
 
     def test_interactive(self):
         from aiida.orm import Computer

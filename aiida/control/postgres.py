@@ -333,9 +333,9 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
     result = subprocess.check_output(sudo_su_psql, preexec_fn=os.setsid, **kwargs)
 
-    if isinstance(result, str):
-        result = result.strip().split('\n')
-        result = [i for i in result if i]
+    result = result.decode('utf-8').strip().split('\n')
+    result = [i for i in result if i]
+
     return result
 
 

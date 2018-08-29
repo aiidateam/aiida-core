@@ -164,7 +164,7 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         import tempfile
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10
@@ -189,7 +189,7 @@ class TestTcodDbExporter(AiidaTestCase):
         pd = ParameterData()
 
         code = Code(local_executable='test.sh')
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
             code.add_path(f.name, 'test.sh')
@@ -202,14 +202,14 @@ class TestTcodDbExporter(AiidaTestCase):
         calc.add_link_from(code, "code")
         calc.set_environment_variables({'PATH': '/dev/null', 'USER': 'unknown'})
 
-        with tempfile.NamedTemporaryFile(prefix="Fe") as f:
+        with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as f:
             f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
             f.flush()
             upf = UpfData(file=f.name)
             upf.store()
             calc.add_link_from(upf, "upf")
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write("data_test")
             f.flush()
             cif = CifData(file=f.name)
@@ -333,7 +333,7 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10

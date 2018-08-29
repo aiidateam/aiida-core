@@ -646,7 +646,7 @@ class TestNodeBasic(AiidaTestCase):
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content)
             f.flush()
             a.add_path(f.name, 'file1.txt')
@@ -671,7 +671,7 @@ class TestNodeBasic(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_different)
             f.flush()
             b.add_path(f.name, 'file2.txt')
@@ -701,7 +701,7 @@ class TestNodeBasic(AiidaTestCase):
         # I now clone after storing
         c = a.clone()
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_different)
             f.flush()
             c.add_path(f.name, 'file1.txt')
@@ -805,7 +805,7 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ValueError):
             b.add_path('dir3', os.path.join('tree_1', 'dir3'))
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_different)
             f.flush()
             b.add_path(f.name, 'file3.txt')
@@ -846,7 +846,7 @@ class TestNodeBasic(AiidaTestCase):
         c = a.clone()
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_different)
             f.flush()
             c.add_path(f.name, os.path.join('tree_1', 'file1.txt'))
@@ -2012,7 +2012,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I create some objects
         d1 = Data().store()
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile('w+') as f:
             d2 = SinglefileData(file=f.name).store()
 
         code = Code()

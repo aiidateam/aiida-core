@@ -75,7 +75,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile() as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
         for trajectory in trajectory_list:
             tmpf.write(trajectory._exportstring('cif', **kwargs)[0])
         tmpf.flush()
@@ -105,7 +105,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     obj = object_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
         tmpf.write(obj._exportstring('xsf', **kwargs)[0])
         tmpf.flush()
 
@@ -164,7 +164,7 @@ def _show_vesta(exec_name, structure_list):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.cif') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.cif') as tmpf:
         for structure in structure_list:
             tmpf.write(structure._exportstring('cif')[0])
         tmpf.flush()
@@ -194,7 +194,7 @@ def _show_vmd(exec_name, structure_list):
     structure = structure_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
         tmpf.write(structure._exportstring('xsf')[0])
         tmpf.flush()
 

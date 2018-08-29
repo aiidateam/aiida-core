@@ -797,7 +797,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         Fe     0.0 0.0 0.0
         O      2.0 2.0 2.0
         '''
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
 
             f.write(xyzcontent)
             f.flush()
@@ -865,7 +865,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
 
     @classmethod
     def create_cif_data(cls):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             filename = f.name
             f.write(cls.valid_sample_cif_str)
             f.flush()
@@ -943,7 +943,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
                 ' of verdi data import help')
 
     def test_import(self):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
             options = [f.name]

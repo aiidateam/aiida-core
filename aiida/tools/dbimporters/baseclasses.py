@@ -294,7 +294,7 @@ class CifEntry(DbEntry):
 
         cifnode = None
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.cif)
             f.flush()
             cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
@@ -343,7 +343,7 @@ class UpfEntry(DbEntry):
 
         # Prefixing with an ID in order to start file name with the name
         # of the described element.
-        with tempfile.NamedTemporaryFile(prefix=self.source['id']) as f:
+        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as f:
             f.write(self.contents)
             f.flush()
             upfnode = UpfData(file=f.name, source=self.source)

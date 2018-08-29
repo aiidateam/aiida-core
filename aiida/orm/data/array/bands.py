@@ -1046,7 +1046,7 @@ class BandsData(KpointsData):
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
         #exec s
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
 
@@ -1102,7 +1102,7 @@ class BandsData(KpointsData):
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
         #exec s
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
 

@@ -133,7 +133,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         transport.makedirs(workdir)
         transport.chdir(workdir)
 
-    with tempfile.NamedTemporaryFile() as tempf:
+    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
         echo.echo("  `-> Creating the file {}...".format(fname))
         remote_file_path = os.path.join(workdir, fname)

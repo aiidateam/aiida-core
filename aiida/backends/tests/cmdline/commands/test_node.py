@@ -117,7 +117,7 @@ class TestVerdiNodeRepo(AiidaTestCase):
 
         file_content = '''file-with-contents'''
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content)
             f.flush()
             node = SinglefileData(file=f.name)

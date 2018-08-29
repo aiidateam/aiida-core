@@ -45,7 +45,7 @@ def show_xmgrace(exec_name, list_bands):
         text, _ = bnds._exportstring(
             'agr', setnumber_offset=current_band_number, color_number=numpy.mod(iband + 1, max_num_agr_colors))
         # write a tempfile
-        tempf = tempfile.NamedTemporaryFile(suffix='.agr')
+        tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
         tempf.write(text)
         tempf.flush()
         list_files.append(tempf)

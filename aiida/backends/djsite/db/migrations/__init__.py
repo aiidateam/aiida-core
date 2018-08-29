@@ -9,7 +9,7 @@
 ###########################################################################
 
 
-LATEST_MIGRATION = '0012_drop_dblock'
+LATEST_MIGRATION = '0013_django_1_8'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -581,10 +581,10 @@ class SshTransport(aiida.transport.Transport):
         # read permissions, this will raise an exception.
         try:
             self.sftp.stat('.')
-        except IOError as e:
-            if 'Permission denied' in e:
+        except IOError as exc:
+            if 'Permission denied' in str(exc):
                 self.chdir(old_path)
-            raise IOError(e)
+            raise IOError(str(exc))
 
     def normalize(self, path):
         """

@@ -13,10 +13,12 @@ services:
     - docker
 
 addons:
+    # make sure the path in .travis-data/test_script.sh matches the version requested here
     postgresql: "9.5"
 
     apt:
        packages:
+           - postgresql-server-dev-9.5
            - texlive-base
            - texlive-generic-recommended
            - texlive-fonts-recommended
@@ -27,12 +29,7 @@ addons:
            - dvidvi
 
 before_install:
-    # This is needed for the SSH tests (being able to ssh to localhost)
-    # And will also be used for the docker test
-    - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
-    - cp "${HOME}/.ssh/id_rsa.pub" "${HOME}/.ssh/authorized_keys"
-    - ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
-
+    - .travis-data/prep_ssh.sh
     # Build the docker image if needed
     - .travis-data/before_install.sh
 
@@ -40,7 +37,7 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
     # Install AiiDA with some optional dependencies
-    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[rest,docs,atomic_tools,testing,dev_precommit]; fi
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
 env:
 ## Build matrix to test both backends, and the docs

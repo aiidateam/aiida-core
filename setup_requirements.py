@@ -7,17 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# Requirements for core AiiDA functionalities
 
 install_requires = [
     'reentry==1.2.0',
-    'python-dateutil==2.6.0',
-    'python-mimeparse==0.1.4',
-    'django==1.7.11',  # upgrade to Django 1.9 does prevent AiiDA functioning
+    'python-dateutil==2.7.2',
+    'python-mimeparse==1.6.0',
+    'django==1.7.11',  # Upgrade to Django 1.9 does prevent AiiDA functioning
     'django-extensions==1.5.0',
-    'tzlocal==1.3',
-    'pytz==2014.10',
-    'pyyaml',
+    'tzlocal==1.5.1',
+    'pytz==2018.4',
+    'PyYAML==3.12',
     'six==1.11.0',
     'future==0.16.0',
     'pathlib2==2.3.0',
@@ -36,84 +35,74 @@ install_requires = [
     'billiard==3.3.0.23',
     'amqp==1.4.9',
     'anyjson==0.3.3',
-    'psutil==5.4.0',
-    'meld3==1.0.0',
-    'numpy==1.14.3',
     'plumpy==0.7.12',
     'portalocker==1.1.0',
-    'SQLAlchemy==1.0.19',  # upgrade to SQLalchemy 1.1.5 does break tests, see #465
+    'psutil==5.4.5',
+    'meld3==1.0.2',
+    'numpy==1.14.3',
+    'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
-    'alembic==0.9.6',
+    'alembic==0.9.9',
     'ujson==1.35',
     'enum34==1.1.6',
-    'voluptuous==0.8.11',
-    'aldjemy==0.6.0',
+    'voluptuous==0.11.1',
+    'aldjemy==0.8.0',
     'passlib==1.7.1',
     'validate-email==1.3',
     'click==6.7',
-    'click-plugins',
-    'click-spinner',
-    'tabulate==0.7.5',
-    'ete3==3.0.0b35',
-    'uritools==1.0.2',
+    'click-plugins==1.0.3',
+    'click-spinner==0.1.7',
+    'tabulate==0.8.2',
+    'ete3==3.1.1',
+    'uritools==2.1.0',
     'psycopg2-binary==2.7.4',
-    # Requirements for ssh transport
-    'paramiko==2.4.0',
+    'paramiko==2.4.1',
     'ecdsa==0.13',
-    'pycrypto==2.6.1',
-    # Requirements for verdi shell (version of ipython non enforced, because
-    # there are people who still prefer version 4 rather than the latest)
-    'ipython<6.0'
+    'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
 ]
 
 extras_require = {
-    # Requirements for Python 2 only
     ':python_version < "3"': ['chainmap', 'singledispatch >= 3.4.0.3'],
-    # Requirements for ssh transport with authentification through Kerberos
-    # token
+    # Requirements for ssh transport with authentification through Kerberos token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
     # E.g. for Ubuntu 14.04: sudo apt-get install libffi-dev libkrb5-dev
     'ssh_kerberos': [
-        'pyasn1==0.3.7',
+        'pyasn1==0.4.2',
         'python-gssapi==0.6.4',
     ],
     # Requirements for RESTful API
     'rest': [
-        'Flask==0.10.1',
+        'Flask==1.0.2',
         'Flask-RESTful==0.3.6',
-        'Flask-Cors==3.0.1',
-        'pyparsing==2.1.10',
+        'Flask-Cors==3.0.4',
+        'pyparsing==2.2.0',
         'Pattern==2.6',
-        'Flask-SQLAlchemy==2.1',
+        'Flask-SQLAlchemy==2.3.2',
         'sqlalchemy-migrate==0.11.0',
-        'marshmallow-sqlalchemy==0.10.0',
-        'flask-marshmallow==0.7.0',
+        'marshmallow-sqlalchemy==0.13.2',
+        'flask-marshmallow==0.9.0',
         'itsdangerous==0.24',
-        'Flask-HTTPAuth==3.2.0',
+        'Flask-HTTPAuth==3.2.3',
         'Flask-Cache==0.13.1',
-        'python-memcached==1.58',
+        'python-memcached==1.59',
     ],
-    # Requirements to buiilding documentation
+    # Requirements to building documentation
     'docs': [
-        'Sphinx==1.7.2',
+        'Sphinx==1.7.4',
         'Pygments==2.2.0',
-        'docutils==0.13.1',
-        'Jinja2==2.9.5',
-        'MarkupSafe==0.23',
-        # Required by readthedocs
-        'sphinx-rtd-theme==0.2.5b2',
+        'docutils==0.14',
+        'Jinja2==2.10',
+        'MarkupSafe==1.0',
+        'sphinx-rtd-theme==0.3.1',  # Required by readthedocs
     ],
-    # Requirements for non-core funciontalities that rely on external atomic
-    # manipulation/processing software
+    # Requirements for non-core functionalities that rely on external atomic manipulation/processing software
     'atomic_tools': [
-        'spglib==1.9.10.1',
-        # support for symmetry detection in aiida.orm.data.structure. Has no
-        # easily accessible version number
-        'pymatgen==4.5.3',  # support for NWChem I/O
-        'ase==3.12.0',  # support for crystal structure manipulation
-        'PyMySQL==0.7.9',  # required by ICSD tools
-        'PyCifRW==4.2.1',
-        'seekpath==1.8.0',
+        'spglib==1.10.3.65',
+        'pymatgen==2018.4.20',
+        'ase==3.12.0',  # Updating breaks tests
+        'PyMySQL==0.8.0',  # Required by ICSD tools
+        'PyCifRW==4.2.1',  # Updating breaks tests
+        'seekpath==1.8.1',
         'qe-tools==1.1.0',
     ],
     # Requirements for jupyter notebook
@@ -126,16 +115,17 @@ extras_require = {
         'pgtest==1.1.0',
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',
-        'codecov'
+        'codecov==2.0.15'
     ],
     'dev_precommit': [
-        'pre-commit==1.3.0',
-        'yapf==0.19.0',
+        'pre-commit==1.8.2',
+        'yapf==0.21.0',
         'prospector==0.12.7',
         'pylint==1.8.4',
-        'toml'
-    ]
+        'toml==0.9.4'
+    ],
 }
+
 
 # There are a number of optional dependencies that are not
 # listed even as optional dependencies as they are quite
@@ -149,5 +139,5 @@ extras_require = {
 #    moreover requires to have numpy installed before, but it is not in
 #    the requirements (and there is no easy way on our side to fix a specific
 #    installation order of dependencies)
-
 extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools']
+extras_require['all'] = [item for sublist in extras_require.values() for item in sublist]

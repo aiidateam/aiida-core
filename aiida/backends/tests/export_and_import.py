@@ -14,7 +14,6 @@ Tests for the export and import routines.
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
-
 class TestSpecificImport(AiidaTestCase):
 
     def setUp(self):
@@ -55,7 +54,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
 
-            nodes = [parameters.dbnode]
+            nodes = [parameters]
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
@@ -125,7 +124,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
 
-            nodes = [structure.dbnode, child_calculation.dbnode, parent_calculation.dbnode, remote_folder.dbnode]
+            nodes = [structure, child_calculation, parent_calculation, remote_folder]
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
@@ -170,7 +169,6 @@ class TestSpecificImport(AiidaTestCase):
             qb.append(Calculation, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
 
-
 class TestSimple(AiidaTestCase):
 
     def setUp(self):
@@ -185,10 +183,8 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
-        from aiida.orm import DataFactory
         from aiida.orm import load_node
         from aiida.orm.data.base import Str, Int, Float, Bool
-        from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.importexport import export
 
         # Creating a folder for the import/export files
@@ -203,7 +199,7 @@ class TestSimple(AiidaTestCase):
             # my uuid - list to reload the node:
             uuids = [n.uuid for n in nodes]
             # exporting the nodes:
-            export([n.dbnode for n in nodes], outfile=filename, silent=True)
+            export(nodes, outfile=filename, silent=True)
             # cleaning:
             self.clean_db()
             # Importing back the data:
@@ -250,7 +246,7 @@ class TestSimple(AiidaTestCase):
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
-            export([calc.dbnode], outfile=filename, silent=True)
+            export([calc], outfile=filename, silent=True)
 
             self.clean_db()
 
@@ -290,7 +286,7 @@ class TestSimple(AiidaTestCase):
             sd.store()
 
             filename = os.path.join(export_file_tmp_folder, "export.tar.gz")
-            export([sd.dbnode], outfile=filename, silent=True)
+            export([sd], outfile=filename, silent=True)
 
             with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
@@ -340,7 +336,7 @@ class TestSimple(AiidaTestCase):
             sd.store()
 
             filename = os.path.join(temp_folder, "export.tar.gz")
-            export([sd.dbnode], outfile=filename, silent=True)
+            export([sd], outfile=filename, silent=True)
 
             unpack = SandboxFolder()
             with tarfile.open(
@@ -389,25 +385,25 @@ class TestSimple(AiidaTestCase):
         sd.store()
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree([sd], folder=folder, silent=True,
                     allowed_licenses=['GPL'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
+        export_tree([sd], folder=folder, silent=True,
                     forbidden_licenses=['Academic'])
         # Folder should contain two files of metadata + nodes/
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=['CC0'])
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=['GPL'])
 
         def cc_filter(license):
@@ -421,22 +417,22 @@ class TestSimple(AiidaTestCase):
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=cc_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=gpl_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         allowed_licenses=crashing_filter)
 
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
-            export_tree([sd.dbnode], folder=folder, silent=True,
+            export_tree([sd], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
     def test_5(self):
@@ -505,7 +501,7 @@ class TestSimple(AiidaTestCase):
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
-            export([sd3.dbnode], outfile=filename, silent=True)
+            export([sd3], outfile=filename, silent=True)
             self.clean_db()
             import_data(filename, silent=True)
 
@@ -576,7 +572,7 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd2.dbnode], outfile=filename1, silent=True)
+            export([sd2], outfile=filename1, silent=True)
             uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
             self.clean_db()
             self.insert_data()
@@ -612,7 +608,7 @@ class TestSimple(AiidaTestCase):
             uuids2 = [jc2.uuid, sd3.uuid]
 
             filename2 = os.path.join(temp_folder, "export2.tar.gz")
-            export([sd3.dbnode], outfile=filename2, silent=True)
+            export([sd3], outfile=filename2, silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename2, silent=True)
@@ -678,7 +674,7 @@ class TestSimple(AiidaTestCase):
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([sd1.dbnode, jc1.dbnode, g1.dbgroup], outfile=filename1,
+            export([sd1, jc1, g1], outfile=filename1,
                    silent=True)
             n_uuids = [sd1.uuid, jc1.uuid]
             self.clean_db()
@@ -727,7 +723,7 @@ class TestSimple(AiidaTestCase):
             not_wanted_uuids = [v.uuid for v in (b,c,d)]
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([res.dbnode], outfile=filename1, silent=True)
+            export([res], outfile=filename1, silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -770,7 +766,7 @@ class TestSimple(AiidaTestCase):
 
             uuids_values = [(v.uuid, v.value) for v in (output_1, )]
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([output_1.dbnode], outfile=filename1,silent=True)
+            export([output_1], outfile=filename1,silent=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -885,7 +881,7 @@ class TestSimple(AiidaTestCase):
                 g = Group.get_from_string(groupname)
                 # exporting based on all members of the group
                 # this also checks if group memberships are preserved!
-                export([g.dbgroup]+[n.dbnode for n in g.nodes], outfile=filename, silent=True)
+                export([g]+[n for n in g.nodes], outfile=filename, silent=True)
                 # cleaning the DB!
                 self.clean_db()
                 # reimporting the data from the file
@@ -900,8 +896,8 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-
 class TestComplex(AiidaTestCase):
+
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -968,7 +964,7 @@ class TestComplex(AiidaTestCase):
                                  calc2.uuid: calc2.label, fd1.uuid: fd1.label}
 
             filename = os.path.join(temp_folder, "export.tar.gz")
-            export([fd1.dbnode], outfile=filename, silent=True)
+            export([fd1], outfile=filename, silent=True)
 
             self.clean_db()
 
@@ -984,7 +980,6 @@ class TestComplex(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
-
 
 class TestComputer(AiidaTestCase):
 
@@ -1044,11 +1039,11 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1158,7 +1153,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Rename the computer
             self.computer.set_name(comp1_name + "_updated")
@@ -1175,7 +1170,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1265,7 +1260,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Reset the database
             self.clean_db()
@@ -1286,7 +1281,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
-            export([calc2.dbnode], outfile=filename2, silent=True)
+            export([calc2], outfile=filename2, silent=True)
 
             # Reset the database
             self.clean_db()
@@ -1307,7 +1302,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the third job calculation
             filename3 = os.path.join(export_file_tmp_folder, "export3.tar.gz")
-            export([calc3.dbnode], outfile=filename3, silent=True)
+            export([calc3], outfile=filename3, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1394,7 +1389,7 @@ class TestComputer(AiidaTestCase):
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
-            export([calc1.dbnode], outfile=filename1, silent=True)
+            export([calc1], outfile=filename1, silent=True)
 
             # Clean the local database
             self.clean_db()
@@ -1482,7 +1477,8 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
         qb.append(Node, project='uuid', tag='input')
-        qb.append(Node, project='uuid', tag='output', edge_project=['label', 'type'], output_of='input')
+        qb.append(Node, project='uuid', tag='output',
+                  edge_project=['label', 'type'], output_of='input')
         return qb.all()
 
     def test_input_and_create_links(self):
@@ -1496,7 +1492,6 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -1510,7 +1505,7 @@ class TestLinks(AiidaTestCase):
 
             export_links = self.get_all_node_links()
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([node_output.dbnode], outfile=export_file, silent=True)
+            export([node_output], outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
@@ -1525,60 +1520,243 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    def test_input_and_create_links_proper(self):
+    def construct_complex_graph(self, export_combination = 0):
         """
-        Check that CALL links are not followed in the export procedure with
-        dangling links as a consequence::
+        This method creates a "complex" graph with all available link types
+        (INPUT, CREATE, RETURN and CALL) and returns the nodes of the graph. It
+        also returns various combinations of nodes that need to be extracted
+        but also the final expected set of nodes (after adding the expected
+        predecessors, desuccessors).
+        """
+        from aiida.orm.data.base import Int
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.datastructures import calc_states
+        from aiida.common.links import LinkType
 
-               ---------->---------
-            __|_       ___        _|_
-           |    | INP |   | CALL |   |
-           | i1 | --> | C | <--  | W |
-           |____|     |___|      |___|
-                        |
-                        v  CREATE
-                       ____ 
-                      |    |
-                      | o1 |
-                      |____|
+        if export_combination < 0 or export_combination > 8:
+            return None
 
+        # Node creation
+        d1 = Int(1).store()
+        d2 = Int(1).store()
+        wc1 = WorkCalculation().store()
+        wc2 = WorkCalculation().store()
+
+        pw1 = JobCalculation()
+        pw1.set_computer(self.computer)
+        pw1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw1.store()
+
+        d3 = Int(1).store()
+        d4 = Int(1).store()
+
+        pw2 = JobCalculation()
+        pw2.set_computer(self.computer)
+        pw2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw2.store()
+
+        d5 = Int(1).store()
+        d6 = Int(1).store()
+
+        # Link creation
+        wc1.add_link_from(d1, 'input1', link_type=LinkType.INPUT)
+        wc1.add_link_from(d2, 'input2', link_type=LinkType.INPUT)
+
+        wc2.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+        wc2.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+
+        pw1.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+        pw1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+        pw1._set_state(calc_states.PARSING)
+
+        d3.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+        d3.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+        d4.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+        d4.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+        pw2.add_link_from(d4, 'input', link_type=LinkType.INPUT)
+        pw2._set_state(calc_states.PARSING)
+
+        d5.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+        d6.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+
+        # Return the generated nodes
+        graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
+
+        # Create various combinations of nodes that should be exported
+        # and the final set of nodes that are exported in each case, following
+        # predecessor/successor links.
+        export_list = [
+            (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
+            (wc2, [d1, d3, d4, pw1, wc2]),
+            (d3, [d1, d3, d4, pw1]),
+            (d4, [d1, d3, d4, pw1]),
+            (d5, [d1, d3, d4, d5, d6, pw1, pw2]),
+            (d6, [d1, d3, d4, d5, d6, pw1, pw2]),
+            (pw2, [d1, d3, d4, d5, d6, pw1, pw2]),
+            (d1, [d1]),
+            (d2, [d2])
+        ]
+
+        return graph_nodes, export_list[export_combination]
+
+    def test_complex_workflow_graph_links(self):
+        """
+        This test checks that all the needed links are correctly exported and
+        imported. More precisely, it checks that INPUT, CREATE, RETURN and CALL
+        links connecting Data nodes, JobCalculations and WorkCalculations are
+        exported and imported correctly.
         """
         import os, shutil, tempfile
 
-        from aiida.orm.data.base import Int
-        from aiida.orm import Node, Data
+        from aiida.orm import Node
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.calculation.inline import InlineCalculation
-        from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            node_calc = InlineCalculation().store()
-            node_work = WorkCalculation().store()
-            node_input = Int(1).store()
-            node_output = Int(2).store()
+            graph_nodes, _ = self.construct_complex_graph()
 
-            node_work.add_link_from(node_input, 'input-to-work', link_type=LinkType.INPUT)
-            node_calc.add_link_from(node_input, 'input-to-calc', link_type=LinkType.INPUT)
-            node_calc.add_link_from(node_work, 'call', link_type=LinkType.CALL)
-            node_output.add_link_from(node_calc, 'output', link_type=LinkType.CREATE)
-
-            export_links = QueryBuilder().append(
-                    Data, project='uuid').append(
-                    InlineCalculation, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.INPUT.value, )}}
-                ).all() + QueryBuilder().append(
-                    InlineCalculation, project='uuid').append(
-                    Data, project='uuid', edge_project=['label', 'type'],
-                        edge_filters={'type':{'in':(LinkType.CREATE.value, )}}
-                ).all()
+            # Getting the input, create, return and call links
+            qb = QueryBuilder()
+            qb.append(Node, project='uuid')
+            qb.append(Node, project='uuid',
+                      edge_project=['label', 'type'],
+                      edge_filters={'type': {'in': (LinkType.INPUT.value,
+                                                    LinkType.CREATE.value,
+                                                    LinkType.RETURN.value,
+                                                    LinkType.CALL.value)}})
+            export_links = qb.all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
-            export([node_output.dbnode], outfile=export_file, silent=True)
+            export(graph_nodes, outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+            import_links = self.get_all_node_links()
+
+            export_set = [tuple(_) for _ in export_links]
+            import_set = [tuple(_) for _ in import_links]
+
+            self.assertEquals(set(export_set), set(import_set))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_complex_workflow_graph_export_set_expansion(self):
+        import os, shutil, tempfile
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm import Node
+
+        for export_conf in range(0,8):
+
+            graph_nodes, (export_node, export_target) = (
+                self.construct_complex_graph(export_conf))
+
+            tmp_folder = tempfile.mkdtemp()
+            try:
+                export_file = os.path.join(tmp_folder, 'export.tar.gz')
+                export([export_node], outfile=export_file, silent=True)
+                export_node_str = str(export_node)
+
+                self.clean_db()
+                self.insert_data()
+
+                import_data(export_file, silent=True)
+
+                # Get all the nodes of the database
+                qb = QueryBuilder()
+                qb.append(Node, project='uuid')
+                imported_node_uuids = set(str(_[0]) for _ in qb.all())
+
+                export_target_uuids = set(str(_.uuid) for _ in export_target)
+
+                from aiida.orm.utils import load_node
+                self.assertEquals(
+                    export_target_uuids,
+                    imported_node_uuids,
+                    "Problem in comparison of export node: " +
+                    str(export_node_str) + "\n" +
+                    "Expected set: " + str(export_target_uuids)  + "\n" +
+                    "Imported set: " + str(imported_node_uuids)  + "\n" +
+                    "Difference: " + str([load_node(_) for _ in
+                        export_target_uuids.symmetric_difference(
+                            imported_node_uuids)])
+                )
+
+            finally:
+                shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_recursive_export_input_and_create_links_proper(self):
+        """
+        Check that CALL, INPUT, RETURN and CREATE links are followed
+        recursively.
+        """
+        import os, shutil, tempfile
+        from aiida.orm import Node
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation.inline import InlineCalculation
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            wc2 = WorkCalculation().store()
+            wc1 = WorkCalculation().store()
+            c1 = InlineCalculation().store()
+            ni1 = Int(1).store()
+            ni2 = Int(2).store()
+            no1 = Int(1).store()
+            no2 = Int(2).store()
+
+            # Create the connections between workcalculations and calculations
+            wc1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+            c1.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+
+            # Connect the first data node to wc1 & c1
+            wc1.add_link_from(ni1, 'ni1-to-wc1',
+                              link_type=LinkType.INPUT)
+            c1.add_link_from(ni1, 'ni1-to-c1',
+                             link_type=LinkType.INPUT)
+
+            # Connect the second data node to wc1 & c1
+            wc1.add_link_from(ni2, 'ni2-to-wc1',
+                              link_type=LinkType.INPUT)
+            c1.add_link_from(ni2, 'ni2-to-c1',
+                             link_type=LinkType.INPUT)
+
+            # Connecting the first output node to wc1 & c1
+            no1.add_link_from(wc1, 'output',
+                              link_type=LinkType.RETURN)
+            no1.add_link_from(c1, 'output',
+                              link_type=LinkType.CREATE)
+
+            # Connecting the second output node to wc1 & c1
+            no2.add_link_from(wc1, 'output',
+                              link_type=LinkType.RETURN)
+            no2.add_link_from(c1, 'output',
+                              link_type=LinkType.CREATE)
+
+            # Getting the input, create, return and call links
+            qb = QueryBuilder()
+            qb.append(Node, project='uuid')
+            qb.append(Node, project='uuid',
+                edge_project=['label', 'type'],
+                edge_filters={'type': {'in': (LinkType.INPUT.value,
+                                              LinkType.CREATE.value,
+                                              LinkType.RETURN.value,
+                                              LinkType.CALL.value)}})
+            export_links = qb.all()
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([wc2], outfile=export_file, silent=True)
 
             self.clean_db()
             self.insert_data()
@@ -1614,14 +1792,9 @@ class TestLinks(AiidaTestCase):
         import os, shutil, tempfile
 
         from aiida.orm.data.base import Int
-        from aiida.orm import Node, Data
         from aiida.orm.importexport import export
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.calculation.inline import InlineCalculation
         from aiida.orm.calculation.work import WorkCalculation
         from aiida.common.links import LinkType
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
@@ -1635,21 +1808,23 @@ class TestLinks(AiidaTestCase):
             o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
             o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
 
-            uuids_wanted = set(_.uuid for _ in (w1,o1,i1))
-            links_wanted = [l for l in self.get_all_node_links() if l[3] in ('createlink', 'inputlink')]
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in
+                            (LinkType.CREATE.value,
+                             LinkType.INPUT.value,
+                             LinkType.RETURN.value)]
 
             export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
             export_file_2 = os.path.join(tmp_folder, 'export-2.tar.gz')
-            export([o1.dbnode], outfile=export_file_1, silent=True)
-            export([w1.dbnode], outfile=export_file_2, silent=True)
+            export([o1], outfile=export_file_1, silent=True)
+            export([w1], outfile=export_file_2, silent=True)
 
             self.clean_db()
             self.insert_data()
 
             import_data(export_file_1, silent=True)
             links_in_db = self.get_all_node_links()
-            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
 
             self.clean_db()
             self.insert_data()
@@ -1660,5 +1835,149 @@ class TestLinks(AiidaTestCase):
 
 
 
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_double_return_links_for_workflows(self):
+        """
+        This test checks that double return links to a node can be exported
+        and imported without problems,
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.data.base import Int
+        from aiida.orm.importexport import export
+        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            w1 = WorkCalculation().store()
+            w2 = WorkCalculation().store()
+            i1 = Int(1).store()
+            o1 = Int(2).store()
+
+            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
+            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
+            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
+            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
+            o1.add_link_from(w2, 'return', link_type=LinkType.RETURN)
+
+            uuids_wanted = set(_.uuid for _ in (w1,o1,i1,w2))
+            links_wanted = [l for l in self.get_all_node_links() if l[3] in (
+                'createlink', 'inputlink', 'returnlink', 'calllink')]
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([o1, w1, w2, i1],
+                   outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            uuids_in_db = [str(uuid) for [uuid] in
+                           QueryBuilder().append(Node, project='uuid').all()]
+            self.assertEquals(sorted(uuids_wanted), sorted(uuids_in_db))
+
+            links_in_db = self.get_all_node_links()
+            self.assertEquals(sorted(links_wanted), sorted(links_in_db))
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_solo_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.orm.code import Code
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([code], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            self.assertEquals(load_node(code_uuid).label, code_label)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_input_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported. It also checks that the links
+        are also in place after the import.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.common.links import LinkType
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.code import Code
+        from aiida.orm.querybuilder import QueryBuilder
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            jc = JobCalculation()
+            jc.set_computer(self.computer)
+            jc.set_resources(
+                {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc.store()
+
+            jc.add_link_from(code, 'code', link_type=LinkType.INPUT)
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([jc], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            # Check that the node is there
+            self.assertEquals(load_node(code_uuid).label, code_label)
+            # Check that the link is in place
+            qb = QueryBuilder()
+            qb.append(Code, project='uuid')
+            qb.append(JobCalculation, project='uuid',
+                edge_project=['label', 'type'],
+                edge_filters={'type': {'==': LinkType.INPUT.value}})
+            self.assertEquals(qb.count(), 1,
+                              "Expected to find one and only one link from "
+                              "code to the calculation node. {} found."
+                              .format(qb.count()))
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

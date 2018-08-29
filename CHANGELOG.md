@@ -1,3 +1,21 @@
+## v0.12.2
+### Improvements
+- Support the hashing of `uuid.UUID` types by registering a hashing function  [[#1861]](https://github.com/aiidateam/aiida_core/pull/1861)
+- Add documentation on plugin cutter [[#1904]](https://github.com/aiidateam/aiida_core/pull/1904)
+
+### Minor bug fixes
+- Make exported graphs consistent with the current node and link hierarchy definition [[#1764]](https://github.com/aiidateam/aiida_core/pull/1764)
+- Fix link import problem under SQLA [[#1769]](https://github.com/aiidateam/aiida_core/pull/1769)
+- Fix cache folder copying [[1746]](https://github.com/aiidateam/aiida_core/pull/1746) [[1752]](https://github.com/aiidateam/aiida_core/pull/1752)
+- Fix bug in mixins.py when copying node [[#1743]](https://github.com/aiidateam/aiida_core/pull/1743)
+- Fix pgtest failures (release-branch) on travis [[#1736]](https://github.com/aiidateam/aiida_core/pull/1736)
+- Fix plugin: return testrunner result to fail on travis, when tests don't pass [[#1676]](https://github.com/aiidateam/aiida_core/pull/1676)
+
+### Miscellaneous
+- Remove pycrypto dependency, as it was found to have sercurity flaws [[#1754]](https://github.com/aiidateam/aiida_core/pull/1754)
+- Set xsf as default format for structures visualization [[#1756]](https//github.com/aiidateam/aiida_core/pull/1756)
+- Delete unused `utils/create_requirements.py` file [[#1702]]](https//github.com/aiidateam/aiida_core/pull/1702)
+
 ## v0.12.1
 
 ### Improvements

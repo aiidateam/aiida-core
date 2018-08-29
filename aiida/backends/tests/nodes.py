@@ -51,6 +51,34 @@ class TestNodeHashing(AiidaTestCase):
             n2.store(use_cache=True)
             self.assertEqual(n1.uuid, n2.get_extra('_aiida_cached_from'))
 
+
+    def test_node_uuid_hashing_for_querybuidler(self):
+        """
+        QueryBuilder results should be reusable and shouldn't brake hashing.
+        """
+        from aiida.orm.node import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        n = Node()
+        n.store()
+
+        # Search for the UUID of the stored node
+        qb = QueryBuilder()
+        qb.append(Node, project=['uuid'],
+                  filters={'id': {'==': n.id}})
+        [uuid] = qb.first()
+
+        # Look the node with the previously returned UUID
+        qb = QueryBuilder()
+        qb.append(Node, project=['id'],
+                  filters={'uuid': {'==': uuid}})
+
+        # Check that the query doesn't fail
+        qb.all()
+        # And that the results are correct
+        self.assertEquals(qb.count(), 1)
+        self.assertEquals(qb.first()[0], n.id)
+
     @staticmethod
     def create_folderdata_with_empty_file():
         from aiida.orm.data.folder import FolderData

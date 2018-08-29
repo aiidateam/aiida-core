@@ -286,6 +286,10 @@ class FixtureManager(object):
 
     @backend.setter
     def backend(self, backend):
+        if self.__is_running_on_test_profile:
+            raise FixtureError(
+                'backend cannot be changed after setting up the environment')
+
         valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
         if backend not in valid_backends:
             raise ValueError('invalid backend {}, must be one of {}'.format(
@@ -387,24 +391,27 @@ _GLOBAL_FIXTURE_MANAGER = FixtureManager()
 
 
 @contextmanager
-def fixture_manager():
+def fixture_manager(backend=BACKEND_DJANGO):
     """
     Context manager for FixtureManager objects
 
     Example test runner (unittest)::
 
-        with fixture_manager() as fixture_mgr:
+        with fixture_manager(backend) as fixture_mgr:
             # ready for tests
         # everything cleaned up
 
     Example fixture (pytest)::
 
         def aiida_profile():
-            with fixture_manager() as fixture_mgr:
+            with fixture_manager(backend) as fixture_mgr:
                 yield fixture_mgr
+
+    :param backend: database backend, either BACKEND_SQLA or BACKEND_DJANGO
     """
     try:
         if not _GLOBAL_FIXTURE_MANAGER.has_profile_open():
+            _GLOBAL_FIXTURE_MANAGER.backend = backend
             _GLOBAL_FIXTURE_MANAGER.create_profile()
         yield _GLOBAL_FIXTURE_MANAGER
     finally:
@@ -467,6 +474,5 @@ class TestRunner(unittest.runner.TextTestRunner):
         """
         from aiida.utils.capturing import Capturing
         with Capturing():
-            with fixture_manager() as manager:
-                manager.backend = backend
-                super(TestRunner, self).run(suite)
+            with fixture_manager(backend=backend):
+                return super(TestRunner, self).run(suite)

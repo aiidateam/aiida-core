@@ -50,7 +50,7 @@ class ComputerCollection(Collection):
         """
         from .querybuilder import QueryBuilder
 
-        qb = QueryBuilder()
+        qb = self.backend.query_builder()
         filters = {}
         if id is not None:
             filters['id'] = {'==': id}
@@ -97,6 +97,9 @@ class Computer(CollectionEntry):
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
     _logger = logging.getLogger(__name__)
+
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.
 
     @staticmethod
     def get_schema():
@@ -533,7 +536,28 @@ class Computer(CollectionEntry):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
-    @abc.abstractmethod
+    def get_minimum_job_poll_interval(self):
+        """
+        Get the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :return: The minimum interval (in seconds)
+        :rtype: float
+        """
+        return self._get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL,
+                                  self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT)
+
+    def set_minimum_job_poll_interval(self, interval):
+        """
+        Set the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :param interval: The minimum interval in seconds
+        :type interval: float
+        """
+        self._set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
+
+    @abstractmethod
     def get_transport_params(self):
         pass
 

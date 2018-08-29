@@ -13,6 +13,7 @@ Tests for specific subclasses of Data
 
 from __future__ import absolute_import
 
+import six
 from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
@@ -137,6 +138,31 @@ def is_valid_folder_name(name):
 
     return True
 
+
+class _TestParserMeta(type):
+    """
+    Some python black magic to dynamically create tests
+    """
+
+    def __new__(cls, name, bases, attrs):
+        import os
+
+        newcls = type.__new__(cls, name, bases, attrs)
+
+        file_folder = os.path.split(__file__)[0]
+        parser_test_folder = os.path.join(file_folder, 'parser_tests')
+        if os.path.isdir(parser_test_folder):
+            for f in os.listdir(parser_test_folder):
+                absf = os.path.abspath(os.path.join(parser_test_folder, f))
+                if is_valid_folder_name(f) and os.path.isdir(absf):
+                    function_name = f
+                    setattr(newcls, function_name,
+                            newcls.return_base_test(absf))
+
+        return newcls
+
+
+@six.add_metaclass(_TestParserMeta)
 class TestParsers(AiidaTestCase):
     """
     This class dynamically finds all tests in a given subfolder, and loads
@@ -274,28 +300,6 @@ class TestParsers(AiidaTestCase):
                                 raise e
 
         return base_test
-
-    class __metaclass__(type):
-        """
-        Some python black magic to dynamically create tests
-        """
-
-        def __new__(cls, name, bases, attrs):
-            import os
-
-            newcls = type.__new__(cls, name, bases, attrs)
-
-            file_folder = os.path.split(__file__)[0]
-            parser_test_folder = os.path.join(file_folder, 'parser_tests')
-            if os.path.isdir(parser_test_folder):
-                for f in os.listdir(parser_test_folder):
-                    absf = os.path.abspath(os.path.join(parser_test_folder, f))
-                    if is_valid_folder_name(f) and os.path.isdir(absf):
-                        function_name = f
-                        setattr(newcls, function_name,
-                                newcls.return_base_test(absf))
-
-            return newcls
 
 
 class SkipTestException(Exception):

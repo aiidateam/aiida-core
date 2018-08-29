@@ -71,7 +71,7 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     # be named test_...
     import getpass
     osuser = getpass.getuser()
-    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER).hexdigest()
+    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER.encode('utf-8')).hexdigest()
     dbname = db_name or profile_name + '_' + osuser + '_' + aiida_base_dir_hash
 
     # default database user name is aiida_qs_<login-name>

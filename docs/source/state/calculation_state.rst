@@ -112,6 +112,8 @@ Here follows a brief documentation of their action. You can also find them in th
 * ``c.set_extras``: like set extra, but you can pass a dictionary with multiple keys and values.
 * ``c.set_priority``: set the job-scheduler priority of the calculation (AiiDA does not  have internal priorities). The function accepts a value that depends on the scheduler. plugin (but typically is an integer).
 * ``c.set_queue_name``: pass in a string the name of the queue to use on the job-scheduler.
+* ``c.set_account``: pass in a string the name of the account/project to use on the job-scheduler.
+* ``c.set_qos``: pass in a string the name of the quality-of-service to use on the job-scheduler.
 * ``c.set_import_sys_environment``: default=True. If True, the job-scheduling script will load the environment variables.
 * ``c.set_resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
 * ``c.set_withmpi``: True or False, if True (the default) it will  call the executable as a parallel run.

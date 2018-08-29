@@ -37,6 +37,12 @@ class ModelWrapper(object):
         object.__setattr__(self, '_model', model)
 
     def __getattr__(self, item):
+        # Python 3's implementation of copy.copy does not call __init__ on the new object
+        # but manually restores attributes instead. Make sure we never get into a recursive
+        # loop by protecting the only special variable here: _model
+        if item == '_model':
+            raise AttributeError()
+
         if self.is_saved() and self._is_model_field(item):
             self._ensure_model_uptodate(fields=(item,))
 

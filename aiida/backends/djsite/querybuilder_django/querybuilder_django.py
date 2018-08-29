@@ -542,6 +542,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
     def iterall(self, query, batch_size, tag_to_index_dict):
         from django.db import transaction
 
+        if not tag_to_index_dict:
+            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+
         with transaction.atomic():
             results = query.yield_per(batch_size)
 
@@ -562,16 +565,19 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
-            else:
-                raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         from django.db import transaction
+
+        nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
+
+        if not nr_items:
+            raise Exception("Got an empty dictionary")
+
         # Wrapping everything in an atomic transaction:
         with transaction.atomic():
             results = query.yield_per(batch_size)
             # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
             if nr_items > 1:
                 for this_result in results:
                     yield {
@@ -606,5 +612,3 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
-            else:
-                raise Exception("Got an empty dictionary")

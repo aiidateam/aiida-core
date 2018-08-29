@@ -532,6 +532,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             raise e
 
     def iterall(self, query, batch_size, tag_to_index_dict):
+        if not tag_to_index_dict:
+            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+
         try:
             results = query.yield_per(batch_size)
 
@@ -552,18 +555,20 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
-            else:
-                raise Exception("Got an empty dictionary")
         except Exception:
             self.get_session().rollback()
             raise
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
 
+        nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
+
+        if not nr_items:
+            raise Exception("Got an empty dictionary")
+
         # Wrapping everything in an atomic transaction:
         try:
             results = query.yield_per(batch_size)
-            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
             if nr_items > 1:
                 for this_result in results:
                     yield {
@@ -598,8 +603,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
-            else:
-                raise Exception("Got an empty dictionary")
         except Exception as e:
             self.get_session().rollback()
             raise e

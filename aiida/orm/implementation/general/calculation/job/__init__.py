@@ -1476,7 +1476,7 @@ class AbstractJobCalculation(AbstractCalculation):
         inputdict = self.get_inputs_dict(
             only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
 
-        codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
+        codes = [_ for _ in inputdict.values() if isinstance(_, Code)]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()

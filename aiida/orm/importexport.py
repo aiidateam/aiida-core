@@ -417,7 +417,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         ##########################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
+        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
 
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
@@ -789,11 +789,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing = existing_entries.get(dbnode_model_name, {})
             existing_pk = [foreign_ids_reverse_mappings[
                                dbnode_model_name][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(dbnode_model_name, {})
             new_pk = [foreign_ids_reverse_mappings[
                           dbnode_model_name][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 
@@ -940,7 +940,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(
-            data['groups_uuid'].itervalues()))
+            six.itervalues(data['groups_uuid'])))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
@@ -1398,10 +1398,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Put everything in a specific group
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
             existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(NODE_ENTITY_NAME, {})
             new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 

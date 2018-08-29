@@ -30,7 +30,7 @@ class FrozenDict(Data, Mapping):
     def set_dict(self, dict):
         assert not self._initialised
 
-        for value in dict.itervalues():
+        for value in dict.values():
             assert isinstance(value, Data)
             assert value.is_stored
 

@@ -86,7 +86,7 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     from aiida.common.setup import get_or_create_config
     confs = get_or_create_config()
     profs = confs.get('profiles', {})
-    for profile in profs.itervalues():
+    for profile in profs.values():
         if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
             dbpass = profile.get('AIIDADB_PASS')
             echo.echo('using found password for {}'.format(dbuser))

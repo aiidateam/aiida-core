@@ -17,6 +17,7 @@ import tabulate
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
@@ -37,23 +38,15 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
-@verdi_code.command('setup')
-@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
-@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
-@click.option(
+# Reusable options (code-specific)
+ON_COMPUTER = OverridableOption(
     '--on-computer/--store-in-db',
     is_eager=False,
     default=True,
-    prompt='Installed on target computer?',
-    cls=InteractiveOption)
-@options.COMPUTER(
-    prompt='Computer',
     cls=InteractiveOption,
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    help='Name of the computer, on which the code resides')
-@click.option(
+    prompt='Installed on target computer?')
+
+REMOTE_ABS_PATH = OverridableOption(
     '--remote-abs-path',
     prompt='Remote absolute path',
     required_fn=is_on_computer,
@@ -61,23 +54,37 @@ def is_not_on_computer(ctx):
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
     help=('[if --on-computer]: the absolute path to the executable on the remote machine'))
-@click.option(
+
+CODE_FOLDER = OverridableOption(
     '--code-folder',
     prompt='Local directory containing the code',
     type=click.Path(file_okay=False, exists=True, readable=True),
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --store-in-db]: directory the executable and all other files necessary for running it'))
-@click.option(
+    help=('[if --store-in-db]: directory containing the executable and all other files necessary for running it'))
+
+CODE_REL_PATH = OverridableOption(
     '--code-rel-path',
-    prompt='Relative path of executable inside directory',
+    prompt='Relative path of executable inside code folder',
     type=click.Path(dir_okay=False),
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
     help=('[if --store-in-db]: relative path of the executable ' + \
           'inside the code-folder'))
+
+
+@verdi_code.command('setup')
+@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
+@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
+@ON_COMPUTER()
+@options.COMPUTER(
+    prompt='Computer',
+    cls=InteractiveOption,
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    help='Name of the computer, on which the code resides')
+@REMOTE_ABS_PATH()
+@CODE_FOLDER()
+@CODE_REL_PATH()
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -153,12 +160,7 @@ def set_code_builder(ctx, param, value):
     prompt='Default calculation input plugin',
     cls=InteractiveOption,
     contextual_default=partial(get_default, 'input_plugin'))
-@click.option(
-    '--on-computer/--store-in-db',
-    is_eager=False,
-    prompt='Installed on target computer?',
-    cls=InteractiveOption,
-    contextual_default=get_on_computer)
+@ON_COMPUTER(contextual_default=get_on_computer)
 @options.COMPUTER(
     prompt='Computer',
     cls=InteractiveOption,
@@ -166,34 +168,9 @@ def set_code_builder(ctx, param, value):
     prompt_fn=is_on_computer,
     help='Name of the computer, on which the code resides',
     contextual_default=get_computer_name)
-@click.option(
-    '--remote-abs-path',
-    prompt='Remote absolute path',
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    type=types.AbsolutePathParamType(dir_okay=False),
-    cls=InteractiveOption,
-    help=('[if --on-computer]: the absolute path to the executable on the remote machine'),
-    contextual_default=partial(get_default, 'remote_abs_path'))
-@click.option(
-    '--code-folder',
-    prompt='Local directory containing the code',
-    type=click.Path(file_okay=False, exists=True, readable=True),
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
-    cls=InteractiveOption,
-    help=('[if --store-in-db]: directory the executable and all other files necessary for running it'),
-    contextual_default=partial(get_default, 'code_folder'))
-@click.option(
-    '--code-rel-path',
-    prompt='Relative path of executable inside directory',
-    type=click.Path(dir_okay=False),
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
-    cls=InteractiveOption,
-    help=('[if --store-in-db]: relative path of the executable ' + \
-          'inside the code-folder'),
-    contextual_default=partial(get_default, 'code_rel_path'))
+@REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
+@CODE_FOLDER(contextual_default=partial(get_default, 'code_folder'))
+@CODE_REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
 @click.option(
     '--hide-original',
     is_flag=True,

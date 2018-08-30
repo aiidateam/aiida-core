@@ -250,11 +250,11 @@ class AbstractJobCalculation(AbstractCalculation):
         :param folder_path: the path to the folder from which the content
                should be taken
         """
-        # This function can be called only if the state is SUBMITTING
-        if self.get_state() != calc_states.SUBMITTING:
+        # This function can be called only if the state is TOSUBMIT
+        if self.get_state() != calc_states.TOSUBMIT:
             raise ModificationNotAllowed(
                 "The raw input folder can be stored only if the "
-                "state is SUBMITTING, it is instead {}".format(
+                "state is TOSUBMIT, it is instead {}".format(
                     self.get_state()))
 
         # get subfolder and replace with copy
@@ -735,10 +735,10 @@ class AbstractJobCalculation(AbstractCalculation):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
+        if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
             raise ModificationNotAllowed(
                 "Cannot set the retrieve_list for a calculation that is neither "
-                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
+                "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
@@ -780,10 +780,10 @@ class AbstractJobCalculation(AbstractCalculation):
         Set the list of paths that are to retrieved for parsing and be deleted as soon
         as the parsing has been completed.
         """
-        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
+        if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
             raise ModificationNotAllowed(
                 'Cannot set the retrieve_temporary_list for a calculation that is neither '
-                'NEW nor SUBMITTING (current state is {})'.format(self.get_state()))
+                'NEW nor TOSUBMIT (current state is {})'.format(self.get_state()))
 
         if not (isinstance(retrieve_temporary_list, (tuple, list))):
             raise ValueError('You should pass a list/tuple')
@@ -819,10 +819,10 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         Set the list of information for the retrieval of singlefiles
         """
-        if self.get_state() not in (calc_states.SUBMITTING, calc_states.NEW):
+        if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
             raise ModificationNotAllowed(
                 "Cannot set the retrieve_singlefile_list for a calculation that is neither "
-                "NEW nor SUBMITTING (current state is {})".format(self.get_state()))
+                "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
 
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
             raise ValueError("You have to pass a list (or tuple) of lists of "
@@ -1449,8 +1449,7 @@ class AbstractJobCalculation(AbstractCalculation):
           Calculation only in the cache.
 
         :return calcinfo: the CalcInfo object containing the information
-          needed by the daemon to handle operations.
-        :return script_filename: the name of the job scheduler script
+            needed by the daemon to handle operations.
         """
         import os
         import StringIO
@@ -1663,8 +1662,7 @@ class AbstractJobCalculation(AbstractCalculation):
         # TODO: give possibility to use a different name??
         script_filename = '_aiidasubmit.sh'
         script_content = s.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(
-            StringIO.StringIO(script_content), script_filename)
+        folder.create_file_from_filelike(StringIO.StringIO(script_content), script_filename)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
         subfolder.create_file_from_filelike(

@@ -27,7 +27,7 @@ DEPOSIT_OPTIONS = [
         default='published',
         help="Type of the deposition."),
     click.option('-u', '--username', type=click.STRING, default=None, help="Depositor's username."),
-    click.option('-p', '--password', is_flag=True, default=False, help="Depositor's password."),
+    click.option('-p', '--password', is_flag=True, default=False, help="Prompt for depositor's password."),
     click.option('--user-email', type=click.STRING, default=None, help="Depositor's e-mail address."),
     click.option('--title', type=click.STRING, default=None, help="Title of the publication."),
     click.option('--author-name', type=click.STRING, default=None, help="Full name of the publication author."),
@@ -35,11 +35,17 @@ DEPOSIT_OPTIONS = [
     click.option('--url', type=click.STRING, default=None, help="URL of the deposition API."),
     click.option(
         '--code',
+        'code_label',
         type=click.STRING,
         default=None,
         help="Label of the code to be used for the deposition."
         " Default: cif_cod_deposit."),
-    click.option('--computer', type=click.STRING, default=None, help="Name of the computer to be used for deposition."),
+    click.option(
+        '--computer',
+        'computer_name',
+        type=click.STRING,
+        default=None,
+        help="Name of the computer to be used for deposition."),
     click.option(
         '--replace', type=click.INT, default=None, help="ID of the structure to be redeposited (replaced), if any."),
     click.option(
@@ -110,4 +116,4 @@ def deposit_tcod(node, deposit_type, parameter_data=None, **kwargs):
         ParameterData = DataFactory('parameter')
         parameters = load_node(parameter_data, sub_class=ParameterData)
 
-    return deposit(node, deposit_type, parameters, **kwargs)
+    return deposit(node, deposit_type, parameters=parameters, **kwargs)

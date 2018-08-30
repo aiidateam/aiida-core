@@ -12,7 +12,7 @@ install_requires = [
     'reentry==1.2.0',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
-    'django==1.7.11',  # Upgrade to Django 1.9 does prevent AiiDA functioning
+    'django==1.8.19',
     'django-extensions==1.5.0',
     'tzlocal==1.5.1',
     'pytz==2018.4',
@@ -43,7 +43,7 @@ install_requires = [
     'ecdsa==0.13',
     'pika==0.11.2',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
-    'plumpy==0.10.4',
+    'plumpy==0.10.6',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
 ]
@@ -64,7 +64,6 @@ extras_require = {
         'Flask-RESTful==0.3.6',
         'Flask-Cors==3.0.4',
         'pyparsing==2.2.0',
-        'Pattern==2.6',
         'Flask-SQLAlchemy==2.3.2',
         'sqlalchemy-migrate==0.11.0',
         'marshmallow-sqlalchemy==0.13.2',
@@ -114,7 +113,7 @@ extras_require = {
         'toml==0.9.4'
     ],
     'dev_sphinxext': [
-        'pytest==3.6.0',
+        'pytest==3.6.3',
         'pytest-cov==2.5.1',
     ],
     'bpython': [

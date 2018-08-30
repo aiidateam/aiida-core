@@ -1,13 +1,15 @@
-# yet another python formatter
-- repo: git://github.com/pre-commit/mirrors-yapf
-  sha: v0.19.0
+- repo: local
   hooks:
   - id: yapf
+    name: yapf
+    entry: yapf
     language: system
+    types: [python]
+    args: ["-i"]
     exclude: &exclude_files >
       (?x)^(
-        docs/.*\.py|
-        examples/.*\.py|
+        docs/.*|
+        examples/.*|
         aiida/backends/djsite/cmdline.py|
         aiida/backends/djsite/db/admin.py|
         aiida/backends/djsite/db/__init__.py|
@@ -410,14 +412,44 @@
         .ci/polish/workchain.py
       )$
 
-# prospector: collection of linters
-- repo: git://github.com/guykisel/prospector-mirror
-  sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
-  hooks:
+  # prospector: collection of linters
   - id: prospector
     language: system
     types: [file, python]
     exclude: *exclude_files
+    name: prospector
+    description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
+    entry: prospector
+
+  - id: rtd-requirements
+    name: Requirements for RTD
+    entry: python ./docs/update_req_for_rtd.py --pre-commit
+    language: system
+    files: >-
+      (?x)^(
+        setup_requirements.py|
+        docs/requirements_for_rtd.txt|
+        docs/update_req_for_rtd.py|
+      )$
+    pass_filenames: false
+
+  - id: pyproject
+    name: Validating pyproject.toml
+    entry: python ./utils/validate_pyproject.py
+    language: system
+    files: >-
+      (?x)^(
+        setup_requirements.py|
+        utils/validate_pyproject|
+      )$
+    pass_filenames: false
+
+  - id: travis-linter
+    name: travis
+    entry: travis lint
+    files: .travis.yml
+    language: ruby
+    additional_dependencies: ['travis']
 
 # modernizer: make sure our code-base is Python 3 ready
 - repo: https://github.com/python-modernize/python-modernize.git
@@ -482,43 +514,7 @@
       - --fix=xrange_six
       - --fix=zip
 
-- repo: local
-  hooks:
-  - id: rtd-requirements
-    name: Requirements for RTD
-    entry: python ./docs/update_req_for_rtd.py --pre-commit
-    language: system
-    files: >-
-      (?x)^(
-        setup_requirements.py|
-        docs/requirements_for_rtd.txt|
-        docs/update_req_for_rtd.py|
-      )$
-    pass_filenames: false
-
-- repo: local
-  hooks:
-  - id: pyproject
-    name: Validating pyproject.toml
-    entry: python ./utils/validate_pyproject.py
-    language: system
-    files: >-
-      (?x)^(
-        setup_requirements.py|
-        utils/validate_pyproject|
-      )$
-    pass_filenames: false
-
 - repo: git://github.com/pre-commit/pre-commit-hooks
   sha: v1.1.1
   hooks:
   - id: check-yaml
-
-- repo: local
-  hooks:
-  - id: travis-linter
-    name: travis
-    entry: travis lint
-    files: .travis.yml
-    language: ruby
-    additional_dependencies: ['travis']

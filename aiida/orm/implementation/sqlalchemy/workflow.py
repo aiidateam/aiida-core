@@ -409,7 +409,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return six.text_type(self.dbworkflowinstance.state)
+        return six.text_type(self.dbworkflowinstance.state.value)
 
     def set_state(self, state):
         """

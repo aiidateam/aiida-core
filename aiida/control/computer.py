@@ -115,8 +115,8 @@ class ComputerBuilder(object):
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(
-                ", ".join(sorted(passed_keys - used))))
+            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(", ".join(
+                sorted(passed_keys - used))))
 
         return computer
 

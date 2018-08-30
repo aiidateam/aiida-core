@@ -106,8 +106,8 @@ extras_require = {
     ],
     'dev_precommit': [
         'pre-commit==1.8.2',
-        'yapf==0.21.0',
-        'prospector==0.12.7',
+        'yapf==0.23.0',
+        'prospector==0.12.11',
         'pylint==1.8.4',
         'pep8-naming==0.3.3',
         'toml==0.9.4'

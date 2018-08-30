@@ -45,7 +45,6 @@
 - Creating unique constraint & indexes at the db_dbgroup_dbnodes table in SQLA [[#1680]](https://github.com/aiidateam/aiida_core/pull/1680)
 - Performance improvement for adding nodes to group [[#1677]](https://github.com/aiidateam/aiida_core/pull/1677)
 
-
 ### Documentation
 - Big reorganization of the documentation structure [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
 - Added section on the basics of workchains and workfunctions [[#1384]](https://github.com/aiidateam/aiida_core/pull/1384)
@@ -55,7 +54,6 @@
 - Added section on advance concepts of the `WorkChain` class, as well as best-practices on designing/writing workchains [[#1459]](https://github.com/aiidateam/aiida_core/pull/1459)
 - Remove outdated or duplicated docs for legacy and new workflow system [[#1718]]
 
-
 ### Bug fixes
 - Fixed a problem with the temporary folder containing the files of the `retrieve_temporary_list` that could be cleaned before parsing finished [[#1168]](https://github.com/aiidateam/aiida_core/pull/1168)
 - Fixed a bug in the `store` method of `CifData` which would raise and exception when called more than once [[#1136]](https://github.com/aiidateam/aiida_core/pull/1136)
@@ -64,6 +62,26 @@
 - Fix bug in `verdi export create` when only exporting computers [[#1448]](https://github.com/aiidateam/aiida_core/pull/1448)
 - Fix copying of the calculation raw input folder in caching [[#1745]](https://github.com/aiidateam/aiida_core/pull/1745)
 - Fix sphinxext command by allowing whitespace in argument [[#1644]](https://github.com/aiidateam/aiida_core/pull/1644)
+
+
+## v0.12.2
+
+### Improvements
+- Support the hashing of `uuid.UUID` types by registering a hashing function  [[#1861]](https://github.com/aiidateam/aiida_core/pull/1861)
+- Add documentation on plugin cutter [[#1904]](https://github.com/aiidateam/aiida_core/pull/1904)
+
+### Minor bug fixes
+- Make exported graphs consistent with the current node and link hierarchy definition [[#1764]](https://github.com/aiidateam/aiida_core/pull/1764)
+- Fix link import problem under SQLA [[#1769]](https://github.com/aiidateam/aiida_core/pull/1769)
+- Fix cache folder copying [[#1746]](https://github.com/aiidateam/aiida_core/pull/1746) [[1752]](https://github.com/aiidateam/aiida_core/pull/1752)
+- Fix bug in mixins.py when copying node [[#1743]](https://github.com/aiidateam/aiida_core/pull/1743)
+- Fix pgtest failures (release-branch) on travis [[#1736]](https://github.com/aiidateam/aiida_core/pull/1736)
+- Fix plugin: return testrunner result to fail on travis, when tests don't pass [[#1676]](https://github.com/aiidateam/aiida_core/pull/1676)
+
+### Miscellaneous
+- Remove pycrypto dependency, as it was found to have sercurity flaws [[#1754]](https://github.com/aiidateam/aiida_core/pull/1754)
+- Set xsf as default format for structures visualization [[#1756]](https//github.com/aiidateam/aiida_core/pull/1756)
+- Delete unused `utils/create_requirements.py` file [[#1702]](https//github.com/aiidateam/aiida_core/pull/1702)
 
 
 ## v0.12.1

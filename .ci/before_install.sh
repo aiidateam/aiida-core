@@ -6,7 +6,7 @@ set -ev
 if [[ "$TEST_TYPE" == "tests" ]]
 then
     THEKEY=`ssh-keygen -y -f "${HOME}/.ssh/id_rsa"`
-    echo 'AUTHORIZED_KEY='"$THEKEY" > ${TRAVIS_BUILD_DIR}/torquessh.env
+    echo 'AUTHORIZED_KEY='"$THEKEY" > "${TRAVIS_BUILD_DIR}/torquessh.env"
     docker build -t torquessh "${TRAVIS_BUILD_DIR}/.ci/torquessh-doubler"
     # Run it in the background, mapping port 22 of the container
     # to port 10022 outside, and passing the environment variable

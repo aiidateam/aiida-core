@@ -42,7 +42,7 @@ install_requires = [
     'paramiko==2.4.1',
     'ecdsa==0.13',
     'pika==0.11.2',
-    'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
+    'ipython>=4.0<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
     'plumpy==0.10.6',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
@@ -51,6 +51,7 @@ install_requires = [
 extras_require = {
     ':python_version < "3.3"': ['mock'],
     ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
+
     # Requirements for ssh transport with authentification through Kerberos token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
     # E.g. for Ubuntu 14.04: sudo apt-get install libffi-dev libkrb5-dev
@@ -124,16 +125,3 @@ extras_require = {
 extras_require['dev_sphinxext'] += extras_require['docs']
 extras_require['testing'] += extras_require['rest'] + extras_require['atomic_tools'] + extras_require['dev_sphinxext']
 extras_require['all'] = [item for sublist in extras_require.values() for item in sublist if item != 'bpython']
-
-# There are a number of optional dependencies that are not
-# listed even as optional dependencies as they are quite
-# cumbersome to install and there is a risk that a user, wanting
-# to install all dependencies (including optional ones)
-# does not manage and thinks it's an AiiDA problem.
-#
-# These include:
-#  - mayavi>=4.5.0
-#    plotting package, requires to have the vtk code installed first;
-#    moreover requires to have numpy installed before, but it is not in
-#    the requirements (and there is no easy way on our side to fix a specific
-#    installation order of dependencies)

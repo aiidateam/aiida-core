@@ -727,7 +727,7 @@ def _collect_tags(node, calc,parameters=None,
 
         with SandboxFolder() as folder:
             try:
-                export_tree([node.dbnode], folder=folder, silent=True,
+                export_tree([node], folder=folder, silent=True,
                             allowed_licenses=['CC0'])
             except LicensingException as e:
                 raise LicensingException(e.message + \

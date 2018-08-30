@@ -2536,10 +2536,14 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         for struct in structs_to_test:
             self.assertEquals(struct.get_site_kindnames(),
                               ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
-            self.assertEquals([x.symbols for x in struct.kinds],
-                              [('Bi',), ('Se', 'Te')])
-            self.assertEquals([x.weights for x in struct.kinds],
-                              [(1.0,), (0.33333, 0.66667)])
+
+            # Pymatgen's Composition does not guarantee any particular ordering of the kinds,
+            # see the definition of its internal datatype at
+            #   pymatgen/core/composition.py#L135 (d4fe64c18a52949a4e22bfcf7b45de5b87242c51)
+            self.assertEquals([sorted(x.symbols) for x in struct.kinds],
+                              [['Bi',], ['Se', 'Te']])
+            self.assertEquals([sorted(x.weights) for x in struct.kinds],
+                              [[1.0,], [0.33333, 0.66667]])
 
         struct = StructureData(pymatgen_structure=pymatgen_struct)
 

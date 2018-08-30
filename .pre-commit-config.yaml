@@ -85,7 +85,7 @@
       - --fix=exitfunc
       - --fix=funcattrs
 #done:      - --fix=has_key
-#      - --fix=idioms
+#optional:      - --fix=idioms
 #done:      - --fix=long
       - --fix=methodattrs
       - --fix=ne
@@ -105,7 +105,7 @@
       - --fix=xreadlines
       - --fix=basestring
       - --fix=classic_division
-#      - --fix=dict_six
+#done:      - --fix=dict_six
       - --fix=file
       - --fix=filter
       - --fix=import
@@ -117,7 +117,7 @@
       - --fix=map
       - --fix=metaclass
       - --fix=next
-#      - --fix=open
+#optional:      - --fix=open
       - --fix=print
       - --fix=raise
       - --fix=raise_six

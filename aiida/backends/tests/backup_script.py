@@ -29,8 +29,6 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 
-
-
 class TestBackupScriptUnit(AiidaTestCase):
 
 
@@ -215,7 +213,7 @@ class TestBackupScriptUnit(AiidaTestCase):
         backup_inst._read_backup_info_from_dict(input_variables)
         target_variables = backup_inst._dictionarize_backup_info()
 
-        self.assertIs(cmp(input_variables, target_variables), 0,
+        self.assertEqual(input_variables, target_variables,
                       "The test string {} did not succeed".format(
                           input_string) +
                       " the serialization deserialization test.\n" +

@@ -1047,7 +1047,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
 def deposit(what, type, author_name=None, author_email=None, url=None,
             title=None, username=None, password=False, user_email=None,
-            code_label=default_options['code'], computer_name=None,
+            code=None, computer=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
@@ -1087,7 +1087,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
 
     if type == 'published':
         pass
-    elif type in ['prepublication','personal']:
+    elif type in ['prepublication', 'personal']:
         if not author_name:
             author_name = get_property('tcod.depositor_author_name')
             if not author_name:
@@ -1124,16 +1124,6 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what, store=True, **kwargs)
-
-    from aiida.orm.code import Code
-    from aiida.orm.computer import Computer
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.common.exceptions import NotExistent
-
-    code = Code.get_from_string(code_label)
-    computer = None
-    if computer_name:
-        computer = Computer.get(computer_name)
     calc = code.new_calc(computer=computer)
     calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 

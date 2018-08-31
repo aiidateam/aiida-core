@@ -104,6 +104,15 @@ SILENT = OverridableOption(
     is_flag=True, default=False,
     help='Suppress any output printed to stdout.')
 
+VISUALIZATION_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the visualized output.')
+
+INPUT_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the input file.')
+
+EXPORT_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the exported file.')
+
 ARCHIVE_FORMAT = OverridableOption(
     '-F', '--archive-format',
     type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']), default='zip', show_default=True,
@@ -307,3 +316,29 @@ TIMEOUT = OverridableOption(
     '-t', '--timeout',
     type=click.FLOAT, default=5.0, show_default=True,
     help='Time in seconds to wait for a response before timing out.')
+
+FORMULA_MODE = OverridableOption(
+    '-f', '--formula-mode',
+    type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+    default='hill',
+    help='Mode for printing the chemical formula.')
+
+TRAJECTORY_INDEX = OverridableOption(
+    '-i', '--trajectory-index', 'trajectory_index',
+    type=click.INT,
+    default=None,
+    help='Specific step of the Trajecotry to select.')
+
+WITH_ELEMENTS = OverridableOption(
+    '-e', '--with-elements', 'elements',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    default=None,
+    help='Only select objects containing these elements.')
+
+WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
+    '-E', '--with-elements-exclusive', 'elements_exclusive',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    default=None,
+    help='Only select objects containing only these and no other elements.')

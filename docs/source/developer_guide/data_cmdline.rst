@@ -108,7 +108,7 @@ command line parameters, the code of
 :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list` is split into a few
 separate methods, that can be individually overridden:
 
-* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list._list`:
+* :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list.data_list`:
     the main method, parsing the command line arguments and printing the
     data node information to the standard output;
 * :py:class:`~aiida.cmdline.commands.cmd_data.cmd_list.query`:

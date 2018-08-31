@@ -888,7 +888,7 @@ class StructureData(Data):
             species = species_and_occu.keys()
             occupations = species_and_occu.values()
 
-            has_spin = any([specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species])
+            has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)
             has_partial_occupancies = (len(occupations) != 1 or occupations[0] != 1.0)
 
             if has_partial_occupancies and has_spin:

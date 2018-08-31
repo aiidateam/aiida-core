@@ -256,9 +256,8 @@ class AbstractBackup(object):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        backup_info_file = open(backup_info_file_name, 'w')
-        json.dump(backup_variables, backup_info_file)
-        backup_info_file.close()
+        with open(backup_info_file_name, 'w') as backup_info_file:
+            json.dump(backup_variables, backup_info_file)
 
     def _find_files_to_backup(self):
         """

@@ -521,9 +521,8 @@ def gzip_string(to_zip):
     import gzip
 
     with tempfile.NamedTemporaryFile() as fhandle:
-        zipfile = gzip.open(fhandle.name, 'wb')
-        zipfile.write(to_zip)
-        zipfile.close()
+        with gzip.open(fhandle.name, 'wb') as zipfile:
+            zipfile.write(to_zip)
         return fhandle.read()
 
 
@@ -540,8 +539,8 @@ def gunzip_string(zipped_string):
     with tempfile.NamedTemporaryFile() as fhandle:
         fhandle.write(zipped_string)
         fhandle.flush()
-        zipfile = gzip.open(fhandle.name, 'rb')
-        return zipfile.read()
+        with gzip.open(fhandle.name, 'rb') as zipfile:
+            return zipfile.read()
 
 
 def xyz_parser_iterator(xyz_string):

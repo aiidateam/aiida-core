@@ -102,5 +102,5 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
             # Script called sys.exit()
             # Re-raise the exception to have the error code properly returned at the end
             raise
-        finally:
-            handle.close()
+    finally:
+        handle.close()

@@ -12,7 +12,7 @@ install_requires = [
     'reentry==1.2.0',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
-    'django==1.7.11',  # Upgrade to Django 1.9 does prevent AiiDA functioning
+    'django==1.8.19',
     'django-extensions==1.5.0',
     'tzlocal==1.5.1',
     'pytz==2018.4',

@@ -33,18 +33,35 @@ def verdi_export():
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
-    '-P',
-    '--no-parents',
+    '-i',
+    '--input-forward',
     is_flag=True,
     default=False,
-    help='store only the nodes that are explicitly given, without exporting the parents')
+    show_default=True,
+    help='Follow forward INPUT links (recursively) when calculating the node set to export.')
 @click.option(
-    '-O',
-    '--no-calc-outputs',
+    '-c',
+    '--create-reversed',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Follow reverse CREATE links (recursively) when calculating the node set to export.')
+@click.option(
+    '-r',
+    '--return-reversed',
     is_flag=True,
     default=False,
-    help='if a calculation is included in the list of nodes to export, do not export its outputs')
-def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_outputs, force, archive_format):
+    show_default=True,
+    help='Follow reverse RETURN links (recursively) when calculating the node set to export.')
+@click.option(
+    '-x',
+    '--call-reversed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
+           force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
@@ -54,20 +71,22 @@ def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_out
     entities = []
 
     if codes:
-        entities.extend([e.dbnode for e in codes])
+        entities.extend(codes)
 
     if computers:
-        entities.extend([e.dbcomputer for e in computers])
+        entities.extend(computers)
 
     if groups:
-        entities.extend([e.dbgroup for e in groups])
+        entities.extend(groups)
 
     if nodes:
-        entities.extend([e.dbnode for e in nodes])
+        entities.extend(nodes)
 
     kwargs = {
-        'also_parents': not no_parents,
-        'also_calc_outputs': not no_calc_outputs,
+        'input_forward': input_forward,
+        'create_reversed': create_reversed,
+        'return_reversed': return_reversed,
+        'call_reversed': call_reversed,
         'overwrite': force,
     }
 

@@ -7,12 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from passlib.context import CryptContext
-import random
 import hashlib
-import time
-from datetime import datetime
 import numbers
+import random
+import time
+import uuid
+from datetime import datetime
+
+from passlib.context import CryptContext
+
 try: # Python3
     from functools import singledispatch
     from collections import abc
@@ -260,6 +263,11 @@ def _(object_to_hash, **kwargs):
 @make_hash.register(datetime)
 def _(object_to_hash, **kwargs):
     return make_hash_with_type('d', str(object_to_hash))
+
+@make_hash.register(uuid.UUID)
+def _(object_to_hash, **kwargs):
+    return make_hash_with_type('u', str(object_to_hash))
+
 
 @make_hash.register(Folder)
 def _(folder, **kwargs):

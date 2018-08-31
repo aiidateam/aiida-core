@@ -184,7 +184,7 @@ def _create_weights_tuple(weights):
     return weights_tuple
 
     
-def create_automatic_kind_name(symbols,weights):
+def create_automatic_kind_name(symbols, weights):
     """
     Create a string obtained with the symbols appended one
     after the other, without spaces, in alphabetical order;
@@ -873,47 +873,59 @@ class StructureData(Data):
             three directions.
         .. note:: Requires the pymatgen module (version >= 3.3.5, usage
             of earlier versions may cause errors).
-        
+
         :raise ValueError: if there are partial occupancies together with spins.
         """
         def build_kind_name(species_and_occu):
             """
-            Build a kind name from a pymatgen Composition, including an
-            additional ordinal if spin is included, e.g. it returns '<element>1'
-            for an atom with spin<0 and '<element>2' for an element with spin>0,
-            ortherwise (no spin) it returns simply '<element>'
-            :param specie: a pymatgen specie
-            :return: a string
-            """
-            has_spin = any([specie.as_dict().get('properties', {}).get('spin', 0) != 0
-                            for specie in species_and_occu.keys()])
+            Build a kind name from a pymatgen Composition, including an additional ordinal if spin is included,
+            e.g. it returns '<specie>1' for an atom with spin < 0 and '<specie>2' for an atom with spin > 0,
+            otherwise (no spin) it returns None
 
-            if has_spin and (len(species_and_occu.items()) > 1
-                             or any([weight != 1.0 for weight in species_and_occu.values()])):
+            :param species_and_occu: a pymatgen species and occupations dictionary
+            :return: a string representing the kind name or None
+            """
+            species = species_and_occu.keys()
+            occupations = species_and_occu.values()
+
+            has_spin = any([specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species])
+            has_partial_occupancies = (len(occupations) != 1 or occupations[0] != 1.0)
+
+            if has_partial_occupancies and has_spin:
                 raise ValueError('Cannot set partial occupancies and spins at the same time')
 
-            if not has_spin:
+            if has_spin:
+
+                symbols = [specie.symbol for specie in species]
+                kind_name = create_automatic_kind_name(symbols, occupations)
+
+                # If there is spin, we can only have a single specie, otherwise we would have raised above
+                specie = species[0]
+                spin = specie.as_dict().get('properties', {}).get('spin', 0)
+
+                if spin < 0:
+                    kind_name += '1'
+                else:
+                    kind_name += '2'
+
+                return kind_name
+            else:
                 return None
 
-            spin = species_and_occu.keys()[0].as_dict().get('properties', {}).get('spin', 0)
-
-            if spin < 0:
-                return specie.symbol + '1'
-            else:
-                return specie.symbol + '2'
-        
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
         self.clear_kinds()
+
         for site in struct.sites:
+
             if 'kind_name' in site.properties:
                 kind_name = site.properties['kind_name']
             else:
                 kind_name = build_kind_name(site.species_and_occu)
 
             inputs = {
-                'symbols': [x[0].symbol for x in site.species_and_occu.items()],
-                'weights': [x[1] for x in site.species_and_occu.items()],
+                'symbols': [x.symbol for x in site.species_and_occu.keys()],
+                'weights': [x for x in site.species_and_occu.values()],
                 'position': site.coords.tolist()
             }
 

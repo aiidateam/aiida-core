@@ -16,6 +16,7 @@ utilities for:
 """
 
 
+from __future__ import absolute_import
 def registry_cache_folder_name():
     """
     return the name of the subfolder of aiida_dir where registry caches are stored.
@@ -57,7 +58,7 @@ def pickle_to_registry_cache_folder(obj, fname):
     """
     pickles a python object to the registry cache folder
     """
-    from cPickle import dump as pdump
+    from six.moves.cPickle import dump as pdump
     from os import path as osp
     safe_create_registry_cache_folder()
     cache_dir = registry_cache_folder_path()
@@ -70,7 +71,7 @@ def unpickle_from_registry_cache_folder(fname):
     """
     looks for fname in the registry cache folder and tries to unpickle from it
     """
-    from cPickle import load as pload
+    from six.moves.cPickle import load as pload
     from os import path as osp
     cache_dir = registry_cache_folder_path()
     fpath = osp.join(cache_dir, fname)
@@ -93,16 +94,6 @@ def load_json_from_url(url, errorhandler=None):
         else:
             raise e
     return res
-
-
-def connection_error_msg(e):
-    msg = 'There seems to be a problem with your internet connection.'
-    msg += ' The original error message reads:\n\n'
-    '''apparently ConnectionErrors can have an exception as message'''
-    while isinstance(e.message, Exception):
-        e = e.message
-    msg += e.message
-    return msg
 
 
 def value_error_msg(e):

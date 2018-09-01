@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Translator for CifData """
+from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
 from aiida.common.exceptions import LicensingException
 
@@ -54,7 +55,7 @@ class CifDataTranslator(DataTranslator):
                 response["str_viz_info"]["data"] = node._exportstring(format)[0]
                 response["str_viz_info"]["format"] = format
             except LicensingException as exc:
-                response = exc.message
+                response = str(exc)
 
         ## Add extra information
         #response["dimensionality"] = node.get_dimensionality()
@@ -82,6 +83,6 @@ class CifDataTranslator(DataTranslator):
             response["filename"] = node.uuid + "." + format
         except LicensingException as exc:
             response["status"] = 500
-            response["data"] = exc.message
+            response["data"] = str(exc)
 
         return response

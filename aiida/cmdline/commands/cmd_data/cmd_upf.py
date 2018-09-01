@@ -10,6 +10,7 @@
 """
 This allows to manage TrajectoryData objects from command line.
 """
+from __future__ import absolute_import
 import click
 from aiida.cmdline.utils import echo
 from aiida.cmdline.commands.cmd_data import verdi_data

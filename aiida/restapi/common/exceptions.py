@@ -21,6 +21,7 @@ Other errors arising at deeper level, e.g. those raised by the QueryBuilder
 or internal errors, are not embedded into the HTTP response.
 """
 
+from __future__ import absolute_import
 from aiida.common.exceptions import ValidationError, InputValidationError, \
     FeatureNotAvailable
 

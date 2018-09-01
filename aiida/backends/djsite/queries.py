@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
@@ -342,11 +345,11 @@ def get_closest_parents(pks, *args, **kwargs):
     result_dict = {}
     all_chunk_pks = grouper(chunk_size, the_pks)
     if print_progress:
-        print "Chunk size:", chunk_size
+        print("Chunk size:", chunk_size)
 
     for i, chunk_pks in enumerate(all_chunk_pks):
         if print_progress:
-            print "Dealing with chunk #", i
+            print("Dealing with chunk #", i)
         result_chunk_dict = {}
         q_pks = Node.query(pk__in=chunk_pks).values_list('pk', flat=True)
         # Now I am looking for parents (depth=0) of the nodes in the chunk:

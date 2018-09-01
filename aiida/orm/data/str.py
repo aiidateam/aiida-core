@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from past.builtins import basestring
+from __future__ import absolute_import
+
+import six
+
 from aiida.orm.data import BaseType
 from aiida.orm.data import to_aiida_type
 
@@ -19,6 +22,6 @@ class Str(BaseType):
     _type = str
 
 
-@to_aiida_type.register(basestring)
+@to_aiida_type.register(six.string_types[0])
 def _(value):
     return Str(value)

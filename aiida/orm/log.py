@@ -7,8 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import abstractmethod, abstractproperty, ABCMeta
 from collections import namedtuple
+
+import six
+
 from aiida.utils import timezone
 from .backend import Collection, CollectionEntry
 
@@ -18,13 +22,12 @@ DESCENDING = -1
 OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 
+@six.add_metaclass(ABCMeta)
 class LogCollection(Collection):
     """
     This class represents the collection of logs and can be used to create
     and retrieve logs.
     """
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def create_entry(self, time, loggername, levelname, objname,
@@ -104,9 +107,8 @@ class LogCollection(Collection):
         pass
 
 
+@six.add_metaclass(ABCMeta)
 class Log(CollectionEntry):
-    __metaclass__ = ABCMeta
-
     @abstractproperty
     def id(self):
         """

@@ -11,8 +11,12 @@
 This allows to manage BandsData objects from command line.
 """
 from __future__ import print_function
+from __future__ import absolute_import
 import sys
+
 import click
+from six.moves import range
+
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export
 from aiida.cmdline.commands.cmd_data import verdi_data
@@ -41,7 +45,7 @@ def show_xmgrace(exec_name, list_bands):
         text, _ = bnds._exportstring(
             'agr', setnumber_offset=current_band_number, color_number=numpy.mod(iband + 1, max_num_agr_colors))
         # write a tempfile
-        tempf = tempfile.NamedTemporaryFile(suffix='.agr')
+        tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
         tempf.write(text)
         tempf.flush()
         list_files.append(tempf)

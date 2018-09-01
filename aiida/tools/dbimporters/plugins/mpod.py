@@ -8,9 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+
+import six
+from six.moves import filter
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class MpodDbImporter(DbImporter):
@@ -22,7 +26,7 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring) and not isinstance(values, int):
+        if not isinstance(values, six.string_types) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return "{}={}".format(key, values)
@@ -87,18 +91,18 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urllib2.urlopen(query).read()
+            response = urllib.request.urlopen(query).read()
             this_results = re.findall("/datafiles/(\d+)\.mpod", response)
             if results is None:
                 results = this_results
             else:
-                results = filter(set(results).__contains__, this_results)
+                results = list(filter(set(results).__contains__, this_results))
 
         return MpodSearchResults([{"id": x} for x in results])
 

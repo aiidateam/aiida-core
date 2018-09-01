@@ -9,8 +9,9 @@
 ###########################################################################
 """ Resources for REST API """
 
-from urllib import unquote
+from __future__ import absolute_import
 
+from six.moves.urllib.parse import unquote  # pylint: disable=import-error
 from flask import request, make_response
 from flask_restful import Resource
 

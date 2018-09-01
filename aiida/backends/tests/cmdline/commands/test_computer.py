@@ -1,4 +1,5 @@
 """Tests for the 'verdi computer' command."""
+from __future__ import absolute_import
 import os
 from collections import OrderedDict
 from click.testing import CliRunner
@@ -60,7 +61,7 @@ def generate_setup_options(ordereddict):
     :return: a list to be passed as command-line arguments.
     """
     options = []
-    for key, value in ordereddict.iteritems():
+    for key, value in ordereddict.items():
         if value is None:
             options.append('--{}'.format(key))
         else:
@@ -80,7 +81,7 @@ def generate_setup_options_interactive(ordereddict):
     :return: a list to be passed as command-line arguments.
     """
     options = []
-    for key, value in ordereddict.iteritems():
+    for key, value in ordereddict.items():
         if value is None:
             options.append(True)
         else:
@@ -100,7 +101,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
     def test_reachable(self):
         import subprocess as sp
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
-        self.assertIn('Usage:', output)
+        self.assertIn(b'Usage:', output)
 
     def test_interactive(self):
         from aiida.orm import Computer

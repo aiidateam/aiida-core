@@ -22,6 +22,7 @@ methods:
 To discuss: do we also need a simple directory class for full directories
 in the perm repo?
 """
+from __future__ import absolute_import
 import os
 
 from aiida.orm.data import Data

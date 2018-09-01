@@ -7,10 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import os
 import shutil
 import fnmatch
 import tempfile
+
+import six
 
 from aiida.common.utils import get_repository_folder
 
@@ -95,7 +98,7 @@ class Folder(object):
         :Returns: a Folder object pointing to the subfolder.
         """
         dest_abs_dir = os.path.abspath(os.path.join(
-            self.abspath, unicode(subfolder)))
+            self.abspath, six.text_type(subfolder)))
 
         if reset_limit:
             # Create a new Folder object, with a limit to itself (cannot go
@@ -167,12 +170,11 @@ class Folder(object):
                 otherwise, delete it first.
         """
         if dest_name is None:
-            filename = unicode(os.path.basename(src))
+            filename = six.text_type(os.path.basename(src))
         else:
-            filename = unicode(dest_name)
+            filename = six.text_type(dest_name)
 
-        if not isinstance(src, unicode):
-            src = unicode(src)
+        src = six.text_type(src)
 
         dest_abs_path = self.get_abs_path(filename)
 
@@ -226,10 +228,10 @@ class Folder(object):
           file will be copied in the new file.
 
         :param src_filelike: the file-like object (e.g., if you have
-            a string called s, you can pass ``StringIO.StringIO(s)``)
+            a string called s, you can pass ``io.StringIO(s)``)
         :param dest_name: the destination filename will have this file name.
         """
-        filename = unicode(dest_name)
+        filename = six.text_type(dest_name)
 
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
@@ -490,9 +492,9 @@ class RepositoryFolder(Folder):
         # normpath, that may be slow): this is done abywat by the super
         # class.
         entity_dir = os.path.join(
-            get_repository_folder('repository'), unicode(section),
-            unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:])
-        dest = os.path.join(entity_dir, unicode(subfolder))
+            get_repository_folder('repository'), six.text_type(section),
+            six.text_type(uuid)[:2], six.text_type(uuid)[2:4], six.text_type(uuid)[4:])
+        dest = os.path.join(entity_dir, six.text_type(subfolder))
 
         # Internal variable of this class
         self._subfolder = subfolder

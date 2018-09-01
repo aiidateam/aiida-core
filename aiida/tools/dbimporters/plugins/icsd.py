@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class IcsdImporterExp(Exception):
@@ -105,54 +108,49 @@ class IcsdDbImporter(DbImporter):
         :return: SQL query predicate
         """
         for e in values:
-            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
-                                             values)) + ")"
+        return "{} IN ({})".format(key, ", ".join(str(int(i)) for i in values))
 
     def _str_exact_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying string fields.
         """
         for e in values:
-            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + \
-               " IN (" + ", ".join(map(lambda f: "'" + str(f) + "'", \
-                                       values)) + ")"
+        return "{} IN ({})".format(key, ", ".join("'{}'".format(f) for f in values))
 
     def _formula_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
                                      alias, \
-                                     map(lambda f: str(f), \
-                                         values))
+                                     [str(f) for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
         Return SQL query predicate for fuzzy querying of string fields.
         """
         for e in values:
-            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return " OR ".join(map(lambda s: key + \
-                                         " LIKE '%" + str(s) + "%'", values))
+        return " OR ".join("{} LIKE '%{}%'".format(key, s) for s in values)
 
     def _composition_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying elements in formula fields.
         """
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         # SUM_FORM in the ICSD always stores a numeral after the element name,
@@ -161,22 +159,17 @@ class IcsdDbImporter(DbImporter):
         # or at the end of the formula expression (no space after).
         # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
         # after, because I found that capitalization of the element name is not enforced in these queries.
-        return " AND ".join(map(lambda e: "SUM_FORM REGEXP '(^|\ )" + e + "[0-9\.]+($|\ )'", values))
+        return " AND ".join("SUM_FORM REGEXP '(^|\ ){}[0-9\.]+($|\ )'".format(e) for e in values)
 
     def _double_clause(self, key, alias, values, precision):
         """
         Return SQL query predicate for querying double-valued fields.
         """
         for e in values:
-            if not isinstance(e, (int, long)) and not isinstance(e, float):
+            if not isinstance(e, six.integer_types) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join(map(lambda d: key + \
-                                         " BETWEEN " + \
-                                         str(d - precision) + " AND " + \
-                                         str(d + precision), \
-                               values))
-
+        return " OR ".join("{} BETWEEN {} AND {}".format(key, d-precision, d+precision) for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
         """
@@ -193,12 +186,10 @@ class IcsdDbImporter(DbImporter):
         }  # from icsd accepted crystal systems
 
         for e in values:
-            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
+            if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return key + \
-               " IN (" + ", ".join(map(lambda f: "'" + valid_systems[f.lower()] + "'", \
-                                       values)) + ")"
+        return key + " IN (" + ", ".join("'" + valid_systems[f.lower()] + "'" for f in values) + ")"
 
     def _length_clause(self, key, alias, values):
         """
@@ -390,7 +381,7 @@ class IcsdDbImporter(DbImporter):
 
         sql_where_query = []  # second part of sql query
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if not isinstance(v, list):
                 v = [v]
             sql_where_query.append("({})".format(self.keywords_db[k][1](self, 
@@ -417,7 +408,7 @@ class IcsdDbImporter(DbImporter):
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
-        import urllib
+        from six.moves import urllib
 
         self.actual_args = {
             "action": "Search",
@@ -428,7 +419,7 @@ class IcsdDbImporter(DbImporter):
             "mineral": ""
         }
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             try:
                 realname = self.keywords[k][0]
                 newv = self.keywords[k][1](k, v)
@@ -437,10 +428,10 @@ class IcsdDbImporter(DbImporter):
                     self.actual_args[realname] = self.actual_args[realname] + newv + " "
                 else:
                     self.actual_args[realname] = newv
-            except KeyError as e:
-                raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(e.message))
+            except KeyError as exc:
+                raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(exc.args[0]))
 
-        url_values = urllib.urlencode(self.actual_args)
+        url_values = urllib.parse.urlencode(self.actual_args)
         query_url = self.db_parameters["urladd"] + url_values
 
         return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
@@ -601,13 +592,13 @@ class IcsdSearchResults(DbSearchResults):
 
 
         else:
-            import urllib2
+            from six.moves import urllib
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib2.urlopen(self.db_parameters["server"] + 
-                                        self.db_parameters["db"] + "/" + 
-                                        self.query.format(str(self.page))).read()
+            self.html = urllib.request.urlopen(self.db_parameters["server"] + 
+                                               self.db_parameters["db"] + "/" + 
+                                               self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 
@@ -684,7 +675,7 @@ class IcsdEntry(CifEntry):
         """
         if self._contents is None:
             from hashlib import md5
-            from urllib2 import urlopen
+            from six.moves.urllib.request import urlopen
 
             self._contents = urlopen(self.source['uri']).read()
             self._contents = self._contents.decode('iso-8859-1').encode('utf8')
@@ -696,11 +687,11 @@ class IcsdEntry(CifEntry):
         """
         :return: ASE structure corresponding to the cif file.
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
         from aiida.orm.data.cif import CifData
 
         cif = correct_cif(self.cif)
-        return CifData.read_cif(StringIO.StringIO(cif))
+        return CifData.read_cif(StringIO(cif))
 
 
 def correct_cif(cif):

@@ -19,12 +19,15 @@ Local transport
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+from __future__ import absolute_import
 import errno
 import os
 import shutil
 import subprocess
-import StringIO
 import glob
+
+import six
+from six.moves import cStringIO as StringIO
 
 from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
@@ -771,16 +774,16 @@ class LocalTransport(Transport):
         local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
-            if isinstance(stdin, basestring):
-                filelike_stdin = StringIO.StringIO(stdin)
+            if isinstance(stdin, six.string_types):
+                filelike_stdin = StringIO(stdin)
             else:
                 filelike_stdin = stdin
 
             try:
                 for line in filelike_stdin.readlines():
-                    local_proc.stdin.write(line)
+                    local_stdin.write(line.encode('utf-8'))  # the Popen.stdin/out/err are byte streams
             except AttributeError:
-                raise ValueError("stdin can only be either a string of a " "file-like object!")
+                raise ValueError("stdin can only be either a string or a file-like object!")
         else:
             filelike_stdin = None
 
@@ -789,7 +792,7 @@ class LocalTransport(Transport):
 
         retval = local_proc.returncode
 
-        return retval, output_text, stderr_text
+        return retval, output_text.decode('utf-8'), stderr_text.decode('utf-8')
 
     def gotocomputer_command(self, remotedir):
         """

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
+from __future__ import absolute_import
 from aiida.common.utils import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 

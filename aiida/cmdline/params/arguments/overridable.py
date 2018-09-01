@@ -4,6 +4,7 @@
     :synopsis: Convenience class which can be used to defined a set of commonly used arguments that
         can be easily reused and which improves consistency across the command line interface
 """
+from __future__ import absolute_import
 import click
 
 

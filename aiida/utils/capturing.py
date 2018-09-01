@@ -7,8 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from cStringIO import StringIO
+from __future__ import absolute_import
 import sys
+
+from six.moves import cStringIO as StringIO
 
 
 class Capturing(object):

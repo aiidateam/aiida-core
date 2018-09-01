@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import inspect
+
+import six
 import plumpy
 import plumpy.test_utils
 from tornado import gen
@@ -275,7 +278,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the if(..) part
         work.run(Wf, value=A, n=three)
         # Check the steps that should have been run
-        for step, finished in Wf.finished_steps.iteritems():
+        for step, finished in Wf.finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -283,7 +286,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the elif(..) part
         finished_steps = work.run(Wf, value=B, n=three)
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -291,7 +294,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the else... part
         finished_steps = work.run(Wf, value=C, n=three)
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -363,7 +366,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf)
 
     def test_str(self):
-        self.assertIsInstance(str(Wf.spec()), basestring)
+        self.assertIsInstance(str(Wf.spec()), six.string_types)
 
     def test_malformed_outline(self):
         """
@@ -387,7 +390,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the if(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -395,7 +398,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -403,7 +406,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))

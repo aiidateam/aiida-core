@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The `verdi` command line interface."""
+from __future__ import absolute_import
 import click_completion
 
 # Activate the completion of parameter types provided by the click_completion package

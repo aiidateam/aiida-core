@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import json
 import shutil
 import tempfile
@@ -23,7 +24,7 @@ from aiida.backends.testbase import AiidaTestCase
 class TestBackupSetupScriptUnit(AiidaTestCase):
 
     def tearDown(self):
-        utils.raw_input = None
+        utils.input = None
 
     def test_construct_backup_variables(self):
         """
@@ -36,8 +37,8 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
 
         # Checking parsing of backup variables with many empty answers
         answers = ["", "y", "", "y", "", "y", "1", "y", "2", "y"]
-        # utils.raw_input = lambda _: answers[self.array_counter()]
-        utils.raw_input = lambda _: answers[ac.array_counter()]
+        # utils.input = lambda _: answers[self.array_counter()]
+        utils.input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
         self.assertIsNone(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY])
@@ -51,7 +52,7 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         answers = ["2013-07-28 20:48:53.197537+02:00", "y",
                     "2", "y", "2015-07-28 20:48:53.197537+02:00", "y",
                     "3", "y", "4", "y"]
-        utils.raw_input = lambda _: answers[ac.array_counter()]
+        utils.input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
         self.assertEqual(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY], answers[0])
@@ -96,7 +97,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                        "",                  # is it correct?
                        "2",                 # threshold?
                        ""]                  # is it correct?
-            utils.raw_input = lambda _: answers[ac.array_counter()]
+            utils.input = lambda _: answers[ac.array_counter()]
 
             # Run the setup script and catch the sysout
             with Capturing():

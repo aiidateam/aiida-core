@@ -11,6 +11,7 @@
 Generic tests that need the use of the DB
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.node import Node
@@ -33,7 +34,7 @@ class TestCode(AiidaTestCase):
             # No file with name test.sh
             code.store()
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
             code.add_path(f.name, 'test.sh')
@@ -67,7 +68,7 @@ class TestCode(AiidaTestCase):
             _ = Code(remote_computer_exec=('localhost', '/bin/ls'))
 
         code = Code(remote_computer_exec=(self.computer, '/bin/ls'))
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
             code.add_path(f.name, 'test.sh')

@@ -8,7 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from datetime import datetime
+
+import six
+
 import aiida.backends.sqlalchemy
 
 from sqlalchemy import and_, or_, not_
@@ -251,7 +255,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                     "You have to give an integer when comparing to a length"
                 )
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, basestring):
+            if not isinstance(value, six.string_types):
                 raise InputValidationError(
                     "Value for operator {} has to be a string (you gave {})"
                     "".format(operator, value)
@@ -356,7 +360,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, (str, unicode)):
+            elif isinstance(value, six.string_types):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:
@@ -420,7 +424,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif operator == 'contains':
             expr = database_entity.cast(JSONB).contains(value)
         elif operator == 'has_key':
-            expr = database_entity.cast(JSONB).has_key(value)
+            expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
             expr = and_(
                 jsonb_typeof(database_entity) == 'array',
@@ -528,6 +532,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             raise e
 
     def iterall(self, query, batch_size, tag_to_index_dict):
+        if not tag_to_index_dict:
+            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+
         try:
             results = query.yield_per(batch_size)
 
@@ -535,7 +542,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 # Sqlalchemy, for some strange reason, does not return a list of lsits
                 # if you have provided an ormclass
 
-                if tag_to_index_dict.values() == ['*']:
+                if list(tag_to_index_dict.values()) == ['*']:
                     for rowitem in results:
                         yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
                 else:
@@ -548,18 +555,20 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
-            else:
-                raise Exception("Got an empty dictionary")
         except Exception:
             self.get_session().rollback()
             raise
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
 
+        nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
+
+        if not nr_items:
+            raise Exception("Got an empty dictionary")
+
         # Wrapping everything in an atomic transaction:
         try:
             results = query.yield_per(batch_size)
-            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
             if nr_items > 1:
                 for this_result in results:
                     yield {
@@ -594,8 +603,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
-            else:
-                raise Exception("Got an empty dictionary")
         except Exception as e:
             self.get_session().rollback()
             raise e

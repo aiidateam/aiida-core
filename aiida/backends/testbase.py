@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import unittest
@@ -157,8 +159,8 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
             modulenames = get_db_test_list()[test]
         except KeyError:
             if verbose:
-                print >> sys.stderr, "Unknown DB test {}... skipping".format(
-                    test)
+                print("Unknown DB test {}... skipping"
+                      .format(test), file=sys.stderr)
             continue
         actually_run_tests.append(test)
 
@@ -172,24 +174,21 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
                         import traceback
                         importlib.import_module(modulename)
                     except ImportError as exception:
-                        print >> sys.stderr, (
-                            "[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
-                                .format(modulename, traceback.format_exc(exception))
-                        )
+                        print("[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
+                              .format(modulename, traceback.format_exc(exception)), file=sys.stderr)
                         sys.exit(1)
                 found_modulenames.add(modulename)
 
         num_tests_expected = test_suite.countTestCases()
 
     if verbose:
-        print >> sys.stderr, (
-            "DB tests that will be run: {} (expecting {} tests)".format(
-                ",".join(actually_run_tests), num_tests_expected))
+        print("DB tests that will be run: {} (expecting {} tests)"
+              .format(",".join(actually_run_tests), num_tests_expected), file=sys.stderr)
         results = unittest.TextTestRunner(failfast=False, verbosity=2).run(test_suite)
     else:
         results = unittest.TextTestRunner(failfast=False).run(test_suite)
 
     if verbose:
-        print "Run tests: {}".format(results.testsRun)
+        print("Run tests: {}".format(results.testsRun))
 
     return results

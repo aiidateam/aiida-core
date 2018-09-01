@@ -10,6 +10,7 @@
 """
 It defines subcommands for verdi group command.
 """
+from __future__ import absolute_import
 import click
 
 from aiida.common.exceptions import UniquenessError
@@ -100,7 +101,7 @@ def group_rename(group, name):
     try:
         group.name = name
     except UniquenessError as exception:
-        echo.echo_critical("Error: {}.".format(exception.message))
+        echo.echo_critical("Error: {}.".format(exception))
     else:
         echo.echo_success('Name successfully changed')
 
@@ -241,8 +242,8 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
         try:
             type_string = get_group_type_mapping()[group_type]
         except KeyError:
-            echo.echo_critical("Invalid group type. Valid group types are: {}".format(
-                ",".join(sorted(get_group_type_mapping().keys()))))
+            echo.echo_critical("Invalid group type. Valid group types are: {}".format(",".join(
+                sorted(get_group_type_mapping().keys()))))
 
     n_days_ago = None
     if past_days:

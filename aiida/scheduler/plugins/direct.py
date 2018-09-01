@@ -11,6 +11,10 @@
 Plugin for direct execution.
 """
 from __future__ import division
+from __future__ import absolute_import
+
+import six
+
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError
@@ -91,7 +95,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         command = 'ps -o pid,stat,user,time'
 
         if jobs:
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
@@ -163,7 +167,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)

@@ -225,7 +225,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Return a suggestion for the specific field.
         """
-        return ""
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('allow_agent', "no")))
 
     @classmethod
     def _convert_look_for_keys_fromstring(cls, string):
@@ -244,7 +245,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Return a suggestion for the specific field.
         """
-        return ""
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('look_for_keys', "no")))
 
     @classmethod
     def _convert_proxy_command_fromstring(cls, string):

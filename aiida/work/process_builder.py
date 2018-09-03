@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=cell-var-from-loop
 """Convenience classes to help building the input dictionaries for Processes."""
+from __future__ import absolute_import
 from collections import Mapping
 from aiida.work.ports import PortNamespace
 

@@ -10,6 +10,7 @@
 
 # The current configuration version. Increment this value whenever a change
 # to the config.json structure is made.
+from __future__ import absolute_import
 CURRENT_CONFIG_VERSION = 3
 
 # The oldest config version where no backwards-incompatible changes have been made since.

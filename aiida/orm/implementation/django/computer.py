@@ -8,8 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import json
 import collections
+
+import six
 
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -23,7 +26,7 @@ from aiida.common.exceptions import (NotExistent, ConfigurationError,
 class Computer(AbstractComputer):
     @property
     def uuid(self):
-        return unicode(self._dbcomputer.uuid)
+        return six.text_type(self._dbcomputer.uuid)
 
     @property
     def pk(self):
@@ -64,7 +67,7 @@ class Computer(AbstractComputer):
             self.set(**kwargs)
 
     def set(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             try:
                 method = getattr(self, 'set_{}'.format(k))
             except AttributeError:
@@ -234,7 +237,7 @@ class Computer(AbstractComputer):
 
     def set_workdir(self, val):
         # if self.to_be_stored:
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             raise ValueError("Computer work directory needs to be string, got {}".format(val))
 
         metadata = self._get_metadata()

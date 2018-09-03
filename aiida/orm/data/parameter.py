@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.orm import Data
 from aiida.orm.data import to_aiida_type
 
@@ -56,7 +57,7 @@ class ParameterData(Data):
         :param dict: a dictionary with the keys to substitute. It works like
           dict.update(), adding new keys and overwriting existing keys.
         """
-        for k, v in dict.iteritems():
+        for k, v in dict.items():
             self._set_attr(k, v)
 
     def get_dict(self):

@@ -2,6 +2,7 @@
 """
 Module to define custom click param type for multiple values
 """
+from __future__ import absolute_import
 import click
 
 

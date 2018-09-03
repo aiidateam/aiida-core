@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
+from __future__ import absolute_import
 import os
 import sys
 import subprocess

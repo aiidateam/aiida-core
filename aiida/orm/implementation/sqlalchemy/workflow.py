@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import importlib
 import inspect
 import logging
+
+import six
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
@@ -293,7 +296,7 @@ class Workflow(AbstractWorkflow):
 
         def par_validate(params):
             the_params = {}
-            for k, v in params.iteritems():
+            for k, v in params.items():
                 if any([isinstance(v, int),
                         isinstance(v, bool),
                         isinstance(v, float),
@@ -406,7 +409,7 @@ class Workflow(AbstractWorkflow):
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        return unicode(self.dbworkflowinstance.state)
+        return six.text_type(self.dbworkflowinstance.state.value)
 
     def set_state(self, state):
         """
@@ -453,7 +456,7 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
-        if isinstance(step_method, basestring):
+        if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
             if not getattr(step_method, "is_wf_step"):
@@ -528,7 +531,7 @@ class Workflow(AbstractWorkflow):
         except ImportError:
             raise InternalError("Unable to load the workflow module {}".format(module))
 
-        for elem_name in wf_mod.__dict__.iterkeys():
+        for elem_name in wf_mod.__dict__.keys():
 
             if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)

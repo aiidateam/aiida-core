@@ -10,7 +10,11 @@
 """
 This allows to manage CifData objects from command line.
 """
+from __future__ import absolute_import
+
+from six.moves import range
 import click
+
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
@@ -121,9 +125,7 @@ def export(**kwargs):
     fmt = kwargs.pop('format')
     force = kwargs.pop('force')
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, CifData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), CifData))
@@ -165,9 +167,7 @@ def deposit(**kwargs):
     kwargs.pop('database')  # looks like a bug, but deposit function called inside deposit_tcod
     # complains about the 'database' keywords argument
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, CifData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), CifData))

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
@@ -89,7 +90,7 @@ class TemplatereplacerCalculation(JobCalculation):
         :param inputdict: a dictionary with the input nodes, as they would
                 be returned by get_inputs_dict (with the Code!)
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         from aiida.orm.data.singlefile import SinglefileData
         from aiida.orm.data.remote import RemoteData
@@ -119,8 +120,8 @@ class TemplatereplacerCalculation(JobCalculation):
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
-        except ValidationError as e:
-            raise InputValidationError("invalid file_to_copy format: {}".format(e.message))
+        except ValidationError as exc:
+            raise InputValidationError("invalid file_to_copy format: {}".format(exc))
 
         local_copy_list = []
         remote_copy_list = []
@@ -158,7 +159,7 @@ class TemplatereplacerCalculation(JobCalculation):
             raise InputValidationError("If you ask for input_through_stdin you have to "
                                        "specify a input_file_name")
 
-        input_file = StringIO.StringIO(input_file_template.format(**parameters))
+        input_file = StringIO(input_file_template.format(**parameters))
         if input_file_name:
             tempfolder.create_file_from_filelike(input_file, input_file_name)
         else:

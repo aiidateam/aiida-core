@@ -33,6 +33,7 @@ example registry::
 """
 
 
+from __future__ import absolute_import
 def entry_point_from_tpstr(typestring):
     if typestring.startswith('calculation.job.'):
         typestring = typestring.split('.', 2)[-1]
@@ -51,7 +52,7 @@ def plugin_ep_iterator():
     """
     from aiida.plugins.registry import load_cached
     plugins = load_cached()
-    return plugins.iterkeys()
+    return iter(plugins.keys())
 
 
 def find_by_name(plugin_key):

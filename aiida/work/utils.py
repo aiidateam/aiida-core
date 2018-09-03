@@ -9,8 +9,11 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
+from __future__ import absolute_import
 import contextlib
 import logging
+
+from six.moves import range
 import tornado.ioloop
 from tornado.concurrent import Future
 from tornado.gen import coroutine, sleep, Return

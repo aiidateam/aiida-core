@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.common.constants import elements
+from __future__ import absolute_import
 import copy
+from six.moves import zip
 import numpy as np
+
+from aiida.common.constants import elements
 from aiida.orm.data.structure import Kind, Site, StructureData
 
 __all__ = ['structure_to_spglib_tuple', 'spglib_tuple_to_structure']
@@ -57,7 +60,7 @@ def structure_to_spglib_tuple(structure):
     for kind in structure.kinds:
         if len(kind.symbols) == 1:
             realnumber = Z[kind.symbols[0]]
-            if realnumber in list(kind_numbers.values()):
+            if realnumber in kind_numbers.values():
                 number = get_new_number(
                     list(kind_numbers.values()), start_from=realnumber * 1000)
             else:
@@ -98,9 +101,9 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
         try:
             # For each site
             symbols = [elements[num]['symbol'] for num in numbers]
-        except KeyError as e:
+        except KeyError as exc:
             raise ValueError("You did not pass kind_info, but at least one number "
-                             "is not a valid Z number: {}".format(e.message))
+                             "is not a valid Z number: {}".format(exc.args[0]))
 
         _kind_info = {elements[num]['symbol']: num for num in set(numbers)}
         # Get the default kinds
@@ -108,7 +111,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
 
     _kinds_dict = {k.name: k for k in _kinds}
     # Now I will use in any case _kinds and _kind_info
-    if len(_kind_info.values()) != len(set(_kind_info.values())):
+    if len(_kind_info) != len(set(_kind_info.values())):
         raise ValueError(
             "There is at least a number repeated twice in kind_info!")
     # Invert the mapping
@@ -117,15 +120,14 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     try:
         mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname
                             in mapping_num_kindname.items()}
-    except KeyError as e:
+    except KeyError as exc:
         raise ValueError(
-            "Unable to find '{}' in the kinds list".format(e.message))
+            "Unable to find '{}' in the kinds list".format(exc.args[0]))
 
     try:
         site_kinds = [mapping_to_kinds[num] for num in numbers]
-    except KeyError as e:
-        raise ValueError(
-            "Unable to find kind in kind_info for number {}".format(e.message))
+    except KeyError as exc:
+        raise ValueError("Unable to find kind in kind_info for number {}".format(exc.args[0]))
 
     structure = StructureData(cell=cell)
     for k in _kinds:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A utility module with mapper objects that map database entities projections on attributes and labels."""
+from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 
@@ -71,6 +72,7 @@ class CalculationProjectionMapper(ProjectionMapper):
     """The CLI projection mapper for Calculation derived entities."""
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
+        # pylint: disable=too-many-locals
         from aiida.orm.calculation import Calculation
         from aiida.orm.mixins import Sealable
 

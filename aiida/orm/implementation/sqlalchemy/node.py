@@ -11,7 +11,8 @@
 SQL Alchemy Node concrete implementation
 """
 from __future__ import absolute_import
-from future.utils import viewitems, viewkeys
+
+import six
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
@@ -102,7 +103,7 @@ class Node(AbstractNode):
                 raise NotExistent("UUID={} is not an instance of {}".format(uuid, cls.__name__))
             return node
         except DatabaseError as exc:
-            raise ValueError(exc.message)
+            raise ValueError(str(exc))
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
@@ -129,7 +130,7 @@ class Node(AbstractNode):
                 raise NotExistent("pk= {} is not an instance of {}".format(pk, cls.__name__))
             return node
         except DatabaseError as exc:
-            raise ValueError(exc.message)
+            raise ValueError(str(exc))
 
     def __int__(self):
         if self._to_be_stored:
@@ -414,16 +415,16 @@ class Node(AbstractNode):
     def _db_iterextras(self):
         extras = self._extras()
         if extras is None:
-            return viewitems(dict())
+            return iter(dict().items())
 
-        return viewitems(extras)
+        return iter(extras.items())
 
     def _db_iterattrs(self):
-        for key, val in viewitems(self._attributes()):
+        for key, val in self._attributes().items():
             yield (key, val)
 
     def _db_attrs(self):
-        for key in viewkeys(self._attributes()):
+        for key in self._attributes().keys():
             yield key
 
     def add_comment(self, content, user=None):
@@ -502,7 +503,7 @@ class Node(AbstractNode):
     def _update_comment(self, new_field, comment_pk, user):
         comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
 
-        if not isinstance(new_field, basestring):
+        if not isinstance(new_field, six.string_types):
             raise ValueError("Non string comments are not accepted")
 
         if not comment:
@@ -710,7 +711,7 @@ class Node(AbstractNode):
 
     @property
     def uuid(self):
-        return unicode(self._dbnode.uuid)
+        return six.text_type(self._dbnode.uuid)
 
     def _attributes(self):
         self._ensure_model_uptodate(['attributes'])

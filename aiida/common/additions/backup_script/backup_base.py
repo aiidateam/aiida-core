@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import division
 import json
 import datetime
 import shutil
@@ -15,13 +17,13 @@ import logging
 
 from abc import abstractmethod, ABCMeta
 
+import six
 from dateutil.parser import parse
 from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
 
 
-
-
+@six.add_metaclass(ABCMeta)
 class AbstractBackup(object):
     """
     This class handles the backup of the AiiDA repository that is referenced
@@ -31,8 +33,6 @@ class AbstractBackup(object):
     (in periods of *periodicity* days) until the ending date of the backup
     specified by *end_date_of_backup* or *days_to_backup*.
     """
-
-    __metaclass__ = ABCMeta
 
     # Keys in the dictionary loaded by the JSON file
     OLDEST_OBJECT_BK_KEY = "oldest_object_backedup"
@@ -245,7 +245,7 @@ class AbstractBackup(object):
                 else str(self._end_date_of_backup),
             self.PERIODICITY_KEY: self._periodicity,
             self.BACKUP_LENGTH_THRESHOLD_KEY:
-                int((self._backup_length_threshold.total_seconds() / 3600))
+                int(self._backup_length_threshold.total_seconds() // 3600)
         }
 
         return backup_variables
@@ -256,9 +256,8 @@ class AbstractBackup(object):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        backup_info_file = open(backup_info_file_name, 'w')
-        json.dump(backup_variables, backup_info_file)
-        backup_info_file.close()
+        with open(backup_info_file_name, 'w') as backup_info_file:
+            json.dump(backup_variables, backup_info_file)
 
     def _find_files_to_backup(self):
         """
@@ -387,7 +386,7 @@ class AbstractBackup(object):
                             (datetime.datetime.now() -
                                  last_progress_print).seconds > 60):
                     last_progress_print = datetime.datetime.now()
-                    percent_progress = (copy_counter * 100 / dir_no_to_copy)
+                    percent_progress = copy_counter * 100 / dir_no_to_copy
                     self._logger.info(
                         "Copied {} ".format(copy_counter) +
                         "directories [{}]".format(item.__class__.__name__, ) +

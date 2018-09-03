@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.calculation import Calculation
@@ -64,7 +65,7 @@ class TestCalcNode(AiidaTestCase):
             'state': self.stateval
         }
 
-        for k, v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.items():
             a._set_attr(k, v)
 
         # Check before storing

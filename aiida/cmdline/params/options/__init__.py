@@ -2,6 +2,7 @@
 """Provide reusable options, helping to keep interfaces consistent."""
 # yapf: disable
 
+from __future__ import absolute_import
 import click
 
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA

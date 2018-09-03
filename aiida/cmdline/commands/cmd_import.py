@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -32,7 +33,7 @@ def cmd_import(archives, webpages):
     """
     # pylint: disable=too-many-branches,broad-except
     import traceback
-    import urllib2
+    from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
     from aiida.orm.importexport import get_valid_import_links, import_data
@@ -77,7 +78,7 @@ def cmd_import(archives, webpages):
         try:
             echo.echo_info('downloading archive {}'.format(archive))
 
-            response = urllib2.urlopen(archive)
+            response = urllib.request.urlopen(archive)
 
             with SandboxFolder() as temp_folder:
                 temp_file = 'importfile.tar.gz'

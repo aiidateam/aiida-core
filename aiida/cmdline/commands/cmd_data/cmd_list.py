@@ -10,6 +10,7 @@
 """
 This module provides list functionality to all data types.
 """
+from __future__ import absolute_import
 import click
 from aiida.cmdline.params import options
 

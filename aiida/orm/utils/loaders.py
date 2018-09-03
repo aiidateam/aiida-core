@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from abc import ABCMeta
 from enum import Enum
+
+import six
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.utils import abstractclassmethod, classproperty
@@ -46,9 +49,8 @@ class IdentifierType(Enum):
     LABEL = 'LABEL'
 
 
+@six.add_metaclass(ABCMeta)
 class OrmEntityLoader(object):
-
-    __metaclass__ = ABCMeta
 
     LABEL_AMBIGUITY_BREAKER_CHARACTER = '!'
 
@@ -244,7 +246,7 @@ class OrmEntityLoader(object):
         if not value:
             raise ValueError('the value for the identifier cannot be empty')
 
-        if not isinstance(value, basestring):
+        if not isinstance(value, six.string_types):
             value = str(value)
 
         # If the final character of the value is the special marker, we enforce LABEL interpretation

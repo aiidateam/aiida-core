@@ -12,11 +12,18 @@ This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
 
-from aiida.orm.data.array.kpoints import KpointsData
-import numpy
+from __future__ import absolute_import
+from __future__ import division
 from string import Template
+
+import six
+from six.moves import range, zip
+import numpy
+
+from aiida.orm.data.array.kpoints import KpointsData
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import prettify_labels, join_labels
+
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
     from aiida import get_file_header
@@ -121,7 +128,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 
             # sort the bands by energy, and reorder the occupations accordingly
             # since after joining the two spins, I might have unsorted stuff
-            bands, occupations = [numpy.array(y) for y in zip(*[zip(*j) for j in
+            bands, occupations = [numpy.array(y) for y in zip(*[list(zip(*j)) for j in
                                                                 [sorted(zip(i[0].tolist(), i[1].tolist()),
                                                                         key=lambda x: x[0])
                                                                  for i in zip(bands, occupations)]])]
@@ -146,10 +153,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             # calculation, 2 otherwise)
             number_electrons_per_band = 4 - len(stored_bands.shape)  # 1 or 2
             # gather the energies of the homo band, for every kpoint
-            homo = [i[number_electrons / number_electrons_per_band - 1] for i in bands]  # take the nth level
+            homo = [i[number_electrons // number_electrons_per_band - 1] for i in bands]  # take the nth level
             try:
                 # gather the energies of the lumo band, for every kpoint
-                lumo = [i[number_electrons / number_electrons_per_band] for i in bands]  # take the n+1th level
+                lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError("To understand if it is a metal or insulator, "
                                  "need more bands than n_band=number_electrons")
@@ -307,9 +314,9 @@ class BandsData(KpointsData):
 
         # check the labels
         if labels is not None:
-            if isinstance(labels, basestring):
+            if isinstance(labels, six.string_types):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, basestring) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all([isinstance(_, six.string_types) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError("Band labels have an unrecognized type ({})"
@@ -629,7 +636,7 @@ class BandsData(KpointsData):
         #    batch.append("s{} hidden true".format(i))
 
         batch_data = "\n".join(batch) + "\n"
-        extra_files = {dat_filename: raw_data.encode('utf-8')}
+        extra_files = {dat_filename: raw_data}
 
         return batch_data.encode('utf-8'), extra_files
 
@@ -804,7 +811,7 @@ class BandsData(KpointsData):
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
         # prepare xticks labels
-        tick_pos, tick_labels = zip(*labels)
+        tick_pos, tick_labels = list(zip(*labels))
 
         #all_data['bands'] = the_bands.tolist()
         all_data['paths'] = plot_info['paths']
@@ -835,7 +842,7 @@ class BandsData(KpointsData):
         all_data['y_max_lim'] = y_max_lim
         #all_data['ytick_spacing'] = ytick_spacing
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k not in valid_additional_keywords:
                 raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(
                     k
@@ -1039,7 +1046,7 @@ class BandsData(KpointsData):
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
         #exec s
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
 
@@ -1095,7 +1102,7 @@ class BandsData(KpointsData):
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
         #exec s
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
 
@@ -1119,8 +1126,12 @@ class BandsData(KpointsData):
         
         Other kwargs are passed to self._exportstring.
         """
-        exec self._exportstring(fileformat='mpl_singlefile', main_file_name='',
-                                **kwargs)
+        # In Python 2, exec is a statement which was extended to also take a tuple, while Python 3's exec
+        # is a real function. We could unpack the tuple into arguments in Python 3 as follows:
+        #    exec(*self._exportstring(...))
+        # but this does not work in Python 2. But it is anyway clearer to explicitly unpack the 2-tuple instead.
+        code_obj, code_globals = self._exportstring(fileformat='mpl_singlefile', main_file_name='', **kwargs)
+        exec(code_obj, code_globals)  # pylint: disable=exec-used
         
 
     def _prepare_agr(self, main_file_name="", comments=True, setnumber_offset=0, color_number=1,

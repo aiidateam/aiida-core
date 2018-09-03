@@ -10,6 +10,7 @@
 """
 This allows to setup and configure a code from command line.
 """
+from __future__ import absolute_import
 from functools import partial
 import click
 import tabulate
@@ -251,7 +252,7 @@ def delete(codes):
             code_str = str(code)
             delete_code(code)
         except InvalidOperation as exc:
-            echo.echo_critical(exc.message)
+            echo.echo_critical(str(exc))
 
         echo.echo_success("{} deleted.".format(code_str))
 
@@ -416,7 +417,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 def print_list_res(qb_query, show_owner):
     """Print list of codes."""
     # pylint: disable=invalid-name
-    if qb_query.count > 0:
+    if qb_query.count() > 0:
         for tuple_ in qb_query.all():
             if len(tuple_) == 3:
                 (pk, label, useremail) = tuple_

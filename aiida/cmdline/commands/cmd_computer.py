@@ -9,7 +9,10 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` commands"""
+from __future__ import absolute_import
 import sys
+
+from six.moves import zip
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -40,7 +43,7 @@ def get_computer_names():
     builder = QueryBuilder()
     builder.append(type='computer', project=['name'])
     if builder.count() > 0:
-        return zip(*builder.all())[0]
+        return next(zip(*builder.all()))  # return the first entry
 
     return []
 
@@ -130,7 +133,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         transport.makedirs(workdir)
         transport.chdir(workdir)
 
-    with tempfile.NamedTemporaryFile() as tempf:
+    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
         echo.echo("  `-> Creating the file {}...".format(fname))
         remote_file_path = os.path.join(workdir, fname)
@@ -160,7 +163,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
             echo.echo(read_string)
             return False
         else:
-            print "      [Content OK]"
+            echo.echo("      [Content OK]")
     finally:
         os.remove(destfile)
 
@@ -451,12 +454,12 @@ def computer_rename(computer, new_name):
         computer.set_name(new_name)
         computer.store()
     except ValidationError as error:
-        echo.echo_critical("Invalid input! {}".format(error.message))
+        echo.echo_critical("Invalid input! {}".format(error))
     except UniquenessError as error:
         echo.echo_critical("Uniqueness error encountered! Probably a "
                            "computer with name '{}' already exists"
                            "".format(new_name))
-        echo.echo_critical("(Message was: {})".format(error.message))
+        echo.echo_critical("(Message was: {})".format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
@@ -533,7 +536,7 @@ def computer_test(user, print_traceback, computer):
                         # Indent
                         echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
-                        echo.echo("** {}: {}".format(error.__class__.__name__, error.message))
+                        echo.echo("** {}: {}".format(error.__class__.__name__, error))
                         echo.echo("** (use the --print-traceback option to see the " "full traceback)")
                     succeeded = False
 
@@ -553,7 +556,7 @@ def computer_test(user, print_traceback, computer):
             # Indent
             echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
-            echo.echo("{}: {}".format(error.__class__.__name__, error.message))
+            echo.echo("{}: {}".format(error.__class__.__name__, error))
             echo.echo("(use the --print-traceback option to see the " "full traceback)")
         succeeded = False
 
@@ -576,7 +579,7 @@ def computer_delete(computer):
     try:
         delete_computer(computer)
     except InvalidOperation as error:
-        echo.echo_critical(error.message)
+        echo.echo_critical(str(error))
 
     echo.echo_success("Computer '{}' deleted.".format(compname))
 

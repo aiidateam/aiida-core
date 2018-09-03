@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping

@@ -10,9 +10,12 @@
 
 from __future__ import absolute_import
 
+import six
+
 from aiida.backends import settings
 from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
 from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
+
 
 AIIDA_ATTRIBUTE_SEP = '.'
 
@@ -27,7 +30,7 @@ def validate_attribute_key(key):
     """
     from aiida.common.exceptions import ValidationError
 
-    if not isinstance(key, basestring):
+    if not isinstance(key, six.string_types):
         raise ValidationError("The key must be a string.")
     if not key:
         raise ValidationError("The key cannot be an empty string.")

@@ -8,6 +8,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
 # Available alembic commands
@@ -86,5 +88,4 @@ if __name__ == "__main__":
         else:
             alembic_command(args.command)
     else:
-        print("No valid command specified. The available commands are: " +
-              str(AVAIL_AL_COMMANDS))
+        print("No valid command specified. The available commands are: " + str(AVAIL_AL_COMMANDS))

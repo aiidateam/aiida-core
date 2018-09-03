@@ -8,6 +8,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 from aiida.orm.data.int import Int
 from aiida import work
 from aiida.work.workchain import while_, if_
@@ -56,16 +58,16 @@ class OutlineWorkChain(work.WorkChain):
         return self.ctx.counter % 3 == 0
 
     def report_fizz_buzz(self):
-        print 'FizzBuzz'
+        print('FizzBuzz')
 
     def report_fizz(self):
-        print 'Fizz'
+        print('Fizz')
 
     def report_buzz(self):
-        print 'Buzz'
+        print('Buzz')
 
     def report_number(self):
-        print self.ctx.counter
+        print(self.ctx.counter)
 
     def decrement(self):
         self.ctx.counter -= 1

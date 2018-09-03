@@ -8,9 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import json
-
 from copy import copy
+
+import six
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
@@ -23,12 +25,11 @@ from aiida.orm.implementation.general.computer import AbstractComputer, Util as 
 from aiida.common.lang import override
 
 
-
 class Computer(AbstractComputer):
 
     @property
     def uuid(self):
-        return unicode(self._dbcomputer.uuid)
+        return six.text_type(self._dbcomputer.uuid)
 
     @property
     def pk(self):
@@ -73,7 +74,7 @@ class Computer(AbstractComputer):
 
         is_modified = False
 
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:
@@ -299,8 +300,6 @@ class Util(ComputerUtil):
             session = aiida.backends.sqlalchemy.get_scoped_session()
             session.query(DbComputer).get(pk).delete()
             session.commit()
-        except SQLAlchemyError as e:
+        except SQLAlchemyError as exc:
             raise InvalidOperation("Unable to delete the requested computer: it is possible that there "
-                                   "is at least one node using this computer (original message: {})".format(
-                e.message
-            ))
+                                   "is at least one node using this computer (original message: {})".format(exc))

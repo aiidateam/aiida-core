@@ -16,6 +16,7 @@ the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
 from __future__ import division
+from __future__ import absolute_import
 from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
 
 from aiida.common import aiidalogger
@@ -577,7 +578,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         """
         import json
 
-        ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.iteritems()}
+        ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
         return json.dumps(ser_data)
 
@@ -591,5 +592,5 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         deser_data = json.loads(data)
 
-        for key, value in deser_data.iteritems():
+        for key, value in deser_data.items():
             self[key] = self.deserialize_field(value, self._special_serializers.get(key, None))

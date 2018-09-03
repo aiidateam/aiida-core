@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation import Workflow, get_workflow_info
 from aiida.orm.implementation.general.workflow import WorkflowKillError, WorkflowUnkillable

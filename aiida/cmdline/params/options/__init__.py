@@ -8,7 +8,6 @@ import click
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.params import types
 from aiida.cmdline.params.options.conditional import ConditionalOption
-from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 

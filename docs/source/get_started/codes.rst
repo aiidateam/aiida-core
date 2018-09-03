@@ -133,7 +133,7 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
 .. note:: You can change the label of a code by using the following command::
 
-   verdi code rename "ID"
+   verdi code relabel "ID" "new-label"
    
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
   the code (preferentially), or possibly its label (or label@computername), 

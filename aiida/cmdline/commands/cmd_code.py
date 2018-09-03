@@ -11,12 +11,14 @@
 This allows to setup and configure a code from command line.
 """
 from __future__ import absolute_import
+from functools import partial
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
@@ -37,23 +39,15 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
-@verdi_code.command('setup')
-@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
-@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
-@click.option(
+# Reusable options (code-specific)
+ON_COMPUTER = OverridableOption(
     '--on-computer/--store-in-db',
     is_eager=False,
     default=True,
-    prompt='Installed on target computer?',
-    cls=InteractiveOption)
-@options.COMPUTER(
-    prompt='Computer',
     cls=InteractiveOption,
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    help='Name of the computer, on which the code resides')
-@click.option(
+    prompt='Installed on target computer?')
+
+REMOTE_ABS_PATH = OverridableOption(
     '--remote-abs-path',
     prompt='Remote absolute path',
     required_fn=is_on_computer,
@@ -61,23 +55,41 @@ def is_not_on_computer(ctx):
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
     help=('[if --on-computer]: the absolute path to the executable on the remote machine'))
-@click.option(
+
+CODE_FOLDER = OverridableOption(
     '--code-folder',
     prompt='Local directory containing the code',
+    required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
     type=click.Path(file_okay=False, exists=True, readable=True),
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
     cls=InteractiveOption,
-    help=('[if --store-in-db]: directory the executable and all other files necessary for running it'))
-@click.option(
+    help=('[if --store-in-db]: directory containing the executable and all other files necessary for running it'))
+
+CODE_REL_PATH = OverridableOption(
     '--code-rel-path',
-    prompt='Relative path of executable inside directory',
-    type=click.Path(dir_okay=False),
+    prompt='Relative path of executable inside code folder',
     required_fn=is_not_on_computer,
     prompt_fn=is_not_on_computer,
+    type=click.Path(dir_okay=False),
     cls=InteractiveOption,
     help=('[if --store-in-db]: relative path of the executable ' + \
           'inside the code-folder'))
+
+
+@verdi_code.command('setup')
+@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
+@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
+@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
+@ON_COMPUTER()
+@options.COMPUTER(
+    prompt='Computer',
+    cls=InteractiveOption,
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    help='Name of the computer, on which the code resides')
+@REMOTE_ABS_PATH()
+@CODE_FOLDER()
+@CODE_REL_PATH()
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -102,10 +114,113 @@ def setup_code(non_interactive, **kwargs):
         code.store()
         code.reveal()  # newly setup code shall not be hidden
     except ValidationError as err:
-        echo.echo_critical('unable to store the code: {}. Exiting...'.format(err))
+        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
 
     echo.echo_success('code "{}" stored in DB.'.format(code.label))
     echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
+
+
+def get_default(key, ctx):
+    """
+    Get the default argument using a user instance property
+    :param value: The name of the property to use
+    :param ctx: The click context (which will be used to get the user)
+    :return: The default value, or None
+    """
+    try:
+        value = getattr(ctx.code_builder, key)
+        if value == "":
+            value = None
+    except KeyError:
+        value = None
+
+    return value
+
+
+def get_computer_name(ctx):
+    return getattr(ctx.code_builder, 'computer').name
+
+
+def get_on_computer(ctx):
+    return not getattr(ctx.code_builder, 'is_local')()
+
+
+#pylint: disable=unused-argument
+def set_code_builder(ctx, param, value):
+    """Set the code spec for defaults of following options."""
+    ctx.code_builder = CodeBuilder.from_code(value)
+    return value
+
+
+@verdi_code.command('duplicate')
+@arguments.CODE(callback=set_code_builder)
+@options.LABEL(
+    prompt='Label', cls=InteractiveOption, help='Label for new code', contextual_default=partial(get_default, 'label'))
+@options.DESCRIPTION(
+    prompt='Description',
+    cls=InteractiveOption,
+    help='A human-readable description of this code',
+    contextual_default=partial(get_default, 'description'))
+@options.INPUT_PLUGIN(
+    prompt='Default calculation input plugin',
+    cls=InteractiveOption,
+    contextual_default=partial(get_default, 'input_plugin'))
+@ON_COMPUTER(contextual_default=get_on_computer)
+@options.COMPUTER(
+    prompt='Computer',
+    cls=InteractiveOption,
+    required_fn=is_on_computer,
+    prompt_fn=is_on_computer,
+    help='Name of the computer, on which the code resides',
+    contextual_default=get_computer_name)
+@REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
+@CODE_FOLDER(contextual_default=partial(get_default, 'code_folder'))
+@CODE_REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
+@click.option(
+    '--hide-original',
+    is_flag=True,
+    default=False,
+    help=('Hide the code being copied.'),
+)
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@click.pass_context
+@with_dbenv()
+# pylint: disable=unused-argument
+def code_duplicate(ctx, code, non_interactive, **kwargs):
+    """
+    Create duplicate of existing code.
+    """
+    from aiida.common.exceptions import ValidationError
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    if kwargs.pop('on_computer'):
+        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+    else:
+        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+
+    if kwargs.pop('hide_original'):
+        code.hide()
+
+    code_builder = ctx.code_builder
+    for key, value in kwargs.items():
+        if value is not None:
+            setattr(code_builder, key, value)
+    new_code = code_builder.new()
+
+    try:
+        new_code.store()
+        new_code.reveal()  # newly setup code shall not be hidden
+    except ValidationError as err:
+        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
+
+    echo.echo_success("Duplicated code '{}'.".format(code.full_label))
+    echo.echo_info('New ' + str(new_code))
 
 
 @verdi_code.command()
@@ -134,11 +249,12 @@ def delete(codes):
 
     for code in codes:
         try:
+            code_str = str(code)
             delete_code(code)
         except InvalidOperation as exc:
             echo.echo_critical(str(exc))
 
-        echo.echo_success("Code '{}' deleted.".format(code.pk))
+        echo.echo_success("{} deleted.".format(code_str))
 
 
 @verdi_code.command()

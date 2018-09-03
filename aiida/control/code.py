@@ -4,6 +4,7 @@ import enum
 import os
 
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.utils.error_accumulator import ErrorAccumulator
 
 
@@ -11,8 +12,16 @@ class CodeBuilder(object):
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
-        self._code_spec = kwargs
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
+        self._code_spec = {}
+
+        # code_type must go first
+        for key in ['code_type']:
+            self.__setattr__(key, kwargs.pop(key))
+
+        # then set the rest
+        for key, value in kwargs.items():
+            self.__setattr__(key, value)
 
     def validate(self, raise_error=True):
         self._err_acc.run(self.validate_code_type)
@@ -55,13 +64,51 @@ class CodeBuilder(object):
 
         return code
 
+    @staticmethod
+    def from_code(code):
+        """Create CodeBuilder from existing code instance.
+
+        See also :py:func:`~CodeBuilder.get_code_spec`
+        """
+        spec = CodeBuilder.get_code_spec(code)
+        return CodeBuilder(**spec)
+
+    @staticmethod
+    def get_code_spec(code):
+        """Get code attributes from existing code instance.
+
+        These attributes can be used to create a new CodeBuilder::
+
+            spec = CodeBuilder.get_code_spec(old_code)
+            builder = CodeBuilder(**spec)
+            new_code = builder.new()
+
+        """
+        spec = {}
+        spec['label'] = code.label
+        spec['description'] = code.description
+        spec['input_plugin'] = code.get_input_plugin_name()
+        spec['prepend_text'] = code.get_prepend_text()
+        spec['append_text'] = code.get_append_text()
+
+        if code.is_local():
+            spec['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+            spec['code_folder'] = code.get_code_folder()
+            spec['code_rel_path'] = code.get_code_rel_path()
+        else:
+            spec['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+            spec['computer'] = code.get_remote_computer()
+            spec['remote_abs_path'] = code.get_remote_exec_path()
+
+        return spec
+
     def __getattr__(self, key):
         """Access code attributes used to build the code"""
         if not key.startswith('_'):
             try:
                 return self._code_spec[key]
             except KeyError:
-                raise self.CodeValidationError(key + ' not set')
+                raise KeyError("Attribute '{}' not set".format(key))
         return None
 
     def _get(self, key):
@@ -92,7 +139,14 @@ class CodeBuilder(object):
         super(CodeBuilder, self).__setattr__(key, value)
 
     def _set_code_attr(self, key, value):
-        """Set a code attribute if it passes validation."""
+        """Set a code attribute, if it passes validation.
+
+        Checks compatibility with other code attributes.
+        """
+        # store only string of input plugin
+        if key == 'input_plugin' and isinstance(value, PluginParamType):
+            value = value.name
+
         backup = self._code_spec.copy()
         self._code_spec[key] = value
         success, _ = self.validate(raise_error=False)
@@ -109,7 +163,7 @@ class CodeBuilder(object):
     def validate_upload(self):
         """If the code is stored and uploaded, catch invalid on-computer attributes"""
         messages = []
-        if self._get('code_type') == self.CodeType.STORE_AND_UPLOAD:
+        if self.is_local():
             if self._get('computer'):
                 messages.append('invalid option for store-and-upload code: "computer"')
             if self._get('remote_abs_path'):
@@ -145,6 +199,10 @@ class CodeBuilder(object):
 
         def __repr__(self):
             return '<CodeValidationError: {}>'.format(self)
+
+    def is_local(self):
+        """Analogous to Code.is_local()"""
+        return self.__getattr__('code_type') == self.CodeType.STORE_AND_UPLOAD
 
     # pylint: disable=too-few-public-methods
     class CodeType(enum.Enum):

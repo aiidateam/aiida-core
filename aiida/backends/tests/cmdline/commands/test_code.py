@@ -5,7 +5,7 @@ import subprocess as sp
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show)
+from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show, code_duplicate)
 from aiida.common.exceptions import NotExistent
 
 
@@ -118,6 +118,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
                 remote_computer_exec=[self.comp, '/remote/abs/path'],
             )
             code.label = 'code'
+            code.description = 'desc'
             code.store()
         self.code = code
 
@@ -198,3 +199,30 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.runner.invoke(show, [str(self.code.pk)])
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
+
+    def test_code_duplicate_interactive(self):
+        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
+        label = 'code_duplicate_interactive'
+        user_input = label + '\n\n\n\n\n\n'
+        result = self.runner.invoke(code_duplicate, [str(self.code.pk)], input=user_input, catch_exceptions=False)
+        self.assertIsNone(result.exception, result.output)
+
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+
+    def test_code_duplicate_non_interactive(self):
+        label = 'code_duplicate_noninteractive'
+        result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
+        self.assertIsNone(result.exception)
+
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+        self.assertEquals(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
+

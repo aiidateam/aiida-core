@@ -58,6 +58,8 @@ REMOTE_ABS_PATH = OverridableOption(
 CODE_FOLDER = OverridableOption(
     '--code-folder',
     prompt='Local directory containing the code',
+    required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
     type=click.Path(file_okay=False, exists=True, readable=True),
     cls=InteractiveOption,
     help=('[if --store-in-db]: directory containing the executable and all other files necessary for running it'))
@@ -65,6 +67,8 @@ CODE_FOLDER = OverridableOption(
 CODE_REL_PATH = OverridableOption(
     '--code-rel-path',
     prompt='Relative path of executable inside code folder',
+    required_fn=is_not_on_computer,
+    prompt_fn=is_not_on_computer,
     type=click.Path(dir_okay=False),
     cls=InteractiveOption,
     help=('[if --store-in-db]: relative path of the executable ' + \

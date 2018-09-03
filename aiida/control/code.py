@@ -20,7 +20,7 @@ class CodeBuilder(object):
             self.__setattr__(key, kwargs.pop(key))
 
         # then set the rest
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             self.__setattr__(key, value)
 
     def validate(self, raise_error=True):
@@ -59,8 +59,8 @@ class CodeBuilder(object):
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(
-                ", ".join(sorted(passed_keys - used))))
+            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(", ".join(
+                sorted(passed_keys - used))))
 
         return code
 

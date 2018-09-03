@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.common.utils import type_check
 from aiida.orm.user import User, UserCollection

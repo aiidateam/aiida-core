@@ -7,9 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import HTMLParser
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
+import six
+from six.moves import zip
+from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
@@ -17,6 +21,7 @@ from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
+
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -244,8 +249,8 @@ def deserialize_attributes(attributes_data, conversion_data):
 
     if isinstance(attributes_data, dict):
         ret_data = {}
-        for k, v in attributes_data.iteritems():
-            # print "k: ", k, " v: ", v
+        for k, v in attributes_data.items():
+            # print("k: ", k, " v: ", v)
             if conversion_data is not None:
                 ret_data[k] = deserialize_attributes(v, conversion_data[k])
             else:
@@ -373,9 +378,9 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 try:
                     extract_zip(in_path, folder, silent=silent,
                                 nodes_export_subfolder=nodes_export_subfolder)
-                except ValueError as ve:
+                except ValueError as exc:
                     print("The following problem occured while processing the "
-                          "provided file: {}".format(ve.message))
+                          "provided file: {}".format(exc))
                     return
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
                 extract_cif(in_path, folder, silent=silent,
@@ -412,7 +417,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         ##########################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
+        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
 
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
@@ -425,7 +430,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
         # ~ dbnode_model = get_class_string(models.DbNode)
-        # ~ print dbnode_model
+        # ~ print(dbnode_model)
         import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
@@ -478,12 +483,12 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
         import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].iteritems():
+        for model_name, import_data in data['export_data'].items():
             if model_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[model_name] = {
                     int(k): v[metadata['unique_identifiers'][model_name]] for k, v in
-                    import_data.iteritems()}
+                    import_data.items()}
 
         ###############
         # IMPORT DATA #
@@ -520,8 +525,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                    import_unique_ids})}
 
                         foreign_ids_reverse_mappings[model_name] = {
-                            k: v.pk for k, v in relevant_db_entries.iteritems()}
-                        for k, v in data['export_data'][model_name].iteritems():
+                            k: v.pk for k, v in relevant_db_entries.items()}
+                        for k, v in data['export_data'][model_name].items():
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
                                 existing_entries[model_name][k] = v
@@ -540,7 +545,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 unique_identifier = metadata['unique_identifiers'].get(
                     model_name, None)
 
-                for import_entry_id, entry_data in existing_entries[model_name].iteritems():
+                for import_entry_id, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -549,10 +554,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     ret_dict[model_name]['existing'].append((import_entry_id,
                                                              existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("existing %s: %s (%s->%s)" % (model_name, unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
-                        # print "  `-> WARNING: NO DUPLICITY CHECK DONE!"
+                                                            existing_entry_id))
+                        # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
                         # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them
@@ -562,13 +567,13 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 import_entry_ids = {}
                 dupl_counter = 0
                 imported_comp_names = set()
-                for import_entry_id, entry_data in new_entries[model_name].iteritems():
+                for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     if Model is models.DbComputer:
                         # Check if there is already a computer with the same
@@ -605,7 +610,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # are nodes). Note: only for new entries!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE FILES..."
+                        print("STORING NEW NODE FILES...")
                     for o in objects_to_create:
 
                         subfolder = folder.get_subfolder(os.path.join(
@@ -636,10 +641,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 imported_states = []
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             models.DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
@@ -647,7 +652,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
@@ -656,15 +661,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                                         new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
                 # For DbNodes, we also have to store Attributes!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE ATTRIBUTES..."
-                    for unique_id, new_pk in just_saved.iteritems():
+                        print("STORING NEW NODE ATTRIBUTES...")
+                    for unique_id, new_pk in just_saved.items():
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
                         try:
@@ -687,7 +692,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                             with_transaction=False)
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -699,7 +704,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            # ~ print foreign_ids_reverse_mappings
+            # ~ print(foreign_ids_reverse_mappings)
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
             for link in import_links:
                 try:
@@ -759,17 +764,17 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
 
                 models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group = models.DbGroup.objects.get(uuid=groupuuid)
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
@@ -784,11 +789,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing = existing_entries.get(dbnode_model_name, {})
             existing_pk = [foreign_ids_reverse_mappings[
                                dbnode_model_name][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(dbnode_model_name, {})
             new_pk = [foreign_ids_reverse_mappings[
                           dbnode_model_name][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 
@@ -817,15 +822,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
@@ -935,7 +940,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(
-            data['groups_uuid'].itervalues()))
+            six.itervalues(data['groups_uuid'])))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
@@ -1024,13 +1029,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
-        for entity_name, import_data in data['export_data'].iteritems():
+        for entity_name, import_data in data['export_data'].items():
             # Again I need the entity_name since that's what's being stored since 0.3
             if entity_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[entity_name] = {
                     int(k): v[metadata['unique_identifiers'][entity_name]]
-                    for k, v in import_data.iteritems()}
+                    for k, v in import_data.items()}
         ###############
         # IMPORT DATA #
         ###############
@@ -1077,11 +1082,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in
-                                relevant_db_entries.iteritems()}
+                                relevant_db_entries.items()}
 
                         dupl_counter = 0
                         imported_comp_names = set()
-                        for k, v in data['export_data'][entity_name].iteritems():
+                        for k, v in data['export_data'][entity_name].items():
                             if entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
@@ -1090,15 +1095,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 # stored as (unicode) strings of the serialized
                                 # JSON objects and not as simple serialized
                                 # JSON objects.
-                                if ((type(v['metadata']) is str) or
-                                        (type(v['metadata']) is unicode)):
-                                    v['metadata'] = json.loads(v['metadata'])
+                                if (isinstance(v['metadata'], six.string_types) or
+                                        isinstance(v['metadata'], six.binary_type)):
+                                    v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
 
-                                if ((type(v['transport_params']) is str) or
-                                        (type(v['transport_params']) is
-                                         unicode)):
-                                    v['transport_params'] = json.loads(
-                                        v['transport_params'])
+                                if (isinstance(v['transport_params'], six.string_types) or
+                                        isinstance(v['transport_params'], six.binary_type)):
+                                    v['transport_params'] = json.loads(v['transport_params'])
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -1145,7 +1148,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (existing_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (existing_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -1153,10 +1156,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (entity_sig,
+                        print("existing %s: %s (%s->%s)" % (entity_sig,
                                                             unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
+                                                            existing_entry_id))
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -1164,13 +1167,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
 
-                for import_entry_id, entry_data in (new_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (new_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     # We convert the Django fields to SQLA. Note that some of
                     # the Django fields were converted to SQLA compatible
@@ -1197,7 +1200,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
 
                     if not silent:
-                        print "STORING NEW NODE FILES & ATTRIBUTES..."
+                        print("STORING NEW NODE FILES & ATTRIBUTES...")
                     for o in objects_to_create:
 
                         # Creating the needed files
@@ -1254,7 +1257,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if import_entry_ids.keys():
                     qb = QueryBuilder()
                     qb.append(entity, filters={
-                        unique_identifier: {"in": import_entry_ids.keys()}},
+                        unique_identifier: {"in": list(import_entry_ids.keys())}},
                               project=[unique_identifier, "id"], tag="res")
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:
@@ -1266,10 +1269,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # Needs more from here and below
                     ################################################
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             DbCalcState(dbnode_id=new_pk,
                                         state=calc_states.IMPORTED))
@@ -1278,7 +1281,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
                         unique_id = str(unique_id)
@@ -1290,12 +1293,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                                          new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -1370,16 +1373,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
                 session.add_all(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(
                     Group, filters={'uuid': {'==': groupuuid}})
@@ -1395,10 +1398,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Put everything in a specific group
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
             existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(NODE_ENTITY_NAME, {})
             new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 
@@ -1436,28 +1439,28 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 #     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
             if not silent:
-                print "COMMITTING EVERYTHING..."
+                print("COMMITTING EVERYTHING...")
             session.commit()
         except:
-            print "Rolling back"
+            print("Rolling back")
             session.rollback()
             raise
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
 
-class HTMLGetLinksParser(HTMLParser.HTMLParser):
+class HTMLGetLinksParser(HTMLParser):
     def __init__(self, filter_extension=None):
         """
         If a filter_extension is passed, only links with extension matching
@@ -1465,7 +1468,7 @@ class HTMLGetLinksParser(HTMLParser.HTMLParser):
         """
         self.filter_extension = filter_extension
         self.links = []
-        HTMLParser.HTMLParser.__init__(self)
+        super(HTMLGetLinksParser, self).__init__()
 
     def handle_starttag(self, tag, attrs):
         """
@@ -1490,17 +1493,16 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    import urllib2
-    import urlparse
+    from six.moves import urllib
 
-    request = urllib2.urlopen(url)
+    request = urllib.request.urlopen(url)
     parser = HTMLGetLinksParser(filter_extension='aiida')
     parser.feed(request.read())
 
     return_urls = []
 
     for link in parser.get_links():
-        return_urls.append(urlparse.urljoin(request.geturl(), link))
+        return_urls.append(urllib.parse.urljoin(request.geturl(), link))
 
     return return_urls
 
@@ -1520,13 +1522,13 @@ def serialize_field(data, track_conversion=False):
         if track_conversion:
             ret_data = {}
             ret_conversion = {}
-            for k, v in data.iteritems():
+            for k, v in data.items():
                 ret_data[k], ret_conversion[k] = serialize_field(
                     data=v, track_conversion=track_conversion)
         else:
             ret_data = {k: serialize_field(data=v,
                                            track_conversion=track_conversion)
-                        for k, v in data.iteritems()}
+                        for k, v in data.items()}
     elif isinstance(data, (list, tuple)):
         if track_conversion:
             ret_data = []
@@ -1587,7 +1589,7 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
 
     conversions = {}
 
-    for k, v in datadict.iteritems():
+    for k, v in datadict.items():
         if k not in remove_fields:
             # rename_fields.get(k,k): use the replacement if found in rename_fields,
             # otherwise use 'k' as the default value.
@@ -1649,8 +1651,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
-        if file_fields_to_model_fields.has_key(current_entity_str):
-            if file_fields_to_model_fields[current_entity_str].has_key(prop):
+        if current_entity_str in file_fields_to_model_fields:
+            if prop in file_fields_to_model_fields[current_entity_str]:
                 nprop = file_fields_to_model_fields[current_entity_str][prop]
 
         project_cols.append(nprop)
@@ -1669,12 +1671,12 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
                       all_fields_info[
-                          current_entity_str].iteritems()
-                      # all_fields_info[model_name].iteritems()
+                          current_entity_str].items()
+                      # all_fields_info[model_name].items()
                       if 'requires' in v}
 
     new_tag_suffixes = tag_suffixes + [current_entity_str]
-    for k, v in foreign_fields.iteritems():
+    for k, v in foreign_fields.items():
         ref_model_name = v['requires']
         fill_in_query(partial_query, current_entity_str, ref_model_name,
                       new_tag_suffixes)
@@ -1960,7 +1962,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         for prop in entity_prop:
             # nprop contains the list of projections
             nprop = (file_fields_to_model_fields[given_entity][prop]
-                     if file_fields_to_model_fields[given_entity].has_key(prop)
+                     if prop in file_fields_to_model_fields[given_entity]
                      else prop)
             project_cols.append(nprop)
 
@@ -1993,18 +1995,18 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
-        print "STORING DATABASE ENTRIES..."
+        print("STORING DATABASE ENTRIES...")
 
     export_data = dict()
     entity_separator = '_'
-    for entity_name, partial_query in entries_to_add.iteritems():
+    for entity_name, partial_query in entries_to_add.items():
 
         foreign_fields = {k: v for k, v in
-                          all_fields_info[entity_name].iteritems()
-                          # all_fields_info[model_name].iteritems()
+                          all_fields_info[entity_name].items()
+                          # all_fields_info[model_name].items()
                           if 'requires' in v}
 
-        for k, v in foreign_fields.iteritems():
+        for k, v in foreign_fields.items():
             ref_model_name = v['requires']
             fill_in_query(partial_query, entity_name, ref_model_name,
                           [entity_name], entity_separator)
@@ -2035,22 +2037,22 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     ######################################
     # I use .get because there may be no nodes to export
     all_nodes_pk = list()
-    if export_data.has_key(NODE_ENTITY_NAME):
+    if NODE_ENTITY_NAME in export_data:
         all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
 
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
-            print "No nodes to store, exiting..."
+            print("No nodes to store, exiting...")
         return
 
     if not silent:
-        print "Exporting a total of {} db entries, of which {} nodes.".format(
-            sum(len(model_data) for model_data in export_data.values()),
-            len(all_nodes_pk))
+        print("Exporting a total of {} db entries, of which {} nodes."
+              .format(sum(len(model_data) for model_data in export_data.values()),
+                      len(all_nodes_pk)))
 
     ## ATTRIBUTES
     if not silent:
-        print "STORING NODE ATTRIBUTES..."
+        print("STORING NODE ATTRIBUTES...")
     node_attributes = {}
     node_attributes_conversion = {}
 
@@ -2067,7 +2069,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 n.get_attrs(), track_conversion=True)
 
     if not silent:
-        print "STORING NODE LINKS..."
+        print("STORING NODE LINKS...")
 
     links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
@@ -2301,10 +2303,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-    links_uuid = links_uuid_dict.values()
+    links_uuid = list(links_uuid_dict.values())
 
     if not silent:
-        print "STORING GROUP ELEMENTS..."
+        print("STORING GROUP ELEMENTS...")
     groups_uuid = dict()
     # If a group is in the exported date, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -2316,7 +2318,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
                                  project=['uuid'], member_of='group')
             for res in group_uuid_qb.iterall():
-                if groups_uuid.has_key(str(res[0])):
+                if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))
                 else:
                     groups_uuid[str(res[0])] = [str(res[1])]
@@ -2334,7 +2336,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             export_data.pop(entity_name))
 
     if not silent:
-        print "STORING DATA..."
+        print("STORING DATA...")
 
     with folder.open('data.json', 'w') as f:
         json.dump({
@@ -2359,7 +2361,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         json.dump(metadata, f)
 
     if silent is not True:
-        print "STORING FILES..."
+        print("STORING FILES...")
 
     # If there are no nodes, there are no files to store
     if len(all_nodes_pk) > 0:
@@ -2454,11 +2456,11 @@ class MyWritingZipFile(object):
         self._buffer = None
 
     def open(self):
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         if self._buffer is not None:
             raise IOError("Cannot open again!")
-        self._buffer = StringIO.StringIO()
+        self._buffer = StringIO()
 
     def write(self, data):
         self._buffer.write(data)
@@ -2501,7 +2503,7 @@ class ZipFolder(object):
         import zipfile
         import os
 
-        if isinstance(zipfolder_or_fname, basestring):
+        if isinstance(zipfolder_or_fname, six.string_types):
             the_mode = mode
             if the_mode is None:
                 the_mode = "r"
@@ -2553,14 +2555,13 @@ class ZipFolder(object):
         import os
 
         if dest_name is None:
-            base_filename = unicode(os.path.basename(src))
+            base_filename = six.text_type(os.path.basename(src))
         else:
-            base_filename = unicode(dest_name)
+            base_filename = six.text_type(dest_name)
 
         base_filename = self._get_internal_path(base_filename)
 
-        if not isinstance(src, unicode):
-            src = unicode(src)
+        src = six.text_type(src)
 
         if not os.path.isabs(src):
             raise ValueError("src must be an absolute path in insert_file")
@@ -2600,7 +2601,7 @@ def export_zip(what, outfile='testzip', overwrite=False,
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
-        print "File written in {:10.3g} s.".format(time.time() - t)
+        print("File written in {:10.3g} s.".format(time.time() - t))
 
 
 def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
@@ -2650,7 +2651,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
     t2 = time.time()
 
     if not silent:
-        print "COMPRESSING..."
+        print("COMPRESSING...")
 
     t3 = time.time()
     with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
@@ -2661,11 +2662,11 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
     if not silent:
         filecr_time = t2 - t1
         filecomp_time = t4 - t3
-        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time,
-                                                                                      filecr_time + filecomp_time)
+        print("Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s."
+              .format(filecr_time, filecomp_time, filecr_time + filecomp_time))
 
     if not silent:
-        print "DONE."
+        print("DONE.")
 
 # Following code: to serialize the date directly when dumping into JSON.
 # In our case, it is better to have a finer control on how to parse fields.

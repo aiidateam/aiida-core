@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
 from aiida.orm.data.float import Float
 from aiida.orm.data.str import Str
@@ -100,5 +101,5 @@ class EquationOfState2(WorkChain):
             self.insert_barrier(Calc(pid))
 
     def finalise(self):
-        for s, pid in self.ctx.launched.iteritems():
+        for s, pid in self.ctx.launched.items():
             self.out(s, load_node(pid)['output_parameters'].dict)

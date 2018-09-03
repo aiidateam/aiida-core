@@ -7,7 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import division
+
+import six
+from six.moves import range, zip
 import numpy
+
 
 _default_epsilon_length = 1e-5
 _default_epsilon_angle = 1e-5
@@ -151,7 +157,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                 return False
 
             for i in path:
-                are_str = all([isinstance(b, basestring) for b in i])
+                are_str = all([isinstance(b, six.string_types) for b in i])
                 if not are_str:
                     return False
         except IndexError:
@@ -164,8 +170,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             if not are_three:
                 return False
 
-            are_good = all([all([isinstance(b[0], basestring),
-                                 isinstance(b[1], basestring),
+            are_good = all([all([isinstance(b[0], six.string_types),
+                                 isinstance(b[1], six.string_types),
                                  isinstance(b[2], int)])
                             for b in path])
             if not are_good:
@@ -188,7 +194,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_four = all([len(i) == 4 for i in path])
             if not are_four:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             for i in path:
@@ -207,7 +213,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_five = all([len(i) == 5 for i in path])
             if not are_five:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             have_points_num = all([isinstance(i[4], int) for i in path])
@@ -240,14 +246,13 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             max_point_per_interval = 10
             max_interval = max(distances)
             try:
-                points_per_piece = [max(2, int(max_point_per_interval * i / max_interval)) for i in distances]
+                points_per_piece = [max(2, max_point_per_interval * i // max_interval) for i in distances]
             except ValueError:
                 raise ValueError("The beginning and end of each segment in the "
                                  "path should be different.")
 
         else:
-            points_per_piece = [max(2, int(distance / kpoint_distance))
-                                for distance in distances]
+            points_per_piece = [max(2, int(distance // kpoint_distance)) for distance in distances]
         return points_per_piece
 
     if cartesian:
@@ -369,13 +374,13 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         ini_coord = point_coordinates[ini_label]
         end_coord = point_coordinates[end_label]
 
-        path_piece = zip(numpy.linspace(ini_coord[0], end_coord[0],
+        path_piece = list(zip(numpy.linspace(ini_coord[0], end_coord[0],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[1], end_coord[1],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[2], end_coord[2],
                                         num_points[count_piece]),
-                         )
+                         ))
 
         for count, j in enumerate(path_piece):
             if all(numpy.array(explicit_kpoints[-1]) == j):
@@ -1877,14 +1882,14 @@ def get_kpoints_path(cell, pbc=None, cartesian=False,
         return [permutation.index(i) for i in range(3)]
 
     the_special_points = {}
-    for k in special_points.iterkeys():
+    for k in special_points.keys():
         # NOTE: this originally returned the inverse of the permutation, but was later changed to permutation
         the_special_points[k] = permute(special_points[k], permutation)
 
     # output crystal or cartesian
     if cartesian:
         the_abs_special_points = {}
-        for k in the_special_points.iterkeys():
+        for k in the_special_points.keys():
             the_abs_special_points[k] = change_reference(
                 reciprocal_cell, numpy.array(the_special_points[k]), to_cartesian=True
             )

@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 import os
-import types
 import logging
 import importlib
 import collections
@@ -19,6 +19,8 @@ try:
     import pathlib
 except ImportError:
     import pathlib2 as pathlib
+
+import six
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
@@ -56,9 +58,9 @@ def clean_value(value):
         return value.value
     elif isinstance(value, dict):
         # Check dictionary before iterables
-        return {k: clean_value(v) for k, v in value.iteritems()}
+        return {k: clean_value(v) for k, v in value.items()}
     elif (isinstance(value, collections.Iterable) and
-          not isinstance(value, types.StringTypes)):
+          not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -71,7 +73,32 @@ def clean_value(value):
     return value
 
 
-# pylint: disable=protected-access
+class _AbstractNodeMeta(ABCMeta):
+    """
+    Some python black magic to set correctly the logger also in subclasses.
+    """
+
+    def __new__(cls, name, bases, attrs):
+
+        newcls = ABCMeta.__new__(cls, name, bases, attrs)
+
+        # Configure the logger by inheriting from the aiida logger
+        if not attrs['__module__'].startswith('aiida.'):
+            newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
+        else:
+            newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
+
+        # Set the plugin type string and query type string
+        plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+        query_type_string = get_query_type_from_type_string(plugin_type_string)
+
+        newcls._plugin_type_string = plugin_type_string
+        newcls._query_type_string = query_type_string
+
+        return newcls
+
+
+@six.add_metaclass(_AbstractNodeMeta)
 class AbstractNode(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -87,31 +114,6 @@ class AbstractNode(object):
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-
-    # pylint: disable=invalid-name,protected-access
-    class __metaclass__(ABCMeta):
-        """
-        Some python black magic to set correctly the logger also in subclasses.
-        """
-
-        def __new__(cls, name, bases, attrs):
-
-            newcls = ABCMeta.__new__(cls, name, bases, attrs)
-
-            # Configure the logger by inheriting from the aiida logger
-            if not attrs['__module__'].startswith('aiida.'):
-                newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
-            else:
-                newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
-
-            # Set the plugin type string and query type string
-            plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
-            query_type_string = get_query_type_from_type_string(plugin_type_string)
-
-            newcls._plugin_type_string = plugin_type_string
-            newcls._query_type_string = query_type_string
-
-            return newcls
 
     # This will be set by the metaclass call
     _logger = None
@@ -439,7 +441,7 @@ class AbstractNode(object):
                     raise ValueError("Cannot set {} at the same time".format(
                         " and ".join(incomp)))
 
-        for k, v in arguments.iteritems():
+        for k, v in arguments.items():
             try:
                 if allow_hidden and k.startswith("_"):
                     method = getattr(self, '_set_{}'.format(k[1:]))
@@ -814,7 +816,7 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.iteritems():
+            for label, v in self._inputlinks_cache.items():
                 src = v[0]
                 input_link_type = v[1]
                 if label in input_list_keys:
@@ -1128,7 +1130,7 @@ class AbstractNode(object):
         """
 
         try:
-            for key, value in the_dict.iteritems():
+            for key, value in the_dict.items():
                 self.set_extra(key, value)
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
@@ -1274,7 +1276,7 @@ class AbstractNode(object):
         # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
         if self._to_be_stored:
-            for k, v in self._attrs_cache.iteritems():
+            for k, v in self._attrs_cache.items():
                 yield (k, v)
         else:
             for k, v in self._db_iterattrs():
@@ -1289,7 +1291,7 @@ class AbstractNode(object):
         # Note: this calls a different function _db_attrs
         # because often it's faster not to retrieve the values from the DB
         if self._to_be_stored:
-            for k in self._attrs_cache.iterkeys():
+            for k in self._attrs_cache.keys():
                 yield k
         else:
             for k in self._db_attrs():
@@ -1401,8 +1403,7 @@ class AbstractNode(object):
     @property
     def pk(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         return self.id
 
@@ -1410,8 +1411,7 @@ class AbstractNode(object):
     @abstractmethod
     def id(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         pass
 
@@ -2098,4 +2098,4 @@ class AttributeManager(object):
         try:
             return self._node.get_attr(name)
         except AttributeError as err:
-            raise KeyError(err.message)
+            raise KeyError(str(err))

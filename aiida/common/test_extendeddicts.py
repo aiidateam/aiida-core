@@ -7,8 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import copy
 import unittest
+from six import integer_types
 from aiida.common.extendeddicts import *
 
 
@@ -30,7 +32,7 @@ class TestDFADExample(DefaultFieldsAttributeDict):
         if value is None:
             return
 
-        if not isinstance(value, (int, long)):
+        if not isinstance(value, integer_types):
             raise TypeError('expecting integer')
         if value < 0:
             raise ValueError('expecting a positive or zero value')

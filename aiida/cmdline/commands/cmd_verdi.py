@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """The main `verdi` click group."""
 
+from __future__ import absolute_import
 import click
 
 

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from collections import Mapping
 from aiida.orm.data import Data
 from aiida.orm import load_node
@@ -29,18 +30,18 @@ class FrozenDict(Data, Mapping):
     def set_dict(self, dict):
         assert not self._initialised
 
-        for value in dict.itervalues():
+        for value in dict.values():
             assert isinstance(value, Data)
             assert value.is_stored
 
-        for k, v in dict.iteritems():
+        for k, v in dict.items():
             self._set_attr(k, v.pk)
 
     def __getitem__(self, key):
         return self._get(key)
 
     def __iter__(self):
-        return self.get_attrs().iterkeys()
+        return iter(self.get_attrs().keys())
 
     def __len__(self):
         return len(self.get_attrs())

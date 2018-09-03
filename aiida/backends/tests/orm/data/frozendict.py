@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.int import Int
@@ -29,7 +30,7 @@ class TestFrozenDict(AiidaTestCase):
     def test_iterate(self):
         input = {'a': Int(5).store(), 'b': Str('testing').store()}
         d = FrozenDict(dict=input)
-        for k, v in d.iteritems():
+        for k, v in d.items():
             self.assertEqual(input[k], v)
 
     def test_length(self):

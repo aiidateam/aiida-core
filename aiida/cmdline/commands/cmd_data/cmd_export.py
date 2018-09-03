@@ -10,6 +10,7 @@
 """
 This module provides export functionality to all data types
 """
+from __future__ import absolute_import
 import click
 from aiida.cmdline.utils import echo
 from aiida.cmdline.params import arguments
@@ -96,17 +97,17 @@ def _export(node, output_fname, fileformat, other_args=None, overwrite=False):
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as err:
-                echo.echo_critical("verdi: ERROR while exporting file:\n" + err.message)
+                echo.echo_critical("verdi: ERROR while exporting file:\n{}".format(err))
         else:
             filetext, extra_files = node._exportstring(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
                 echo.echo_critical("This format requires to write more than one file.\n"
                                    "You need to pass the -o option to specify a file name.")
             else:
-                print filetext
+                echo.echo(filetext.decode('utf-8'))
     except TypeError as err:
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
         echo.echo_critical("verdi: ERROR, probably a parameter is not "
                            "supported by the specific format.\nError "
-                           "message: {}".format(err.message))
+                           "message: {}".format(err))

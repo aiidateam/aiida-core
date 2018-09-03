@@ -10,6 +10,8 @@
 
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 def test_and_get_code(codename, expected_code_type, use_exceptions=False):
     """
     Pass a code name and an expected code (plugin) type. Check that the
@@ -53,7 +55,7 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
             if use_exceptions:
                 raise ValueError(msg)
             else:
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 sys.exit(1)
         else:
             msg = ("Code not valid, and no valid codes for {}.\n"
@@ -63,7 +65,7 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
             if use_exceptions:
                 raise ValueError(msg)
             else:
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 sys.exit(1)
 
     return code

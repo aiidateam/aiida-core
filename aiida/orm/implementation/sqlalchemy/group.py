@@ -8,8 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import collections
 from copy import copy
+
+import six
 from sqlalchemy.orm.session import make_transient
 
 from aiida.backends import sqlalchemy as sa
@@ -39,7 +42,7 @@ class Group(AbstractGroup):
                 raise ValueError("If you pass a dbgroups, you cannot pass any "
                                  "further parameter")
 
-            if isinstance(given_dbgroup, (int, long)):
+            if isinstance(given_dbgroup, six.integer_types):
                 dbgroup_res = DbGroup.query.filter_by(id=given_dbgroup).first()
                 if not dbgroup_res:
                     raise NotExistent("Group with pk={} does not exist".format(
@@ -132,7 +135,7 @@ class Group(AbstractGroup):
 
     @property
     def uuid(self):
-        return unicode(self._dbgroup.uuid)
+        return six.text_type(self._dbgroup.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -161,7 +164,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
@@ -220,7 +223,7 @@ class Group(AbstractGroup):
 
             # For future python-3 compatibility
             def __next__(self):
-                return self.next()
+                return next(self.generator)
 
             def next(self):
                 return next(self.generator)
@@ -237,7 +240,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
@@ -292,7 +295,7 @@ class Group(AbstractGroup):
             if not isinstance(nodes, collections.Iterable):
                 nodes = [nodes]
 
-            if not all(map(lambda n: isinstance(n, (Node, DbNode)), nodes)):
+            if not all(isinstance(n, (Node, DbNode)) for n in nodes):
                 raise TypeError("At least one of the elements passed as "
                                 "nodes for the query on Group is neither "
                                 "a Node nor a DbNode")
@@ -301,20 +304,20 @@ class Group(AbstractGroup):
             # property on it.
             sub_query = (session.query(table_groups_nodes).filter(
                 table_groups_nodes.c["dbnode_id"].in_(
-                    map(lambda n: n.id, nodes)),
+                    [n.id for n in nodes]),
                 table_groups_nodes.c["dbgroup_id"] == DbGroup.id
             ).exists())
 
             filters.append(sub_query)
         if user:
-            if isinstance(user, basestring):
+            if isinstance(user, six.string_types):
                 filters.append(DbGroup.user.has(email=user))
             else:
                 # This should be a DbUser
                 filters.append(DbGroup.user == user.dbuser)
 
         if name_filters:
-            for (k, v) in name_filters.iteritems():
+            for (k, v) in name_filters.items():
                 if not v:
                     continue
                 if k == "startswith":

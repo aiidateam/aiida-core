@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for postgres database maintenance functionality"""
+from __future__ import absolute_import
 import unittest
 import mock
 
@@ -26,7 +27,7 @@ class PostgresTest(unittest.TestCase):
 
     def setUp(self):
         """Set up a temporary database cluster for testing potentially destructive operations"""
-        self.pg_test = PGTest()
+        self.pg_test = PGTest(max_connections=11)  # set to 11 to avoid https://github.com/jamesnunn/pgtest/issues/9
         self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=True)
         self.dbuser = 'aiida'
         self.dbpass = 'password'

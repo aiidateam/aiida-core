@@ -7,14 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+import copy
+
+import six
+from six.moves import range
+import numpy as np
+
+from aiida.orm import load_node
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.orbital import OrbitalData 
+from aiida.orm.data.array.bands import BandsData
 from aiida.common.orbital import  Orbital
 from aiida.common.exceptions import   ValidationError, NotExistent
-import copy
-import numpy as np
-from aiida.orm import load_node
-from aiida.orm.data.array.bands import BandsData
 
 
 class ProjectionData(OrbitalData, ArrayData): 
@@ -282,7 +287,7 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return ValidationError("tags must be a list")
 
-            if not all([isinstance(_,basestring) for _ in tags]):
+            if not all([isinstance(_,six.string_types) for _ in tags]):
                 raise ValidationError("Tags must set a list of strings")
             self._set_attr('tags', tags)
 

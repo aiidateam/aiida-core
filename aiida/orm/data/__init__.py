@@ -7,12 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta
 
 try:
-    from functools import singledispatch
+    from functools import singledispatch  # Python 3.4+
 except ImportError:
     from singledispatch import singledispatch
+
+import six
 
 from aiida.orm.node import Node
 from aiida.common.links import LinkType
@@ -255,7 +258,7 @@ class Data(Node):
                 raise OSError("The file {} already exists, stopping.".format(
                     path))
 
-        for additional_fname, additional_fcontent in extra_files.iteritems():
+        for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
             with open(additional_fname, 'wb') as f:
                 f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin
@@ -354,7 +357,7 @@ class Data(Node):
         """
         if object_format is None:
             raise ValueError("object_format must be provided")
-        if not isinstance(object_format, basestring):
+        if not isinstance(object_format, six.string_types):
             raise ValueError('object_format should be a string')
 
         converters = self._get_converters()
@@ -416,13 +419,13 @@ class Data(Node):
 
 
 
+@six.add_metaclass(ABCMeta)
 class BaseType(Data):
     """
     Store a base python type as a AiiDA node in the DB.
 
     Provide the .value property to get the actual value.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
         try:

@@ -5,6 +5,7 @@ language: python
 
 python:
     - "2.7"
+    - "3.6"
 
 cache: pip
 
@@ -59,7 +60,6 @@ env:
 - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
 - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
 - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
-
 
 before_script:
     - .ci/setup_profiles.sh

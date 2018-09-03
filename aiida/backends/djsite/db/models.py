@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import sys
 
-from six import reraise
+import six
+from six.moves import zip, range
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
@@ -373,7 +375,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # subitems contains all subitems, here I store only those of
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+        firstlevelsubdict = {k: v for k, v in subitems.items()
                              if sep not in k}
 
         # For checking, I verify the expected values
@@ -425,10 +427,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
         # I get the values in memory as a dictionary
         tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+        for firstsubk, firstsubv in firstlevelsubdict.items():
             # I call recursively the same function to get subitems
             newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.iteritems()
+                           for k, v in subitems.items()
                            if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
                                                          subitems=newsubitems, sep=sep, original_class=original_class,
@@ -441,7 +443,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # subitems contains all subitems, here I store only those of
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+        firstlevelsubdict = {k: v for k, v in subitems.items()
                              if sep not in k}
 
         if len(firstlevelsubdict) != mainitem['ival']:
@@ -470,10 +472,10 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
         # I get the values in memory as a dictionary
         tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+        for firstsubk, firstsubv in firstlevelsubdict.items():
             # I call recursively the same function to get subitems
             newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.iteritems()
+                           for k, v in subitems.items()
                            if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
                                                          subitems=newsubitems, sep=sep, original_class=original_class,
@@ -525,11 +527,11 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     # I group results by zero-level entity
     found_mainitems = {}
     found_subitems = defaultdict(dict)
-    for mainkey, descriptiondict in data.iteritems():
+    for mainkey, descriptiondict in data.items():
         prefix, thissep, postfix = mainkey.partition(sep)
         if thissep:
             found_subitems[prefix][postfix] = {k: v for k, v
-                                               in descriptiondict.iteritems() if k != "key"}
+                                               in descriptiondict.items() if k != "key"}
         else:
             mainitem = descriptiondict.copy()
             mainitem['key'] = prefix
@@ -544,7 +546,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
 
     # For each zero-level entity, I call the _deserialize_attribute function
     retval = {}
-    for k, v in found_mainitems.iteritems():
+    for k, v in found_mainitems.items():
         # Note: found_subitems[k] will return an empty dictionary it the
         # key does not exist, as it is a defaultdict
         retval[k] = _deserialize_attribute(mainitem=v,
@@ -684,20 +686,19 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
             if with_transaction:
                 transaction.savepoint_commit(sid)
-        except BaseException as e:  # All exceptions including CTRL+C, ...
+        except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
                 transaction.savepoint_rollback(sid)
-            if isinstance(e, IntegrityError) and stop_if_existing:
+            if isinstance(exc, IntegrityError) and stop_if_existing:
                 raise UniquenessError("Impossible to create the required "
                                       "entry "
                                       "in table '{}', "
                                       "another entry already exists and the creation would "
                                       "violate an uniqueness constraint.\nFurther details: "
-                                      "{}".format(
-                    cls.__name__, e.message))
+                                      "{}".format(cls.__name__, exc))
             raise
 
     @classmethod
@@ -764,7 +765,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value, (int, long)):
+        elif isinstance(value, six.integer_types):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -780,7 +781,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.bval = None
             new_entry.dval = None
 
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             new_entry.datatype = 'txt'
             new_entry.tval = value
             new_entry.bval = None
@@ -833,7 +834,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.ival = len(value)
             new_entry.fval = None
 
-            for subk, subv in value.iteritems():
+            for subk, subv in value.items():
                 cls.validate_key(subk)
 
                 # I do not need get_or_create here, because
@@ -891,11 +892,11 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             return {'datatype': 'none'}
         elif isinstance(value, bool):
             return {'datatype': 'bool', 'bval': value}
-        elif isinstance(value, (int, long)):
+        elif isinstance(value, six.integer_types):
             return {'datatype': 'int', 'ival': value}
         elif isinstance(value, float):
             return {'datatype': 'float', 'fval': value}
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             return {'datatype': 'txt', 'tval': value}
         elif isinstance(value, datetime.datetime):
             # current timezone is taken from the settings file of django
@@ -969,8 +970,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                 return deserialize_attributes(data, sep=self._sep,
                                               original_class=self.__class__,
                                               original_pk=self.subspecifier_pk)['attr']
-        except DeserializationException as e:
-            exc = DbContentError(e.message)
+        except DeserializationException as exc:
+            exc = DbContentError(exc)
             exc.original_exception = e
             raise exc
 
@@ -1108,8 +1109,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             return deserialize_attributes(data, sep=cls._sep,
                                           original_class=cls,
                                           original_pk=dbnodepk)
-        except DeserializationException as e:
-            exc = DbContentError(e.message)
+        except DeserializationException as exc:
+            exc = DbContentError(exc)
             exc.original_exception = e
             raise exc
 
@@ -1126,13 +1127,13 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             if with_transaction:
                 sid = transaction.savepoint()
 
-            if isinstance(dbnode, (int, long)):
+            if isinstance(dbnode, six.integer_types):
                 dbnode_node = DbNode(id=dbnode)
             else:
                 dbnode_node = dbnode
 
             # create_value returns a list of nodes to store
-            for k, v in attributes.iteritems():
+            for k, v in attributes.items():
                 nodes_to_store.extend(
                     cls.create_value(k, v,
                                      subspecifier_value=dbnode_node,
@@ -1187,7 +1188,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        if isinstance(dbnode, (int, long)):
+        if isinstance(dbnode, six.integer_types):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
@@ -1370,7 +1371,7 @@ class DbComputer(m.Model):
         from aiida.common.exceptions import NotExistent
         from aiida.orm.computer import Computer
 
-        if isinstance(computer, basestring):
+        if isinstance(computer, six.string_types):
             try:
                 dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
@@ -1518,7 +1519,7 @@ class DbWorkflow(m.Model):
     nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
+    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))), default=wf_states.INITIALIZED)
     report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
     module = m.TextField(blank=False)
@@ -1702,7 +1703,7 @@ class DbWorkflowData(m.Model):
                 self.value_type = wf_data_value_types.JSON
                 self.save()
         except Exception as exc:
-            reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
+            six.reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
         import json
@@ -1737,7 +1738,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
                                       related_name="parent_workflow_step")
     state = m.CharField(max_length=255,
-                        choices=zip(list(wf_states), list(wf_states)),
+                        choices=list(zip(list(wf_states), list(wf_states))),
                         default=wf_states.CREATED)
 
     class Meta:

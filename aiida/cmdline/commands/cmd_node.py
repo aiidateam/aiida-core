@@ -10,6 +10,7 @@
 """"
 Manipulating and printing information of nodes.
 """
+from __future__ import absolute_import
 import click
 import tabulate
 
@@ -41,14 +42,14 @@ def repo_cat(node, relative_path):
     try:
         cat_repo_files(node, relative_path)
     except ValueError as exc:
-        echo.echo_critical(exc.message)
+        echo.echo_critical(str(exc))
     except IOError as exc:
         import errno
         # Ignore Broken pipe errors, re-raise everything else
         if exc.errno == errno.EPIPE:
             pass
         else:
-            echo.echo_critical(exc.message)
+            echo.echo_critical(str(exc))
 
 
 @verdi_node_repo.command('ls')
@@ -63,7 +64,7 @@ def repo_ls(node, relative_path, color):
     try:
         list_repo_files(node, relative_path, color)
     except ValueError as exc:
-        echo.echo_critical(exc.message)
+        echo.echo_critical(str(exc))
 
 
 @verdi_node.command('label')
@@ -240,8 +241,7 @@ class NodeTreePrinter(object):
 @click.option('-c', '--follow-calls', is_flag=True, help='follow call links downwards when deleting')
 # Commenting also the option for follow returns. This is dangerous for the inexperienced user.
 #@click.option('-r', '--follow-returns', is_flag=True, help='follow return links downwards when deleting')
-@click.option(
-    '-n', '--dry-run', is_flag=True, help='dry run, does not delete')
+@click.option('-n', '--dry-run', is_flag=True, help='dry run, does not delete')
 @click.option('-v', '--verbose', is_flag=True, help='print individual nodes marked for deletion.')
 @options.NON_INTERACTIVE()
 @with_dbenv()

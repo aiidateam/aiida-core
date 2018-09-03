@@ -18,16 +18,15 @@ install_requires = [
     'pytz==2018.4',
     'PyYAML==3.12',
     'six==1.11.0',
-    'future==0.16.0',
     'anyjson==0.3.3',
     'psutil==5.4.5',
     'meld3==1.0.2',
+    'mock==2.0.0',
     'numpy==1.14.3',
     'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.9',
     'ujson==1.35',
-    'enum34==1.1.6',
     'aldjemy==0.8.0',
     'passlib==1.7.1',
     'validate-email==1.3',
@@ -46,12 +45,13 @@ install_requires = [
     'plumpy==0.10.6',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
+    'chainmap; python_version<"3.5"',
+    'pathlib2; python_version<"3.5"',
+    'singledispatch>=3.4.0.3; python_version<"3.5"',
+    'enum34==1.1.6; python_version<"3.5"',
 ]
 
 extras_require = {
-    ':python_version < "3.3"': ['mock'],
-    ':python_version < "3"': ['chainmap', 'pathlib2', 'singledispatch >= 3.4.0.3'],
-
     # Requirements for ssh transport with authentification through Kerberos token
     # N. B.: you need to install first libffi and MIT kerberos GSSAPI including header files.
     # E.g. for Ubuntu 14.04: sudo apt-get install libffi-dev libkrb5-dev
@@ -76,7 +76,7 @@ extras_require = {
     ],
     # Requirements to building documentation
     'docs': [
-        'Sphinx==1.7.4',
+        'Sphinx==1.7.7',
         'Pygments==2.2.0',
         'docutils==0.14',
         'Jinja2==2.10',
@@ -99,7 +99,6 @@ extras_require = {
     ],
     # Requirements for testing
     'testing': [
-        'mock==2.0.0',
         'pgtest==1.1.0',
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',
@@ -107,8 +106,8 @@ extras_require = {
     ],
     'dev_precommit': [
         'pre-commit==1.8.2',
-        'yapf==0.21.0',
-        'prospector==0.12.7',
+        'yapf==0.23.0',
+        'prospector==0.12.11',
         'pylint==1.8.4',
         'pep8-naming==0.3.3',
         'toml==0.9.4'

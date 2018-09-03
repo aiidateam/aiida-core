@@ -7,10 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
-
 import logging
 import os
+
+import six
 
 from aiida.transport import Transport, TransportFactory
 from aiida.scheduler import Scheduler, SchedulerFactory
@@ -236,8 +238,7 @@ class AbstractComputer(object):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, (
-                int, long)) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
             raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                   "must be a positive integer, or an empty "
                                   "string if you do not want to provide a "
@@ -302,11 +303,10 @@ class AbstractComputer(object):
 
         try:
             convertedwd = workdir.format(username="test")
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement "
-                                  "field '{}'".format(e.message))
-        except ValueError as e:
-            raise ValidationError("Error in the string: '{}'".format(e.message))
+        except KeyError as exc:
+            raise ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+        except ValueError as exc:
+            raise ValidationError("Error in the string: '{}'".format(exc))
 
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
@@ -317,7 +317,7 @@ class AbstractComputer(object):
         checking for a valid scheduler.
         """
         if not isinstance(mpirun_cmd, (tuple, list)) or not (
-                all(isinstance(i, basestring) for i in mpirun_cmd)):
+                all(isinstance(i, six.string_types) for i in mpirun_cmd)):
             raise ValidationError("the mpirun_command must be a list of strings")
 
         try:
@@ -331,11 +331,10 @@ class AbstractComputer(object):
         try:
             for arg in mpirun_cmd:
                 arg.format(**subst)
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement "
-                                  "field '{}'".format(e.message))
-        except ValueError as e:
-            raise ValidationError("Error in the string: '{}'".format(e.message))
+        except KeyError as exc:
+            raise ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+        except ValueError as exc:
+            raise ValidationError("Error in the string: '{}'".format(exc))
 
     def validate(self):
         """
@@ -466,13 +465,13 @@ class AbstractComputer(object):
         return self._get_property("prepend_text", "")
 
     def set_prepend_text(self, val):
-        self._set_property("prepend_text", unicode(val))
+        self._set_property("prepend_text", six.text_type(val))
 
     def get_append_text(self):
         return self._get_property("append_text", "")
 
     def set_append_text(self, val):
-        self._set_property("append_text", unicode(val))
+        self._set_property("append_text", six.text_type(val))
 
     def get_mpirun_command(self):
         """
@@ -490,7 +489,7 @@ class AbstractComputer(object):
         string.split() if you have a single, space-separated string).
         """
         if not isinstance(val, (tuple, list)) or not (
-                all(isinstance(i, basestring) for i in val)):
+                all(isinstance(i, six.string_types) for i in val)):
             raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
 
@@ -510,7 +509,7 @@ class AbstractComputer(object):
         if def_cpus_per_machine is None:
             self._del_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
-            if not isinstance(def_cpus_per_machine, (int, long)):
+            if not isinstance(def_cpus_per_machine, six.integer_types):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
@@ -567,7 +566,7 @@ class AbstractComputer(object):
         """
         :param str val: A valid shebang line
         """
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             raise ValueError("{} is invalid. Input has to be a string".format(val))
         if not val.startswith('#!'):
             raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
@@ -659,18 +658,18 @@ class AbstractComputer(object):
         try:
             # I return the class, not an instance
             return TransportFactory(self.get_transport_type())
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.name, self.get_transport_type(), e.message))
+                self.name, self.get_transport_type(), exc))
 
     def get_scheduler(self):
         try:
             ThisPlugin = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return ThisPlugin()
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.name, self.get_scheduler_type(), e.message))
+                self.name, self.get_scheduler_type(), exc))
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -684,9 +683,8 @@ class AbstractComputer(object):
                                                        self.pk)
 
 
+@six.add_metaclass(ABCMeta)
 class Util(object):
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def delete_computer(self, pk):
         pass

@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  UpfEntry)
-
 
 
 class NnincDbImporter(DbImporter):
@@ -22,7 +25,7 @@ class NnincDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring):
+        if not isinstance(values, six.string_types):
             raise ValueError("incorrect value for keyword '{}' -- only "
                              "strings and integers are accepted".format(alias))
         return "{}={}".format(key, values)
@@ -69,11 +72,11 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query = self.query_get(**kwargs)
-        response = urllib2.urlopen(query).read()
+        response = urllib.request.urlopen(query).read()
         results = re.findall("psp_files/([^']+)\.UPF", response)
 
         elements = kwargs.get('element', None)

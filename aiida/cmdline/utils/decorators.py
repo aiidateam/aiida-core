@@ -19,6 +19,7 @@ Provides:
     code branch gets visited and possibly avoiding the overhead if not
 
 """
+from __future__ import absolute_import
 import sys
 from contextlib import contextmanager
 from functools import wraps

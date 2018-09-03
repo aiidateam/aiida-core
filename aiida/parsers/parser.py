@@ -11,6 +11,7 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
+from __future__ import absolute_import
 import logging
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import aiidalogger, get_dblogger_extra

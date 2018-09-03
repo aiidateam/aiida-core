@@ -1,4 +1,5 @@
 """Manage computer objects with lazy loading of the db env"""
+from __future__ import absolute_import
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.utils.error_accumulator import ErrorAccumulator
@@ -114,8 +115,8 @@ class ComputerBuilder(object):
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(
-                ", ".join(sorted(passed_keys - used))))
+            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(", ".join(
+                sorted(passed_keys - used))))
 
         return computer
 

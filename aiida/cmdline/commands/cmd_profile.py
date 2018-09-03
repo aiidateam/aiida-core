@@ -10,6 +10,7 @@
 """
 This allows to manage profiles from command line.
 """
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -40,7 +41,7 @@ def profile_list():
     except ConfigurationError as err:
         err_msg = ("Stopping: {}\n"
                    "Note: if no configuration file was found, it means that you have not run\n"
-                   "'verdi setup' yet to configure at least one AiiDA profile.".format(err.message))
+                   "'verdi setup' yet to configure at least one AiiDA profile.".format(err))
         echo.echo_critical(err_msg)
 
     if default_profile is None:
@@ -79,7 +80,7 @@ def profile_delete(force, profiles):
     """
     from aiida.common.setup import get_or_create_config, update_config
     import os.path
-    from urlparse import urlparse
+    from six.moves.urllib.parse import urlparse  # pylint: disable=import-error
 
     echo.echo('profiles: {}'.format(', '.join(profiles)))
 

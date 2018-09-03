@@ -10,7 +10,11 @@
 """
 This allows to manage TrajectoryData objects from command line.
 """
+from __future__ import absolute_import
+
+from six.moves import range
 import click
+
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
@@ -81,9 +85,7 @@ def show(**kwargs):
         if not isinstance(node, TrajectoryData):
             echo.echo_critical("Node {} is of class {} instead " "of {}".format(node, type(node), TrajectoryData))
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if given_format == "jmol":
         _show_jmol(given_format, nodes, **kwargs)
@@ -121,9 +123,7 @@ def export(**kwargs):
     export_format = kwargs.pop('format')
     force = kwargs.pop('force')
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, TrajectoryData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), TrajectoryData))
@@ -153,9 +153,7 @@ def deposit(**kwargs):
     if kwargs['database'] is None:
         echo.echo_critical("Default database is not defined, please specify.")
 
-    for key, value in kwargs.items():
-        if value is None:
-            kwargs.pop(key)
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     if not isinstance(node, TrajectoryData):
         echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), TrajectoryData))

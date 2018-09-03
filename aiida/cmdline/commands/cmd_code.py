@@ -72,8 +72,7 @@ CODE_REL_PATH = OverridableOption(
     prompt_fn=is_not_on_computer,
     type=click.Path(dir_okay=False),
     cls=InteractiveOption,
-    help=('[if --store-in-db]: relative path of the executable ' + \
-          'inside the code-folder'))
+    help=('[if --store-in-db]: relative path of the executable inside the code-folder'))
 
 
 @verdi_code.command('setup')
@@ -145,7 +144,7 @@ def get_on_computer(ctx):
     return not getattr(ctx.code_builder, 'is_local')()
 
 
-#pylint: disable=unused-argument
+# pylint: disable=unused-argument
 def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
     ctx.code_builder = CodeBuilder.from_code(value)

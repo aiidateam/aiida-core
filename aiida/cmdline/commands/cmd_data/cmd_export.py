@@ -13,7 +13,6 @@ This module provides export functionality to all data types
 from __future__ import absolute_import
 import click
 from aiida.cmdline.utils import echo
-from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 
 EXPORT_OPTIONS = [
@@ -61,8 +60,7 @@ EXPORT_OPTIONS = [
         help="If present, store the output directly on a file "
         "with the given name. It is essential to use this option "
         "if more than one file needs to be created."),
-    options.FORCE(help="If passed, overwrite files without checking."),
-    arguments.NODE(),
+    options.FORCE(help="Overwrite files without checking."),
 ]
 
 
@@ -73,18 +71,18 @@ def export_options(func):
     return func
 
 
-def _export(node, output_fname, fileformat, other_args=None, overwrite=False):
+def data_export(node, output_fname, fileformat, other_args=None, overwrite=False):
     """
     Depending on the parameters, either print the (single) output file on
     screen, or store the file(s) on disk.
 
     :param node: the Data node to print or store on disk
     :param output_fname: The filename to store the main file. If empty or
-            None, print instead
+        None, print instead
     :param fileformat: a string to pass to the _exportstring method
     :param other_args: a dictionary with additional kwargs to pass to _exportstring
     :param overwrite: if False, stops if any file already exists (when output_fname
-            is not empty
+        is not empty
 
     :note: this function calls directly sys.exit(1) when an error occurs (or e.g. if
         check_overwrite is True and a file already exists).

@@ -235,15 +235,13 @@ Below is a list with all the available subcommands.
 Setup and manage code objects.
 
   *  **delete**: delete a code from the database. Only possible for disconnected codes (i.e. a code that has not been used yet)
+  *  **duplicate**: create a new code, starting from the settings of an existing one
   *  **hide**: hide codes from `verdi code list`
   *  **list**: lists the installed codes
   *  **relabel**: change the label (name) of a code. If you like to load codes based on their labels and not on their UUID's or PK's, make sure to use unique labels!
-  *  **rename**: (deprecated) use ``relabel`` instead
   *  **reveal**: un-hide codes for `verdi code list`
   *  **setup**: setup a new code
   *  **show**: shows the information of the installed code
-  *  **update**: change (some of) the installation description of the code given at the moment of the setup
-
 
 .. _comment:
 

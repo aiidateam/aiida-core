@@ -27,7 +27,7 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
 * :ref:`user<user>`:                 Inspect and manage users.
 * :ref:`work<work>`:                 Inspect and manage work calculations.
-* :ref:`workflow<workflow>`:         Inspect and manage legacy workflows.
+* :ref:`workflow<workflow>`:         [deprecated: since v1.0.0] Inspect and manage legacy workflows.
 
 
 Concepts
@@ -543,6 +543,10 @@ Manage work calculations.
 
 ``verdi workflow``
 ------------------
+
+.. warning::
+  As of v1.0.0 this command is deprecated, as legacy workflows are no longer maintained
+
 Manage legacy workflows:
 
   * **kill**: kills a workflow

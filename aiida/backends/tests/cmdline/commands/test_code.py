@@ -225,4 +225,3 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
         self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
         self.assertEquals(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
-

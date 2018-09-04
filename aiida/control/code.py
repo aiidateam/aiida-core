@@ -129,7 +129,7 @@ class CodeBuilder(object):
            ``key`` will be added to this set if the value exists in the spec and can be retrieved.
         """
         retval = self.__getattr__(key)
-        ## I first get a retval, so if I get an exception, I don't add it to the 'used' set
+        # I first get a retval, so if I get an exception, I don't add it to the 'used' set
         used.add(key)
         return retval
 

@@ -235,7 +235,7 @@ Below is a list with all the available subcommands.
 Setup and manage code objects.
 
   *  **delete**: delete a code from the database. Only possible for disconnected codes (i.e. a code that has not been used yet)
-  *  **duplicate**: create a new code, starting from the settings of an existing one
+  *  **duplicate**: setup a new code, starting from the settings of an existing one
   *  **hide**: hide codes from `verdi code list`
   *  **list**: lists the installed codes
   *  **relabel**: change the label (name) of a code. If you like to load codes based on their labels and not on their UUID's or PK's, make sure to use unique labels!
@@ -280,7 +280,8 @@ Setup and manage computer objects.
   *  **setup**: creates a new computer object
   *  **show**: shows the details of an installed computer
   *  **test**: tests if the current user (or a given user) can connect to the computer and if basic operations perform as expected (file copy, getting the list of jobs in the scheduler queue, ...)
-  *  **update**: change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet)
+  *  **duplicate**: setup a new computer, starting from the settings of an existing one
+  *  **update**: [deprecated: use ``verdi computer duplicate`` instead] change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet)
 
 
 .. _daemon:

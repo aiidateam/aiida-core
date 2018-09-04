@@ -11,8 +11,9 @@
 """`verdi computer` commands"""
 from __future__ import absolute_import
 import sys
-
+from functools import partial
 from six.moves import zip
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -240,7 +241,6 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 @with_dbenv()
 def computer_setup(non_interactive, **kwargs):
     """Add a Computer."""
-
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists.\n'
                            'Use "verdi computer update" to update it, and be '
@@ -256,6 +256,159 @@ def computer_setup(non_interactive, **kwargs):
     kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
+    try:
+        computer = computer_builder.new()
+    except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
+        echo.echo_critical('{}: {}'.format(type(e).__name__, e))
+
+    try:
+        computer.store()
+    except ValidationError as err:
+        echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+
+    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
+    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
+
+    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
+    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
+    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
+    echo.echo_info("the command-line interface at the moment)")
+
+
+def get_parameter_default(parameter, ctx):
+    """
+    Get the value for a specific parameter from the computer_builder or the default value of that option
+
+    :param parameter: parameter name
+    :param ctx: click context of the command
+    :return: parameter default value, or None
+    """
+    default = None
+
+    for param in ctx.command.get_params(ctx):
+        if param.name == parameter:
+            default = param.default
+
+    try:
+        value = getattr(ctx.computer_builder, parameter)
+        if value == '':
+            value = default
+    except KeyError:
+        value = default
+
+    return value
+
+
+# pylint: disable=unused-argument
+def set_computer_builder(ctx, param, value):
+    """Set the computer spec for defaults of following options."""
+    ctx.computer_builder = ComputerBuilder.from_computer(value)
+    return value
+
+
+@verdi_computer.command('duplicate')
+@arguments.COMPUTER(callback=set_computer_builder)
+@options.LABEL(
+    prompt='Computer label',
+    cls=InteractiveOption,
+    required=True,
+    type=NonEmptyStringParamType(),
+    contextual_default=partial(get_parameter_default, 'label'))
+@options.HOSTNAME(
+    prompt='Hostname',
+    cls=InteractiveOption,
+    required=True,
+    contextual_default=partial(get_parameter_default, 'hostname'),
+    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
+@options.DESCRIPTION(
+    prompt='Description',
+    cls=InteractiveOption,
+    help='A human-readable description of this computer',
+    contextual_default=partial(get_parameter_default, 'description'))
+@click.option(
+    '-e/-d',
+    '--enabled/--disabled',
+    is_flag=True,
+    default=True,
+    help='if created with the disabled flag, calculations '
+    'associated with it will not be submitted until when it is '
+    're-enabled',
+    prompt="Enable the computer?",
+    contextual_default=partial(get_parameter_default, 'enabled'),
+    cls=InteractiveOption,
+    # IMPORTANT! Do not specify explicitly type=click.BOOL,
+    # Otherwise you would not get a default value when prompting
+)
+@options.TRANSPORT(
+    prompt="Transport plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'transport'))
+@options.SCHEDULER(
+    prompt="Scheduler plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'scheduler'))
+@click.option(
+    '--shebang',
+    prompt='Shebang line (first line of each script, starting with #!)',
+    default="#!/bin/bash",
+    cls=InteractiveOption,
+    help='this line specifies the first line of the submission script for this computer',
+    contextual_default=partial(get_parameter_default, 'shebang'),
+    type=ShebangParamType())
+@click.option(
+    '-w',
+    '--work-dir',
+    prompt='Work directory on the computer',
+    default="/scratch/{username}/aiida/",
+    cls=InteractiveOption,
+    contextual_default=partial(get_parameter_default, 'work_dir'),
+    help="The absolute path of the directory on the computer where AiiDA will "
+    "run the calculations (typically, the scratch of the computer). You "
+    "can use the {username} replacement, that will be replaced by your "
+    "username on the remote computer")
+@click.option(
+    '-m',
+    '--mpirun-command',
+    prompt="Mpirun command",
+    default="mpirun -np {tot_num_mpiprocs}",
+    cls=InteractiveOption,
+    contextual_default=partial(get_parameter_default, 'mpirun_command'),
+    help="The mpirun command needed on the cluster to run parallel MPI "
+    "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+    "replaced by the total number of cpus, or the other scheduler-dependent "
+    "replacement fields (see the scheduler docs for more information)",
+    type=MpirunCommandParamType())
+@click.option(
+    '--mpiprocs-per-machine',
+    prompt="Default number of CPUs per machine",
+    cls=InteractiveOption,
+    help="Enter here the default number of MPI processes per machine (node) that "
+    "should be used if nothing is otherwise specified. Pass the digit 0 "
+    "if you do not want to provide a default value.",
+    contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'),
+    prompt_fn=should_call_default_mpiprocs_per_machine,
+    required_fn=False,
+    type=click.INT,
+)  # Note: this can still be passed from the command line in non-interactive mode
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@click.pass_context
+@with_dbenv()
+def computer_duplicate(ctx, computer, non_interactive, **kwargs):
+    """Duplicate a Computer."""
+    if kwargs['label'] in get_computer_names():
+        echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    kwargs['transport'] = kwargs['transport'].name
+    kwargs['scheduler'] = kwargs['scheduler'].name
+
+    computer_builder = ctx.computer_builder
+    for key, value in kwargs.items():
+        if value is not None:
+            setattr(computer_builder, key, value)
+
     try:
         computer = computer_builder.new()
     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:

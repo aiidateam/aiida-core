@@ -116,7 +116,7 @@ def profile_delete(force, profiles):
             echo.echo_info("Associated database user '{}' does not exist.".format(user))
         elif users.count(user) > 1:
             echo.echo_info("Associated database user '{}' is used by other profiles " \
-                  "and will not be deleted.".format(user))
+                           "and will not be deleted.".format(user))
         elif force or click.confirm("Delete database user '{}'?".format(user)):
             echo.echo_info("Deleting user '{}'.".format(user))
             postgres.drop_dbuser(user)
@@ -126,10 +126,10 @@ def profile_delete(force, profiles):
         repo_path = os.path.expanduser(repo_path)
         if not os.path.isabs(repo_path):
             echo.echo_info("Associated file repository '{}' does not exist." \
-                  .format(repo_path))
+                           .format(repo_path))
         elif not os.path.isdir(repo_path):
             echo.echo_info("Associated file repository '{}' is not a directory." \
-                  .format(repo_path))
+                           .format(repo_path))
         elif force or click.confirm("Delete associated file repository '{}'?\n" \
                                     "WARNING: All data will be lost.".format(repo_path)):
             echo.echo_info("Deleting directory '{}'.".format(repo_path))

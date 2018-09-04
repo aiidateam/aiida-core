@@ -14,8 +14,9 @@ import os
 from django.db import transaction
 
 from aiida.orm.implementation.general.code import AbstractCode
-from aiida.orm.implementation import Computer
 from aiida.common.exceptions import InvalidOperation
+from aiida.orm.computer import Computer
+from aiida.common.utils import type_check
 
 
 class Code(AbstractCode):
@@ -62,7 +63,7 @@ class Code(AbstractCode):
         """
         from aiida.backends.djsite.db.models import DbComputer
         if (not isinstance(remote_computer_exec, (list, tuple))
-            or len(remote_computer_exec) != 2):
+                or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
                              "of length 2, with machine and executable "
                              "name")
@@ -109,19 +110,11 @@ class Code(AbstractCode):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        from aiida.backends.djsite.db.models import DbComputer
         if self.is_local():
             return True
         else:
-            dbcomputer = computer
-            if isinstance(dbcomputer, Computer):
-                dbcomputer = dbcomputer.dbcomputer
-            if not isinstance(dbcomputer, DbComputer):
-                raise ValueError(
-                    "computer must be either a Computer or DbComputer object")
-            dbcomputer = DbComputer.get_dbcomputer(computer)
-            return (dbcomputer.pk ==
-                    self.get_remote_computer().dbcomputer.pk)
+            type_check(computer, Computer)
+            return computer.id == self.get_remote_computer().id
 
 
 def delete_code(code):

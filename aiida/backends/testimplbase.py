@@ -35,6 +35,10 @@ class AiidaTestImplementation(object):
     methods.
     """
 
+    # This should be set by the implementing class in setUpClass_method()
+    backend = None  # type: :class:`aiida.orm.backend.Backend`
+    computer = None  # type: :class:`aiida.orm.Computer`
+
     @abstractmethod
     def setUpClass_method(self):
         """
@@ -66,12 +70,17 @@ class AiidaTestImplementation(object):
         """
         pass
 
-    @abstractmethod
     def insert_data(self):
         """
         This method inserts default data into the database.
         """
-        pass
+        self.computer = self.backend.computers.create(
+            name='localhost',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida')
+        self.computer.store()
 
     def get_computer(self):
         """
@@ -90,4 +99,3 @@ class AiidaTestImplementation(object):
             return self.user_email
         except AttributeError:
             raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
-

@@ -11,10 +11,13 @@ from __future__ import absolute_import
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
-class QueryManagerSQLA(AbstractQueryManager):
+class SqlaQueryManager(AbstractQueryManager):
     """
     SQLAlchemy implementation of custom queries, for efficiency reasons
     """
+
+    def __init__(self, backend):
+        super(SqlaQueryManager, self).__init__(backend)
 
     def get_creation_statistics(
             self,
@@ -51,9 +54,9 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         total_query = s.query(m.node.DbNode)
         types_query = s.query(m.node.DbNode.type.label('typestring'),
-                sa.func.count(m.node.DbNode.id))
+                              sa.func.count(m.node.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
-                           sa.func.count(m.node.DbNode.id))
+                             sa.func.count(m.node.DbNode.id))
 
         if user_pk is not None:
             total_query = total_query.filter(m.node.DbNode.user_id == user_pk)
@@ -74,5 +77,3 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         return retdict
         # Still not containing all dates
-
-

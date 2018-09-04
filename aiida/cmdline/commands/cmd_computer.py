@@ -238,8 +238,9 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@click.pass_context
 @with_dbenv()
-def computer_setup(non_interactive, **kwargs):
+def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists.\n'
@@ -265,14 +266,14 @@ def computer_setup(non_interactive, **kwargs):
         computer.store()
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
 
-    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
-    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
-
-    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
-    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
-    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
-    echo.echo_info("the command-line interface at the moment)")
+    if not non_interactive and click.confirm('Do you want to configure the computer now?'):
+        ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
+    else:
+        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 def get_parameter_default(parameter, ctx):
@@ -393,6 +394,8 @@ def set_computer_builder(ctx, param, value):
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a Computer."""
+    from aiida.orm.backend import construct_backend
+
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
 
@@ -413,19 +416,25 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         computer = computer_builder.new()
     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
         echo.echo_critical('{}: {}'.format(type(e).__name__, e))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
 
     try:
         computer.store()
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
 
-    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
-    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
+    backend = construct_backend()
+    is_configured = computer.is_user_configured(backend.users.get_automatic_user())
 
-    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
-    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
-    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
-    echo.echo_info("the command-line interface at the moment)")
+    if not is_configured:
+        if not non_interactive and click.confirm('Do you want to configure the computer now?'):
+            ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
+        else:
+            echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+            echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('enable')

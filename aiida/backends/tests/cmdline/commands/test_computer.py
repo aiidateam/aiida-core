@@ -735,7 +735,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'computer_duplicate_interactive'
-        user_input = label + '\n\n\n\n\n\n\n\n\n'
+        user_input = label + '\n\n\n\n\n\n\n\n\nN'
         result = self.runner.invoke(computer_duplicate, [str(self.comp.pk)], input=user_input, catch_exceptions=False)
         self.assertIsNone(result.exception, result.output)
 

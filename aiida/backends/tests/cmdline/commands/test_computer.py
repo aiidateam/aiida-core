@@ -617,7 +617,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertIsNotNone(result.output)
 
         # Check all options run
-        for opt in ['-o', '--only-usable', '-r', '--raw', '-a', '--all']:
+        for opt in ['-r', '--raw', '-a', '--all']:
             result = self.runner.invoke(computer_list, [opt])
             # No exceptions should arise
             self.assertIsNone(result.exception)

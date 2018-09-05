@@ -29,7 +29,7 @@ class PluginParamType(click.ParamType):
         click.option(... type=PluginParamType(group=('calculations', 'data'))
 
     """
-    name = 'aiida plugin'
+    name = 'plugin'
 
     def __init__(self, group=None, load=False, *args, **kwargs):
         """

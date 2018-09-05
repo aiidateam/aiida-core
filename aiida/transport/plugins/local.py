@@ -807,7 +807,7 @@ class LocalTransport(Transport):
         if input_string:
             for entry in self._EC_CHARACTERS:
                 # remove byte sequences, not single bytes
-                input_string = input_string.strip(entry, b'')
+                input_string = input_string.replace(entry, b'')
 
         return input_string
 

@@ -28,13 +28,14 @@ from aiida.orm import DataFactory
 from aiida.orm.data.folder import FolderData
 from aiida.scheduler.datastructures import JOB_STATES
 
+REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
 execlogger = aiidalogger.getChild('execmanager')
 
 
-def submit_calculation(calculation, transport, calc_info, script_filename):
+def upload_calculation(calculation, transport, calc_info, script_filename):
     """
-    Submit a calculation
+    Upload a calculation
 
     :param calculation: the instance of JobCalculation to submit.
     :param transport: an already opened transport to use to submit the calculation.
@@ -103,11 +104,33 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     transport.chdir(calc_info.uuid[:2])
     transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
     transport.chdir(calc_info.uuid[2:4])
-    transport.mkdir(calc_info.uuid[4:])
-    transport.chdir(calc_info.uuid[4:])
+
+    try:
+        # The final directory may already exist, most likely because this function was already executed once, but
+        # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
+        # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
+        # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
+        transport.mkdir(calc_info.uuid[4:])
+    except OSError:
+        # Move the existing directory to lost+found, log a warning and create a clean directory anyway
+        path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
+        path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
+        path_target = os.path.join(path_lost_found, calc_info.uuid)
+        execlogger.warning('tried to create path {} but it already exists, moving the entire folder to {}'.format(
+            path_existing, path_target))
+
+        # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
+        transport.mkdir(path_lost_found, ignore_existing=True)
+        transport.copytree(path_existing, path_target)
+        transport.rmtree(path_existing)
+
+        # Now we can create a clean folder for this calculation
+        transport.mkdir(calc_info.uuid[4:])
+    finally:
+        transport.chdir(calc_info.uuid[4:])
+
+    # I store the workdir of the calculation for later file retrieval
     workdir = transport.getcwd()
-    # I store the workdir of the calculation for later file
-    # retrieval
     calculation._set_remote_workdir(workdir)
 
     # I first create the code files, so that the code can put
@@ -193,10 +216,23 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     remotedata.add_link_from(calculation, label='remote_folder', link_type=LinkType.CREATE)
     remotedata.store()
 
-    scheduler = computer.get_scheduler()
+    return calc_info, script_filename
+
+
+def submit_calculation(calculation, transport, calc_info, script_filename):
+    """
+    Submit a calculation
+
+    :param calculation: the instance of JobCalculation to submit.
+    :param transport: an already opened transport to use to submit the calculation.
+    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
+    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    """
+    scheduler = calculation.get_computer().get_scheduler()
     scheduler.set_transport(transport)
 
-    job_id = scheduler.submit_from_script(transport.getcwd(), script_filename)
+    workdir = calculation._get_remote_workdir()
+    job_id = scheduler.submit_from_script(workdir, script_filename)
     calculation._set_job_id(job_id)
 
 

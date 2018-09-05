@@ -11,15 +11,15 @@
 """`verdi computer` commands"""
 from __future__ import absolute_import
 import sys
-
+from functools import partial
 from six.moves import zip
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
-from aiida.cmdline.params import types
 from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.types import ShebangParamType, MpirunCommandParamType, NonemptyStringParamType
+from aiida.cmdline.params.types import ShebangParamType, MpirunCommandParamType, NonEmptyStringParamType
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
@@ -62,7 +62,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
     pass
 
 
-def shouldcall_default_mpiprocs_per_machine(ctx):
+def should_call_default_mpiprocs_per_machine(ctx):
     """
     Return True if the scheduler can accept 'default_mpiprocs_per_machine',
     False otherwise.
@@ -174,7 +174,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
 
 @verdi_computer.command('setup')
-@options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonemptyStringParamType())
+@options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonEmptyStringParamType())
 @options.HOSTNAME(
     prompt='Hostname',
     cls=InteractiveOption,
@@ -231,17 +231,17 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     help="Enter here the default number of MPI processes per machine (node) that "
     "should be used if nothing is otherwise specified. Pass the digit 0 "
     "if you do not want to provide a default value.",
-    prompt_fn=shouldcall_default_mpiprocs_per_machine,
+    prompt_fn=should_call_default_mpiprocs_per_machine,
     required_fn=False,
     type=click.INT,
 )  # Note: this can still be passed from the command line in non-interactive mode
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@click.pass_context
 @with_dbenv()
-def setup_computer(non_interactive, **kwargs):
+def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
-
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists.\n'
                            'Use "verdi computer update" to update it, and be '
@@ -266,30 +266,186 @@ def setup_computer(non_interactive, **kwargs):
         computer.store()
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
 
-    echo.echo_success('computer "{}" stored in DB.'.format(computer.name))
-    echo.echo_info('pk: {}, uuid: {}'.format(computer.pk, computer.uuid))
+    if not non_interactive and click.confirm('Do you want to configure the computer now?'):
+        ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
+    else:
+        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
-    echo.echo_info("Note: before using it with AiiDA, configure it using the command")
-    echo.echo_info("  verdi computer configure {} {}".format(computer.get_transport_type(), computer.name))
-    echo.echo_info("(Note: machine_dependent transport parameters cannot be set via ")
-    echo.echo_info("the command-line interface at the moment)")
+
+def get_parameter_default(parameter, ctx):
+    """
+    Get the value for a specific parameter from the computer_builder or the default value of that option
+
+    :param parameter: parameter name
+    :param ctx: click context of the command
+    :return: parameter default value, or None
+    """
+    default = None
+
+    for param in ctx.command.get_params(ctx):
+        if param.name == parameter:
+            default = param.default
+
+    try:
+        value = getattr(ctx.computer_builder, parameter)
+        if value == '':
+            value = default
+    except KeyError:
+        value = default
+
+    return value
+
+
+# pylint: disable=unused-argument
+def set_computer_builder(ctx, param, value):
+    """Set the computer spec for defaults of following options."""
+    ctx.computer_builder = ComputerBuilder.from_computer(value)
+    return value
+
+
+@verdi_computer.command('duplicate')
+@arguments.COMPUTER(callback=set_computer_builder)
+@options.LABEL(
+    prompt='Computer label',
+    cls=InteractiveOption,
+    required=True,
+    type=NonEmptyStringParamType(),
+    contextual_default=partial(get_parameter_default, 'label'))
+@options.HOSTNAME(
+    prompt='Hostname',
+    cls=InteractiveOption,
+    required=True,
+    contextual_default=partial(get_parameter_default, 'hostname'),
+    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
+@options.DESCRIPTION(
+    prompt='Description',
+    cls=InteractiveOption,
+    help='A human-readable description of this computer',
+    contextual_default=partial(get_parameter_default, 'description'))
+@click.option(
+    '-e/-d',
+    '--enabled/--disabled',
+    is_flag=True,
+    default=True,
+    help='if created with the disabled flag, calculations '
+    'associated with it will not be submitted until when it is '
+    're-enabled',
+    prompt="Enable the computer?",
+    contextual_default=partial(get_parameter_default, 'enabled'),
+    cls=InteractiveOption,
+    # IMPORTANT! Do not specify explicitly type=click.BOOL,
+    # Otherwise you would not get a default value when prompting
+)
+@options.TRANSPORT(
+    prompt="Transport plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'transport'))
+@options.SCHEDULER(
+    prompt="Scheduler plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'scheduler'))
+@click.option(
+    '--shebang',
+    prompt='Shebang line (first line of each script, starting with #!)',
+    default="#!/bin/bash",
+    cls=InteractiveOption,
+    help='this line specifies the first line of the submission script for this computer',
+    contextual_default=partial(get_parameter_default, 'shebang'),
+    type=ShebangParamType())
+@click.option(
+    '-w',
+    '--work-dir',
+    prompt='Work directory on the computer',
+    default="/scratch/{username}/aiida/",
+    cls=InteractiveOption,
+    contextual_default=partial(get_parameter_default, 'work_dir'),
+    help="The absolute path of the directory on the computer where AiiDA will "
+    "run the calculations (typically, the scratch of the computer). You "
+    "can use the {username} replacement, that will be replaced by your "
+    "username on the remote computer")
+@click.option(
+    '-m',
+    '--mpirun-command',
+    prompt="Mpirun command",
+    default="mpirun -np {tot_num_mpiprocs}",
+    cls=InteractiveOption,
+    contextual_default=partial(get_parameter_default, 'mpirun_command'),
+    help="The mpirun command needed on the cluster to run parallel MPI "
+    "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
+    "replaced by the total number of cpus, or the other scheduler-dependent "
+    "replacement fields (see the scheduler docs for more information)",
+    type=MpirunCommandParamType())
+@click.option(
+    '--mpiprocs-per-machine',
+    prompt="Default number of CPUs per machine",
+    cls=InteractiveOption,
+    help="Enter here the default number of MPI processes per machine (node) that "
+    "should be used if nothing is otherwise specified. Pass the digit 0 "
+    "if you do not want to provide a default value.",
+    contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'),
+    prompt_fn=should_call_default_mpiprocs_per_machine,
+    required_fn=False,
+    type=click.INT,
+)  # Note: this can still be passed from the command line in non-interactive mode
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@click.pass_context
+@with_dbenv()
+def computer_duplicate(ctx, computer, non_interactive, **kwargs):
+    """Duplicate a Computer."""
+    from aiida.orm.backend import construct_backend
+
+    if kwargs['label'] in get_computer_names():
+        echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    kwargs['transport'] = kwargs['transport'].name
+    kwargs['scheduler'] = kwargs['scheduler'].name
+
+    computer_builder = ctx.computer_builder
+    for key, value in kwargs.items():
+        if value is not None:
+            setattr(computer_builder, key, value)
+
+    try:
+        computer = computer_builder.new()
+    except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
+        echo.echo_critical('{}: {}'.format(type(e).__name__, e))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+
+    try:
+        computer.store()
+    except ValidationError as err:
+        echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
+    else:
+        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+
+    backend = construct_backend()
+    is_configured = computer.is_user_configured(backend.users.get_automatic_user())
+
+    if not is_configured:
+        if not non_interactive and click.confirm('Do you want to configure the computer now?'):
+            ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
+        else:
+            echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+            echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('enable')
-@click.option(
-    '-u',
-    '--only-for-user',
-    type=types.UserParamType(),
-    required=False,
-    help="Enable a computer only for the given user. If not specified, enables the computer globally.")
+@options.USER(required=False, help="Enable only for this user. If not specified, enables the computer globally.")
 @arguments.COMPUTER()
 @with_dbenv()
-def enable_computer(only_for_user, computer):
-    """Enable a computer"""
+def computer_enable(user, computer):
+    """Enable a computer."""
     from aiida.common.exceptions import NotExistent
 
-    if only_for_user is None:
+    if user is None:
         if computer.is_enabled():
             echo.echo_info("Computer '{}' already enabled.".format(computer.name))
         else:
@@ -297,33 +453,28 @@ def enable_computer(only_for_user, computer):
             echo.echo_info("Computer '{}' enabled.".format(computer.name))
     else:
         try:
-            authinfo = computer.get_authinfo(only_for_user)
+            authinfo = computer.get_authinfo(user)
         except NotExistent:
             echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-                only_for_user.email, computer.name))
+                user.email, computer.name))
 
         if not authinfo.enabled:
             authinfo.enabled = True
-            echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, only_for_user.get_full_name()))
+            echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
         else:
             echo.echo_info("Computer '{}' was already enabled for user {} {}.".format(
-                computer.name, only_for_user.first_name, only_for_user.last_name))
+                computer.name, user.first_name, user.last_name))
 
 
 @verdi_computer.command('disable')
-@click.option(
-    '-u',
-    '--only-for-user',
-    type=types.UserParamType(),
-    required=False,
-    help="Disable a computer only for the given user. If not specified, disables the computer globally.")
+@options.USER(required=False, help="Disable only for this user. If not specified, disables the computer globally.")
 @arguments.COMPUTER()
 @with_dbenv()
-def disable_computer(only_for_user, computer):
+def computer_disable(user, computer):
     """Disable a computer. Useful, for instance, when a computer is under maintenance."""
     from aiida.common.exceptions import NotExistent
 
-    if only_for_user is None:
+    if user is None:
         if not computer.is_enabled():
             echo.echo_info("Computer '{}' already disabled.".format(computer.name))
         else:
@@ -331,17 +482,17 @@ def disable_computer(only_for_user, computer):
             echo.echo_info("Computer '{}' disabled.".format(computer.name))
     else:
         try:
-            authinfo = computer.get_authinfo(only_for_user)
+            authinfo = computer.get_authinfo(user)
         except NotExistent:
             echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-                only_for_user.email, computer.name))
+                user.email, computer.name))
 
         if authinfo.enabled:
             authinfo.enabled = False
-            echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, only_for_user.get_full_name()))
+            echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
         else:
             echo.echo_info("Computer '{}' was already disabled for user {} {}.".format(
-                computer.name, only_for_user.first_name, only_for_user.last_name))
+                computer.name, user.first_name, user.last_name))
 
 
 @verdi_computer.command('list')
@@ -350,17 +501,11 @@ def disable_computer(only_for_user, computer):
     '--only-usable',
     is_flag=True,
     help="Show only computers that are usable (i.e. configured for the given user and enabled)")
-@click.option(
-    '-p',
-    '--parsable',
-    is_flag=True,
-    help="Show only the computer names, one per line, without any other information or string.")
-@click.option('-a', '--all-comps', is_flag=True, help="Show also disabled or unconfigured computers")
+@options.ALL(help='Show also disabled or unconfigured computers.')
+@options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
-def computer_list(only_usable, parsable, all_comps):
-    """
-    List available computers
-    """
+def computer_list(only_usable, all_entries, raw):
+    """List available computers."""
     from aiida.orm.computer import Computer as AiiDAOrmComputer
     from aiida.orm.backend import construct_backend
 
@@ -368,9 +513,9 @@ def computer_list(only_usable, parsable, all_comps):
 
     computer_names = get_computer_names()
 
-    if not parsable:
+    if not raw:
         echo.echo("# List of configured computers:")
-        echo.echo("# (use 'verdi computer show COMPUTERNAME' " "to see the details)")
+        echo.echo("# (use 'verdi computer show COMPUTERNAME' to see the details)")
     if computer_names:
         for name in sorted(computer_names):
             computer = AiiDAOrmComputer.get(name)
@@ -380,46 +525,46 @@ def computer_list(only_usable, parsable, all_comps):
 
             is_usable = False  # True if both enabled and configured
 
-            if not all_comps:
+            if not all_entries:
                 if not is_configured or not is_user_enabled or not computer.is_enabled():
                     continue
 
             if computer.is_enabled():
                 if is_configured:
-                    configured_str = ""
+                    configured_str = ''
                     if is_user_enabled:
-                        symbol = "*"
+                        symbol = '*'
                         color = 'green'
-                        enabled_str = ""
+                        enabled_str = ''
                         is_usable = True
                     else:
-                        symbol = "x"
+                        symbol = 'x'
                         color = 'red'
-                        enabled_str = "[DISABLED for this user]"
+                        enabled_str = '[DISABLED for this user]'
                 else:
-                    symbol = "x"
+                    symbol = 'x'
                     color = 'reset'
-                    enabled_str = ""
-                    configured_str = " [unconfigured]"
+                    enabled_str = ''
+                    configured_str = ' [unconfigured]'
             else:  # GLOBALLY DISABLED
-                symbol = "x"
+                symbol = 'x'
                 color = 'red'
                 if is_configured and not is_user_enabled:
-                    enabled_str = " [DISABLED globally AND for this user]"
+                    enabled_str = ' [DISABLED globally AND for this user]'
                 else:
-                    enabled_str = " [DISABLED globally]"
+                    enabled_str = ' [DISABLED globally]'
                 if is_configured:
-                    configured_str = ""
+                    configured_str = ''
                 else:
-                    configured_str = " [unconfigured]"
+                    configured_str = ' [unconfigured]'
 
-            if parsable:
-                echo.echo(click.style("{}".format(name), fg=color))
-            else:
-                if (not only_usable) or is_usable:
-                    echo.echo(click.style("{} ".format(symbol), fg=color), nl=False)
-                    echo.echo(click.style("{} ".format(name), bold=True, fg=color), nl=False)
-                    echo.echo(click.style("{}{}".format(enabled_str, configured_str), fg=color))
+            if (not only_usable) or is_usable:
+                if raw:
+                    echo.echo(click.style('{}'.format(name), fg=color))
+                else:
+                    echo.echo(click.style('{} '.format(symbol), fg=color), nl=False)
+                    echo.echo(click.style('{} '.format(name), bold=True, fg=color), nl=False)
+                    echo.echo(click.style('{}{}'.format(enabled_str, configured_str), fg=color))
 
     else:
         echo.echo("# No computers configured yet. Use 'verdi computer setup'")

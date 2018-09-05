@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi work` command."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -233,7 +234,7 @@ def work_kill(calculations):
                 else:
                     echo.echo_error('problem killing Calculation<{}>'.format(calculation.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, exception.message))
+                echo.echo_error('failed to kill Calculation<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('pause')
@@ -259,7 +260,7 @@ def work_pause(calculations):
                 else:
                     echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception.message))
+                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('play')
@@ -285,7 +286,7 @@ def work_play(calculations):
                 else:
                     echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception.message))
+                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('watch')

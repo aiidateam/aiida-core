@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.orm.data.numeric import NumericType
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float

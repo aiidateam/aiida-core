@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import unittest
 import logging
 import uuid
@@ -72,9 +73,9 @@ class TestParserSqueue(unittest.TestCase):
         self.assertEquals([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '863553'][0], 30 * 60)
         self.assertEquals([j.wallclock_time_seconds for j in job_list if j.job_id == '863553'][0], 29 * 60 + 29)
         self.assertEquals([j.dispatch_time for j in job_list if j.job_id == '863553'][0],
-                          datetime.datetime(2013, 05, 23, 11, 44, 11))
+                          datetime.datetime(2013, 5, 23, 11, 44, 11))
         self.assertEquals([j.submission_time for j in job_list if j.job_id == '863553'][0],
-                          datetime.datetime(2013, 05, 23, 10, 42, 11))
+                          datetime.datetime(2013, 5, 23, 10, 42, 11))
         self.assertEquals([j.annotation for j in job_list if j.job_id == '863100'][0], 'Resources')
         self.assertEquals([j.num_machines for j in job_list if j.job_id == '863100'][0], 32)
         self.assertEquals([j.num_mpiprocs for j in job_list if j.job_id == '863100'][0], 1024)

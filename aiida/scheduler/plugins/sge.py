@@ -15,6 +15,7 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 from __future__ import division
+from __future__ import absolute_import
 import xml.parsers.expat
 import xml.dom.minidom
 
@@ -201,7 +202,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             # is now empty or does not start with a valid character
             # (the first symbol cannot be digit, at least in some versions
             #  of the scheduler)
-            if not job_title or (job_title[0] not in string.letters):
+            if not job_title or (job_title[0] not in string.ascii_letters):
                 job_title = 'j' + job_title
 
             lines.append('#$ -N {}'.format(job_tmpl.job_name))
@@ -273,7 +274,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
@@ -478,7 +479,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

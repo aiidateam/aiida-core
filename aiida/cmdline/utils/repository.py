@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utility functions for command line commands operating on the repository."""
+from __future__ import absolute_import
 from aiida.cmdline.utils import echo
 
 

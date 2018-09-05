@@ -7,14 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import logging
 from abc import abstractmethod, abstractproperty, ABCMeta
 
+import six
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractComment(object):
-    __metaclass__ = ABCMeta
-
     _logger = logging.getLogger(__name__)
 
     @abstractmethod

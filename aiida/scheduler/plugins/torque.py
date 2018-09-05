@@ -12,6 +12,7 @@ Plugin for PBS/Torque.
 This has been tested on Torque v.2.4.16 (from Ubuntu).
 """
 from __future__ import division
+from __future__ import absolute_import
 import logging
 
 from .pbsbaseclasses import PbsBaseClass

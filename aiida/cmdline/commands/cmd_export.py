@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-arguments
 """`verdi export` command."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -33,18 +34,35 @@ def verdi_export():
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
-    '-P',
-    '--no-parents',
+    '-i',
+    '--input-forward',
     is_flag=True,
     default=False,
-    help='store only the nodes that are explicitly given, without exporting the parents')
+    show_default=True,
+    help='Follow forward INPUT links (recursively) when calculating the node set to export.')
 @click.option(
-    '-O',
-    '--no-calc-outputs',
+    '-c',
+    '--create-reversed',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Follow reverse CREATE links (recursively) when calculating the node set to export.')
+@click.option(
+    '-r',
+    '--return-reversed',
     is_flag=True,
     default=False,
-    help='if a calculation is included in the list of nodes to export, do not export its outputs')
-def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_outputs, force, archive_format):
+    show_default=True,
+    help='Follow reverse RETURN links (recursively) when calculating the node set to export.')
+@click.option(
+    '-x',
+    '--call-reversed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
+           force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
@@ -54,20 +72,22 @@ def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_out
     entities = []
 
     if codes:
-        entities.extend([e.dbnode for e in codes])
+        entities.extend(codes)
 
     if computers:
-        entities.extend([e.dbcomputer for e in computers])
+        entities.extend(computers)
 
     if groups:
-        entities.extend([e.dbgroup for e in groups])
+        entities.extend(groups)
 
     if nodes:
-        entities.extend([e.dbnode for e in nodes])
+        entities.extend(nodes)
 
     kwargs = {
-        'also_parents': not no_parents,
-        'also_calc_outputs': not no_calc_outputs,
+        'input_forward': input_forward,
+        'create_reversed': create_reversed,
+        'return_reversed': return_reversed,
+        'call_reversed': call_reversed,
         'overwrite': force,
     }
 
@@ -83,7 +103,7 @@ def create(output_file, codes, computers, groups, nodes, no_parents, no_calc_out
     try:
         export_function(entities, outfile=output_file, **kwargs)
     except IOError as exception:
-        echo.echo_critical('failed to write the export archive file: {}'.format(exception.message))
+        echo.echo_critical('failed to write the export archive file: {}'.format(exception))
     else:
         echo.echo_success('wrote the export archive file to {}'.format(output_file))
 
@@ -241,7 +261,7 @@ def migrate_v1_to_v2(metadata, data):
         """Replace the requires keys with new module path."""
         if isinstance(data, dict):
             new_data = {}
-            for key, value in data.iteritems():
+            for key, value in data.items():
                 if key == 'requires' and value.startswith(old_start):
                     new_data[key] = get_new_string(value)
                 else:
@@ -362,7 +382,7 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
 
     # Now we migrate the entity key names i.e. removing the 'aiida.backends.djsite.db.models' prefix
     for field in ['unique_identifiers', 'all_fields_info']:
-        for old_key, new_key in entity_map.iteritems():
+        for old_key, new_key in entity_map.items():
             if old_key in metadata[field]:
                 metadata[field][new_key] = metadata[field][old_key]
                 del metadata[field][old_key]
@@ -370,13 +390,13 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     # Replace the 'requires' keys in the nested dictionaries in 'all_fields_info'
     for entity in metadata['all_fields_info'].values():
         for prop in entity.values():
-            for key, value in prop.iteritems():
+            for key, value in prop.items():
                 if key == 'requires' and value in entity_map:
                     prop[key] = entity_map[value]
 
     # Replace any present keys in the data.json
     for field in ['export_data']:
-        for old_key, new_key in entity_map.iteritems():
+        for old_key, new_key in entity_map.items():
             if old_key in data[field]:
                 data[field][new_key] = data[field][old_key]
                 del data[field][old_key]

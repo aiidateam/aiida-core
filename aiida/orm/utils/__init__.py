@@ -7,7 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta
+
+import six
+
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import abstractclassmethod
 from aiida.plugins.factory import BaseFactory
@@ -78,7 +82,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
 
     elif uuid is not None:
 
-        if not isinstance(uuid, basestring):
+        if not isinstance(uuid, six.string_types):
             raise TypeError('uuid has to be a string type')
 
         identifier = uuid
@@ -86,7 +90,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
 
     elif label is not None:
 
-        if not isinstance(label, basestring):
+        if not isinstance(label, six.string_types):
             raise TypeError('label has to be a string type')
 
         identifier = label
@@ -134,7 +138,7 @@ def load_node(identifier=None, pk=None, uuid=None, sub_class=None, query_with_da
 
     elif uuid is not None:
 
-        if not isinstance(uuid, basestring):
+        if not isinstance(uuid, six.string_types):
             raise TypeError('uuid has to be a string type')
 
         identifier = uuid
@@ -177,7 +181,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
         if wf_id and isinstance(wf_id, uuid_type):
             wf_id = str(wf_id)
 
-        if isinstance(wf_id, basestring):
+        if isinstance(wf_id, six.string_types):
             return Workflow.get_subclass_from_uuid(wf_id)
         elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)
@@ -192,12 +196,13 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     else:
         if uuid and isinstance(uuid, uuid_type):
             uuid = str(uuid)
-        if isinstance(uuid, str) or isinstance(uuid, unicode):
+        if isinstance(uuid, six.string_types):
             return Workflow.get_subclass_from_uuid(uuid)
         else:
             raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
 
 
+@six.add_metaclass(ABCMeta)
 class BackendDelegateWithDefault(object):
     """
     This class is a helper to implement the delegation pattern [1] by
@@ -206,7 +211,6 @@ class BackendDelegateWithDefault(object):
 
     [1] https://en.wikipedia.org/wiki/Delegation_pattern
     """
-    __metaclass__ = ABCMeta
 
     _DEFAULT = None
 

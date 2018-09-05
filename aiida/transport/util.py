@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """General utilities for Transport classes."""
+from __future__ import absolute_import
 from paramiko import ProxyCommand
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict

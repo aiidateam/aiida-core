@@ -1,4 +1,5 @@
 #-*- coding: utf8 -*-
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import GroupParamType
 from aiida.orm import Group

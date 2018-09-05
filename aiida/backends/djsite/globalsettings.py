@@ -11,6 +11,7 @@
 Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
+from __future__ import absolute_import
 from django.db import IntegrityError
 from aiida.common.exceptions import UniquenessError
 

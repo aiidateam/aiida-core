@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.datastructures import _sorted_datastates, calc_states, is_progressive_state_change
 

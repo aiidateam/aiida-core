@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+
+import six
+
 from aiida.utils import timezone
 from aiida.common.exceptions import ValidationError, MissingPluginError
 
@@ -158,7 +162,7 @@ class Autogroup(object):
         """
         Set the name of the group to be created
         """
-        if not isinstance(gname, basestring):
+        if not isinstance(gname, six.string_types):
             raise ValidationError("group name must be a string")
         self.group_name = gname
 

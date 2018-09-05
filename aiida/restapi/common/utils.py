@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import division
 from datetime import datetime, timedelta
 
 from flask import jsonify
@@ -136,7 +138,7 @@ class Utils(object):
         :return: list of each element separated by '/'
         """
         # type: (string) -> (list_of_strings).
-        return filter(None, path.split('/'))
+        return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
         """
@@ -303,7 +305,7 @@ class Utils(object):
         if total_count == 0:
             last_page = 1
         else:
-            last_page = int(ceil(float(total_count) / float(perpage)))
+            last_page = int(ceil(total_count / perpage))
 
         ## Check validity of required page and calculate limit, offset,
         # previous,
@@ -394,7 +396,7 @@ class Utils(object):
 
             if path_elems.pop(-1) == 'page' or path_elems.pop(-1) == 'page':
                 links = []
-                for (rel, page) in rel_pages.iteritems():
+                for (rel, page) in rel_pages.items():
                     if page is not None:
                         links.append(make_rel_url(rel, page))
                 headers['Link'] = ''.join(links)
@@ -439,7 +441,7 @@ class Utils(object):
         response.status_code = status
 
         if headers is not None:
-            for k, v in headers.iteritems():
+            for k, v in headers.items():
                 response.headers[k] = v
 
         return response
@@ -807,7 +809,7 @@ class Utils(object):
                     "respect to UTC")
             if dt.tzinfo is not None:
                 tzoffset_minutes = int(
-                    dt.tzinfo.utcoffset(None).total_seconds() / 60)
+                    dt.tzinfo.utcoffset(None).total_seconds() // 60)
 
                 return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
                     offset=tzoffset_minutes, name=None)), precision)
@@ -869,7 +871,7 @@ class Utils(object):
 
 def list_routes():
     """List available routes"""
-    import urllib
+    from six.moves import urllib
     from flask import current_app, url_for
 
     output = []
@@ -878,7 +880,7 @@ def list_routes():
             continue
 
         methods = ','.join(rule.methods)
-        line = urllib.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
+        line = urllib.parse.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
         output.append(line)
 
     return sorted(set(output))

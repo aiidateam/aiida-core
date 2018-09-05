@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import click
 from click.testing import CliRunner
 from traceback import format_exception

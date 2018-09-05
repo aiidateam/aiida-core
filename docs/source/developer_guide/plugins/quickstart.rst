@@ -11,28 +11,22 @@ Let's get started with creating a new plugin ``aiida-mycode``.
  0. At least once, :ref:`install an existing aiida plugin <plugins>` to make sure this works.
 
  1. Check on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_
-    that the plugin name is still available
+    that your desired plugin name is still available
 
- #. Download the AiiDA plugin template::
+ #. Use the `AiiDA plugin cutter <https://github.com/aiidateam/aiida-plugin-cutter>`_ to jumpstart your plugin::
 
-        wget https://github.com/aiidateam/aiida-plugin-template/archive/master.zip
-        unzip master.zip
-        cd aiida-plugin-template
+        pip install cookiecutter
+        cookiecutter https://github.com/aiidateam/aiida-plugin-cutter.git
+        # follow instructions ...
+        cd aiida-mycode
 
- #. Replace the name ``aiida-plugin-template`` by ``aiida-mycode``::
-
-        mv aiida_plugin_template aiida_mycode
-        sed -i .bak 's/aiida_plugin_template/aiida_mycode/g' README.md setup.json examples/*.py
-        sed -i .bak 's/aiida-plugin-template/aiida-mycode/g' README.md setup.json
-        sed -i .bak 's/template\./mycode./g' setup.json
  #. Install your new plugin::
 
         workon <name_of_your_virtualenv> # if you have one
         pip install -e .
         reentry scan -r aiida
 
-That's it - now you can ``import aiida-mycode`` and start developing your plugin
-
+That's it - now you can ``import aiida_mycode`` and start developing your plugin
 
 A few things to keep in mind:
  * Be sure to update the `setup.json`_, in particular the license and version number

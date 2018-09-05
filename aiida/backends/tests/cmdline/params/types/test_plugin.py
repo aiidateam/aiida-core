@@ -1,4 +1,5 @@
 """Unit tests for plugin parameter type."""
+from __future__ import absolute_import
 import click
 import mock
 

@@ -1,4 +1,5 @@
 """Manage computer objects with lazy loading of the db env"""
+from __future__ import absolute_import
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.utils.error_accumulator import ErrorAccumulator
@@ -53,6 +54,42 @@ def get_computer_configuration(computer, user=None):
 class ComputerBuilder(object):
     """Build a computer with validation of attribute combinations"""
 
+    @staticmethod
+    def from_computer(computer):
+        """Create ComputerBuilder from existing computer instance.
+
+        See also :py:func:`~ComputerBuilder.get_computer_spec`
+        """
+        spec = ComputerBuilder.get_computer_spec(computer)
+        return ComputerBuilder(**spec)
+
+    @staticmethod
+    def get_computer_spec(computer):
+        """Get computer attributes from existing computer instance.
+
+        These attributes can be used to create a new ComputerBuilder::
+
+            spec = ComputerBuilder.get_computer_spec(old_computer)
+            builder = ComputerBuilder(**spec)
+            new_computer = builder.new()
+
+        """
+        spec = {}
+        spec['label'] = computer.label
+        spec['description'] = computer.description
+        spec['enabled'] = computer.is_enabled()
+        spec['hostname'] = computer.get_hostname()
+        spec['scheduler'] = computer.get_scheduler_type()
+        spec['transport'] = computer.get_transport_type()
+        spec['prepend_text'] = computer.get_prepend_text()
+        spec['append_text'] = computer.get_append_text()
+        spec['work_dir'] = computer.get_workdir()
+        spec['shebang'] = computer.get_shebang()
+        spec['mpirun_command'] = ' '.join(computer.get_mpirun_command())
+        spec['mpiprocs_per_machine'] = computer.get_default_mpiprocs_per_machine()
+
+        return spec
+
     def __init__(self, **kwargs):
         self._computer_spec = {}
         self._err_acc = ErrorAccumulator(self.ComputerValidationError)
@@ -64,7 +101,6 @@ class ComputerBuilder(object):
         """
         Validate the computer options
         """
-        #self._err_acc.run(self.validate_installed)
         return self._err_acc.result(raise_error=self.ComputerValidationError if raise_error else False)
 
     @with_dbenv()
@@ -89,6 +125,8 @@ class ComputerBuilder(object):
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))
+        computer.set_shebang(self._get_and_count('shebang', used))
+
         mpiprocs_per_machine = self._get_and_count('mpiprocs_per_machine', used)
         # In the command line, 0 means unspecified
         if mpiprocs_per_machine == 0:
@@ -110,12 +148,10 @@ class ComputerBuilder(object):
         computer._mpirun_command_validator(mpirun_command_internal)  # pylint: disable=protected-access
         computer.set_mpirun_command(mpirun_command_internal)
 
-        computer.set_shebang(self._get_and_count('shebang', used))
-
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(
-                ", ".join(sorted(passed_keys - used))))
+            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(", ".join(
+                sorted(passed_keys - used))))
 
         return computer
 
@@ -146,7 +182,7 @@ class ComputerBuilder(object):
            ``key`` will be added to this set if the value exists in the spec and can be retrieved.
         """
         retval = self.__getattr__(key)
-        ## I first get a retval, so if I get an exception, I don't add it to the 'used' set
+        # I first get a retval, so if I get an exception, I don't add it to the 'used' set
         used.add(key)
         return retval
 

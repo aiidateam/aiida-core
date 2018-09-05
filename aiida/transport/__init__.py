@@ -8,5 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport module."""
+from __future__ import absolute_import
 from aiida.transport.transport import Transport
 from aiida.plugins.factory import TransportFactory

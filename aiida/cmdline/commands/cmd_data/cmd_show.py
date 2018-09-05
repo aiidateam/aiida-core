@@ -10,49 +10,32 @@
 """
 This allows to manage showfunctionality to all data types.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+
 import click
-from aiida.cmdline.utils import echo
-from aiida.cmdline.params import arguments
+
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
+from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
 from aiida.common.exceptions import MultipleObjectsError
 
 SHOW_OPTIONS = [
-    arguments.NODES(),
-    click.option(
-        '-f',
-        '--format',
-        'show_format',
-        type=click.Choice(['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']),
-        default='jmol',
-        help="Type of the visualization format/tool"),
-    click.option(
-        '--step',
-        type=click.INT,
-        default=None,
-        help="ID of the trajectory step. If none is supplied, all"
-        " steps are explored."),
+    options.TRAJECTORY_INDEX(),
+    options.WITH_ELEMENTS(),
     click.option('-c', '--contour', type=click.FLOAT, cls=MultipleValueOption, default=None, help="Isovalues to plot"),
     click.option(
         '--sampling-stepsize',
         type=click.INT,
         default=None,
-        help="Sample positions in plot every sampling_stepsize"
-        " timestep"),
+        help="Sample positions in plot every sampling_stepsize timestep"),
     click.option(
         '--stepsize',
         type=click.INT,
         default=None,
-        help="The stepsize for the trajectory, set it higher"
-        " to reduce number of points"),
+        help="The stepsize for the trajectory, set it higher to reduce number of points"),
     click.option('--mintime', type=click.INT, default=None, help="The time to plot from"),
     click.option('--maxtime', type=click.INT, default=None, help="The time to plot to"),
-    click.option(
-        '-e',
-        '--elements',
-        type=click.STRING,
-        cls=MultipleValueOption,
-        default=None,
-        help="Show only atoms of that species"),
     click.option('--indices', type=click.INT, cls=MultipleValueOption, default=None, help="Show only these indices"),
     click.option(
         '--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot."),
@@ -74,7 +57,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile() as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
         for trajectory in trajectory_list:
             tmpf.write(trajectory._exportstring('cif', **kwargs)[0])
         tmpf.flush()
@@ -104,7 +87,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     obj = object_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
         tmpf.write(obj._exportstring('xsf', **kwargs)[0])
         tmpf.flush()
 
@@ -163,7 +146,7 @@ def _show_vesta(exec_name, structure_list):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.cif') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.cif') as tmpf:
         for structure in structure_list:
             tmpf.write(structure._exportstring('cif')[0])
         tmpf.flush()
@@ -193,7 +176,7 @@ def _show_vmd(exec_name, structure_list):
     structure = structure_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
         tmpf.write(structure._exportstring('xsf')[0])
         tmpf.flush()
 
@@ -208,3 +191,43 @@ def _show_vmd(exec_name, structure_list):
                                    "or try with an absolute path.".format(exec_name))
             else:
                 raise
+
+
+def _show_xmgrace(exec_name, list_bands):
+    """
+    Plugin for showing the bands with the XMGrace plotting software.
+    """
+    import sys
+    import subprocess
+    import tempfile
+    from aiida.orm.data.array.bands import max_num_agr_colors
+
+    list_files = []
+    current_band_number = 0
+    for iband, bnds in enumerate(list_bands):
+        # extract number of bands
+        nbnds = bnds.get_bands().shape[1]
+        # pylint: disable=protected-access
+        text, _ = bnds._exportstring(
+            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors))
+        # write a tempfile
+        tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
+        tempf.write(text)
+        tempf.flush()
+        list_files.append(tempf)
+        # update the number of bands already plotted
+        current_band_number += nbnds
+
+    try:
+        subprocess.check_output([exec_name] + [f.name for f in list_files])
+    except subprocess.CalledProcessError:
+        print("Note: the call to {} ended with an error.".format(exec_name))
+    except OSError as err:
+        if err.errno == 2:
+            print("No executable '{}' found. Add to the path," " or try with an absolute path.".format(exec_name))
+            sys.exit(1)
+        else:
+            raise
+    finally:
+        for fhandle in list_files:
+            fhandle.close()

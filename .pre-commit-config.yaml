@@ -1,72 +1,426 @@
-# yet another python formatter
-- repo: git://github.com/pre-commit/mirrors-yapf
-  sha: v0.19.0
+- repo: local
   hooks:
   - id: yapf
+    name: yapf
+    entry: yapf
     language: system
-    files: &check_files >-  # begin multiline string
-      (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
-        .ci/test_plugin_testcase.py|
-        .ci/test_setup.py|
-        #aiida/backends/tests/cmdline/commands/.*.py|
-        aiida/backends/tests/cmdline/params/types/workflow.py|
-        aiida/common/utils.py|
-        aiida/cmdline/.*.py|
-        aiida/control/.*.py|
-        aiida/orm/data/cif.py|
+    types: [python]
+    args: ["-i"]
+    exclude: &exclude_files >
+      (?x)^(
+        docs/.*|
+        examples/.*|
+        aiida/backends/djsite/cmdline.py|
+        aiida/backends/djsite/db/admin.py|
+        aiida/backends/djsite/db/__init__.py|
+        aiida/backends/djsite/db/management/__init__.py|
+        aiida/backends/djsite/db/migrations/0001_initial.py|
+        aiida/backends/djsite/db/migrations/0002_db_state_change.py|
+        aiida/backends/djsite/db/migrations/0003_add_link_type.py|
+        aiida/backends/djsite/db/migrations/0004_add_daemon_and_uuid_indices.py|
+        aiida/backends/djsite/db/migrations/0005_add_cmtime_indices.py|
+        aiida/backends/djsite/db/migrations/0006_delete_dbpath.py|
+        aiida/backends/djsite/db/migrations/0007_update_linktypes.py|
+        aiida/backends/djsite/db/migrations/0008_code_hidden_to_extra.py|
+        aiida/backends/djsite/db/migrations/0009_base_data_plugin_type_string.py|
+        aiida/backends/djsite/db/migrations/0010_process_type.py|
+        aiida/backends/djsite/db/migrations/0011_delete_kombu_tables.py|
+        aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
+        aiida/backends/djsite/db/migrations/0013_django_1_8.py|
+        aiida/backends/djsite/db/migrations/__init__.py|
+        aiida/backends/djsite/db/models.py|
+        aiida/backends/djsite/db/subtests/djangomigrations.py|
+        aiida/backends/djsite/db/subtests/generic.py|
+        aiida/backends/djsite/db/subtests/__init__.py|
+        aiida/backends/djsite/db/subtests/nodes.py|
+        aiida/backends/djsite/db/subtests/query.py|
+        aiida/backends/djsite/db/testbase.py|
+        aiida/backends/djsite/db/views.py|
+        aiida/backends/djsite/globalsettings.py|
+        aiida/backends/djsite/__init__.py|
+        aiida/backends/djsite/manage.py|
+        aiida/backends/djsite/queries.py|
+        aiida/backends/djsite/querybuilder_django/dummy_model.py|
+        aiida/backends/djsite/querybuilder_django/querybuilder_django.py|
+        aiida/backends/djsite/settings/__init__.py|
+        aiida/backends/djsite/settings/settings_profile.py|
+        aiida/backends/djsite/settings/settings.py|
+        aiida/backends/djsite/settings/wsgi.py|
+        aiida/backends/djsite/utils.py|
+        aiida/backends/general/abstractqueries.py|
+        aiida/backends/general/querybuilder_interface.py|
+        aiida/backends/__init__.py|
+        aiida/backends/profile.py|
+        aiida/backends/settings.py|
+        aiida/backends/sqlalchemy/alembic_manage.py|
+        aiida/backends/sqlalchemy/cmdline.py|
+        aiida/backends/sqlalchemy/globalsettings.py|
+        aiida/backends/sqlalchemy/__init__.py|
+        aiida/backends/sqlalchemy/migrations/env.py|
+        aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
+        aiida/backends/sqlalchemy/migrations/versions/35d4ee9a1b0e_code_hidden_attr_to_extra.py|
+        aiida/backends/sqlalchemy/migrations/versions/59edaf8a8b79_adding_indexes_and_constraints_to_the_.py|
+        aiida/backends/sqlalchemy/migrations/versions/6c629c886f84_process_type.py|
+        aiida/backends/sqlalchemy/migrations/versions/70c7d732f1b2_delete_dbpath.py|
+        aiida/backends/sqlalchemy/migrations/versions/89176227b25_add_indexes_to_dbworkflowdata_table.py|
+        aiida/backends/sqlalchemy/migrations/versions/a514d673c163_drop_dblock.py|
+        aiida/backends/sqlalchemy/migrations/versions/a6048f0ffca8_update_linktypes.py|
+        aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
+        aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
+        aiida/backends/sqlalchemy/models/authinfo.py|
+        aiida/backends/sqlalchemy/models/base.py|
+        aiida/backends/sqlalchemy/models/comment.py|
+        aiida/backends/sqlalchemy/models/computer.py|
+        aiida/backends/sqlalchemy/models/group.py|
+        aiida/backends/sqlalchemy/models/__init__.py|
+        aiida/backends/sqlalchemy/models/log.py|
+        aiida/backends/sqlalchemy/models/node.py|
+        aiida/backends/sqlalchemy/models/settings.py|
+        aiida/backends/sqlalchemy/models/user.py|
+        aiida/backends/sqlalchemy/models/utils.py|
+        aiida/backends/sqlalchemy/models/workflow.py|
+        aiida/backends/sqlalchemy/queries.py|
+        aiida/backends/sqlalchemy/querybuilder_sqla.py|
+        aiida/backends/sqlalchemy/tests/generic.py|
+        aiida/backends/sqlalchemy/tests/__init__.py|
+        aiida/backends/sqlalchemy/tests/migrations.py|
+        aiida/backends/sqlalchemy/tests/migration_test/versions/470e57bc0936_create_account_table.py|
+        aiida/backends/sqlalchemy/tests/migration_test/versions/b947a8821295_add_a_column.py|
+        aiida/backends/sqlalchemy/tests/nodes.py|
+        aiida/backends/sqlalchemy/tests/query.py|
+        aiida/backends/sqlalchemy/tests/schema.py|
+        aiida/backends/sqlalchemy/tests/session.py|
+        aiida/backends/sqlalchemy/tests/testbase.py|
+        aiida/backends/sqlalchemy/tests/utils.py|
+        aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
+        aiida/backends/sqlalchemy/utils.py|
+        aiida/backends/testbase.py|
+        aiida/backends/testimplbase.py|
+        aiida/backends/tests/backup_script.py|
+        aiida/backends/tests/backup_setup_script.py|
+        aiida/backends/tests/base_dataclasses.py|
+        aiida/backends/tests/calculation_node.py|
+        aiida/backends/tests/cmdline/commands/test_calculation.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
+        aiida/backends/tests/cmdline/commands/test_comment.py|
+        aiida/backends/tests/cmdline/commands/test_computer.py|
+        aiida/backends/tests/cmdline/commands/test_data.py|
+        aiida/backends/tests/cmdline/commands/test_devel.py|
+        aiida/backends/tests/cmdline/commands/test_export.py|
+        aiida/backends/tests/cmdline/commands/test_group.py|
+        aiida/backends/tests/cmdline/commands/test_node.py|
+        aiida/backends/tests/cmdline/commands/test_user.py|
+        aiida/backends/tests/cmdline/commands/test_work.py|
+        aiida/backends/tests/cmdline/commands/test_workflow.py|
+        aiida/backends/tests/cmdline/params/types/test_calculation.py|
+        aiida/backends/tests/cmdline/params/types/test_code.py|
+        aiida/backends/tests/cmdline/params/types/test_computer.py|
+        aiida/backends/tests/cmdline/params/types/test_data.py|
+        aiida/backends/tests/cmdline/params/types/test_group.py|
+        aiida/backends/tests/cmdline/params/types/test_identifier.py|
+        aiida/backends/tests/cmdline/params/types/test_node.py|
+        aiida/backends/tests/cmdline/params/types/test_plugin.py|
+        aiida/backends/tests/cmdline/params/types/test_workflow.py|
+        aiida/backends/tests/common/test_datastructures.py|
+        aiida/backends/tests/computer.py|
+        aiida/backends/tests/control/test_computer_ctrl.py|
+        aiida/backends/tests/daemon.py|
+        aiida/backends/tests/daemon/test_client.py|
+        aiida/backends/tests/dataclasses.py|
+        aiida/backends/tests/dbimporters.py|
+        aiida/backends/tests/example_helpers.py|
+        aiida/backends/tests/export_and_import.py|
+        aiida/backends/tests/generic.py|
+        aiida/backends/tests/__init__.py|
+        aiida/backends/tests/inline_calculation.py|
+        aiida/backends/tests/nodes.py|
+        aiida/backends/tests/orm/data/frozendict.py|
+        aiida/backends/tests/orm/data/remote.py|
+        aiida/backends/tests/orm/log.py|
+        aiida/backends/tests/orm/mixins.py|
+        aiida/backends/tests/orm/utils/loaders.py|
+        aiida/backends/tests/parsers.py|
+        aiida/backends/tests/query.py|
+        aiida/backends/tests/restapi.py|
+        aiida/backends/tests/tcodexporter.py|
+        aiida/backends/tests/test_caching_config.py|
+        aiida/backends/tests/test_plugin_loader.py|
+        aiida/backends/tests/utils/fixtures.py|
+        aiida/backends/tests/utils/test_serialize.py|
+        aiida/backends/tests/work/class_loader.py|
+        aiida/backends/tests/work/daemon.py|
+        aiida/backends/tests/workflows.py|
+        aiida/backends/tests/work/job_processes.py|
+        aiida/backends/tests/work/persistence.py|
+        aiida/backends/tests/work/process.py|
+        aiida/backends/tests/work/run.py|
+        aiida/backends/tests/work/test_futures.py|
+        aiida/backends/tests/work/test_launch.py|
+        aiida/backends/tests/work/test_process_builder.py|
+        aiida/backends/tests/work/test_process_spec.py|
+        aiida/backends/tests/work/test_rmq.py|
+        aiida/backends/tests/work/test_runners.py|
+        aiida/backends/tests/work/test_transport.py|
+        aiida/backends/tests/work/test_utils.py|
+        aiida/backends/tests/work/test_workfunctions.py|
+        aiida/backends/tests/work/utils.py|
+        aiida/backends/tests/work/work_chain.py|
+        aiida/backends/utils.py|
+        aiida/common/additions/backup_script/backup_base.py|
+        aiida/common/additions/backup_script/backup_django.py|
+        aiida/common/additions/backup_script/backup_setup.py|
+        aiida/common/additions/backup_script/backup_sqlalchemy.py|
+        aiida/common/additions/backup_script/__init__.py|
+        aiida/common/additions/config_migrations/__init__.py|
+        aiida/common/additions/config_migrations/_migrations.py|
+        aiida/common/additions/config_migrations/test_migrations.py|
+        aiida/common/additions/config_migrations/_utils.py|
+        aiida/common/archive.py|
+        aiida/common/caching.py|
+        aiida/common/constants.py|
+        aiida/common/datastructures.py|
+        aiida/common/example_helpers.py|
+        aiida/common/exceptions.py|
+        aiida/common/extendeddicts.py|
+        aiida/common/folders.py|
+        aiida/common/graph.py|
+        aiida/common/hashing.py|
+        aiida/common/__init__.py|
+        aiida/common/ipython/__init__.py|
+        aiida/common/ipython/ipython_magics.py|
+        aiida/common/lang.py|
+        aiida/common/links.py|
+        aiida/common/log.py|
+        aiida/common/orbital/__init__.py|
+        aiida/common/orbital/realhydrogen.py|
+        aiida/common/profile.py|
+        aiida/common/setup.py|
+        aiida/common/test_extendeddicts.py|
+        aiida/common/test_folders.py|
+        aiida/common/test_logging.py|
+        aiida/common/test_utils.py|
+        aiida/control/tests/test_postgres.py|
+        aiida/daemon/client.py|
+        aiida/daemon/execmanager.py|
+        aiida/daemon/runner.py|
+        aiida/daemon/timestamps.py|
+        aiida/daemon/workflowmanager.py|
+        aiida/__init__.py|
+        aiida/orm/authinfo.py|
+        aiida/orm/autogroup.py|
+        aiida/orm/backend.py|
+        aiida/orm/calculation/function.py|
+        aiida/orm/calculation/__init__.py|
+        aiida/orm/calculation/inline.py|
+        aiida/orm/calculation/job/__init__.py|
+        aiida/orm/calculation/job/simpleplugins/arithmetic/add.py|
+        aiida/orm/calculation/job/simpleplugins/__init__.py|
+        aiida/orm/calculation/job/simpleplugins/templatereplacer.py|
+        aiida/orm/calculation/work.py|
+        aiida/orm/code.py|
+        aiida/orm/computer.py|
+        aiida/orm/data/array/bands.py|
+        aiida/orm/data/array/__init__.py|
+        aiida/orm/data/array/kpoints.py|
+        aiida/orm/data/array/projection.py|
+        aiida/orm/data/array/trajectory.py|
+        aiida/orm/data/array/xy.py|
+        aiida/orm/data/base.py|
+        aiida/orm/data/bool.py|
+        aiida/orm/data/error.py|
+        aiida/orm/data/float.py|
+        aiida/orm/data/folder.py|
+        aiida/orm/data/frozendict.py|
+        aiida/orm/data/__init__.py|
+        aiida/orm/data/int.py|
+        aiida/orm/data/list.py|
+        aiida/orm/data/numeric.py|
+        aiida/orm/data/orbital.py|
+        aiida/orm/data/parameter.py|
+        aiida/orm/data/remote.py|
+        aiida/orm/data/singlefile.py|
+        aiida/orm/data/str.py|
+        aiida/orm/data/structure.py|
+        aiida/orm/data/upf.py|
+        aiida/orm/group.py|
+        aiida/orm/implementation/calculation.py|
+        aiida/orm/implementation/django/authinfo.py|
+        aiida/orm/implementation/django/backend.py|
+        aiida/orm/implementation/django/calculation/__init__.py|
+        aiida/orm/implementation/django/calculation/job/__init__.py|
+        aiida/orm/implementation/django/code.py|
+        aiida/orm/implementation/django/comment.py|
+        aiida/orm/implementation/django/computer.py|
+        aiida/orm/implementation/django/group.py|
+        aiida/orm/implementation/django/__init__.py|
+        aiida/orm/implementation/django/log.py|
+        aiida/orm/implementation/django/node.py|
+        aiida/orm/implementation/django/user.py|
+        aiida/orm/implementation/django/utils.py|
+        aiida/orm/implementation/django/workflow.py|
+        aiida/orm/implementation/general/calculation/function.py|
+        aiida/orm/implementation/general/calculation/__init__.py|
+        aiida/orm/implementation/general/calculation/inline.py|
+        aiida/orm/implementation/general/calculation/job/__init__.py|
+        aiida/orm/implementation/general/calculation/work.py|
+        aiida/orm/implementation/general/code.py|
+        aiida/orm/implementation/general/comment.py|
+        aiida/orm/implementation/general/computer.py|
+        aiida/orm/implementation/general/group.py|
+        aiida/orm/implementation/general/__init__.py|
+        aiida/orm/implementation/general/node.py|
+        aiida/orm/implementation/general/user.py|
+        aiida/orm/implementation/general/workflow.py|
+        aiida/orm/implementation/__init__.py|
+        aiida/orm/implementation/sqlalchemy/authinfo.py|
+        aiida/orm/implementation/sqlalchemy/backend.py|
+        aiida/orm/implementation/sqlalchemy/calculation/__init__.py|
+        aiida/orm/implementation/sqlalchemy/calculation/job/__init__.py|
+        aiida/orm/implementation/sqlalchemy/code.py|
+        aiida/orm/implementation/sqlalchemy/comment.py|
+        aiida/orm/implementation/sqlalchemy/computer.py|
+        aiida/orm/implementation/sqlalchemy/group.py|
+        aiida/orm/implementation/sqlalchemy/__init__.py|
+        aiida/orm/implementation/sqlalchemy/log.py|
         aiida/orm/implementation/sqlalchemy/node.py|
-        aiida/orm/user.py|
-        # Unfortunately scheduler plugins and datastructures need to be refactored thoroughly
-        # to pass the linters, so enable only __init__ and test_datastructures for now
-        # aiida/scheduler/[^/]+.py|
+        aiida/orm/implementation/sqlalchemy/querytool.py|
+        aiida/orm/implementation/sqlalchemy/user.py|
+        aiida/orm/implementation/sqlalchemy/utils.py|
+        aiida/orm/implementation/sqlalchemy/workflow.py|
+        aiida/orm/importexport.py|
+        aiida/orm/__init__.py|
+        aiida/orm/log.py|
+        aiida/orm/mixins.py|
+        aiida/orm/node.py|
+        aiida/orm/querybuilder.py|
+        aiida/orm/utils/__init__.py|
+        aiida/orm/utils/loaders.py|
+        aiida/orm/utils/remote.py|
+        aiida/orm/workflow.py|
+        aiida/parsers/exceptions.py|
+        aiida/parsers/__init__.py|
+        aiida/parsers/parser.py|
+        aiida/parsers/simpleplugins/arithmetic/add.py|
+        aiida/parsers/simpleplugins/templatereplacer/doubler.py|
+        aiida/parsers/simpleplugins/templatereplacer/__init__.py|
+        aiida/plugins/entry_point.py|
+        aiida/plugins/entry.py|
+        aiida/plugins/factory.py|
+        aiida/plugins/info.py|
+        aiida/plugins/loader.py|
+        aiida/plugins/registry.py|
+        aiida/plugins/utils.py|
+        aiida/restapi/__init__.py|
+        aiida/restapi/api.py|
+        aiida/restapi/common/config.py|
+        aiida/restapi/common/__init__.py|
+        aiida/restapi/common/exceptions.py|
+        aiida/restapi/common/utils.py|
+        aiida/restapi/run_api.py|
+        aiida/restapi/translator/base.py|
+        aiida/restapi/translator/calculation/__init__.py|
+        aiida/restapi/translator/code.py|
+        aiida/restapi/translator/computer.py|
+        aiida/restapi/translator/data/bands.py|
+        aiida/restapi/translator/data/__init__.py|
+        aiida/restapi/translator/data/kpoints.py|
+        aiida/restapi/translator/data/structure.py|
+        aiida/restapi/translator/data/upf.py|
+        aiida/restapi/translator/group.py|
+        aiida/restapi/translator/__init__.py|
+        aiida/restapi/translator/node.py|
+        aiida/restapi/translator/user.py|
+        aiida/scheduler/datastructures.py|
         aiida/scheduler/__init__.py|
-        aiida/scheduler/test_datastructures.py|
-        aiida/transport/__init__.py|
-        aiida/transport/cli.py|
-        aiida/transport/transport.py|
-        aiida/transport/util.py|
-        aiida/transport/plugins/__init__.py|
-        aiida/transport/plugins/local.py|
-        aiida/restapi/resources.py|
-        aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py|
-        aiida/work/awaitable.py|
-        aiida/work/context.py|
-        aiida/work/exceptions.py|
-        aiida/work/exit_code.py|
-        aiida/work/futures.py|
-        aiida/work/launch.py|
-        aiida/work/persistence.py|
-        aiida/work/ports.py|
-        aiida/work/process_builder.py|
-        aiida/work/process_spec.py|
-        aiida/work/rmq.py|
-        aiida/work/runners.py|
-        aiida/work/test_utils.py|
-        aiida/work/transports.py|
-        aiida/work/utils.py|
-        aiida/work/workchain.py|
-        aiida/work/workfunctions.py|
-        docs/update_req_for_rtd.py # a|b -> match a OR b
-      )$  # $ -> end of file path, to add a directory, give full/path/.*
+        aiida/scheduler/plugins/direct.py|
+        aiida/scheduler/plugins/lsf.py|
+        aiida/scheduler/plugins/pbsbaseclasses.py|
+        aiida/scheduler/plugins/pbsbaseclasses.py|
+        aiida/scheduler/plugins/sge.py|
+        aiida/scheduler/plugins/slurm.py|
+        aiida/scheduler/plugins/test_direct.py|
+        aiida/scheduler/plugins/test_lsf.py|
+        aiida/scheduler/plugins/test_pbspro.py|
+        aiida/scheduler/plugins/test_sge.py|
+        aiida/scheduler/plugins/test_slurm.py|
+        aiida/scheduler/plugins/test_torque.py|
+        aiida/settings.py|
+        aiida/sphinxext/tests/conftest.py|
+        aiida/sphinxext/tests/test_workchain.py|
+        aiida/sphinxext/tests/workchain_source/conf.py|
+        aiida/sphinxext/tests/workchain_source/demo_workchain.py|
+        aiida/sphinxext/workchain.py|
+        aiida/tools/data/array/kpoints/__init__.py|
+        aiida/tools/data/array/kpoints/legacy.py|
+        aiida/tools/data/array/kpoints/seekpath.py|
+        aiida/tools/data/__init__.py|
+        aiida/tools/data/structure/__init__.py|
+        aiida/tools/dbexporters/__init__.py|
+        aiida/tools/dbexporters/tcod_plugins/__init__.py|
+        aiida/tools/dbexporters/tcod.py|
+        aiida/tools/dbimporters/baseclasses.py|
+        aiida/tools/dbimporters/__init__.py|
+        aiida/tools/dbimporters/plugins/cod.py|
+        aiida/tools/dbimporters/plugins/icsd.py|
+        aiida/tools/dbimporters/plugins/__init__.py|
+        aiida/tools/dbimporters/plugins/mpds.py|
+        aiida/tools/dbimporters/plugins/mpod.py|
+        aiida/tools/dbimporters/plugins/nninc.py|
+        aiida/tools/dbimporters/plugins/oqmd.py|
+        aiida/tools/dbimporters/plugins/pcod.py|
+        aiida/tools/dbimporters/plugins/tcod.py|
+        aiida/tools/dbimporters/plugins/test_icsd.py|
+        aiida/tools/__init__.py|
+        aiida/transport/plugins/ssh.py|
+        aiida/transport/plugins/test_all_plugins.py|
+        aiida/transport/plugins/test_local.py|
+        aiida/transport/plugins/test_ssh.py|
+        aiida/utils/ascii_vis.py|
+        aiida/utils/capturing.py|
+        aiida/utils/cli/__init__.py|
+        aiida/utils/cli/options.py|
+        aiida/utils/cli/validators.py|
+        aiida/utils/delete_nodes.py|
+        aiida/utils/email.py|
+        aiida/utils/error_accumulator.py|
+        aiida/utils/find_folder.py|
+        aiida/utils/__init__.py|
+        aiida/utils/queries.py|
+        aiida/utils/serialize.py|
+        aiida/utils/test_timezone.py|
+        aiida/utils/timezone.py|
+        aiida/utils/which.py|
+        aiida/workflows/__init__.py|
+        aiida/workflows/test.py|
+        aiida/workflows/user/__init__.py|
+        aiida/workflows/wf_demo.py|
+        aiida/workflows/wf_XTiO3.py|
+        aiida/work/__init__.py|
+        aiida/work/job_processes.py|
+        aiida/work/processes.py|
+        aiida/work/run.py|
+        fastentrypoints.py|
+        setup.py|
+        setup_requirements.py|
+        utils/create_requirements.py|
+        utils/validate_pyproject.py|
+        .ci/test_daemon.py|
+        .ci/test_fixtures.py|
+        .ci/workchains.py|
+        .ci/polish/cli.py|
+        .ci/polish/expression.py|
+        .ci/polish/workchain.py
+      )$
 
-
-# prospector: collection of linters
-- repo: git://github.com/guykisel/prospector-mirror
-  sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
-  hooks:
+  # prospector: collection of linters
   - id: prospector
     language: system
     types: [file, python]
-    files: *check_files
-    exclude: >
-           (?x)^(
-                tests/|
-                examples/
-            )$
+    exclude: *exclude_files
+    name: prospector
+    description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
+    entry: prospector
 
-- repo: local
-  hooks:
   - id: rtd-requirements
     name: Requirements for RTD
     entry: python ./docs/update_req_for_rtd.py --pre-commit
@@ -79,8 +433,6 @@
       )$
     pass_filenames: false
 
-- repo: local
-  hooks:
   - id: pyproject
     name: Validating pyproject.toml
     entry: python ./utils/validate_pyproject.py
@@ -92,16 +444,77 @@
       )$
     pass_filenames: false
 
-- repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: v1.1.1
-  hooks:
-  - id: check-yaml
-
-- repo: local
-  hooks:
   - id: travis-linter
     name: travis
     entry: travis lint
     files: .travis.yml
     language: ruby
     additional_dependencies: ['travis']
+
+# modernizer: make sure our code-base is Python 3 ready
+- repo: https://github.com/python-modernize/python-modernize.git
+  sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
+  hooks:
+  - id: python-modernize
+    exclude: ^docs/
+    args:
+      - --write
+      - --nobackups
+# Following are all the fixers in python-modernize.
+# Those marked as 'done' were run at some point and their results checked
+# and incorporated if necessary, but they can't be applied without breaking valid cases
+      - --fix=apply
+      - --fix=except
+      - --fix=exec
+      - --fix=execfile
+      - --fix=exitfunc
+      - --fix=funcattrs
+#done:      - --fix=has_key
+#optional:      - --fix=idioms
+#done:      - --fix=long
+      - --fix=methodattrs
+      - --fix=ne
+      - --fix=numliterals
+      - --fix=operator
+      - --fix=paren
+      - --fix=reduce
+      - --fix=renames
+      - --fix=repr
+#optional:      - --fix=set_literal
+      - --fix=standarderror
+      - --fix=sys_exc
+      - --fix=throw
+      - --fix=tuple_params
+      - --fix=types
+#optional:      - --fix=ws_comma
+      - --fix=xreadlines
+      - --fix=basestring
+      - --fix=classic_division
+#done:      - --fix=dict_six
+      - --fix=file
+      - --fix=filter
+      - --fix=import
+      - --fix=imports_six
+      - --fix=input_six
+      - --fix=int_long_tuple
+      - --fix=itertools_imports_six
+      - --fix=itertools_six
+      - --fix=map
+      - --fix=metaclass
+      - --fix=next
+#optional:      - --fix=open
+      - --fix=print
+      - --fix=raise
+      - --fix=raise_six
+      - --fix=unichr
+      - --fix=unicode
+      - --fix=unicode_future
+      - --fix=unicode_type
+      - --fix=urllib_six
+      - --fix=xrange_six
+      - --fix=zip
+
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  sha: v1.1.1
+  hooks:
+  - id: check-yaml

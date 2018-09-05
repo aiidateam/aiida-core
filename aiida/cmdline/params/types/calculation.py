@@ -3,6 +3,7 @@
 Module for the calculation parametre type
 """
 
+from __future__ import absolute_import
 from .identifier import IdentifierParamType
 
 

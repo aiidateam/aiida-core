@@ -10,10 +10,15 @@
 """
 Tests for specific subclasses of Data
 """
+from __future__ import absolute_import
+from __future__ import division
+import unittest
+
+from six.moves import range
+
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
-import unittest
 from aiida.common.utils import HiddenPrints
 
 
@@ -110,7 +115,7 @@ class TestSinglefileData(AiidaTestCase):
         from aiida.orm.data.singlefile import SinglefileData
 
         file_content = 'some text ABCDE'
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             filename = f.name
             basename = os.path.split(filename)[1]
             f.write(file_content)
@@ -196,7 +201,7 @@ class TestCifData(AiidaTestCase):
         from aiida.orm.data.cif import CifData
 
         file_content = "data_test _cell_length_a 10(1)"
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             filename = f.name
             basename = os.path.split(filename)[1]
             f.write(file_content)
@@ -238,7 +243,7 @@ class TestCifData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         # Checking the get_or_create() method:
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content)
             f.flush()
             c, created = CifData.get_or_create(f.name, store_cif=False)
@@ -250,7 +255,7 @@ class TestCifData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         other_content = "data_test _cell_length_b 10(1)"
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(other_content)
             f.flush()
             c, created = CifData.get_or_create(f.name, store_cif=False)
@@ -268,12 +273,12 @@ class TestCifData(AiidaTestCase):
         from aiida.orm.data.cif import CifData
 
         file_content = "data_test _cell_length_a 10(1)"
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content)
             f.flush()
             a = CifData(file=f.name)
 
-        self.assertEquals(a.values.keys(), ['test'])
+        self.assertEquals(list(a.values.keys()), ['test'])
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_change_cifdata_file(self):
@@ -283,14 +288,14 @@ class TestCifData(AiidaTestCase):
 
         file_content_1 = "data_test _cell_length_a 10(1)"
         file_content_2 = "data_test _cell_length_a 11(1)"
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_1)
             f.flush()
             a = CifData(file=f.name)
 
         self.assertEquals(a.values['test']['_cell_length_a'], '10(1)')
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(file_content_2)
             f.flush()
             a.set_file(f.name)
@@ -304,7 +309,7 @@ class TestCifData(AiidaTestCase):
 
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
 data_test
 _cell_length_a    10
@@ -348,7 +353,7 @@ O 0.5 0.5 0.5
 
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_9012064
                 _space_group_IT_number           166
@@ -397,7 +402,7 @@ O 0.5 0.5 0.5
 
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
 data_9012064
 _space_group_IT_number           166
@@ -539,7 +544,7 @@ _tag                                    '[value]'
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
 data_0
 _tag   {}
@@ -553,7 +558,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10
@@ -626,7 +631,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10
@@ -650,7 +655,7 @@ _tag   {}
 
         self.assertEqual(a.has_attached_hydrogens, False)
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10
@@ -685,7 +690,7 @@ _tag   {}
         from aiida.orm.data.cif import CifData, refine_inline
         import tempfile
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_test
                 _cell_length_a    10
@@ -708,7 +713,7 @@ _tag   {}
 
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
-        self.assertEqual(b.values.keys(), ['test'])
+        self.assertEqual(list(b.values.keys()), ['test'])
         self.assertEqual(b.values['test']['_chemical_formula_sum'], 'C O2')
         self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'], [
             'x,y,z',
@@ -728,7 +733,7 @@ _tag   {}
             'y,x,-z',
             '-y,-x,z'])
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('''
                 data_a
                 data_b
@@ -769,7 +774,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
 
@@ -780,6 +785,7 @@ _tag   {}
             flex = CifData(file=f.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_empty_cif(self):
         """
         Test empty CifData
@@ -789,7 +795,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
 
@@ -806,6 +812,7 @@ _tag   {}
 
             a.store()
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_parse_policy(self):
         """
         Test that loading of CIF file occurs as defined by parse_policy.
@@ -813,7 +820,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
 
@@ -841,7 +848,7 @@ _tag   {}
         import tempfile
         from aiida.orm.data.cif import CifData
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
 
@@ -849,7 +856,7 @@ _tag   {}
             f1 = a.get_formulae()
             self.assertIsNot(f1, None)
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str_2)
             f.flush()
 
@@ -2493,7 +2500,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         import tempfile
 
-        with tempfile.NamedTemporaryFile(suffix=".cif") as f:
+        with tempfile.NamedTemporaryFile(mode='w+', suffix=".cif") as f:
             f.write("""data_9011963
                 _space_group_IT_number           166
                 _symmetry_space_group_name_Hall  '-R 3 2"'
@@ -2529,10 +2536,14 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         for struct in structs_to_test:
             self.assertEquals(struct.get_site_kindnames(),
                               ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
-            self.assertEquals([x.symbols for x in struct.kinds],
-                              [('Bi',), ('Se', 'Te')])
-            self.assertEquals([x.weights for x in struct.kinds],
-                              [(1.0,), (0.33333, 0.66667)])
+
+            # Pymatgen's Composition does not guarantee any particular ordering of the kinds,
+            # see the definition of its internal datatype at
+            #   pymatgen/core/composition.py#L135 (d4fe64c18a52949a4e22bfcf7b45de5b87242c51)
+            self.assertEquals([sorted(x.symbols) for x in struct.kinds],
+                              [['Bi',], ['Se', 'Te']])
+            self.assertEquals([sorted(x.weights) for x in struct.kinds],
+                              [[1.0,], [0.33333, 0.66667]])
 
         struct = StructureData(pymatgen_structure=pymatgen_struct)
 
@@ -2561,7 +2572,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         import tempfile
 
-        with tempfile.NamedTemporaryFile(suffix=".xyz") as f:
+        with tempfile.NamedTemporaryFile(mode='w+', suffix=".xyz") as f:
             f.write("""5
                 H4 C1
                 C 0.000000 0.000000 0.000000

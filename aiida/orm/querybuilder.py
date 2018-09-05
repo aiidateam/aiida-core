@@ -20,9 +20,15 @@ when instantiated by the user.
 """
 
 # Warnings are issued for deprecations:
+from __future__ import absolute_import
+from __future__ import print_function
 import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
+
+import six
+from six.moves import range, zip
+
 from aiida.orm.node import Node
 
 # The SQLAlchemy functionalities:
@@ -37,7 +43,6 @@ from aiida.common.exceptions import InputValidationError, ConfigurationError
 # The way I get column as a an attribute to the orm class
 from aiida.backends.utils import _get_column
 from aiida.common.links import LinkType
-
 
 
 def get_querybuilder_classifiers_from_cls(cls, obj):
@@ -285,7 +290,7 @@ class QueryBuilder(object):
             if isinstance(path_spec, dict):
                 self.append(**path_spec)
             # ~ except TypeError as e:
-            elif isinstance(path_spec, basestring):
+            elif isinstance(path_spec, six.string_types):
                 # Maybe it is just a string,
                 # I assume user means the type
                 self.append(type=path_spec)
@@ -328,7 +333,7 @@ class QueryBuilder(object):
                 "Received additional keywords: {}"
                 "\nwhich I cannot process"
                 "\nValid keywords are: {}"
-                "".format(kwargs.keys(), valid_keys)
+                "".format(list(kwargs.keys()), valid_keys)
             )
 
     def __str__(self):
@@ -546,14 +551,14 @@ class QueryBuilder(object):
             
             if isinstance(type, (tuple, list, set)):
                 for t in type:
-                    if not isinstance(t, basestring):
+                    if not isinstance(t, six.string_types):
                         raise InputValidationError(
                             "\n\n\n"
                             "{} was passed as type, but is not a string"
                             "\n\n\n".format(t)
                         )
             else:
-                if not isinstance(type, basestring):
+                if not isinstance(type, six.string_types):
                     raise InputValidationError(
                         "\n\n\n"
                         "{} was passed as type, but is not a string"
@@ -629,8 +634,8 @@ class QueryBuilder(object):
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append, cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append, cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -658,8 +663,8 @@ class QueryBuilder(object):
                 self.add_filter(tag, filters)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part filters), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part filters), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag)
@@ -674,8 +679,8 @@ class QueryBuilder(object):
                 self.add_projection(tag, project)
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part projections), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part projections), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -687,7 +692,7 @@ class QueryBuilder(object):
 
         try:
             # Get the functions that are implemented:
-            spec_to_function_map = self._get_function_map().keys()
+            spec_to_function_map = list(self._get_function_map().keys())
             joining_keyword = kwargs.pop('joining_keyword', None)
             joining_value = kwargs.pop('joining_value', None)
 
@@ -732,18 +737,17 @@ class QueryBuilder(object):
                     else:
                         raise InputValidationError("direction=0 is not valid")
                     joining_value = self._path[-abs(joining_value)]['tag']
-                except IndexError as e:
+                except IndexError as exc:
                     raise InputValidationError(
                         "You have specified a non-existent entity with\n"
                         "direction={}\n"
-                        "{}\n".format(joining_value, e.message)
-                    )
+                        "{}\n".format(joining_value, exc))
 
 
         except Exception as e:
             if self._debug:
-                print "DEBUG: Exception caught in append (part joining), cleaning up"
-                print "  ", e
+                print("DEBUG: Exception caught in append (part joining), cleaning up")
+                print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
@@ -756,7 +760,7 @@ class QueryBuilder(object):
         if len(self._path) > 0:
             try:
                 if self._debug:
-                    print "DEBUG: Choosing an edge_tag"
+                    print("DEBUG: Choosing an edge_tag")
                 if edge_tag is None:
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
@@ -766,7 +770,7 @@ class QueryBuilder(object):
                             "The tag {} is already in use".format(edge_tag)
                         )
                 if self._debug:
-                    print "   I have chosen", edge_tag
+                    print("   I have chosen", edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -786,9 +790,9 @@ class QueryBuilder(object):
             except Exception as e:
 
                 if self._debug:
-                    print "DEBUG: Exception caught in append (part joining), cleaning up"
+                    print("DEBUG: Exception caught in append (part joining), cleaning up")
                     import traceback
-                    print  traceback.format_exc()
+                    print(traceback.format_exc())
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self._tag_to_alias_map.pop(tag, None)
@@ -869,7 +873,7 @@ class QueryBuilder(object):
                 tag = self._get_tag_from_specification(tagspec)
                 _order_spec[tag] = []
                 for item_to_order_by in items_to_order_by:
-                    if isinstance(item_to_order_by, basestring):
+                    if isinstance(item_to_order_by, six.string_types):
                         item_to_order_by = {item_to_order_by: {}}
                     elif isinstance(item_to_order_by, dict):
                         pass
@@ -883,7 +887,7 @@ class QueryBuilder(object):
                         # if somebody specifies eg {'node':{'id':'asc'}}
                         # tranform to {'node':{'id':{'order':'asc'}}}
 
-                        if isinstance(orderspec, basestring):
+                        if isinstance(orderspec, six.string_types):
                             this_order_spec = {'order': orderspec}
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
@@ -1021,14 +1025,14 @@ class QueryBuilder(object):
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
         if self._debug:
-            print "DEBUG: Adding projection of", tag_spec
-            print "   projection", projection_spec
+            print("DEBUG: Adding projection of", tag_spec)
+            print("   projection", projection_spec)
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]
         for projection in projection_spec:
             if isinstance(projection, dict):
                 _thisprojection = projection
-            elif isinstance(projection, basestring):
+            elif isinstance(projection, six.string_types):
                 _thisprojection = {projection: {}}
             else:
                 raise InputValidationError(
@@ -1050,13 +1054,13 @@ class QueryBuilder(object):
                             "{} is not a valid key {}".format(
                                 key, self._VALID_PROJECTION_KEYS)
                         )
-                        if not isinstance(val, basestring):
+                        if not isinstance(val, six.string_types):
                             raise InputValidationError(
                                 "{} has to be a string".format(val)
                             )
             _projections.append(_thisprojection)
         if self._debug:
-            print "   projections have become:", _projections
+            print("   projections have become:", _projections)
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
@@ -1120,7 +1124,7 @@ class QueryBuilder(object):
         # reduces number of key in return dictionary
 
         if self._debug:
-            print tag, items_to_project
+            print(tag, items_to_project)
         if not items_to_project:
             return
 
@@ -1161,7 +1165,7 @@ class QueryBuilder(object):
             In that case, I simply check that it's not a duplicate.
             If it is a class, I check if it's in the _cls_to_tag_map!
         """
-        if isinstance(specification, basestring):
+        if isinstance(specification, six.string_types):
             if specification in self._tag_to_alias_map.keys():
                 tag = specification
             else:
@@ -1755,7 +1759,7 @@ class QueryBuilder(object):
             The input value that will be converted.
             Recurses into each value if **inp** is an iterable.
         """
-        print inp
+        print(inp)
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[
@@ -1920,10 +1924,10 @@ class QueryBuilder(object):
 
         self.nr_of_projections = 0
         if self._debug:
-            print "DEBUG:"
-            print "   Printing the content of self._projections"
-            print "  ", self._projections
-            print
+            print("DEBUG:")
+            print("   Printing the content of self._projections")
+            print("  ", self._projections)
+            print()
 
         if not any(self._projections.values()):
             # If user has not set projection,
@@ -1940,9 +1944,12 @@ class QueryBuilder(object):
             for vertice in self._path[1:]:
                 edge_tag = vertice.get('edge_tag', None)
                 if self._debug:
-                    print "DEBUG: Checking projections for edges:"
-                    print "   This is edge", edge_tag, "from", vertice.get('tag'), ",", vertice.get(
-                        'joining_keyword'), 'of', vertice.get('joining_value')
+                    print("DEBUG: Checking projections for edges:")
+                    print("   This is edge {} from {}, {} of {}"
+                          .format(edge_tag,
+                                  vertice.get('tag'),
+                                  vertice.get('joining_keyword'),
+                                  vertice.get('joining_value')))
                 if edge_tag is not None:
                     self._build_projections(edge_tag)
 

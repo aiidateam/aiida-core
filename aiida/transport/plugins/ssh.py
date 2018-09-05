@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from stat import S_ISDIR, S_ISREG
-import StringIO
-
 import os
 import click
 import glob
+
+import six
+from six.moves import cStringIO as StringIO
 
 import aiida.transport
 import aiida.transport.transport
@@ -24,6 +26,7 @@ from aiida.cmdline.utils import echo
 from aiida.common import aiidalogger
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import NotExistent
+
 
 __all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
 
@@ -163,7 +166,7 @@ class SshTransport(aiida.transport.Transport):
         try:
             identities = config['identityfile']
             # In paramiko > 0.10, identity file is a list of strings.
-            if isinstance(identities, basestring):
+            if isinstance(identities, six.string_types):
                 identity = identities
             elif isinstance(identities, (list, tuple)):
                 if not identities:
@@ -486,9 +489,9 @@ class SshTransport(aiida.transport.Transport):
 
         try:
             self._client.connect(self._machine, **connection_arguments)
-        except Exception as e:
+        except Exception as exc:
             self.logger.error("Error connecting through SSH: [{}] {}, "
-                              "connect_args were: {}".format(e.__class__.__name__, e.message, self._connect_args))
+                              "connect_args were: {}".format(exc.__class__.__name__, exc, self._connect_args))
             raise
 
         # Open also a SFTPClient
@@ -578,10 +581,10 @@ class SshTransport(aiida.transport.Transport):
         # read permissions, this will raise an exception.
         try:
             self.sftp.stat('.')
-        except IOError as e:
-            if 'Permission denied' in e:
+        except IOError as exc:
+            if 'Permission denied' in str(exc):
                 self.chdir(old_path)
-            raise IOError(e)
+            raise IOError(str(exc))
 
     def normalize(self, path):
         """
@@ -650,15 +653,15 @@ class SshTransport(aiida.transport.Transport):
 
         try:
             self.sftp.mkdir(path)
-        except IOError as e:
+        except IOError as exc:
             if os.path.isabs(path):
                 raise OSError("Error during mkdir of '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(path, e.message))
+                              "or the directory already exists? ({})".format(path, exc))
             else:
                 raise OSError("Error during mkdir of '{}' from folder '{}', "
                               "maybe you don't have the permissions to do it, "
-                              "or the directory already exists? ({})".format(path, self.getcwd(), e.message))
+                              "or the directory already exists? ({})".format(path, self.getcwd(), exc))
 
     # TODO : implement rmtree
     def rmtree(self, path):
@@ -1330,8 +1333,8 @@ class SshTransport(aiida.transport.Transport):
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
-            if isinstance(stdin, basestring):
-                filelike_stdin = StringIO.StringIO(stdin)
+            if isinstance(stdin, six.string_types):
+                filelike_stdin = StringIO(stdin)
             else:
                 filelike_stdin = stdin
 
@@ -1350,8 +1353,8 @@ class SshTransport(aiida.transport.Transport):
         retval = channel.recv_exit_status()
 
         # needs to be after 'recv_exit_status', otherwise it might hang
-        output_text = stdout.read()
-        stderr_text = stderr.read()
+        output_text = stdout.read().decode('utf-8')
+        stderr_text = stderr.read().decode('utf-8')
 
         return retval, output_text, stderr_text
 
@@ -1419,7 +1422,7 @@ class SshTransport(aiida.transport.Transport):
         import errno
         try:
             self.sftp.stat(path)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return False
             raise

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Click parameter types for paths."""
+from __future__ import absolute_import
 import os
 import click
 

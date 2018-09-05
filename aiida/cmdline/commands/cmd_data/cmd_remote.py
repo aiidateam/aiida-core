@@ -7,39 +7,35 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to manage ParameterData objects from command line.
-"""
+"""`verdi data remote` command."""
+from __future__ import absolute_import
+
 import click
+
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments
+from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
 from aiida.common.utils import get_mode_string
 
 
 @verdi_data.group('remote')
 def remote():
-    """
-    Managing Remote_Data data types
-    """
+    """Managing RemoteData objects."""
     pass
 
 
 @remote.command('ls')
-@click.option('-l', '--long', 'ls_long', is_flag=True, default=False, help="Display also file metadata")
-@click.option('-p', '--path', type=click.STRING, default='.', help="The folder to list")
-@arguments.NODE()
-def lsfunction(ls_long, path, node):
-    """
-    List directory content on remote RemoteData objects.
-    """
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
+@click.option('-l', '--long', 'ls_long', is_flag=True, default=False, help='Display also file metadata.')
+@click.option('-p', '--path', type=click.STRING, default='.', help='The folder to list.')
+def remote_ls(ls_long, path, datum):
+    """List directory content on remote RemoteData objects."""
     import datetime
     try:
-        content = node.listdir_withattributes(path=path)
+        content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
-        echo.echo_critical("Unable to access the remote folder"
-                           " or file, check if it exists.\n"
-                           "Original error: {}".format(str(err)))
+        echo.echo_critical('Unable to access the remote folde or file, check if it exists.\n'
+                           'Original error: {}'.format(str(err)))
     for metadata in content:
         if ls_long:
             mtime = datetime.datetime.fromtimestamp(metadata['attributes'].st_mtime)
@@ -54,24 +50,21 @@ def lsfunction(ls_long, path, node):
 
 
 @remote.command('cat')
-@arguments.NODE()
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
 @click.argument('path', type=click.STRING)
-def cat(node, path):
-    """
-    Show the content of remote files in RemoteData objects.
-    """
+def remote_cat(datum, path):
+    """Show the content of remote files in RemoteData objects."""
     import os
     import sys
     import tempfile
     try:
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.close()
-            node.getfile(path, tmpf.name)
+            datum.getfile(path, tmpf.name)
             with open(tmpf.name) as fobj:
                 sys.stdout.write(fobj.read())
     except IOError as err:
-        click.echo("ERROR {}: {}".format(err.errno, str(err)), err=True)
-        sys.exit(1)
+        echo.echo_critical('{}: {}'.format(err.errno, str(err)))
 
     try:
         os.remove(tmpf.name)
@@ -81,12 +74,10 @@ def cat(node, path):
 
 
 @remote.command('show')
-@arguments.NODE()
-def show(node):
-    """
-    Show information on a RemoteData object.
-    """
-    click.echo("- Remote computer name:")
-    click.echo("  {}".format(node.get_computer_name()))
-    click.echo("- Remote folder full path:")
-    click.echo("  {}".format(node.get_remote_path()))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
+def remote_show(datum):
+    """Show information on a RemoteData object."""
+    click.echo('- Remote computer name:')
+    click.echo('  {}'.format(datum.get_computer_name()))
+    click.echo('- Remote folder full path:')
+    click.echo('  {}'.format(datum.get_remote_path()))

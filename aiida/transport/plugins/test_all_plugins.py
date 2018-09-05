@@ -19,7 +19,11 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
 
+from __future__ import absolute_import
+from __future__ import print_function
 import unittest
+
+from six.moves import range
 
 
 def get_all_custom_transports():
@@ -50,7 +54,7 @@ def get_all_custom_transports():
     try:
         test_modules.remove(thisbasename)
     except IndexError:
-        print "Warning, this module ({}) was not found!".format(thisbasename)
+        print("Warning, this module ({}) was not found!".format(thisbasename))
 
     all_custom_transports = {}
     for m in test_modules:
@@ -81,7 +85,7 @@ def run_for_all_plugins(actual_test_method):
         The wrapper function that calls the subfunction for each transport.
         """
         exceptions = []
-        for tr_name, custom_transport in all_custom_transports.iteritems():
+        for tr_name, custom_transport in all_custom_transports.items():
             try:
                 actual_test_method(self, custom_transport)
             except Exception as e:
@@ -97,14 +101,9 @@ def run_for_all_plugins(actual_test_method):
 
             messages = ["*** At least one test for a subplugin failed. " "See below ***", ""]
             for exc in exceptions:
-                if hasattr(exc[0], "message"):
-                    messages.append("*** [For plugin {}]: Exception '{}': {}"
-                                    "".format(exc[2],
-                                              type(exc[0]).__name__, exc[0].message))
-                    messages.append(exc[1])
-                else:
-                    messages.append("*** [For plugin {}]: Exception '{}'".format(exc[2], type(exc[0]).__name__))
-                    messages.append(exc[1])
+                messages.append("*** [For plugin {}]: Exception '{}': {}"
+                                .format(exc[2], type(exc[0]).__name__, exc[0]))
+                messages.append(exc[1])
 
             raise exception_to_raise("\n".join(messages))
 
@@ -427,16 +426,16 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.mkdir(directory)
 
             # change permissions
-            t.chmod(directory, 0777)
+            t.chmod(directory, 0o777)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0777)
+            self.assertEquals(t.get_mode(directory), 0o777)
 
             # change permissions
-            t.chmod(directory, 0511)
+            t.chmod(directory, 0o511)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0511)
+            self.assertEquals(t.get_mode(directory), 0o511)
 
             # TODO : bug in paramiko. When changing the directory to very low \
             # I cannot set it back to higher permissions
@@ -450,12 +449,12 @@ class TestDirectoryManipulation(unittest.TestCase):
             # change permissions of an empty string, non existing folder.
             fake_dir = ''
             with self.assertRaises(IOError):
-                t.chmod(fake_dir, 0777)
+                t.chmod(fake_dir, 0o777)
 
             fake_dir = 'pippo'
             with self.assertRaises(IOError):
                 # chmod to a non existing folder
-                t.chmod(fake_dir, 0777)
+                t.chmod(fake_dir, 0o777)
 
             t.chdir('..')
             t.rmdir(directory)
@@ -1324,10 +1323,10 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         test_string = "some_test String"
-        stdin = StringIO.StringIO(test_string)
+        stdin = StringIO(test_string)
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
             self.assertEquals(retcode, 0)

@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import unicode_literals
 
+from __future__ import absolute_import
 from django.db import models, migrations
 import aiida.utils.timezone
 from aiida.backends.djsite.db.migrations import update_schema_version

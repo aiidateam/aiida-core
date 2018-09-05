@@ -2,6 +2,7 @@
 """
 Module for custom click param type group
 """
+from __future__ import absolute_import
 from .identifier import IdentifierParamType
 
 

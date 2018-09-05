@@ -7,9 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
+
+import six
+from six.moves import range, zip
+
 from aiida.orm.data.array import ArrayData
 from aiida.orm.calculation.inline import optional_inline
-
 
 
 @optional_inline
@@ -49,7 +54,7 @@ class TrajectoryData(ArrayData):
             raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if not isinstance(symbols, numpy.ndarray):
             raise TypeError("TrajectoryData.symbols must be a numpy array")
-        if any([not isinstance(i, basestring) for i in symbols]):
+        if any([not isinstance(i, six.string_types) for i in symbols]):
             raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
@@ -165,7 +170,7 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        stepids = numpy.array(range(0, len(structurelist)))
+        stepids = numpy.arange(len(structurelist))
         cells = numpy.array([x.cell for x in structurelist])
         symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites]
@@ -192,10 +197,10 @@ class TrajectoryData(ArrayData):
                                     self.get_times(),
                                     self.get_velocities())
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
-        except Exception as e:
+        except Exception as exc:
             raise ValidationError("The TrajectoryData did not validate. "
                                   "Error: {} with message {}".format(
-                type(e).__name__, e.message))
+                type(e).__name__, exc))
 
     @property
     def numsteps(self):
@@ -432,9 +437,9 @@ class TrajectoryData(ArrayData):
         Write the given trajectory to a string of format XSF (for XCrySDen).
         """
         from aiida.common.constants import elements
-        _atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
+        _atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
-        indices = range(self.numsteps)
+        indices = list(range(self.numsteps))
         if index is not None:
             indices = [index]
         return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(indices))
@@ -465,7 +470,7 @@ class TrajectoryData(ArrayData):
                 try:
                     return_string += "{} {:18.10f} {:18.10f} {:18.10f}\n".format(atn, pos[0], pos[1], pos[2] )
                 except:
-                    print atn, pos
+                    print(atn, pos)
                     raise
         return return_string.encode('utf-8'), {}
 
@@ -479,7 +484,7 @@ class TrajectoryData(ArrayData):
         from aiida.common.utils import HiddenPrints
 
         cif = ""
-        indices = range(self.numsteps)
+        indices = list(range(self.numsteps))
         if trajectory_index is not None:
             indices = [trajectory_index]
         for idx in indices:
@@ -852,7 +857,7 @@ def plot_positions_XYZ(
             tlim[1] = maxtime
             index_range[1] = np.argmin(times<maxtime)
 
-        trajectories = zip(*positions.tolist())
+        trajectories = zip(*positions.tolist())  # only used in enumerate() below
         cmap =  plt.get_cmap('jet_r')
         fig = plt.figure(figsize = (12,7))
 
@@ -878,7 +883,7 @@ def plot_positions_XYZ(
             if index not in indices_to_show:
                 continue
             color =  color_list[index]
-            X,Y,Z = zip(*traj)
+            X,Y,Z = list(zip(*traj))
             ax1.plot(times, X, color=color)
             ax2.plot(times, Y, color=color)
             ax3.plot(times, Z, color=color)

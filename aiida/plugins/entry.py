@@ -15,6 +15,7 @@ location for the (implicit) definition of the registry format.
 """
 
 
+from __future__ import absolute_import
 class InvalidPluginEntryError(Exception):
     def __init__(self, msg=''):
         msg = 'Error: Invalid Plugin Registry Entry: {}'.format(msg)
@@ -104,7 +105,7 @@ class RegistryEntry(object):
         ic = InstallCommand()
         opts, args = ic.parser.parse_args()
         args.append(self.pip_url)
-        for k, v in opts.__dict__.iteritems():
+        for k, v in opts.__dict__.items():
             setattr(opts, k, v)
         req_set = ic.run(opts, args)
         req_set.install(opts)
@@ -144,7 +145,7 @@ class RegistryEntry(object):
         from aiida.plugins.entry_point import get_entry_point_names
 
         if iversion == self.version or not new_style:
-            for cat, ep in self.entry_points.iteritems():
+            for cat, ep in self.entry_points.items():
                 if not set(ep).issubset(set(get_entry_point_names('aiida.' + cat))):
                     installed = False
         return installed, new_style, iversion
@@ -211,7 +212,7 @@ class RegistryEntry(object):
             table.append(['Package:', self.package_name])
             table.append(['Description:', self.description])
             table.append(['Plugins:', ''])
-            for category, eps in self.entry_points.iteritems():
+            for category, eps in self.entry_points.items():
                 table.append(['', category.capitalize() + ':'])
                 table.extend([['', ep] for ep in eps])
                 table.append(['', ''])

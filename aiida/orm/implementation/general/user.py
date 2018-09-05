@@ -7,18 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import logging
 from abc import abstractmethod, abstractproperty, ABCMeta
+
+import six
+
 from aiida.common.hashing import is_password_usable
 from aiida.common.utils import abstractclassmethod
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractUser(object):
     """
     An AiiDA ORM implementation of a user.
     """
-
-    __metaclass__ = ABCMeta
 
     _logger = logging.getLogger(__name__)
 
@@ -228,9 +231,8 @@ class AbstractUser(object):
         }
 
 
+@six.add_metaclass(ABCMeta)
 class Util(object):
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def delete_user(self, pk):
         """

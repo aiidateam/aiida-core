@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import django.db
 from django.db.models.fields import FieldDoesNotExist
 from aiida.common import exceptions

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin aware click command Group."""
+from __future__ import absolute_import
 import click
 
 from aiida.plugins.entry_point import load_entry_point, get_entry_point_names, MissingEntryPointError

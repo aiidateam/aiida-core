@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import traceback
 import inspect
@@ -769,9 +771,9 @@ class AbstractWorkflow(object):
             if c._is_new() or c._is_running():
                 try:
                     c.kill()
-                except (InvalidOperation, RemoteOperationError) as e:
+                except (InvalidOperation, RemoteOperationError) as exc:
                     counter += 1
-                    self.logger.error(e.message)
+                    self.logger.error(str(exc))
 
         if counter:
             raise InvalidOperation("{} step calculation{} could not be killed"
@@ -799,20 +801,19 @@ class AbstractWorkflow(object):
 
                 try:
                     self.kill_step_calculations(s)
-                except InvalidOperation as e:
+                except InvalidOperation as exc:
                     error_message = ("'{}' for workflow with pk= {}"
-                                     "".format(e.message, self.pk))
+                                     "".format(exc, self.pk))
                     error_messages.append(error_message)
 
                 for w in s.get_sub_workflows():
                     if verbose:
-                        print "Killing workflow with pk: {}".format(w.pk)
+                        print("Killing workflow with pk: {}".format(w.pk))
 
                     try:
                         w.kill(verbose=verbose)
-                    except WorkflowKillError as e:
-                        # self.logger.error(e.message)
-                        error_messages.extend(e.error_message_list)
+                    except WorkflowKillError as exc:
+                        error_messages.extend(exc.error_message_list)
                     except WorkflowUnkillable:
                         # A subwf cannot be killed, skip
                         pass

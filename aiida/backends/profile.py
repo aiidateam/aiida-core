@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends import settings
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.setup import get_default_profile, get_profile_config

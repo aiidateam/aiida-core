@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import division
+from __future__ import absolute_import
+from six.moves import zip, range
 import aiida.common
 from aiida.common import aiidalogger
 from aiida.orm.workflow import Workflow
@@ -171,8 +173,8 @@ class WorkflowXTiO3_EOS(Workflow):
         e_calcs = [c.res.energy for c in start_calcs]
         v_calcs = [c.res.volume for c in start_calcs]
 
-        e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
-        v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
+        e_calcs = list(zip(*sorted(zip(a_sweep, e_calcs))))[1]
+        v_calcs = list(zip(*sorted(zip(a_sweep, v_calcs))))[1]
 
         #  Add to report
         #-----------------------------------------

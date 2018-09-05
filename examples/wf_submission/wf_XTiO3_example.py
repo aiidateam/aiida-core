@@ -8,6 +8,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
 import sys
 from aiida.common.example_helpers import test_and_get_code
@@ -35,8 +37,7 @@ try:
     else:
         raise IndexError
 except IndexError:
-    print >> sys.stderr, ("The first parameter can only be either "
-                          "--send or --dont-send")
+    print("The first parameter can only be either --send or --dont-send", file=sys.stderr)
     sys.exit(1)
 
 try:
@@ -49,18 +50,18 @@ valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=[element, 'Ti', 'O'
 try:
     pseudo_family = sys.argv[3]
 except IndexError:
-    print >> sys.stderr, "Error, you must pass as second parameter the pseudofamily"
-    print >> sys.stderr, "Valid UPF families are:"
-    print >> sys.stderr, "\n".join("* {}".format(i.name) for i in valid_pseudo_groups)
+    print("Error, you must pass as second parameter the pseudofamily", file=sys.stderr)
+    print("Valid UPF families are:", file=sys.stderr)
+    print("\n".join("* {}".format(i.name) for i in valid_pseudo_groups), file=sys.stderr)
     sys.exit(1)
 
 try:
     UpfData.get_upf_group(pseudo_family)
 except NotExistent:
-    print >> sys.stderr, "You set pseudo_family='{}',".format(pseudo_family)
-    print >> sys.stderr, "but no group with such a name found in the DB."
-    print >> sys.stderr, "Valid UPF groups are:"
-    print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
+    print("You set pseudo_family='{}',".format(pseudo_family), file=sys.stderr)
+    print("but no group with such a name found in the DB.", file=sys.stderr)
+    print("Valid UPF groups are:", file=sys.stderr)
+    print(",".join(i.name for i in valid_pseudo_groups), file=sys.stderr)
     sys.exit(1)
 
 ParameterData = DataFactory('parameter')

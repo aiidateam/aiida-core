@@ -13,16 +13,18 @@ miscellaneous utilities for different parts in AiiDA
 
 # pylint: disable=too-many-lines
 
+from __future__ import absolute_import
 import datetime
 import filecmp
 import functools
 import inspect
 import os.path
-import string
 import sys
 import numbers
 import re
 
+import six
+from six.moves import range, input, zip
 from dateutil.parser import parse
 
 from aiida.common.exceptions import ConfigurationError
@@ -104,7 +106,7 @@ def get_new_uuid():
         raise NotImplementedError("Only version 4 of UUID supported currently")
 
     the_uuid = uuid.uuid4()
-    return unicode(the_uuid)
+    return six.text_type(the_uuid)
 
 
 # To speed up the process (os.path.abspath calls are slow)
@@ -185,7 +187,7 @@ def get_suggestion(provided_string, allowed_strings):
     if len(similar_kws) == 1:
         return "(Maybe you wanted to specify {0}?)".format(similar_kws[0])
     elif len(similar_kws) > 1:
-        return "(Maybe you wanted to specify one of these: {0}?)".format(string.join(similar_kws, ', '))
+        return "(Maybe you wanted to specify one of these: {}?)".format(', '.join(similar_kws))
 
     return "(No similar keywords found...)"
 
@@ -214,7 +216,7 @@ def validate_list_of_string_tuples(val, tuple_length):
 
     for element in val:
         if (not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-                not all(isinstance(s, basestring) for s in element)):
+                not all(isinstance(s, six.string_types) for s in element)):
             raise ValidationError(err_msg)
 
     return True
@@ -237,7 +239,7 @@ def conv_to_fortran(val, quote_strings=True):
         val_str = "{:d}".format(val)
     elif isinstance(val, numbers.Real):
         val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif isinstance(val, basestring):
+    elif isinstance(val, six.string_types):
         if quote_strings:
             val_str = "'{!s}'".format(val)
         else:
@@ -268,13 +270,13 @@ def conv_to_fortran_withlists(val, quote_strings=True):
 
         return '.false.'
 
-    if isinstance(val, (int, long)):
+    if isinstance(val, six.integer_types):
         return "{:d}".format(val)
 
     if isinstance(val, float):
         return "{:18.10e}".format(val).replace('e', 'd')
 
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         if quote_strings:
             return "'{!s}'".format(val)
 
@@ -519,9 +521,8 @@ def gzip_string(to_zip):
     import gzip
 
     with tempfile.NamedTemporaryFile() as fhandle:
-        zipfile = gzip.open(fhandle.name, 'wb')
-        zipfile.write(to_zip)
-        zipfile.close()
+        with gzip.open(fhandle.name, 'wb') as zipfile:
+            zipfile.write(to_zip)
         return fhandle.read()
 
 
@@ -538,8 +539,8 @@ def gunzip_string(zipped_string):
     with tempfile.NamedTemporaryFile() as fhandle:
         fhandle.write(zipped_string)
         fhandle.flush()
-        zipfile = gzip.open(fhandle.name, 'rb')
-        return zipfile.read()
+        with gzip.open(fhandle.name, 'rb') as zipfile:
+            return zipfile.read()
 
 
 def xyz_parser_iterator(xyz_string):
@@ -567,7 +568,7 @@ def xyz_parser_iterator(xyz_string):
 
         def __next__(self):  # pylint: disable=missing-docstring
             try:
-                match = self._it.next()
+                match = next(self._it)
             except StopIteration:
                 # if we reached the number of atoms declared, everything is well
                 # and we re-raise the StopIteration exception
@@ -593,7 +594,8 @@ def xyz_parser_iterator(xyz_string):
             """
             return self.__next__()
 
-    pos_regex = re.compile(r"""
+    pos_regex = re.compile(
+        r"""
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
 (?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
@@ -601,7 +603,8 @@ def xyz_parser_iterator(xyz_string):
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
 """, re.X | re.M)
-    pos_block_regex = re.compile(r"""
+    pos_block_regex = re.compile(
+        r"""
                                                             # First line contains an integer
                                                             # and only an integer: the number of atoms
 ^[ \t]* (?P<natoms> [0-9]+) [ \t]*[\n]                      # End first line
@@ -633,7 +636,7 @@ def xyz_parser_iterator(xyz_string):
                 |
                 \#                                          # If a line is commented out, that is also ok
             )
-            .*                                              # I do not care what is after the comment or the position spec
+            .*                                              # ignore what is after the comment or the position spec
             |                                               # OR
             \s*                                             # A line only containing white space
          )
@@ -663,7 +666,7 @@ def get_extremas_from_positions(positions):
     """
     returns the minimum and maximum value for each dimension in the positions given
     """
-    return zip(*[(min(values), max(values)) for values in zip(*positions)])
+    return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
 
 
 def get_fortfloat(key, txt, be_case_sensitive=True):
@@ -764,7 +767,7 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
 
 
 def query_yes_no(question, default="yes"):
-    """Ask a yes/no question via raw_input() and return their answer.
+    """Ask a yes/no question via input() and return their answer.
 
     "question" is a string that is presented to the user.
     "default" is the presumed answer if the user just hits <Enter>.
@@ -784,7 +787,7 @@ def query_yes_no(question, default="yes"):
         raise ValueError("invalid default answer: '%s'" % default)
 
     while True:
-        choice = raw_input(question + prompt).lower()
+        choice = input(question + prompt).lower()
         if default is not None and not choice:
             return valid[default]
         elif choice in valid:
@@ -816,7 +819,7 @@ def query_string(question, default):
         prompt = " [{}]".format(default)
 
     while True:
-        reply = raw_input(question + prompt)
+        reply = input(question + prompt)
         if default is not None and not reply:
             # If the default answer is an empty string.
             if not default:

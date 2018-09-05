@@ -11,8 +11,12 @@
 Base classes for PBSPro and PBS/Torque plugins.
 """
 from __future__ import division
+from __future__ import absolute_import
 import abc
 import logging
+
+import six
+
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, MachineInfo, NodeNumberJobResource)
@@ -107,6 +111,7 @@ class PbsJobResource(NodeNumberJobResource):
             self.num_cores_per_machine = (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class PbsBaseClass(Scheduler):
     """
     Base class with support for the PBSPro scheduler
@@ -116,7 +121,6 @@ class PbsBaseClass(Scheduler):
     Only a few properties need to be redefined, see examples of the pbspro and
     torque plugins
     """
-    __metaclass__ = abc.ABCMeta
 
     # Query only by list of jobs and not by user
     _features = {
@@ -163,7 +167,7 @@ class PbsBaseClass(Scheduler):
             command.append('-u{}'.format(user))
 
         if jobs:
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:
@@ -242,7 +246,7 @@ class PbsBaseClass(Scheduler):
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
-            if not job_title or (job_title[0] not in string.letters + string.digits):
+            if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 15 characters
@@ -274,6 +278,9 @@ class PbsBaseClass(Scheduler):
 
         if job_tmpl.queue_name:
             lines.append("#PBS -q {}".format(job_tmpl.queue_name))
+
+        if job_tmpl.account:
+            lines.append("#PBS -A {}".format(job_tmpl.account))
 
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
@@ -309,7 +316,7 @@ class PbsBaseClass(Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
@@ -527,7 +534,7 @@ class PbsBaseClass(Scheduler):
                 except Exception as exc:
                     _LOGGER.debug("Problem parsing the node names, I "
                                   "got Exception {} with message {}; "
-                                  "exec_hosts was {}".format(str(type(exc)), exc.message, exec_hosts))
+                                  "exec_hosts was {}".format(str(type(exc)), exc, exec_hosts))
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -682,7 +689,7 @@ class PbsBaseClass(Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            _LOGGER.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
+            _LOGGER.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

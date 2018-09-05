@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import json
 
 from sqlalchemy import ForeignKey
@@ -235,7 +236,7 @@ class DbWorkflowData(Base):
         if instance:
             return instance, False
         else:
-            params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+            params = dict((k, v) for k, v in kwargs.items() if not isinstance(v, ClauseElement))
             instance = model(**params)
             session.add(instance)
             return instance, True
@@ -256,9 +257,8 @@ class DbWorkflowData(Base):
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
                 self.save()
-        except Exception as ex:
-            raise ValueError("Cannot set the parameter {}\n".format(self.name)
-                             + ex.message)
+        except Exception as exc:
+            raise ValueError("Cannot set the parameter {}\n{}".format(self.name, exc))
 
     def get_value(self):
         if self.value_type == wf_data_value_types.JSON:

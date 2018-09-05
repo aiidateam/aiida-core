@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import functools
 import logging
 import shutil
 import sys
 import tempfile
-from future.utils import raise_
+
+import six
 from tornado.gen import coroutine, Return
 
 import plumpy
@@ -29,6 +31,7 @@ from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
 from . import persistence
 from . import processes
+
 
 __all__ = ['JobProcess']
 
@@ -312,7 +315,7 @@ class Waiting(plumpy.Waiting):
             exc_info = sys.exc_info()
             yield self._launch_task(task_kill_job, calculation, transport_queue)
             self._killing.set_result(True)
-            raise_(*exc_info)
+            six.reraise(*exc_info)
         except Return:
             calculation._set_process_status(None)
             raise
@@ -403,20 +406,22 @@ class JobProcess(processes.Process):
             # Define the 'options' inputs namespace and its input ports
             spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
             spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
-                       help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
-            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True,
-                       default=1800,
-                       help='Set the wallclock in seconds asked to the scheduler')
-            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring,
-                       non_db=True, required=False,
-                       help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                            'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
-                            'scheduler submission file where such text is inserted: with this method, the string is inserted before '
-                            ' any non-scheduler command')
-            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the name of the queue on the remote computer')
+                help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                     'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
+            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
+                help='Set the wallclock in seconds asked to the scheduler')
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                     'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
+                     'scheduler submission file where such text is inserted: with this method, the string is inserted before '
+                     ' any non-scheduler command')
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the name of the queue on the remote computer')
+            spec.input('{}.account'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the account to use in for the queue on the remote computer')
+            spec.input('{}.qos'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+                help='Set the quality of service to use in for the queue on the remote computer')
+
             spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
                        help='Set the computer to be used by the calculation')
             spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
@@ -431,23 +436,23 @@ class JobProcess(processes.Process):
             spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True,
                        required=False,
                        help='Set a dictionary of custom environment variables for this calculation')
-            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types[0], non_db=True,
                        required=False,
                        help='Set the priority of the job to be queued')
             spec.input('{}.max_memory_kb'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, required=False,
                        help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types[0], non_db=True,
                        required=False,
                        help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
-            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types[0], non_db=True,
                        required=False,
                        help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
-            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
+            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types[0], non_db=True,
                        required=False,
                        help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
             # Define the actual inputs based on the use methods of the calculation class
-            for key, use_method in calc_class._use_methods.iteritems():
+            for key, use_method in calc_class._use_methods.items():
 
                 valid_type = use_method['valid_types']
                 docstring = use_method.get('docstring', None)
@@ -534,7 +539,7 @@ class JobProcess(processes.Process):
             if isinstance(port, PortNamespace):
                 additional = self._calc_class._use_methods[name]['additional_parameter']
 
-                for k, v in input_value.iteritems():
+                for k, v in input_value.items():
                     try:
                         getattr(self.calc, 'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError:
@@ -614,7 +619,7 @@ class JobProcess(processes.Process):
                     raise
 
         # Finally link up the outputs and we're done
-        for label, node in self.calc.get_outputs_dict().iteritems():
+        for label, node in self.calc.get_outputs_dict().items():
             self.out(label, node)
 
         return exit_code

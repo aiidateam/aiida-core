@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """User param type for click."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv

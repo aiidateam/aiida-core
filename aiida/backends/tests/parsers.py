@@ -11,8 +11,12 @@
 Tests for specific subclasses of Data
 """
 
-from aiida.backends.testbase import AiidaTestCase
+from __future__ import absolute_import
 
+import six
+from six.moves import range
+
+from aiida.backends.testbase import AiidaTestCase
 
 
 ### Here comparisons are defined #####################################
@@ -32,7 +36,7 @@ def _comparison_AlmostEqual(testclass, dbdata, comparisondata):
     value = comparisondata['value']
     if isinstance(dbdata, (list, tuple)) and isinstance(value, (list, tuple)):
         testclass.assertEqual(len(dbdata), len(value))
-        for i in range(0, len(dbdata)):
+        for i in range(len(dbdata)):
             testclass.assertAlmostEqual(dbdata[i], value[i])
     else:
         testclass.assertAlmostEqual(dbdata, value)
@@ -127,13 +131,38 @@ def is_valid_folder_name(name):
     if not name.startswith('test_'):
         return False
 
-    # Remove valid characters, see if anything remains
-    bad_characters = name.translate(None, string.letters + string.digits + '_')
+    # Remove valid characters, see if anything remains, allow only ASCII strings here
+    bad_characters = name.translate(None, string.ascii_letters + string.digits + '_')
     if bad_characters:
         return False
 
     return True
 
+
+class _TestParserMeta(type):
+    """
+    Some python black magic to dynamically create tests
+    """
+
+    def __new__(cls, name, bases, attrs):
+        import os
+
+        newcls = type.__new__(cls, name, bases, attrs)
+
+        file_folder = os.path.split(__file__)[0]
+        parser_test_folder = os.path.join(file_folder, 'parser_tests')
+        if os.path.isdir(parser_test_folder):
+            for f in os.listdir(parser_test_folder):
+                absf = os.path.abspath(os.path.join(parser_test_folder, f))
+                if is_valid_folder_name(f) and os.path.isdir(absf):
+                    function_name = f
+                    setattr(newcls, function_name,
+                            newcls.return_base_test(absf))
+
+        return newcls
+
+
+@six.add_metaclass(_TestParserMeta)
 class TestParsers(AiidaTestCase):
     """
     This class dynamically finds all tests in a given subfolder, and loads
@@ -231,11 +260,11 @@ class TestParsers(AiidaTestCase):
                                 attr_test_listtests, start=1):
                             try:
                                 comparison = attr_test_data.pop('comparison')
-                            except KeyError as e:
+                            except KeyError as exc:
                                 raise ValueError(
                                     "Missing '{}' in the '{}' field "
                                     "in '{}' in "
-                                    "the test file".format(e.message,
+                                    "the test file".format(exc.args[0],
                                                            attr_test,
                                                            test_node_name))
 
@@ -259,12 +288,7 @@ class TestParsers(AiidaTestCase):
                                 comparison_test(testclass=self, dbdata=dbdata,
                                                 comparisondata=attr_test_data)
                             except Exception as e:
-                                # I change both the message and the 'args'
-                                # (apparently, args[0] is used by str(e))
                                 # Probably, a 'better' way should be found to do this!
-                                e.message = "Failed test #{} for {}->{}: {}".format(
-                                    test_number, test_node_name, attr_test,
-                                    e.message)
                                 if e.args:
                                     e.args = tuple(
                                         ["Failed test #{} for {}->{}: {}".format(
@@ -276,28 +300,6 @@ class TestParsers(AiidaTestCase):
                                 raise e
 
         return base_test
-
-    class __metaclass__(type):
-        """
-        Some python black magic to dynamically create tests
-        """
-
-        def __new__(cls, name, bases, attrs):
-            import os
-
-            newcls = type.__new__(cls, name, bases, attrs)
-
-            file_folder = os.path.split(__file__)[0]
-            parser_test_folder = os.path.join(file_folder, 'parser_tests')
-            if os.path.isdir(parser_test_folder):
-                for f in os.listdir(parser_test_folder):
-                    absf = os.path.abspath(os.path.join(parser_test_folder, f))
-                    if is_valid_folder_name(f) and os.path.isdir(absf):
-                        function_name = f
-                        setattr(newcls, function_name,
-                                newcls.return_base_test(absf))
-
-            return newcls
 
 
 class SkipTestException(Exception):

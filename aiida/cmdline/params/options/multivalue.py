@@ -2,6 +2,7 @@
 Module to define multi value options for click.
 """
 
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.params import types

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import os, tempfile
 
 def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',
@@ -51,7 +52,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
             shape = "shape=ellipse"
         if kwargs:
             additional_params = ",{}".format(
-                ",".join('{}="{}"'.format(k, v) for k, v in kwargs.iteritems()))
+                ",".join('{}="{}"'.format(k, v) for k, v in kwargs.items()))
         else:
             additional_params = ""
         if node.label:
@@ -175,11 +176,11 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     fd, fname = tempfile.mkstemp(suffix='.dot')
     with open(fname, 'w') as fout:
         fout.write("digraph G {\n")
-        for l_name, l_values in links.iteritems():
+        for l_name, l_values in links.items():
             fout.write('    {}\n'.format(l_values))
-        for n_name, n_values in nodes.iteritems():
+        for n_name, n_values in nodes.items():
             fout.write("    {}\n".format(n_values))
-        for n_name, n_values in additional_nodes.iteritems():
+        for n_name, n_values in additional_nodes.items():
             fout.write("    {}\n".format(n_values))
         fout.write("}\n")
 

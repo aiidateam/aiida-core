@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport interface."""
+from __future__ import absolute_import
 from abc import ABCMeta
 import os
 import re
@@ -15,18 +16,19 @@ import fnmatch
 import sys
 from collections import OrderedDict
 
+import six
 from aiida.common.exceptions import InternalError
 from aiida.common.utils import classproperty
 from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
 
 
 # pylint: disable=too-many-public-methods
+@six.add_metaclass(ABCMeta)
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
-    __metaclass__ = ABCMeta
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -703,15 +705,13 @@ class Transport(object):
         if not dirname:
             # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
-        if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
-            dirname = unicode(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
+        if isinstance(pattern, six.text_type) and not isinstance(dirname, six.text_type):
+            dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             # names = os.listdir(dirname)
             # print dirname
             names = self.listdir(dirname)
-        except os.error:
-            return []
-        except IOError:
+        except EnvironmentError:  # in PY2 a superclass of OS/IOError, in PY3 an alias for OSError, like IOError
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']

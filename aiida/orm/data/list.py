@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from collections import MutableSequence
 from aiida.orm.data import Data
 
@@ -85,9 +86,9 @@ class List(Data, MutableSequence):
     def count(self, value):
         return self.get_list().count(value)
 
-    def sort(self, cmp=None, key=None, reverse=False):
+    def sort(self, key=None, reverse=False):
         l = self.get_list()
-        l.sort(cmp, key, reverse)
+        l.sort(key=key, reverse=reverse)
         if not self._using_list_reference():
             self.set_list(l)
 

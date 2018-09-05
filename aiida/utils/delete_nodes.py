@@ -9,6 +9,11 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import zip, input
+
+
 def delete_nodes(pks, follow_calls=False, follow_returns=False, 
                  dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
@@ -47,7 +52,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         # If I was passed an empty list, I don't to anything
         # I prefer checking explicitly, an empty set might be problematic for the queries done below.
         if verbosity:
-            print "Nothing to delete"
+            print("Nothing to delete")
         return
 
     # The following code is just for the querying of downwards provenance.
@@ -78,20 +83,20 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         pks_set_to_delete = pks_set_to_delete.union(new_pks_set)
 
     if verbosity > 0:
-        print "I {} delete {} node{}".format(
-            'would' if dry_run else 'will',
-            len(pks_set_to_delete),
-            's' if len(pks_set_to_delete) > 1 else '')
+        print("I {} delete {} node{}"
+              .format('would' if dry_run else 'will',
+                      len(pks_set_to_delete),
+                      's' if len(pks_set_to_delete) > 1 else ''))
         if verbosity > 1:
             qb = QueryBuilder().append(Node, filters={'id': {'in': pks_set_to_delete}},
                                        project=('uuid', 'id', 'type', 'label'))
-            print "The nodes I {} delete:".format('would' if dry_run else 'will')
+            print("The nodes I {} delete:".format('would' if dry_run else 'will'))
             for uuid, pk, type_string, label in qb.iterall():
                 try:
                     short_type_string = type_string.split('.')[-2]
                 except IndexError:
                     short_type_string = type_string
-                print "   {} {} {} {}".format(uuid, pk, short_type_string, label)
+                print("   {} {} {} {}".format(uuid, pk, short_type_string, label))
 
 
     # Here I am checking whether I am deleting
@@ -107,15 +112,16 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
         caller_to_called2delete = called_qb.all()
 
         if verbosity > 0 and caller_to_called2delete:
-            calculation_pks_losing_called = set(zip(*caller_to_called2delete)[0])
-            print "\n{} calculation{} {} lose at least one called instance".format(
-                    len(calculation_pks_losing_called),
-                    's' if len(calculation_pks_losing_called) > 1 else '',
-                    'would' if dry_run else 'will')
+            calculation_pks_losing_called = set(next(zip(*caller_to_called2delete)))
+            print("\n{} calculation{} {} lose at least one called instance"
+                  .format(len(calculation_pks_losing_called),
+                          's' if len(calculation_pks_losing_called) > 1 else '',
+                          'would' if dry_run else 'will'))
             if verbosity > 1:
-                print "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will')
+                print("These are the calculations that {} lose a called instance:"
+                      .format('would' if dry_run else 'will'))
                 for calc_losing_called_pk in calculation_pks_losing_called:
-                    print '  ', load_node(calc_losing_called_pk)
+                    print('  ', load_node(calc_losing_called_pk))
 
         created_qb = QueryBuilder()
         created_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
@@ -125,29 +131,29 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
         creator_to_created2delete = created_qb.all()
         if verbosity > 0 and creator_to_created2delete:
-            calculation_pks_losing_created = set(zip(*creator_to_created2delete)[0])
-            print "\n{} calculation{} {} lose at least one created data-instance".format(
-                len(calculation_pks_losing_created),
-                's' if len(calculation_pks_losing_created) > 1 else '',
-                'would' if dry_run else 'will')
+            calculation_pks_losing_created = set(next(zip(*creator_to_created2delete)))
+            print("\n{} calculation{} {} lose at least one created data-instance"
+                  .format(len(calculation_pks_losing_created),
+                          's' if len(calculation_pks_losing_created) > 1 else '',
+                          'would' if dry_run else 'will'))
             if verbosity > 1:
-                print "These are the calculations that {} lose a created data-instance:".format(
-                    'would' if dry_run else 'will')
+                print("These are the calculations that {} lose a created data-instance:"
+                      .format('would' if dry_run else 'will'))
                 for calc_losing_created_pk in calculation_pks_losing_created:
-                    print '  ', load_node(calc_losing_created_pk)
+                    print('  ', load_node(calc_losing_created_pk))
 
     if dry_run:
         if verbosity > 0:
-            print "\nThis was a dry run, exiting without deleting anything"
+            print("\nThis was a dry run, exiting without deleting anything")
         return
 
     # Asking for user confirmation here
     if force:
         pass
     else:
-        print "YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete))
-        if raw_input("Shall I continue? [Y/N] ").lower() != 'y':
-            print "Exiting without deleting"
+        print("YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete)))
+        if input("Shall I continue? [Y/N] ").lower() != 'y':
+            print("Exiting without deleting")
             return
 
     # Recover the list of folders to delete before actually deleting

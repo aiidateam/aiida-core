@@ -18,5 +18,5 @@
 #={{'='*50}}=#
 #= {{'Summary of config so far'|center(48)}} =#
 #={{'='*50}}=#
-{% for k, v in summary.iteritems() %}#= {{k.ljust(20)}}: {{v}}
+{% for k, v in summary.items() %}#= {{k.ljust(20)}}: {{v}}
 {% endfor %}

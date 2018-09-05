@@ -1,4 +1,5 @@
 """Unit tests for the InteractiveOption."""
+from __future__ import absolute_import
 import unittest
 
 import click

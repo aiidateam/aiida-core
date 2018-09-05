@@ -7,26 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to manage TrajectoryData objects from command line.
-"""
+"""`verdi data upf` command."""
+from __future__ import absolute_import
+
 import click
-from aiida.cmdline.utils import echo
+
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.params import arguments, options
+from aiida.cmdline.utils import decorators, echo
 
 
 @verdi_data.group('upf')
 def upf():
-    """
-    Manipulation of the upf families
-    """
+    """Manipulation of the upf families."""
     pass
 
 
 @upf.command('uploadfamily')
-@with_dbenv()
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.argument('group_name', type=click.STRING)
 @click.argument('group_description', type=click.STRING)
@@ -35,7 +32,8 @@ def upf():
     is_flag=True,
     default=False,
     help='Interrupt pseudos import if a pseudo was already present in the AiiDA database')
-def uploadfamily(folder, group_name, group_description, stop_if_existing):
+@decorators.with_dbenv()
+def upf_uploadfamily(folder, group_name, group_description, stop_if_existing):
     """
     Upload a new pseudopotential family.
 
@@ -49,7 +47,6 @@ def uploadfamily(folder, group_name, group_description, stop_if_existing):
 
 
 @upf.command('listfamilies')
-@with_dbenv()
 @click.option(
     '-d',
     '--with-description',
@@ -57,16 +54,9 @@ def uploadfamily(folder, group_name, group_description, stop_if_existing):
     is_flag=True,
     default=False,
     help="Show also the description for the UPF family")
-@click.option(
-    '-e',
-    '--elements',
-    'elements',
-    type=click.STRING,
-    cls=MultipleValueOption,
-    default=None,
-    help="Filter the families only to those containing "
-    "a pseudo for each of the specified elements")
-def listfamilies(elements, with_description):
+@options.WITH_ELEMENTS()
+@decorators.with_dbenv()
+def upf_listfamilies(elements, with_description):
     """
     Print on screen the list of upf families installed
     """
@@ -111,24 +101,15 @@ def listfamilies(elements, with_description):
 
 
 @upf.command('exportfamily')
-@with_dbenv()
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
-@click.argument('group_name', type=click.STRING)
-def exportfamily(folder, group_name):
+@arguments.GROUP()
+@decorators.with_dbenv()
+def upf_exportfamily(folder, group):
     """
     Export a pseudopotential family into a folder.
     Call without parameters to get some help.
     """
     import os
-    from aiida.common.exceptions import NotExistent
-    from aiida.orm import DataFactory
-
-    # pylint: disable=invalid-name
-    UpfData = DataFactory('upf')
-    try:
-        group = UpfData.get_upf_group(group_name)
-    except NotExistent:
-        echo.echo_critical("upf family {} not found".format(group_name))
 
     # pylint: disable=protected-access
     for node in group.nodes:
@@ -138,16 +119,17 @@ def exportfamily(folder, group_name):
                 with node._get_folder_pathsubfolder.open(node.filename) as source:
                     dest.write(source.read())
         else:
-            echo.echo_warning("File {} is already present in the " "destination folder".format(node.filename))
+            echo.echo_warning("File {} is already present in the destination folder".format(node.filename))
 
 
 @upf.command('import')
-@with_dbenv()
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-def import_upf(filename):
+@decorators.with_dbenv()
+def upf_import(filename):
     """
     Import upf data object
     """
     from aiida.orm.data.upf import UpfData
+
     node, _ = UpfData.get_or_create(filename)
-    echo.echo_success("Imported: {}".format(node))
+    echo.echo_success('Imported: {}'.format(node))

@@ -13,6 +13,7 @@ Test the plugin test case
 This must be in a standalone script because it would clash with other tests,
 Since the dbenv gets loaded on the temporary profile.
 """
+from __future__ import absolute_import
 import os
 import sys
 import unittest
@@ -106,4 +107,7 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    TestRunner().run(SUITE, backend=determine_backend())
+    RESULT = TestRunner().run(SUITE, backend=determine_backend())
+
+    EXIT_CODE = int(not RESULT.wasSuccessful())
+    sys.exit(EXIT_CODE)

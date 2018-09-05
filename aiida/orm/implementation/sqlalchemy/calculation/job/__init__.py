@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import datetime
 # XXX to remove when we implements the settings/tasks using SQLA
 from dateutil.parser import parse

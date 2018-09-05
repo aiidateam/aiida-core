@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+
+import six
+
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.orm.implementation.general.comment import AbstractComment
 from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
-
 
 
 class Comment(AbstractComment):
@@ -85,7 +87,7 @@ class Comment(AbstractComment):
 
     @property
     def uuid(self):
-        return unicode(self.dbcomment.uuid)
+        return six.text_type(self.dbcomment.uuid)
 
     def get_ctime(self):
         return self.dbcomment.ctime

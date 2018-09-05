@@ -10,6 +10,7 @@
 """
 Tests for the NWChem input plugins.
 """
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import NotExistent

@@ -52,8 +52,8 @@ class LocalTransport(Transport):
     _DEFAULT_SAFE_OPEN_INTERVAL = 2.
 
     # List of escape and csi characters we forcefully remove from stdout
-    # and stderr
-    _EC_CHARACTERS = ['\x1b[H\x1b[J']
+    # and stderr. Use bytes since those are ANSI, not unicode sequences.
+    _EC_CHARACTERS = [b'\x1b[H\x1b[J']
 
     def __init__(self, **kwargs):
         super(LocalTransport, self).__init__()
@@ -806,7 +806,8 @@ class LocalTransport(Transport):
 
         if input_string:
             for entry in self._EC_CHARACTERS:
-                input_string = input_string.strip(entry)
+                # remove byte sequences, not single bytes
+                input_string = input_string.strip(entry, b'')
 
         return input_string
 

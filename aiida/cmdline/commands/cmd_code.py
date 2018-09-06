@@ -7,21 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to setup and configure a code from command line.
-"""
+"""`verdi code` command."""
 from __future__ import absolute_import
 from functools import partial
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments, types
-from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
+from aiida.common.exceptions import InputValidationError
 from aiida.control.code import CodeBuilder
 
 
@@ -29,94 +27,6 @@ from aiida.control.code import CodeBuilder
 def verdi_code():
     """Setup and manage codes."""
     pass
-
-
-def is_on_computer(ctx):
-    return bool(ctx.params.get('on_computer'))
-
-
-def is_not_on_computer(ctx):
-    return bool(not is_on_computer(ctx))
-
-
-# Reusable options (code-specific)
-ON_COMPUTER = OverridableOption(
-    '--on-computer/--store-in-db',
-    is_eager=False,
-    default=True,
-    cls=InteractiveOption,
-    prompt='Installed on target computer?')
-
-REMOTE_ABS_PATH = OverridableOption(
-    '--remote-abs-path',
-    prompt='Remote absolute path',
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    type=types.AbsolutePathParamType(dir_okay=False),
-    cls=InteractiveOption,
-    help=('[if --on-computer]: the absolute path to the executable on the remote machine'))
-
-CODE_FOLDER = OverridableOption(
-    '--code-folder',
-    prompt='Local directory containing the code',
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
-    type=click.Path(file_okay=False, exists=True, readable=True),
-    cls=InteractiveOption,
-    help=('[if --store-in-db]: directory containing the executable and all other files necessary for running it'))
-
-CODE_REL_PATH = OverridableOption(
-    '--code-rel-path',
-    prompt='Relative path of executable inside code folder',
-    required_fn=is_not_on_computer,
-    prompt_fn=is_not_on_computer,
-    type=click.Path(dir_okay=False),
-    cls=InteractiveOption,
-    help=('[if --store-in-db]: relative path of the executable inside the code-folder'))
-
-
-@verdi_code.command('setup')
-@options.LABEL(prompt='Label', cls=InteractiveOption, help='A label to refer to this code')
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help='A human-readable description of this code')
-@options.INPUT_PLUGIN(prompt='Default calculation input plugin', cls=InteractiveOption)
-@ON_COMPUTER()
-@options.COMPUTER(
-    prompt='Computer',
-    cls=InteractiveOption,
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    help='Name of the computer, on which the code resides')
-@REMOTE_ABS_PATH()
-@CODE_FOLDER()
-@CODE_REL_PATH()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
-@options.NON_INTERACTIVE()
-@with_dbenv()
-def setup_code(non_interactive, **kwargs):
-    """Add a Code."""
-    from aiida.common.exceptions import ValidationError
-
-    if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
-
-    if kwargs.pop('on_computer'):
-        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
-    else:
-        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
-    code_builder = CodeBuilder(**kwargs)
-    code = code_builder.new()
-
-    try:
-        code.store()
-        code.reveal()  # newly setup code shall not be hidden
-    except ValidationError as err:
-        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
-
-    echo.echo_success('code "{}" stored in DB.'.format(code.label))
-    echo.echo_info('pk: {}, uuid: {}'.format(code.pk, code.uuid))
 
 
 def get_default(key, ctx):
@@ -151,46 +61,63 @@ def set_code_builder(ctx, param, value):
     return value
 
 
-@verdi_code.command('duplicate')
-@arguments.CODE(callback=set_code_builder)
-@options.LABEL(
-    prompt='Label', cls=InteractiveOption, help='Label for new code', contextual_default=partial(get_default, 'label'))
-@options.DESCRIPTION(
-    prompt='Description',
-    cls=InteractiveOption,
-    help='A human-readable description of this code',
-    contextual_default=partial(get_default, 'description'))
-@options.INPUT_PLUGIN(
-    prompt='Default calculation input plugin',
-    cls=InteractiveOption,
-    contextual_default=partial(get_default, 'input_plugin'))
-@ON_COMPUTER(contextual_default=get_on_computer)
-@options.COMPUTER(
-    prompt='Computer',
-    cls=InteractiveOption,
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
-    help='Name of the computer, on which the code resides',
-    contextual_default=get_computer_name)
-@REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
-@CODE_FOLDER(contextual_default=partial(get_default, 'code_folder'))
-@CODE_REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
-@click.option(
-    '--hide-original',
-    is_flag=True,
-    default=False,
-    help=('Hide the code being copied.'),
-)
+@verdi_code.command('setup')
+@options_code.LABEL()
+@options_code.DESCRIPTION()
+@options_code.INPUT_PLUGIN()
+@options_code.ON_COMPUTER()
+@options_code.COMPUTER()
+@options_code.REMOTE_ABS_PATH()
+@options_code.FOLDER()
+@options_code.REL_PATH()
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@with_dbenv()
+def setup_code(non_interactive, **kwargs):
+    """Setup a new Code."""
+    from aiida.common.exceptions import ValidationError
+
+    if not non_interactive:
+        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        kwargs['prepend_text'] = pre
+        kwargs['append_text'] = post
+
+    if kwargs.pop('on_computer'):
+        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
+    else:
+        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
+
+    code_builder = CodeBuilder(**kwargs)
+    code = code_builder.new()
+
+    try:
+        code.store()
+        code.reveal()
+    except ValidationError as exception:
+        echo.echo_critical('Unable to store the Code: {}'.format(exception))
+
+    echo.echo_success('Code<{}> {} created'.format(code.pk, code.full_label))
+
+
+@verdi_code.command('duplicate')
+@arguments.CODE(callback=set_code_builder)
+@options_code.LABEL(contextual_default=partial(get_default, 'label'))
+@options_code.DESCRIPTION(contextual_default=partial(get_default, 'description'))
+@options_code.INPUT_PLUGIN(contextual_default=partial(get_default, 'input_plugin'))
+@options_code.ON_COMPUTER(contextual_default=get_on_computer)
+@options_code.COMPUTER(contextual_default=get_computer_name)
+@options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
+@options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
+@options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
+@options.PREPEND_TEXT()
+@options.APPEND_TEXT()
+@options.NON_INTERACTIVE()
+@click.option('--hide-original', is_flag=True, default=False, help='Hide the code being copied.')
 @click.pass_context
 @with_dbenv()
-# pylint: disable=unused-argument
 def code_duplicate(ctx, code, non_interactive, **kwargs):
-    """
-    Create duplicate of existing code.
-    """
+    """Create duplicate of existing Code."""
     from aiida.common.exceptions import ValidationError
 
     if not non_interactive:
@@ -214,22 +141,19 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     try:
         new_code.store()
-        new_code.reveal()  # newly setup code shall not be hidden
-    except ValidationError as err:
-        echo.echo_critical('Unable to store the code: {}. Exiting...'.format(err))
+        new_code.reveal()
+    except ValidationError as exception:
+        echo.echo_critical('Unable to store the Code: {}'.format(exception))
 
-    echo.echo_success("Duplicated code '{}'.".format(code.full_label))
-    echo.echo_info('New ' + str(new_code))
+    echo.echo_success('Code<{}> {} created'.format(code.pk, code.full_label))
 
 
 @verdi_code.command()
 @arguments.CODE()
-@click.option('-v', '--verbose', is_flag=True, help='show additional verbose information')
+@options.VERBOSE()
 @with_dbenv()
 def show(code, verbose):
-    """
-    Display information about a Code object identified by CODE_ID which can be the pk or label
-    """
+    """Display detailed information for the given CODE."""
     click.echo(tabulate.tabulate(code.full_text_info(verbose)))
 
 
@@ -237,47 +161,39 @@ def show(code, verbose):
 @arguments.CODES()
 @with_dbenv()
 def delete(codes):
-    """
-    Delete codes.
-
-    Does not delete codes that are used by calculations
-    (i.e., if there are output links)
-    """
+    """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
     from aiida.common.exceptions import InvalidOperation
     from aiida.orm.code import delete_code
 
     for code in codes:
         try:
-            code_str = str(code)
+            pk = code.pk
+            full_label = code.full_label
             delete_code(code)
-        except InvalidOperation as exc:
-            echo.echo_critical(str(exc))
-
-        echo.echo_success("{} deleted.".format(code_str))
+        except InvalidOperation as exception:
+            echo.echo_error(str(exception))
+        else:
+            echo.echo_success('Code<{}> {} deleted'.format(pk, full_label))
 
 
 @verdi_code.command()
 @arguments.CODES()
 @with_dbenv()
 def hide(codes):
-    """
-    Hide one or more codes from the verdi show command
-    """
+    """Hide one or more codes from the `verdi code list` command."""
     for code in codes:
         code.hide()
-        echo.echo_success("Code '{}' hidden.".format(code.pk))
+        echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
 
 
 @verdi_code.command()
 @arguments.CODES()
 @with_dbenv()
 def reveal(codes):
-    """
-    Reveal one or more hidden codes to the verdi show command
-    """
+    """Reveal one or more hidden codes to the `verdi code list` command."""
     for code in codes:
         code.reveal()
-        echo.echo_success("Code '{}' revealed.".format(code.pk))
+        echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
 
 
 @verdi_code.command()
@@ -286,48 +202,42 @@ def reveal(codes):
 @deprecated_command("Updating codes breaks data provenance. Use 'duplicate' instead.")
 # pylint: disable=unused-argument
 def update(code):
-    """
-    Update an existing code.
-    """
+    """Update an existing code."""
     pass
 
 
 @verdi_code.command()
-@arguments.CODE('old_label')
-@arguments.LABEL('new_label')
+@arguments.CODE()
+@arguments.LABEL()
 @with_dbenv()
-def relabel(old_label, new_label):
-    """
-    Relabel a code.
-    """
-    # Note: old_label actually holds a code but we need to
-    # specify it that way for the click help message
-    code = old_label
+def relabel(code, label):
+    """Relabel a code."""
     old_label = code.full_label
-    code.relabel(new_label)
 
-    echo.echo_success("Relabeled code with ID={} from '{}' to '{}'".format(code.pk, old_label, code.full_label))
+    try:
+        code.relabel(label)
+    except InputValidationError as exception:
+        echo.echo_critical('invalid code name: {}'.format(exception))
+    else:
+        echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
 
 
 @verdi_code.command()
-@arguments.CODE('OLD_LABEL')
-@arguments.LABEL('NEW_LABEL')
+@arguments.CODE()
+@arguments.LABEL()
 @with_dbenv()
 @click.pass_context
 @deprecated_command("This command may be removed in a future release. Use 'relabel' instead.")
-# pylint: disable=unused-argument
-def rename(ctx, old_label, new_label):
-    """
-    Rename a code (change its label).
-    """
-    ctx.forward(relabel)
+def rename(ctx, code, label):
+    """Rename a code."""
+    ctx.invoke(relabel, code=code, label=label)
 
 
 @verdi_code.command('list')
-@options.COMPUTER(help="Filter codes by computer")
-@options.INPUT_PLUGIN(help="Filter codes by calculation input plugin.")
-@options.ALL(help="Include hidden codes.")
-@options.ALL_USERS(help="Include codes from all users.")
+@options.COMPUTER(help='Filter codes by computer.')
+@options.INPUT_PLUGIN(help='Filter codes by calculation input plugin.')
+@options.ALL(help='Include hidden codes.')
+@options.ALL_USERS(help='Include codes from all users.')
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
-"""`verdi computer` commands"""
+"""`verdi computer` command."""
 from __future__ import absolute_import
 import sys
 from functools import partial
@@ -18,8 +18,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
-from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.types import ShebangParamType, MpirunCommandParamType, NonEmptyStringParamType
+from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
@@ -53,39 +52,13 @@ def get_computer(name):
     """
     Get a Computer object with given name, or raise NotExistent
     """
-    from aiida.orm.computer import Computer as AiidaOrmComputer
-    return AiidaOrmComputer.get(name)
+    from aiida.orm.computer import Computer
+    return Computer.get(name)
 
 
 @with_dbenv()
 def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argument
     pass
-
-
-def should_call_default_mpiprocs_per_machine(ctx):
-    """
-    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
-    False otherwise.
-
-    If there is a problem in determining the scheduler, return True to
-    avoid exceptions.
-    """
-    scheduler_ep = ctx.params['scheduler']
-    if scheduler_ep is not None:
-        try:
-            scheduler_cls = scheduler_ep.load()
-        except ImportError:
-            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
-    else:
-        raise ValidationError(
-            "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
-
-    job_resource_cls = scheduler_cls.job_resource_class
-    if job_resource_cls is None:
-        # Odd situation...
-        return False
-
-    return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
 def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
@@ -173,68 +146,48 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     return True
 
 
+def get_parameter_default(parameter, ctx):
+    """
+    Get the value for a specific parameter from the computer_builder or the default value of that option
+
+    :param parameter: parameter name
+    :param ctx: click context of the command
+    :return: parameter default value, or None
+    """
+    default = None
+
+    for param in ctx.command.get_params(ctx):
+        if param.name == parameter:
+            default = param.default
+
+    try:
+        value = getattr(ctx.computer_builder, parameter)
+        if value == '':
+            value = default
+    except KeyError:
+        value = default
+
+    return value
+
+
+# pylint: disable=unused-argument
+def set_computer_builder(ctx, param, value):
+    """Set the computer spec for defaults of following options."""
+    ctx.computer_builder = ComputerBuilder.from_computer(value)
+    return value
+
+
 @verdi_computer.command('setup')
-@options.LABEL(prompt='Computer label', cls=InteractiveOption, required=True, type=NonEmptyStringParamType())
-@options.HOSTNAME(
-    prompt='Hostname',
-    cls=InteractiveOption,
-    required=True,
-    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
-@options.DESCRIPTION(prompt='Description', cls=InteractiveOption, help="A human-readable description of this computer")
-@click.option(
-    '-e/-d',
-    '--enabled/--disabled',
-    is_flag=True,
-    default=True,
-    help='if created with the disabled flag, calculations '
-    'associated with it will not be submitted until when it is '
-    're-enabled',
-    prompt="Enable the computer?",
-    cls=InteractiveOption,
-    # IMPORTANT! Do not specify explicitly type=click.BOOL,
-    # Otherwise you would not get a default value when prompting
-)
-@options.TRANSPORT(prompt="Transport plugin", cls=InteractiveOption)
-@options.SCHEDULER(prompt="Scheduler plugin", cls=InteractiveOption)
-@click.option(
-    '--shebang',
-    prompt='Shebang line (first line of each script, starting with #!)',
-    default="#!/bin/bash",
-    cls=InteractiveOption,
-    help='this line specifies the first line of the submission script for this computer',
-    type=ShebangParamType())
-@click.option(
-    '-w',
-    '--work-dir',
-    prompt='Work directory on the computer',
-    default="/scratch/{username}/aiida/",
-    cls=InteractiveOption,
-    help="The absolute path of the directory on the computer where AiiDA will "
-    "run the calculations (typically, the scratch of the computer). You "
-    "can use the {username} replacement, that will be replaced by your "
-    "username on the remote computer")
-@click.option(
-    '-m',
-    '--mpirun-command',
-    prompt="Mpirun command",
-    default="mpirun -np {tot_num_mpiprocs}",
-    cls=InteractiveOption,
-    help="The mpirun command needed on the cluster to run parallel MPI "
-    "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
-    "replaced by the total number of cpus, or the other scheduler-dependent "
-    "replacement fields (see the scheduler docs for more information)",
-    type=MpirunCommandParamType())
-@click.option(
-    '--mpiprocs-per-machine',
-    prompt="Default number of CPUs per machine",
-    cls=InteractiveOption,
-    help="Enter here the default number of MPI processes per machine (node) that "
-    "should be used if nothing is otherwise specified. Pass the digit 0 "
-    "if you do not want to provide a default value.",
-    prompt_fn=should_call_default_mpiprocs_per_machine,
-    required_fn=False,
-    type=click.INT,
-)  # Note: this can still be passed from the command line in non-interactive mode
+@options_computer.LABEL()
+@options_computer.HOSTNAME()
+@options_computer.DESCRIPTION()
+@options_computer.ENABLED()
+@options_computer.TRANSPORT()
+@options_computer.SCHEDULER()
+@options_computer.SHEBANG()
+@options_computer.WORKDIR()
+@options_computer.MPI_RUN_COMMAND()
+@options_computer.MPI_PROCS_PER_MACHINE()
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -267,7 +220,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
     if not non_interactive and click.confirm('Do you want to configure the computer now?'):
         ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
@@ -276,117 +229,18 @@ def computer_setup(ctx, non_interactive, **kwargs):
         echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
-def get_parameter_default(parameter, ctx):
-    """
-    Get the value for a specific parameter from the computer_builder or the default value of that option
-
-    :param parameter: parameter name
-    :param ctx: click context of the command
-    :return: parameter default value, or None
-    """
-    default = None
-
-    for param in ctx.command.get_params(ctx):
-        if param.name == parameter:
-            default = param.default
-
-    try:
-        value = getattr(ctx.computer_builder, parameter)
-        if value == '':
-            value = default
-    except KeyError:
-        value = default
-
-    return value
-
-
-# pylint: disable=unused-argument
-def set_computer_builder(ctx, param, value):
-    """Set the computer spec for defaults of following options."""
-    ctx.computer_builder = ComputerBuilder.from_computer(value)
-    return value
-
-
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)
-@options.LABEL(
-    prompt='Computer label',
-    cls=InteractiveOption,
-    required=True,
-    type=NonEmptyStringParamType(),
-    contextual_default=partial(get_parameter_default, 'label'))
-@options.HOSTNAME(
-    prompt='Hostname',
-    cls=InteractiveOption,
-    required=True,
-    contextual_default=partial(get_parameter_default, 'hostname'),
-    help="The fully qualified host-name of this computer; for local transports, use 'localhost'")
-@options.DESCRIPTION(
-    prompt='Description',
-    cls=InteractiveOption,
-    help='A human-readable description of this computer',
-    contextual_default=partial(get_parameter_default, 'description'))
-@click.option(
-    '-e/-d',
-    '--enabled/--disabled',
-    is_flag=True,
-    default=True,
-    help='if created with the disabled flag, calculations '
-    'associated with it will not be submitted until when it is '
-    're-enabled',
-    prompt="Enable the computer?",
-    contextual_default=partial(get_parameter_default, 'enabled'),
-    cls=InteractiveOption,
-    # IMPORTANT! Do not specify explicitly type=click.BOOL,
-    # Otherwise you would not get a default value when prompting
-)
-@options.TRANSPORT(
-    prompt="Transport plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'transport'))
-@options.SCHEDULER(
-    prompt="Scheduler plugin", cls=InteractiveOption, contextual_default=partial(get_parameter_default, 'scheduler'))
-@click.option(
-    '--shebang',
-    prompt='Shebang line (first line of each script, starting with #!)',
-    default="#!/bin/bash",
-    cls=InteractiveOption,
-    help='this line specifies the first line of the submission script for this computer',
-    contextual_default=partial(get_parameter_default, 'shebang'),
-    type=ShebangParamType())
-@click.option(
-    '-w',
-    '--work-dir',
-    prompt='Work directory on the computer',
-    default="/scratch/{username}/aiida/",
-    cls=InteractiveOption,
-    contextual_default=partial(get_parameter_default, 'work_dir'),
-    help="The absolute path of the directory on the computer where AiiDA will "
-    "run the calculations (typically, the scratch of the computer). You "
-    "can use the {username} replacement, that will be replaced by your "
-    "username on the remote computer")
-@click.option(
-    '-m',
-    '--mpirun-command',
-    prompt="Mpirun command",
-    default="mpirun -np {tot_num_mpiprocs}",
-    cls=InteractiveOption,
-    contextual_default=partial(get_parameter_default, 'mpirun_command'),
-    help="The mpirun command needed on the cluster to run parallel MPI "
-    "programs. You can use the {tot_num_mpiprocs} replacement, that will be "
-    "replaced by the total number of cpus, or the other scheduler-dependent "
-    "replacement fields (see the scheduler docs for more information)",
-    type=MpirunCommandParamType())
-@click.option(
-    '--mpiprocs-per-machine',
-    prompt="Default number of CPUs per machine",
-    cls=InteractiveOption,
-    help="Enter here the default number of MPI processes per machine (node) that "
-    "should be used if nothing is otherwise specified. Pass the digit 0 "
-    "if you do not want to provide a default value.",
-    contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'),
-    prompt_fn=should_call_default_mpiprocs_per_machine,
-    required_fn=False,
-    type=click.INT,
-)  # Note: this can still be passed from the command line in non-interactive mode
+@options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))
+@options_computer.HOSTNAME(contextual_default=partial(get_parameter_default, 'hostname'))
+@options_computer.DESCRIPTION(contextual_default=partial(get_parameter_default, 'description'))
+@options_computer.ENABLED(contextual_default=partial(get_parameter_default, 'enabled'))
+@options_computer.TRANSPORT(contextual_default=partial(get_parameter_default, 'transport'))
+@options_computer.SCHEDULER(contextual_default=partial(get_parameter_default, 'scheduler'))
+@options_computer.SHEBANG(contextual_default=partial(get_parameter_default, 'shebang'))
+@options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
+@options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
+@options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -424,7 +278,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
     backend = construct_backend()
     is_configured = computer.is_user_configured(backend.users.get_automatic_user())
@@ -438,7 +292,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
 
 @verdi_computer.command('enable')
-@options.USER(required=False, help="Enable only for this user. If not specified, enables the computer globally.")
+@options.USER(required=False, help='Enable only for this user instead of globally.')
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_enable(user, computer):
@@ -467,7 +321,7 @@ def computer_enable(user, computer):
 
 
 @verdi_computer.command('disable')
-@options.USER(required=False, help="Disable only for this user. If not specified, disables the computer globally.")
+@options.USER(required=False, help='Disable only for this user instead of globally.')
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_disable(user, computer):
@@ -496,17 +350,12 @@ def computer_disable(user, computer):
 
 
 @verdi_computer.command('list')
-@click.option(
-    '-o',
-    '--only-usable',
-    is_flag=True,
-    help="Show only computers that are usable (i.e. configured for the given user and enabled)")
 @options.ALL(help='Show also disabled or unconfigured computers.')
 @options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
-def computer_list(only_usable, all_entries, raw):
+def computer_list(all_entries, raw):
     """List available computers."""
-    from aiida.orm.computer import Computer as AiiDAOrmComputer
+    from aiida.orm.computer import Computer
     from aiida.orm.backend import construct_backend
 
     backend = construct_backend()
@@ -514,16 +363,14 @@ def computer_list(only_usable, all_entries, raw):
     computer_names = get_computer_names()
 
     if not raw:
-        echo.echo("# List of configured computers:")
-        echo.echo("# (use 'verdi computer show COMPUTERNAME' to see the details)")
+        echo.echo_info("List of configured computers:")
+        echo.echo_info("(use 'verdi computer show COMPUTERNAME' to see the details)")
     if computer_names:
         for name in sorted(computer_names):
-            computer = AiiDAOrmComputer.get(name)
+            computer = Computer.get(name)
 
             is_configured = computer.is_user_configured(backend.users.get_automatic_user())
             is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
-
-            is_usable = False  # True if both enabled and configured
 
             if not all_entries:
                 if not is_configured or not is_user_enabled or not computer.is_enabled():
@@ -536,7 +383,6 @@ def computer_list(only_usable, all_entries, raw):
                         symbol = '*'
                         color = 'green'
                         enabled_str = ''
-                        is_usable = True
                     else:
                         symbol = 'x'
                         color = 'red'
@@ -558,16 +404,15 @@ def computer_list(only_usable, all_entries, raw):
                 else:
                     configured_str = ' [unconfigured]'
 
-            if (not only_usable) or is_usable:
-                if raw:
-                    echo.echo(click.style('{}'.format(name), fg=color))
-                else:
-                    echo.echo(click.style('{} '.format(symbol), fg=color), nl=False)
-                    echo.echo(click.style('{} '.format(name), bold=True, fg=color), nl=False)
-                    echo.echo(click.style('{}{}'.format(enabled_str, configured_str), fg=color))
+            if raw:
+                echo.echo(click.style('{}'.format(name), fg=color))
+            else:
+                echo.echo(click.style('{} '.format(symbol), fg=color), nl=False)
+                echo.echo(click.style('{} '.format(name), bold=True, fg=color), nl=False)
+                echo.echo(click.style('{}{}'.format(enabled_str, configured_str), fg=color))
 
     else:
-        echo.echo("# No computers configured yet. Use 'verdi computer setup'")
+        echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
 
 
 @verdi_computer.command('show')

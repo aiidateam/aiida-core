@@ -15,9 +15,7 @@ from django.db import transaction
 
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation import Computer
-from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
-                                     InvalidOperation)
-
+from aiida.common.exceptions import InvalidOperation
 
 
 class Code(AbstractCode):
@@ -126,8 +124,6 @@ class Code(AbstractCode):
                     self.get_remote_computer().dbcomputer.pk)
 
 
-
-
 def delete_code(code):
     """
     Delete a code from the DB.
@@ -141,15 +137,13 @@ def delete_code(code):
     computer.delete().
     """
     if not isinstance(code, Code):
-        raise TypeError("code must be an instance of "
-                        "aiida.orm.computer.Code")
+        raise TypeError('code must be an instance of aiida.orm.computer.Code')
 
     existing_outputs = code.get_outputs()
 
     if len(existing_outputs) != 0:
-        raise InvalidOperation("Unable to delete the requested code because it "
-                               "has {} output links".format(
-            len(existing_outputs)))
+        raise InvalidOperation('Unable to delete {} because it has {} output links'.format(
+            code.full_label, len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
         with transaction.atomic():

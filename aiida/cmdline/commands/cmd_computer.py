@@ -196,10 +196,9 @@ def set_computer_builder(ctx, param, value):
 def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical('A computer called {} already exists.\n'
-                           'Use "verdi computer update" to update it, and be '
-                           'careful if you really want to modify a database '
-                           'entry!'.format(kwargs['label']))
+        echo.echo_critical('A computer called {c} already exists. '
+                           'Use "verdi computer duplicate {c}" to set up a new'
+                           'computer starting from the settings of {c}.'.format(c=kwargs['label']))
 
     if not non_interactive:
         pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)

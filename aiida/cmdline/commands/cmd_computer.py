@@ -197,7 +197,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {c} already exists. '
-                           'Use "verdi computer duplicate {c}" to set up a new'
+                           'Use "verdi computer duplicate {c}" to set up a new '
                            'computer starting from the settings of {c}.'.format(c=kwargs['label']))
 
     if not non_interactive:

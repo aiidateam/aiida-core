@@ -2,6 +2,7 @@
 """
 utilities for getting multi line input from the commandline
 """
+from __future__ import absolute_import
 import click
 
 
@@ -29,7 +30,7 @@ def edit_pre_post(pre=None, post=None, summary=None):
     from aiida.cmdline.utils.templates import env
     template = env.get_template('prepost.bash.tpl')
     summary = summary or {}
-    summary = {k: v for k, v in summary.iteritems() if v}
+    summary = {k: v for k, v in summary.items() if v}
     content = template.render(default_pre=pre or '', default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
     if mlinput:

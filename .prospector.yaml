@@ -10,5 +10,8 @@ pylint:
 pyflakes:
   run: false
 
+pep8:
+  run: false
+
 mccabe:
   run: false

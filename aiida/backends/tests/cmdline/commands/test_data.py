@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import division
 import sys
 import os
 import shutil
@@ -15,7 +17,7 @@ from aiida.orm.group import Group
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.cif import CifData
+from aiida.orm.data.cif import CifData, has_pycifrw
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
@@ -46,7 +48,7 @@ from aiida.work.workfunctions import workfunction as wf
 
 
 from contextlib import contextmanager
-from StringIO import StringIO
+from six.moves import cStringIO as StringIO
 
 @contextmanager
 def captured_output():
@@ -70,20 +72,21 @@ class TestVerdiDataExportable:
     NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
     NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
 
+    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
     def data_export_test(self, datatype, ids, supported_formats):
         """
         This method tests that the data listing works as expected with all
         possible flags and arguments for different datatypes.
         """
 
-        from aiida.cmdline.commands.cmd_data.cmd_cif import export as export_cif
-        from aiida.cmdline.commands.cmd_data.cmd_structure import export as export_str
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import export as export_tr
+        from aiida.cmdline.commands.cmd_data.cmd_cif import cif_export
+        from aiida.cmdline.commands.cmd_data.cmd_structure import structure_export
+        from aiida.cmdline.commands.cmd_data.cmd_trajectory import trajectory_export
 
         datatype_mapping = {
-            CifData: export_cif,
-            StructureData: export_str,
-            TrajectoryData: export_tr,
+            CifData: cif_export,
+            StructureData: structure_export,
+            TrajectoryData: trajectory_export,
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
@@ -99,7 +102,7 @@ class TestVerdiDataExportable:
         self.assertEquals(res.exit_code, 0, "The command did not finish "
                                             "correctly")
 
-        dump_flags = ['-y', '--format']
+        dump_flags = ['-F', '--format']
         for flag in dump_flags:
             for format in supported_formats:
                 # with captured_output() as (out, err):
@@ -109,76 +112,6 @@ class TestVerdiDataExportable:
                 self.assertEquals(res.exit_code, 0,
                                   "The command did not finish "
                                   "correctly")
-
-
-#        # The --parameter-data flag is not implemented and it should fail
-#        options = ['--parameter-data', '0', str(ids[self.NODE_ID_STR])]
-#        res = self.cli_runner.invoke(export_cmd, options,
-#                                     catch_exceptions=False)
-#        self.assertNotEquals(res.exit_code, 0,
-#                          "The command should not finish correctly and"
-#                          "return normal termination exit status.")
-#
-#        # The following flags fail.
-#        # We have to see why. The --reduce-symmetry seems to work in
-#        # the original code. The other one not.
-#        symmetry_flags = ['--reduce-symmetry', '--no-reduce-symmetry']
-#        for flag in symmetry_flags:
-#            options = [flag, str(ids[self.NODE_ID_STR])]
-#            res = self.cli_runner.invoke(export_cmd, options,
-#                                         catch_exceptions=False)
-#            self.assertNotEquals(res.exit_code, 0,
-#                              "The command should not finish correctly and"
-#                              "return normal termination exit status.")
-#
-#
-#        # The following two flags are not implemented and should return
-#        # an error:
-#        # --dump-aiida-database / --no-dump-aiida-database
-#        dump_flags = ['--dump-aiida-database' , '--no-dump-aiida-database']
-#        for flag in dump_flags:
-#            options = [flag, str(ids[self.NODE_ID_STR])]
-#            res = self.cli_runner.invoke(export_cmd, options,
-#                                         catch_exceptions=False)
-#            self.assertNotEquals(res.exit_code, 0,
-#                              "The command should not finish correctly and"
-#                              "return normal termination exit status.")
-#
-#
-#        # The following two flags are not implemented and should return
-#        # an error:
-#        # --exclude-external-contents / --no-exclude-external-contents
-#        external_cont_flags = ['--exclude-external-contents' ,
-#                               '--no-exclude-external-contents']
-#        for flag in external_cont_flags:
-#            options = [flag, str(ids[self.NODE_ID_STR])]
-#            res = self.cli_runner.invoke(export_cmd, options,
-#                                         catch_exceptions=False)
-#            self.assertNotEquals(res.exit_code, 0,
-#                              "The command should not finish correctly and"
-#                              "return normal termination exit status.")
-#
-#
-#        # The following two flags are not implemented and should return
-#        # an error:
-#        # --gzip / --no-gzip
-#        gzip_flags = ['--gzip' , '--no-gzip']
-#        for flag in gzip_flags:
-#            options = [flag, str(ids[self.NODE_ID_STR])]
-#            res = self.cli_runner.invoke(export_cmd, options,
-#                                         catch_exceptions=False)
-#
-#            self.assertNotEquals(res.exit_code, 0,
-#                              "The command should not finish correctly and"
-#                              "return normal termination exit status.")
-#
-#        # The --gzip-threshold flag is not implemented and it should fail
-#        options = ['--gzip-threshold', '1', str(ids[self.NODE_ID_STR])]
-#        res = self.cli_runner.invoke(export_cmd, options,
-#                                     catch_exceptions=False)
-#        self.assertNotEquals(res.exit_code, 0,
-#                          "The command should not finish correctly and"
-#                          "return normal termination exit status.")
 
         # Check that the output to file flags work correctly:
         # -o, --output
@@ -232,14 +165,14 @@ class TestVerdiDataListable:
         """
 
         from aiida.cmdline.commands.cmd_data.cmd_cif import cif_list
-        from aiida.cmdline.commands.cmd_data.cmd_structure import list_structures
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import list_trajections
+        from aiida.cmdline.commands.cmd_data.cmd_structure import structure_list
+        from aiida.cmdline.commands.cmd_data.cmd_trajectory import trajectory_list
         from aiida.cmdline.commands.cmd_data.cmd_bands import bands_list
 
-        from aiida.cmdline.commands.cmd_data.cmd_structure import PROJECT_HEADERS as p_str
-        from aiida.cmdline.commands.cmd_data.cmd_cif import PROJECT_HEADERS as p_cif
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import PROJECT_HEADERS as p_tr
-        from aiida.cmdline.commands.cmd_data.cmd_bands import PROJECT_HEADERS as p_bands
+        from aiida.cmdline.commands.cmd_data.cmd_structure import LIST_PROJECT_HEADERS as p_str
+        from aiida.cmdline.commands.cmd_data.cmd_cif import LIST_PROJECT_HEADERS as p_cif
+        from aiida.cmdline.commands.cmd_data.cmd_trajectory import LIST_PROJECT_HEADERS as p_tr
+        from aiida.cmdline.commands.cmd_data.cmd_bands import LIST_PROJECT_HEADERS as p_bands
 
         headers_mapping = {
             CifData: p_cif,
@@ -250,8 +183,8 @@ class TestVerdiDataListable:
 
         datatype_mapping = {
             CifData: cif_list,
-            StructureData: list_structures,
-            TrajectoryData: list_trajections,
+            StructureData: structure_list,
+            TrajectoryData: trajectory_list,
             BandsData: bands_list
         }
 
@@ -262,10 +195,13 @@ class TestVerdiDataListable:
         listing_cmd = datatype_mapping[datatype]
         project_headers = headers_mapping[datatype]
 
+        # the output we are comparing to is un-decoded bytes, convert search strings:
+        search_string_bytes = search_string.encode('utf-8')
+
         # Check that the normal listing works as expected
         res = self.cli_runner.invoke(listing_cmd, [],
                                      catch_exceptions=False)
-        self.assertIn(search_string, res.output_bytes,
+        self.assertIn(search_string_bytes, res.output_bytes,
                       'The string {} was not found in the listing'
                       .format(search_string))
 
@@ -276,14 +212,14 @@ class TestVerdiDataListable:
             options = [flag, '1']
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
-            self.assertIn(search_string, res.output_bytes,
+            self.assertIn(search_string_bytes, res.output_bytes,
                           'The string {} was not found in the listing'
                           .format(search_string))
 
             options = [flag, '0']
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
-            self.assertNotIn(search_string, res.output_bytes,
+            self.assertNotIn(search_string_bytes, res.output_bytes,
                           'A not expected string {} was found in the listing'
                           .format(search_string))
 
@@ -296,7 +232,7 @@ class TestVerdiDataListable:
                 options = [flag, non_empty]
                 res = self.cli_runner.invoke(listing_cmd, options,
                                              catch_exceptions=False)
-                self.assertIn(search_string, res.output_bytes,
+                self.assertIn(search_string_bytes, res.output_bytes,
                               'The string {} was not found in the listing')
 
             # Empty group
@@ -306,7 +242,7 @@ class TestVerdiDataListable:
                 res = self.cli_runner.invoke(listing_cmd, options,
                                              catch_exceptions=False)
                 self.assertNotIn(
-                    search_string, res.output_bytes,
+                    search_string_bytes, res.output_bytes,
                     'A not expected string {} was found in the listing')
 
             # Group combination
@@ -317,7 +253,7 @@ class TestVerdiDataListable:
                     options = [flag, non_empty, empty]
                     res = self.cli_runner.invoke(listing_cmd, options,
                                                  catch_exceptions=False)
-                    self.assertIn(search_string, res.output_bytes,
+                    self.assertIn(search_string_bytes, res.output_bytes,
                                   'The string {} was not found in the listing')
 
         # Check raw flag
@@ -327,7 +263,7 @@ class TestVerdiDataListable:
             res = self.cli_runner.invoke(listing_cmd, options,
                                          catch_exceptions=False)
             for header in project_headers:
-                self.assertNotIn(header, res.output_bytes)
+                self.assertNotIn(header.encode('utf-8'), res.output_bytes)
 
 class TestVerdiData(AiidaTestCase):
     """
@@ -357,7 +293,7 @@ class TestVerdiData(AiidaTestCase):
         for sub_cmd in subcommands:
             output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
             self.assertIn(
-                'Usage:', output,
+                b'Usage:', output,
                 "Sub-command verdi data {} --help failed.". format(sub_cmd))
 
 class TestVerdiDataArray(AiidaTestCase):
@@ -379,13 +315,13 @@ class TestVerdiDataArray(AiidaTestCase):
     def test_arrayshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'array', 'show', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data array show --help failed.")
 
     def test_arrayshow(self):
         # with captured_output() as (out, err):
         options = [str(self.a.id)]
-        res = self.cli_runner.invoke(cmd_array.show, options,
+        res = self.cli_runner.invoke(cmd_array.array_show, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
                           "The command did not finish "
@@ -456,13 +392,13 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     def test_bandsshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'show', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data bands show --help failed.")
-    
+
     def test_bandlistshelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'list', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data bands show --help failed.")
 
     def test_bandslist(self):
@@ -474,17 +410,14 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data bands export --help failed.")
 
     def test_bandsexport(self):
         options = [str(self.ids[TestVerdiDataListable.NODE_ID_STR])]
-        res = self.cli_runner.invoke(cmd_bands.export, options, 
-                                     catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0,
-                          "The command did not finish "
-                          "correctly")
-        self.assertIn("[1.0, 3.0]", res.output_bytes,
+        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+        self.assertEquals(res.exit_code, 0, 'The command did not finish correctly')
+        self.assertIn(b"[1.0, 3.0]", res.output_bytes,
                       'The string [1.0, 3.0] was not found in the bands'
                       'export')
 
@@ -506,19 +439,19 @@ class TestVerdiDataParameter(AiidaTestCase):
     def test_parametershowhelp(self):
         output = sp.check_output(['verdi', 'data', 'parameter', 'show', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data parameter show --help failed.")
 
     def test_parametershow(self):
         supported_formats = ['json_date']
         for format in supported_formats:
             options = [str(self.p.id)]
-            res = self.cli_runner.invoke(cmd_parameter.show, options,
+            res = self.cli_runner.invoke(cmd_parameter.parameter_show, options,
                                          catch_exceptions=False)
             self.assertEquals(res.exit_code, 0,
                               "The command verdi data parameter show did not"
                               " finish correctly")
-        self.assertIn('"a": 1', res.output_bytes,
+        self.assertIn(b'"a": 1', res.output_bytes,
                       'The string "a": 1 was not found in the output'
                       ' of verdi data parameter show')
 
@@ -556,54 +489,54 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remoteshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'show', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data remote show --help failed.")
 
     def test_remoteshow(self):
         options = [str(self.r.id)]
-        res = self.cli_runner.invoke(cmd_remote.show, options,
+        res = self.cli_runner.invoke(cmd_remote.remote_show, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
                           "The command verdi data remote show did not"
                           " finish correctly")
-        self.assertIn('Remote computer name:', res.output_bytes,
+        self.assertIn(b'Remote computer name:', res.output_bytes,
                       'The string "Remote computer name:" was not found in the'
                       ' output of verdi data remote show')
-        self.assertIn('Remote folder full path:', res.output_bytes,
+        self.assertIn(b'Remote folder full path:', res.output_bytes,
                       'The string "Remote folder full path:" was not found in the'
                       ' output of verdi data remote show')
     
     def test_remotelshelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'ls', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data remote ls --help failed.")
 
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
-        res = self.cli_runner.invoke(cmd_remote.lsfunction, options,
+        res = self.cli_runner.invoke(cmd_remote.remote_ls, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
                           "The command verdi data remote ls did not"
                           " finish correctly")
-        self.assertIn('file.txt', res.output_bytes,
+        self.assertIn(b'file.txt', res.output_bytes,
                       'The file "file.txt" was not found in the output'
                       ' of verdi data remote ls')
 
     def test_remotecathelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'cat', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data remote cat --help failed.")
 
     def test_remotecat(self):
         options = [str(self.r.id), 'file.txt']
-        res = self.cli_runner.invoke(cmd_remote.cat, options,
+        res = self.cli_runner.invoke(cmd_remote.remote_cat, options,
                                      catch_exceptions=False)
         self.assertEquals(res.exit_code, 0,
                           "The command verdi data parameter cat did not"
                           " finish correctly")
-        self.assertIn('test string', res.output_bytes,
+        self.assertIn(b'test string', res.output_bytes,
                       'The string "test string" was not found in the output'
                       ' of verdi data remote cat file.txt')
 
@@ -671,10 +604,10 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
     def setUpClass(cls):
         super(TestVerdiDataTrajectory, cls).setUpClass()
         new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+                            hostname='localhost',
+                            transport_type='local',
+                            scheduler_type='direct',
+                            workdir='/tmp/aiida')
         new_comp.store()
         cls.ids = cls.create_trajectory_data()
 
@@ -687,14 +620,14 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
         self.cli_runner = CliRunner()
 
     def test_deposithelp(self):
-        res = self.runner.invoke(cmd_trajectory.deposit, ['--help'])
-        self.assertIn('Usage:', res.output_bytes,
+        res = self.runner.invoke(cmd_trajectory.trajectory_deposit, ['--help'])
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data trajectory deposit --help')
 
     def test_showhelp(self):
-        res = self.runner.invoke(cmd_trajectory.show, ['--help'])
-        self.assertIn('Usage:', res.output_bytes,
+        res = self.runner.invoke(cmd_trajectory.trajectory_show, ['--help'])
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data trajecotry show --help')
 
@@ -703,27 +636,23 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
             TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]),
             self.ids)
 
+    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
     def test_export(self):
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import SUPPORTED_FORMATS
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import export
+        from aiida.cmdline.commands.cmd_data.cmd_trajectory import EXPORT_FORMATS, trajectory_export
 
-        new_supported_formats = list(SUPPORTED_FORMATS)
+        new_supported_formats = list(EXPORT_FORMATS)
         # TCOD export needs special arguments
         new_supported_formats.remove('tcod')
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
         # Check independently the TCOD export that needs special arguments
-        dump_flags = ['-y', '--format']
+        dump_flags = ['-F', '--format']
         for flag in dump_flags:
-            options = [flag, 'tcod', '--step', '0',str(self.ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(export, options,
-                                         catch_exceptions=False)
-            self.assertEquals(res.exit_code, 0,
-                              "The command did not finish "
-                              "correctly")
+            options = [flag, 'tcod', '-i', '0',str(self.ids[self.NODE_ID_STR])]
+            res = self.cli_runner.invoke(trajectory_export, options, catch_exceptions=False)
+            self.assertEquals(res.exit_code, 0, 'The command did not finish correctly')
 
 
-class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
-                             TestVerdiDataExportable):
+class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
 
     @staticmethod
     def create_structure_data():
@@ -764,10 +693,10 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         super(TestVerdiDataStructure, cls).setUpClass()
         from aiida.orm import Computer
         new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+                            hostname='localhost',
+                            transport_type='local',
+                            scheduler_type='direct',
+                            workdir='/tmp/aiida')
         new_comp.store()
         cls.ids = cls.create_structure_data()
 
@@ -782,7 +711,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
 
     def test_importhelp(self):
         res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data import --help')
 
@@ -793,37 +722,37 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         Fe     0.0 0.0 0.0
         O      2.0 2.0 2.0
         '''
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
 
             f.write(xyzcontent)
             f.flush()
             options = [f.name,
-                    '--format', 'xyz',
-                    '--vacuum-factor', '1.0',
-                    '--vacuum-addition', '10.0',
-                    '--pbc', '1', '1', '1',
-                    ]
+                '--format', 'xyz',
+                '--vacuum-factor', '1.0',
+                '--vacuum-addition', '10.0',
+                '--pbc', '1', '1', '1',
+            ]
             res = self.cli_runner.invoke(cmd_structure.structure_import,
                     options, catch_exceptions=False)
-            self.assertIn('Succesfully imported', res.output_bytes,
+            self.assertIn(b'PK = None', res.output_bytes,
+                'The string "PK = None" was not found in the output'
+                ' of verdi data structure import with --store option.')
+            options.append('--store')
+            res = self.cli_runner.invoke(cmd_structure.structure_import,
+                    options, catch_exceptions=False)
+            self.assertIn(b'Succesfully imported', res.output_bytes,
                 'The string "Succesfully imported" was not found in the output'
                 ' of verdi data structure import.')
-            options.append('--dont-store')
-            res = self.cli_runner.invoke(cmd_structure.structure_import,
-                    options, catch_exceptions=False)
-            self.assertIn('PK = None', res.output_bytes,
-                'The string "PK = None" was not found in the output'
-                ' of verdi data structure import with --dont-store option.')
 
     def test_showhelp(self):
         res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data show --help')
 
     def test_deposithelp(self):
         res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data show --help')
 
@@ -831,10 +760,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable,
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
     def test_export(self):
-        from aiida.cmdline.commands.cmd_data.cmd_structure import SUPPORTED_FORMATS
-        self.data_export_test(StructureData, self.ids, SUPPORTED_FORMATS)
+        from aiida.cmdline.commands.cmd_data.cmd_structure import EXPORT_FORMATS
+        self.data_export_test(StructureData, self.ids, EXPORT_FORMATS)
 
 
+@unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
                        TestVerdiDataExportable):
 
@@ -860,7 +790,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
 
     @classmethod
     def create_cif_data(cls):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             filename = f.name
             f.write(cls.valid_sample_cif_str)
             f.flush()
@@ -888,10 +818,10 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
     def setUpClass(cls):
         super(TestVerdiDataCif, cls).setUpClass()
         new_comp = Computer(name='comp',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='direct',
-                                workdir='/tmp/aiida')
+                            hostname='localhost',
+                            transport_type='local',
+                            scheduler_type='direct',
+                            workdir='/tmp/aiida')
         new_comp.store()
 
         cls.ids = cls.create_cif_data()
@@ -915,36 +845,36 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
 
     def test_showhelp(self):
         options = ['--help']
-        res = self.cli_runner.invoke(cmd_cif.show, options,
+        res = self.cli_runner.invoke(cmd_cif.cif_show, options,
                                      catch_exceptions=False)
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data show help')
 
     def test_deposithelp(self):
         options = ['--help']
-        res = self.cli_runner.invoke(cmd_cif.deposit, options,
+        res = self.cli_runner.invoke(cmd_cif.cif_deposit, options,
                                      catch_exceptions=False)
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data show deposit')
 
     def test_importhelp(self):
         options = ['--help']
-        res = self.cli_runner.invoke(cmd_cif.importfile, options,
+        res = self.cli_runner.invoke(cmd_cif.cif_import, options,
                                      catch_exceptions=False)
-        self.assertIn('Usage:', res.output_bytes,
+        self.assertIn(b'Usage:', res.output_bytes,
                 'The string "Usage: " was not found in the output'
                 ' of verdi data import help')
 
     def test_import(self):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.valid_sample_cif_str)
             f.flush()
             options = [f.name]
-            res = self.cli_runner.invoke(cmd_cif.importfile, options,
+            res = self.cli_runner.invoke(cmd_cif.cif_import, options,
                                          catch_exceptions=False)
-            self.assertIn('imported uuid', res.output_bytes,
+            self.assertIn(b'imported uuid', res.output_bytes,
                 'The string "imported uuid" was not found in the output'
                 ' of verdi data import.')
 
@@ -953,8 +883,8 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
         This method checks if the Cif export works as expected with all
         possible flags and arguments.
         """
-        from aiida.cmdline.commands.cmd_data.cmd_cif import SUPPORTED_FORMATS
-        self.data_export_test(CifData, self.ids, SUPPORTED_FORMATS)
+        from aiida.cmdline.commands.cmd_data.cmd_cif import EXPORT_FORMATS
+        self.data_export_test(CifData, self.ids, EXPORT_FORMATS)
 
 class TestVerdiDataUpf(AiidaTestCase):
     """
@@ -975,9 +905,9 @@ class TestVerdiDataUpf(AiidaTestCase):
         options = [self.this_folder+'/'+self.pseudos_dir,
                 "test_group",
                 "test description"]
-        res = self.cli_runner.invoke(cmd_upf.uploadfamily, options,
+        res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options,
                                      catch_exceptions=False)
-        self.assertIn('UPF files found: 3', res.output_bytes,
+        self.assertIn(b'UPF files found: 3', res.output_bytes,
                       'The string "UPF files found: 3" was not found in the'
                       ' output of verdi data upf uploadfamily')
 
@@ -985,7 +915,7 @@ class TestVerdiDataUpf(AiidaTestCase):
     def test_uploadfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data upf uploadfamily --help failed.")
 
     def test_uploadfamily(self):
@@ -995,14 +925,14 @@ class TestVerdiDataUpf(AiidaTestCase):
                 "test description",
                 "--stop-if-existing"]
         with self.assertRaises(ValueError):
-            res = self.cli_runner.invoke(cmd_upf.uploadfamily, options,
+            res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options,
                                          catch_exceptions=False)
 
 
     def test_exportfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'exportfamily', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data upf exportfamily --help failed.")
 
 
@@ -1011,59 +941,59 @@ class TestVerdiDataUpf(AiidaTestCase):
         
         p = tempfile.mkdtemp()
         options = [p, 'test_group']
-        res = self.cli_runner.invoke(cmd_upf.exportfamily, options,
+        res = self.cli_runner.invoke(cmd_upf.upf_exportfamily, options,
                                      catch_exceptions=False)
         output = sp.check_output(['ls', p ])
         self.assertIn(
-            'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
+            b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
             "Sub-command verdi data upf exportfamily --help failed.")
         self.assertIn(
-            'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,
+            b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,
             "Sub-command verdi data upf exportfamily --help failed.")
         self.assertIn(
-            'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
+            b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
             "Sub-command verdi data upf exportfamily --help failed.")
 
 
     def test_listfamilieshelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'listfamilies', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data upf listfamilies --help failed.")
 
     def test_listfamilies(self):
         self.upload_family()
 
         options = ['-d', '-e', 'Ba']
-        res = self.cli_runner.invoke(cmd_upf.listfamilies, options,
+        res = self.cli_runner.invoke(cmd_upf.upf_listfamilies, options,
                                      catch_exceptions=False)
         
-        self.assertIn('test_group', res.output_bytes,
+        self.assertIn(b'test_group', res.output_bytes,
                       'The string "test_group" was not found in the'
                       ' output of verdi data upf listfamilies')
 
-        self.assertIn('test description', res.output_bytes,
+        self.assertIn(b'test description', res.output_bytes,
                       'The string "test_group" was not found in the'
                       ' output of verdi data upf listfamilies')
         
         
         options = ['-d', '-e', 'Fe']
-        res = self.cli_runner.invoke(cmd_upf.listfamilies, options,
+        res = self.cli_runner.invoke(cmd_upf.upf_listfamilies, options,
                                      catch_exceptions=False)
-        self.assertIn('No valid UPF pseudopotential', res.output_bytes,
+        self.assertIn(b'No valid UPF pseudopotential', res.output_bytes,
                       'The string "No valid UPF pseudopotential" was not'
                       ' found in the output of verdi data upf listfamilies')
 
     def test_importhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'import', '--help'])
         self.assertIn(
-            'Usage:', output,
+            b'Usage:', output,
             "Sub-command verdi data upf listfamilies --help failed.")
 
     def test_import(self):
         options = [self.this_folder + '/'+self.pseudos_dir + '/' + 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF']
-        res = self.cli_runner.invoke(cmd_upf.import_upf, options, catch_exceptions=False)
+        res = self.cli_runner.invoke(cmd_upf.upf_import, options, catch_exceptions=False)
 
-        self.assertIn('Imported', res.output_bytes,
+        self.assertIn(b'Imported', res.output_bytes,
                       'The string "Imported" was not'
                       ' found in the output of verdi data import: {}'.format(res.output))

@@ -7,10 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import abc
 import copy
 import datetime
 import enum
+
+import six
+from six.moves import range, zip
 
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
@@ -205,9 +210,9 @@ class AbstractJobCalculation(AbstractCalculation):
         s = computer.get_scheduler()
         try:
             _ = s.create_job_resource(**self.get_resources(full=True))
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError) as exc:
             raise ValidationError("Invalid resources for the scheduler of the "
-                                  "specified computer: {}".format(e.message))
+                                  "specified computer: {}".format(exc))
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError(
@@ -290,7 +295,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if val is None:
             self._set_attr('queue_name', None)
         else:
-            self._set_attr('queue_name', unicode(val))
+            self._set_attr('queue_name', six.text_type(val))
 
     def set_account(self, val):
         """
@@ -345,8 +350,8 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError("You have to pass a "
                              "dictionary to set_environment_variables")
 
-        for k, v in env_vars_dict.iteritems():
-            if not isinstance(k, basestring) or not isinstance(v, basestring):
+        for k, v in env_vars_dict.items():
+            if not isinstance(k, six.string_types) or not isinstance(v, six.string_types):
                 raise ValueError(
                     "Both the keys and the values of the "
                     "dictionary passed to set_environment_variables must be "
@@ -371,7 +376,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
-        self._set_attr('priority', unicode(val))
+        self._set_attr('priority', six.text_type(val))
 
     def set_max_memory_kb(self, val):
         """
@@ -507,7 +512,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        self._set_attr("prepend_text", unicode(val))
+        self._set_attr("prepend_text", six.text_type(val))
 
     def get_append_text(self):
         """
@@ -525,7 +530,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        self._set_attr("append_text", unicode(val))
+        self._set_attr("append_text", six.text_type(val))
 
     def set_custom_scheduler_commands(self, val):
         """
@@ -537,7 +542,7 @@ class AbstractJobCalculation(AbstractCalculation):
         inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
-        self._set_attr("custom_scheduler_commands", unicode(val))
+        self._set_attr("custom_scheduler_commands", six.text_type(val))
 
     def get_custom_scheduler_commands(self):
         """
@@ -584,7 +589,7 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError("You must pass a list of strings to "
                              "set_mpirun_extra_params")
         for param in extra_params:
-            if not isinstance(param, basestring):
+            if not isinstance(param, six.string_types):
                 raise ValueError("You must pass a list of strings to "
                                  "set_mpirun_extra_params")
 
@@ -788,15 +793,15 @@ class AbstractJobCalculation(AbstractCalculation):
         if not (isinstance(retrieve_list, (tuple, list))):
             raise ValueError("You should pass a list/tuple")
         for item in retrieve_list:
-            if not isinstance(item, basestring):
+            if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or
                         len(item) != 3):
                     raise ValueError(
                         "You should pass a list containing either "
                         "strings or lists/tuples"
                     )
-                if (not (isinstance(item[0], basestring)) or
-                        not (isinstance(item[1], basestring)) or
+                if (not (isinstance(item[0], six.string_types)) or
+                        not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
                     raise ValueError(
                         "You have to pass a list (or tuple) of "
@@ -829,15 +834,15 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError('You should pass a list/tuple')
 
         for item in retrieve_temporary_list:
-            if not isinstance(item, basestring):
+            if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or len(item) != 3):
                     raise ValueError(
                         'You should pass a list containing either '
                         'strings or lists/tuples'
                     )
 
-                if (not (isinstance(item[0], basestring)) or
-                        not (isinstance(item[1], basestring)) or
+                if (not (isinstance(item[0], six.string_types)) or
+                        not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
                     raise ValueError(
                         'You have to pass a list (or tuple) of lists, with remotepath(string), '
@@ -869,7 +874,7 @@ class AbstractJobCalculation(AbstractCalculation):
                              "strings as retrieve_singlefile_list")
         for j in retrieve_singlefile_list:
             if (not (isinstance(j, (tuple, list))) or
-                    not (all(isinstance(i, basestring) for i in j))):
+                    not (all(isinstance(i, six.string_types) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
                                  "of strings as retrieve_singlefile_list")
         self._set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
@@ -896,7 +901,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 "{})".format(self.get_state())
             )
 
-        return self._set_attr('job_id', unicode(job_id))
+        return self._set_attr('job_id', six.text_type(job_id))
 
     def get_job_id(self):
         """
@@ -911,7 +916,7 @@ class AbstractJobCalculation(AbstractCalculation):
         # I just convert it to a string
         from aiida.utils import timezone
 
-        self._set_attr('scheduler_state', unicode(state))
+        self._set_attr('scheduler_state', six.text_type(state))
         self._set_attr('scheduler_lastchecktime', timezone.now())
 
     def get_scheduler_state(self):
@@ -1111,7 +1116,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 for k, v in [cls.projection_map[p]]:
                     projections_dict[k].append(v)
 
-        for k, v in projections_dict.iteritems():
+        for k, v in projections_dict.items():
             qb.add_projection(k, v)
 
         # ORDER
@@ -1129,7 +1134,7 @@ class AbstractJobCalculation(AbstractCalculation):
             calc_list_data = []
             try:
                 for i in range(100):
-                    res = results_generator.next()
+                    res = next(results_generator)
 
                     row = cls._get_calculation_info_row(
                         res, projections, now if relative_ctime else None)
@@ -1318,7 +1323,7 @@ class AbstractJobCalculation(AbstractCalculation):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = zip(*returnresult)[0]
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def _prepare_for_submission(self, tempfolder, inputdict):
@@ -1492,8 +1497,9 @@ class AbstractJobCalculation(AbstractCalculation):
             needed by the daemon to handle operations.
         """
         import os
-        import StringIO
         import json
+
+        from six.moves import cStringIO as StringIO
 
         from aiida.common.exceptions import (NotExistent,
                                              PluginInternalError,
@@ -1510,7 +1516,7 @@ class AbstractJobCalculation(AbstractCalculation):
         inputdict = self.get_inputs_dict(
             only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
 
-        codes = [_ for _ in inputdict.itervalues() if isinstance(_, Code)]
+        codes = [_ for _ in inputdict.values() if isinstance(_, Code)]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
@@ -1596,7 +1602,7 @@ class AbstractJobCalculation(AbstractCalculation):
         subst_dict = {'tot_num_mpiprocs':
                           job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
-        for k, v in job_tmpl.job_resource.iteritems():
+        for k, v in job_tmpl.job_resource.items():
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
@@ -1708,13 +1714,11 @@ class AbstractJobCalculation(AbstractCalculation):
         # TODO: give possibility to use a different name??
         script_filename = '_aiidasubmit.sh'
         script_content = s.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(StringIO.StringIO(script_content), script_filename)
+        folder.create_file_from_filelike(StringIO(script_content), script_filename)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(
-            StringIO.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
-        subfolder.create_file_from_filelike(
-            StringIO.StringIO(json.dumps(calcinfo)), 'calcinfo.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(calcinfo)), 'calcinfo.json')
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []
@@ -1728,20 +1732,20 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             validate_list_of_string_tuples(local_copy_list,
                                            tuple_length=2)
-        except ValidationError as e:
+        except ValidationError as exc:
             raise PluginInternalError(
                 "[presubmission of calc {}] "
-                "local_copy_list format problem: {}".format(this_pk, e.message))
+                "local_copy_list format problem: {}".format(this_pk, exc))
 
         remote_copy_list = calcinfo.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list,
                                            tuple_length=3)
-        except ValidationError as e:
+        except ValidationError as exc:
             raise PluginInternalError(
                 "[presubmission of calc {}] "
                 "remote_copy_list format problem: {}".
-                    format(this_pk, e.message))
+                    format(this_pk, exc))
 
         for (remote_computer_uuid, remote_abs_path,
              dest_rel_path) in remote_copy_list:
@@ -1857,7 +1861,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 # Note: this will possibly overwrite files
                 for f in code.get_folder_list():
                     t.put(code.get_abs_path(f), f)
-                t.chmod(code.get_local_executable(), 0755)  # rwxr-xr-x
+                t.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list

@@ -8,6 +8,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 from aiida.orm.data.base import NumericType
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
@@ -81,13 +83,13 @@ def main():
     }
 
     results = work.run(SumWorkChain, **inputs)
-    print 'Result of SumWorkChain: {}'.format(results)
+    print('Result of SumWorkChain: {}'.format(results))
 
     results = work.run(ProductWorkChain, **inputs)
-    print 'Result of ProductWorkChain: {}'.format(results)
+    print('Result of ProductWorkChain: {}'.format(results))
 
     results = work.run(SumProductWorkChain, **inputs)
-    print 'Result of SumProductWorkChain: {}'.format(results)
+    print('Result of SumProductWorkChain: {}'.format(results))
 
 
 if __name__ == '__main__':

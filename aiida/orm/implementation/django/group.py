@@ -8,7 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import collections
+
+import six
+
 from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
@@ -37,7 +41,7 @@ class Group(AbstractGroup):
             if kwargs:
                 raise ValueError("If you pass a dbgroups, you cannot pass any further parameter")
 
-            if isinstance(dbgroup, (int, long)):
+            if isinstance(dbgroup, six.integer_types):
                 try:
                     dbgroup = DbGroup.objects.get(pk=dbgroup)
                 except ObjectDoesNotExist:
@@ -115,7 +119,7 @@ class Group(AbstractGroup):
 
     @property
     def uuid(self):
-        return unicode(self._dbgroup.uuid)
+        return six.text_type(self._dbgroup.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -151,7 +155,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(nodes, collections.Iterable):
+        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
                             "of such objects, it is instead {}".format(
@@ -190,7 +194,7 @@ class Group(AbstractGroup):
 
             # For future python-3 compatibility
             def __next__(self):
-                return self.next()
+                return next(self.generator)
 
             def next(self):
                 return next(self.generator)
@@ -207,7 +211,7 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, basestring) or not isinstance(
+        if isinstance(nodes, six.string_types) or not isinstance(
                 nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
@@ -269,22 +273,22 @@ class Group(AbstractGroup):
             queryobject &= Q(dbnodes__in=pk_list)
 
         if user is not None:
-            if isinstance(user, basestring):
+            if isinstance(user, six.string_types):
                 queryobject &= Q(user__email=user)
             else:
                 queryobject &= Q(user=user.id)
 
         if name_filters is not None:
             name_filters_list = {"name__" + k: v for (k, v)
-                                 in name_filters.iteritems() if v}
+                                 in name_filters.items() if v}
             queryobject &= Q(**name_filters_list)
 
         groups_pk = set(DbGroup.objects.filter(
             queryobject, **kwargs).values_list('pk', flat=True))
 
         if node_attributes is not None:
-            for k, vlist in node_attributes.iteritems():
-                if isinstance(vlist, basestring) or not isinstance(
+            for k, vlist in node_attributes.items():
+                if isinstance(vlist, six.string_types) or not isinstance(
                         vlist, collections.Iterable):
                     vlist = [vlist]
 
@@ -296,7 +300,7 @@ class Group(AbstractGroup):
                     # prepend to the key the right django string to SQL-join
                     # on the right table
                     query_dict = {'dbnodes__dbattributes__{}'.format(k2): v2
-                                  for k2, v2 in base_query_dict.iteritems()}
+                                  for k2, v2 in base_query_dict.items()}
 
                     # I narrow down the list of groups.
                     # I had to do it in this way, with multiple DB hits and

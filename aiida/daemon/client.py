@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import enum
 import os
 import shutil
@@ -115,7 +116,8 @@ class DaemonClient(ProfileConfig):
         """
         if self.is_daemon_running:
             try:
-                return int(open(self.circus_port_file, 'r').read().strip())
+                with open(self.circus_port_file, 'r') as fhandle:
+                    return int(fhandle.read().strip())
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:

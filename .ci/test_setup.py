@@ -18,6 +18,7 @@ the file system behind itself.
 These problems could also be addressed in tearDown methods of the test cases instead.
 It has not been done due to time constraints yet.
 """
+from __future__ import absolute_import
 import unittest
 import os
 from os.path import abspath
@@ -45,8 +46,8 @@ class QuicksetupTestCase(unittest.TestCase):
         backend_settings.AIIDADB_PROFILE = None
         result = self.runner.invoke(quicksetup, [
             '--backend={}'.format(self.backend), '--email=giuseppe.verdi@ope.ra', '--first-name=Giuseppe',
-            '--last-name=Verdi', '--institution=Scala', '--db-name=aiida_giuseppe_{}'.format(self.backend),
-            '--repository=aiida_giuseppe_{}'.format(self.backend), 'giuseppe-{}'.format(self.backend)
+            '--last-name=Verdi', '--institution=Scala', '--db-name=aiida_giuseppe_{}'.format(
+                self.backend), '--repository=aiida_giuseppe_{}'.format(self.backend), 'giuseppe-{}'.format(self.backend)
         ])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
@@ -98,9 +99,9 @@ class SetupTestCase(unittest.TestCase):
         result = self.runner.invoke(setup, [
             '--non-interactive', '--backend={}'.format(self.backend), '--email=radames.verdi@ope.ra',
             '--first-name=Radames', '--last-name=Verdi', '--institution=Scala', '--repository={}'.format(
-                self.repository), '--db-host=localhost', '--db-port={}'.format(self.pg_test.port),
-            '--db-name={}'.format(self.dbname), '--db-username={}'.format(self.dbuser), '--db-password={}'.format(
-                self.dbpass), 'radames_{}'.format(self.backend)
+                self.repository), '--db-host=localhost', '--db-port={}'.format(
+                    self.pg_test.port), '--db-name={}'.format(self.dbname), '--db-username={}'.format(
+                        self.dbuser), '--db-password={}'.format(self.dbpass), 'radames_{}'.format(self.backend)
         ])
         self.assertFalse(result.exception, msg=get_debug_msg(result))
 
@@ -112,9 +113,9 @@ class SetupTestCase(unittest.TestCase):
         self.runner.invoke(setup, [
             '--non-interactive', '--backend={}'.format(self.backend), '--email=radames.verdi@ope.ra',
             '--first-name=Radames', '--last-name=Verdi', '--institution=Scala', '--repository={}'.format(
-                self.repository), '--db-host=localhost', '--db-port={}'.format(self.pg_test.port),
-            '--db-name={}'.format(self.dbname), '--db-username={}'.format(self.dbuser), '--db-password={}'.format(
-                self.dbpass), 'radames2_{}'.format(self.backend)
+                self.repository), '--db-host=localhost', '--db-port={}'.format(
+                    self.pg_test.port), '--db-name={}'.format(self.dbname), '--db-username={}'.format(
+                        self.dbuser), '--db-password={}'.format(self.dbpass), 'radames2_{}'.format(self.backend)
         ])
 
         tpl = '{email}\n{first_name}\n{last_name}\n{institution}\nyes\n{email}\n{engine}\n\n\n\n\n\n{repo}\nno\n\n'

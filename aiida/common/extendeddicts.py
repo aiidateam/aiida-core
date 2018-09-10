@@ -7,7 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import collections
+
+import six
+
 from aiida.common.exceptions import ValidationError
 from aiida.common.lang import override
 
@@ -15,7 +19,7 @@ from aiida.common.lang import override
 class Enumerate(frozenset):
     def __getattr__(self, name):
         if name in self:
-            return name.decode("utf-8")
+            return six.text_type(name)  # always return unicode in Python 2
         raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
             name, self.__class__.__name__))
 
@@ -233,9 +237,9 @@ class DefaultFieldsAttributeDict(AttributeDict):
             if callable(validator):
                 try:
                     validator(self[key])
-                except Exception as e:
+                except Exception as exc:
                     raise ValidationError("Invalid value for key '{}' [{}]: {}".format(
-                        key, e.__class__.__name__, e.message))
+                        key, exc.__class__.__name__, exc))
 
     def __setattr__(self, attr, value):
         """

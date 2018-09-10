@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import with_statement
+from __future__ import absolute_import
 from alembic import context
 from aiida.backends.settings import IN_DOC_MODE
 

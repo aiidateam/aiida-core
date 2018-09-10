@@ -7,12 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+from six.moves import zip
+import six
 
-
+@six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
-    __metaclass__ = ABCMeta
-
     def __init__(self, *args, **kwargs):
         pass
 
@@ -105,7 +106,7 @@ class AbstractQueryManager(object):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = zip(*returnresult)[0]
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def get_creation_statistics(
@@ -141,7 +142,7 @@ class AbstractQueryManager(object):
             def get_statistics_dict(dataset):
                 results = {}
                 for count, typestring in sorted(
-                        (v, k) for k, v in dataset.iteritems())[::-1]:
+                        (v, k) for k, v in dataset.items())[::-1]:
                     results[typestring] = count
                 return results
 

@@ -10,6 +10,7 @@
 """
 Generic tests that need the be specific to sqlalchemy
 """
+from __future__ import absolute_import
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase

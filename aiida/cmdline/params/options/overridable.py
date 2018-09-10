@@ -5,6 +5,7 @@
         can be easily reused and which improves consistency across the command line interface
 """
 
+from __future__ import absolute_import
 import click
 
 
@@ -34,19 +35,45 @@ class OverridableOption(object):
             click.echo(os.listdir(folder))
     """
 
-    # pylint: disable=too-few-public-methods
-
     def __init__(self, *args, **kwargs):
         """
-        Store the default args and kwargs
+        Store the default args and kwargs.
+
+        :param args: default arguments to be used for the click option
+        :param kwargs: default keyword arguments to be used that can be overridden in the call
         """
         self.args = args
         self.kwargs = kwargs
 
     def __call__(self, **kwargs):
         """
-        Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option
+        Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option.
+
+        :param kwargs: keyword arguments that will override those set in the construction
+        :return: click option constructed with args and kwargs defined during construction and call of this instance
         """
         kw_copy = self.kwargs.copy()
         kw_copy.update(kwargs)
         return click.option(*self.args, **kw_copy)
+
+    def clone(self, **kwargs):
+        """
+        Create a new instance of the OverridableOption by cloning it and updating the stored kwargs with those passed.
+
+        This can be useful when an already predefined OverridableOption needs to be further specified and reused
+        by a set of sub commands. Example::
+
+            LABEL = OverridableOption('-l', '--label', required=False, help='The label of the node'
+            LABEL_COMPUTER = LABEL.clone(required=True, help='The label of the computer')
+
+        If multiple computer related sub commands need the LABEL option, but the default help string and required
+        attribute need to be different, the `clone` method allows to override these and create a new OverridableOption
+        instance that can then be used as a decorator.
+
+        :param kwargs: keyword arguments to update
+        :return: OverridableOption instance with stored keyword arguments updated
+        """
+        import copy
+        clone = copy.deepcopy(self)
+        clone.kwargs.update(kwargs)
+        return clone

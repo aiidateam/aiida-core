@@ -73,7 +73,9 @@ def shell(plain, no_startup, interface):
                     continue
                 try:
                     with open(pythonrc) as handle:
-                        exec (compile(handle.read(), pythonrc, 'exec'), imported_objects)  # pylint: disable=exec-used
+                        # Disable yapf to keep Python 3 style here
+                        exec(compile(handle.read(), pythonrc, 'exec'),  # pylint: disable=exec-used
+                             imported_objects)  # yapf:disable
                 except NameError:
                     pass
 

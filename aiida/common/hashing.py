@@ -7,12 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from passlib.context import CryptContext
-import random
+
+from __future__ import absolute_import
 import hashlib
-import time
-from datetime import datetime
 import numbers
+import random
+import time
+import uuid
+from datetime import datetime
+
+import six
+from six.moves import range
+from passlib.context import CryptContext
+
 try: # Python3
     from functools import singledispatch
     from collections import abc
@@ -114,14 +121,19 @@ def get_random_string(length=12,
     return ''.join(random.choice(allowed_chars) for i in range(length))
 
 
-
 def make_hash_with_type(type_chr, string_to_hash):
     """
-    Convention: type_chr should be a single char, lower case
-      for simple datatypes, upper case for composite datatypes
-      We don't check anything for speed efficiency
+    get a hash digest for a given enumerated type and its content
+
+    :param type_chr: a single char, lower case for simple datatypes, upper case for composite datatypes
+    :param string_to_hash: an encoded string (a `str` in Python 2, latin1-encoded `bytes` in Python 3)
+
+    We don't check anything for speed efficiency.
+
+    The `latin1` here is not an error. Since this was introduced in Python 2 and no proper care was
+    taken to properly encode/decode strings, the default was used, which was `latin1` at that time.
     """
-    return hashlib.sha224("{}{}".format(type_chr, string_to_hash)).hexdigest()
+    return hashlib.sha224(type_chr.encode('latin1') + string_to_hash).hexdigest()
 
 @singledispatch
 def make_hash(object_to_hash, **kwargs):
@@ -201,7 +213,7 @@ def _(sequence, **kwargs):
     hashes = tuple([
         make_hash(x, **kwargs) for x in sequence
     ])
-    return make_hash_with_type('L', ",".join(hashes))
+    return make_hash_with_type('L', ",".join(hashes).encode('latin1'))
 
 @make_hash.register(abc.Set)
 def _(object_to_hash, **kwargs):
@@ -210,7 +222,7 @@ def _(object_to_hash, **kwargs):
             for x
             in sorted(object_to_hash)
         ])
-    return make_hash_with_type('S', ",".join(hashes))
+    return make_hash_with_type('S', ",".join(hashes).encode('latin1'))
 
 @make_hash.register(abc.Mapping)
 def _(mapping, **kwargs):
@@ -221,7 +233,7 @@ def _(mapping, **kwargs):
     }
     return make_hash_with_type(
         'D',
-        make_hash(sorted(hashed_dictionary.items()), **kwargs)
+        make_hash(sorted(hashed_dictionary.items()), **kwargs).encode('latin1')
     )
 
 @make_hash.register(numbers.Real)
@@ -238,34 +250,49 @@ def _(object_to_hash, **kwargs):
         ','.join([
             make_hash(object_to_hash.real, **kwargs),
             make_hash(object_to_hash.imag, **kwargs)
-        ])
+        ]).encode('latin1')
     )
 
 @make_hash.register(numbers.Integral)
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('i', str(object_to_hash))
+    return make_hash_with_type('i', str(object_to_hash).encode('latin1'))
 
-@make_hash.register(basestring)
+# if the type is unicode in Python 2 or a str in Python 3, convert it
+# to a str in Python 2 and bytes in Python 3 using the default Python 2 encoding.
+# This should emulate what the hashlib has been doing internally: converting
+# unicode strings to latin1 bytes representation before hashing.
+@make_hash.register(six.text_type)
+def _(object_to_hash, **kwargs):
+    return make_hash_with_type('s', object_to_hash.encode('latin1'))
+
+# for str in Python 2 and bytes in Python 3, simply forward them to
+# the hashing function, without trying to encode them
+@make_hash.register(six.binary_type)
 def _(object_to_hash, **kwargs):
     return make_hash_with_type('s', object_to_hash)
 
 @make_hash.register(bool)
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('b', str(object_to_hash))
+    return make_hash_with_type('b', str(object_to_hash).encode('latin1'))
 
 @make_hash.register(type(None))
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('n', str(object_to_hash))
+    return make_hash_with_type('n', str(object_to_hash).encode('latin1'))
 
 @make_hash.register(datetime)
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('d', str(object_to_hash))
+    return make_hash_with_type('d', str(object_to_hash).encode('latin1'))
+
+@make_hash.register(uuid.UUID)
+def _(object_to_hash, **kwargs):
+    return make_hash_with_type('u', str(object_to_hash).encode('latin1'))
+
 
 @make_hash.register(Folder)
 def _(folder, **kwargs):
     # make sure file is closed after being read
     def _read_file(folder, name):
-        with folder.open(name) as f:
+        with folder.open(name, mode='rb') as f:
             return f.read()
 
     ignored_folder_content = kwargs.get('ignored_folder_content', [])
@@ -280,7 +307,7 @@ def _(folder, **kwargs):
             )
             for name in sorted(folder.get_content_list())
             if name not in ignored_folder_content
-        ], **kwargs)
+        ], **kwargs).encode('latin1')
     )
 
 @make_hash.register(np.ndarray)
@@ -288,7 +315,7 @@ def _(object_to_hash, **kwargs):
     if object_to_hash.dtype == np.float64:
         return make_hash_with_type(
             'af',
-            make_hash(truncate_array64(object_to_hash).tobytes(), **kwargs)
+            make_hash(truncate_array64(object_to_hash).tobytes(), **kwargs).encode('latin1')
         )
     elif object_to_hash.dtype == np.complex128:
         return make_hash_with_type(
@@ -296,12 +323,12 @@ def _(object_to_hash, **kwargs):
             make_hash([
                 object_to_hash.real,
                 object_to_hash.imag
-            ], **kwargs)
+            ], **kwargs).encode('latin1')
         )
     else:
         return make_hash_with_type(
             'ao',
-            make_hash(object_to_hash.tobytes(), **kwargs)
+            make_hash(object_to_hash.tobytes(), **kwargs).encode('latin1')
         )
 
 def truncate_float64(x, num_bits=4):

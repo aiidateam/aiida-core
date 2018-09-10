@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from collections import namedtuple, OrderedDict
 from aiida.common.exceptions import DbContentError, MissingPluginError
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
@@ -56,7 +57,7 @@ def load_plugin(plugin_type, safe=False):
     if base_path.count('.') == 0:
         base_path = '{}.{}'.format(base_path, base_path)
 
-    for prefix, entry_point_type in type_string_to_entry_point_type_map.iteritems():
+    for prefix, entry_point_type in type_string_to_entry_point_type_map.items():
         if base_path.startswith(prefix):
             entry_point = strip_prefix(base_path, prefix)
             try:

@@ -11,6 +11,7 @@
 """
 This allows to manage comments from command line.
 """
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

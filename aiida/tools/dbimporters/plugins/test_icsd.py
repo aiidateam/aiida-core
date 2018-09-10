@@ -10,6 +10,7 @@
 """
 Tests for IcsdDbImporter
 """
+from __future__ import absolute_import
 from django.utils import unittest
 from aiida.backends.testbase import AiidaTestCase
 
@@ -61,8 +62,8 @@ class TestIcsd(AiidaTestCase):
         """
         Test Icsd intranet webinterface
         """
-        import urllib2
-        html = urllib2.urlopen(self.server + "icsd/").read()
+        from six.moves import urllib
+        html = urllib.request.urlopen(self.server + "icsd/").read()
 
     @unittest.skipIf(host is None or not has_mysqldb(), "host required to query mysql db or unable to import MySQLdb")
     def test_mysqldb(self):
@@ -91,8 +92,8 @@ class TestIcsd(AiidaTestCase):
         self.assertEqual(queryresults.number_of_results,1)
 
         with self.assertRaises(StopIteration):
-            queryresults.next()
-            queryresults.next()
+            next(queryresults)
+            next(queryresults)
 
         with self.assertRaises(IndexError):
             queryresults.at(10)
@@ -106,7 +107,7 @@ class TestIcsd(AiidaTestCase):
         self.assertEqual(self.noresults.number_of_results, 0)
 
         with self.assertRaises(StopIteration):
-            self.noresults.next()
+            next(self.noresults)
 
         with self.assertRaises(IndexError):
             self.noresults.at(0)

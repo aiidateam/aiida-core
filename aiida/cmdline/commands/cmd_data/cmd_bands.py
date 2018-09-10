@@ -7,134 +7,52 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to manage BandsData objects from command line.
-"""
+"""`verdi data bands` command."""
 from __future__ import print_function
-import sys
+from __future__ import absolute_import
+
 import click
-from aiida.cmdline.commands.cmd_data.cmd_list import list_options
-from aiida.cmdline.commands.cmd_data.cmd_export import _export
+from six.moves import range
+
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
-from aiida.cmdline.params import arguments
-from aiida.cmdline.params import options
+from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export
+from aiida.cmdline.commands.cmd_data.cmd_list import list_options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.utils import Prettifier
 
-
-def show_xmgrace(exec_name, list_bands):
-    """
-    Plugin for showing the bands with the XMGrace plotting software.
-    """
-    import tempfile
-    import subprocess
-    import numpy
-    from aiida.orm.data.array.bands import max_num_agr_colors
-
-    list_files = []
-    current_band_number = 0
-    for iband, bnds in enumerate(list_bands):
-        # extract number of bands
-        nbnds = bnds.get_bands().shape[1]
-        # pylint: disable=protected-access
-        text, _ = bnds._exportstring(
-            'agr', setnumber_offset=current_band_number, color_number=numpy.mod(iband + 1, max_num_agr_colors))
-        # write a tempfile
-        tempf = tempfile.NamedTemporaryFile(suffix='.agr')
-        tempf.write(text)
-        tempf.flush()
-        list_files.append(tempf)
-        # update the number of bands already plotted
-        current_band_number += nbnds
-
-    try:
-        subprocess.check_output([exec_name] + [f.name for f in list_files])
-    except subprocess.CalledProcessError:
-        print("Note: the call to {} ended with an error.".format(exec_name))
-    except OSError as err:
-        if err.errno == 2:
-            print("No executable '{}' found. Add to the path," " or try with an absolute path.".format(exec_name))
-            sys.exit(1)
-        else:
-            raise
-    finally:
-        for fhandle in list_files:
-            fhandle.close()
+LIST_PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
+EXPORT_FORMATS = [
+    'agr', 'agr_batch', 'dat_blocks', 'dat_multicolumn', 'gnuplot', 'json', 'mpl_pdf', 'mpl_png', 'mpl_singlefile',
+    'mpl_withjson'
+]
+VISUALIZATION_FORMATS = ['xmgrace']
 
 
 @verdi_data.group('bands')
 def bands():
-    """
-    Manipulate BandsData objects
-    """
+    """Manipulate BandsData objects."""
     pass
-
-
-@bands.command('show')
-@decorators.with_dbenv()
-@arguments.NODES()
-@click.option(
-    '-f',
-    '--format',
-    'show_format',
-    type=click.Choice(['xmgrace']),
-    default='xmgrace',
-    help="Filter the families only to those containing "
-    "a pseudo for each of the specified elements")
-def show(nodes, show_format):
-    """
-    Visualize bands objects
-    """
-    from aiida.orm.data.array.bands import BandsData
-    for node in nodes:
-        if not isinstance(node, BandsData):
-            echo.echo_critical("Node {} is of class {} instead " "of {}".format(node, type(node), BandsData))
-        show_xmgrace(show_format, nodes)
-
-
-PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
 
 
 # pylint: disable=too-many-arguments
 @bands.command('list')
 @decorators.with_dbenv()
 @list_options
-@click.option(
-    '-e',
-    '--elements',
-    type=click.STRING,
-    cls=MultipleValueOption,
-    default=None,
-    help="Print only the objects that"
-    " contain desired elements")
-@click.option(
-    '-eo',
-    '--elements-only',
-    type=click.STRING,
-    cls=MultipleValueOption,
-    default=None,
-    help="Print only the objects that"
-    " contain only the selected elements")
-@click.option(
-    '-f',
-    '--formulamode',
-    type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
-    default='hill',
-    help="Formula printing mode (if None, does not print the formula)")
-def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all_users):
-    """
-    List bands objects
-    """
-    # from aiida.orm.data.cif import CifData
+@options.WITH_ELEMENTS()
+@options.WITH_ELEMENTS_EXCLUSIVE()
+@options.FORMULA_MODE()
+def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
+    """List BandsData objects."""
     from aiida.backends.utils import QueryFactory
     from tabulate import tabulate
     from argparse import Namespace
 
     args = Namespace()
     args.element = elements
-    args.element_only = elements_only
-    args.formulamode = formulamode
+    args.element_only = elements_exclusive
+    args.formulamode = formula_mode
     args.past_days = past_days
     args.group_name = None
     if groups is not None:
@@ -149,34 +67,39 @@ def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all
     counter = 0
     bands_list_data = list()
     if not raw:
-        bands_list_data.append(PROJECT_HEADERS)
+        bands_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
                 entry[i] = ",".join(value)
-        for i in range(len(entry), len(PROJECT_HEADERS)):
+        for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
     bands_list_data.extend(entry_list)
     if raw:
         echo.echo(tabulate(bands_list_data, tablefmt='plain'))
     else:
-        echo.echo(tabulate(bands_list_data, headers="firstrow"))
-        echo.echo("\nTotal results: {}\n".format(counter))
+        echo.echo(tabulate(bands_list_data, headers='firstrow'))
+        echo.echo('\nTotal results: {}\n'.format(counter))
+
+
+@bands.command('show')
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='xmgrace')
+@decorators.with_dbenv()
+def bands_show(data, fmt):
+    """Visualize BandsData objects."""
+    try:
+        show_function = getattr(cmd_show, '_show_{}'.format(fmt))
+    except AttributeError:
+        echo.echo_critical('visualization format {} is not supported'.format(fmt))
+
+    show_function(fmt, data)
 
 
 @bands.command('export')
-@decorators.with_dbenv()
-@click.option(
-    '-y',
-    '--format',
-    'used_format',
-    type=click.Choice([
-        'agr', 'agr_batch', 'dat_blocks', 'dat_multicolumn', 'gnuplot', 'json', 'mpl_pdf', 'mpl_png', 'mpl_singlefile',
-        'mpl_withjson'
-    ]),
-    default='json',
-    help="Type of the exported file.")
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='json')
 @click.option(
     '--y-min-lim',
     type=click.FLOAT,
@@ -203,13 +126,9 @@ def bands_list(elements, elements_only, raw, formulamode, past_days, groups, all
     default=None,
     type=click.Choice(Prettifier.get_prettifiers()),
     help='The style of labels for the prettifier')
-@arguments.NODE()
-def export(used_format, y_min_lim, y_max_lim, output, force, prettify_format, node):
-    """
-    Export bands objects
-    """
-    from aiida.orm.data.array.bands import BandsData
-
+@decorators.with_dbenv()
+def bands_export(fmt, y_min_lim, y_max_lim, output, force, prettify_format, datum):
+    """Export BandsData objects."""
     args = {}
     if y_min_lim is not None:
         args['y_min_lim'] = y_min_lim
@@ -218,6 +137,4 @@ def export(used_format, y_min_lim, y_max_lim, output, force, prettify_format, no
     if prettify_format is not None:
         args['prettify_format'] = prettify_format
 
-    if not isinstance(node, BandsData):
-        echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), BandsData))
-    _export(node, output, used_format, other_args=args, overwrite=force)
+    data_export(datum, output, fmt, other_args=args, overwrite=force)

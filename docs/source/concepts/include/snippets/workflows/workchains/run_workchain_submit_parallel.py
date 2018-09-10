@@ -15,7 +15,7 @@ class SomeWorkChain(WorkChain):
         for i in range(3):
             future = self.submit(SomeWorkChain)
             key = 'workchain_{}'.format(i)
-            self.to_context(key=future)
+            self.to_context(**{key:future})
 
     def inspect_workchains(self)
         for i in range(3):

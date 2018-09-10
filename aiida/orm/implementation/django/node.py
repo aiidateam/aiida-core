@@ -8,7 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import copy
+from functools import reduce
+
+import six
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
@@ -277,11 +281,11 @@ class Node(AbstractNode):
             DbLink.objects.create(input=src._dbnode, output=self._dbnode,
                                   label=label, type=link_type.value)
             transaction.savepoint_commit(sid)
-        except IntegrityError as e:
+        except IntegrityError as exc:
             transaction.savepoint_rollback(sid)
             raise UniquenessError("There is already a link with the same "
                                   "name (raw message was {})"
-                                  "".format(e.message))
+                                  "".format(exc))
 
     def _get_db_input_links(self, link_type):
         from aiida.backends.djsite.db.models import DbLink
@@ -463,7 +467,7 @@ class Node(AbstractNode):
         comment = list(DbComment.objects.filter(dbnode=self._dbnode,
                                                 pk=comment_pk, user=user))[0]
 
-        if not isinstance(new_field, basestring):
+        if not isinstance(new_field, six.string_types):
             raise ValueError("Non string comments are not accepted")
 
         if not comment:
@@ -491,7 +495,7 @@ class Node(AbstractNode):
 
     @property
     def uuid(self):
-        return unicode(self._dbnode.uuid)
+        return six.text_type(self._dbnode.uuid)
 
     @property
     def id(self):

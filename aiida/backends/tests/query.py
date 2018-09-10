@@ -8,8 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.backends.testbase import AiidaTestCase
+from __future__ import absolute_import
+from __future__ import print_function
 import unittest
+
+from six.moves import range, zip
+
+from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 
 
@@ -587,54 +592,54 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
             Node, project='attributes.foo'
         ).order_by({Node: 'ctime'})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Specifying the order  explicitly the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'asc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Reversing the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'desc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(9, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(9, -1, -1)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, -1, -1)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, 1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, 1, -1)))
 
 
 class QueryBuilderJoinsTests(AiidaTestCase):
@@ -709,7 +714,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
                 Node, edge_filters={'label': 'is_advisor'}, tag='student'
             ).count(), 7)
 
-        for adv_id, number_students in zip(range(3), (2, 2, 3)):
+        for adv_id, number_students in zip(list(range(3)), (2, 2, 3)):
             self.assertEqual(QueryBuilder().append(
                 Node, filters={'attributes.advisor_id': adv_id}
             ).append(
@@ -912,9 +917,9 @@ class QueryBuilderPath(AiidaTestCase):
             Node, descendant_of='anc', filters={'id': n8.pk}, edge_tag='edge'
         )
         qb.add_projection('edge', 'depth')
-        self.assertTrue(set(zip(*qb.all())[0]), set([5, 6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
         qb.add_filter('edge', {'depth': 6})
-        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([6]))
 
 
 class TestConsistency(AiidaTestCase):
@@ -930,7 +935,7 @@ class TestConsistency(AiidaTestCase):
 
         for idx, item in enumerate(QueryBuilder().append(Node, project=['id', 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
-                print "creating new node"
+                print("creating new node")
                 n = Node()
                 n.store()
         self.assertEqual(idx, 99)
@@ -976,10 +981,10 @@ class TestManager(AiidaTestCase):
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)
 
@@ -1025,9 +1030,9 @@ class TestManager(AiidaTestCase):
 
         new_db_statistics = qmanager_default.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)

@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import argparse
 import imp
 import os

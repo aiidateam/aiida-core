@@ -326,7 +326,7 @@ The ``verdi work report`` command will display all the log messages in chronolog
 The log message will include a timestamp followed by the level of the log, which is always ``REPORT``.
 The second block has the format ``pk|class name|step function name`` detailing information about the workchain itself and the step in which the message was fired.
 Finally, the message itself is displayed.
-Of course how many messages are logged and how useful they are is up to the workchain development.
+Of course how many messages are logged and how useful they are is up to the workchain developer.
 In general they can be very useful for a user to understand what has happened during the execution of the workchain, however, one has to realize that each entry is stored in the database, so overuse can unnecessarily bloat the database.
 
 
@@ -503,7 +503,7 @@ This is where the ``dynamic`` attribute of the ``PortNamespace`` comes in.
 By default this is set to ``False``, but by setting it to ``True``, one indicates that that namespace can take a number of values that is unknown at the time of definition of the specification.
 This now explains the meaning of the ``valid_type``, ``validator`` and ``default`` attributes in the context of the ``PortNamespace``.
 If you do mark a namespace as dynamic, you may still want to limit the set of values that are acceptable, which you can do by specifying the valid type and or validator.
-The values that will eventually be passed to the port namespave will then be validated according to these rules exactly as a value for a regular input port would be.
+The values that will eventually be passed to the port namespace will then be validated according to these rules exactly as a value for a regular input port would be.
 
 Non storable inputs
 ^^^^^^^^^^^^^^^^^^^
@@ -681,7 +681,7 @@ An example in the section on :ref:`running workflows<running_workflows>` already
 However, that is not enough to complete the process.
 When the ``submit`` method is called, the process is created and submitted to the daemon, but at that point it is not yet done.
 So the value that is returned by the ``submit`` call is not the result of the submitted process, but rather it is a *future*.
-When the process is terminated, this future will than be transformed into the results of the process, however, until this happens, the workchain cannot continue: it has to wait for the process to be finished.
+When the process is terminated, this future will then be transformed into the results of the process, however, until this happens, the workchain cannot continue: it has to wait for the process to be finished.
 To do this, control has to be returned to the workflow engine, which can then, when the process is completed, call the next step in the outline, where we can analyse the results.
 
 To context
@@ -828,7 +828,7 @@ As a first example, we will implement a thin wrapper workflow, which simply forw
 .. include:: include/snippets/workflows/expose_inputs/simple_parent.py
     :code: python
 
-In the ``define`` method of this simple parent workchain, we use the :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`plumpy.process_spec.ProcessSpec.expose_outputs`.
+In the ``define`` method of this simple parent workchain, we use the :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`~plumpy.process_spec.ProcessSpec.expose_outputs`.
 This creates the corresponding input and output ports in the parent workchain.
 Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class.
 This is used when calling the child in the ``run_child`` method.
@@ -857,7 +857,7 @@ In the next section, we will explain each of the steps.
     :code: python
 
 First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.
-For this, we again use :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`plumpy.process_spec.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
+For this, we again use :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`~plumpy.process_spec.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
 This specifies a list of keys, and only inputs or outputs which are in that list will be exposed.
 So by passing ``include=['a']`` to :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
 

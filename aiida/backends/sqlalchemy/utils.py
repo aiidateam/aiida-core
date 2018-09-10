@@ -9,6 +9,8 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 try:
     import ultrajson as json
     from functools import partial
@@ -24,8 +26,9 @@ except ImportError:
     json_loads = json.loads
 
 import datetime
-
 import re
+
+import six
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
@@ -108,7 +111,7 @@ def dumps_json(d):
         if isinstance(v, list):
             return [f(_) for _ in v]
         elif isinstance(v, dict):
-            return dict((key, f(val)) for key, val in v.iteritems())
+            return dict((key, f(val)) for key, val in v.items())
         elif isinstance(v, datetime.datetime):
             return v.isoformat()
         return v
@@ -132,10 +135,10 @@ def loads_json(s):
                 d[i] = f(val)
             return d
         elif isinstance(d, dict):
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 d[k] = f(v)
             return d
-        elif isinstance(d, basestring):
+        elif isinstance(d, six.string_types):
             if date_reg.match(d):
                 try:
                     return parser.parse(d)

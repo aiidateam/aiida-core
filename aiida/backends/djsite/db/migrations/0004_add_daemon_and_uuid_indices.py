@@ -9,6 +9,7 @@
 ###########################################################################
 from __future__ import unicode_literals
 
+from __future__ import absolute_import
 import django_extensions.db.fields
 from django.db import migrations
 

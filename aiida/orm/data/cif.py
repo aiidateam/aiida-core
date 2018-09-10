@@ -9,6 +9,11 @@
 ###########################################################################
 """Tools for handling Crystallographic Information Files (CIF)"""
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
+from __future__ import absolute_import
+from __future__ import division
+
+from six.moves import range
+
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.calculation.inline import optional_inline
 from aiida.common.utils import HiddenPrints
@@ -84,8 +89,8 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     import re
     axes = ["x", "y", "z"]
     parts = ["", "", ""]
-    for i in range(0, 3):
-        for j in range(0, 3):
+    for i in range(3):
+        for j in range(3):
             sign = None
             if matrix[i][j] > eps:
                 sign = "+"
@@ -268,13 +273,16 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     :param names: optional list of datablock names
     :return: CifFile
     """
-    import CifFile
-    from CifFile import CifBlock
+    try:
+        import CifFile
+        from CifFile import CifBlock
+    except ImportError as exc:
+        raise ImportError(str(exc) + '. You need to install the PyCifRW package.')
 
     if loops is None:
         loops = dict()
 
-    cif = CifFile.CifFile()
+    cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
         cif.set_grammar("1.1")
     except AttributeError:
@@ -336,7 +344,7 @@ def refine_inline(node):
                          "block -- multiblock CIF files are not "
                          "supported yet")
 
-    name = node.values.keys()[0]
+    name = list(node.values.keys())[0]
 
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:
@@ -362,7 +370,7 @@ def refine_inline(node):
     cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
         [symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
                                            symmetry['translations'][i])
-         for i in range(0, len(symmetry['rotations']))]
+         for i in range(len(symmetry['rotations']))]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
@@ -374,7 +382,7 @@ def refine_inline(node):
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']
         if len(original_atoms) % len(refined_atoms):
-            new_Z = old_Z * len(original_atoms) / len(refined_atoms)
+            new_Z = old_Z * len(original_atoms) // len(refined_atoms)
             cif.values[name]['_cell_formula_units_Z'] = new_Z
 
     return {'cif': cif}
@@ -555,13 +563,10 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         if self._values is None:
-            try:
-                import CifFile
-                from CifFile import CifBlock
-            except ImportError as e:
-                raise ImportError(str(e) + '. You need to install the PyCifRW package.')
+            import CifFile
+            from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
-            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))
+            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -833,7 +838,7 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
-        import cif  # pylint: disable=import-self
+        from . import cif  # pylint: disable=import-self
         from aiida.orm.data.parameter import ParameterData
 
         parameters = ParameterData(dict=kwargs)

@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import inspect
+
+import six
 import plumpy
 import plumpy.test_utils
 from tornado import gen
@@ -23,7 +26,7 @@ from aiida.orm.data.str import Str
 from aiida.utils.capturing import Capturing
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
-from aiida.work import Process
+from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
 
@@ -158,53 +161,97 @@ class PotentialFailureWorkChain(WorkChain):
 
     EXIT_STATUS = 1
     EXIT_MESSAGE = 'Well you did ask for it'
+    OUTPUT_LABEL = 'optional_output'
+    OUTPUT_VALUE = 144
 
     @classmethod
     def define(cls, spec):
         super(PotentialFailureWorkChain, cls).define(spec)
         spec.input('success', valid_type=Bool)
+        spec.input('through_return', valid_type=Bool, default=Bool(False))
         spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
         spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(
+            if_(cls.should_return_out_of_outline)(
+                return_(cls.EXIT_STATUS)
+            ),
             cls.failure,
             cls.success
         )
+        spec.output('optional', required=False)
+
+    def should_return_out_of_outline(self):
+        return self.inputs.through_return.value
 
     def failure(self):
         if self.inputs.success.value is False:
+            # Returning either 0 or ExitCode with non-zero status should terminate the workchain
             if self.inputs.through_exit_code.value is False:
                 return self.EXIT_STATUS
             else:
                 return self.exit_codes.EXIT_STATUS
+        else:
+            # Returning 0 or ExitCode with zero status should *not* terminate the workchain
+            if self.inputs.through_exit_code.value is False:
+                return 0
+            else:
+                return ExitCode()
 
     def success(self):
+        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE))
         return
 
 
 class TestExitStatus(AiidaTestCase):
+    """
+    This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
+    it running it all the way through. Currently this can be done directly in the outline by calling the `return_`
+    construct, or from an outline step function by returning a non-zero integer or an ExitCode with a non-zero status
+    """
 
-    def test_failing_workchain(self):
+    def test_failing_workchain_through_integer(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False))
         self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEquals(node.exit_message, None)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
 
-    def test_failing_workchain_with_message(self):
+    def test_failing_workchain_through_exit_code(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
         self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEquals(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
 
-    def test_successful_workchain(self):
+    def test_successful_workchain_through_integer(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True))
         self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
+        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL], PotentialFailureWorkChain.OUTPUT_VALUE)
+
+    def test_successful_workchain_through_exit_code(self):
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
+        self.assertEquals(node.exit_status, 0)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, True)
+        self.assertEquals(node.is_failed, False)
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
+        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL], PotentialFailureWorkChain.OUTPUT_VALUE)
+
+    def test_return_out_of_outline(self):
+        result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
+        self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
+        self.assertEquals(node.is_finished, True)
+        self.assertEquals(node.is_finished_ok, False)
+        self.assertEquals(node.is_failed, True)
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
 
 
 class IfTest(work.WorkChain):
@@ -275,7 +322,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the if(..) part
         work.run(Wf, value=A, n=three)
         # Check the steps that should have been run
-        for step, finished in Wf.finished_steps.iteritems():
+        for step, finished in Wf.finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -283,7 +330,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the elif(..) part
         finished_steps = work.run(Wf, value=B, n=three)
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -291,7 +338,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the else... part
         finished_steps = work.run(Wf, value=C, n=three)
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -363,7 +410,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf)
 
     def test_str(self):
-        self.assertIsInstance(str(Wf.spec()), basestring)
+        self.assertIsInstance(str(Wf.spec()), six.string_types)
 
     def test_malformed_outline(self):
         """
@@ -387,7 +434,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the if(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -395,7 +442,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))
@@ -403,7 +450,7 @@ class TestWorkchain(AiidaTestCase):
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
-        for step, finished in finished_steps.iteritems():
+        for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
                 self.assertTrue(
                     finished, "Step {} was not called by workflow".format(step))

@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import uuid
+
+import six
 
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.common.exceptions import ValidationError
@@ -30,7 +33,7 @@ def validate_key(key):
     :return: None if the key is valid
     :raise ValidationError: if the key is not valid
     """
-    if not isinstance(key, basestring):
+    if not isinstance(key, six.string_types):
         raise ValidationError("The key must be a string.")
     if not key:
         raise ValidationError("The key cannot be an empty string.")
@@ -69,6 +72,6 @@ def get_value_of_sub_field(key, original_get_value):
                 curr_pos += 1
 
             return curr_val
-        except TypeError, KeyError:
+        except TypeError as KeyError:
             raise NotExistent("The sub-field {} doesn't correspond "
                               "to a value.".format(key))

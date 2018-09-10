@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 
-LATEST_MIGRATION = '0012_drop_dblock'
+LATEST_MIGRATION = '0013_django_1_8'
 
 
 def _update_schema_version(version, apps, schema_editor):

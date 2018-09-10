@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import os
 import copy
 from functools import wraps
@@ -20,7 +21,7 @@ except ImportError:
     from chainmap import ChainMap
 
 import yaml
-from future.utils import raise_from
+import six
 
 import aiida
 from aiida.common.exceptions import ConfigurationError
@@ -66,7 +67,7 @@ def _get_config(config_file):
         for key in [config_keys.enabled, config_keys.disabled]:
             config[key] = [get_object_from_string(c) for c in config[key]]
     except (ValueError) as err:
-        raise_from(
+        six.raise_from(
             ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)),
             err
         )

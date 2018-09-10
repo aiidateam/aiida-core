@@ -7,9 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+import copy
+
+import six
+
 from aiida.common.orbital import Orbital
 from aiida.common.exceptions import ValidationError, InputValidationError
-import copy
 
 
 conversion_dict = {  'S':{'S':{'angular_momentum': 0, 'magnetic_number':0}
@@ -188,7 +192,7 @@ class RealhydrogenOrbital(Orbital):
         # Finally checks optional fields
         KindName = input_dict.pop('kind_name', None)
         if KindName:
-            if not isinstance(KindName, (basestring, None)):
+            if not isinstance(KindName, (six.string_types, None)):
                 raise ValidationError('If kind_name is provided must be string')
             validated_dict['kind_name'] = KindName
         Kind_index = input_dict.pop('kind_index', None)
@@ -241,7 +245,7 @@ class RealhydrogenOrbital(Orbital):
         """
         # importing a copy of the conversion_dict
         convert_ref = copy.deepcopy(conversion_dict)
-        if not isinstance(name, basestring):
+        if not isinstance(name, six.string_types):
             raise InputValidationError('Input name must be a string')
         name = name.upper()
         list_of_dicts = [convert_ref[x][y] for x in convert_ref for y in

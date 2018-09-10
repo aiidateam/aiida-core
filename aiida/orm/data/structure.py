@@ -12,12 +12,19 @@ This module defines the classes for structures and all related
 functions to operate on them.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+import itertools
+import copy
+from functools import reduce
+
+import six
+from six.moves import range, zip
+
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.orm.calculation.inline import optional_inline
-import itertools
-import copy
 
 # Threshold used to check if the mass of two different Site objects is the same.
 
@@ -33,7 +40,7 @@ from aiida.common.constants import elements
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
-_atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
+_atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
 
 def _get_valid_cell(inputcell):
@@ -160,7 +167,7 @@ def _create_symbols_tuple(symbols):
     Returns a tuple with the symbols provided. If a string is provided,
     this is converted to a tuple with one single element.
     """
-    if isinstance(symbols, basestring):
+    if isinstance(symbols, six.string_types):
         symbols_list = (symbols,)
     else:
         symbols_list = tuple(symbols)
@@ -184,7 +191,7 @@ def _create_weights_tuple(weights):
     return weights_tuple
 
     
-def create_automatic_kind_name(symbols,weights):
+def create_automatic_kind_name(symbols, weights):
     """
     Create a string obtained with the symbols appended one
     after the other, without spaces, in alphabetical order;
@@ -319,7 +326,7 @@ def get_formula_from_symbol_list(_list, separator=""):
         else:
             multiplicity_str = str(elem[0])
 
-        if isinstance(elem[1], basestring):
+        if isinstance(elem[1], six.string_types):
             list_str.append("{}{}".format(elem[1], multiplicity_str))
         elif elem[0] > 1:
             list_str.append(
@@ -434,7 +441,7 @@ def get_formula_group(symbol_list, separator=""):
         n = len(_list)
         the_symbol_list = copy.deepcopy(_list)
 
-        while (not has_finished) and (group_size <= n / 2):
+        while (not has_finished) and (group_size <= n // 2):
             # try to group as much as possible by groups of size group_size
             the_symbol_list, has_grouped = group_together_symbols(
                 the_symbol_list,
@@ -546,7 +553,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
     if mode in ['hill_compact', 'count_compact']:
         from fractions import gcd
         the_gcd = reduce(gcd,[e[0] for e in the_symbol_list])
-        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
+        the_symbol_list = [[e[0]//the_gcd,e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
@@ -604,9 +611,8 @@ def symop_ortho_from_fract(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = map(lambda x: math.pi * x / 180,
-                             alpha, beta, gamma)
-    ca, cb, cg = map(math.cos, [alpha, beta, gamma])
+    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
+    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
     sg = math.sin(gamma)
 
     return numpy.array([
@@ -632,9 +638,8 @@ def symop_fract_from_ortho(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = map(lambda x: math.pi * x / 180,
-                             [alpha, beta, gamma])
-    ca, cb, cg = map(math.cos, [alpha, beta, gamma])
+    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
+    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
     sg = math.sin(gamma)
     ctg = cg / sg
     D = math.sqrt(sg * sg - cb * cb - ca * ca + 2 * ca * cb * cg)
@@ -704,6 +709,47 @@ def _get_cif_ase_inline(struct, parameters):
         cif.values[i]['_cell_formula_units_Z'] = 1
         cif.values[i]['_chemical_formula_sum'] = formula
     return {'cif': cif}
+
+
+def atom_kinds_to_html(atom_kind):
+    """
+
+    Construct in html format
+
+    an alloy with 0.5 Ge, 0.4 Si and 0.1 vacancy is represented as
+    Ge<sub>0.5</sub> + Si<sub>0.4</sub> + vacancy<sub>0.1</sub>
+
+    Args:
+        atom_kind: a string with the name of the atomic kind, as printed by
+        kind.get_symbols_string(), e.g. Ba0.80Ca0.10X0.10
+
+    Returns:
+        html code for rendered formula
+    """
+
+    # Parse the formula (TODO can be made more robust though never fails if
+    # it takes strings generated with kind.get_symbols_string())
+    import re
+    elements = re.findall(r'([A-Z][a-z]*)([0-1][.[0-9]*]?)?', atom_kind)
+
+    # Compose the html string
+    html_formula_pieces = []
+
+    for element in elements:
+
+        # replace element X by 'vacancy'
+        species = element[0] if element[0] != 'X' else 'vacancy'
+        weight = element[1] if element[1] != '' else None
+
+        if weight is not None:
+            html_formula_pieces.append(species + '<sub>' + weight +
+                                   '</sub>')
+        else:
+            html_formula_pieces.append(species)
+
+    html_formula = ' + '.join(html_formula_pieces)
+
+    return html_formula
 
 
 class StructureData(Data):
@@ -832,47 +878,59 @@ class StructureData(Data):
             three directions.
         .. note:: Requires the pymatgen module (version >= 3.3.5, usage
             of earlier versions may cause errors).
-        
+
         :raise ValueError: if there are partial occupancies together with spins.
         """
         def build_kind_name(species_and_occu):
             """
-            Build a kind name from a pymatgen Composition, including an
-            additional ordinal if spin is included, e.g. it returns '<element>1'
-            for an atom with spin<0 and '<element>2' for an element with spin>0,
-            ortherwise (no spin) it returns simply '<element>'
-            :param specie: a pymatgen specie
-            :return: a string
-            """
-            has_spin = any([specie.as_dict().get('properties', {}).get('spin', 0) != 0
-                            for specie in species_and_occu.keys()])
+            Build a kind name from a pymatgen Composition, including an additional ordinal if spin is included,
+            e.g. it returns '<specie>1' for an atom with spin < 0 and '<specie>2' for an atom with spin > 0,
+            otherwise (no spin) it returns None
 
-            if has_spin and (len(species_and_occu.items()) > 1
-                             or any([weight != 1.0 for weight in species_and_occu.values()])):
+            :param species_and_occu: a pymatgen species and occupations dictionary
+            :return: a string representing the kind name or None
+            """
+            species = list(species_and_occu.keys())
+            occupations = list(species_and_occu.values())
+
+            has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)
+            has_partial_occupancies = (len(occupations) != 1 or occupations[0] != 1.0)
+
+            if has_partial_occupancies and has_spin:
                 raise ValueError('Cannot set partial occupancies and spins at the same time')
 
-            if not has_spin:
+            if has_spin:
+
+                symbols = [specie.symbol for specie in species]
+                kind_name = create_automatic_kind_name(symbols, occupations)
+
+                # If there is spin, we can only have a single specie, otherwise we would have raised above
+                specie = species[0]
+                spin = specie.as_dict().get('properties', {}).get('spin', 0)
+
+                if spin < 0:
+                    kind_name += '1'
+                else:
+                    kind_name += '2'
+
+                return kind_name
+            else:
                 return None
 
-            spin = species_and_occu.keys()[0].as_dict().get('properties', {}).get('spin', 0)
-
-            if spin < 0:
-                return specie.symbol + '1'
-            else:
-                return specie.symbol + '2'
-        
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
         self.clear_kinds()
+
         for site in struct.sites:
+
             if 'kind_name' in site.properties:
                 kind_name = site.properties['kind_name']
             else:
                 kind_name = build_kind_name(site.species_and_occu)
 
             inputs = {
-                'symbols': [x[0].symbol for x in site.species_and_occu.items()],
-                'weights': [x[1] for x in site.species_and_occu.items()],
+                'symbols': [x.symbol for x in site.species_and_occu.keys()],
+                'weights': [x for x in site.species_and_occu.values()],
                 'position': site.coords.tolist()
             }
 
@@ -892,21 +950,21 @@ class StructureData(Data):
 
         try:
             _get_valid_cell(self.cell)
-        except ValueError as e:
-            raise ValidationError("Invalid cell: {}".format(e.message))
+        except ValueError as exc:
+            raise ValidationError("Invalid cell: {}".format(exc))
 
         try:
             get_valid_pbc(self.pbc)
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Invalid periodic boundary conditions: {}".format(e.message))
+                "Invalid periodic boundary conditions: {}".format(exc))
 
         try:
             # This will try to create the kinds objects
             kinds = self.kinds
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Unable to validate the kinds: {}".format(e.message))
+                "Unable to validate the kinds: {}".format(exc))
 
         from collections import Counter
 
@@ -920,9 +978,9 @@ class StructureData(Data):
         try:
             # This will try to create the sites objects
             sites = self.sites
-        except ValueError as e:
+        except ValueError as exc:
             raise ValidationError(
-                "Unable to validate the sites: {}".format(e.message))
+                "Unable to validate the sites: {}".format(exc))
 
         for site in sites:
             if site.kind_name not in [k.name for k in kinds]:
@@ -976,6 +1034,79 @@ class StructureData(Data):
         """
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self, **kwargs).encode('utf-8'), {}
+
+    def _prepare_chemdoodle(self, main_file_name=""):
+        """
+        Write the given structure to a string of format required by ChemDoodle.
+        """
+        import numpy as np
+        from itertools import product
+        import json
+
+        supercell_factors=[1, 1, 1]
+
+        # Get cell vectors and atomic position
+        lattice_vectors = np.array(self.get_attr('cell'))
+        base_sites = self.get_attr('sites')
+
+        start1 = -int(supercell_factors[0] / 2)
+        start2 = -int(supercell_factors[1] / 2)
+        start3 = -int(supercell_factors[2] / 2)
+
+        stop1 = start1 + supercell_factors[0]
+        stop2 = start2 + supercell_factors[1]
+        stop3 = start3 + supercell_factors[2]
+
+        grid1 = range(start1, stop1)
+        grid2 = range(start2, stop2)
+        grid3 = range(start3, stop3)
+
+        atoms_json = []
+
+        # Manual recenter of the structure
+        center = (lattice_vectors[0] + lattice_vectors[1] +
+                  lattice_vectors[2]) / 2.
+
+        for ix, iy, iz in product(grid1, grid2, grid3):
+            for base_site in base_sites:
+                shift = (ix * lattice_vectors[0] + iy * lattice_vectors[1] + \
+                         iz * lattice_vectors[2] - center).tolist()
+
+                kind_name = base_site['kind_name']
+                kind_string = self.get_kind(kind_name).get_symbols_string()
+
+                atoms_json.append(
+                    {'l': kind_string,
+                     'x': base_site['position'][0] + shift[0],
+                     'y': base_site['position'][1] + shift[1],
+                     'z': base_site['position'][2] + shift[2],
+                     # 'atomic_elements_html': kind_string
+                     'atomic_elements_html': atom_kinds_to_html(kind_string)
+                     })
+
+        cell_json = {
+            "t": "UnitCell",
+            "i": "s0",
+            "o": (-center).tolist(),
+            "x": (lattice_vectors[0] - center).tolist(),
+            "y": (lattice_vectors[1] - center).tolist(),
+            "z": (lattice_vectors[2] - center).tolist(),
+            "xy": (lattice_vectors[0] + lattice_vectors[1]
+                   - center).tolist(),
+            "xz": (lattice_vectors[0] + lattice_vectors[2]
+                   - center).tolist(),
+            "yz": (lattice_vectors[1] + lattice_vectors[2]
+                   - center).tolist(),
+            "xyz": (lattice_vectors[0] + lattice_vectors[1]
+                    + lattice_vectors[2] - center).tolist(),
+        }
+
+        return_dict = {"s": [cell_json],
+                        "m": [{"a": atoms_json}],
+                        "units": '&Aring;'
+                        }
+
+        return json.dumps(return_dict), {}
 
     def _prepare_xyz(self, main_file_name=""):
         """
@@ -1755,7 +1886,7 @@ class StructureData(Data):
         :return: :py:class:`aiida.orm.data.cif.CifData` node.
         """
         from aiida.orm.data.parameter import ParameterData
-        import structure  # This same module
+        from . import structure  # This same module
 
         param = ParameterData(dict=kwargs)
         try:
@@ -2090,8 +2221,7 @@ class Kind(object):
         normalized_weights = (i / w_sum for i in self._weights)
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
-        self._mass = sum([i * j for i, j in
-                          zip(normalized_weights, element_masses)])
+        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses))
 
     @property
     def name(self):
@@ -2108,7 +2238,7 @@ class Kind(object):
         """
         Set the name of this site (a string).
         """
-        self._name = unicode(value)
+        self._name = six.text_type(value)
 
     def set_automatic_kind_name(self, tag=None):
         """
@@ -2349,9 +2479,9 @@ class Site(object):
             try:
                 self.kind_name = raw['kind_name']
                 self.position = raw['position']
-            except KeyError as e:
+            except KeyError as exc:
                 raise ValueError("Invalid raw object, it does not contain any "
-                                 "key {}".format(e.message))
+                                 "key {}".format(exc.args[0]))
             except TypeError:
                 raise ValueError("Invalid raw object, it is not a dictionary")
 
@@ -2359,8 +2489,8 @@ class Site(object):
             try:
                 self.kind_name = kwargs.pop('kind_name')
                 self.position = kwargs.pop('position')
-            except KeyError as e:
-                raise ValueError("You need to specify {}".format(e.message))
+            except KeyError as exc:
+                raise ValueError("You need to specify {}".format(exc.args[0]))
             if kwargs:
                 raise ValueError("Unrecognized parameters: {}".format(
                     kwargs.keys))
@@ -2399,7 +2529,7 @@ class Site(object):
                 tag_list.append(None)
             # If the kind name is equal to the specie name,
             # then no tag should be set
-            elif unicode(k.name) == unicode(k.symbols[0]):
+            elif six.text_type(k.name) == six.text_type(k.symbols[0]):
                 tag_list.append(None)
             else:
                 # Name is not the specie name
@@ -2417,7 +2547,7 @@ class Site(object):
             # If it is a string, it is the name of the element,
             # and I have to generate a new integer for this element
             # and replace tag_list[i] with this new integer
-            if isinstance(tag_list[i], basestring):
+            if isinstance(tag_list[i], six.string_types):
                 # I get a list of used tags for this element
                 existing_tags = used_tags[tag_list[i]]
                 if existing_tags:
@@ -2465,7 +2595,7 @@ class Site(object):
         """
         Set the type of this site (a string).
         """
-        self._kind_name = unicode(value)
+        self._kind_name = six.text_type(value)
 
     @property
     def position(self):

@@ -10,6 +10,7 @@
 """Components for the WorkChain concept of the workflow engine."""
 from __future__ import absolute_import
 import functools
+import six
 
 from plumpy import auto_persist, WorkChainSpec, Wait, Continue
 from plumpy.workchains import if_, while_, return_, _PropagateReturn
@@ -156,13 +157,18 @@ class WorkChain(Process):
         except _PropagateReturn as exception:
             finished, result = True, exception.exit_code
         else:
-            if isinstance(stepper_result, (int, ExitCode)):
+            # Set result to None unless stepper_result was non-zero positive integer or ExitCode with similar status
+            if isinstance(stepper_result, six.integer_types) and stepper_result > 0:
+                result = ExitCode(stepper_result)
+            elif isinstance(stepper_result, ExitCode) and stepper_result.status > 0:
                 result = stepper_result
             else:
                 result = None
 
-        if not finished and (stepper_result is None or isinstance(stepper_result, ToContext)):
-
+        # If the stepper said we are finished or the result is an ExitCode, we exit by returning
+        if finished or isinstance(result, ExitCode):
+            return result
+        else:
             if isinstance(stepper_result, ToContext):
                 self.to_context(**stepper_result)
 
@@ -170,8 +176,6 @@ class WorkChain(Process):
                 return Wait(self._do_step, 'Waiting before next step')
 
             return Continue(self._do_step)
-
-        return result
 
     def on_wait(self, awaitables):
         super(WorkChain, self).on_wait(awaitables)

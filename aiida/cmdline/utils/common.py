@@ -217,8 +217,8 @@ def get_calculation_log_report(calculation):
     report = []
 
     if calculation_state == calc_states.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
-                                                        if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(calculation_state,
+                                                        scheduler_state if scheduler_state else '(unknown)')
     else:
         state_string = '{}'.format(calculation_state)
 

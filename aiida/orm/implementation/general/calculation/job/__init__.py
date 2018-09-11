@@ -306,7 +306,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if val is None:
             self._set_attr('account', None)
         else:
-            self._set_attr('account', unicode(val))
+            self._set_attr('account', six.text_type(val))
 
     def set_qos(self, val):
         """
@@ -317,7 +317,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if val is None:
             self._set_attr('qos', None)
         else:
-            self._set_attr('qos', unicode(val))
+            self._set_attr('qos', six.text_type(val))
 
     def set_import_sys_environment(self, val):
         """

@@ -410,16 +410,16 @@ class JobProcess(processes.Process):
                      'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
             spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, default=1800,
                 help='Set the wallclock in seconds asked to the scheduler')
-            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types, non_db=True, required=False,
                 help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
                      'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
                      'scheduler submission file where such text is inserted: with this method, the string is inserted before '
                      ' any non-scheduler command')
-            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types, non_db=True, required=False,
                 help='Set the name of the queue on the remote computer')
-            spec.input('{}.account'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+            spec.input('{}.account'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types, non_db=True, required=False,
                 help='Set the account to use in for the queue on the remote computer')
-            spec.input('{}.qos'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True, required=False,
+            spec.input('{}.qos'.format(cls.OPTIONS_INPUT_LABEL), valid_type=six.string_types, non_db=True, required=False,
                 help='Set the quality of service to use in for the queue on the remote computer')
 
             spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,

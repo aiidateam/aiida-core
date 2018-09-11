@@ -32,6 +32,7 @@ from six.moves import cStringIO as StringIO
 from aiida.transport import cli as transport_cli
 from aiida.transport.transport import Transport, TransportInternalError
 
+
 # refactor or raise the limit: issue #1784
 # pylint: disable=too-many-public-methods
 class LocalTransport(Transport):

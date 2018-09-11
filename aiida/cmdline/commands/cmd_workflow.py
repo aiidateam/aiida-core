@@ -117,10 +117,8 @@ def workflow_list(short, all_states, depth, past_days, workflows):
     backend = construct_backend()
     current_user = backend.users.get_automatic_user()
 
-    wf_list = get_workflow_list([workflow.pk for workflow in workflows],
-                                user=current_user,
-                                all_states=all_states,
-                                n_days_ago=past_days)
+    wf_list = get_workflow_list(
+        [workflow.pk for workflow in workflows], user=current_user, all_states=all_states, n_days_ago=past_days)
     for workflow in wf_list:
         if not workflow.is_subworkflow() or workflow in workflows:
             echo.echo('\n'.join(get_workflow_info(workflow, tab_size=tab_size, short=short, depth=depth)))

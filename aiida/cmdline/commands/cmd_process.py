@@ -60,6 +60,7 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout):
     """Kill running processes."""
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
@@ -86,6 +87,7 @@ def process_kill(processes, timeout):
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout):
     """Pause running processes."""
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
@@ -112,6 +114,7 @@ def process_pause(processes, timeout):
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout):
     """Play paused processes."""
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
@@ -137,6 +140,7 @@ def process_play(processes, timeout):
 @verdi_process.command('watch')
 @arguments.PROCESSES()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from kiwipy import BroadcastFilter

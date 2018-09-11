@@ -322,7 +322,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.account:
             lines.append("#SBATCH --account={}".format(job_tmpl.account))
 
-        if job_tmpl.qos:
+        if job_tmpl.qos:        
             lines.append("#SBATCH --qos={}".format(job_tmpl.qos))
 
         if job_tmpl.priority:

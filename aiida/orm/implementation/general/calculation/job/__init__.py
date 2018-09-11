@@ -292,9 +292,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the queue name
         """
-        if val is None:
-            self._set_attr('queue_name', None)
-        else:
+        if val is not None:
             self._set_attr('queue_name', six.text_type(val))
 
     def set_account(self, val):
@@ -303,9 +301,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the account name
         """
-        if val is None:
-            self._set_attr('account', None)
-        else:
+        if val is not None:
             self._set_attr('account', six.text_type(val))
 
     def set_qos(self, val):
@@ -314,9 +310,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the quality of service
         """
-        if val is None:
-            self._set_attr('qos', None)
-        else:
+        if val is not None:
             self._set_attr('qos', six.text_type(val))
 
     def set_import_sys_environment(self, val):

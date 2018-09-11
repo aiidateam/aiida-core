@@ -279,6 +279,9 @@ class PbsBaseClass(Scheduler):
         if job_tmpl.queue_name:
             lines.append("#PBS -q {}".format(job_tmpl.queue_name))
 
+        if job_tmpl.account:
+            lines.append("#PBS -A {}".format(job_tmpl.account))
+
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1024,  +1023] inclusive.  Sets job's Priority

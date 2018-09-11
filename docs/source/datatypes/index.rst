@@ -56,7 +56,7 @@ ParameterData
 StructureData
 +++++++++++++
 
-* **Class**: :py:class:`~aiida.orm.data.upf.UpfData`
+* **Class**: :py:class:`~aiida.orm.data.structure.StructureData`
 * **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``structure``
 * **Aim**: store a crystal structure to be used by atomistic codes
 * **What is stored in the database**: all atomic positions, species, kinds,

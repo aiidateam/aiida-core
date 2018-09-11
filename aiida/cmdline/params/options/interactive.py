@@ -110,10 +110,23 @@ class InteractiveOption(ConditionalOption):
 
         return super(InteractiveOption, self).get_default(ctx)
 
+    @staticmethod
+    def custom_value_proc(value):
+        """Custom value_proc function for the click.prompt which it will call to do value conversion.
+
+        Simply return the value, because we want to take care of value conversion ourselves in the `simple_prompt_loop`.
+        If we let `click.prompt` do it, it will raise an exception when the user passes a control character, like the
+        question mark, to bring up the help message and the type of the option is not a string, causing conversion to
+        fail.
+        """
+        return value
+
     def prompt_func(self, ctx):
         """prompt function with args set"""
         return click.prompt(
             click.style(self._prompt, fg=self.PROMPT_COLOR),
+            type=self.type,
+            value_proc=self.custom_value_proc,
             prompt_suffix=click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,

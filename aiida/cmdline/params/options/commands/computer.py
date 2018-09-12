@@ -27,7 +27,7 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
             raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
     else:
         raise ValidationError(
-            "The shouldcall_... function should always be run (and prompted) AFTER asking for a scheduler")
+            "The should_call_... function should always be run (and prompted) AFTER asking for a scheduler")
 
     job_resource_cls = scheduler_cls.job_resource_class
     if job_resource_cls is None:
@@ -61,9 +61,9 @@ ENABLED = OverridableOption(
     # Otherwise you would not get a default value when prompting
 )
 
-TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin.', cls=InteractiveOption)
+TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
 
-SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin.', cls=InteractiveOption)
+SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin', cls=InteractiveOption)
 
 SHEBANG = OverridableOption(
     '--shebang',

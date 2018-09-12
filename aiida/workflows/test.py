@@ -123,7 +123,7 @@ def generate_calc():
     computer = Computer.get("localhost")
 
     calc = CustomCalc(computer=computer, withmpi=True)
-    calc.set_resources(
+    calc.set_option('resources',
         {"num_machines": 1, "num_mpiprocs_per_machine": 1})
     calc.store()
     calc._set_state(calc_states.FINISHED)

@@ -408,9 +408,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can import only "
-                             "version {}".format(metadata['export_version'],
-                                                 expected_export_version))
+            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
+                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -928,10 +927,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can "
-                             "import only version {}"
-                             .format(metadata['export_version'],
-                                     expected_export_version))
+            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
+                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #

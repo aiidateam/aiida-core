@@ -1,0 +1,55 @@
+---
+# creates conda environment for aiida
+# usage: conda env create -f environment.yml
+name: aiida
+channels:
+  - anaconda
+  - conda-forge
+  - etetoolkit
+dependencies:
+  - postgresql==9.6.6
+    # aiida dependencies available on conda
+  - SQLAlchemy-Utils==0.33.0
+  - passlib==1.7.1
+  - numpy==1.12.0
+  - ecdsa==0.13
+  - ete3==3.0.0b35
+  - anyjson==0.3.3
+  - psutil==5.4.0
+  - tabulate==0.7.5
+  - tzlocal==1.3
+  - aldjemy==0.6.0
+  - six==1.11.0
+  - click-plugins
+  - ujson==1.35
+  - pathlib2==2.3.0
+  - voluptuous==0.8.11
+  - portalocker==1.1.0
+  - enum34==1.1.6
+  - ipython<6.0
+  - paramiko==2.4.0
+  - celery==3.1.25
+  - billiard==3.3.0.23
+  - pycrypto==2.6.1
+  - python-dateutil==2.6.0
+  - alembic==0.9.6
+  - pyyaml
+  - future==0.16.0
+  - click==6.7
+  - amqp==1.4.9
+  - pip:
+    # aiida itself
+    - aiida==0.12.0
+    # aiida dependencies not available on conda
+    - django-extensions==1.5.0
+    - python-mimeparse==0.1.4
+    - uritools==1.0.2
+    - pytz==2014.10
+    - psycopg2-binary==2.7.4
+    - click-spinner
+    - django==1.7.11
+    - meld3==1.0.0
+    - plumpy==0.7.12
+    - reentry==1.2.0
+    - SQLAlchemy==1.0.19
+    - validate-email==1.3

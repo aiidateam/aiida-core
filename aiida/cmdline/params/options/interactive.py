@@ -145,8 +145,13 @@ class InteractiveOption(ConditionalOption):
         msg = self.help or 'Expecting {}'.format(self.type.name)
         choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
         if choices:
-            msg += '\none of:\n'
-            choice_table = ['\t{:<12} {}'.format(*choice) for choice in choices]
+            choice_table = []
+            msg += '\nSelect one of:\n'
+            for choice in choices:
+                if isinstance(choice, tuple):
+                    choice_table.append('\t{:<12} {}'.format(*choice))
+                else:
+                    choice_table.append('\t{:<12}'.format(choice))
             msg += '\n'.join(choice_table)
         return msg
 

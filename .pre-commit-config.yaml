@@ -58,7 +58,7 @@
   hooks:
   - id: pyproject
     name: Validating pyproject.toml
-    entry: python ./utils/validate_pyproject.py
+    entry: python ./utils/validate_pyproject.py version
     language: system
     files: >-
       (?x)^(

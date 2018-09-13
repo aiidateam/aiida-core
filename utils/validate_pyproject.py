@@ -13,7 +13,11 @@ import os
 import sys
 import toml
 
-@click.command()
+@click.group()
+def cli():
+    pass
+
+@click.command('version')
 def validate_pyproject():
     """
     Ensure that the version of reentry in setup_requirements.py and pyproject.toml are identical
@@ -63,5 +67,39 @@ def validate_pyproject():
         sys.exit(1)
 
 
+@click.command('conda')
+def update_environment_yml():
+    """
+    Updates environment.yml file for conda.
+    """
+    from setup_requirements import install_requires
+    import yaml
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    environment_filename = 'environment.yml'
+    file_path = os.path.join(dir_path, environment_filename)
+
+    # fix incompatibilities between conda and pypi
+    replacements = {
+        'psycopg2-binary' : 'psycopg',
+        'validate-email' : 'validate_email',
+    }
+    for k in replacements:
+        install_requires = [ i.replace(k, replacements[k]) for i in install_requires]
+
+    environment = dict(
+        name = 'aiida',
+        channels = ['anaconda', 'conda-forge', 'etetoolkit'],
+        dependencies = install_requires,
+    )
+
+    with open(file_path, 'w') as f:
+        yaml.dump(environment, f,
+                explicit_start=True,
+                default_flow_style=False)
+
+cli.add_command(validate_pyproject)
+cli.add_command(update_environment_yml)
+
 if __name__ == '__main__':
-    validate_pyproject()  # pylint: disable=no-value-for-parameter
+    cli()  # pylint: disable=no-value-for-parameter

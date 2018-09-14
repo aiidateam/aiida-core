@@ -39,7 +39,7 @@ dependencies:
 - tabulate==0.8.2
 - ete3==3.1.1
 - uritools==2.1.0
-- psycopg==2.7.4
+- psycopg2==2.7.4
 - paramiko==2.4.1
 - ecdsa==0.13
 - ipython<6.0

@@ -81,7 +81,7 @@ def update_environment_yml():
 
     # fix incompatibilities between conda and pypi
     replacements = {
-        'psycopg2-binary' : 'psycopg',
+        'psycopg2-binary' : 'psycopg2',
         'validate-email' : 'validate_email',
     }
     for k in replacements:

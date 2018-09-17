@@ -7,8 +7,8 @@
 .. image:: https://readthedocs.org/projects/aiida-core/badge
     :target: http://aiida-core.readthedocs.io/
 
-.. image:: https://badge.fury.io/py/aiida_core.svg
-    :target: https://badge.fury.io/py/aiida_core
+.. image:: https://badge.fury.io/py/aiida-core.svg
+    :target: https://badge.fury.io/py/aiida-core
     
 =====
 AiiDA

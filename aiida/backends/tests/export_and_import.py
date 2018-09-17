@@ -279,6 +279,7 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
+        from aiida.common import exceptions
         from aiida.orm import DataFactory
         from aiida.orm.importexport import export
 
@@ -310,7 +311,7 @@ class TestSimple(AiidaTestCase):
             self.tearDownClass()
             self.setUpClass()
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(exceptions.IncompatibleArchiveVersionError):
                 import_data(filename, silent=True)
         finally:
             # Deleting the created temporary folders

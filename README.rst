@@ -1,3 +1,15 @@
+.. image:: https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop
+    :target: https://travis-ci.org/aiidateam/aiida_core
+
+.. image:: https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop
+    :target: https://coveralls.io/github/aiidateam/aiida_core?branch=develop
+
+.. image:: https://readthedocs.org/projects/aiida-core/badge
+    :target: http://aiida-core.readthedocs.io/
+
+.. image:: https://badge.fury.io/py/aiida_core.svg
+    :target: https://badge.fury.io/py/aiida_core
+    
 =====
 AiiDA
 =====

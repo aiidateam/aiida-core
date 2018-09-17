@@ -61,7 +61,6 @@ def is_dbenv_loaded():
 def load_dbenv(profile=None, *args, **kwargs):
     if is_dbenv_loaded():
         raise InvalidOperation("You cannot call load_dbenv multiple times!")
-    settings.LOAD_DBENV_CALLED = True
 
     # This is going to set global variables in settings, including settings.BACKEND
     load_profile(profile=profile)
@@ -70,14 +69,16 @@ def load_dbenv(profile=None, *args, **kwargs):
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
-        return load_dbenv_sqlalchemy(profile=profile, *args, **kwargs)
+        to_return = load_dbenv_sqlalchemy(profile=profile, *args, **kwargs)
     elif settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
-        return load_dbenv_django(profile=profile, *args, **kwargs)
+        to_return = load_dbenv_django(profile=profile, *args, **kwargs)
     else:
         raise ConfigurationError("Invalid settings.BACKEND: {}".format(
             settings.BACKEND))
 
+    settings.LOAD_DBENV_CALLED = True
+    return to_return
 
 def get_workflow_list(*args, **kwargs):
     if settings.BACKEND == BACKEND_SQLA:

@@ -72,6 +72,10 @@ def update_environment_yml():
     """
     Updates environment.yml file for conda.
     """
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    sys.path.append(os.path.join(dir_path, os.pardir))
+
     from setup_requirements import install_requires
     import yaml
 

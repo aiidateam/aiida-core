@@ -48,18 +48,19 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
+    - pip install coveralls
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
 env:
-## Build matrix to test both backends, and the docs
-## I still let it create the test backend for django
-## also when building the docs
-## because otherwise the code would complain. Also, I need latex.
-- TEST_TYPE="pre-commit"
-- TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
-- TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
-- TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
+    ## Build matrix to test both backends, and the docs
+    ## I still let it create the test backend for django
+    ## also when building the docs
+    ## because otherwise the code would complain. Also, I need latex.
+    - TEST_TYPE="pre-commit"
+    - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
+    - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
+    - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
 before_script:
     - .ci/setup_profiles.sh
@@ -68,8 +69,8 @@ before_script:
 script: .ci/test_script.sh
 
 after_success:
-  # upload coverage report to codecov.io
-  - if [ "$TEST_TYPE" == "tests" ]; then codecov; fi
+  # upload coverage report to coveralls.io
+  - if [ "$TEST_TYPE" == "tests" ]; then coveralls; fi
 
 git:
   depth: 3

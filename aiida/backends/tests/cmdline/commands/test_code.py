@@ -16,14 +16,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCodeSetup, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Computer
-        new_comp = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
+        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer
-        self.comp = Computer.get('comp')
+        self.comp = self.backend.computers.get(name='comp')
 
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -101,14 +99,13 @@ class TestVerdiCodeCommands(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCodeCommands, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Computer
-        new_comp = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
+        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer, Code
-        self.comp = Computer.get('comp')
+        from aiida.orm import Code
+        self.comp = self.backend.computers.get(name='comp')
 
         try:
             code = Code.get_from_string('code')

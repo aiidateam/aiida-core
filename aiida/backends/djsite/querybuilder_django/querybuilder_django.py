@@ -93,13 +93,13 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     @property
     def AiidaUser(self):
-        import aiida.orm.user
+        import aiida.orm
         return aiida.orm.User
 
     @property
     def AiidaComputer(self):
-        import aiida.orm.implementation.django.computer
-        return aiida.orm.implementation.django.computer.Computer
+        import aiida.orm
+        return aiida.orm.Computer
 
     def get_filter_expr_from_column(self, operator, value, column):
 

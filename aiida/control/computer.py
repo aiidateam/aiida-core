@@ -106,7 +106,9 @@ class ComputerBuilder(object):
     @with_dbenv()
     def new(self):
         """Build and return a new computer instance (not stored)"""
-        from aiida.orm import Computer
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
 
         self.validate()
 
@@ -114,12 +116,11 @@ class ComputerBuilder(object):
         passed_keys = set(self._computer_spec.keys())
         used = set()
 
-        computer = Computer()
+        computer = backend.computers.create(
+            name=self._get_and_count('label', used), hostname=self._get_and_count('hostname', used))
 
-        computer.set_name(self._get_and_count('label', used))
         computer.set_description(self._get_and_count('description', used))
         computer.set_enabled_state(self._get_and_count('enabled', used))
-        computer.set_hostname(self._get_and_count('hostname', used))
         computer.set_scheduler_type(self._get_and_count('scheduler', used))
         computer.set_transport_type(self._get_and_count('transport', used))
         computer.set_prepend_text(self._get_and_count('prepend_text', used))

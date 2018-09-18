@@ -117,7 +117,8 @@ class UserCollection(Collection):
 
     def all(self):
         """
-        Final all users matching the given criteria
+        Get all users
+
         :return: A collection of users matching the criteria
         """
         # pylint: disable=no-self-use

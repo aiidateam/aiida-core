@@ -235,7 +235,7 @@ class TestSimple(AiidaTestCase):
 
             calc = JobCalculation()
             calc.set_computer(self.computer)
-            calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
             calc.add_link_from(sd)
@@ -474,7 +474,7 @@ class TestSimple(AiidaTestCase):
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
-            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
@@ -490,7 +490,7 @@ class TestSimple(AiidaTestCase):
 
             jc2 = JobCalculation()
             jc2.set_computer(self.computer)
-            jc2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
             jc2.add_link_from(sd2, label='l2')
@@ -557,7 +557,7 @@ class TestSimple(AiidaTestCase):
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
-            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
@@ -593,7 +593,7 @@ class TestSimple(AiidaTestCase):
 
             jc2 = JobCalculation()
             jc2.set_computer(self.computer)
-            jc2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
             jc2.add_link_from(sd2_imp, label='l2')
@@ -661,7 +661,7 @@ class TestSimple(AiidaTestCase):
 
             jc1 = JobCalculation()
             jc1.set_computer(self.computer)
-            jc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
@@ -930,7 +930,7 @@ class TestComplex(AiidaTestCase):
         try:
             calc1 = JobCalculation()
             calc1.set_computer(self.computer)
-            calc1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
             calc1._set_state(u'RETRIEVING')
@@ -952,7 +952,7 @@ class TestComplex(AiidaTestCase):
 
             calc2 = JobCalculation()
             calc2.set_computer(self.computer)
-            calc2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
             calc2.store()
             calc2.add_link_from(pd1, link_type=LinkType.INPUT)
@@ -1024,7 +1024,7 @@ class TestComputer(AiidaTestCase):
             calc1_label = "calc1"
             calc1 = JobCalculation()
             calc1.set_computer(self.computer)
-            calc1.set_resources({"num_machines": 1,
+            calc1.set_option('resources', {"num_machines": 1,
                                  "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
@@ -1033,7 +1033,7 @@ class TestComputer(AiidaTestCase):
             calc2_label = "calc2"
             calc2 = JobCalculation()
             calc2.set_computer(self.computer)
-            calc2.set_resources({"num_machines": 2,
+            calc2.set_option('resources', {"num_machines": 2,
                                  "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
@@ -1148,7 +1148,7 @@ class TestComputer(AiidaTestCase):
             calc1_label = "calc1"
             calc1 = JobCalculation()
             calc1.set_computer(self.computer)
-            calc1.set_resources({"num_machines": 1,
+            calc1.set_option('resources', {"num_machines": 1,
                                  "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
@@ -1168,7 +1168,7 @@ class TestComputer(AiidaTestCase):
             calc2_label = "calc2"
             calc2 = JobCalculation()
             calc2.set_computer(self.computer)
-            calc2.set_resources({"num_machines": 2,
+            calc2.set_option('resources', {"num_machines": 2,
                                  "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
@@ -1258,7 +1258,7 @@ class TestComputer(AiidaTestCase):
             calc1_label = "calc1"
             calc1 = JobCalculation()
             calc1.set_computer(self.computer)
-            calc1.set_resources({"num_machines": 1,
+            calc1.set_option('resources', {"num_machines": 1,
                                  "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
@@ -1279,7 +1279,7 @@ class TestComputer(AiidaTestCase):
             calc2_label = "calc2"
             calc2 = JobCalculation()
             calc2.set_computer(self.computer)
-            calc2.set_resources({"num_machines": 2,
+            calc2.set_option('resources', {"num_machines": 2,
                                  "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
@@ -1300,7 +1300,7 @@ class TestComputer(AiidaTestCase):
             calc3_label = "calc3"
             calc3 = JobCalculation()
             calc3.set_computer(self.computer)
-            calc3.set_resources({"num_machines": 2,
+            calc3.set_option('resources', {"num_machines": 2,
                                  "num_mpiprocs_per_machine": 2})
             calc3.label = calc3_label
             calc3.store()
@@ -1387,7 +1387,7 @@ class TestComputer(AiidaTestCase):
             calc1_label = "calc1"
             calc1 = JobCalculation()
             calc1.set_computer(self.computer)
-            calc1.set_resources({"num_machines": 1,
+            calc1.set_option('resources', {"num_machines": 1,
                                  "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
@@ -1540,7 +1540,7 @@ class TestLinks(AiidaTestCase):
 
         pw1 = JobCalculation()
         pw1.set_computer(self.computer)
-        pw1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         pw1.store()
 
         d3 = Int(1).store()
@@ -1548,7 +1548,7 @@ class TestLinks(AiidaTestCase):
 
         pw2 = JobCalculation()
         pw2.set_computer(self.computer)
-        pw2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        pw2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         pw2.store()
 
         d5 = Int(1).store()
@@ -1944,7 +1944,7 @@ class TestLinks(AiidaTestCase):
 
             jc = JobCalculation()
             jc.set_computer(self.computer)
-            jc.set_resources(
+            jc.set_option('resources',
                 {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc.store()
 

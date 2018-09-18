@@ -8,14 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from six.moves import zip
 import six
 
+
 @six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, backend):
+        """
+        :param backend: The AiiDA backend
+        :type backend: :class:`aiida.orm.Backend`
+        """
+        self._backend = backend
 
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:
@@ -302,7 +307,7 @@ class AbstractQueryManager(object):
 
         return entry_list
 
-    def get_all_parents(self, node_pks, return_values=['id']):
+    def get_all_parents(self, node_pks, return_values=('id',)):
         """
         Get all the parents of given nodes
         :param node_pks: one node pk or an iterable of node pks

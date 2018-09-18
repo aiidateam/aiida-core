@@ -25,9 +25,8 @@ class TestQueryBuilder(AiidaTestCase):
         This tests the classifications of the QueryBuilder
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
-        from aiida.orm import Group, User, Node, Computer, Data, Calculation
+        from aiida.orm import Group, User, Node, Computer, Data
         from aiida.common.exceptions import InputValidationError
 
         qb = QueryBuilder()
@@ -87,7 +86,6 @@ class TestQueryBuilder(AiidaTestCase):
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
-
 
     def test_simple_query_1(self):
         """
@@ -323,19 +321,21 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(qb.count(), 1)
 
         # Now I am testing the subclassing with tuples:
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'})
+        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'), filters={'attributes.cat':'miau'})
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+                                   filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'},
+                                   subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat':'miau'}, )
+        qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat': 'miau'}, )
         self.assertEqual(qb.count(), 3)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'),
-                filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+                                   filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.Data.'),
-                filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
+                                   filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):
@@ -438,12 +438,12 @@ class TestQueryBuilder(AiidaTestCase):
 
 
 class TestQueryHelp(AiidaTestCase):
-    def test_queryhelp(self):   
+    def test_queryhelp(self):
         """
         Here I test the queryhelp by seeing whether results are the same as using the append method.
         I also check passing of tuples.
         """
-        
+
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data import Data
@@ -467,9 +467,9 @@ class TestQueryHelp(AiidaTestCase):
                 ((ParameterData, Data), 2, False),
                 ((ParameterData, Data), 3, True),
                 ((ParameterData, Data, StructureData), 3, False),
-            ):
+        ):
             qb = QueryBuilder()
-            qb.append(cls, filters={'attributes.foo-qh2':'bar'}, subclassing=subclassing, project='uuid')
+            qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
             self.assertEqual(qb.count(), expected_count)
 
             qh = qb.get_json_compatible_queryhelp()
@@ -479,19 +479,19 @@ class TestQueryHelp(AiidaTestCase):
                 sorted([uuid for uuid, in qb.all()]),
                 sorted([uuid for uuid, in qb_new.all()]))
 
-        qb = QueryBuilder().append(Group, filters={'name':'helloworld'})
+        qb = QueryBuilder().append(Group, filters={'name': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = QueryBuilder().append((Group,), filters={'name':'helloworld'})
+        qb = QueryBuilder().append((Group,), filters={'name': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = QueryBuilder().append(Computer,)
+        qb = QueryBuilder().append(Computer, )
         self.assertEqual(qb.count(), 1)
 
         qb = QueryBuilder().append(cls=(Computer,))
         self.assertEqual(qb.count(), 1)
 
-            
+
 class TestQueryBuilderCornerCases(AiidaTestCase):
     """
     In this class corner cases of QueryBuilder are added.
@@ -758,9 +758,8 @@ class QueryBuilderPath(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         from aiida.common.links import LinkType
-        from aiida.backends.utils import QueryFactory
 
-        q = QueryFactory()()
+        q = self.backend.query_manager
         n1 = Node()
         n1.label = 'n1'
         n1.store()
@@ -949,7 +948,6 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.backends.utils import QueryFactory
         from aiida.orm import Node, DataFactory, Calculation
         from collections import defaultdict
 
@@ -959,7 +957,7 @@ class TestManager(AiidaTestCase):
             statistics['types'][n._plugin_type_string] += 1
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        qmanager = QueryFactory()()
+        qmanager = self.backend.query_manager
         current_db_statistics = qmanager.get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
@@ -1007,7 +1005,7 @@ class TestManager(AiidaTestCase):
         class QueryManagerDefault(AbstractQueryManager):
             pass
 
-        qmanager_default = QueryManagerDefault()
+        qmanager_default = QueryManagerDefault(self.backend)
 
         current_db_statistics = qmanager_default.get_creation_statistics()
         types = defaultdict(int)

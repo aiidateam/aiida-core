@@ -121,7 +121,7 @@ class SqlaAuthInfo(AuthInfo):
 
     @property
     def computer(self):
-        return computers.Computer.get(self._dbauthinfo.dbcomputer)
+        return self._backend.computers.from_dbmodel(self._dbauthinfo.dbcomputer)
 
     @property
     def user(self):

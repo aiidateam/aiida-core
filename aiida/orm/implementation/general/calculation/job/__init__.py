@@ -112,12 +112,62 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classmethod
     def process(cls):
+        """
+        Return the JobProcess class constructed based on this JobCalculatin class
+
+        :return: JobProcess class
+        """
         from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
 
     @classmethod
     def get_builder(cls):
+        """
+        Return a JobProcessBuilder instance, tailored for this calculation class
+
+        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        validation when settings values as well as automated docstrings for each input
+
+        :return: JobProcessBuilder instance
+        """
         return cls.process().get_builder()
+
+    def get_builder_restart(self):
+        """
+        Return a JobProcessBuilder instance, tailored for this calculation instance
+
+        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        validation when settings values as well as automated docstrings for each input.
+
+        The fields of the builder will be pre-populated with all the inputs recorded for this instance as well as
+        settings all the options that were explicitly set for this calculation instance.
+
+        This builder can then directly be launched again to effectively run a duplicate calculation. But more useful
+        is that it serves as a starting point to, after changing one or more inputs, launch a similar calculation by
+        using this already completed calculation as a starting point.
+
+        :return: JobProcessBuilder instance
+        """
+        from aiida.work.job_processes import JobProcess
+        from aiida.work.ports import PortNamespace
+
+        inputs = self.get_inputs_dict()
+        options = self.get_options()
+        builder = self.get_builder()
+
+        for port_name, port in self.process().spec().inputs.items():
+            if port_name == JobProcess.OPTIONS_INPUT_LABEL:
+                setattr(builder, port_name, options)
+            elif isinstance(port, PortNamespace):
+                namespace = port_name + '_'
+                sub = {link[len(namespace):]: node for link, node in inputs.items() if link.startswith(namespace)}
+                if sub:
+                    setattr(builder, port_name, sub)
+            else:
+                if port_name in inputs:
+                    setattr(builder, port_name, inputs[port_name])
+
+        return builder
 
     def _init_internal_params(self):
         """

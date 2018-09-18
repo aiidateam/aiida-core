@@ -258,13 +258,6 @@ The ``verdi comment`` command provides a set of methods that are used to manipul
   * **update**: modify a comment
 
 
-.. _completioncommand:
-
-``verdi completioncommand``
----------------------------
-Prints the string to be copied and pasted to the ``.bashrc`` in order to allow for autocompletion of the verdi commands.
-
-
 .. _computer:
 
 ``verdi computer``

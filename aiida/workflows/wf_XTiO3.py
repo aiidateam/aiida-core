@@ -100,8 +100,8 @@ class WorkflowXTiO3_EOS(Workflow):
         QECalc = CalculationFactory('quantumespresso.pw')
 
         calc = QECalc(computer=computer)
-        calc.set_max_wallclock_seconds(max_wallclock_seconds)
-        calc.set_resources({"num_machines": num_machines})
+        calc.set_option('max_wallclock_seconds', max_wallclock_seconds)
+        calc.set_option('resources', {"num_machines": num_machines})
         calc.store()
 
         calc.use_code(code)

@@ -70,7 +70,7 @@ script: .ci/test_script.sh
 
 after_success:
   # upload coverage report to coveralls.io
-  - if [ "$TEST_TYPE" == "tests" ]; then coveralls; fi
+  - if [ "$TEST_TYPE" == "tests" ]; then COVERALLS_PARALLEL=true coveralls; fi
 
 git:
   depth: 3

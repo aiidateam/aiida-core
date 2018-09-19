@@ -75,5 +75,10 @@ after_success:
   # Do for all travis runs, even if there is no coverage to report
   - COVERALLS_PARALLEL=true coveralls
 
+# Needed by coveralls to get a final notification after all the parallel ones
+# have finished, so to report back with the coverage.
+notifications:
+  webhooks: https://coveralls.io/webhook
+
 git:
   depth: 3

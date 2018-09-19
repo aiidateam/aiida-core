@@ -13,6 +13,7 @@
 =====
 AiiDA
 =====
+
 **Automated Interactive Infrastructure and Database for Computational Science**
 
 AiiDA is a sophisticated framework designed from scratch to be a flexible

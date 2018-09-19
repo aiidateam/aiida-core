@@ -71,7 +71,8 @@ script: .ci/test_script.sh
 
 after_success:
   # upload coverage report to coveralls.io
-  - if [ "$TEST_TYPE" == "tests" ]; then COVERALLS_PARALLEL=true coveralls; fi
+  # Do for all travis runs, even if there is no coverage to report
+  COVERALLS_PARALLEL=true coveralls
 
 git:
   depth: 3

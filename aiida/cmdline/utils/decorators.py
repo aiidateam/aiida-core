@@ -60,11 +60,11 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """Load dbenv if not yet loaded, then run the original function."""
-            from aiida.common.exceptions import ConfigurationError
+            from aiida.common.exceptions import ConfigurationError, IntegrityError
 
             try:
                 load_dbenv_if_not_loaded(*load_dbenv_args, **load_dbenv_kwargs)
-            except ConfigurationError as exception:
+            except (IntegrityError, ConfigurationError) as exception:
                 echo.echo_critical(str(exception))
 
             return function(*args, **kwargs)

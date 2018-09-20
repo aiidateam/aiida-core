@@ -16,8 +16,22 @@ from django.db import migrations
 from django_extensions.db.fields import UUIDField
 from aiida.backends.djsite.db.migrations import update_schema_version
 from aiida.backends.settings import AIIDANODES_UUID_VERSION
+from aiida.manage.database.integrity import verify_node_uuid_uniqueness
 
 SCHEMA_VERSION = "1.0.14"
+
+
+def verify_node_uuid_uniqueness(apps, schema_editor):
+    """Check whether the database contains nodes with duplicate UUIDS.
+
+    Note that we have to redefine this method from aiida.manage.database.integrity.verify_node_uuid_uniqueness
+    because the migrations.RunPython command that will invoke this function, will pass two arguments and therefore
+    this wrapper needs to have a different function signature.
+
+    :raises: IntegrityError if database contains nodes with duplicate UUIDS.
+    """
+    from aiida.manage.database.integrity import verify_node_uuid_uniqueness
+    verify_node_uuid_uniqueness()
 
 
 class Migration(migrations.Migration):
@@ -28,6 +42,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(verify_node_uuid_uniqueness),
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',

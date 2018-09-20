@@ -3,6 +3,33 @@
 from __future__ import absolute_import
 import uuid as UUID
 
+from aiida.common.exceptions import IntegrityError
+
+
+def verify_node_uuid_uniqueness():
+    """Check whether the database contains nodes with duplicate UUIDS.
+
+    :raises: IntegrityError if database contains nodes with duplicate UUIDS.
+    """
+    duplicates = get_duplicate_node_uuids()
+
+    if duplicates:
+        raise IntegrityError('your database contains nodes with duplicate UUIDS: '
+                             'run `verdi database integrity duplicate-node-uuid` to return to a consistent state')
+
+
+def get_duplicate_node_uuids():
+    """Retrieve nodes with duplicate UUIDS.
+
+    :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
+    """
+    from aiida.orm.backend import construct_backend
+
+    backend = construct_backend()
+    duplicates = backend.query_manager.get_duplicate_node_uuids()
+
+    return duplicates
+
 
 def deduplicate_node_uuids(dry_run=True):
     """Detect and solve nodes with duplicate UUIDs.
@@ -21,17 +48,12 @@ def deduplicate_node_uuids(dry_run=True):
 
     from aiida.backends.settings import AIIDANODES_UUID_VERSION
     from aiida.orm import load_node
-    from aiida.orm.backend import construct_backend
 
     uuid_generator = getattr(UUID, 'uuid{}'.format(AIIDANODES_UUID_VERSION))
 
-    backend = construct_backend()
     mapping = defaultdict(list)
 
-    query = 'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode) AS s WHERE c > 1'
-    duplicates = backend.query_manager.raw(query)
-
-    for pk, uuid in duplicates:
+    for pk, uuid in get_duplicate_node_uuids():
         mapping[uuid].append(int(pk))
 
     def copy_repo_folder(node_source, uuid):

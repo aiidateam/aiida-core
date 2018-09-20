@@ -31,6 +31,18 @@ class AbstractQueryManager(object):
         """
         pass
 
+    def get_duplicate_node_uuids(self):
+        """
+        Return a list of nodes that have an identical UUID
+
+        :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
+        """
+        query = """
+            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode)
+            AS s WHERE c > 1
+            """
+        return self.raw(query)
+
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:
     def query_jobcalculations_by_computer_user_state(

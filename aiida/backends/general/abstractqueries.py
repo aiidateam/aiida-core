@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import absolute_import
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from six.moves import zip
 import six
 
@@ -21,6 +21,15 @@ class AbstractQueryManager(object):
         :type backend: :class:`aiida.orm.Backend`
         """
         self._backend = backend
+
+    @abstractmethod
+    def raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
+        pass
 
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:

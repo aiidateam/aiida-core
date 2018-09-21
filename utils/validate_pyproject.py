@@ -79,10 +79,6 @@ def update_environment_yml():
     from setup_requirements import install_requires
     import yaml
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    environment_filename = 'environment.yml'
-    file_path = os.path.join(dir_path, environment_filename)
-
     # fix incompatibilities between conda and pypi
     replacements = {
         'psycopg2-binary' : 'psycopg2',
@@ -97,10 +93,17 @@ def update_environment_yml():
         dependencies = install_requires,
     )
 
-    with open(file_path, 'w') as f:
-        yaml.dump(environment, f,
-                explicit_start=True,
-                default_flow_style=False)
+    aiida_root = os.path.abspath(os.path.join(dir_path, os.pardir))
+    if (not ('aiida' in os.listdir(aiida_root))):
+        click.echo("Unable to locate 'aiida' folder in parent directory '{}'."
+                   .format(aiida_root))
+        sys.exit(1)
+    else:
+        environment_filename = 'environment.yml'
+        file_path = os.path.join(aiida_root, environment_filename)
+        with open(file_path, 'w') as env_file:
+            yaml.dump(environment, env_file, explicit_start=True, 
+                      default_flow_style=False)
 
 cli.add_command(validate_pyproject)
 cli.add_command(update_environment_yml)

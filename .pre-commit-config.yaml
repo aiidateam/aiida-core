@@ -31,6 +31,7 @@
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/djangomigrations.py|
+        aiida/backends/djsite/db/subtests/migrations.py|
         aiida/backends/djsite/db/subtests/generic.py|
         aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/nodes.py|

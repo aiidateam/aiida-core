@@ -98,7 +98,9 @@ def update_environment_yml():
     # export environment to yml-file in AiiDA project's root folder
     aiida_root = os.path.abspath(os.path.join(dir_path, os.pardir))
     if (not os.path.isdir(os.path.join(aiida_root, 'aiida'))):
-        click.echo("Unable to locate 'aiida' folder in parent directory '{}'."
+        click.echo("Unable to identify parent folder as AiiDA project root ( "
+                   "Found parent folder '{}' does not seem to contain an "
+                   "'aiida' directory)"
                    .format(aiida_root))
         sys.exit(1)
     else:

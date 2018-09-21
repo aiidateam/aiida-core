@@ -84,15 +84,18 @@ def update_environment_yml():
         'psycopg2-binary' : 'psycopg2',
         'validate-email' : 'validate_email',
     }
-    for k in replacements:
-        install_requires = [ i.replace(k, replacements[k]) for i in install_requires]
-
+    sep = '%'  # use something forbidden in conda package names
+    pkg_string = sep.join(install_requires)
+    for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
+        pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
+    install_requires = pkg_string.split(sep)
     environment = dict(
         name = 'aiida',
         channels = ['anaconda', 'conda-forge', 'etetoolkit'],
         dependencies = install_requires,
     )
 
+    # export environment to yml-file in AiiDA project's root folder
     aiida_root = os.path.abspath(os.path.join(dir_path, os.pardir))
     if (not ('aiida' in os.listdir(aiida_root))):
         click.echo("Unable to locate 'aiida' folder in parent directory '{}'."

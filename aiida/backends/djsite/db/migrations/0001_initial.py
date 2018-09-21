@@ -8,19 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import unicode_literals
-
 from __future__ import absolute_import
+
 from django.db import models, migrations
 import django.db.models.deletion
 import django.utils.timezone
 from django.conf import settings
 import django_extensions.db.fields
 
-from aiida.backends.djsite.db.migrations import update_schema_version
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-
-SCHEMA_VERSION = "1.0.1"
+REVISION = '1.0.1'
+DOWN_REVISION = '1.0.0'
 
 
 class Migration(migrations.Migration):
@@ -456,5 +456,5 @@ class Migration(migrations.Migration):
             name='dbattribute',
             unique_together=set([('dbnode', 'key')]),
         ),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

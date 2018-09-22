@@ -15,7 +15,8 @@ class TestMultilineInput(unittest.TestCase):
         ## Sleep 1 is needed because on some filesystems (e.g. some pre 10.13 Mac) the
         ## filesystem returns the time with a precision of 1 second, and
         ## click uses the timestamp to decide if the file was re-saved or not.
-        editor_cmd = 'sleep 1 ; vim -c "%s/$/Test/g" -cwq'  # appends Test to every line
+        editor_cmd = 'sleep 1 ; vim -c "g!/#/s/$/Test" -cwq'  # appends Test to
+        # every line not containing '#' character
         os.environ['EDITOR'] = editor_cmd
         os.environ['VISUAL'] = editor_cmd
         self.runner = CliRunner()

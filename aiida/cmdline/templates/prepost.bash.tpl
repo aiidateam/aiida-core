@@ -5,7 +5,6 @@
 {{default_pre}}
 
 {{separator}}
-
 {{default_post}}
 
 #={{'='*50}}=#

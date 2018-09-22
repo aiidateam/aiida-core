@@ -4,6 +4,7 @@ utilities for getting multi line input from the commandline
 """
 from __future__ import absolute_import
 import click
+from aiida.cmdline.utils import decorators, echo
 
 
 def ensure_scripts(pre, post, summary):
@@ -31,12 +32,27 @@ def edit_pre_post(pre=None, post=None, summary=None):
     template = env.get_template('prepost.bash.tpl')
     summary = summary or {}
     summary = {k: v for k, v in summary.items() if v}
-    content = template.render(default_pre=pre or '', default_post=post or '', summary=summary)
+
+    # Define a separator that will be splitting pre- and post- execution
+    # parts of the submission script
+    separator = "#====================================================#\n" \
+                "#=              Post execution script               =#\n" \
+                "#=   I am acting as separator, do not modify me!!!  =#\n" \
+                "#====================================================#\n"
+
+    content = template.render(default_pre=pre or '', separator=separator,
+            default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
     if mlinput:
         import re
-        stripped_input = re.sub(r'(^#.*$\n)+', '#', mlinput, flags=re.M).strip('#')
-        pre, post = [text.strip() for text in stripped_input.split('#')]
+
+        # Splitting the text in pre- and post- halfs
+        pre, post = mlinput.split(separator)
+
+        # Removing all the comments starting from '#=' in both pre- and post-
+        # parts
+        pre = re.sub(r'(^#=.*$\n)+', '', pre, flags=re.M).strip()
+        post = re.sub(r'(^#=.*$\n)+', '', post, flags=re.M).strip()
     else:
         pre, post = ('', '')
     return pre, post

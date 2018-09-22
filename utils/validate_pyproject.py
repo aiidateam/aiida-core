@@ -72,31 +72,43 @@ def update_environment_yml():
     """
     Updates environment.yml file for conda.
     """
-    from setup_requirements import install_requires
-    import yaml
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    environment_filename = 'environment.yml'
-    file_path = os.path.join(dir_path, environment_filename)
+    sys.path.append(os.path.join(dir_path, os.pardir))
+
+    from setup_requirements import install_requires
+    import yaml
 
     # fix incompatibilities between conda and pypi
     replacements = {
         'psycopg2-binary' : 'psycopg2',
         'validate-email' : 'validate_email',
     }
-    for k in replacements:
-        install_requires = [ i.replace(k, replacements[k]) for i in install_requires]
-
+    sep = '%'  # use something forbidden in conda package names
+    pkg_string = sep.join(install_requires)
+    for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
+        pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
+    install_requires = pkg_string.split(sep)
     environment = dict(
         name = 'aiida',
         channels = ['anaconda', 'conda-forge', 'etetoolkit'],
         dependencies = install_requires,
     )
 
-    with open(file_path, 'w') as f:
-        yaml.dump(environment, f,
-                explicit_start=True,
-                default_flow_style=False)
+    # export environment to yml-file in AiiDA project's root folder
+    aiida_root = os.path.abspath(os.path.join(dir_path, os.pardir))
+    if (not os.path.isdir(os.path.join(aiida_root, 'aiida'))):
+        click.echo("Unable to identify parent folder as AiiDA project root ( "
+                   "Found parent folder '{}' does not seem to contain an "
+                   "'aiida' directory)"
+                   .format(aiida_root))
+        sys.exit(1)
+    else:
+        environment_filename = 'environment.yml'
+        file_path = os.path.join(aiida_root, environment_filename)
+        with open(file_path, 'w') as env_file:
+            yaml.dump(environment, env_file, explicit_start=True, 
+                      default_flow_style=False)
 
 cli.add_command(validate_pyproject)
 cli.add_command(update_environment_yml)
